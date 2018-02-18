@@ -1036,7 +1036,7 @@ namespace yae
         videoTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::string ts = TTime(seekTime).to_hhmmss_usec(":");
+        std::string ts = TTime(seekTime).to_hhmmss_ms();
         std::cerr << "\n\tCLEAR VIDEO FRAME QUEUE for seek: "
                   << ts << std::endl;
 #endif
@@ -1051,7 +1051,7 @@ namespace yae
         audioTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::string ts = TTime(seekTime).to_hhmmss_usec(":");
+        std::string ts = TTime(seekTime).to_hhmmss_ms();
         std::cerr << "\n\tCLEAR AUDIO FRAME QUEUE for seek: "
                   << ts << std::endl;
 #endif

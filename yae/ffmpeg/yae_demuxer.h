@@ -287,7 +287,7 @@ namespace yae
     double avg_track_duration(const AVFormatContext & ctx) const;
 
     inline double duration() const
-    { return (t0_ < t1_) ? (t1_ - t0_).toSeconds() : 0.0; }
+    { return (t0_ < t1_) ? (t1_ - t0_).sec() : 0.0; }
 
     inline bool empty() const
     { return num_packets_ < 1; }

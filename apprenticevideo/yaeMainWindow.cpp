@@ -3228,7 +3228,7 @@ namespace yae
   {
 #ifndef NDEBUG
     std::cerr
-      << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_usec(":")
+      << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_ms(":")
       << std::endl;
 #endif
 

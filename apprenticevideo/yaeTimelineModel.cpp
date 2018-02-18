@@ -299,7 +299,7 @@ namespace yae
       frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
-    timelineStart_ = start.toSeconds();
+    timelineStart_ = start.sec();
     timelinePosition_ = timelineStart_;
     unknownDuration_ =
       duration.time_ == std::numeric_limits<int64>::max() ||
@@ -307,7 +307,7 @@ namespace yae
 
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :
-                         duration.toSeconds());
+                         duration.sec());
   }
 
   //----------------------------------------------------------------
@@ -468,9 +468,9 @@ namespace yae
     {
       double seconds = std::max<double>(0.0, t0 + secOffset);
 #if 0
-      std::cerr << "seek from " << TTime(t0).to_hhmmss_usec(":")
+      std::cerr << "seek from " << TTime(t0).to_hhmmss_ms()
                 << " " << secOffset << " seconds to "
-                << TTime(seconds).to_hhmmss_usec(":")
+                << TTime(seconds).to_hhmmss_ms()
                 << std::endl;
 #endif
       seekTo(seconds);
@@ -619,7 +619,7 @@ namespace yae
 
         TTime currentTime;
         timeChangedEvent->payload_.get(currentTime);
-        timelinePosition_ = currentTime.toSeconds();
+        timelinePosition_ = currentTime.sec();
 
         double t = timelinePosition_ - timelineStart_;
         updateMarkerPlayhead(t / timelineDuration_);

@@ -164,8 +164,8 @@ namespace yae
             std::cerr
               << "\nNOTE: non-monotonically increasing "
               << "audio timestamps detected:" << std::endl
-              << "  prev = " << prevPTS_.to_hhmmss_usec(":") << std::endl
-              << "  next = " << nextPTS.to_hhmmss_usec(":") << std::endl
+              << "  prev = " << prevPTS_ << std::endl
+              << "  next = " << nextPTS << std::endl
               << std::endl;
 #endif
             hasPrevPTS_ = false;
@@ -293,8 +293,8 @@ namespace yae
 #ifndef NDEBUG
         if (hasPrevPTS_)
         {
-          double ta = prevPTS_.toSeconds();
-          double tb = af.time_.toSeconds();
+          double ta = prevPTS_.sec();
+          double tb = af.time_.sec();
           // std::cerr << "audio pts: " << tb << std::endl;
           double dt = tb - ta;
           // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
@@ -316,7 +316,7 @@ namespace yae
       // make sure the frame is in the in/out interval:
       if (playbackEnabled_)
       {
-        double t = af.time_.toSeconds();
+        double t = af.time_.sec();
         double dt = double(numOutputSamples) / double(output_.sampleRate_);
         if (t > timeOut_ || (t + dt) < timeIn_)
         {
@@ -404,7 +404,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       {
-        std::string ts = to_hhmmss_usec(afPtr);
+        std::string ts = to_hhmmss_ms(afPtr);
         std::cerr << "push audio frame: " << ts << std::endl;
       }
 #endif
@@ -415,7 +415,7 @@ namespace yae
         return;
       }
 
-      // std::cerr << "A: " << af.time_.toSeconds() << std::endl;
+      // std::cerr << "A: " << af.time_.sec() << std::endl;
     }
     catch (...)
     {}
@@ -675,19 +675,19 @@ namespace yae
       std::size_t frameSize = frame->data_->rowBytes(0);
       std::size_t numSamples = bytesPerSample ? frameSize / bytesPerSample : 0;
 
-      double t = frame->time_.toSeconds();
+      double t = frame->time_.sec();
       double dt = double(numSamples) / double(atraits.sampleRate_);
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       static TTime prevTime(0, 1000);
 
-      std::string in = TTime(timeIn_).to_hhmmss_usec(":");
-      std::cerr << "\n\t\t\tAUDIO TIME IN:    " << in << std::endl;
+      std::string in = TTime(timeIn_).to_hhmmss_ms();
+      std::cerr << "\n\t\t\tAUDIO TIME IN:    " << timeIn_ << std::endl;
 
-      std::string ts = to_hhmmss_usec(frame);
+      std::string ts = to_hhmmss_ms(frame);
       std::cerr << "\t\t\tPOP AUDIO frame:  " << ts << std::endl;
 
-      std::string t0 = prevTime.to_hhmmss_usec(":");
+      std::string t0 = prevTime.to_hhmmss_ms();
       std::cerr << "\t\t\tPREV AUDIO frame: " << t0 << std::endl;
 #endif
 
@@ -711,10 +711,9 @@ namespace yae
   AudioTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      std::string in = TTime(timeIn).to_hhmmss_usec(":");
-      std::cerr
-        << "SET AUDIO TRACK TIME IN: " << in
-        << std::endl;
+    std::cerr
+      << "SET AUDIO TRACK TIME IN: " << TTime(timeIn)
+      << std::endl;
 #endif
 
     timeIn_ = timeIn;

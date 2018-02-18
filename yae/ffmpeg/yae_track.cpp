@@ -188,7 +188,7 @@ namespace yae
                (!hasPrevPTS ||
                 (prevPTS.base_ == nextPTS.base_ ?
                  prevPTS.time_ < nextPTS.time_ :
-                 prevPTS.toSeconds() < nextPTS.toSeconds())));
+                 prevPTS.sec() < nextPTS.sec())));
 #if 0
     if (ok && debugMessage)
     {

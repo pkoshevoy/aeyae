@@ -539,16 +539,28 @@ namespace yae
   typedef boost::shared_ptr<TAudioFrame> TAudioFramePtr;
 
   //----------------------------------------------------------------
-  // to_hhmmss_usec
+  // to_hhmmss_ms
   //
-  inline std::string to_hhmmss_usec(const TVideoFramePtr & vf)
-  { return vf->time_.to_hhmmss_usec(":"); }
+  template <typename Traits>
+  inline std::string
+  to_hhmmss_ms(const boost::shared_ptr<TFrame<Traits> > & f,
+               const char * mm_separator = ":",
+               const char * ms_separator = ".")
+  {
+    return f->time_.to_hhmmss_ms(mm_separator, ms_separator);
+  }
 
   //----------------------------------------------------------------
-  // to_hhmmss_usec
+  // to_hhmmss_us
   //
-  inline std::string to_hhmmss_usec(const TAudioFramePtr & af)
-  { return af->time_.to_hhmmss_usec(":"); }
+  template <typename Traits>
+  inline std::string
+  to_hhmmss_us(const boost::shared_ptr<TFrame<Traits> > & f,
+               const char * mm_separator = ":",
+               const char * us_separator = ".")
+  {
+    return f->time_.to_hhmmss_us(mm_separator, us_separator);
+  }
 
   //----------------------------------------------------------------
   // TProgramInfo
@@ -602,10 +614,10 @@ namespace yae
              const Timespan & span = Timespan());
 
     inline double t0_sec() const
-    { return span_.t0_.toSeconds(); }
+    { return span_.t0_.sec(); }
 
     inline double t1_sec() const
-    { return span_.t1_.toSeconds(); }
+    { return span_.t1_.sec(); }
 
     inline double dt_sec() const
     { return span_.duration_sec(); }

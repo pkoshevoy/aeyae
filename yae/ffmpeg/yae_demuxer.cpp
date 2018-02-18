@@ -549,7 +549,7 @@ namespace yae
     {
       if (streamIndex == -1)
       {
-        ts = seekTime.getTime(AV_TIME_BASE);
+        ts = seekTime.get(AV_TIME_BASE);
       }
       else
       {
@@ -1210,7 +1210,7 @@ namespace yae
 
         if (ok)
         {
-          double dt = (t1 - t0).toSeconds();
+          double dt = (t1 - t0).sec();
           sum += dt;
         }
       }
@@ -2298,7 +2298,7 @@ namespace yae
         av->id = ix;
         av->time_base.num = 1;
         av->time_base.den = ch.span_.t0_.base_;
-        av->start = ch.span_.t0_.getTime(ch.span_.t1_.base_);
+        av->start = ch.span_.t0_.get(ch.span_.t1_.base_);
         av->end = ch.span_.t1_.time_;
         setDictionary(av->metadata, ch.metadata_);
       }

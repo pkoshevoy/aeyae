@@ -30,24 +30,37 @@ namespace yae
   //
   struct YAE_API TTime
   {
+
+    //----------------------------------------------------------------
+    // Flicks
+    //
+    // "universal" timebase, 705600000 ticks per second:
+    static const uint64 Flicks;
+
     TTime();
     TTime(int64 time, uint64 base);
     TTime(double seconds);
 
+    // return time expressed in a given time base:
+    TTime rebased(uint64 base) const;
+
+    // NOTE: these round to seconds and drop sub-seconds:
+    TTime ceil() const;
+    TTime floor() const;
+    TTime round() const;
+
     TTime & operator += (const TTime & dt);
     TTime operator + (const TTime & dt) const;
-
-    TTime & operator += (double dtSec);
-    TTime operator + (double dtSec) const;
 
     TTime & operator -= (const TTime & dt);
     TTime operator - (const TTime & dt) const;
 
-    TTime & operator -= (double dtSec);
-    TTime operator - (double dtSec) const;
-
     bool operator < (const TTime & t) const;
     bool operator <= (const TTime & t) const;
+    bool operator == (const TTime & t) const;
+
+    inline bool operator != (const TTime & t) const
+    { return !(this->operator==(t)); }
 
     inline bool operator > (const TTime & t) const
     { return t < *this; }
@@ -57,68 +70,74 @@ namespace yae
 
     void reset(int64 time = 0, uint64 base = 1001);
 
-    int64 getTime(uint64 base) const;
+    int64 get(uint64 base) const;
+
+    inline double sec() const
+    {
+      YAE_ASSERT(base_);
+      return double(time_) / double(base_);
+    }
+
+    inline double hz() const
+    {
+      YAE_ASSERT(time_);
+      return time_ ? double(base_) / double(time_) : 0.0;
+    }
 
     void to_hhmmss(std::string & ts,
-                   const char * separator = "") const;
+                   const char * separator = ":") const;
 
     void to_hhmmss_frac(std::string & ts,
                         unsigned int precision = 100, // centiseconds
                         const char * separator = ":",
                         const char * remainder_separator = ".") const;
 
-    void to_hhmmss_usec(std::string & ts,
-                        const char * separator = "",
-                        const char * usec_separator = ".") const;
-
     void to_hhmmss_frame(std::string & ts,
-                         double frameRate = 29.97,
-                         const char * separator = ":",
-                         const char * framenum_separator = ":") const;
+                         double frame_rate = 29.97,
+                         const char * mm_separator = ":",
+                         const char * ff_separator = ":") const;
 
-    inline std::string to_hhmmss(const char * separator = "") const
+    // return timestamp in hhmmss format
+    inline std::string to_hhmmss(const char * mm_separator = ":") const
     {
       std::string ts;
-      to_hhmmss(ts, separator);
+      to_hhmmss(ts, mm_separator);
       return ts;
+    }
+
+    // return timestamp in hh:mm:ss:ff format
+    inline std::string to_hhmmss_ff(double frame_rate = 29.97,
+                                    const char * mm_separator = ":",
+                                    const char * ff_separator = ":") const
+    {
+      std::string ts;
+      to_hhmmss_frame(ts, frame_rate, mm_separator, ff_separator);
+      return ts;
+    }
+
+    // return timestamp in hhmmss.xxxxxxxx format
+    inline std::string to_hhmmss_frac(unsigned int precision = 100,
+                                      const char * mm_separator = ":",
+                                      const char * xx_separator = ".") const
+    {
+      std::string ts;
+      to_hhmmss_frac(ts, precision, mm_separator, xx_separator);
+      return ts;
+    }
+
+    // return timestamp in hhmmss.mmm format
+    inline std::string to_hhmmss_ms(const char * mm_separator = ":",
+                                    const char * ms_separator = ".") const
+    {
+      return to_hhmmss_frac(1000, mm_separator, ms_separator);
     }
 
     // return timestamp in hhmmss.uuuuuu format
-    inline std::string to_hhmmss_frac(unsigned int precision = 100,
-                                      const char * separator = "",
-                                      const char * frac_separator = ".") const
+    inline std::string to_hhmmss_us(const char * mm_separator = ":",
+                                    const char * us_separator = ".") const
     {
-      std::string ts;
-      to_hhmmss_frac(ts, precision, separator, frac_separator);
-      return ts;
+      return to_hhmmss_frac(1000000, mm_separator, us_separator);
     }
-
-    inline std::string to_hhmmss_usec(const char * separator = "",
-                                      const char * usec_separator = ".") const
-    {
-      return to_hhmmss_frac(1000000, separator, usec_separator);
-    }
-
-    inline std::string to_hhmmss_frame(double frameRate = 29.97,
-                                       const char * separator = ":",
-                                       const char * fnum_separator = ":") const
-    {
-      std::string ts;
-      to_hhmmss_frame(ts, frameRate, separator, fnum_separator);
-      return ts;
-    }
-
-    inline double toSeconds() const
-    { return double(time_) / double(base_); }
-
-    inline double perSecond() const
-    { return double(base_) / double(time_); }
-
-    inline bool operator == (const TTime & t) const
-    { return time_ == t.time_ && base_ == t.base_; }
-
-    inline bool operator != (const TTime & t) const
-    { return time_ != t.time_ || base_ != t.base_; }
 
     int64 time_;
     uint64 base_;
@@ -163,7 +182,7 @@ namespace yae
     { return t0_ <= s.t0_ && s.t1_ <= t1_; }
 
     inline double duration_sec() const
-    { return empty() ? 0.0 : (t1_ - t0_).toSeconds(); }
+    { return empty() ? 0.0 : (t1_ - t0_).sec(); }
 
     // returns non-zero value if interval s
     // and this interval are disjoint beyond given tolerance;

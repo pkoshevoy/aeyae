@@ -193,14 +193,14 @@ namespace yae
       if (timeSegment.realtime_)
       {
         TTime ct = t0 + elapsedTime;
-        double dt = (ct - t).toSeconds();
+        double dt = (ct - t).sec();
         if (hasTime && dt > 0.5)
         {
 #if YAE_DEBUG_SHARED_CLOCK
           std::cerr
             << "\nNOTE: badly muxed file?\n"
-            << "rollback denied: " << t.to_hhmmss_usec(":") << std::endl
-            << "current time at: " << ct.to_hhmmss_usec(":") << std::endl
+            << "rollback denied: " << t << std::endl
+            << "current time at: " << ct << std::endl
             << "dt: " << dt << std::endl
             << std::endl;
 #endif
@@ -299,7 +299,7 @@ namespace yae
 #if YAE_DEBUG_SHARED_CLOCK
       std::cerr
         << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
-        << ", " << TTime(delayInSeconds).to_hhmmss_usec(":")
+        << ", " << TTime(delayInSeconds)
         << std::endl;
 #endif
     }
@@ -348,7 +348,7 @@ namespace yae
       double elapsedTime = double(delta.total_milliseconds()) * 1e-3;
 
       std::cerr
-        << "STOP TIME, end: " << TTime(elapsedTime).to_hhmmss_usec(":")
+        << "STOP TIME, end: " << TTime(elapsedTime)
         << std::endl;
 #endif
     }
@@ -393,7 +393,7 @@ namespace yae
 #if YAE_DEBUG_SHARED_CLOCK
     std::cerr
       << "\nWAITING FOR: " << to_simple_string(waitingFor_)
-      << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+      << ", " << TTime(1e-3 * msecToWait)
       << std::endl
       << std::endl;
 #endif
@@ -410,7 +410,7 @@ namespace yae
 #if YAE_DEBUG_SHARED_CLOCK
         std::cerr
           << "\nWAIT FINISHED: " << to_simple_string(waitingFor_)
-          << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+          << ", " << TTime(1e-3 * msecToWait)
           << std::endl
           << std::endl;
 #endif
@@ -429,7 +429,7 @@ namespace yae
 #if YAE_DEBUG_SHARED_CLOCK
           std::cerr
             << "\nWAIT CANCELLED: " << to_simple_string(waitingFor_)
-            << ", " << TTime(1e-3 * msecToWait).to_hhmmss_usec(":")
+            << ", " << TTime(1e-3 * msecToWait)
             << std::endl
             << std::endl;
 #endif
@@ -455,7 +455,7 @@ namespace yae
         std::cerr
           << "\nCANCEL WAIT REQUEST: "
           << to_simple_string(timeSegment.waitForMe_)
-          << ", " << TTime(timeSegment.delayInSeconds_).to_hhmmss_usec(":")
+          << ", " << TTime(timeSegment.delayInSeconds_)
           << std::endl
           << std::endl;
 #endif

@@ -187,7 +187,7 @@ namespace yae
     TTime duration;
     if (reader->isSeekable() && get_duration(reader.get(), start, duration))
     {
-      double offset = std::min<double>(duration.toSeconds() * 8e-2, 288.0);
+      double offset = std::min<double>(duration.sec() * 8e-2, 288.0);
 
       // avoid seeking very short files (.jpg):
       if (offset >= 0.016 && reader->readVideo(frame, &waitMgr))
@@ -198,7 +198,7 @@ namespace yae
         }
 
         // FIXME: check for a bookmark, seek to the bookmarked position:
-        double t0 = start.toSeconds();
+        double t0 = start.sec();
         reader->seek(t0 + offset);
       }
     }

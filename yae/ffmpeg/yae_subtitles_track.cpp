@@ -414,8 +414,8 @@ namespace yae
   {
     if (prev.tEnd_.time_ == std::numeric_limits<int64>::max())
     {
-      double s0 = prev.time_.toSeconds();
-      double s1 = next.time_.toSeconds();
+      double s0 = prev.time_.sec();
+      double s1 = next.time_.sec();
 
       if (next.time_.time_ != std::numeric_limits<int64>::max() &&
           s0 < s1)
@@ -470,7 +470,7 @@ namespace yae
          i != active_.end(); )
     {
       const TSubsFrame & sf = *i;
-      double s1 = sf.tEnd_.toSeconds();
+      double s1 = sf.tEnd_.sec();
 
       if (s1 <= v0)
       {
@@ -493,8 +493,8 @@ namespace yae
          i != active_.end(); ++i)
     {
       const TSubsFrame & sf = *i;
-      double s0 = sf.time_.toSeconds();
-      double s1 = sf.tEnd_.toSeconds();
+      double s0 = sf.time_.sec();
+      double s1 = sf.tEnd_.sec();
 
       if (s0 < v1 && v0 < s1)
       {

@@ -19,6 +19,89 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // subsec_t
+  //
+  struct subsec_t
+  {
+    subsec_t(const TTime & a = TTime()):
+      tsec_(a.time_ / a.base_),
+      tsub_(a.time_ % a.base_),
+      base_(a.base_)
+    {
+      if (tsub_ < 0)
+      {
+        tsec_ -= 1;
+        tsub_ += base_;
+      }
+    }
+
+    subsec_t add(const subsec_t & other) const
+    {
+      int64_t base = std::max<int64_t>(base_, other.base_);
+      int64_t sec = (tsec_ + other.tsec_);
+      int64_t ss = (tsub_ * base) / base_ + (other.tsub_ * base) / other.base_;
+      TTime t(sec * base + ss, base);
+      return subsec_t(t);
+    }
+
+    subsec_t sub(const subsec_t & other) const
+    {
+      int64_t base = std::max<int64_t>(base_, other.base_);
+      int64_t sec = (tsec_ - other.tsec_);
+      int64_t a = (tsub_ * base) / base_;
+      int64_t b = (other.tsub_ * base) / other.base_;
+      int64_t d = (a < b) ? 1 : 0;
+      int64_t ss = base * d + a - b;
+      TTime t((sec - d) * base + ss, base);
+      return subsec_t(t);
+    }
+
+    inline bool eq(const subsec_t & ss) const
+    {
+      subsec_t diff = ss.sub(*this);
+      return !(diff.tsec_ || diff.tsub_);
+    }
+
+    inline bool lt(const subsec_t & ss) const
+    {
+      subsec_t diff = ss.sub(*this);
+      return diff.tsec_ > 0;
+    }
+
+    inline bool le(const subsec_t & ss) const
+    {
+      subsec_t diff = ss.sub(*this);
+      return diff.tsec_ >= 0;
+    }
+
+    inline operator TTime() const
+    {
+      return TTime(tsec_ * base_ + tsub_, base_);
+    }
+
+    int64_t tsec_; // whole seconds
+    int64_t tsub_; // sub-seconds expressed in base_ timebase
+    int64_t base_;
+  };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  static std::ostream &
+  operator << (std::ostream & os, const subsec_t & t)
+  {
+    os << t.tsec_ << ".(" << t.tsub_ << "/" << t.base_ << ")";
+    return os;
+  }
+
+
+  //----------------------------------------------------------------
+  // TTime::Flicks
+  //
+  const uint64 TTime::Flicks = 705600000ULL;
+
   //----------------------------------------------------------------
   // TTime::TTime
   //
@@ -44,6 +127,43 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // TTime::rebased
+  //
+  TTime
+  TTime::rebased(uint64 base) const
+  {
+    subsec_t ss(*this);
+    int64_t t = (ss.tsub_ * base) / ss.base_;
+    return TTime(ss.tsec_ * base + t, base);
+  }
+
+  //----------------------------------------------------------------
+  // TTime::ceil
+  //
+  TTime TTime::ceil() const
+  {
+    return TTime((time_ + base_ - 1) / base_, 1).rebased(base_);
+  }
+
+  //----------------------------------------------------------------
+  // TTime::floor
+  //
+  TTime
+  TTime::floor() const
+  {
+    return TTime(time_ / base_, 1).rebased(base_);
+  }
+
+  //----------------------------------------------------------------
+  // TTime::round
+  //
+  TTime
+  TTime::round() const
+  {
+    return TTime((time_ + base_ / 2) / base_, 1).rebased(base_);
+  }
+
+  //----------------------------------------------------------------
   // TTime::operator +=
   //
   TTime &
@@ -55,7 +175,8 @@ namespace yae
       return *this;
     }
 
-    return operator += (dt.toSeconds());
+    *this = subsec_t(*this).add(subsec_t(dt));
+    return *this;
   }
 
   //----------------------------------------------------------------
@@ -64,30 +185,12 @@ namespace yae
   TTime
   TTime::operator + (const TTime & dt) const
   {
-    TTime t(*this);
-    t += dt;
-    return t;
-  }
+    if (base_ == dt.base_)
+    {
+      return TTime(time_ + dt.time_, base_);
+    }
 
-  //----------------------------------------------------------------
-  // TTime::operator +
-  //
-  TTime &
-  TTime::operator += (double dtSec)
-  {
-    time_ += int64(dtSec * double(base_));
-    return *this;
-  }
-
-  //----------------------------------------------------------------
-  // TTime::operator +
-  //
-  TTime
-  TTime::operator + (double dtSec) const
-  {
-    TTime t(*this);
-    t += dtSec;
-    return t;
+    return subsec_t(*this).add(subsec_t(dt));
   }
 
   //----------------------------------------------------------------
@@ -102,7 +205,8 @@ namespace yae
       return *this;
     }
 
-    return operator -= (dt.toSeconds());
+    *this = subsec_t(*this).sub(subsec_t(dt));
+    return *this;
   }
 
   //----------------------------------------------------------------
@@ -111,30 +215,12 @@ namespace yae
   TTime
   TTime::operator - (const TTime & dt) const
   {
-    TTime t(*this);
-    t -= dt;
-    return t;
-  }
+    if (base_ == dt.base_)
+    {
+      return TTime(time_ - dt.time_, base_);
+    }
 
-  //----------------------------------------------------------------
-  // TTime::operator -
-  //
-  TTime &
-  TTime::operator -= (double dtSec)
-  {
-    time_ -= int64(dtSec * double(base_));
-    return *this;
-  }
-
-  //----------------------------------------------------------------
-  // TTime::operator -
-  //
-  TTime
-  TTime::operator - (double dtSec) const
-  {
-    TTime t(*this);
-    t -= dtSec;
-    return t;
+    return subsec_t(*this).sub(subsec_t(dt));
   }
 
   //----------------------------------------------------------------
@@ -148,7 +234,7 @@ namespace yae
       return time_ < t.time_;
     }
 
-    return toSeconds() < t.toSeconds();
+    return subsec_t(*this).lt(subsec_t(t));
   }
 
   //----------------------------------------------------------------
@@ -162,8 +248,21 @@ namespace yae
       return time_ <= t.time_;
     }
 
-    double dt = toSeconds() - t.toSeconds();
-    return dt <= 0;
+    return subsec_t(*this).le(subsec_t(t));
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator ==
+  //
+  bool
+  TTime::operator == (const TTime & t) const
+  {
+    if (t.base_ == base_)
+    {
+      return time_ == t.time_;
+    }
+
+    return subsec_t(*this).eq(subsec_t(t));
   }
 
   //----------------------------------------------------------------
@@ -177,10 +276,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TTime::getTime
+  // TTime::get
   //
   int64
-  TTime::getTime(uint64 base) const
+  TTime::get(uint64 base) const
   {
     if (base_ == base)
     {
@@ -276,57 +375,46 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TTime::to_hhmmss_usec
-  //
-  void
-  TTime::to_hhmmss_usec(std::string & ts,
-                        const char * separator,
-                        const char * usec_separator) const
-  {
-    to_hhmmss_frac(ts, 1000000, separator, usec_separator);
-  }
-
-  //----------------------------------------------------------------
   // TTime::to_hhmmss_frame
   //
   void
   TTime::to_hhmmss_frame(std::string & ts,
-                         double frameRate,
+                         double frame_rate,
                          const char * separator,
                          const char * framenum_separator) const
   {
-    bool negative = (time_ < 0);
+    const double ceil_fps = ::ceil(frame_rate);
+    const bool negative = (time_ < 0);
 
-    // round to nearest frame:
-    double seconds = toSeconds();
+    uint64 t = negative ? -time_ : time_;
+    uint64 ff = uint64(ceil_fps * double(t % base_) / double(base_));
+    t /= base_;
 
-    if (negative)
-    {
-      seconds = -seconds;
-    }
+    uint64 ss = t % 60;
+    t /= 60;
 
-    double fpsWhole = ceil(frameRate);
-    seconds = (seconds * fpsWhole + 0.5) / fpsWhole;
-
-    double secondsWhole = floor(seconds);
-    double remainder = seconds - secondsWhole;
-    double frame = remainder * fpsWhole;
-    uint64 frameNo = int(frame);
-
-    TTime tmp(seconds);
-    tmp.to_hhmmss(ts, separator);
+    uint64 mm = t % 60;
+    t /= 60;
 
     std::ostringstream os;
-
-    if (negative && (frameNo || (uint64)tmp.time_ >= tmp.base_))
+    if (negative && (ff || ss || mm || t))
     {
       os << '-';
     }
 
-    os << ts << framenum_separator
-       << std::setw(2) << std::setfill('0') << frameNo;
+    std::size_t w =
+      ceil_fps <= 10.0 ? 1 :
+      ceil_fps <= 100.0 ? 2 :
+      ceil_fps <= 1000.0 ? 3 :
+      ceil_fps <= 10000.0 ? 4 :
+      ::ceil(::log10(ceil_fps));
 
-    ts = std::string(os.str().c_str());
+    os << std::setw(2) << std::setfill('0') << t << separator
+       << std::setw(2) << std::setfill('0') << mm << separator
+       << std::setw(2) << std::setfill('0') << ss << framenum_separator
+       << std::setw(w) << std::setfill('0') << ff;
+
+    ts = os.str();
   }
 
   //----------------------------------------------------------------
@@ -335,7 +423,7 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const TTime & t)
   {
-    oss << t.to_hhmmss_frac(1000, ":");
+    oss << t.to_hhmmss_ms(":", ".");
     return oss;
   }
 
@@ -377,8 +465,8 @@ namespace yae
       return 0.0;
     }
 
-    double gap_s_to_this = (t0_ - s.t1_).toSeconds();
-    double gap_this_to_s = (s.t0_ - t1_).toSeconds();
+    double gap_s_to_this = (t0_ - s.t1_).sec();
+    double gap_this_to_s = (s.t0_ - t1_).sec();
     double gap =
       gap_s_to_this > 0.0 ? gap_s_to_this :
       gap_this_to_s > 0.0 ? gap_this_to_s :
@@ -420,8 +508,8 @@ namespace yae
       return std::numeric_limits<double>::max();
     }
 
-    double gap_t_to_this = (t0_ - t).toSeconds();
-    double gap_this_to_t = (t - t1_).toSeconds();
+    double gap_t_to_this = (t0_ - t).sec();
+    double gap_this_to_t = (t - t1_).sec();
     double gap =
       (gap_t_to_this > 0.0) ? -gap_t_to_this :
       (gap_this_to_t > 0.0) ? gap_this_to_t :
@@ -832,7 +920,7 @@ namespace yae
         {
           const TTime & dts = j->first;
           const TTime & pts = j->second;
-          oss << ' ' << pts << "(cts " << (pts - dts).getTime(1000) << "ms)";
+          oss << ' ' << pts << "(cts " << (pts - dts).get(1000) << "ms)";
         }
         oss << '\n';
       }
@@ -969,7 +1057,7 @@ namespace yae
 
       const TTime & src_sum = yae::get(src.sum_, msec);
       TTime & dst_sum = sum_[msec];
-      dst_sum = TTime(src_sum.time_ + dst_sum.getTime(src_sum.base_),
+      dst_sum = TTime(src_sum.time_ + dst_sum.get(src_sum.base_),
                       src_sum.base_);
     }
 
@@ -990,13 +1078,13 @@ namespace yae
       YAE_ASSERT(monotonically_increasing);
 
       TTime dt = monotonically_increasing ? dts - prev : prev - dts;
-      TTime msec(dt.getTime(1000), 1000);
+      TTime msec(dt.get(1000), 1000);
 
       uint64 & num = dur_[msec];
       num++;
 
       TTime & sum = sum_[msec];
-      dt.time_ += sum.getTime(dt.base_);
+      dt.time_ += sum.get(dt.base_);
       sum = dt;
     }
 
@@ -1022,7 +1110,7 @@ namespace yae
       return 0.0;
     }
 
-    double dt = (dts_.back() - dts_.front()).toSeconds();
+    double dt = (dts_.back() - dts_.front()).sec();
     double fps = double(num_ - 1) / dt;
     return fps;
   }
@@ -1073,7 +1161,7 @@ namespace yae
       occurrences[i->second] = dt;
 
       TTime dur = yae::get(sum_, dt);
-      sum = TTime(dur.time_ + sum.getTime(dur.base_), dur.base_);
+      sum = TTime(dur.time_ + sum.get(dur.base_), dur.base_);
       num += n;
     }
 
@@ -1102,13 +1190,13 @@ namespace yae
 
         if (r < 0.25)
         {
-          outlier_sum = TTime(dur.time_ + outlier_sum.getTime(dur.base_),
+          outlier_sum = TTime(dur.time_ + outlier_sum.get(dur.base_),
                               dur.base_);
           outlier_num += n;
         }
         else
         {
-          inlier_sum = TTime(dur.time_ + inlier_sum.getTime(dur.base_),
+          inlier_sum = TTime(dur.time_ + inlier_sum.get(dur.base_),
                              dur.base_);
           inlier_num += n;
         }
@@ -1117,22 +1205,22 @@ namespace yae
 
     stats.normal_ =
       double(yae::get(dur_, most_frequent)) /
-      yae::get(sum_, most_frequent).toSeconds();
+      yae::get(sum_, most_frequent).sec();
 
     stats.min_ =
       double(yae::get(dur_, max_duration)) /
-      yae::get(sum_, max_duration).toSeconds();
+      yae::get(sum_, max_duration).sec();
 
     stats.max_ =
       double(yae::get(dur_, min_duration)) /
-      yae::get(sum_, min_duration).toSeconds();
+      yae::get(sum_, min_duration).sec();
 
     stats.outlier_ = outlier_num ?
-      double(outlier_num) / outlier_sum.toSeconds() :
+      double(outlier_num) / outlier_sum.sec() :
       0.0;
 
-    stats.inlier_ = double(inlier_num) / inlier_sum.toSeconds();
-    stats.avg_ = double(num) / sum.toSeconds();
+    stats.inlier_ = double(inlier_num) / inlier_sum.sec();
+    stats.avg_ = double(num) / sum.sec();
 
     std::set<double> std_fps;
 

@@ -127,7 +127,7 @@ namespace yae
         std::ostringstream os;
         TTime t(nstart_, (bitsPerSample_ * numChannels_ * sampleRate_) / 8);
 
-        os << newFilePrefix << t.to_hhmmss_usec() << ".wav";
+        os << newFilePrefix << t.to_hhmmss_us("", ".") << ".wav";
         open(os.str().c_str());
       }
 
@@ -178,7 +178,7 @@ namespace yae
     {
       std::size_t start = nstart_ + nout_;
       TTime t(start, (bitsPerSample_ * numChannels_ * sampleRate_) / 8);
-      std::string ts = t.to_hhmmss_usec();
+      std::string ts = t.to_hhmmss_us("", ".");
       return ts;
     }
 

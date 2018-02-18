@@ -1084,7 +1084,7 @@ namespace yae
 
           if (assTrack && libass_.isReady())
           {
-            int64 pts = (int64)(subs.time_.toSeconds() * 1000.0 + 0.5);
+            int64 pts = (int64)(subs.time_.sec() * 1000.0 + 0.5);
             assTrack->processData((unsigned char *)&assa[0], assa.size(), pts);
             nrectsPainted++;
             done = true;
@@ -1114,7 +1114,7 @@ namespace yae
       // the list of images is owned by libass,
       // libass is responsible for their deallocation:
       const bool closedCaptions = (i == 1);
-      int64 now = (int64)(frame->time_.toSeconds() * 1000.0 + 0.5);
+      int64 now = (int64)(frame->time_.sec() * 1000.0 + 0.5);
 
       int changeDetected = 0;
       ASS_Image * pic = assTrack->renderFrame(now, &changeDetected);

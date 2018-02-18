@@ -17,6 +17,38 @@
 using namespace yae;
 
 
+BOOST_AUTO_TEST_CASE(yae_time)
+{
+  TTime t1(100, 1000);
+  TTime t2(200, 1000);
+  TTime t3(300, 1000);
+  TTime t4(400, 1000);
+  TTime t5(500, 1000);
+  TTime t6(600, 1000);
+
+  BOOST_CHECK_EQUAL(t1.rebased(30).time_, 3);
+  BOOST_CHECK_EQUAL(t2, t1 + t1);
+  BOOST_CHECK_EQUAL(t1, t2 - t1);
+  BOOST_CHECK_EQUAL(-t2, t4 - t6);
+
+  BOOST_CHECK_LT(t1, t2);
+  BOOST_CHECK_GT(t2, t1);
+  BOOST_CHECK_LT(-t1, t1);
+  BOOST_CHECK_GT(t1, -t1);
+
+  TTime s1(1, 1001);
+  BOOST_CHECK_LE(t1, t1 + s1);
+
+
+  TTime t(1 + 30 * (1 + 60 * (1 + 60)), 30);
+  std::string tc = t.to_hhmmss_ff(29.97, ":", ";");
+  BOOST_CHECK_EQUAL(tc, std::string("01:01:01;01"));
+
+  std::string ms = t.to_hhmmss_ms();
+  BOOST_CHECK_EQUAL(ms, std::string("01:01:01.033"));
+}
+
+
 BOOST_AUTO_TEST_CASE(yae_timeline)
 {
   TTime t1(100, 1000);

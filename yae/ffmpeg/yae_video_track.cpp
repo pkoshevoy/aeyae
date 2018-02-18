@@ -387,7 +387,7 @@ namespace yae
 
     bool operator() (const TSubsFrame & sf) const
     {
-      double s0 = sf.time_.toSeconds();
+      double s0 = sf.time_.sec();
       return s0 <= now_;
     }
 
@@ -671,8 +671,8 @@ namespace yae
 #ifndef NDEBUG
         if (hasPrevPTS_)
         {
-          double ta = prevPTS_.toSeconds();
-          double tb = t.toSeconds();
+          double ta = prevPTS_.sec();
+          double tb = t.sec();
           // std::cerr << "video pts: " << tb << std::endl;
           double dt = tb - ta;
           double fd = 1.0 / native_.frameRate_;
@@ -733,7 +733,7 @@ namespace yae
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)
         {
-          double t = vf.time_.toSeconds();
+          double t = vf.time_.sec();
           double dt = 1.0 / double(output_.frameRate_);
           if (t > timeOut_ || (t + dt) < timeIn_)
           {
@@ -824,7 +824,7 @@ namespace yae
 
         // check for applicable subtitles:
         {
-          double v0 = vf.time_.toSeconds();
+          double v0 = vf.time_.sec();
           double v1 = v0 + (vf.traits_.frameRate_ ?
                             1.0 / vf.traits_.frameRate_ :
                             0.042);
@@ -866,7 +866,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         {
-          std::string ts = to_hhmmss_usec(vfPtr);
+          std::string ts = to_hhmmss_ms(vfPtr);
           std::cerr << "push video frame: " << ts << std::endl;
         }
 #endif
@@ -877,7 +877,7 @@ namespace yae
           return;
         }
 
-        // std::cerr << "V: " << vf.time_.toSeconds() << std::endl;
+        // std::cerr << "V: " << vf.time_.sec() << std::endl;
       }
     }
     catch (...)
@@ -1096,19 +1096,19 @@ namespace yae
       }
 
       // discard outlier frames:
-      double t = frame->time_.toSeconds();
+      double t = frame->time_.sec();
       double dt = 1.0 / frame->traits_.frameRate_;
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       static TTime prevTime(0, 1000);
 
-      std::string in = TTime(timeIn_).to_hhmmss_usec(":");
+      std::string in = TTime(timeIn_).to_hhmmss_ms();
       std::cerr << "\n\t\t\t\t\tTIME IN:          " << in << std::endl;
 
-      std::string ts = to_hhmmss_usec(frame);
+      std::string ts = to_hhmmss_ms(frame);
       std::cerr << "\t\t\t\t\tPOP video frame:  " << ts << std::endl;
 
-      std::string t0 = prevTime.to_hhmmss_usec(":");
+      std::string t0 = prevTime.to_hhmmss_ms();
       std::cerr << "\t\t\t\t\tPREV video frame: " << t0 << std::endl;
 #endif
 
@@ -1132,7 +1132,7 @@ namespace yae
   VideoTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      std::string in = TTime(timeIn).to_hhmmss_usec(":");
+      std::string in = TTime(timeIn).to_hhmmss_ms();
       std::cerr
         << "SET VIDEO TRACK TIME IN: " << in
         << std::endl;

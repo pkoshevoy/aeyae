@@ -157,7 +157,7 @@ namespace yae
       terminator.stopWaiting(true);
 
       double frameDuration = 0.0;
-      double f0 = framePosition_.toSeconds();
+      double f0 = framePosition_.sec();
       double df = frameDuration;
       double tempo = 1.0;
       double drift = 0.0;
@@ -218,7 +218,7 @@ namespace yae
       bool clockIsRunning =
         clock_.getCurrentTime(t0, elapsedTime, clockIsAccurate);
 
-      double clockPosition = t0.toSeconds();
+      double clockPosition = t0.sec();
       double playheadPosition = clockPosition + elapsedTime * tempo - drift;
 
       bool playbackLoopedAround = (clockPosition < clockPositionPrev);
@@ -226,16 +226,16 @@ namespace yae
 
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
-      double f0 = framePosition_.toSeconds();
+      double f0 = framePosition_.sec();
       double f1 = f0 + frameDurationScaled;
       double df = f0 + frameDurationScaled - playheadPosition;
 
 #if YAE_DEBUG_VIDEO_RENDERER
       std::cerr
-        << "t:  " << TTime(playheadPosition).to_hhmmss_usec(":") << std::endl
+        << "t:  " << TTime(playheadPosition) << std::endl
         << "dt: " << frameDurationScaled << std::endl
-        << "f0: " << TTime(f0).to_hhmmss_usec(":") << std::endl
-        << "f1: " << TTime(f1).to_hhmmss_usec(":") << std::endl
+        << "f0: " << TTime(f0) << std::endl
+        << "f1: " << TTime(f1) << std::endl
         << "df: " << df << std::endl
         << "drift: " << drift << std::endl
         << std::endl;
@@ -265,10 +265,10 @@ namespace yae
           std::cerr
             << "FRAME IS VALID FOR " << df << " sec\n"
             << "sleep: " << secondsToSleep << " sec"
-            << "\tf0: " << TTime(f0).to_hhmmss_usec(":")
-            << "\tf1: " << TTime(f1).to_hhmmss_usec(":")
-            << "\tclock: " << TTime(clockPosition).to_hhmmss_usec(":")
-            << "\tplayhead: " << TTime(playheadPosition).to_hhmmss_usec(":")
+            << "\tf0: " << TTime(f0)
+            << "\tf1: " << TTime(f1)
+            << "\tclock: " << TTime(clockPosition)
+            << "\tplayhead: " << TTime(playheadPosition)
             << std::endl;
 #endif
         }
@@ -335,7 +335,7 @@ namespace yae
 
       if (frame_b_)
       {
-        frameDuration = (frame_b_->time_ - frame_a_->time_).toSeconds();
+        frameDuration = (frame_b_->time_ - frame_a_->time_).sec();
       }
       else
       {
@@ -352,7 +352,7 @@ namespace yae
 
 #if YAE_DEBUG_VIDEO_RENDERER
         std::cerr
-          << "VIDEO (p) SET CLOCK: " << framePosition_.to_hhmmss_usec(":")
+          << "VIDEO (p) SET CLOCK: " << framePosition_
           << std::endl;
 #endif
         clock_.setCurrentTime(framePosition_, 0.0, false);
@@ -439,7 +439,7 @@ namespace yae
       {
 #if YAE_DEBUG_VIDEO_RENDERER
         std::cerr
-          << "First FRAME @ " << to_hhmmss_usec(frame)
+          << "First FRAME @ " << to_hhmmss_ms(frame)
           << std::endl;
 #endif
         frame_a_ = frame;
@@ -452,12 +452,12 @@ namespace yae
       frame_b_ = frame;
       framePosition_ = frame_a_->time_;
 
-      double t = framePosition_.toSeconds();
+      double t = framePosition_.sec();
       if (t > f0 || frameDuration == 0.0)
       {
 #if YAE_DEBUG_VIDEO_RENDERER
         std::cerr
-          << "Next FRAME @ " << to_hhmmss_usec(frame_a_)
+          << "Next FRAME @ " << to_hhmmss_ms(frame_a_)
           << std::endl;
 #endif
         break;
@@ -480,12 +480,12 @@ namespace yae
 
 #if YAE_DEBUG_VIDEO_RENDERER
       std::cerr
-        << "VIDEO (a) SET CLOCK: " << to_hhmmss_usec(frame_a_)
+        << "VIDEO (a) SET CLOCK: " << to_hhmmss_ms(frame_a_)
         << std::endl;
 #endif
       TTime t = frame_a_->time_;
-      double ta = frame_a_->time_.toSeconds();
-      double tb = frame_b_ ? frame_b_->time_.toSeconds() : ta;
+      double ta = frame_a_->time_.sec();
+      double tb = frame_b_ ? frame_b_->time_.sec() : ta;
       double dt = (tb - ta) / tempo;
       t += dt;
 
@@ -501,7 +501,7 @@ namespace yae
       {
 #if YAE_DEBUG_VIDEO_RENDERER
         std::cerr
-          << "RENDER VIDEO @ " << to_hhmmss_usec(frame_a_)
+          << "RENDER VIDEO @ " << to_hhmmss_ms(frame_a_)
           << std::endl;
 #endif
         canvas_->render(frame_a_);

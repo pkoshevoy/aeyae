@@ -167,7 +167,7 @@ namespace yae
 
 #if YAE_DEBUG_AUDIO_RENDERER
     std::cerr
-      << "TRY TO SKIP AUDIO TO @ " << t.to_hhmmss_usec(":")
+      << "TRY TO SKIP AUDIO TO @ " << t
       << std::endl;
 #endif
 
@@ -204,7 +204,7 @@ namespace yae
         {
           // calculate offset:
           audioFrameOffset_ =
-            double((t - audioFrame_->time_).getTime(sampleRate)) /
+            double((t - audioFrame_->time_).get(sampleRate)) /
             audioFrame_->tempo_;
           break;
         }
@@ -228,7 +228,7 @@ namespace yae
     {
 #if YAE_DEBUG_AUDIO_RENDERER
       std::cerr
-        << "SKIP AUDIO TO @ " << framePosition.to_hhmmss_usec(":")
+        << "SKIP AUDIO TO @ " << framePosition
         << std::endl;
 #endif
 
@@ -236,7 +236,7 @@ namespace yae
       {
 #if YAE_DEBUG_AUDIO_RENDERER
         std::cerr
-          << "AUDIO (s) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
+          << "AUDIO (s) SET CLOCK: " << framePosition
           << std::endl;
 #endif
         clock_.setCurrentTime(framePosition, -0.016);
@@ -450,7 +450,7 @@ namespace yae
     {
 #if YAE_DEBUG_AUDIO_RENDERER
       std::cerr
-        << "AUDIO (c) SET CLOCK: " << framePosition.to_hhmmss_usec(":")
+        << "AUDIO (c) SET CLOCK: " << framePosition
         << std::endl;
 #endif
       clock_.setCurrentTime(framePosition, -0.016);
