@@ -20,6 +20,15 @@ using namespace yae;
 
 BOOST_AUTO_TEST_CASE(yae_time)
 {
+  BOOST_CHECK_LT(TTime(0, 1), TTime(0.9));
+  BOOST_CHECK_GT(TTime(0.9), TTime(0, 1));
+
+  BOOST_CHECK_LE(TTime(0, 1001), TTime(0.0));
+  BOOST_CHECK_GE(TTime(0.0), TTime(0, 1001));
+
+  BOOST_CHECK_LE(TTime(1, 1001), TTime(0.001));
+  BOOST_CHECK_GE(TTime(0.001), TTime(1, 1001));
+
   TTime t1(100, 1000);
   TTime t2(200, 1000);
   TTime t3(300, 1000);
