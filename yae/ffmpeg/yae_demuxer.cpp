@@ -2685,23 +2685,61 @@ namespace yae
     // zero-duration packets could cause problems, try to prevent them:
     summary_.replace_missing_durations();
 
-    const Timeline::Track & tt = summary_.get_track_timeline(trackId);
-    /*
-    std::size_t i0 = tt.lookup_sample_by_pts(ptsSpan.t0_);
-    std::size_t i1 = tt.lookup_sample_by_pts(ptsSpan.t1_);
-    std::size_t k0 = tt.leading_keyframe(i0);
-    std::size_t k1 = tt.closing_keyframe(i1);
+    // figure out the origin and region of interest:
+    std::size_t ka, kb, kc, kd, ia, ib;
+    {
+      const Timeline::Track & tt = summary_.get_track_timeline(trackId);
+      if (!tt.find_samples_for(ptsSpan, ka, kb, kc, kd, ia, ib))
+      {
+        YAE_ASSERT(false);
+        throw std::out_of_range("track does not overlap span, trim failed");
+      }
 
-    const TTime & dts_keyframe = tt.dts_[k0];
-    const TTime & dts_0 = tt.dts_[i0];
-    const TTime & dts_1 = tt.dts_[i1];
+      program_ = summary_.find_program(trackId);
+      origin_[program_] = tt.pts_[ia];
+      trim_[trackId] = Trim(tt.dts_[ka],
+                            tt.dts_[kb],
+                            tt.dts_[kc],
+                            tt.dts_[ib]);
+    }
 
+    // shortcut:
+    const Timeline & ref = yae::at(summary_.timeline_, program_);
+
+    // trim every other program/track to match:
     for (std::map<int, Timeline>::const_iterator
            i = summary_.timeline_.begin(); i != summary_.timeline_.end(); ++i)
     {
+      const int & program = i->first;
       const Timeline & t = i->second;
+
+      // adjust PTS span based on track origin offset
+      // between reference program and this program:
+      TTime offset = t.bbox_dts_.t0_ - ref.bbox_dts_.t0_;
+      Timespan span = ptsSpan + offset;
+
+      for (Timeline::TTracks::const_iterator
+             j = t.tracks_.begin(); j != t.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        const Timeline::Track & tt = j->second;
+        if (!tt.find_samples_for(span, ka, kb, kc, kd, ia, ib))
+        {
+          YAE_ASSERT(false);
+          continue;
+        }
+
+        if (!yae::has(origin_, program))
+        {
+          origin_[program] = tt.pts_[ia];
+        }
+
+        trim_[track_id] = Trim(tt.dts_[ka],
+                               tt.dts_[kb],
+                               tt.dts_[kc],
+                               tt.dts_[ib]);
+      }
     }
-    */
   }
 
   //----------------------------------------------------------------
@@ -2709,7 +2747,10 @@ namespace yae
   //
   void
   TrimmedDemuxer::populate()
-  {}
+  {
+    // FIXME: pkoshevoy: write me!
+    YAE_ASSERT(false);
+  }
 
   //----------------------------------------------------------------
   // TrimmedDemuxer::seek
@@ -2718,21 +2759,32 @@ namespace yae
   TrimmedDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                        const TTime & seekTime,
                        const std::string & trackId)
-  {}
+  {
+    // FIXME: pkoshevoy: write me!
+    YAE_ASSERT(false);
+    return -1;
+  }
 
   //----------------------------------------------------------------
   // TrimmedDemuxer::peek
   //
   TPacketPtr
   TrimmedDemuxer::peek(AVStream *& src) const
-  {}
+  {
+    // FIXME: pkoshevoy: write me!
+    YAE_ASSERT(false);
+    return TPacketPtr();
+  }
 
   //----------------------------------------------------------------
   // TrimmedDemuxer::summarize
   //
   void
   TrimmedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
-  {}
+  {
+    // FIXME: pkoshevoy: write me!
+    YAE_ASSERT(false);
+  }
 
 
   //----------------------------------------------------------------

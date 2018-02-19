@@ -629,10 +629,37 @@ namespace yae
     virtual void summarize(DemuxerSummary & summary,
                            double tolerance = 0.017);
 
+    //----------------------------------------------------------------
+    // Trim
+    //
+    // DTS points of interest of the trimmed region:
+    //
+    // re-encode [a, b), copy [b, c), re-encode [c, d)
+    //
+    struct Trim
+    {
+      Trim(const TTime & a = TTime(),
+           const TTime & b = TTime(),
+           const TTime & c = TTime(),
+           const TTime & d = TTime()):
+        a_(a),
+        b_(b),
+        c_(c),
+        d_(d)
+      {}
+
+      TTime a_;
+      TTime b_;
+      TTime c_;
+      TTime d_;
+    };
+
   protected:
     TDemuxerInterfacePtr src_;
     DemuxerSummary summary_;
-    std::map<int, Timespan> trim_;
+    int program_;
+    std::map<int, TTime> origin_;
+    std::map<std::string, Trim> trim_;
   };
 
   //----------------------------------------------------------------
