@@ -8,6 +8,7 @@
 
 // system includes:
 #include <iomanip>
+#include <iterator>
 #include <limits>
 #include <math.h>
 #include <sstream>
@@ -26,9 +27,9 @@ namespace yae
   struct subsec_t
   {
     subsec_t(const TTime & a = TTime()):
-      tsec_(a.time_ / a.base_),
-      tsub_(a.time_ % a.base_),
-      base_(a.base_)
+      tsec_(a.time_ / int64_t(a.base_)),
+      tsub_(a.time_ % int64_t(a.base_)),
+      base_(int64_t(a.base_))
     {
       if (tsub_ < 0)
       {
@@ -60,14 +61,14 @@ namespace yae
 
     inline bool eq(const subsec_t & ss) const
     {
-      subsec_t diff = ss.sub(*this);
+      subsec_t diff = sub(ss);
       return !(diff.tsec_ || diff.tsub_);
     }
 
     inline bool lt(const subsec_t & ss) const
     {
-      subsec_t diff = ss.sub(*this);
-      return diff.tsec_ > 0;
+      subsec_t diff = sub(ss);
+      return diff.tsec_ < 0;
     }
 
     inline bool le(const subsec_t & ss) const
@@ -96,11 +97,6 @@ namespace yae
     return os;
   }
 
-
-  //----------------------------------------------------------------
-  // TTime::Flicks
-  //
-  const uint64 TTime::Flicks = 705600000ULL;
 
   //----------------------------------------------------------------
   // TTime::TTime
@@ -637,6 +633,141 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Timeline::Track::generate_gops
+  //
+  void
+  Timeline::Track::generate_gops(std::map<TTime, std::size_t> & GOPs) const
+  {
+    GOPs.clear();
+
+    for (std::set<std::size_t>::const_iterator
+           i = keyframes_.begin(); i != keyframes_.end(); ++i)
+    {
+      const std::size_t & x = *i;
+      const TTime & t0 = pts_[x];
+      GOPs[t0] = x;
+    }
+
+    if (!pts_.empty())
+    {
+      // close the last GOP to simplify lookups:
+      std::size_t i = GOPs.empty() ? 0 : GOPs.rbegin()->second;
+      std::size_t n = pts_.size();
+
+      // find max PTS in the last GOP (can't assume it's the last value
+      // because PTS can be stored out-of-order due to B-frames):
+      TTime t1 = pts_[i++];
+      for (; i < n; i++)
+      {
+        TTime ti = pts_[i] + dur_[i];
+        if (t1 < ti)
+        {
+          t1 = ti;
+        }
+      }
+
+      GOPs[t1] = pts_.size();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::Track::find_bounding_samples
+  //
+  bool
+  Timeline::Track::find_bounding_samples(const Timespan & pts_span,
+                                         std::size_t & ka,
+                                         std::size_t & kb,
+                                         std::size_t & kc,
+                                         std::size_t & kd) const
+  {
+    // generate a lookup map for GOPs, indexed by PTS value:
+    std::map<TTime, std::size_t> GOPs;
+    generate_gops(GOPs);
+
+    std::map<TTime, std::size_t>::const_iterator
+      found = GOPs.upper_bound(pts_span.t0_);
+    if (found == GOPs.end())
+    {
+      // no overlap:
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    kb = found->second;
+    if (found != GOPs.begin())
+    {
+      std::advance(found, -1);
+    }
+    ka = found->second;
+
+    found = GOPs.lower_bound(pts_span.t1_);
+    if (found == GOPs.end())
+    {
+      kc = pts_.size();
+      kd = kc;
+    }
+    else
+    {
+      kd = found->second;
+      if (found != GOPs.begin())
+      {
+        std::advance(found, -1);
+      }
+      kc = found->second;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Timeline::Track::find_samples_for
+  //
+  bool
+  Timeline::Track::find_samples_for(const Timespan & pts_span,
+                                    std::size_t & ka,
+                                    std::size_t & kb,
+                                    std::size_t & kc,
+                                    std::size_t & kd,
+                                    std::size_t & ia,
+                                    std::size_t & ib) const
+  {
+    if (!find_bounding_samples(pts_span, ka, kb, kc, kd))
+    {
+      return false;
+    }
+
+    ia = ka;
+    for (; ia < kb; ia++)
+    {
+      const TTime & t0 = pts_[ia];
+      const TTime & dt = dur_[ia];
+      TTime t1 = t0 + dt;
+
+      if (t0 <= pts_span.t0_ && pts_span.t0_ < t1)
+      {
+        break;
+      }
+    }
+
+    ib = kd - 1;
+    for (std::size_t j = 1; j <= kd - kc; j++)
+    {
+      ib = kd - j;
+      const TTime & t0 = pts_[ib];
+      const TTime & dt = dur_[ib];
+      TTime t1 = t0 + dt;
+
+      if (t1 < pts_span.t1_)
+      {
+        break;
+      }
+    }
+
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
   // Timeline::add_frame
   //
   void
@@ -651,7 +782,7 @@ namespace yae
 
     if (keyframe)
     {
-      track.keyframes_[dts] = pts;
+      track.keyframes_.insert(track.dts_.size());
     }
 
     track.dts_.push_back(dts);
@@ -680,24 +811,6 @@ namespace yae
     }
 
     expand_bbox(bbox_pts_, t);
-  }
-
-  //----------------------------------------------------------------
-  // translate
-  //
-  static void
-  translate(TTimeMap & keyframes, const TTime & offset)
-  {
-    TTimeMap tmp;
-    for (TTimeMap::const_iterator j =
-           keyframes.begin(); j != keyframes.end(); ++j)
-    {
-      const TTime & dts = j->first;
-      const TTime & pts = j->second;
-      tmp[dts + offset] = pts + offset;
-    }
-
-    keyframes.swap(tmp);
   }
 
   //----------------------------------------------------------------
@@ -736,7 +849,6 @@ namespace yae
            i = tracks_.begin(); i != tracks_.end(); ++i)
     {
       Track & track = i->second;
-      translate(track.keyframes_, offset);
       translate(track.dts_span_, offset);
       translate(track.pts_span_, offset);
       translate(track.dts_, offset);
@@ -753,13 +865,17 @@ namespace yae
   // extend
   //
   static void
-  extend(TTimeMap & dst, const TTimeMap & src, const TTime & offset)
+  extend(std::set<std::size_t> & dst,
+         const std::set<std::size_t> & src,
+         std::size_t sample_offset)
   {
-    for (TTimeMap::const_iterator j = src.begin(); j != src.end(); ++j)
+    typedef std::pair<std::set<std::size_t>::iterator, bool> TResult;
+    for (std::set<std::size_t>::const_iterator
+           j = src.begin(); j != src.end(); ++j)
     {
-      const TTime & dts = j->first;
-      const TTime & pts = j->second;
-      dst[dts + offset] = pts + offset;
+      const std::size_t & sample = *j;
+      TResult r = dst.insert(sample + sample_offset);
+      YAE_ASSERT(r.second);
     }
   }
 
@@ -795,7 +911,7 @@ namespace yae
       Track & dst = tracks_[track_id];
 
       // update keyframes:
-      yae::extend(dst.keyframes_, src.keyframes_, offset);
+      yae::extend(dst.keyframes_, src.keyframes_, dst.dts_.size());
 
       // update DTS timeline:
       for (std::list<Timespan>::const_iterator
@@ -915,11 +1031,12 @@ namespace yae
       {
         oss << "keyframes " << track_id << ':';
 
-        for (TTimeMap::const_iterator j =
-               track.keyframes_.begin(); j != track.keyframes_.end(); ++j)
+        for (std::set<std::size_t>::const_iterator
+               j = track.keyframes_.begin(); j != track.keyframes_.end(); ++j)
         {
-          const TTime & dts = j->first;
-          const TTime & pts = j->second;
+          const std::size_t & sample = *j;
+          const TTime & dts = track.dts_[sample];
+          const TTime & pts = track.pts_[sample];
           oss << ' ' << pts << "(cts " << (pts - dts).get(1000) << "ms)";
         }
         oss << '\n';

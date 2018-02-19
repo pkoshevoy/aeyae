@@ -35,7 +35,8 @@ namespace yae
     // Flicks
     //
     // "universal" timebase, 705600000 ticks per second:
-    static const uint64 Flicks;
+    //
+    enum { Flicks = 705600000 };
 
     TTime();
     TTime(int64 time, uint64 base);
@@ -184,6 +185,14 @@ namespace yae
     inline double duration_sec() const
     { return empty() ? 0.0 : (t1_ - t0_).sec(); }
 
+    inline void
+    reset(const TTime & t0 = TTime(std::numeric_limits<int64>::max(), 1),
+          const TTime & t1 = TTime(std::numeric_limits<int64>::min(), 1))
+    {
+      t0_ = t0;
+      t1_ = t1;
+    }
+
     // returns non-zero value if interval s
     // and this interval are disjoint beyond given tolerance;
     //
@@ -240,11 +249,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TTimeMap
-  //
-  typedef std::map<TTime, TTime> TTimeMap;
-
-  //----------------------------------------------------------------
   // Timeline
   //
   struct YAE_API Timeline
@@ -255,6 +259,36 @@ namespace yae
     //
     struct Track
     {
+      // generate a lookup map for GOPs, indexed by PTS value:
+      void generate_gops(std::map<TTime, std::size_t> & GOPs) const;
+
+      // given PTS timespan [t0, t1)
+      // find keyframe samples [ka, kb, kc, kd] such that:
+      //
+      //      [t0,         t1)
+      //   [ka, [kb,... kc), kd)
+      //      [ia,         ib]
+      //
+      // then [kb, kc) samples can be copied
+      // and [ka, kb), [kc, kd) samples must be re-encoded
+      // to represent trimmed region [t0, t1)
+      //
+      bool find_bounding_samples(const Timespan & pts_span,
+                                 std::size_t & ka,
+                                 std::size_t & kb,
+                                 std::size_t & kc,
+                                 std::size_t & kd) const;
+
+      // same as above, additionally pass-back sample indices [ia, ib]
+      // corresponding to PTS span [t0, t1):
+      bool find_samples_for(const Timespan & pts_span,
+                            std::size_t & ka,
+                            std::size_t & kb,
+                            std::size_t & kc,
+                            std::size_t & kd,
+                            std::size_t & ia,
+                            std::size_t & ib) const;
+
       // timespan built-up in [dts, dts + dur) increments,
       // should be quick due to monotonically increasing dts:
       std::list<Timespan> dts_span_;
@@ -268,8 +302,8 @@ namespace yae
       std::vector<TTime> pts_;
       std::vector<TTime> dur_;
 
-      // time stamps of keyframes, per track, where key = dts and value = pts:
-      std::map<TTime, TTime> keyframes_;
+      // sample indices of keyframes:
+      std::set<std::size_t> keyframes_;
     };
 
     //----------------------------------------------------------------
@@ -385,6 +419,9 @@ namespace yae
 
     inline const std::map<TTime, uint64> & durations() const
     { return dur_; }
+
+    inline const std::list<TTime> & dts() const
+    { return dts_; }
 
   protected:
     // a sliding window, for calculating a window average:

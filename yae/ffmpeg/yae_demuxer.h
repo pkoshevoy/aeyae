@@ -388,6 +388,16 @@ namespace yae
                 const std::map<int, TTime> & prog_offset,
                 double tolerance);
 
+    // calculate packet duration for packets with zero duration,
+    // return true if any durations were replaced:
+    bool replace_missing_durations();
+
+    // find the program ID associated with a given track ID:
+    int find_program(const std::string & trackId) const;
+
+    // lookup timeline for a given track ID:
+    const Timeline::Track & get_track_timeline(const std::string & id) const;
+
     // global metadata:
     TDictionary metadata_;
 
@@ -592,6 +602,37 @@ namespace yae
     std::map<std::string, int> prog_lut_;
     std::map<int, std::map<TTime, std::size_t> > t0_;
     mutable std::size_t curr_;
+  };
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer
+  //
+  struct YAE_API TrimmedDemuxer : DemuxerInterface
+  {
+    void trim(const TDemuxerInterfacePtr & src,
+              const DemuxerSummary & summary,
+              // a source may have more than one program with completely
+              // separate timelines, so we need to know which timeline
+              // we are trimming:
+              const std::string & trackId,
+              const Timespan & ptsSpan);
+
+    virtual void populate();
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & seekTime,
+                     const std::string & trackId = std::string());
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const;
+
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.017);
+
+  protected:
+    TDemuxerInterfacePtr src_;
+    DemuxerSummary summary_;
+    std::map<int, Timespan> trim_;
   };
 
   //----------------------------------------------------------------

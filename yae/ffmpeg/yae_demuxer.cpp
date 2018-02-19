@@ -1712,6 +1712,101 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DemuxerSummary::replace_missing_durations
+  //
+  bool
+  DemuxerSummary::replace_missing_durations()
+  {
+    bool replaced = false;
+
+    for (std::map<int, Timeline>::iterator
+           i = timeline_.begin(); i != timeline_.end(); ++i)
+    {
+      Timeline & t = i->second;
+      for (std::map<std::string, Timeline::Track>::iterator
+             j = t.tracks_.begin(); j != t.tracks_.end(); ++j)
+      {
+        Timeline::Track & tt = j->second;
+        if (tt.dts_.size() < 2)
+        {
+          continue;
+        }
+
+        FramerateEstimator estimator;
+        estimator.push(tt.dts_[0]);
+
+        for (size_t k = 1, end = tt.dts_.size(); k < end; k++)
+        {
+          const TTime & t0 = tt.dts_[k - 1];
+          TTime & dur = tt.dur_[k - 1];
+
+          if (!dur.time_)
+          {
+            const TTime & t1 = tt.dts_[k];
+            dur = t1 - t0;
+            replaced = (dur.time_ != 0);
+          }
+
+          estimator.push(estimator.dts().back() + dur);
+        }
+
+        if (!tt.dur_.back().time_)
+        {
+          FramerateEstimator::Framerate stats;
+          double fps = estimator.get(stats);
+
+          const TTime & head = tt.dur_.front();
+          TTime & tail = tt.dur_.back();
+          tail = frameDurationForFrameRate(fps).rebased(head.base_);
+          replaced = (tail.time_ != 0);
+        }
+      }
+    }
+
+    return replaced;
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::find_program
+  //
+  int
+  DemuxerSummary::find_program(const std::string & trackId) const
+  {
+    int program = -1;
+
+    for (std::map<int, Timeline>::const_iterator
+           i = timeline_.begin(); i != timeline_.end(); ++i)
+    {
+      const Timeline & t = i->second;
+      if (yae::has(t.tracks_, trackId))
+      {
+        program = i->first;
+        break;
+      }
+    }
+
+    if (program == -1)
+    {
+      throw std::out_of_range(trackId);
+    }
+
+    return program;
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::get_track_timeline
+  //
+  const Timeline::Track &
+  DemuxerSummary::get_track_timeline(const std::string & trackId) const
+  {
+    int program = find_program(trackId);
+    const Timeline & timeline = yae::at(timeline_, program);
+    const Timeline::Track & t = yae::at(timeline.tracks_, trackId);
+    return t;
+  }
+
+
+  //----------------------------------------------------------------
   // operator <<
   //
   std::ostream &
@@ -2573,6 +2668,72 @@ namespace yae
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
   }
+
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::trim
+  //
+  void
+  TrimmedDemuxer::trim(const TDemuxerInterfacePtr & src,
+                       const DemuxerSummary & summary,
+                       const std::string & trackId,
+                       const Timespan & ptsSpan)
+  {
+    src_ = src;
+    summary_ = summary;
+
+    // zero-duration packets could cause problems, try to prevent them:
+    summary_.replace_missing_durations();
+
+    const Timeline::Track & tt = summary_.get_track_timeline(trackId);
+    /*
+    std::size_t i0 = tt.lookup_sample_by_pts(ptsSpan.t0_);
+    std::size_t i1 = tt.lookup_sample_by_pts(ptsSpan.t1_);
+    std::size_t k0 = tt.leading_keyframe(i0);
+    std::size_t k1 = tt.closing_keyframe(i1);
+
+    const TTime & dts_keyframe = tt.dts_[k0];
+    const TTime & dts_0 = tt.dts_[i0];
+    const TTime & dts_1 = tt.dts_[i1];
+
+    for (std::map<int, Timeline>::const_iterator
+           i = summary_.timeline_.begin(); i != summary_.timeline_.end(); ++i)
+    {
+      const Timeline & t = i->second;
+    }
+    */
+  }
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::populate
+  //
+  void
+  TrimmedDemuxer::populate()
+  {}
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::seek
+  //
+  int
+  TrimmedDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                       const TTime & seekTime,
+                       const std::string & trackId)
+  {}
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::peek
+  //
+  TPacketPtr
+  TrimmedDemuxer::peek(AVStream *& src) const
+  {}
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::summarize
+  //
+  void
+  TrimmedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
+  {}
+
 
   //----------------------------------------------------------------
   // convert_to
