@@ -102,15 +102,13 @@ namespace yae
   // TTime::MaxFlicks
   //
   TTime
-  TTime::MaxFlicks(std::numeric_limits<int64_t>::max() / TTime::Flicks,
-                   TTime::Flicks);
+  TTime::MaxFlicks(std::numeric_limits<int64_t>::max(), TTime::Flicks);
 
   //----------------------------------------------------------------
   // TTime::MinFlicks
   //
   TTime
-  TTime::MinFlicks(std::numeric_limits<int64_t>::min() / TTime::Flicks,
-                   TTime::Flicks);
+  TTime::MinFlicks(std::numeric_limits<int64_t>::min(), TTime::Flicks);
 
   //----------------------------------------------------------------
   // TTime::TTime

@@ -859,8 +859,8 @@ namespace yae
   //
   ProgramBuffer::ProgramBuffer():
     num_packets_(0),
-    t0_(std::numeric_limits<int64_t>::max(), 1),
-    t1_(std::numeric_limits<int64_t>::min(), 1)
+    t0_(TTime::MaxFlicks),
+    t1_(TTime::MinFlicks)
   {}
 
   //----------------------------------------------------------------
@@ -871,8 +871,8 @@ namespace yae
   {
     packets_.clear();
     num_packets_ = 0;
-    t0_.reset(std::numeric_limits<int64_t>::max(), 1);
-    t1_.reset(std::numeric_limits<int64_t>::min(), 1);
+    t0_ = TTime::MaxFlicks;
+    t1_ = TTime::MinFlicks;
     next_dts_.clear();
   }
 
@@ -1079,7 +1079,7 @@ namespace yae
                      AVStream *& src,
                      int stream_index)
   {
-    TTime dts(std::numeric_limits<int64_t>::max(), 1);
+    TTime dts(TTime::MaxFlicks);
     TPacketPtr packet_ptr = peek(ctx, dts, stream_index);
 
     if (packet_ptr)
@@ -1097,8 +1097,8 @@ namespace yae
       if (!num_packets_)
       {
         // reset the timespan:
-        t0_ = TTime(std::numeric_limits<int64_t>::max(), 1);
-        t1_ = TTime(std::numeric_limits<int64_t>::min(), 1);
+        t0_ = TTime(TTime::MaxFlicks);
+        t1_ = TTime(TTime::MinFlicks);
       }
     }
 
@@ -1131,8 +1131,8 @@ namespace yae
         if (!num_packets_)
         {
           // reset the timespan:
-          t0_ = TTime(std::numeric_limits<int64_t>::max(), 1);
-          t1_ = TTime(std::numeric_limits<int64_t>::min(), 1);
+          t0_ = TTime(TTime::MaxFlicks);
+          t1_ = TTime(TTime::MinFlicks);
         }
 
         return true;
@@ -1148,7 +1148,7 @@ namespace yae
   void
   ProgramBuffer::update_duration(const AVFormatContext & ctx)
   {
-    TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+    TTime dts_min(TTime::MaxFlicks);
     TPacketPtr next = peek(ctx, dts_min);
     if (next)
     {
@@ -1520,7 +1520,7 @@ namespace yae
 
     if (!buffer || stream_index < 0)
     {
-      TTime dts_min(std::numeric_limits<int64_t>::max(), 1);
+      TTime dts_min(TTime::MaxFlicks);
       buffer = choose(dts_min, stream_index);
 
       if (!buffer)
@@ -1960,7 +1960,7 @@ namespace yae
   TPacketPtr
   DemuxerBuffer::peek(AVStream *& src) const
   {
-    TTime dts(std::numeric_limits<int64_t>::max(), 1);
+    TTime dts(TTime::MaxFlicks);
     int stream_index = -1;
 
     TProgramBufferPtr program = src_.choose(dts, stream_index);
@@ -2177,7 +2177,7 @@ namespace yae
     TDemuxerInterfacePtr best;
     TPacketPtr best_pkt;
     AVStream * best_stream = NULL;
-    TTime best_dts(std::numeric_limits<int64_t>::max(), 1);
+    TTime best_dts(TTime::MaxFlicks);
 
     for (std::list<TDemuxerInterfacePtr>::const_iterator
            i = src_.begin(); i != src_.end(); ++i)
