@@ -1088,7 +1088,7 @@ namespace yae
       if (!track.keyframes_.empty())
       {
         oss << "keyframes " << track_id << ':';
-
+#if 0
         for (std::set<std::size_t>::const_iterator
                j = track.keyframes_.begin(); j != track.keyframes_.end(); ++j)
         {
@@ -1097,6 +1097,31 @@ namespace yae
           const TTime & pts = track.pts_[sample];
           oss << ' ' << pts << "(cts " << (pts - dts).get(1000) << "ms)";
         }
+#else
+        // present it as a GOP:
+        static const char * alphabet = "0123456789abcdefghijklmnopqrstuvwxyz";
+        std::map<TTime, std::size_t> GOPs;
+        track.generate_gops(GOPs);
+
+        std::map<TTime, std::size_t>::const_iterator jend = GOPs.end();
+        std::map<TTime, std::size_t>::const_iterator j0 = GOPs.begin();
+        std::map<TTime, std::size_t>::const_iterator j1 = j0;
+        std::advance(j1, 1);
+        for (; j1 != jend; ++j0, ++j1)
+        {
+          const TTime & t0 = j0->first;
+          const TTime & t1 = j1->first;
+          std::size_t i0 = j0->second;
+          std::size_t i1 = j1->second;
+
+          oss << '\n' << t0 << ' ';
+          for (std::size_t ix = i0; ix < i1; ix++)
+          {
+            std::size_t x = (ix - i0) % 10;
+            oss << ((x > 0) ? '.' : alphabet[((ix - i0) / 10) % 36]);
+          }
+        }
+#endif
         oss << '\n';
       }
     }
