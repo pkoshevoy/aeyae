@@ -38,12 +38,15 @@ namespace yae
       }
     }
 
+    inline int64_t tsec_abs() const
+    { return tsec_ < 0 ? ~tsec_ : tsec_; }
+
     inline int64_t max_base(const subsec_t & other) const
     {
       int64_t base = std::max<int64_t>(base_, other.base_);
       int64_t nsec = std::numeric_limits<int64_t>::max() / base;
 
-      if (nsec < abs(tsec_) || nsec < abs(other.tsec_))
+      if (nsec < tsec_abs() || nsec < other.tsec_abs())
       {
         // try to avoid an overflow:
         base = std::min<int64_t>(base_, other.base_);
