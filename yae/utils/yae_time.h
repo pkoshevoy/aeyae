@@ -38,6 +38,9 @@ namespace yae
     //
     enum { Flicks = 705600000 };
 
+    static TTime MaxFlicks;
+    static TTime MinFlicks;
+
     TTime();
     TTime(int64 time, uint64 base);
     TTime(double seconds);
