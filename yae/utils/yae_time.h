@@ -287,6 +287,23 @@ namespace yae
 
       // same as above, additionally pass-back sample indices [ia, ib]
       // corresponding to PTS span [t0, t1):
+      //
+      // points of interest for clipping a region of a track timeline:
+      //
+      //   |.....[.....|..........|..........|....].......
+      //   ka    ia    kb                    kc   ib      kd
+      //         t0                                t1
+      //
+      // for a seamless artifact-free triming one has to:
+      //   - decode [ka, kb), drop [ka, ia), encode [ia, kb)
+      //   - copy [kb, kc)
+      //   - decode [kc, ib], encode [kc, ib]
+      //
+      // if decoding/encoding is not possible then:
+      //   - drop [ka, ia)
+      //   - copy [ia, ib]
+      //   - expect decoding artifacts in the resulting output
+      //
       bool find_samples_for(const Timespan & pts_span,
                             std::size_t & ka,
                             std::size_t & kb,
