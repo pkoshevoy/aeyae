@@ -165,8 +165,8 @@ namespace yae
   //
   struct YAE_API Timespan
   {
-    Timespan(const TTime & t0 = TTime(std::numeric_limits<int64>::max(), 1),
-             const TTime & t1 = TTime(std::numeric_limits<int64>::min(), 1));
+    Timespan(const TTime & t0 = TTime::MaxFlicks,
+             const TTime & t1 = TTime::MinFlicks);
 
     Timespan & operator += (const TTime & offset);
 
@@ -189,8 +189,8 @@ namespace yae
     { return empty() ? 0.0 : (t1_ - t0_).sec(); }
 
     inline void
-    reset(const TTime & t0 = TTime(std::numeric_limits<int64>::max(), 1),
-          const TTime & t1 = TTime(std::numeric_limits<int64>::min(), 1))
+    reset(const TTime & t0 = TTime::MaxFlicks,
+          const TTime & t1 = TTime::MinFlicks)
     {
       t0_ = t0;
       t1_ = t1;
@@ -274,7 +274,10 @@ namespace yae
       //
       // then [kb, kc) samples can be copied
       // and [ka, kb), [kc, kd) samples must be re-encoded
-      // to represent trimmed region [t0, t1)
+      // to represent trimmed region [t0, t1)... unless one
+      // is willing to skip re-encoding and tolerate some
+      // decoding artifacts in which case [ia, kb) and [kc, ib)
+      // can be copied instead.
       //
       bool find_bounding_samples(const Timespan & pts_span,
                                  std::size_t & ka,

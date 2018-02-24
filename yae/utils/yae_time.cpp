@@ -38,9 +38,23 @@ namespace yae
       }
     }
 
-    subsec_t add(const subsec_t & other) const
+    inline int64_t max_base(const subsec_t & other) const
     {
       int64_t base = std::max<int64_t>(base_, other.base_);
+      int64_t nsec = std::numeric_limits<int64_t>::max() / base;
+
+      if (nsec < abs(tsec_) || nsec < abs(other.tsec_))
+      {
+        // try to avoid an overflow:
+        base = std::min<int64_t>(base_, other.base_);
+      }
+
+      return base;
+    }
+
+    subsec_t add(const subsec_t & other) const
+    {
+      int64_t base = max_base(other);
       int64_t sec = (tsec_ + other.tsec_);
       int64_t ss = (tsub_ * base) / base_ + (other.tsub_ * base) / other.base_;
       TTime t(sec * base + ss, base);
@@ -49,7 +63,7 @@ namespace yae
 
     subsec_t sub(const subsec_t & other) const
     {
-      int64_t base = std::max<int64_t>(base_, other.base_);
+      int64_t base = max_base(other);
       int64_t sec = (tsec_ - other.tsec_);
       int64_t a = (tsub_ * base) / base_;
       int64_t b = (other.tsub_ * base) / other.base_;
@@ -59,22 +73,54 @@ namespace yae
       return subsec_t(t);
     }
 
-    inline bool eq(const subsec_t & ss) const
+    inline bool eq(const subsec_t & other) const
     {
-      subsec_t diff = sub(ss);
-      return !(diff.tsec_ || diff.tsub_);
+      return (tsec_ != other.tsec_) ? false : subsec_eq(other);
     }
 
-    inline bool lt(const subsec_t & ss) const
+    inline bool subsec_eq(const subsec_t & other) const
     {
-      subsec_t diff = sub(ss);
-      return diff.tsec_ < 0;
+      int64_t base = max_base(other);
+      int64_t a = (tsub_ * base) / base_;
+      int64_t b = (other.tsub_ * base) / other.base_;
+      return a == b;
     }
 
-    inline bool le(const subsec_t & ss) const
+    inline bool lt(const subsec_t & other) const
     {
-      subsec_t diff = ss.sub(*this);
-      return diff.tsec_ >= 0;
+      return
+        (other.tsec_ < tsec_) ? false :
+        (tsec_ < other.tsec_) ? true :
+        subsec_lt(other);
+    }
+
+    inline bool subsec_lt(const subsec_t & other) const
+    {
+      int64_t base = max_base(other);
+      int64_t a = (tsub_ * base) / base_;
+      int64_t b = (other.tsub_ * base) / other.base_;
+      return a < b;
+    }
+
+    inline bool gt(const subsec_t & other) const
+    {
+      return
+        (tsec_ < other.tsec_) ? false :
+        (other.tsec_ < tsec_) ? true :
+        subsec_gt(other);
+    }
+
+    inline bool subsec_gt(const subsec_t & other) const
+    {
+      int64_t base = max_base(other);
+      int64_t a = (tsub_ * base) / base_;
+      int64_t b = (other.tsub_ * base) / other.base_;
+      return b < a;
+    }
+
+    inline bool le(const subsec_t & other) const
+    {
+      return !gt(other);
     }
 
     inline operator TTime() const

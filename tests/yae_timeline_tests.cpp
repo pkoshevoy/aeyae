@@ -56,6 +56,26 @@ BOOST_AUTO_TEST_CASE(yae_time)
 
   std::string ms = t.to_hhmmss_ms();
   BOOST_CHECK_EQUAL(ms, std::string("01:01:01.033"));
+
+  TTime za(std::numeric_limits<int64_t>::max(), 1);
+  TTime zb(-2000, 1000);
+  TTime zc(std::numeric_limits<int64_t>::min(), 2);
+  BOOST_CHECK_GT(za, zb);
+  BOOST_CHECK_LT(zb, za);
+  BOOST_CHECK_LT(zc, za);
+  BOOST_CHECK_LT(zc, zb);
+
+  TTime apb = za + zb;
+  BOOST_CHECK_EQUAL(apb.time_, std::numeric_limits<int64_t>::max() - 2);
+
+  TTime cmb = zc - zb;
+  BOOST_CHECK_LT(zc, cmb);
+
+  TTime cmcpb = zc - cmb;
+  BOOST_CHECK_EQUAL(cmcpb, zb);
+
+  TTime apc = za + zc;
+  BOOST_CHECK_EQUAL(apc.time_, std::numeric_limits<int64_t>::max() / 2);
 }
 
 
