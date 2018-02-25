@@ -22,13 +22,24 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // ClipInfo
+  //
+  struct ClipInfo
+  {
+    std::string track_;
+    std::string t0_;
+    std::string t1_;
+  };
+
   //----------------------------------------------------------------
   // load
   //
   TDemuxerInterfacePtr
   load(DemuxerSummary & summary,
        const std::list<std::string> & sources,
-       const std::map<std::string, std::pair<std::string, std::string> > & trim,
+       const std::map<std::string, ClipInfo> & clip,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
        const double discont_tolerance = 0.017);

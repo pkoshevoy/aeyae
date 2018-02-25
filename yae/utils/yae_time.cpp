@@ -668,6 +668,8 @@ namespace yae
       hh_ = std::max<int64_t>(0, hh_);
       mm_ = std::max<int64_t>(0, mm_);
       ss_ = std::max<int64_t>(0, ss_);
+      xx_ = std::max<int64_t>(0, xx_);
+      xx_base_ = std::max<int64_t>(1, xx_base_);
 
       t.tsec_ = ss_ + 60 * (mm_ + 60 * hh_);
 
@@ -1151,12 +1153,24 @@ namespace yae
   {
     GOPs.clear();
 
-    for (std::set<std::size_t>::const_iterator
-           i = keyframes_.begin(); i != keyframes_.end(); ++i)
+    if (keyframes_.empty())
     {
-      const std::size_t & x = *i;
-      const TTime & t0 = pts_[x];
-      GOPs[t0] = x;
+      // audio, subs... every frame is a keyframe:
+      for (std::size_t i = 0, end = dts_.size(); i < end; i++)
+      {
+        const TTime & t0 = pts_[i];
+        GOPs[t0] = i;
+      }
+    }
+    else
+    {
+      for (std::set<std::size_t>::const_iterator
+             i = keyframes_.begin(); i != keyframes_.end(); ++i)
+      {
+        const std::size_t & x = *i;
+        const TTime & t0 = pts_[x];
+        GOPs[t0] = x;
+      }
     }
 
     if (!pts_.empty())

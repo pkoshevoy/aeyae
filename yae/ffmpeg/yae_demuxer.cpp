@@ -2747,6 +2747,9 @@ namespace yae
       }
     }
 
+    // seek to the starting position, to lower peek latency:
+    src_->seek(AVSEEK_FLAG_BACKWARD, yae::at(trim_, track_).a_, track_);
+
     // NOTE: if re-encoding then do it here, once, and store
     // the resulting re-encoded samples in TrimmedDemuxer both
     // for the leading and trailing re-encoded regions
@@ -2783,7 +2786,7 @@ namespace yae
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
-    TTime ts = seekTime + origin;
+    TTime ts = (seekTime.time_ == kMinInt64) ? origin : seekTime + origin;
 
     // clamp to trimmed region:
     ts = std::min(trim.d_, std::max(trim.a_, ts));
@@ -2799,14 +2802,14 @@ namespace yae
   TrimmedDemuxer::peek(AVStream *& src) const
   {
     TPacketPtr packet_ptr;
-    if (src_)
+    while (src_)
     {
       packet_ptr = src_->peek(src);
-    }
+      if (!packet_ptr)
+      {
+        break;
+      }
 
-    if (packet_ptr)
-    {
-      // adjust pts/dts:
       AvPkt & pkt = *packet_ptr;
       AVPacket & packet = pkt.get();
 
@@ -2814,16 +2817,24 @@ namespace yae
       const TTime & origin = yae::at(origin_, pkt.program_);
 
       TTime dts(packet.dts * src->time_base.num, src->time_base.den);
-      if (dts < trim.a_ || dts >= trim.d_)
+      if (dts < trim.a_)
+      {
+        src_->get(src);
+        continue;
+      }
+
+      if (trim.d_ < dts)
       {
         return TPacketPtr();
       }
 
+      // adjust pts/dts:
       int64_t shift = av_rescale_q(-origin.time_,
                                    Rational(1, origin.base_),
                                    src->time_base);
       packet.pts += shift;
       packet.dts += shift;
+      break;
     }
 
     return packet_ptr;
@@ -2855,6 +2866,7 @@ namespace yae
       {
         const std::string & track_id = j->first;
         const Timeline::Track & tt = j->second;
+        const bool is_video_track = al::starts_with(track_id, "v:");
 
         YAE_ASSERT(tt.dts_.size() == tt.pts_.size() &&
                    tt.dts_.size() == tt.dur_.size());
@@ -2868,6 +2880,7 @@ namespace yae
         // if the [ka, kb) region is re-encoded then ia could shift
         // so that's probably not right either...
         //
+        FramerateEstimator & fps = summary.fps_[track_id];
         for (std::size_t k = x.ka_; k <= x.ib_; k++)
         {
           const TTime & dts = tt.dts_[k];
@@ -2881,6 +2894,12 @@ namespace yae
                                      pts - origin,
                                      dur,
                                      tolerance);
+
+
+          if (is_video_track)
+          {
+            fps.push(dts);
+          }
         }
       }
     }
@@ -2892,20 +2911,25 @@ namespace yae
            i = summary_.chapters_.begin(); i != summary_.chapters_.end(); ++i)
     {
       const TTime & pts = i->first;
-      const TChapter & chapter = i->second;
       if (!timespan_.contains(pts))
       {
         continue;
       }
 
+      TChapter chapter = i->second;
+      chapter.span_ -= timespan_.t0_;
       summary.chapters_[pts - timespan_.t0_] = chapter;
     }
 
     // copy the rest:
+    summary.metadata_ = summary_.metadata_;
+    summary.trk_meta_ = summary_.trk_meta_;
+    summary.streams_ = summary_.streams_;
     summary.decoders_ = summary_.decoders_;
     summary.programs_ = summary_.programs_;
-    summary.trk_meta_ = summary_.trk_meta_;
-    summary.metadata_ = summary_.metadata_;
+
+    // get the track id and time position of the "first" packet:
+    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
   }
 
 

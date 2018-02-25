@@ -211,7 +211,7 @@ mainMayThrowException(int argc, char ** argv)
 
   // parse input parameters:
   std::list<std::string> sources;
-  std::map<std::string, std::pair<std::string, std::string> > trim;
+  std::map<std::string, yae::ClipInfo> clip;
   std::string output_path;
   bool save_keyframes = false;
 
@@ -230,15 +230,18 @@ mainMayThrowException(int argc, char ** argv)
     }
     else if (arg == "-t")
     {
-      // trim timestamps should be evaluated after the source is analyzed
+      // clip boundaries should be evaluated after the source is analyzed
       // and framerate is known:
-      std::pair<std::string, std::string> & t = trim[sources.back()];
+      yae::ClipInfo & trim = clip[sources.back()];
 
       ++i;
-      t.first = i->toUtf8().constData();
+      trim.track_ = i->toUtf8().constData();
 
       ++i;
-      t.second = i->toUtf8().constData();
+      trim.t0_ = i->toUtf8().constData();
+
+      ++i;
+      trim.t1_ = i->toUtf8().constData();
     }
     else if (arg == "-o")
     {
@@ -258,7 +261,7 @@ mainMayThrowException(int argc, char ** argv)
   // load the sources:
   yae::DemuxerSummary summary;
   yae::TDemuxerInterfacePtr demuxer =
-    yae::load(summary, sources, trim, buffer_duration, discont_tolerance);
+    yae::load(summary, sources, clip, buffer_duration, discont_tolerance);
 
   if (!output_path.empty())
   {
@@ -304,6 +307,7 @@ main(int argc, char ** argv)
   try
   {
     r = mainMayThrowException(argc, argv);
+    std::cout << std::flush;
   }
   catch (const std::exception & e)
   {
