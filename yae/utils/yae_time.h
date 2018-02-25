@@ -191,6 +191,9 @@ namespace yae
     inline Timespan operator - (const TTime & offset) const
     { return this->operator + (-offset); }
 
+    inline TTime dt() const
+    { return t1_ - t0_; }
+
     inline bool empty() const
     { return t1_ < t0_; }
 

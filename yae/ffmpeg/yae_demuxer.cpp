@@ -940,11 +940,19 @@ namespace yae
     AvPkt & pkt = *packet_ptr;
     AVPacket & packet = pkt.get();
 
-    TTime next_dts = yae::get(next_dts_, packet.stream_index,
-                              TTime(-stream->codecpar->video_delay *
-                                    stream->avg_frame_rate.den,
-                                    stream->avg_frame_rate.num));
+    TTime delay;
+    if (stream->avg_frame_rate.num &&
+        stream->avg_frame_rate.den &&
+        stream->codecpar->video_delay)
+    {
+      delay.reset(stream->avg_frame_rate.den * stream->codecpar->video_delay,
+                  stream->avg_frame_rate.num);
+    }
 
+    TTime pts;
+    get_pts(pts, stream, packet);
+
+    TTime next_dts = yae::get(next_dts_, packet.stream_index, pts - delay);
     next_dts.time_ = (av_rescale_q(next_dts.time_,
                                    Rational(1, next_dts.base_),
                                    stream->time_base) *
@@ -1447,6 +1455,18 @@ namespace yae
 
       YAE_ASSERT(!pkt.trackId_.empty());
       program->push(packet_ptr, stream);
+#if 0
+      TTime dts(packet.dts * stream->time_base.num, stream->time_base.den);
+      TTime pts(packet.pts * stream->time_base.num, stream->time_base.den);
+      TTime dur(packet.duration * stream->time_base.num, stream->time_base.den);
+      bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
+      std::cout
+        << "PacketBuffer::populate: " << pkt.trackId_
+        << ", dts: " << Timespan(dts, dts + dur)
+        << ", pts: " << Timespan(pts, pts + dur)
+        << (keyframe ? ", keyframe" : "")
+        << std::endl;
+#endif
     }
 
     return 0;
@@ -1996,8 +2016,22 @@ namespace yae
 
           if (!stream.empty())
           {
-            TPacketPtr pkt = found->second.front();
-            return pkt;
+            TPacketPtr packet_ptr = found->second.front();
+#if 0
+            const AvPkt & pkt = *packet_ptr;
+            const AVPacket & packet = pkt.get();
+            TTime dts(packet.dts * src->time_base.num, src->time_base.den);
+            TTime pts(packet.pts * src->time_base.num, src->time_base.den);
+            TTime dur(packet.duration * src->time_base.num, src->time_base.den);
+            bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
+            std::cout
+              << "DemuxerBuffer::peek: " << pkt.trackId_
+              << ", dts: " << Timespan(dts, dts + dur)
+              << ", pts: " << Timespan(pts, pts + dur)
+              << (keyframe ? ", keyframe" : "")
+              << std::endl;
+#endif
+            return packet_ptr;
           }
         }
       }
@@ -2395,10 +2429,13 @@ namespace yae
         AVChapter * av = (AVChapter *)av_mallocz(sizeof(AVChapter));
         muxer->chapters[ix] = av;
         av->id = ix;
+
+        TTime dt = ch.span_.t1_ - ch.span_.t0_;
         av->time_base.num = 1;
-        av->time_base.den = ch.span_.t0_.base_;
-        av->start = ch.span_.t0_.get(ch.span_.t1_.base_);
-        av->end = ch.span_.t1_.time_;
+        av->time_base.den = dt.base_;
+        av->start = ch.span_.t0_.get(dt.base_);
+        av->end = ch.span_.t1_.get(dt.base_);
+
         setDictionary(av->metadata, ch.metadata_);
       }
     }
@@ -2607,6 +2644,7 @@ namespace yae
       }
 
       curr_++;
+      std::cout << "FIXME: pkoshevoy: NEXT SOURCE!" << std::endl;
 
       if (curr_ < src_.size())
       {
@@ -2822,15 +2860,47 @@ namespace yae
       TTime t0(packet.dts * src->time_base.num, src->time_base.den);
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
       TTime t1 = t0 + dt;
+
+#if 0
+      TTime dts(packet.dts * src->time_base.num, src->time_base.den);
+      TTime pts(packet.pts * src->time_base.num, src->time_base.den);
+      TTime dur(packet.duration * src->time_base.num, src->time_base.den);
+      bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
+      std::cout
+        << "TrimmedDemuxer::peek: src: " << pkt.trackId_
+        << ", dts: " << Timespan(dts, dts + dur)
+        << ", pts: " << Timespan(pts, pts + dur)
+        << (keyframe ? ", keyframe" : "")
+        << std::endl;
+#endif
+
       if (t1 <= trim.a_)
       {
+#if 0
+        std::cout
+          << "TrimmedDemuxer::peek: packet too old: "
+          << t1 << " <= " << trim.a_
+          << std::endl;
+#endif
         src_->get(src);
         continue;
       }
 
       if (trim.d_ <= t0)
       {
-        return TPacketPtr();
+#if 0
+        std::cout
+          << "TrimmedDemuxer::peek: packet beyond trim end: "
+          << trim.d_ << " <= " << t0
+          << std::endl;
+#endif
+        if (pkt.trackId_ == track_)
+        {
+          return TPacketPtr();
+        }
+
+        src_->get(src);
+        continue;
       }
 
       // adjust pts/dts:
@@ -2839,6 +2909,18 @@ namespace yae
                                    src->time_base);
       packet.pts += shift;
       packet.dts += shift;
+#if 0
+      dts.reset(packet.dts * src->time_base.num, src->time_base.den);
+      pts.reset(packet.pts * src->time_base.num, src->time_base.den);
+      dur.reset(packet.duration * src->time_base.num, src->time_base.den);
+
+      std::cout
+        << "TrimmedDemuxer::peek: out: " << pkt.trackId_
+        << ", dts: " << Timespan(dts, dts + dur)
+        << ", pts: " << Timespan(pts, pts + dur)
+        << (keyframe ? ", keyframe" : "")
+        << std::endl;
+#endif
       break;
     }
 
@@ -2912,18 +2994,33 @@ namespace yae
     // trim the chapters, under the assumption that chapters refer
     // to the track that was trimmed:
     YAE_ASSERT(summary_.chapters_.empty() || origin_.size() == 1);
+    std::vector<TChapter> chapters;
     for (std::map<TTime, TChapter>::const_iterator
            i = summary_.chapters_.begin(); i != summary_.chapters_.end(); ++i)
     {
-      const TTime & pts = i->first;
-      if (!timespan_.contains(pts))
+      TChapter chapter = i->second;
+      if (!timespan_.overlaps(chapter.span_))
       {
         continue;
       }
 
-      TChapter chapter = i->second;
       chapter.span_ -= timespan_.t0_;
-      summary.chapters_[pts - timespan_.t0_] = chapter;
+      chapter.span_.t0_ = std::max(chapter.span_.t0_, TTime());
+      chapter.span_.t1_ = std::min(chapter.span_.t1_, timespan_.dt());
+      chapters.push_back(chapter);
+    }
+
+    for (std::size_t i = 1, z = chapters.size(); i < z; i++)
+    {
+      TChapter & c0 = chapters[i - 1];
+      const TChapter & c1 = chapters[i];
+      c0.span_.t1_ = c1.span_.t0_;
+    }
+
+    for (std::size_t i = 0, z = chapters.size(); i < z; i++)
+    {
+      const TChapter & chapter = chapters[i];
+      summary.chapters_[chapter.span_.t0_] = chapter;
     }
 
     // copy the rest:
