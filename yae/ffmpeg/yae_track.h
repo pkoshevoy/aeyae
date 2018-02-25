@@ -147,6 +147,15 @@ namespace yae
   //
   typedef Queue<TPacketPtr> TPacketQueue;
 
+  //----------------------------------------------------------------
+  // clone
+  //
+  // return a copy of this but with av_packet_clone(packet_),
+  // so that modifying packet_.pts/dts of the clone
+  // would not affect the original:
+  //
+  YAE_API TPacketPtr clone(const TPacketPtr & packet_ptr);
+
 
   //----------------------------------------------------------------
   // AvFrm

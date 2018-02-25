@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard lib:
+#include <algorithm>
 #include <inttypes.h>
 #include <iterator>
 #include <limits>
@@ -1121,7 +1122,12 @@ namespace yae
     if (found != packets_.end())
     {
       std::list<TPacketPtr> & pkts = found->second;
-      if (!pkts.empty() && pkts.front() == packet_ptr)
+
+      // NOTE: packet_ptr being popped may be a clone created by
+      // the serial demuxer or trimmed demuxer, so we can't compare
+      // pkts.front() and packet_ptr directly...
+      //
+      if (!pkts.empty() /* && pkts.front() == packet_ptr */)
       {
         pkts.pop_front();
 
@@ -1873,6 +1879,12 @@ namespace yae
     for (std::map<std::string, FramerateEstimator>::const_iterator
            i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
     {
+      const std::string & track_id = i->first;
+      if (!al::starts_with(track_id, "v:"))
+      {
+        continue;
+      }
+
       const FramerateEstimator & estimator = i->second;
       oss << i->first << "\n"
           << estimator
@@ -2253,14 +2265,6 @@ namespace yae
         streams[pkt.trackId_] = src;
       }
 
-#if 0
-      if (al::starts_with(pkt.trackId_, "_:"))
-      {
-        // skip non audio/video/subtitle tracks:
-        continue;
-      }
-#endif
-
       Timeline & timeline = programs[pkt.program_];
 
       TTime dts;
@@ -2510,6 +2514,7 @@ namespace yae
         prog_lut_[track_id] = prog_id;
       }
 
+      std::vector<TTime> & t0 = t0_[prog_id];
       std::vector<TTime> & t1 = t1_[prog_id];
       std::vector<TTime> & offset = offset_[prog_id];
 
@@ -2518,11 +2523,9 @@ namespace yae
       TTime src_t1 = src_t0 + src_dt;
       TTime src_offset = timeline.bbox_dts_.t0_ - src_t0;
 
+      t0.push_back(src_t0);
       t1.push_back(src_t1);
       offset.push_back(src_offset);
-
-      std::map<TTime, std::size_t> & t0 = t0_[prog_id];
-      t0[src_t0] = src_.size();
     }
 
     src_.push_back(src);
@@ -2586,7 +2589,7 @@ namespace yae
     while (curr_ < src_.size())
     {
       const DemuxerInterface & curr = *(src_[curr_]);
-      TPacketPtr packet_ptr = curr.peek(src);
+      TPacketPtr packet_ptr = yae::clone(curr.peek(src));
       if (packet_ptr)
       {
         // adjust pts/dts:
@@ -2628,18 +2631,16 @@ namespace yae
   std::size_t
   SerialDemuxer::find(const TTime & seek_time, int prog_id) const
   {
-    const std::map<TTime, std::size_t> & t0 = yae::at(t0_, prog_id);
-
-    std::map<TTime, std::size_t>::const_iterator
-      found = t0.lower_bound(seek_time);
-
-    if (found == t0.end())
+    const std::vector<TTime> & t1 = yae::at(t1_, prog_id);
+    std::vector<TTime>::const_iterator found = std::upper_bound(t1.begin(),
+                                                                t1.end(),
+                                                                seek_time);
+    if (found == t1.end())
     {
-      return 0;
+      return src_.size();
     }
 
-    std::size_t i = found->second;
-    const std::vector<TTime> & t1 = yae::at(t1_, prog_id);
+    std::size_t i = std::distance(found, t1.begin());
     const TTime & end_time = t1[i];
     return (seek_time < end_time) ? i : src_.size();
   }
@@ -2700,7 +2701,8 @@ namespace yae
       }
 
       program_ = summary_.find_program(trackId);
-      origin_[program_] = tt.pts_[x.ia_];
+      // origin_[program_] = tt.pts_[x.ia_];
+      origin_[program_] = tt.pts_[x.ka_];
       trim_[trackId] = Trim(tt.dts_[x.ka_],
                             tt.dts_[x.kb_],
                             tt.dts_[x.kc_],
@@ -2736,7 +2738,8 @@ namespace yae
 
         if (!yae::has(origin_, program))
         {
-          origin_[program] = tt.pts_[x.ia_];
+          // origin_[program] = tt.pts_[x.ia_];
+          origin_[program] = tt.pts_[x.ka_];
         }
 
         trim_[track_id] = Trim(tt.dts_[x.ka_],
@@ -2749,7 +2752,7 @@ namespace yae
 
     // seek to the starting position, to lower peek latency:
     src_->seek(AVSEEK_FLAG_BACKWARD, yae::at(trim_, track_).a_, track_);
-
+    src_->populate();
     // NOTE: if re-encoding then do it here, once, and store
     // the resulting re-encoded samples in TrimmedDemuxer both
     // for the leading and trailing re-encoded regions
@@ -2786,7 +2789,7 @@ namespace yae
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
-    TTime ts = (seekTime.time_ == kMinInt64) ? origin : seekTime + origin;
+    TTime ts = (seekTime.time_ < 0) ? origin : seekTime + origin;
 
     // clamp to trimmed region:
     ts = std::min(trim.d_, std::max(trim.a_, ts));
@@ -2804,7 +2807,7 @@ namespace yae
     TPacketPtr packet_ptr;
     while (src_)
     {
-      packet_ptr = src_->peek(src);
+      packet_ptr = yae::clone(src_->peek(src));
       if (!packet_ptr)
       {
         break;
@@ -2816,14 +2819,16 @@ namespace yae
       const Trim & trim = yae::at(trim_, pkt.trackId_);
       const TTime & origin = yae::at(origin_, pkt.program_);
 
-      TTime dts(packet.dts * src->time_base.num, src->time_base.den);
-      if (dts < trim.a_)
+      TTime t0(packet.dts * src->time_base.num, src->time_base.den);
+      TTime dt(packet.duration * src->time_base.num, src->time_base.den);
+      TTime t1 = t0 + dt;
+      if (t1 <= trim.a_)
       {
         src_->get(src);
         continue;
       }
 
-      if (trim.d_ < dts)
+      if (trim.d_ <= t0)
       {
         return TPacketPtr();
       }

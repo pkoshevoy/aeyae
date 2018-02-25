@@ -85,6 +85,14 @@ namespace yae
     return *this;
   }
 
+  //----------------------------------------------------------------
+  // clone
+  //
+  TPacketPtr
+  clone(const TPacketPtr & packet_ptr)
+  {
+    return packet_ptr ? TPacketPtr(new AvPkt(*packet_ptr)) : TPacketPtr();
+  }
 
   //----------------------------------------------------------------
   // AvFrm::AvFrm

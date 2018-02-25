@@ -603,10 +603,10 @@ namespace yae
 
     std::vector<TDemuxerInterfacePtr> src_;
     std::vector<DemuxerSummary> summary_;
+    std::map<int, std::vector<TTime> > t0_;
     std::map<int, std::vector<TTime> > t1_;
     std::map<int, std::vector<TTime> > offset_;
     std::map<std::string, int> prog_lut_;
-    std::map<int, std::map<TTime, std::size_t> > t0_;
     mutable std::size_t curr_;
   };
 
