@@ -34,6 +34,7 @@ namespace yae
   TDemuxerInterfacePtr
   load(DemuxerSummary & summary,
        const std::list<std::string> & sources,
+       const std::map<std::string, std::pair<std::string, std::string> > & trim,
        // these are expressed in seconds:
        const double buffer_duration,
        const double discont_tolerance)
@@ -84,7 +85,15 @@ namespace yae
       // show the summary:
       std::cout << "\nparallel:\n" << summary << std::endl;
 
-      serial_demuxer->append(parallel_demuxer, summary);
+      if (yae::has(trim, filePath))
+      {
+        // FIXME: write me!
+        YAE_ASSERT(false);
+      }
+      else
+      {
+        serial_demuxer->append(parallel_demuxer, summary);
+      }
     }
 
     if (serial_demuxer->empty())

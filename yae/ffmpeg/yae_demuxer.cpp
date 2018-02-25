@@ -2679,28 +2679,33 @@ namespace yae
                        const std::string & trackId,
                        const Timespan & ptsSpan)
   {
+    YAE_ASSERT(!src_);
+
     src_ = src;
     summary_ = summary;
+    track_ = trackId;
+    timespan_ = ptsSpan;
 
     // zero-duration packets could cause problems, try to prevent them:
     summary_.replace_missing_durations();
 
     // figure out the origin and region of interest:
-    std::size_t ka, kb, kc, kd, ia, ib;
+    Timeline::Track::Trim x;
     {
       const Timeline::Track & tt = summary_.get_track_timeline(trackId);
-      if (!tt.find_samples_for(ptsSpan, ka, kb, kc, kd, ia, ib))
+      if (!tt.find_samples_for(ptsSpan, x))
       {
         YAE_ASSERT(false);
         throw std::out_of_range("track does not overlap span, trim failed");
       }
 
       program_ = summary_.find_program(trackId);
-      origin_[program_] = tt.pts_[ia];
-      trim_[trackId] = Trim(tt.dts_[ka],
-                            tt.dts_[kb],
-                            tt.dts_[kc],
-                            tt.dts_[ib]);
+      origin_[program_] = tt.pts_[x.ia_];
+      trim_[trackId] = Trim(tt.dts_[x.ka_],
+                            tt.dts_[x.kb_],
+                            tt.dts_[x.kc_],
+                            tt.dts_[x.ib_]);
+      x_[trackId] = x;
     }
 
     // shortcut:
@@ -2723,7 +2728,7 @@ namespace yae
       {
         const std::string & track_id = j->first;
         const Timeline::Track & tt = j->second;
-        if (!tt.find_samples_for(span, ka, kb, kc, kd, ia, ib))
+        if (!tt.find_samples_for(span, x))
         {
           YAE_ASSERT(false);
           continue;
@@ -2731,15 +2736,20 @@ namespace yae
 
         if (!yae::has(origin_, program))
         {
-          origin_[program] = tt.pts_[ia];
+          origin_[program] = tt.pts_[x.ia_];
         }
 
-        trim_[track_id] = Trim(tt.dts_[ka],
-                               tt.dts_[kb],
-                               tt.dts_[kc],
-                               tt.dts_[ib]);
+        trim_[track_id] = Trim(tt.dts_[x.ka_],
+                               tt.dts_[x.kb_],
+                               tt.dts_[x.kc_],
+                               tt.dts_[x.ib_]);
+        x_[track_id] = x;
       }
     }
+
+    // NOTE: if re-encoding then do it here, once, and store
+    // the resulting re-encoded samples in TrimmedDemuxer both
+    // for the leading and trailing re-encoded regions
   }
 
   //----------------------------------------------------------------
@@ -2748,8 +2758,10 @@ namespace yae
   void
   TrimmedDemuxer::populate()
   {
-    // FIXME: pkoshevoy: write me!
-    YAE_ASSERT(false);
+    if (src_)
+    {
+      src_->populate();
+    }
   }
 
   //----------------------------------------------------------------
@@ -2760,9 +2772,24 @@ namespace yae
                        const TTime & seekTime,
                        const std::string & trackId)
   {
-    // FIXME: pkoshevoy: write me!
-    YAE_ASSERT(false);
-    return -1;
+    if (!src_)
+    {
+      return AVERROR_STREAM_NOT_FOUND;
+    }
+
+    std::string track_id = trackId.empty() ? track_ : trackId;
+    const int program = summary_.find_program(track_id);
+    const Timeline::Track & track = summary_.get_track_timeline(track_id);
+    const Trim & trim = yae::at(trim_, track_id);
+    const TTime & origin = yae::at(origin_, program);
+
+    TTime ts = seekTime + origin;
+
+    // clamp to trimmed region:
+    ts = std::min(trim.d_, std::max(trim.a_, ts));
+
+    int r = src_->seek(seekFlags, ts, track_id);
+    return r;
   }
 
   //----------------------------------------------------------------
@@ -2771,9 +2798,35 @@ namespace yae
   TPacketPtr
   TrimmedDemuxer::peek(AVStream *& src) const
   {
-    // FIXME: pkoshevoy: write me!
-    YAE_ASSERT(false);
-    return TPacketPtr();
+    TPacketPtr packet_ptr;
+    if (src_)
+    {
+      packet_ptr = src_->peek(src);
+    }
+
+    if (packet_ptr)
+    {
+      // adjust pts/dts:
+      AvPkt & pkt = *packet_ptr;
+      AVPacket & packet = pkt.get();
+
+      const Trim & trim = yae::at(trim_, pkt.trackId_);
+      const TTime & origin = yae::at(origin_, pkt.program_);
+
+      TTime dts(packet.dts * src->time_base.num, src->time_base.den);
+      if (dts < trim.a_ || dts >= trim.d_)
+      {
+        return TPacketPtr();
+      }
+
+      int64_t shift = av_rescale_q(-origin.time_,
+                                   Rational(1, origin.base_),
+                                   src->time_base);
+      packet.pts += shift;
+      packet.dts += shift;
+    }
+
+    return packet_ptr;
   }
 
   //----------------------------------------------------------------
@@ -2782,8 +2835,77 @@ namespace yae
   void
   TrimmedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    // FIXME: pkoshevoy: write me!
-    YAE_ASSERT(false);
+    YAE_ASSERT(src_);
+    if (!src_)
+    {
+      return;
+    }
+
+    // re-summarize the trimmed region:
+    for (std::map<int, Timeline>::const_iterator
+           i = summary_.timeline_.begin(); i != summary_.timeline_.end(); ++i)
+    {
+      const int & program = i->first;
+      const Timeline & timeline = i->second;
+      const TTime & origin = yae::at(origin_, program);
+      Timeline & trimmed_timeline = summary.timeline_[program];
+
+      for (Timeline::TTracks::const_iterator
+             j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        const Timeline::Track & tt = j->second;
+
+        YAE_ASSERT(tt.dts_.size() == tt.pts_.size() &&
+                   tt.dts_.size() == tt.dur_.size());
+
+        const Trim & trim = yae::at(trim_, track_id);
+        const Timeline::Track::Trim & x = yae::at(x_, track_id);
+
+        // NOTE: starting from keyframe ka to avoid decoding artifacts,
+        // but not sure whether should be starting from ia instead...
+        //
+        // if the [ka, kb) region is re-encoded then ia could shift
+        // so that's probably not right either...
+        //
+        for (std::size_t k = x.ka_; k <= x.ib_; k++)
+        {
+          const TTime & dts = tt.dts_[k];
+          const TTime & pts = tt.pts_[k];
+          const TTime & dur = tt.dur_[k];
+          const bool keyframe = yae::has(tt.keyframes_, k);
+
+          trimmed_timeline.add_frame(track_id,
+                                     keyframe,
+                                     dts - origin,
+                                     pts - origin,
+                                     dur,
+                                     tolerance);
+        }
+      }
+    }
+
+    // trim the chapters, under the assumption that chapters refer
+    // to the track that was trimmed:
+    YAE_ASSERT(summary_.chapters_.empty() || origin_.size() == 1);
+    for (std::map<TTime, TChapter>::const_iterator
+           i = summary_.chapters_.begin(); i != summary_.chapters_.end(); ++i)
+    {
+      const TTime & pts = i->first;
+      const TChapter & chapter = i->second;
+      if (!timespan_.contains(pts))
+      {
+        continue;
+      }
+
+      summary.chapters_[pts - timespan_.t0_] = chapter;
+    }
+
+    // copy the rest:
+    summary.decoders_ = summary_.decoders_;
+    summary.programs_ = summary_.programs_;
+    summary.trk_meta_ = summary_.trk_meta_;
+    summary.metadata_ = summary_.metadata_;
   }
 
 

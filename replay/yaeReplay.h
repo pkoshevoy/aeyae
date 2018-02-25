@@ -28,6 +28,7 @@ namespace yae
   TDemuxerInterfacePtr
   load(DemuxerSummary & summary,
        const std::list<std::string> & sources,
+       const std::map<std::string, std::pair<std::string, std::string> > & trim,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
        const double discont_tolerance = 0.017);

@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system includes:
+#include <ctype.h>
 #include <iomanip>
 #include <iterator>
 #include <limits>
@@ -484,6 +485,455 @@ namespace yae
     return oss;
   }
 
+  //----------------------------------------------------------------
+  // is_one_of
+  //
+  static const char *
+  is_one_of(const std::string & text, const char ** options)
+  {
+    for (const char ** i = options; *i != NULL; ++i)
+    {
+      const char * option = *i;
+      if (text == option)
+      {
+        return option;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // subsec_base_for
+  //
+  static int64_t
+  subsec_base_for(const std::string & number)
+  {
+    int64_t base = 1;
+
+    for (std::size_t i = 0, n = number.size(); i < n; i++)
+    {
+      base *= 10;
+    }
+
+    return base;
+  }
+
+  //----------------------------------------------------------------
+  // TimeParser
+  //
+  struct TimeParser
+  {
+    TimeParser():
+      sign_(0),
+      hh_(-1),
+      mm_(-1),
+      ss_(-1),
+      xx_(-1),
+      xx_base_(-1),
+      xx_sep_(NULL)
+    {}
+
+    //----------------------------------------------------------------
+    // Token
+    //
+    struct Token
+    {
+      enum type_t { kUndefined, kNumber, kOther };
+      Token(): type_(kUndefined) {}
+
+      inline bool is_empty() const
+      { return text_.empty(); }
+
+      inline bool is_number() const
+      { return type_ == kNumber; }
+
+      inline bool is_other() const
+      { return type_ == kOther; }
+
+      inline void clear()
+      {
+        type_ = kUndefined;
+        text_.clear();
+      }
+
+      type_t type_;
+      std::string text_;
+    };
+
+    bool parse_time(TTime & result,
+                    const char * hhmmss_xx,
+                    const char * mm_separator,
+                    const char * xx_separator,
+                    const double frame_rate)
+    {
+      std::vector<Token> tokens;
+      Token token;
+
+      std::size_t num_numbers = 0;
+      std::size_t num_others = 0;
+
+      const std::size_t sz = strlen(hhmmss_xx);
+      for (const char * i = hhmmss_xx, * end = hhmmss_xx + sz; i < end; i++)
+      {
+        char c = *i;
+        if (isspace(c))
+        {
+          if (!token.is_empty())
+          {
+            num_numbers += (token.is_number() ? 1 : 0);
+            num_others += (token.is_other() ? 1 : 0);
+            tokens.push_back(token);
+            token.clear();
+          }
+
+          continue;
+        }
+
+        if ('0' <= c && c <= '9')
+        {
+          if (!token.is_empty() && !token.is_number())
+          {
+            tokens.push_back(token);
+            token.clear();
+            num_others++;
+          }
+
+          token.type_ = Token::kNumber;
+          token.text_ += c;
+        }
+        else
+        {
+          if (!token.is_empty() && !token.is_other())
+          {
+            tokens.push_back(token);
+            token.clear();
+            num_numbers++;
+          }
+
+          token.type_ = Token::kOther;
+          token.text_ += c;
+        }
+      }
+
+      if (!token.is_empty())
+      {
+        num_numbers += (token.is_number() ? 1 : 0);
+        num_others += (token.is_other() ? 1 : 0);
+        tokens.push_back(token);
+        token.clear();
+      }
+
+      if (tokens.empty())
+      {
+        return false;
+      }
+
+      static const char * mm_separators[] = { ":", NULL };
+
+      sign_ = 0;
+      hh_ = -1;
+      mm_ = -1;
+      ss_ = -1;
+      xx_ = -1;
+      xx_base_ = -1;
+      xx_sep_ = NULL;
+
+      // handle (optional) sign first:
+      if (tokens.front().is_other())
+      {
+        const std::string & text = tokens.front().text_;
+        if (text == "-")
+        {
+          sign_ = -1;
+        }
+        else if (text == "+")
+        {
+          sign_ = 1;
+        }
+      }
+
+      if (sign_)
+      {
+        tokens.erase(tokens.begin());
+        num_others--;
+      }
+
+      if (!parse(tokens, num_numbers, num_others, mm_separator, xx_separator))
+      {
+        return false;
+      }
+
+      subsec_t t;
+      hh_ = std::max<int64_t>(0, hh_);
+      mm_ = std::max<int64_t>(0, mm_);
+      ss_ = std::max<int64_t>(0, ss_);
+
+      t.tsec_ = ss_ + 60 * (mm_ + 60 * hh_);
+
+      static const char * framenum_separators[] = { ":", ";", NULL };
+      if (xx_sep_ && is_one_of(std::string(xx_sep_), framenum_separators))
+      {
+        if (!frame_rate || int64_t(ceil(frame_rate)) <= xx_)
+        {
+          return false;
+        }
+
+        TTime dt = frameDurationForFrameRate(frame_rate);
+        t.tsub_ = dt.time_ * xx_;
+        t.base_ = dt.base_;
+      }
+      else
+      {
+        t.tsub_ = std::max<int64_t>(0, xx_);
+        t.base_ = std::max<int64_t>(1, xx_base_);
+      }
+
+      result = sign_ < 0 ? -TTime(t) : TTime(t);
+      return true;
+    }
+
+  protected:
+    bool parse(const std::vector<Token> & tokens,
+               const std::size_t num_numbers,
+               const std::size_t num_others,
+               const char * mm_separator,
+               const char * xx_separator)
+    {
+      if (num_numbers < 1)
+      {
+        return false;
+      }
+
+      const std::size_t num_tokens = tokens.size();
+      if (num_numbers == num_others && num_tokens % 2 == 0)
+      {
+        // parse XXu YYu ZZu WWu formatted time:
+        for (std::size_t i = 0; i < num_tokens; i += 2)
+        {
+          const Token & a = tokens.at(i);
+          const Token & b = tokens.at(i + 1);
+          if (!parse_number_and_label(a, b))
+          {
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      if (num_numbers == 1 && num_others == 0)
+      {
+        // seconds:
+        ss_ = toScalar<int64_t>(tokens.front().text_);
+        return true;
+      }
+
+      if (num_numbers == 2 && num_others == 1)
+      {
+        const Token & t3 = tokens[0];
+        const Token & t2 = tokens[1];
+        const Token & t1 = tokens[2];
+
+        if (parse_xx(t2, t1, xx_separator) &&
+            parse(ss_, t3))
+        {
+          return true;
+        }
+
+        if (parse(ss_, t2, t1, mm_separator) &&
+            parse(mm_, t3))
+        {
+          return true;
+        }
+
+        return false;
+      }
+
+      if (num_numbers == 3 && num_others == 2)
+      {
+        const Token & t5 = tokens[0];
+        const Token & t4 = tokens[1];
+        const Token & t3 = tokens[2];
+        const Token & t2 = tokens[3];
+        const Token & t1 = tokens[4];
+
+        if (parse_xx(t2, t1, xx_separator) &&
+            parse(ss_, t4, t3, mm_separator) &&
+            parse(mm_, t5))
+        {
+          return true;
+        }
+
+        if (parse(ss_, t2, t1, mm_separator) &&
+            parse(mm_, t4, t3, mm_separator) &&
+            parse(hh_, t5))
+        {
+          return true;
+        }
+
+        return false;
+      }
+
+      if (num_numbers == 4 && num_others == 3)
+      {
+        const Token & t7 = tokens[0];
+        const Token & t6 = tokens[1];
+        const Token & t5 = tokens[2];
+        const Token & t4 = tokens[3];
+        const Token & t3 = tokens[4];
+        const Token & t2 = tokens[5];
+        const Token & t1 = tokens[6];
+
+        if (parse_xx(t2, t1, xx_separator) &&
+            parse(ss_, t4, t3, mm_separator) &&
+            parse(mm_, t6, t5, mm_separator) &&
+            parse(hh_, t7))
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    bool parse_number_and_label(const Token & a, const Token & b)
+    {
+      // accept a number followed by units label
+      if (a.is_other() || b.is_number())
+      {
+        return false;
+      }
+
+      if (b.text_ == "h" && hh_ == -1)
+      {
+        hh_ = toScalar<int64_t>(a.text_);
+      }
+      else if (b.text_ == "m" && mm_ == -1)
+      {
+        mm_ = toScalar<int64_t>(a.text_);
+      }
+      else if (b.text_ == "s" && ss_ == -1)
+      {
+        ss_ = toScalar<int64_t>(a.text_);
+      }
+      else if (b.text_ == "ms" && xx_ == -1)
+      {
+        xx_ = toScalar<int64_t>(a.text_);
+        xx_base_ = 1000;
+      }
+      else if (b.text_ == "us" && xx_ == -1)
+      {
+        xx_ = toScalar<int64_t>(a.text_);
+        xx_base_ = 1000000;
+      }
+      else
+      {
+        // unknown units label, or same field specified more than once:
+        return false;
+      }
+
+      return true;
+    }
+
+    bool parse_xx(const Token & a,
+                  const Token & b,
+                  const char * xx_separator)
+    {
+      // accept a separator followed by a number:
+      if (xx_sep_ || a.is_number() || b.is_other())
+      {
+        return false;
+      }
+
+      if (xx_separator && a.text_ == xx_separator)
+      {
+        xx_sep_ = xx_separator;
+      }
+      else if (!xx_separator)
+      {
+        static const char * xx_separators[] = { ".", ":", ";", NULL };
+        xx_sep_ = is_one_of(a.text_, xx_separators);
+      }
+
+      if (!xx_sep_)
+      {
+        // same field parsed more than once:
+        return false;
+      }
+
+      xx_ = toScalar<int64_t>(b.text_);
+      xx_base_ = subsec_base_for(b.text_);
+      return true;
+    }
+
+    bool parse(int64_t & result,
+               const Token & a,
+               const Token & b,
+               const char * separator)
+    {
+      // accept a separator followed by a number:
+      if (result != -1 || a.is_number() || b.is_other())
+      {
+        return false;
+      }
+
+      const char * sep = NULL;
+      if (separator && a.text_ == separator)
+      {
+        sep = separator;
+      }
+      else if (!separator)
+      {
+        static const char * separators[] = { ":", NULL };
+        sep = is_one_of(a.text_, separators);
+      }
+
+      if (!sep)
+      {
+        return false;
+      }
+
+      result = toScalar<int64_t>(b.text_);
+      return true;
+    }
+
+    bool parse(int64_t & result, const Token & a)
+    {
+      if (result != -1 || !a.is_number())
+      {
+        return false;
+      }
+
+      result = toScalar<int64_t>(a.text_);
+      return true;
+    }
+
+    int64_t sign_;
+    int64_t hh_;
+    int64_t mm_;
+    int64_t ss_;
+    int64_t xx_;
+    int64_t xx_base_;
+    const char * xx_sep_;
+  };
+
+  //----------------------------------------------------------------
+  // parse_time
+  //
+  bool parse_time(TTime & result,
+                  const char * hhmmss_xx,
+                  const char * mm_separator,
+                  const char * xx_separator,
+                  const double frame_rate)
+  {
+    TimeParser parser;
+    return parser.parse_time(result,
+                             hhmmss_xx,
+                             mm_separator,
+                             xx_separator,
+                             frame_rate);
+  }
 
   //----------------------------------------------------------------
   // Timespan::Timespan

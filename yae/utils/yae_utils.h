@@ -285,6 +285,28 @@ namespace yae
   //----------------------------------------------------------------
   // at
   //
+  template <typename TValue>
+  static const TValue &
+  at(const std::vector<TValue> & v, int offset)
+  {
+    std::size_t i = offset < 0 ? v.size() - offset : offset;
+    return v.at(i);
+  }
+
+  //----------------------------------------------------------------
+  // at
+  //
+  template <typename TValue>
+  static TValue &
+  at(std::vector<TValue> & v, int offset)
+  {
+    std::size_t i = offset < 0 ? v.size() - offset : offset;
+    return v.at(i);
+  }
+
+  //----------------------------------------------------------------
+  // at
+  //
   template <typename TKey, typename TValue>
   static const TValue &
   at(const std::map<TKey, TValue> & lut, const TKey & key)
@@ -352,6 +374,17 @@ namespace yae
       const TValue & defaultValue = TValue())
   {
     return get<std::string, TValue>(lut, std::string(key), defaultValue);
+  }
+
+  //----------------------------------------------------------------
+  // has
+  //
+  template <typename TValue>
+  static bool
+  has(const std::set<TValue> & values, const TValue & value)
+  {
+    typename std::set<TValue>::const_iterator found = values.find(value);
+    return found != values.end();
   }
 
   //----------------------------------------------------------------

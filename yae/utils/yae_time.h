@@ -159,6 +159,18 @@ namespace yae
   YAE_API std::ostream &
   operator << (std::ostream & oss, const TTime & t);
 
+  //----------------------------------------------------------------
+  // parse_time
+  //
+  // parse time expressed as [[[-][hh]mm]ss[[.:;]xxx]]
+  //
+  YAE_API bool
+  parse_time(TTime & t,
+             const char * hh_mm_ss_xx,
+             const char * mm_separator = NULL,
+             const char * xx_separator = NULL,
+             const double frame_rate = 0.0);
+
 
   //----------------------------------------------------------------
   // Timespan
@@ -184,6 +196,10 @@ namespace yae
 
     inline bool contains(const Timespan & s) const
     { return t0_ <= s.t0_ && s.t1_ <= t1_; }
+
+    // check whether t is contained in [t0, t1):
+    inline bool contains(const TTime & t) const
+    { return t0_ <= t && t < t1_; }
 
     inline double duration_sec() const
     { return empty() ? 0.0 : (t1_ - t0_).sec(); }
@@ -262,6 +278,45 @@ namespace yae
     //
     struct Track
     {
+
+      //----------------------------------------------------------------
+      // Trim
+      //
+      // points of interest for clipping a region of a track timeline:
+      //
+      //   |.....[.....|..........|..........|....].......
+      //   ka    ia    kb                    kc   ib      kd
+      //         t0                                t1
+      //
+      // for a seamless artifact-free triming one has to:
+      //   - decode [ka, kb), drop [ka, ia), encode [ia, kb)
+      //   - copy [kb, kc)
+      //   - decode [kc, ib], encode [kc, ib]
+      //
+      // if decoding/encoding is not possible then:
+      //   - drop [ka, ia)
+      //   - copy [ia, ib]
+      //   - expect decoding artifacts in the resulting output
+      //
+      struct Trim
+      {
+        Trim():
+          ka_(std::numeric_limits<std::size_t>::max()),
+          kb_(std::numeric_limits<std::size_t>::max()),
+          kc_(std::numeric_limits<std::size_t>::max()),
+          kd_(std::numeric_limits<std::size_t>::max()),
+          ia_(std::numeric_limits<std::size_t>::max()),
+          ib_(std::numeric_limits<std::size_t>::max())
+        {}
+
+        std::size_t ka_;
+        std::size_t kb_;
+        std::size_t kc_;
+        std::size_t kd_;
+        std::size_t ia_;
+        std::size_t ib_;
+      };
+
       // generate a lookup map for GOPs, indexed by PTS value:
       void generate_gops(std::map<TTime, std::size_t> & GOPs) const;
 
@@ -288,22 +343,6 @@ namespace yae
       // same as above, additionally pass-back sample indices [ia, ib]
       // corresponding to PTS span [t0, t1):
       //
-      // points of interest for clipping a region of a track timeline:
-      //
-      //   |.....[.....|..........|..........|....].......
-      //   ka    ia    kb                    kc   ib      kd
-      //         t0                                t1
-      //
-      // for a seamless artifact-free triming one has to:
-      //   - decode [ka, kb), drop [ka, ia), encode [ia, kb)
-      //   - copy [kb, kc)
-      //   - decode [kc, ib], encode [kc, ib]
-      //
-      // if decoding/encoding is not possible then:
-      //   - drop [ka, ia)
-      //   - copy [ia, ib]
-      //   - expect decoding artifacts in the resulting output
-      //
       bool find_samples_for(const Timespan & pts_span,
                             std::size_t & ka,
                             std::size_t & kb,
@@ -311,6 +350,18 @@ namespace yae
                             std::size_t & kd,
                             std::size_t & ia,
                             std::size_t & ib) const;
+
+      inline bool
+      find_samples_for(const Timespan & pts_span, Trim & samples) const
+      {
+        return find_samples_for(pts_span,
+                                samples.ka_,
+                                samples.kb_,
+                                samples.kc_,
+                                samples.kd_,
+                                samples.ia_,
+                                samples.ib_);
+      }
 
       // timespan built-up in [dts, dts + dur) increments,
       // should be quick due to monotonically increasing dts:

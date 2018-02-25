@@ -79,6 +79,50 @@ BOOST_AUTO_TEST_CASE(yae_time)
 }
 
 
+BOOST_AUTO_TEST_CASE(yae_parse_time)
+{
+  TTime t;
+  BOOST_CHECK(parse_time(t, "0s"));
+  BOOST_CHECK_EQUAL(t.time_, 0);
+  BOOST_CHECK_EQUAL(t.base_, 1);
+
+  BOOST_CHECK(parse_time(t, "1m"));
+  BOOST_CHECK_EQUAL(t.time_, 60);
+  BOOST_CHECK_EQUAL(t.base_, 1);
+
+  BOOST_CHECK(parse_time(t, "1m 1s"));
+  BOOST_CHECK_EQUAL(t.time_, 61);
+  BOOST_CHECK_EQUAL(t.base_, 1);
+
+  BOOST_CHECK(parse_time(t, "-5s100ms"));
+  BOOST_CHECK_EQUAL(t.time_, -5100);
+  BOOST_CHECK_EQUAL(t.base_, 1000);
+
+  BOOST_CHECK(parse_time(t, "-1.1"));
+  BOOST_CHECK_EQUAL(t.time_, -11);
+  BOOST_CHECK_EQUAL(t.base_, 10);
+
+  BOOST_CHECK(parse_time(t, "00:00:00;01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.time_, 1001);
+  BOOST_CHECK_EQUAL(t.base_, 30000);
+
+  BOOST_CHECK(parse_time(t, "-00:00:00;01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.time_, -1001);
+  BOOST_CHECK_EQUAL(t.base_, 30000);
+
+  BOOST_CHECK(parse_time(t, "00:00:00.001", ":", "."));
+  BOOST_CHECK_EQUAL(t.time_, 1);
+  BOOST_CHECK_EQUAL(t.base_, 1000);
+
+  BOOST_CHECK(parse_time(t, "01:01:01:01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.time_, 1001 + 30000 * (1 + 60 * (1 + 60)));
+  BOOST_CHECK_EQUAL(t.base_, 30000);
+
+  BOOST_CHECK(parse_time(t, "01:01:01.01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.time_, 1 + 100 * (1 + 60 * (1 + 60)));
+  BOOST_CHECK_EQUAL(t.base_, 100);
+}
+
 BOOST_AUTO_TEST_CASE(yae_timeline)
 {
   TTime t1(100, 1000);

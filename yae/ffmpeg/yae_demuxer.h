@@ -80,6 +80,7 @@ namespace yae
 
     bool isSeekable() const;
 
+    // NOTE: in general seekTime refers to DTS
     int seekTo(int seekFlags, // AVSEEK_FLAG_* bitmask
                const TTime & seekTime,
                const std::string & trackId = std::string());
@@ -331,6 +332,7 @@ namespace yae
     // these are global, not per-program (avformat API doesn't it):
     void get_chapters(std::map<TTime, TChapter> & chapters) const;
 
+    // NOTE: in general seekTime refers to DTS
     int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
              const TTime & seekTime,
              const std::string & trackId = std::string());
@@ -443,6 +445,7 @@ namespace yae
 
     virtual void populate() = 0;
 
+    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                      const TTime & seekTime,
                      const std::string & trackId = std::string()) = 0;
@@ -492,6 +495,7 @@ namespace yae
 
     virtual void populate();
 
+    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                      const TTime & seekTime,
                      const std::string & trackId = std::string());
@@ -525,6 +529,7 @@ namespace yae
 
     virtual void populate();
 
+    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                      const TTime & seekTime,
                      const std::string & trackId = std::string());
@@ -581,6 +586,7 @@ namespace yae
 
     virtual void populate();
 
+    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                      const TTime & seekTime,
                      const std::string & trackId = std::string());
@@ -619,6 +625,7 @@ namespace yae
 
     virtual void populate();
 
+    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
                      const TTime & seekTime,
                      const std::string & trackId = std::string());
@@ -657,9 +664,12 @@ namespace yae
   protected:
     TDemuxerInterfacePtr src_;
     DemuxerSummary summary_;
+    std::string track_;
+    Timespan timespan_;
     int program_;
     std::map<int, TTime> origin_;
     std::map<std::string, Trim> trim_;
+    std::map<std::string, Timeline::Track::Trim> x_;
   };
 
   //----------------------------------------------------------------

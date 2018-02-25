@@ -211,6 +211,7 @@ mainMayThrowException(int argc, char ** argv)
 
   // parse input parameters:
   std::list<std::string> sources;
+  std::map<std::string, std::pair<std::string, std::string> > trim;
   std::string output_path;
   bool save_keyframes = false;
 
@@ -226,6 +227,18 @@ mainMayThrowException(int argc, char ** argv)
       {
         sources.push_back(filePath);
       }
+    }
+    else if (arg == "-t")
+    {
+      // trim timestamps should be evaluated after the source is analyzed
+      // and framerate is known:
+      std::pair<std::string, std::string> & t = trim[sources.back()];
+
+      ++i;
+      t.first = i->toUtf8().constData();
+
+      ++i;
+      t.second = i->toUtf8().constData();
     }
     else if (arg == "-o")
     {
@@ -245,7 +258,7 @@ mainMayThrowException(int argc, char ** argv)
   // load the sources:
   yae::DemuxerSummary summary;
   yae::TDemuxerInterfacePtr demuxer =
-    yae::load(summary, sources, buffer_duration, discont_tolerance);
+    yae::load(summary, sources, trim, buffer_duration, discont_tolerance);
 
   if (!output_path.empty())
   {
