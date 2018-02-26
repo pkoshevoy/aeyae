@@ -2877,21 +2877,21 @@ namespace yae
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
       TTime t1 = t0 + dt;
 
-#if 0
-      TTime dts(packet.dts * src->time_base.num, src->time_base.den);
-      TTime pts(packet.pts * src->time_base.num, src->time_base.den);
-      TTime dur(packet.duration * src->time_base.num, src->time_base.den);
-      bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
-      std::cout
-        << "TrimmedDemuxer::peek: src: " << pkt.trackId_
-        << ", dts: " << Timespan(dts, dts + dur)
-        << ", pts: " << Timespan(pts, pts + dur)
-        << (keyframe ? ", keyframe" : "")
-        << std::endl;
-#endif
-
       if (t1 <= trim.a_)
       {
+        bool keyframe = (al::starts_with(pkt.trackId_, "v:") &&
+                         (packet.flags & AV_PKT_FLAG_KEY));
+        TTime pts(packet.pts * src->time_base.num, src->time_base.den);
+        TTime end = pts + dt;
+
+        if (timespan_.overlaps(Timespan(pts, end)) && keyframe)
+        {
+          YAE_ASSERT(false);
+          av_log(NULL, AV_LOG_WARNING,
+                 "TrimmedDemuxer::peek, dropping keyframe PTS [%s, %s)",
+                 pts.to_hhmmss_ms().c_str(),
+                 end.to_hhmmss_ms().c_str());
+        }
 #if 0
         std::cout
           << "TrimmedDemuxer::peek: packet too old: "
