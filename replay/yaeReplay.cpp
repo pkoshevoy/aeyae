@@ -70,52 +70,58 @@ namespace yae
 
         DemuxerSummary summary;
         buffer->summarize(summary, discont_tolerance);
-
+#if 0
         std::cout
           << "\n" << demuxer->resourcePath() << ":\n"
           << summary << std::endl;
-
+#endif
         parallel_demuxer->append(buffer, summary);
       }
 
       // summarize the demuxer:
       DemuxerSummary summary;
       parallel_demuxer->summarize(summary, discont_tolerance);
-
+#if 0
       // show the summary:
       std::cout << "\nparallel:\n" << summary << std::endl;
-
+#endif
       if (yae::has(clip, filePath))
       {
         const ClipInfo & trim = yae::at(clip, filePath);
         const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
 
         double fps = fe.best_guess();
-        Timespan pts_span;
 
-        if (!parse_time(pts_span.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+        for (std::size_t i = 0, z = trim.t0_.size(); i < z; i++)
         {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
-          return TDemuxerInterfacePtr();
+          const std::string & t0 = trim.t0_[i];
+          const std::string & t1 = trim.t1_[i];
+
+          Timespan pts_span;
+          if (!parse_time(pts_span.t0_, t0.c_str(), NULL, NULL, fps))
+          {
+            av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t0.c_str());
+            return TDemuxerInterfacePtr();
+          }
+
+          if (!parse_time(pts_span.t1_, t1.c_str(), NULL, NULL, fps))
+          {
+            av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t1.c_str());
+            return TDemuxerInterfacePtr();
+          }
+
+          boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
+          clip_demuxer->trim(parallel_demuxer, summary, trim.track_, pts_span);
+
+          // summarize clip demuxer:
+          DemuxerSummary clip_summary;
+          clip_demuxer->summarize(clip_summary, discont_tolerance);
+#if 0
+          // show clip summary:
+          std::cout << "\ntrimmed:\n" << clip_summary << std::endl;
+#endif
+          serial_demuxer->append(clip_demuxer, clip_summary);
         }
-
-        if (!parse_time(pts_span.t1_, trim.t1_.c_str(), NULL, NULL, fps))
-        {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
-          return TDemuxerInterfacePtr();
-        }
-
-        boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
-        clip_demuxer->trim(parallel_demuxer, summary, trim.track_, pts_span);
-
-        // summarize clip demuxer:
-        DemuxerSummary clip_summary;
-        clip_demuxer->summarize(clip_summary, discont_tolerance);
-
-        // show clip summary:
-        std::cout << "\ntrimmed:\n" << clip_summary << std::endl;
-
-        serial_demuxer->append(clip_demuxer, clip_summary);
       }
       else
       {
@@ -137,10 +143,6 @@ namespace yae
     }
 
     serial_demuxer->summarize(summary, discont_tolerance);
-
-    // show the summary:
-    std::cout << "\nserial:\n" << summary << std::endl;
-
     return serial_demuxer;
   }
 

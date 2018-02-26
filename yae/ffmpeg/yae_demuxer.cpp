@@ -9,6 +9,7 @@
 // standard lib:
 #include <algorithm>
 #include <inttypes.h>
+#include <iomanip>
 #include <iterator>
 #include <limits>
 #include <stdio.h>
@@ -1458,8 +1459,11 @@ namespace yae
 #if 0
       TTime dts(packet.dts * stream->time_base.num, stream->time_base.den);
       TTime pts(packet.pts * stream->time_base.num, stream->time_base.den);
-      TTime dur(packet.duration * stream->time_base.num, stream->time_base.den);
-      bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
+      TTime dur(stream->time_base.num * packet.duration,
+                stream->time_base.den);
+      bool keyframe =
+        al::starts_with(pkt.trackId_, "v:") &&
+        (packet.flags & AV_PKT_FLAG_KEY);
       std::cout
         << "PacketBuffer::populate: " << pkt.trackId_
         << ", dts: " << Timespan(dts, dts + dur)
@@ -2566,7 +2570,20 @@ namespace yae
     }
 
     src_.push_back(src);
-    summary_.push_back(summary);
+
+    // add a chapter marker to the summary if there isn't one already:
+    DemuxerSummary src_summary = summary;
+    if (src_summary.chapters_.empty())
+    {
+      std::ostringstream oss;
+      oss << "Part " << std::setw(2) << std::setfill('0') << src_.size();
+
+      const Timeline & timeline = src_summary.timeline_.begin()->second;
+      TChapter c(oss.str(), timeline.bbox_pts_);
+      src_summary.chapters_[timeline.bbox_pts_.t0_] = c;
+    }
+
+    summary_.push_back(src_summary);
   }
 
   //----------------------------------------------------------------

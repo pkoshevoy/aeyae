@@ -213,6 +213,7 @@ mainMayThrowException(int argc, char ** argv)
   std::list<std::string> sources;
   std::map<std::string, yae::ClipInfo> clip;
   std::string output_path;
+  std::string track;
   bool save_keyframes = false;
 
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
@@ -228,20 +229,25 @@ mainMayThrowException(int argc, char ** argv)
         sources.push_back(filePath);
       }
     }
+    else if (arg == "-track")
+    {
+      ++i;
+      track = i->toUtf8().constData();
+    }
     else if (arg == "-t")
     {
       // clip boundaries should be evaluated after the source is analyzed
       // and framerate is known:
       yae::ClipInfo & trim = clip[sources.back()];
+      trim.track_ = track;
 
       ++i;
-      trim.track_ = i->toUtf8().constData();
+      std::string t0 = i->toUtf8().constData();
+      trim.t0_.push_back(t0);
 
       ++i;
-      trim.t0_ = i->toUtf8().constData();
-
-      ++i;
-      trim.t1_ = i->toUtf8().constData();
+      std::string t1 = i->toUtf8().constData();
+      trim.t1_.push_back(t1);
     }
     else if (arg == "-o")
     {
@@ -262,6 +268,9 @@ mainMayThrowException(int argc, char ** argv)
   yae::DemuxerSummary summary;
   yae::TDemuxerInterfacePtr demuxer =
     yae::load(summary, sources, clip, buffer_duration, discont_tolerance);
+
+  // show the summary:
+  std::cout << "\nsummary:\n" << summary << std::endl;
 
   if (!output_path.empty())
   {
