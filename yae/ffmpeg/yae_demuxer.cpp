@@ -2661,7 +2661,6 @@ namespace yae
       }
 
       curr_++;
-      std::cout << "FIXME: pkoshevoy: NEXT SOURCE!" << std::endl;
 
       if (curr_ < src_.size())
       {
