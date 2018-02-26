@@ -39,6 +39,18 @@ namespace yae
       }
     }
 
+    subsec_t(int64_t tsec, int64_t tsub, int64_t base):
+      tsec_(tsec),
+      tsub_(tsub),
+      base_(base)
+    {
+      if (tsub_ < 0)
+      {
+        tsec_ -= 1;
+        tsub_ += base_;
+      }
+    }
+
     inline int64_t tsec_abs() const
     { return tsec_ < 0 ? ~tsec_ : tsec_; }
 
@@ -61,8 +73,7 @@ namespace yae
       int64_t base = max_base(other);
       int64_t sec = (tsec_ + other.tsec_);
       int64_t ss = (tsub_ * base) / base_ + (other.tsub_ * base) / other.base_;
-      TTime t(sec * base + ss, base);
-      return subsec_t(t);
+      return subsec_t(sec, ss, base);
     }
 
     subsec_t sub(const subsec_t & other) const
@@ -73,8 +84,7 @@ namespace yae
       int64_t b = (other.tsub_ * base) / other.base_;
       int64_t d = (a < b) ? 1 : 0;
       int64_t ss = base * d + a - b;
-      TTime t((sec - d) * base + ss, base);
-      return subsec_t(t);
+      return subsec_t(sec - d, ss, base);
     }
 
     inline bool eq(const subsec_t & other) const
