@@ -38,8 +38,8 @@ namespace yae
     //
     enum { Flicks = 705600000 };
 
-    static TTime MaxFlicks;
-    static TTime MinFlicks;
+    static const TTime & max_flicks();
+    static const TTime & min_flicks();
 
     TTime();
     TTime(int64 time, uint64 base);
@@ -177,8 +177,8 @@ namespace yae
   //
   struct YAE_API Timespan
   {
-    Timespan(const TTime & t0 = TTime::MaxFlicks,
-             const TTime & t1 = TTime::MinFlicks);
+    Timespan(const TTime & t0 = TTime::max_flicks(),
+             const TTime & t1 = TTime::min_flicks());
 
     Timespan & operator += (const TTime & offset);
 
@@ -214,8 +214,8 @@ namespace yae
     { return empty() ? 0.0 : (t1_ - t0_).sec(); }
 
     inline void
-    reset(const TTime & t0 = TTime::MaxFlicks,
-          const TTime & t1 = TTime::MinFlicks)
+    reset(const TTime & t0 = TTime::max_flicks(),
+          const TTime & t1 = TTime::min_flicks())
     {
       t0_ = t0;
       t1_ = t1;
@@ -285,7 +285,7 @@ namespace yae
     //----------------------------------------------------------------
     // Track
     //
-    struct Track
+    struct YAE_API Track
     {
 
       //----------------------------------------------------------------
@@ -307,7 +307,7 @@ namespace yae
       //   - copy [ia, ib]
       //   - expect decoding artifacts in the resulting output
       //
-      struct Trim
+      struct YAE_API Trim
       {
         Trim():
           ka_(std::numeric_limits<std::size_t>::max()),

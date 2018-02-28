@@ -380,10 +380,22 @@ namespace yae
   // has
   //
   template <typename TValue>
-  static bool
+  inline bool
   has(const std::set<TValue> & values, const TValue & value)
   {
     typename std::set<TValue>::const_iterator found = values.find(value);
+    return found != values.end();
+  }
+
+  //----------------------------------------------------------------
+  // has
+  //
+  template <typename TValue>
+  inline bool
+  has(const std::list<TValue> & values, const TValue & value)
+  {
+    typename std::list<TValue>::const_iterator found =
+      std::find(values.begin(), values.end(), value);
     return found != values.end();
   }
 
@@ -409,18 +421,6 @@ namespace yae
     typename TContainer::const_iterator i = c.begin();
     typename TContainer::const_iterator e = c.end();
     return (i != e) && (++i != e);
-  }
-
-  //----------------------------------------------------------------
-  // has
-  //
-  template <typename TContainer>
-  bool
-  has(const TContainer & container, const typename TContainer::value_type & v)
-  {
-    typename TContainer::const_iterator iter =
-      std::find(container.begin(), container.end(), v);
-    return iter != container.end();
   }
 
   //----------------------------------------------------------------

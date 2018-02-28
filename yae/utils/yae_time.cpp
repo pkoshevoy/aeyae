@@ -159,16 +159,24 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TTime::MaxFlicks
+  // TTime::max_flicks
   //
-  TTime
-  TTime::MaxFlicks(std::numeric_limits<int64_t>::max(), TTime::Flicks);
+  const TTime &
+  TTime::max_flicks()
+  {
+    static const TTime t(std::numeric_limits<int64_t>::max(), TTime::Flicks);
+    return t;
+  }
 
   //----------------------------------------------------------------
-  // TTime::MinFlicks
+  // TTime::min_flicks
   //
-  TTime
-  TTime::MinFlicks(std::numeric_limits<int64_t>::min(), TTime::Flicks);
+  const TTime &
+  TTime::min_flicks()
+  {
+    static const TTime t(std::numeric_limits<int64_t>::min(), TTime::Flicks);
+    return t;
+  }
 
   //----------------------------------------------------------------
   // TTime::TTime
@@ -475,7 +483,7 @@ namespace yae
       ceil_fps <= 100.0 ? 2 :
       ceil_fps <= 1000.0 ? 3 :
       ceil_fps <= 10000.0 ? 4 :
-      ::ceil(::log10(ceil_fps));
+      std::size_t(::ceil(::log10(ceil_fps)));
 
     os << std::setw(2) << std::setfill('0') << t << separator
        << std::setw(2) << std::setfill('0') << mm << separator
@@ -946,6 +954,7 @@ namespace yae
                              xx_separator,
                              frame_rate);
   }
+
 
   //----------------------------------------------------------------
   // Timespan::Timespan
