@@ -60,7 +60,6 @@ namespace yae
     TTime operator - (const TTime & dt) const;
 
     bool operator < (const TTime & t) const;
-    bool operator <= (const TTime & t) const;
     bool operator == (const TTime & t) const;
 
     inline bool operator != (const TTime & t) const
@@ -69,8 +68,11 @@ namespace yae
     inline bool operator > (const TTime & t) const
     { return t < *this; }
 
+    inline bool operator <= (const TTime & t) const
+    { return !(t < *this); }
+
     inline bool operator >= (const TTime & t) const
-    { return t <= *this; }
+    { return !(*this < t); }
 
     void reset(int64 time = 0, uint64 base = 1001);
 

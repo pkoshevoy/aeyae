@@ -68,7 +68,7 @@ namespace yae
       return base;
     }
 
-    subsec_t add(const subsec_t & other) const
+    inline subsec_t add(const subsec_t & other) const
     {
       int64_t base = max_base(other);
       int64_t sec = (tsec_ + other.tsec_);
@@ -76,7 +76,7 @@ namespace yae
       return subsec_t(sec, ss, base);
     }
 
-    subsec_t sub(const subsec_t & other) const
+    inline subsec_t sub(const subsec_t & other) const
     {
       int64_t base = max_base(other);
       int64_t sec = (tsec_ - other.tsec_);
@@ -114,27 +114,6 @@ namespace yae
       int64_t a = (tsub_ * base) / base_;
       int64_t b = (other.tsub_ * base) / other.base_;
       return a < b;
-    }
-
-    inline bool gt(const subsec_t & other) const
-    {
-      return
-        (tsec_ < other.tsec_) ? false :
-        (other.tsec_ < tsec_) ? true :
-        subsec_gt(other);
-    }
-
-    inline bool subsec_gt(const subsec_t & other) const
-    {
-      int64_t base = max_base(other);
-      int64_t a = (tsub_ * base) / base_;
-      int64_t b = (other.tsub_ * base) / other.base_;
-      return b < a;
-    }
-
-    inline bool le(const subsec_t & other) const
-    {
-      return !gt(other);
     }
 
     inline operator TTime() const
@@ -311,20 +290,6 @@ namespace yae
     }
 
     return subsec_t(*this).lt(subsec_t(t));
-  }
-
-  //----------------------------------------------------------------
-  // TTime::operator <=
-  //
-  bool
-  TTime::operator <= (const TTime & t) const
-  {
-    if (t.base_ == base_)
-    {
-      return time_ <= t.time_;
-    }
-
-    return subsec_t(*this).le(subsec_t(t));
   }
 
   //----------------------------------------------------------------
