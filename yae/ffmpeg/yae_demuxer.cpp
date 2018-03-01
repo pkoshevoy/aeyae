@@ -2536,6 +2536,53 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // pick_src_start
+  //
+  static TTime
+  pick_src_start(const Timeline & a, const Timeline & b)
+  {
+    TTime ta_max = TTime::min_flicks();
+    TTime tb_min = TTime::max_flicks();
+    std::map<std::string, TTime> ta_lut;
+    std::map<std::string, TTime> tb_lut;
+
+    for (Timeline::TTracks::const_iterator
+           i = a.tracks_.begin(); i != a.tracks_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      if (!yae::has(b.tracks_, track_id))
+      {
+        continue;
+      }
+
+      const Timeline::Track & track_a = i->second;
+      const Timeline::Track & track_b = yae::at(b.tracks_, track_id);
+      const TTime & ta = track_a.dts_span_.back().t1_;
+      const TTime & tb = track_b.dts_span_.front().t0_;
+      ta_max = std::max(ta, ta_max);
+      tb_min = std::min(tb, tb_min);
+      ta_lut[track_id] = ta;
+      tb_lut[track_id] = tb;
+    }
+
+    TTime min_gap = TTime::max_flicks();
+    for (std::map<std::string, TTime>::const_iterator
+           i = ta_lut.begin(); i != ta_lut.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const TTime & ta = i->second;
+      const TTime & tb = yae::at(tb_lut, track_id);
+
+      TTime da = ta_max - ta;
+      TTime db = tb - tb_min;
+      TTime gap = da + db;
+      min_gap = std::min(gap, min_gap);
+    }
+
+    return ta_max - min_gap;
+  }
+
+  //----------------------------------------------------------------
   // SerialDemuxer::append
   //
   void
@@ -2561,6 +2608,13 @@ namespace yae
 
       TTime src_dt = timeline.bbox_dts_.t1_ - timeline.bbox_dts_.t0_;
       TTime src_t0 = t1.empty() ? timeline.bbox_dts_.t0_ : t1.back();
+
+      if (!t1.empty())
+      {
+        const Timeline & prev = yae::at(summary_.back().timeline_, prog_id);
+        src_t0 = pick_src_start(prev, timeline);
+      }
+
       TTime src_t1 = src_t0 + src_dt;
       TTime src_offset = timeline.bbox_dts_.t0_ - src_t0;
 
@@ -2970,6 +3024,7 @@ namespace yae
         const std::string & track_id = j->first;
         const Timeline::Track & tt = j->second;
         const bool is_video_track = al::starts_with(track_id, "v:");
+        const bool is_subtt_track = al::starts_with(track_id, "s:");
 
         YAE_ASSERT(tt.dts_.size() == tt.pts_.size() &&
                    tt.dts_.size() == tt.dur_.size());
@@ -2990,6 +3045,12 @@ namespace yae
           const TTime & pts = tt.pts_[k];
           const TTime & dur = tt.dur_[k];
           const bool keyframe = yae::has(tt.keyframes_, k);
+
+          if (is_subtt_track && pts < origin)
+          {
+            // don't bother with partial subs:
+            continue;
+          }
 
           trimmed_timeline.add_frame(track_id,
                                      keyframe,
