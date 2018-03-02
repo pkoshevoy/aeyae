@@ -134,6 +134,9 @@ namespace yae
     // get programs indexed by program id:
     void getPrograms(std::map<int, TProgramInfo> & programs) const;
 
+    // get program ids indexed by track ids:
+    void getTrackPrograms(std::map<std::string, int> & programs) const;
+
     // get decoders indexed by track id:
     void getDecoders(std::map<std::string, TrackPtr> & decoders) const;
 
@@ -329,6 +332,9 @@ namespace yae
     void get_decoders(std::map<std::string, TrackPtr> & decoders) const;
     void get_programs(std::map<int, TProgramInfo> & programs) const;
 
+    // get program ids indexed by track ids:
+    void get_trk_prog(std::map<std::string, int> & programs) const;
+
     // these are global, not per-program (avformat API doesn't it):
     void get_chapters(std::map<TTime, TChapter> & chapters) const;
 
@@ -402,6 +408,9 @@ namespace yae
 
     // global metadata:
     TDictionary metadata_;
+
+    // program ids indexed by track ids:
+    std::map<std::string, int> trk_prog_;
 
     // per-track metadata:
     std::map<std::string, TDictionary> trk_meta_;

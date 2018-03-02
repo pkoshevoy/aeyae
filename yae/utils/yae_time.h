@@ -465,7 +465,7 @@ namespace yae
   {
     FramerateEstimator(std::size_t buffer_size = 300);
 
-    FramerateEstimator & operator += (const FramerateEstimator & s);
+    void add(const FramerateEstimator & s, const TTime & offset);
 
     void push(const TTime & dts);
 

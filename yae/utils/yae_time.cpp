@@ -1736,10 +1736,10 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // FramerateEstimator::operator +=
+  // FramerateEstimator::add
   //
-  FramerateEstimator &
-  FramerateEstimator::operator += (const FramerateEstimator & src)
+  void
+  FramerateEstimator::add(const FramerateEstimator & src, const TTime & offset)
   {
     max_ = std::max(max_, src.max_);
 
@@ -1747,7 +1747,7 @@ namespace yae
            i = src.dts_.begin(); i != src.dts_.end(); ++i)
     {
       const TTime & dts = *i;
-      dts_.push_back(dts);
+      dts_.push_back(dts + offset);
 
       if (num_ < max_)
       {
@@ -1771,8 +1771,6 @@ namespace yae
       dst_sum = TTime(src_sum.time_ + dst_sum.get(src_sum.base_),
                       src_sum.base_);
     }
-
-    return *this;
   }
 
   //----------------------------------------------------------------

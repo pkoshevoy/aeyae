@@ -682,6 +682,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Demuxer::getTrackPrograms
+  //
+  void
+  Demuxer::getTrackPrograms(std::map<std::string, int> & prog_lut) const
+  {
+    const AVFormatContext & ctx = getFormatContext();
+    for (unsigned int i = 0; i < ctx.nb_streams; i++)
+    {
+      const AVStream * stream = ctx.streams[i];
+      std::string track_id = yae::get(trackId_, stream->index);
+
+      if (track_id.empty())
+      {
+        YAE_ASSERT(false);
+        track_id = make_track_id('_', to_ + stream->index);
+      }
+
+      int prog_id = yae::at(streamIndexToProgramIndex_, stream->index);
+      prog_lut[track_id] = prog_id;
+    }
+  }
+
+  //----------------------------------------------------------------
   // Demuxer::getDecoders
   //
   void
@@ -1318,6 +1341,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PacketBuffer::get_trk_prog
+  //
+  void
+  PacketBuffer::get_trk_prog(std::map<std::string, int> & lut) const
+  {
+    const Demuxer & demuxer = *demuxer_;
+    demuxer.getTrackPrograms(lut);
+  }
+
+  //----------------------------------------------------------------
   // PacketBuffer::get_chapters
   //
   void
@@ -1693,12 +1726,37 @@ namespace yae
       programs_[prog_id] = info;
     }
 
+    for (std::map<std::string, int>::const_iterator
+           i = s.trk_prog_.begin(); i != s.trk_prog_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const int & prog_id = i->second;
+
+      std::map<std::string, int>::iterator found = trk_prog_.find(track_id);
+      if (found == trk_prog_.end())
+      {
+        trk_prog_[track_id] = prog_id;
+        continue;
+      }
+
+      const int & prev_id = found->second;
+      if (prev_id != prog_id)
+      {
+        std::ostringstream oss;
+        oss << "track " << track_id << ", program id " << prog_id
+            << " does not match program id " << prev_id;
+        throw std::runtime_error(oss.str().c_str());
+      }
+    }
+
     for (std::map<std::string, FramerateEstimator>::const_iterator
            i = s.fps_.begin(); i != s.fps_.end(); ++i)
     {
       const std::string & track_id = i->first;
       const FramerateEstimator & src = i->second;
-      fps_[track_id] += src;
+      int prog_id = prog_offset.empty() ? 0 : s.find_program(track_id);
+      TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
+      fps_[track_id].add(src, offset);
     }
 
     for (std::map<int, Timeline>::const_iterator
@@ -1802,25 +1860,14 @@ namespace yae
   int
   DemuxerSummary::find_program(const std::string & trackId) const
   {
-    int program = -1;
+    std::map<std::string, int>::const_iterator found = trk_prog_.find(trackId);
 
-    for (std::map<int, Timeline>::const_iterator
-           i = timeline_.begin(); i != timeline_.end(); ++i)
-    {
-      const Timeline & t = i->second;
-      if (yae::has(t.tracks_, trackId))
-      {
-        program = i->first;
-        break;
-      }
-    }
-
-    if (program == -1)
+    if (found == trk_prog_.end())
     {
       throw std::out_of_range(trackId);
     }
 
-    return program;
+    return found->second;
   }
 
   //----------------------------------------------------------------
@@ -2163,6 +2210,7 @@ namespace yae
     src_.get_decoders(summary.decoders_);
     src_.get_chapters(summary.chapters_);
     src_.get_programs(summary.programs_);
+    src_.get_trk_prog(summary.trk_prog_);
     src_.get_metadata(summary.trk_meta_,
                       summary.metadata_);
   }
@@ -3114,6 +3162,7 @@ namespace yae
     summary.streams_ = summary_.streams_;
     summary.decoders_ = summary_.decoders_;
     summary.programs_ = summary_.programs_;
+    summary.trk_prog_ = summary_.trk_prog_;
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
