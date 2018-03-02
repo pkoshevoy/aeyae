@@ -12,6 +12,7 @@
 #include <iterator>
 #include <limits>
 #include <math.h>
+#include <numeric>
 #include <sstream>
 
 // yae includes:
@@ -1129,6 +1130,7 @@ namespace yae
     }
   }
 
+
   //----------------------------------------------------------------
   // Timeline::Track::generate_gops
   //
@@ -1280,12 +1282,13 @@ namespace yae
   // Timeline::add_frame
   //
   void
-  Timeline::add_frame(const std::string & track_id,
-                      bool keyframe,
-                      const TTime & dts,
-                      const TTime & pts,
-                      const TTime & dur,
-                      double tolerance)
+  Timeline::add_packet(const std::string & track_id,
+                       bool keyframe,
+                       std::size_t size,
+                       const TTime & dts,
+                       const TTime & pts,
+                       const TTime & dur,
+                       double tolerance)
   {
     Track & track = tracks_[track_id];
 
@@ -1294,6 +1297,7 @@ namespace yae
       track.keyframes_.insert(track.dts_.size());
     }
 
+    track.size_.push_back(size);
     track.dts_.push_back(dts);
     track.pts_.push_back(pts);
     track.dur_.push_back(dur);
@@ -1422,6 +1426,9 @@ namespace yae
       // update keyframes:
       yae::extend(dst.keyframes_, src.keyframes_, dst.dts_.size());
 
+      // append additional packet sizes:
+      dst.size_.insert(dst.size_.end(), src.size_.begin(), src.size_.end());
+
       // update DTS timeline:
       for (std::list<Timespan>::const_iterator
              j = src.dts_span_.begin(); j != src.dts_span_.end(); ++j)
@@ -1442,7 +1449,7 @@ namespace yae
       yae::extend(dst.dts_, src.dts_, offset);
       yae::extend(dst.pts_, src.pts_, offset);
 
-      // simply append additional frame durations:
+      // simply append additional packet durations:
       dst.dur_.insert(dst.dur_.end(), src.dur_.begin(), src.dur_.end());
     }
 
@@ -1483,13 +1490,62 @@ namespace yae
     return yae::bbox(track.pts_span_);
   }
 
+
+  //----------------------------------------------------------------
+  // bitrate_str
+  //
+  static std::string
+  bitrate_str(const Timeline::Track & track)
+  {
+    static const char * units[] = { "bps", "Kbps", "Mbps", "Gbps", "Tbps" };
+    static const std::size_t num_units = sizeof(units) / sizeof(units[0]);
+
+    if (track.dts_span_.empty())
+    {
+      return std::string("n/a bps");
+    }
+
+    const TTime & t0 = track.dts_span_.front().t0_;
+    const TTime & t1 = track.dts_span_.back().t1_;
+    double dt_sec = (t1 - t0).sec();
+    if (dt_sec == 0.0)
+    {
+      return std::string("inf bps");
+    }
+
+    uint64_t num_bytes = std::accumulate(track.size_.begin(),
+                                         track.size_.end(),
+                                         uint64_t(0));
+
+    uint64_t bps = uint64_t((double(num_bytes * 8) / dt_sec) + 0.5);
+    uint64_t remainder = 0;
+
+    std::size_t i = 0;
+    for (; i < num_units && bps > 1000; i++)
+    {
+      remainder = bps % 1000;
+      bps /= 1000;
+    }
+
+    std::ostringstream oss;
+    oss << "size: " << num_bytes << " bytes, bitrate: " << bps;
+    if (remainder)
+    {
+      oss << '.' << std::setw(3) << std::setfill('0') << remainder;
+    }
+    oss << ' ' << units[i];
+
+    return oss.str();
+  }
+
   //----------------------------------------------------------------
   // operator
   //
   std::ostream &
   operator << (std::ostream & oss, const Timeline & timeline)
   {
-    oss << "DTS: " << timeline.bbox_dts_ << ", PTS: " << timeline.bbox_pts_
+    oss << "DTS: " << timeline.bbox_dts_
+        << ", PTS: " << timeline.bbox_pts_
         << "\n";
 
     for (Timeline::TTracks::const_iterator
@@ -1499,8 +1555,14 @@ namespace yae
       const std::string & track_id = i->first;
       const Timeline::Track & track = i->second;
 
+      // bitrate:
+      oss << "track " << track_id
+          << " packets: " << track.dts_.size()
+          << ", " << bitrate_str(track) << '\n';
+
       // DTS timeline:
       oss << "track " << track_id << " DTS:";
+
       std::size_t size = 0;
       for (std::list<Timespan>::const_iterator
              j = track.dts_span_.begin(); j != track.dts_span_.end(); ++j)
@@ -1533,12 +1595,10 @@ namespace yae
       }
       oss << '\n';
 
-      oss << "frames " << track_id << ": " << track.dts_.size() << '\n';
-
       // keyframes, if any:
       if (!track.keyframes_.empty())
       {
-        oss << "keyframes " << track_id << ':';
+        oss << "track " << track_id << " keyframes:";
 #if 0
         for (std::set<std::size_t>::const_iterator
                j = track.keyframes_.begin(); j != track.keyframes_.end(); ++j)

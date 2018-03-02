@@ -297,12 +297,12 @@ namespace yae
       //
       //   |.....[.....|..........|..........|....].......
       //   ka    ia    kb                    kc   ib      kd
-      //         t0                                t1
+      //          t0   tb                    tc    t1
       //
       // for a seamless artifact-free triming one has to:
-      //   - decode [ka, kb), drop [ka, ia), encode [ia, kb)
+      //   - decode [ka, kb), drop [..., t0), encode [t0, tb)
       //   - copy [kb, kc)
-      //   - decode [kc, ib], encode [kc, ib]
+      //   - decode [kc, ib], encode [tc, t1)
       //
       // if decoding/encoding is not possible then:
       //   - drop [ka, ia)
@@ -382,7 +382,8 @@ namespace yae
       // potentially slower due to non-monotonically increasing pts:
       std::list<Timespan> pts_span_;
 
-      // frame dts, pts, and duration in order of appearance:
+      // packet size, dts, pts, and duration in order of appearance:
+      std::vector<std::size_t> size_;
       std::vector<TTime> dts_;
       std::vector<TTime> pts_;
       std::vector<TTime> dur_;
@@ -397,12 +398,13 @@ namespace yae
     typedef std::map<std::string, Track> TTracks;
 
     // update time spans:
-    void add_frame(const std::string & track_id,
-                   bool keyframe,
-                   const TTime & dts,
-                   const TTime & pts,
-                   const TTime & dur,
-                   double tolerance);
+    void add_packet(const std::string & track_id,
+                    bool keyframe,
+                    std::size_t size,
+                    const TTime & dts,
+                    const TTime & pts,
+                    const TTime & dur,
+                    double tolerance);
 
     // translate this timeline by a given offset:
     Timeline & operator += (const TTime & offset);

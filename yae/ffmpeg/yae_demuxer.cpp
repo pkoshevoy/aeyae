@@ -2340,7 +2340,13 @@ namespace yae
           }
         }
 
-        timeline.add_frame(pkt.trackId_, keyframe, dts, pts, dur, tolerance);
+        timeline.add_packet(pkt.trackId_,
+                            keyframe,
+                            packet.size,
+                            dts,
+                            pts,
+                            dur,
+                            tolerance);
       }
     }
   }
@@ -3041,10 +3047,11 @@ namespace yae
         FramerateEstimator & fps = summary.fps_[track_id];
         for (std::size_t k = x.ka_; k <= x.ib_; k++)
         {
+          const bool keyframe = yae::has(tt.keyframes_, k);
+          const std::size_t size = tt.size_[k];
           const TTime & dts = tt.dts_[k];
           const TTime & pts = tt.pts_[k];
           const TTime & dur = tt.dur_[k];
-          const bool keyframe = yae::has(tt.keyframes_, k);
 
           if (is_subtt_track && pts < origin)
           {
@@ -3052,12 +3059,13 @@ namespace yae
             continue;
           }
 
-          trimmed_timeline.add_frame(track_id,
-                                     keyframe,
-                                     dts - origin,
-                                     pts - origin,
-                                     dur,
-                                     tolerance);
+          trimmed_timeline.add_packet(track_id,
+                                      keyframe,
+                                      size,
+                                      dts - origin,
+                                      pts - origin,
+                                      dur,
+                                      tolerance);
 
 
           if (is_video_track)

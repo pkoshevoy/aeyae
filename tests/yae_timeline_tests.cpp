@@ -195,12 +195,13 @@ BOOST_AUTO_TEST_CASE(yae_timeline_track)
     const int dts = i - 2;
     const bool keyframe = (f == 'I');
 
-    timeline.add_frame(track_id,
-                       keyframe,
-                       TTime(dts, 1),
-                       TTime(pts, 1),
-                       TTime(1, 1),
-                       0.0);
+    timeline.add_packet(track_id,
+                        keyframe,
+                        1000,
+                        TTime(dts, 1),
+                        TTime(pts, 1),
+                        TTime(1, 1),
+                        0.0);
   }
 
   // shortcut:
