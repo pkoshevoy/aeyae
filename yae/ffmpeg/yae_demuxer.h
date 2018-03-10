@@ -682,6 +682,23 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TTrimmedDemuxerPtr
+  //
+  typedef boost::shared_ptr<TrimmedDemuxer> TTrimmedDemuxerPtr;
+
+  //----------------------------------------------------------------
+  // decode_keyframe
+  //
+  YAE_API TVideoFramePtr
+  decode_keyframe(const VideoTrackPtr & decoder_ptr,
+                  const TPacketPtr & packet_ptr,
+                  TPixelFormatId pixel_format,
+                  unsigned int envelope_w,
+                  unsigned int envelope_h,
+                  double source_dar,
+                  double output_par);
+
+  //----------------------------------------------------------------
   // save_keyframe
   //
   YAE_API bool

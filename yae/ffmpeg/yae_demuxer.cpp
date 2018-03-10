@@ -2420,12 +2420,7 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const AVStream * src = i->second;
-      AVStream * dst = avformat_new_stream(muxer,
-#if 0
-                                           src->codec ?
-                                           src->codec->codec :
-#endif
-                                           NULL);
+      AVStream * dst = avformat_new_stream(muxer, NULL);
       lut[i->first] = dst;
 
       avcodec_parameters_copy(dst->codecpar, src->codecpar);
@@ -3225,42 +3220,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // save_keyframe
+  // decode_keyframe
   //
-  bool
-  save_keyframe(const std::string & path,
-                const VideoTrackPtr & decoder_ptr,
-                const TPacketPtr & packet_ptr,
-                unsigned int envelope_w,
-                unsigned int envelope_h,
-                double source_dar,
-                double output_par)
+  TVideoFramePtr
+  decode_keyframe(const VideoTrackPtr & decoder_ptr,
+                  const TPacketPtr & packet_ptr,
+                  TPixelFormatId pixel_format,
+                  unsigned int envelope_w,
+                  unsigned int envelope_h,
+                  double source_dar,
+                  double output_par)
   {
     if (!(decoder_ptr && packet_ptr))
     {
-      return false;
+      return TVideoFramePtr();
     }
 
     const AvPkt & pkt = *packet_ptr;
     const AVPacket & packet = pkt.get();
     if (!(packet.flags & AV_PKT_FLAG_KEY))
     {
-      return false;
-    }
-
-    // setup output format:
-    AvOutputContextPtr muxer_ptr(avformat_alloc_context());
-    AVFormatContext * muxer = muxer_ptr.get();
-    av_strlcpy(muxer->filename, path.c_str(), sizeof(muxer->filename));
-    muxer->oformat = av_guess_format(NULL, path.c_str(), NULL);
-
-    const AVCodec * codec = avcodec_find_encoder(muxer->oformat->video_codec);
-    if (!codec)
-    {
-      av_log(NULL, AV_LOG_ERROR,
-             "avcodec_find_encoder(%i) failed, %s\n",
-             muxer->oformat->video_codec, path.c_str());
-      return false;
+      return TVideoFramePtr();
     }
 
     // decode the keyframe packet:
@@ -3276,7 +3256,7 @@ namespace yae
       double source_par =
         source_dar ? (source_dar / native_dar) : 0.0;
 
-      traits.pixelFormat_ = ffmpeg_to_yae(codec->pix_fmts[0]);
+      traits.pixelFormat_ = pixel_format;
       traits.offsetTop_ = 0;
       traits.offsetLeft_ = 0;
       traits.visibleWidth_ = envelope_w;
@@ -3292,7 +3272,7 @@ namespace yae
       if (!decoder.getTraitsOverride(traits) ||
           !(ptts = pixelFormat::getTraits(traits.pixelFormat_)))
       {
-        return false;
+        return TVideoFramePtr();
       }
 
       decoder.threadStart();
@@ -3313,11 +3293,54 @@ namespace yae
     decoder.threadStop();
     decoder.close();
 
+    return vf_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // save_keyframe
+  //
+  bool
+  save_keyframe(const std::string & path,
+                const VideoTrackPtr & decoder_ptr,
+                const TPacketPtr & packet_ptr,
+                unsigned int envelope_w,
+                unsigned int envelope_h,
+                double source_dar,
+                double output_par)
+  {
+    // setup output format:
+    AvOutputContextPtr muxer_ptr(avformat_alloc_context());
+    AVFormatContext * muxer = muxer_ptr.get();
+    av_strlcpy(muxer->filename, path.c_str(), sizeof(muxer->filename));
+    muxer->oformat = av_guess_format(NULL, path.c_str(), NULL);
+
+    const AVCodec * codec = avcodec_find_encoder(muxer->oformat->video_codec);
+    if (!codec)
+    {
+      av_log(NULL, AV_LOG_ERROR,
+             "avcodec_find_encoder(%i) failed, %s\n",
+             muxer->oformat->video_codec, path.c_str());
+      return false;
+    }
+
+    TPixelFormatId pixel_format = ffmpeg_to_yae(codec->pix_fmts[0]);
+    TVideoFramePtr vf_ptr = decode_keyframe(decoder_ptr,
+                                            packet_ptr,
+                                            pixel_format,
+                                            envelope_w,
+                                            envelope_h,
+                                            source_dar,
+                                            output_par);
     if (!vf_ptr)
     {
       YAE_ASSERT(false);
       return false;
     }
+
+    // shortcuts:
+    VideoTrack & decoder = *decoder_ptr;
+    const AvPkt & pkt = *packet_ptr;
+    const AVPacket & packet = pkt.get();
 
     // convert TVideoFramePtr to AVFrame:
     AvFrm frm;
