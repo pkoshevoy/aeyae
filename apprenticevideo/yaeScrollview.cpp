@@ -345,11 +345,13 @@ namespace yae
                       const ItemRef & right,
                       const ItemRef & top,
                       const ItemRef & bottom,
-                      const ItemRef & scrollbarWidth)
+                      const ItemRef & vscrollbarWidth,
+                      const ItemRef & hscrollbarWidth)
   {
-    double z = scrollbarWidth.get();
-    double sceneWidth = content.width();
-    double sceneHeight = content.height();
+    double zv = vscrollbarWidth.get();
+    double zh = hscrollbarWidth.get();
+    double sceneWidth = zh ? content.width() : 0.0;
+    double sceneHeight = zv ? content.height() : 0.0;
 
     double x0 = left.get();
     double x1 = right.get();
@@ -364,12 +366,12 @@ namespace yae
 
     if (horizontal)
     {
-      viewHeight -= z;
+      viewHeight -= zh;
     }
 
     if (vertical)
     {
-      viewWidth -= z;
+      viewWidth -= zv;
     }
 
     vertical = viewHeight < sceneHeight;

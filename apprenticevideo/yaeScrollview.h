@@ -176,7 +176,8 @@ namespace yae
                                   const ItemRef & right,
                                   const ItemRef & top,
                                   const ItemRef & bottom,
-                                  const ItemRef & scrollbarWidth);
+                                  const ItemRef & vscrollbarWidth,
+                                  const ItemRef & hscrollbarWidth);
 
   //----------------------------------------------------------------
   // ScrollbarRequired
@@ -185,14 +186,16 @@ namespace yae
   {
     ScrollbarRequired(const Item & content,
                       const ScrollbarId scrollbarId,
-                      const ItemRef & scrollbarWidth,
+                      const ItemRef & vscrollbarWidth,
+                      const ItemRef & hscrollbarWidth,
                       const ItemRef & left,
                       const ItemRef & right,
                       const ItemRef & top,
                       const ItemRef & bottom):
       content_(content),
       scrollbarId_(scrollbarId),
-      scrollbarWidth_(scrollbarWidth),
+      vscrollbarWidth_(vscrollbarWidth),
+      hscrollbarWidth_(hscrollbarWidth),
       left_(left),
       right_(right),
       top_(top),
@@ -208,13 +211,15 @@ namespace yae
                                                  right_,
                                                  top_,
                                                  bottom_,
-                                                 scrollbarWidth_);
+                                                 vscrollbarWidth_,
+                                                 hscrollbarWidth_);
       result = (scrollbarId_ & required) != 0;
     }
 
     const Item & content_;
     ScrollbarId scrollbarId_;
-    ItemRef scrollbarWidth_;
+    ItemRef vscrollbarWidth_;
+    ItemRef hscrollbarWidth_;
     ItemRef left_;
     ItemRef right_;
     ItemRef top_;
