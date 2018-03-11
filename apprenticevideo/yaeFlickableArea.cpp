@@ -393,7 +393,7 @@ namespace yae
       << ", dv: " << v1 - p_->v0_ << std::endl;
 #endif
 
-    YAE_ASSERT(v1.normSqrd() < v0.normSqrd());
+    YAE_ASSERT(v1.normSqrd() < p_->v0_.normSqrd());
     p_->v0_ = v1;
   }
 

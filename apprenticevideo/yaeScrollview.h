@@ -157,6 +157,61 @@ namespace yae
     double startPos_;
   };
 
+
+  //----------------------------------------------------------------
+  // HorizontalScrollbarRequired
+  //
+  struct HorizontalScrollbarRequired : public TBoolExpr
+  {
+    HorizontalScrollbarRequired(const Scrollview & view,
+                              const ItemRef & left,
+                              const ItemRef & right):
+      view_(view),
+      left_(left),
+      right_(right)
+    {}
+
+    void evaluate(bool & result) const
+    {
+      double x0 = left_.get();
+      double x1 = right_.get();
+      double viewWidth = x1 - x0;
+      double sceneWidth = view_.content_->width();
+      result = viewWidth < sceneWidth;
+    }
+
+    const Scrollview & view_;
+    ItemRef left_;
+    ItemRef right_;
+  };
+
+  //----------------------------------------------------------------
+  // VerticalScrollbarRequired
+  //
+  struct VerticalScrollbarRequired : public TBoolExpr
+  {
+    VerticalScrollbarRequired(const Scrollview & view,
+                              const ItemRef & top,
+                              const ItemRef & bottom):
+      view_(view),
+      top_(top),
+      bottom_(bottom)
+    {}
+
+    void evaluate(bool & result) const
+    {
+      double y0 = top_.get();
+      double y1 = bottom_.get();
+      double viewHeight = y1 - y0;
+      double sceneHeight = view_.content_->height();
+      result = viewHeight < sceneHeight;
+    }
+
+    const Scrollview & view_;
+    ItemRef top_;
+    ItemRef bottom_;
+  };
+
 }
 
 

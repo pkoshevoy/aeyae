@@ -795,6 +795,35 @@ namespace yae
     Transition & transition_;
   };
 
+
+  //----------------------------------------------------------------
+  // Conditional
+  //
+  template <typename TDataRef>
+  struct Conditional : public Expression<typename TDataRef::value_type>
+  {
+    typedef typename TDataRef::value_type TData;
+
+    Conditional(const BoolRef & predicate,
+                const TDataRef & a,
+                const TDataRef & b):
+      predicate_(predicate),
+      a_(a),
+      b_(b)
+    {}
+
+    // virtual:
+    void evaluate(TData & result) const
+    {
+      bool cond = predicate_.get();
+      result = cond ? a_.get() : b_.get();
+    }
+
+    const BoolRef & predicate_;
+    TDataRef a_;
+    TDataRef b_;
+  };
+
 }
 
 

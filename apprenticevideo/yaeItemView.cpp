@@ -279,7 +279,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ItemView::resize
+  // ItemView::resizeTo
   //
   bool
   ItemView::resizeTo(const Canvas * canvas)
