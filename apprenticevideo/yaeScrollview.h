@@ -157,57 +157,66 @@ namespace yae
     double startPos_;
   };
 
-
   //----------------------------------------------------------------
-  // HorizontalScrollbarRequired
+  // ScrollbarId
   //
-  struct HorizontalScrollbarRequired : public TBoolExpr
+  enum ScrollbarId
   {
-    HorizontalScrollbarRequired(const Scrollview & view,
-                              const ItemRef & left,
-                              const ItemRef & right):
-      view_(view),
-      left_(left),
-      right_(right)
-    {}
-
-    void evaluate(bool & result) const
-    {
-      double x0 = left_.get();
-      double x1 = right_.get();
-      double viewWidth = x1 - x0;
-      double sceneWidth = view_.content_->width();
-      result = viewWidth < sceneWidth;
-    }
-
-    const Scrollview & view_;
-    ItemRef left_;
-    ItemRef right_;
+    kScrollbarNone = 0,
+    kScrollbarVertical = 1,
+    kScrollbarHorizontal = 2,
+    kScrollbarBoth = 3
   };
 
   //----------------------------------------------------------------
-  // VerticalScrollbarRequired
+  // scrollbars_required
   //
-  struct VerticalScrollbarRequired : public TBoolExpr
+  ScrollbarId scrollbars_required(const Item & content,
+                                  const ItemRef & left,
+                                  const ItemRef & right,
+                                  const ItemRef & top,
+                                  const ItemRef & bottom,
+                                  const ItemRef & scrollbarWidth);
+
+  //----------------------------------------------------------------
+  // ScrollbarRequired
+  //
+  struct ScrollbarRequired : public TBoolExpr
   {
-    VerticalScrollbarRequired(const Scrollview & view,
-                              const ItemRef & top,
-                              const ItemRef & bottom):
-      view_(view),
+    ScrollbarRequired(const Item & content,
+                      const ScrollbarId scrollbarId,
+                      const ItemRef & scrollbarWidth,
+                      const ItemRef & left,
+                      const ItemRef & right,
+                      const ItemRef & top,
+                      const ItemRef & bottom):
+      content_(content),
+      scrollbarId_(scrollbarId),
+      scrollbarWidth_(scrollbarWidth),
+      left_(left),
+      right_(right),
       top_(top),
       bottom_(bottom)
-    {}
+    {
+      YAE_ASSERT(scrollbarId_ != kScrollbarNone);
+    }
 
     void evaluate(bool & result) const
     {
-      double y0 = top_.get();
-      double y1 = bottom_.get();
-      double viewHeight = y1 - y0;
-      double sceneHeight = view_.content_->height();
-      result = viewHeight < sceneHeight;
+      ScrollbarId required = scrollbars_required(content_,
+                                                 left_,
+                                                 right_,
+                                                 top_,
+                                                 bottom_,
+                                                 scrollbarWidth_);
+      result = (scrollbarId_ & required) != 0;
     }
 
-    const Scrollview & view_;
+    const Item & content_;
+    ScrollbarId scrollbarId_;
+    ItemRef scrollbarWidth_;
+    ItemRef left_;
+    ItemRef right_;
     ItemRef top_;
     ItemRef bottom_;
   };

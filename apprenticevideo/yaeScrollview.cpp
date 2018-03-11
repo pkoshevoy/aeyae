@@ -336,4 +336,57 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // scrollbars_required
+  //
+  ScrollbarId
+  scrollbars_required(const Item & content,
+                      const ItemRef & left,
+                      const ItemRef & right,
+                      const ItemRef & top,
+                      const ItemRef & bottom,
+                      const ItemRef & scrollbarWidth)
+  {
+    double z = scrollbarWidth.get();
+    double sceneWidth = content.width();
+    double sceneHeight = content.height();
+
+    double x0 = left.get();
+    double x1 = right.get();
+    double viewWidth = x1 - x0;
+
+    double y0 = top.get();
+    double y1 = bottom.get();
+    double viewHeight = y1 - y0;
+
+    bool horizontal = viewWidth < sceneWidth;
+    bool vertical = viewHeight < sceneHeight;
+
+    if (horizontal)
+    {
+      viewHeight -= z;
+    }
+
+    if (vertical)
+    {
+      viewWidth -= z;
+    }
+
+    vertical = viewHeight < sceneHeight;
+    horizontal = viewWidth < sceneWidth;
+
+    int required = kScrollbarNone;
+
+    if (vertical)
+    {
+      required |= kScrollbarVertical;
+    }
+
+    if (horizontal)
+    {
+      required |= kScrollbarHorizontal;
+    }
+
+    return (ScrollbarId)required;
+  }
 }
