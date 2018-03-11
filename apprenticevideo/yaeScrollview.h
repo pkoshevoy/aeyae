@@ -14,6 +14,7 @@
 #include "yaeExpression.h"
 #include "yaeInputArea.h"
 #include "yaeItem.h"
+#include "yaeVec.h"
 
 
 namespace yae
@@ -43,6 +44,36 @@ namespace yae
   struct CalcSliderHeight : public TDoubleExpr
   {
     CalcSliderHeight(const Scrollview & view, const Item & slider);
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    const Scrollview & view_;
+    const Item & slider_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CalcSliderLeft
+  //
+  struct CalcSliderLeft : public TDoubleExpr
+  {
+    CalcSliderLeft(const Scrollview & view, const Item & slider);
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    const Scrollview & view_;
+    const Item & slider_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CalcSliderWidth
+  //
+  struct CalcSliderWidth : public TDoubleExpr
+  {
+    CalcSliderWidth(const Scrollview & view, const Item & slider);
 
     // virtual:
     void evaluate(double & result) const;
@@ -98,7 +129,7 @@ namespace yae
     // [0, 1] view position relative to content size
     // where 0 corresponds to the beginning of content
     // and 1 corresponds to the end of content
-    double position_;
+    TVec2D position_;
   };
 
   //----------------------------------------------------------------

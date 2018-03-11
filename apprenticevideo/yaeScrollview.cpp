@@ -40,7 +40,7 @@ namespace yae
     double scale = viewHeight / sceneHeight;
     double minHeight = slider_.width() * 5.0;
     double height = minHeight + (viewHeight - minHeight) * scale;
-    double y = (viewHeight - height) * view_.position_;
+    double y = (viewHeight - height) * view_.position_.y();
     result += y;
   }
 
@@ -75,12 +75,71 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // CalcSliderLeft::CalcSliderLeft
+  //
+  CalcSliderLeft::CalcSliderLeft(const Scrollview & view, const Item & slider):
+    view_(view),
+    slider_(slider)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcSliderLeft::evaluate
+  //
+  void
+  CalcSliderLeft::evaluate(double & result) const
+  {
+    result = view_.top();
+
+    double sceneWidth = view_.content_->width();
+    double viewWidth = view_.width();
+    if (sceneWidth <= viewWidth)
+    {
+      return;
+    }
+
+    double scale = viewWidth / sceneWidth;
+    double minWidth = slider_.height() * 5.0;
+    double width = minWidth + (viewWidth - minWidth) * scale;
+    double x = (viewWidth - width) * view_.position_.x();
+    result += x;
+  }
+
+
+  //----------------------------------------------------------------
+  // CalcSliderWidth::CalcSliderWidth
+  //
+  CalcSliderWidth::CalcSliderWidth(const Scrollview & view,
+                                   const Item & slider):
+    view_(view),
+    slider_(slider)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcSliderWidth::evaluate
+  //
+  void
+  CalcSliderWidth::evaluate(double & result) const
+  {
+    double sceneWidth = view_.content_->width();
+    double viewWidth = view_.width();
+    if (sceneWidth <= viewWidth)
+    {
+      result = viewWidth;
+      return;
+    }
+
+    double scale = viewWidth / sceneWidth;
+    double minWidth = slider_.height() * 5.0;
+    result = minWidth + (viewWidth - minWidth) * scale;
+  }
+
+
+  //----------------------------------------------------------------
   // Scrollview::Scrollview
   //
   Scrollview::Scrollview(const char * id):
     Item(id),
-    content_(new Item("content")),
-    position_(0.0)
+    content_(new Item("content"))
   {
     content_->self_ = content_;
   }
@@ -106,6 +165,9 @@ namespace yae
     double sceneHeight = this->content_->height();
     double viewHeight = this->height();
 
+    double sceneWidth = this->content_->width();
+    double viewWidth = this->width();
+
     const Segment & xExtent = this->xExtent();
     const Segment & yExtent = this->yExtent();
 
@@ -113,12 +175,19 @@ namespace yae
     if (sceneHeight > viewHeight)
     {
       double range = sceneHeight - viewHeight;
-      dy = this->position_ * range;
+      dy = this->position_.y() * range;
     }
 
-    origin.x() = xExtent.origin_;
+    double dx = 0.0;
+    if (sceneWidth > viewWidth)
+    {
+      double range = sceneWidth - viewWidth;
+      dx = this->position_.x() * range;
+    }
+
+    origin.x() = floor(xExtent.origin_ - dx);
     origin.y() = floor(yExtent.origin_ - dy);
-    xView = Segment(0.0, xExtent.length_);
+    xView = Segment(dx, xExtent.length_);
     yView = Segment(dy, yExtent.length_);
   }
 
@@ -225,7 +294,10 @@ namespace yae
   SliderDrag::onPress(const TVec2D & itemCSysOrigin,
                       const TVec2D & rootCSysPoint)
   {
-    startPos_ = scrollview_.position_;
+    bool vertical = scrollbar_.attr<bool>("vertical", true);
+    startPos_ = vertical ?
+      scrollview_.position_.y() :
+      scrollview_.position_.x();
     return true;
   }
 
@@ -237,14 +309,26 @@ namespace yae
                      const TVec2D & rootCSysDragStart,
                      const TVec2D & rootCSysDragEnd)
   {
-    double bh = scrollbar_.height();
-    double sh = this->height();
-    double yRange = bh - sh;
+    bool vertical = scrollbar_.attr<bool>("vertical", true);
+    double bz = vertical ? scrollbar_.height() : scrollbar_.width();
+    double sz = vertical ? this->height() : this->width();
+    double range = bz - sz;
 
-    double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
-    double ds = dy / yRange;
+    double dz = vertical ?
+      rootCSysDragEnd.y() - rootCSysDragStart.y() :
+      rootCSysDragEnd.x() - rootCSysDragStart.x();
+
+    double ds = dz / range;
     double t = std::min<double>(1.0, std::max<double>(0.0, startPos_ + ds));
-    scrollview_.position_ = t;
+
+    if (vertical)
+    {
+      scrollview_.position_.set_y(t);
+    }
+    else
+    {
+      scrollview_.position_.set_x(t);
+    }
 
     parent_->uncache();
     canvasLayer_.delegate()->requestRepaint();

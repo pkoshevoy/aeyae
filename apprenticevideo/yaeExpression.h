@@ -43,6 +43,27 @@ namespace yae
     }
   };
 
+
+  //----------------------------------------------------------------
+  // ConstExpression
+  //
+  template <typename TData>
+  struct ConstExpression : public Expression<TData>
+  {
+    ConstExpression(const TData & value):
+      value_(value)
+    {}
+
+    // virtual:
+    void evaluate(TData & result) const
+    {
+      result = value_;
+    }
+
+    TData value_;
+  };
+
+
   //----------------------------------------------------------------
   // TDoubleExpr
   //

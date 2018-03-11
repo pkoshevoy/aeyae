@@ -32,7 +32,15 @@ namespace yae
     FlickableArea & operator = (const FlickableArea &);
 
   public:
-    FlickableArea(const char * id, ItemView & view, Item & scrollbar);
+    FlickableArea(const char * id,
+                  ItemView & view,
+                  Item & vscrollbar);
+
+    FlickableArea(const char * id,
+                  ItemView & view,
+                  Item * vscrollbar = NULL,
+                  Item * hscrollbar = NULL);
+
     ~FlickableArea();
 
     // virtual:

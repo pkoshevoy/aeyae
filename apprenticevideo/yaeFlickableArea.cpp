@@ -49,11 +49,12 @@ namespace yae
 
     TPrivate(ItemView & itemView,
              FlickableArea & flickable,
-             Item & scrollbar):
+             Item * vscrollbar,
+             Item * hscrollbar):
       itemView_(itemView),
       flickable_(flickable),
-      scrollbar_(scrollbar),
-      startPos_(0.0),
+      vscrollbar_(vscrollbar),
+      hscrollbar_(hscrollbar),
       estimating_(false),
       nsamples_(0),
       v0_(0.0)
@@ -61,11 +62,11 @@ namespace yae
       animator_.reset(new Animator(flickable));
     }
 
-    void addSample(double dt, double y)
+    void addSample(double t, const TVec2D & pos)
     {
       int i = nsamples_ % TPrivate::kMaxSamples;
-      samples_[i].x() = dt;
-      samples_[i].y() = y;
+      t_[i] = t;
+      pos_[i] = pos;
       nsamples_++;
     }
 
@@ -76,11 +77,9 @@ namespace yae
         return 0.0;
       }
 
-      const TVec2D & a = samples_[i0];
-      const TVec2D & b = samples_[i1];
+      const double & t0 = t_[i0];
+      const double & t1 = t_[i1];
 
-      double t0 = a.x();
-      double t1 = b.x();
       double dt = t1 - t0;
       if (dt <= 0.0)
       {
@@ -88,11 +87,12 @@ namespace yae
         return 0.0;
       }
 
-      double y0 = a.y();
-      double y1 = b.y();
-      double dy = y1 - y0;
+      const TVec2D & a = pos_[i0];
+      const TVec2D & b = pos_[i1];
+      TVec2D ab = b - a;
+      double norm_ab = ab.norm();
 
-      double v = dy / dt;
+      double v = norm_ab / dt;
       return v;
     }
 
@@ -115,10 +115,24 @@ namespace yae
       estimating_ = true;
     }
 
+    void uncacheScrollbars()
+    {
+      if (vscrollbar_)
+      {
+        vscrollbar_->uncache();
+      }
+
+      if (hscrollbar_)
+      {
+        hscrollbar_->uncache();
+      }
+    }
+
     ItemView & itemView_;
     FlickableArea & flickable_;
-    Item & scrollbar_;
-    double startPos_;
+    Item * vscrollbar_;
+    Item * hscrollbar_;
+    TVec2D startPos_;
     bool estimating_;
 
     // flicking animation parameters:
@@ -127,11 +141,12 @@ namespace yae
 
     // for each sample point: x = t - tStart, y = dragEnd(t)
     enum { kMaxSamples = 5 };
-    TVec2D samples_[kMaxSamples];
+    double t_[kMaxSamples];
+    TVec2D pos_[kMaxSamples];
     std::size_t nsamples_;
 
     // velocity estimate based on available samples:
-    double v0_;
+    TVec2D v0_;
   };
 
   //----------------------------------------------------------------
@@ -139,11 +154,24 @@ namespace yae
   //
   FlickableArea::FlickableArea(const char * id,
                                ItemView & itemView,
-                               Item & scrollbar):
+                               Item & vscrollbar):
     InputArea(id),
     p_(NULL)
   {
-    p_ = new TPrivate(itemView, *this, scrollbar);
+    p_ = new TPrivate(itemView, *this, &vscrollbar, NULL);
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::FlickableArea
+  //
+  FlickableArea::FlickableArea(const char * id,
+                               ItemView & itemView,
+                               Item * vscrollbar,
+                               Item * hscrollbar):
+    InputArea(id),
+    p_(NULL)
+  {
+    p_ = new TPrivate(itemView, *this, vscrollbar, hscrollbar);
   }
 
   //----------------------------------------------------------------
@@ -168,11 +196,11 @@ namespace yae
     double sh = scrollview.height();
     double ch = scrollview.content_->height();
     double yRange = sh - ch;
-    double y = scrollview.position_ * yRange + sh * degrees / 360.0;
+    double y = scrollview.position_.y() * yRange + sh * degrees / 360.0;
     double s = std::min<double>(1.0, std::max<double>(0.0, y / yRange));
-    scrollview.position_ = s;
+    scrollview.position_.set_y(s);
 
-    p_->scrollbar_.uncache();
+    p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
 
     return true;
@@ -207,16 +235,25 @@ namespace yae
     p_->dontAnimate();
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
+
+    double sw = scrollview.width();
+    double cw = scrollview.content_->width();
+    double xRange = sw - cw;
+
     double sh = scrollview.height();
     double ch = scrollview.content_->height();
     double yRange = sh - ch;
-    double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
-    double ds = dy / yRange;
 
-    double s = std::min<double>(1.0, std::max<double>(0.0, p_->startPos_ + ds));
-    scrollview.position_ = s;
+    TVec2D drag = rootCSysDragEnd - rootCSysDragStart;
+    double tx = drag.x() / xRange;
+    double ty = drag.y() / yRange;
 
-    p_->scrollbar_.uncache();
+    TVec2D pos = p_->startPos_ + TVec2D(tx, ty);
+    pos.clamp(0.0, 1.0);
+
+    scrollview.position_ = pos;
+
+    p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
 
     double secondsElapsed = boost::chrono::duration<double>
@@ -234,16 +271,16 @@ namespace yae
                            const TVec2D & rootCSysDragStart,
                            const TVec2D & rootCSysDragEnd)
   {
-    double dy = (rootCSysDragEnd.y() - rootCSysDragStart.y());
+    TVec2D v = rootCSysDragEnd - rootCSysDragStart;
 
     double secondsElapsed = boost::chrono::duration<double>
       (boost::chrono::steady_clock::now() - p_->tStart_).count();
-    p_->addSample(secondsElapsed, rootCSysDragEnd.y());
+    p_->addSample(secondsElapsed, rootCSysDragEnd);
 
     double vi = p_->estimateVelocity(3);
-    p_->v0_ = dy / secondsElapsed;
+    p_->v0_ = v * (1.0 / secondsElapsed);
 
-    double k = vi / p_->v0_;
+    double k = vi / p_->v0_.norm();
 
 #if 0
     std::cerr << "FIXME: v0: " << p_->v0_ << ", k: " << k << std::endl;
@@ -291,6 +328,11 @@ namespace yae
     }
 
     Scrollview & scrollview = Item::ancestor<Scrollview>();
+
+    double sw = scrollview.width();
+    double cw = scrollview.content_->width();
+    double xRange = sw - cw;
+
     double sh = scrollview.height();
     double ch = scrollview.content_->height();
     double yRange = sh - ch;
@@ -301,20 +343,30 @@ namespace yae
     double secondsElapsed = boost::chrono::duration<double>
       (tNow - p_->tStart_).count();
 
-    double v0 = p_->v0_;
-    double dy = v0 * secondsElapsed;
-    double ds = dy / yRange;
-    double s =
-      std::min<double>(1.0, std::max<double>(0.0, scrollview.position_ + ds));
+    TVec2D v = p_->v0_ * secondsElapsed;
+    v.set_x(v.x() / xRange);
+    v.set_y(v.y() / yRange);
 
-    scrollview.position_ = s;
+    TVec2D pos = scrollview.position_ + v;
+    pos.clamp(0.0, 1.0);
+
+    TVec2D diff = pos - scrollview.position_;
+    scrollview.position_ = pos;
+#if 0
+    std::cerr
+      << "FIXME: pos: " << pos
+      << ", xrange: " << xRange
+      << ", yrange: " << yRange
+      << std::endl;
+#endif
+
     p_->tStart_ = tNow;
     {
       TMakeCurrentContext currentContext(*(p_->itemView_.context()));
-      p_->scrollbar_.uncache();
+      p_->uncacheScrollbars();
     }
 
-    if (s == 0.0 || s == 1.0 || v0 == 0.0)
+    if (v.normSqrd() == 0.0 || diff.normSqrd() == 0.0)
     {
       // motion stopped, stop the animation:
       p_->dontAnimate();
@@ -324,22 +376,24 @@ namespace yae
     // deceleration (friction) coefficient:
     const double k = sh * 0.1;
 
-    double v1 = v0 * (1.0 - k * secondsElapsed / fabs(v0));
-    if (v0 * v1 < 0.0)
+    double t = 1.0 - k * secondsElapsed / p_->v0_.norm();
+    if (t < 0.0)
     {
       // bounce detected:
       p_->dontAnimate();
       return;
     }
 
+    TVec2D v1 = p_->v0_ * t;
+
 #if 0
     std::cerr
-      << "FIXME: v0: " << v0
+      << "FIXME: v0: " << p_->v0_
       << ", v1: " << v1
-      << ", dv: " << v1 - v0 << std::endl;
+      << ", dv: " << v1 - p_->v0_ << std::endl;
 #endif
 
-    YAE_ASSERT(fabs(v1) < fabs(v0));
+    YAE_ASSERT(v1.normSqrd() < v0.normSqrd());
     p_->v0_ = v1;
   }
 

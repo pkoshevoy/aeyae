@@ -465,6 +465,58 @@ namespace yae
       return ColorRef::expression(*e, scale, translate);
     }
 
+    // for user-defined item attributes:
+    template <typename TData>
+    inline DataRef<TData>
+    setAttr(const char * key, Expression<TData> * e)
+    {
+      attr_[std::string(key)] = TPropertiesBasePtr(e);
+      return DataRef<TData>::expression(*e);
+    }
+
+    template <typename TData>
+    inline DataRef<TData>
+    setAttr(const char * key, const TData & value)
+    {
+      Expression<TData> * e = new ConstExpression<TData>(value);
+      return this->setAttr(key, e);
+    }
+
+    template <typename TData>
+    inline bool
+    getAttr(const char * key, TData & value) const
+    {
+      std::map<std::string, TPropertiesBasePtr>::const_iterator
+        found = attr_.find(std::string(key));
+
+      if (found == attr_.end())
+      {
+        return false;
+      }
+
+      const IPropertiesBase * base = found->second.get();
+      const IProperties<TData> * attr =
+        dynamic_cast<const IProperties<TData> *>(base);
+
+      if (!attr)
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      attr->get(kPropertyExpression, value);
+      return true;
+    }
+
+    template <typename TData>
+    TData
+    attr(const char * attr, const TData & defaultValue = TData())
+    {
+      TData value = defaultValue;
+      getAttr(attr, value);
+      return value;
+    }
+
     // helper:
     bool overlaps(const TVec2D & pt) const;
 
@@ -600,6 +652,9 @@ namespace yae
   protected:
     // storage of expressions associated with this Item:
     std::list<TPropertiesBasePtr> expr_;
+
+    // user-defined properties associated with this item:
+    std::map<std::string, TPropertiesBasePtr> attr_;
 
     // storage of event observers associated with this Item:
     TEventObservers eo_;

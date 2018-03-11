@@ -12,6 +12,7 @@
 // standard libraries:
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <limits>
 
 
@@ -29,6 +30,18 @@ namespace yae
     typedef TData value_type;
     typedef Vec<TData, Cardinality> TVec;
     TData coord_[Cardinality];
+
+    inline TData & operator[](unsigned int i)
+    {
+      YAE_ASSERT(i < kCardinality);
+      return coord_[i];
+    }
+
+    inline const TData & operator[](unsigned int i) const
+    {
+      YAE_ASSERT(i < kCardinality);
+      return coord_[i];
+    }
 
     inline TVec & operator *= (const TData & scale)
     {
@@ -227,6 +240,18 @@ namespace yae
 
       return *this;
     }
+
+    inline std::ostream & dump(std::ostream & os) const
+    {
+      os << "TVec" << Cardinality << "D(" << coord_[0];
+      for (unsigned int i = 1; i < Cardinality; i++)
+      {
+        os << ", " << coord_[i];
+      }
+      os << ")";
+
+      return os;
+    }
   };
 
   //----------------------------------------------------------------
@@ -247,6 +272,17 @@ namespace yae
   operator * (const TData & scale, const Vec<TData, Cardinality> & vec)
   {
     return vec * scale;
+  }
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  template <typename TData, unsigned int Cardinality>
+  inline std::ostream &
+  operator << (std::ostream & os, const Vec<TData, Cardinality> & vec)
+  {
+    vec.dump(os);
+    return os;
   }
 
   //----------------------------------------------------------------

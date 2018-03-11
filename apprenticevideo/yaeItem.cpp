@@ -844,13 +844,12 @@ namespace yae
     if (property == kPropertyVisible)
     {
       value = this->visible();
+      return;
     }
-    else
-    {
-      YAE_ASSERT(false);
-      throw std::runtime_error("unsupported item property of type <bool>");
-      value = false;
-    }
+
+    YAE_ASSERT(false);
+    throw std::runtime_error("unsupported item property of type <bool>");
+    value = false;
   }
 
   //----------------------------------------------------------------
