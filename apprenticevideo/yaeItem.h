@@ -468,11 +468,7 @@ namespace yae
     // for user-defined item attributes:
     template <typename TData>
     inline DataRef<TData>
-    setAttr(const char * key, Expression<TData> * e)
-    {
-      attr_[std::string(key)] = TPropertiesBasePtr(e);
-      return DataRef<TData>::expression(*e);
-    }
+    setAttr(const char * key, Expression<TData> * e);
 
     template <typename TData>
     inline DataRef<TData>
@@ -484,36 +480,23 @@ namespace yae
 
     template <typename TData>
     inline bool
-    getAttr(const char * key, TData & value) const
+    getAttr(const std::string & key, TData & value) const;
+
+    template <typename TData>
+    TData
+    attr(const char * name, const TData & defaultValue = TData())
     {
-      std::map<std::string, TPropertiesBasePtr>::const_iterator
-        found = attr_.find(std::string(key));
-
-      if (found == attr_.end())
-      {
-        return false;
-      }
-
-      const IPropertiesBase * base = found->second.get();
-      const IProperties<TData> * attr =
-        dynamic_cast<const IProperties<TData> *>(base);
-
-      if (!attr)
-      {
-        YAE_ASSERT(false);
-        return false;
-      }
-
-      attr->get(kPropertyExpression, value);
-      return true;
+      TData value = defaultValue;
+      getAttr(std::string(name), value);
+      return value;
     }
 
     template <typename TData>
     TData
-    attr(const char * attr, const TData & defaultValue = TData())
+    attr(const std::string & name, const TData & defaultValue = TData())
     {
       TData value = defaultValue;
-      getAttr(attr, value);
+      getAttr(name, value);
       return value;
     }
 
@@ -653,9 +636,6 @@ namespace yae
     // storage of expressions associated with this Item:
     std::list<TPropertiesBasePtr> expr_;
 
-    // user-defined properties associated with this item:
-    std::map<std::string, TPropertiesBasePtr> attr_;
-
     // storage of event observers associated with this Item:
     TEventObservers eo_;
 
@@ -716,7 +696,7 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ExpressionItem
+  // ExprItem
   //
   template <typename TDataRef>
   struct ExprItem : public Item
@@ -758,6 +738,51 @@ namespace yae
   // ExpressionItem
   //
   typedef ExprItem<ItemRef> ExpressionItem;
+
+
+  //----------------------------------------------------------------
+  // Item::setAttr
+  //
+  template <typename TData>
+  inline DataRef<TData>
+  Item::setAttr(const char * key, Expression<TData> * e)
+  {
+    typedef DataRef<TData> TDataRef;
+    typedef ExprItem<TDataRef> TItem;
+    TItem & item = addHidden(new TItem(key, e));
+    return DataRef<TData>::reference(item, kPropertyExpression);
+  }
+
+  //----------------------------------------------------------------
+  // Item::getAttr
+  //
+  template <typename TData>
+  inline bool
+  Item::getAttr(const std::string & key, TData & value) const
+  {
+    const Item * attr = NULL;
+
+    for (std::vector<ItemPtr>::const_iterator
+           i = children_.begin(); i != children_.end(); ++i)
+    {
+      const Item & child = *(i->get());
+      if (child.id_ == key)
+      {
+        attr = &child;
+        YAE_ASSERT(!attr->visible());
+        break;
+      }
+    }
+
+    if (attr == NULL)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    attr->get(kPropertyExpression, value);
+    return true;
+  }
 
 
   //----------------------------------------------------------------

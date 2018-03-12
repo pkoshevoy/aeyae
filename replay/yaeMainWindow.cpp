@@ -111,23 +111,10 @@ namespace yae
 #endif
     canvasWidget_->setGreeting(greeting);
 
-#if 0
-    canvasWidget_->append(&playlistView_);
-    canvasWidget_->append(&timelineView_);
-    canvasWidget_->append(&frameCropView_);
-    playlistView_.setup(this);
-    playlistView_.setModel(&playlistModel_);
-    playlistView_.setEnabled(false);
-    timelineView_.setup(this, &playlistView_);
-    timelineView_.setModel(&timelineModel_);
-    frameCropView_.setEnabled(false);
-
-    // add image://thumbnails/... provider:
-    boost::shared_ptr<ThumbnailProvider>
-      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
-    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
-                                   imageProvider);
-#endif
+    canvasWidget_->append(&view_);
+    view_.setModel(&model_);
+    view_.setEnabled(true);
+    view_.layoutChanged();
 
     canvasWidget_->setFocusPolicy(Qt::StrongFocus);
     canvasWidget_->setAcceptDrops(true);

@@ -188,6 +188,17 @@ namespace yae
       translate_(0.0)
     {}
 
+    //----------------------------------------------------------------
+    // ItemRef
+    //
+    ItemRef(const TDataRef & dataRef,
+            double scale = 1.0,
+            double translate = 0.0):
+      TDataRef(dataRef),
+      scale_(scale),
+      translate_(translate)
+    {}
+
     inline void reset()
     {
       TDataRef::reset();
@@ -209,6 +220,23 @@ namespace yae
                 double s = 1.0,
                 double t = 0.0)
     { return ItemRef(&ref, prop, s, t, 0.0, false); }
+
+    inline static ItemRef
+    reference(const TDataRef & dataRef,
+              double s = 1.0,
+              double t = 0.0)
+    { return ItemRef(dataRef, s, t); }
+
+    inline static ItemRef
+    uncacheable(const TDataRef & dataRef,
+                double s = 1.0,
+                double t = 0.0)
+    {
+      ItemRef r(dataRef, s, t);
+      r.cached_ = false;
+      r.cachingEnabled_ = false;
+      return r;
+    }
 
     inline static ItemRef
     constant(const double & t)
@@ -316,6 +344,17 @@ namespace yae
       TDataRef(constantValue),
       scale_(1.0, 1.0, 1.0, 1.0),
       translate_(0.0, 0.0, 0.0, 0.0)
+    {}
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const TDataRef & dataRef,
+             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0)):
+      TDataRef(dataRef),
+      scale_(scale),
+      translate_(translate)
     {}
 
     inline void reset()

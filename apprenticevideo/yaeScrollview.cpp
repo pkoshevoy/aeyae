@@ -139,7 +139,7 @@ namespace yae
   //
   Scrollview::Scrollview(const char * id):
     Item(id),
-    content_(new Item("content"))
+    content_(new Item((std::string(id) + ".content").c_str()))
   {
     content_->self_ = content_;
   }

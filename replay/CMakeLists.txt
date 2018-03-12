@@ -79,6 +79,8 @@ find_library(GLEW_LIBRARY GLEW
 
 
 set(project_moc_hxx
+
+  yaeDemuxerView.h
   yaeMainWindow.h
 
   ../apprenticevideo/yaeCanvasWidget.h
@@ -97,11 +99,13 @@ set(project_uis
   )
 
 set(project_sources
+  yaeDemuxerView.cpp
+  yaeDemuxerView.h
   yaeMain.cpp
-  yaeMainWindow.h
   yaeMainWindow.cpp
-  yaeReplay.h
+  yaeMainWindow.h
   yaeReplay.cpp
+  yaeReplay.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h

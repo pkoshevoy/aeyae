@@ -25,6 +25,7 @@
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
+#include "yaeDemuxerView.h"
 
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
@@ -115,6 +116,9 @@ namespace yae
 
     // frame editing view:
     boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
+
+    RemuxModel model_;
+    RemuxView view_;
   };
 }
 
