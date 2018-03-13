@@ -38,6 +38,10 @@
 namespace yae
 {
 
+  // forward declarations:
+  class ItemViewStyle;
+
+
   // helper: convert from device independent "pixels" to device pixels:
   template <typename TEvent>
   TVec2D
@@ -123,6 +127,7 @@ namespace yae
     PostponeEvent & operator = (const PostponeEvent &);
   };
 
+
   //----------------------------------------------------------------
   // ItemView
   //
@@ -147,6 +152,9 @@ namespace yae
     };
 
     ItemView(const char * name);
+
+    virtual const ItemViewStyle * style() const
+    { return NULL; }
 
     // virtual:
     void setEnabled(bool enable);
@@ -260,6 +268,145 @@ namespace yae
     // a set of animators, referenced by the animation timer:
     std::set<boost::weak_ptr<IAnimator> > animators_;
   };
+
+
+  //----------------------------------------------------------------
+  // ItemViewStyle
+  //
+  struct YAE_API ItemViewStyle : public Item
+  {
+    ItemViewStyle(const char * id, const ItemView & view):
+      Item(id),
+      view_(view)
+    {}
+
+    // for user-defined item attributes:
+    template <typename TData>
+    inline DataRef<TData>
+    setStyleAttr(const char * key, Expression<TData> * e)
+    {
+      attr_[std::string(key)] = TPropertiesBasePtr(e);
+       DataRef<TData> r = DataRef<TData>::expression(*e);
+       r.cachingEnabled_ = false;
+       return r;
+    }
+
+    template <typename TData>
+    inline DataRef<TData>
+    setStyleAttr(const char * key, const TData & value)
+    {
+      Expression<TData> * e = new ConstExpression<TData>(value);
+      return this->setStyleAttr(key, e);
+    }
+
+    template <typename TData>
+    inline bool
+    getStyleAttr(const std::string & key, TData & value) const
+    {
+      std::map<std::string, TPropertiesBasePtr>::const_iterator
+        found = attr_.find(key);
+
+      if (found == attr_.end())
+      {
+        return false;
+      }
+
+      const IPropertiesBase * base = found->second.get();
+      const IProperties<TData> * styleAttr =
+        dynamic_cast<const IProperties<TData> *>(base);
+
+      if (!styleAttr)
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      styleAttr->get(kPropertyExpression, value);
+      return true;
+    }
+
+    template <typename TData>
+    TData
+    styleAttr(const char * attr, const TData & defaultValue = TData())
+    {
+      TData value = defaultValue;
+      getStyleAttr(std::string(attr), value);
+      return value;
+    }
+
+    // the view that owns this style:
+    const ItemView & view_;
+
+    // user-defined properties associated with this item:
+    std::map<std::string, TPropertiesBasePtr> attr_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ColorAttr
+  //
+  template <typename TData = double>
+  struct YAE_API StyleAttr : public Expression<TData>
+  {
+    StyleAttr(const ItemView & view, const char * attr):
+      view_(view),
+      attr_(attr)
+    {}
+
+    // virtual:
+    void evaluate(TData & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+
+      if (!style)
+      {
+        throw std::runtime_error("view has no style");
+      }
+
+      style->getStyleAttr<TData>(attr_, result);
+    }
+
+    const ItemView & view_;
+    std::string attr_;
+  };
+
+  //----------------------------------------------------------------
+  // ColorAttr
+  //
+  struct YAE_API ColorAttr : public TColorExpr
+  {
+    ColorAttr(const ItemView & view,
+              const char * attr,
+              double alphaScale = 1.0,
+              double alphaTranslate = 0.0):
+      view_(view),
+      attr_(attr),
+      alphaScale_(alphaScale),
+      alphaTranslate_(alphaTranslate)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+
+      if (!style)
+      {
+        throw std::runtime_error("view has no style");
+      }
+
+      if (style->getStyleAttr<Color>(attr_, result))
+      {
+        result = result.a_scaled(alphaScale_, alphaTranslate_);
+      }
+    }
+
+    const ItemView & view_;
+    std::string attr_;
+    double alphaScale_;
+    double alphaTranslate_;
+  };
+
 
   //----------------------------------------------------------------
   // CalcTitleHeight

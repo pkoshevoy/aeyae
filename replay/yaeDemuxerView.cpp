@@ -124,7 +124,26 @@ namespace yae
     void layout(RemuxModel & model, const std::size_t & index,
                 RemuxView & view, const RemuxViewStyle & style,
                 Item & root)
-    {}
+    {
+      const Item * prev = NULL;
+      const std::size_t n = std::size_t(1.0 + 29.0 * drand48());
+      for (std::size_t i = 0; i <= n; ++i)
+      {
+        RoundRect & frame = root.addNew<RoundRect>("frame");
+        frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+        frame.anchors_.left_ = prev ?
+          ItemRef::reference(*prev, kPropertyRight) :
+          ItemRef::reference(root, kPropertyLeft);
+        frame.width_ = ItemRef::reference(style.title_height_, 16.0 / 9.0);
+        frame.height_ = ItemRef::reference(style.title_height_);
+        frame.radius_ = ItemRef::constant(3);
+        frame.background_ = frame.addExpr(new ColorAttr(view, "bg_", 0));
+        frame.color_ = frame.addExpr(new ColorAttr(view, "scrollbar_"));
+
+        prev = &frame;
+      }
+
+    }
   };
 
   //----------------------------------------------------------------
@@ -136,14 +155,18 @@ namespace yae
                 RemuxView & view, const RemuxViewStyle & style,
                 Item & root)
     {
-      RoundRect & rr = root.addNew<RoundRect>("FIXME: pkoshevoy: debugging");
-      rr.anchors_.top_ = ItemRef::constant(0.0);
-      rr.anchors_.left_ = ItemRef::constant(0.0);
-      rr.width_ = ItemRef::constant(1000);
-      rr.height_ = ItemRef::constant(80);
-      rr.radius_ = ItemRef::constant(20);
-      // rr.background_ = slider.addExpr(new ColorAttr(*view.root(), "fg_", 0));
-      rr.color_ = ColorRef::constant(Color(0xeedd82, 1.0));
+      const Item * prev = NULL;
+      for (std::size_t i = 0; i <= 59; ++i)
+      {
+        Item & gop = root.addNew<Item>("gop");
+        gop.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+        gop.anchors_.top_ = prev ?
+          ItemRef::reference(*prev, kPropertyBottom) :
+          ItemRef::reference(root, kPropertyTop);
+
+        style.layout_gop_->layout(model, i, view, style, gop);
+        prev = &gop;
+      }
     }
   };
 
@@ -164,11 +187,11 @@ namespace yae
         RoundRect & btn = root.addNew<RoundRect>("append");
         btn.border_ = ItemRef::constant(1.0);
         btn.radius_ = ItemRef::constant(3.0);
-        btn.width_ = ItemRef::reference(root.height_, 0.9);
+        btn.width_ = ItemRef::reference(root.height_, 0.8);
         btn.height_ = btn.width_;
         btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-        btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
-        btn.color_ = btn.addExpr(new ColorAttr(*view.root(), "bg_controls_"));
+        btn.anchors_.left_ = ItemRef::reference(root.height_, 1);
+        btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
 
         Text & label = btn.addNew<Text>("label");
         label.anchors_.center(btn);
@@ -179,11 +202,11 @@ namespace yae
       RoundRect & btn = root.addNew<RoundRect>("remove");
       btn.border_ = ItemRef::constant(1.0);
       btn.radius_ = ItemRef::constant(3.0);
-      btn.width_ = ItemRef::reference(root.height_, 0.9);
+      btn.width_ = ItemRef::reference(root.height_, 0.8);
       btn.height_ = btn.width_;
       btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-      btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 0.5);
-      btn.color_ = btn.addExpr(new ColorAttr(*view.root(), "bg_controls_"));
+      btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
+      btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
 
       Text & label = btn.addNew<Text>("label");
       label.anchors_.center(btn);
@@ -208,10 +231,9 @@ namespace yae
         row.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
         row.anchors_.top_ = prev ?
           ItemRef::reference(*prev, kPropertyBottom) :
-          ItemRef::constant(0.0);
+          ItemRef::reference(root, kPropertyTop);
         row.color_ = row.addExpr(new ColorAttr
-                                 (*view.root(), "bg_controls_",
-                                  (i % 2) ? 1.0 : 0.5));
+                                 (view, "bg_controls_", (i % 2) ? 1.0 : 0.5));
 
         style.layout_clip_->layout(model, i, view, style, row);
         prev = &row;
@@ -290,9 +312,9 @@ namespace yae
         ItemRef::constant(0.0)));
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-    sview.anchors_.right_ = ItemRef::uncacheable(scrollbar, kPropertyLeft);
+    sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
     sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-    sview.anchors_.bottom_ = ItemRef::uncacheable(hscrollbar, kPropertyTop);
+    sview.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
 
     Item & content = *(sview.content_);
     content.anchors_.left_ = ItemRef::constant(0.0);
@@ -320,8 +342,8 @@ namespace yae
     slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
     slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
-    slider.background_ = slider.addExpr(new ColorAttr(*view.root(), "bg_", 0));
-    slider.color_ = ColorRef::constant(Color(0xeedd82, 1.0));
+    slider.background_ = slider.addExpr(new ColorAttr(view, "bg_", 0));
+    slider.color_ = slider.addExpr(new ColorAttr(view, "scrollbar_"));
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
@@ -339,8 +361,8 @@ namespace yae
     hslider.width_ =
       hslider.addExpr(new CalcSliderWidth(sview, hslider));
     hslider.radius_ = ItemRef::scale(hslider, kPropertyHeight, 0.5);
-    hslider.background_ = slider.addExpr(new ColorAttr(*view.root(), "bg_", 0));
-    hslider.color_ = ColorRef::constant(Color(0xeedd82, 1.0));
+    hslider.background_ = hslider.addExpr(new ColorAttr(view, "bg_", 0));
+    hslider.color_ = hslider.addExpr(new ColorAttr(view, "scrollbar_"));
 
     SliderDrag & maHSlider =
       hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));
@@ -361,7 +383,7 @@ namespace yae
     {
       Rectangle & bg = root.addNew<Rectangle>("background");
       bg.anchors_.fill(root);
-      bg.color_ = bg.addExpr(new ColorAttr(*view.root(), "bg_"));
+      bg.color_ = bg.addExpr(new ColorAttr(view, "bg_"));
 
       Item & gops = root.addNew<Item>("gops");
       Item & clips = root.addNew<Item>("clips");
@@ -369,8 +391,11 @@ namespace yae
       Rectangle & sep = root.addNew<Rectangle>("separator");
       sep.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       sep.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-      sep.anchors_.vcenter_ = ItemRef::scale(root, kPropertyHeight, 0.75);
+      // sep.anchors_.vcenter_ = ItemRef::scale(root, kPropertyHeight, 0.75);
+      sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -100);
       sep.height_ = ItemRef::reference(style.title_height_, 0.1);
+      sep.color_ = sep.
+        addExpr(new ColorAttr(view, "fg_"));
 
       gops.anchors_.fill(root);
       gops.anchors_.bottom_ = ItemRef::reference(sep, kPropertyTop);
@@ -394,8 +419,7 @@ namespace yae
   // RemuxViewStyle::RemuxViewStyle
   //
   RemuxViewStyle::RemuxViewStyle(const char * id, const ItemView & view):
-    Item(id),
-    view_(view),
+    ItemViewStyle(id, view),
     layout_root_(new RemuxLayout()),
     layout_clips_(new RemuxLayoutClips()),
     layout_clip_(new RemuxLayoutClip()),
@@ -458,37 +482,43 @@ namespace yae
                                   QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
 
-    title_height_ = ItemRef::reference
-      (this->setAttr<double>("title_height_", new CalcTitleHeight(view, 50.0)));
+    title_height_ = addExpr(new CalcTitleHeight(view, 50.0));
+    title_height_.cachingEnabled_ = false;
 
-    frame_width_ = ItemRef(title_height_, 2.0);
-    row_height_ = ItemRef(title_height_, 0.3);
-    font_size_ = ItemRef(title_height_, 0.2);
+    frame_width_ = ItemRef::reference(title_height_, 2.0);
+    row_height_ = ItemRef::reference(title_height_, 0.5);
+    font_size_ = ItemRef::reference(title_height_, 0.15);
 
     // color palette:
-    bg_ = setAttr("bg_", Color(0x1f1f1f, 0.87));
-    fg_ = setAttr("fg_", Color(0xffffff, 1.0));
+    bg_ = setStyleAttr("bg_", Color(0x1f1f1f, 0.87));
+    fg_ = setStyleAttr("fg_", Color(0xffffff, 1.0));
 
-    border_ = setAttr("border_", Color(0x7f7f7f, 1.0));
-    cursor_ = setAttr("cursor_", Color(0xf12b24, 1.0));
-    scrollbar_ = setAttr("scrollbar_", Color(0x7f7f7f, 0.5));
-    separator_ = setAttr("separator_", scrollbar_.get());
-    underline_ = setAttr("underline_", cursor_.get());
+    border_ = setStyleAttr("border_", Color(0x7f7f7f, 1.0));
+    cursor_ = setStyleAttr("cursor_", Color(0xf12b24, 1.0));
+    scrollbar_ = setStyleAttr("scrollbar_", Color(0x7f7f7f, 0.5));
+    separator_ = setStyleAttr("separator_", scrollbar_.get());
+    underline_ = setStyleAttr("underline_", cursor_.get());
 
-    bg_timecode_ = setAttr("bg_timecode_", Color(0x7f7f7f, 0.25));
-    fg_timecode_ = setAttr("fg_timecode_", Color(0xFFFFFF, 0.5));
+    bg_timecode_ = setStyleAttr("bg_timecode_", Color(0x7f7f7f, 0.25));
+    fg_timecode_ = setStyleAttr("fg_timecode_", Color(0xFFFFFF, 0.5));
 
-    bg_controls_ = setAttr("bg_controls_", bg_timecode_.get());
-    fg_controls_ = setAttr("fg_controls_", fg_timecode_.get().opaque(0.75));
+    bg_controls_ =
+      setStyleAttr("bg_controls_", bg_timecode_.get());
+    fg_controls_ =
+      setStyleAttr("fg_controls_", fg_timecode_.get().opaque(0.75));
 
-    bg_focus_ = setAttr("bg_focus_", Color(0x7f7f7f, 0.5));
-    fg_focus_ = setAttr("fg_focus_", Color(0xffffff, 1.0));
+    bg_focus_ = setStyleAttr("bg_focus_", Color(0x7f7f7f, 0.5));
+    fg_focus_ = setStyleAttr("fg_focus_", Color(0xffffff, 1.0));
 
-    bg_edit_selected_ = setAttr("bg_edit_selected_", Color(0xffffff, 1.0));
-    fg_edit_selected_ = setAttr("fg_edit_selected_", Color(0x000000, 1.0));
+    bg_edit_selected_ =
+      setStyleAttr("bg_edit_selected_", Color(0xffffff, 1.0));
+    fg_edit_selected_ =
+      setStyleAttr("fg_edit_selected_", Color(0x000000, 1.0));
 
-    timeline_excluded_ = setAttr("timeline_excluded_", Color(0xFFFFFF, 0.2));
-    timeline_included_ = setAttr("timeline_included_", Color(0xFFFFFF, 0.5));
+    timeline_excluded_ =
+      setStyleAttr("timeline_excluded_", Color(0xFFFFFF, 0.2));
+    timeline_included_ =
+      setStyleAttr("timeline_included_", Color(0xFFFFFF, 0.5));
   }
 
   //----------------------------------------------------------------
@@ -496,13 +526,9 @@ namespace yae
   //
   RemuxView::RemuxView():
     ItemView("RemuxView"),
+    style_("RemuxViewStyle", *this),
     model_(NULL)
-  {
-    Item & root = *root_;
-
-    RemuxViewStyle & style = root.
-      addHidden(new RemuxViewStyle("style", *this));
-  }
+  {}
 
   //----------------------------------------------------------------
   // RemuxView::setModel
@@ -645,8 +671,7 @@ namespace yae
     root.uncache();
     uncache_.clear();
 
-    RemuxViewStyle & style = root.get<RemuxViewStyle>("style");
-    style.layout_root_->layout(root, *this, *model_, style);
+    style_.layout_root_->layout(root, *this, *model_, style_);
 
 #ifndef NDEBUG
     root.dump(std::cerr);

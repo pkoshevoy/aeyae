@@ -28,10 +28,10 @@ namespace yae
 {
 
   // forward declarations:
-  class RemuxView;
-  struct RemuxViewStyle;
   class Texture;
   class Text;
+  class RemuxView;
+  struct RemuxViewStyle;
 
   //----------------------------------------------------------------
   // Clip
@@ -53,11 +53,18 @@ namespace yae
   //
   struct YAE_API RemuxModel
   {
+    RemuxModel():
+      current_(0)
+    {}
+
     TDemuxerInterfacePtr src_;
     DemuxerSummary summary_;
 
     // composition of the remuxed output:
     std::vector<TClipPtr> remux_;
+
+    // index of currently selected clip:
+    std::size_t current_;
   };
 
   //----------------------------------------------------------------
@@ -100,14 +107,13 @@ namespace yae
   //
   typedef boost::shared_ptr<TLayout> TLayoutPtr;
 
+
   //----------------------------------------------------------------
   // RemuxViewStyle
   //
-  struct YAE_API RemuxViewStyle : public Item
+  struct YAE_API RemuxViewStyle : public ItemViewStyle
   {
     RemuxViewStyle(const char * id, const ItemView & view);
-
-    const ItemView & view_;
 
     TLayoutPtr layout_root_;
     TLayoutPtr layout_clips_;
@@ -155,40 +161,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ColorAttr
-  //
-  struct YAE_API ColorAttr : public TColorExpr
-  {
-    ColorAttr(const Item & item,
-              const char * attr,
-              double alphaScale = 1.0,
-              double alphaTranslate = 0.0):
-      item_(item),
-      attr_(attr),
-      alphaScale_(alphaScale),
-      alphaTranslate_(alphaTranslate)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      // it's a convention:
-      const Item & style = item_["style"];
-
-      if (style.getAttr<Color>(attr_, result))
-      {
-        result = result.a_scaled(alphaScale_, alphaTranslate_);
-      }
-    }
-
-    const Item & item_;
-    std::string attr_;
-    double alphaScale_;
-    double alphaTranslate_;
-  };
-
-
-  //----------------------------------------------------------------
   // RemuxView
   //
   class YAE_API RemuxView : public ItemView
@@ -203,6 +175,10 @@ namespace yae
 
     inline RemuxModel * model() const
     { return model_; }
+
+    // virtual:
+    const ItemViewStyle * style() const
+    { return &style_; }
 
     // virtual:
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
@@ -220,6 +196,7 @@ namespace yae
     void dataChanged();
 
   protected:
+    RemuxViewStyle style_;
     RemuxModel * model_;
   };
 

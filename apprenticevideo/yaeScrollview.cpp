@@ -350,8 +350,12 @@ namespace yae
   {
     double zv = vscrollbarWidth.get();
     double zh = hscrollbarWidth.get();
-    double sceneWidth = zh ? content.width() : 0.0;
-    double sceneHeight = zv ? content.height() : 0.0;
+
+    double sceneWidth = 0.0;
+    try { sceneWidth = zh ? content.width() : 0.0; } catch (...) {}
+
+    double sceneHeight = 0.0;
+    try { sceneHeight = zv ? content.height() : 0.0; } catch (...) {}
 
     double x0 = left.get();
     double x1 = right.get();

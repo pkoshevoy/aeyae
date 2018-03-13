@@ -228,11 +228,28 @@ namespace yae
     { return ItemRef(dataRef, s, t); }
 
     inline static ItemRef
+    reference(const ItemRef & dataRef,
+              double s = 1.0,
+              double t = 0.0)
+    { return ItemRef(dataRef, s * dataRef.scale_, s * dataRef.translate_ + t); }
+
+    inline static ItemRef
     uncacheable(const TDataRef & dataRef,
                 double s = 1.0,
                 double t = 0.0)
     {
       ItemRef r(dataRef, s, t);
+      r.cached_ = false;
+      r.cachingEnabled_ = false;
+      return r;
+    }
+
+    inline static ItemRef
+    uncacheable(const ItemRef & dataRef,
+                double s = 1.0,
+                double t = 0.0)
+    {
+      ItemRef r(dataRef, s * dataRef.scale_, s * dataRef.translate_ + t);
       r.cached_ = false;
       r.cachingEnabled_ = false;
       return r;
@@ -355,6 +372,15 @@ namespace yae
       TDataRef(dataRef),
       scale_(scale),
       translate_(translate)
+    {}
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const ColorRef & dataRef):
+      TDataRef(dataRef),
+      scale_(dataRef.scale_),
+      translate_(dataRef.translate_)
     {}
 
     inline void reset()

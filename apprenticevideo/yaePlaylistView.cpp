@@ -1906,6 +1906,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistView::style
+  //
+  const ItemViewStyle *
+  PlaylistView::style() const
+  {
+    return &playlistViewStyle();
+  }
+
+  //----------------------------------------------------------------
   // SelectionFlags
   //
   typedef QItemSelectionModel::SelectionFlags SelectionFlags;

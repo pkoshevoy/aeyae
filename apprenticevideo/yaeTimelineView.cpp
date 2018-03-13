@@ -1243,6 +1243,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TimelineView::style
+  //
+  const ItemViewStyle *
+  TimelineView::style() const
+  {
+    return playlist_ ? playlist_->style() : NULL;
+  }
+
+  //----------------------------------------------------------------
   // TimelineView::setEnabled
   //
   void

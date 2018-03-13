@@ -597,6 +597,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FrameCropView::style
+  //
+  const ItemViewStyle *
+  FrameCropView::style() const
+  {
+    return playlist_ ? playlist_->style() : NULL;
+  }
+
+  //----------------------------------------------------------------
   // FrameCropView::resizeTo
   //
   bool

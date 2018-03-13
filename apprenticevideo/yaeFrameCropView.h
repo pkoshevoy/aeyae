@@ -79,6 +79,9 @@ namespace yae
 
     void init(PlaylistView * playlist);
 
+    // virtual:
+    const ItemViewStyle * style() const;
+
     // virtual: returns false if size didn't change
     bool resizeTo(const Canvas * canvas);
 

@@ -253,7 +253,7 @@ namespace yae
   //
   PlaylistViewStyle::PlaylistViewStyle(const char * id,
                                        PlaylistView & playlist):
-    Item(id),
+    ItemViewStyle(id, playlist),
     playlist_(playlist),
     title_height_(Item::addNewHidden<Item>("title_height")),
     cell_width_(Item::addNewHidden<Item>("cell_width")),

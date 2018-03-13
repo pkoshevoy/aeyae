@@ -37,6 +37,9 @@ namespace yae
     void setup(MainWindow * mainWindow, PlaylistView * playlist);
 
     // virtual:
+    const ItemViewStyle * style() const;
+
+    // virtual:
     void setEnabled(bool enable);
 
     // virtual: returns false if size didn't change
