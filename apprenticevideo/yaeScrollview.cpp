@@ -151,9 +151,10 @@ namespace yae
   //----------------------------------------------------------------
   // Scrollview::Scrollview
   //
-  Scrollview::Scrollview(const char * id):
+  Scrollview::Scrollview(const char * id, bool clipContent):
     Item(id),
-    content_(new Item((std::string(id) + ".content").c_str()))
+    content_(new Item((std::string(id) + ".content").c_str())),
+    clipContent_(clipContent)
   {
     content_->self_ = content_;
   }
@@ -251,15 +252,18 @@ namespace yae
       return false;
     }
 
-    BBox bbox;
-    Item::get(kPropertyBBox, bbox);
+    if (clipContent_)
+    {
+      BBox bbox;
+      Item::get(kPropertyBBox, bbox);
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
-    yae_assert_gl_no_error();
-    YAE_OGL_11(glScissor(bbox.x_, canvas->canvasHeight() - bbox.bottom(),
-                         bbox.w_, bbox.h_));
-    yae_assert_gl_no_error();
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
+      yae_assert_gl_no_error();
+      YAE_OGL_11(glScissor(bbox.x_, canvas->canvasHeight() - bbox.bottom(),
+                           bbox.w_, bbox.h_));
+      yae_assert_gl_no_error();
+    }
 
     TVec2D origin;
     Segment xView;
@@ -271,7 +275,11 @@ namespace yae
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
     content.paint(xView, yView, canvas);
 
-    YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
+    if (clipContent_)
+    {
+      YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
+    }
+
     return true;
   }
 

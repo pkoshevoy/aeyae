@@ -100,7 +100,7 @@ namespace yae
   //
   struct Scrollview : public Item
   {
-    Scrollview(const char * id);
+    Scrollview(const char * id, bool clipContent = false);
 
     // helper:
     void getContentView(TVec2D & origin,
@@ -142,6 +142,9 @@ namespace yae
     // where 0 corresponds to the beginning of content
     // and 1 corresponds to the end of content
     TVec2D position_;
+
+    // set to true to clip content that extends beyond the scroll view:
+    bool clipContent_;
   };
 
   //----------------------------------------------------------------

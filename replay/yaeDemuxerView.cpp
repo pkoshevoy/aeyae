@@ -249,13 +249,15 @@ namespace yae
                     ItemView & view,
                     const RemuxViewStyle & style,
                     Item & root,
-                    ScrollbarId inset = kScrollbarNone)
+                    ScrollbarId inset = kScrollbarNone,
+                    bool clipContent = true)
   {
     bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
     bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
 
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
+    sview.clipContent_ = clipContent;
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     Item & hscrollbar = root.addNew<Item>("hscrollbar");
