@@ -28,12 +28,15 @@ namespace yae
   //
   struct CalcSliderTop : public TDoubleExpr
   {
-    CalcSliderTop(const Scrollview & view, const Item & slider);
+    CalcSliderTop(const Scrollview & view,
+                  const Item & scrollbar,
+                  const Item & slider);
 
     // virtual:
     void evaluate(double & result) const;
 
     const Scrollview & view_;
+    const Item & scrollbar_;
     const Item & slider_;
   };
 
@@ -43,12 +46,15 @@ namespace yae
   //
   struct CalcSliderHeight : public TDoubleExpr
   {
-    CalcSliderHeight(const Scrollview & view, const Item & slider);
+    CalcSliderHeight(const Scrollview & view,
+                     const Item & scrollbar,
+                     const Item & slider);
 
     // virtual:
     void evaluate(double & result) const;
 
     const Scrollview & view_;
+    const Item & scrollbar_;
     const Item & slider_;
   };
 
@@ -58,12 +64,15 @@ namespace yae
   //
   struct CalcSliderLeft : public TDoubleExpr
   {
-    CalcSliderLeft(const Scrollview & view, const Item & slider);
+    CalcSliderLeft(const Scrollview & view,
+                   const Item & scrollbar,
+                   const Item & slider);
 
     // virtual:
     void evaluate(double & result) const;
 
     const Scrollview & view_;
+    const Item & scrollbar_;
     const Item & slider_;
   };
 
@@ -73,12 +82,15 @@ namespace yae
   //
   struct CalcSliderWidth : public TDoubleExpr
   {
-    CalcSliderWidth(const Scrollview & view, const Item & slider);
+    CalcSliderWidth(const Scrollview & view,
+                    const Item & scrollbar,
+                    const Item & slider);
 
     // virtual:
     void evaluate(double & result) const;
 
     const Scrollview & view_;
+    const Item & scrollbar_;
     const Item & slider_;
   };
 

@@ -248,27 +248,35 @@ namespace yae
   layout_scrollview(ScrollbarId scrollbars,
                     ItemView & view,
                     const RemuxViewStyle & style,
-                    Item & root)
+                    Item & root,
+                    ScrollbarId inset = kScrollbarNone)
   {
+    bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
+    bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
+
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
+    Item & hscrollbar = root.addNew<Item>("hscrollbar");
+
     scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
-    scrollbar.anchors_.bottom_ = ItemRef::reference(sview, kPropertyBottom);
+    scrollbar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
     scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     scrollbar.visible_ = scrollbar.
       addExpr(new ScrollbarRequired
               (*sview.content_,
                kScrollbarVertical,
 
+               // vertical scrollbar width:
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
                ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(0.0),
+               ItemRef::constant(inset_v ? -1.0 : 0.0),
 
+               // horizontal scrollbar width:
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
                ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(0.0),
+               ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
                ItemRef::uncacheable(root, kPropertyRight),
@@ -281,10 +289,9 @@ namespace yae
         ItemRef::uncacheable(style.title_height_, 0.2),
         ItemRef::constant(0.0)));
 
-    Item & hscrollbar = root.addNew<Item>("hscrollbar");
     hscrollbar.setAttr("vertical", false);
     hscrollbar.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
-    hscrollbar.anchors_.right_ = ItemRef::reference(sview, kPropertyRight);
+    hscrollbar.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
     hscrollbar.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
 
     hscrollbar.visible_ = hscrollbar.
@@ -294,11 +301,11 @@ namespace yae
 
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
                ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(0.0),
+               ItemRef::constant(inset_v ? -1.0 : 0.0),
 
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
                ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(0.0),
+               ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
                ItemRef::uncacheable(root, kPropertyRight),
@@ -312,9 +319,17 @@ namespace yae
         ItemRef::constant(0.0)));
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-    sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
     sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-    sview.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
+
+    sview.anchors_.right_ =
+      inset_v ?
+      ItemRef::reference(root, kPropertyRight) :
+      ItemRef::reference(scrollbar, kPropertyLeft);
+
+    sview.anchors_.bottom_ =
+      inset_h ?
+      ItemRef::reference(root, kPropertyBottom) :
+      ItemRef::reference(hscrollbar, kPropertyTop);
 
     Item & content = *(sview.content_);
     content.anchors_.left_ = ItemRef::constant(0.0);
@@ -337,10 +352,12 @@ namespace yae
 
     // configure scrollbar slider:
     RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
-    slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
+    slider.anchors_.top_ = slider.
+      addExpr(new CalcSliderTop(sview, scrollbar, slider));
     slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
     slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-    slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
+    slider.height_ = slider.
+      addExpr(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = slider.addExpr(new ColorAttr(view, "bg_", 0));
     slider.color_ = slider.addExpr(new ColorAttr(view, "scrollbar_"));
@@ -357,9 +374,9 @@ namespace yae
     hslider.anchors_.top_ = ItemRef::offset(hscrollbar, kPropertyTop, 2);
     hslider.anchors_.bottom_ = ItemRef::offset(hscrollbar, kPropertyBottom, -2);
     hslider.anchors_.left_ =
-      hslider.addExpr(new CalcSliderLeft(sview, hslider));
+      hslider.addExpr(new CalcSliderLeft(sview, hscrollbar, hslider));
     hslider.width_ =
-      hslider.addExpr(new CalcSliderWidth(sview, hslider));
+      hslider.addExpr(new CalcSliderWidth(sview, hscrollbar, hslider));
     hslider.radius_ = ItemRef::scale(hslider, kPropertyHeight, 0.5);
     hslider.background_ = hslider.addExpr(new ColorAttr(view, "bg_", 0));
     hslider.color_ = hslider.addExpr(new ColorAttr(view, "scrollbar_"));
@@ -370,7 +387,6 @@ namespace yae
 
     return content;
   }
-
 
   //----------------------------------------------------------------
   // RemuxLayout
@@ -404,7 +420,8 @@ namespace yae
       clips.anchors_.top_ = ItemRef::reference(sep, kPropertyBottom);
 
       Item & gops_container =
-        layout_scrollview(kScrollbarBoth, view, style, gops);
+        layout_scrollview(kScrollbarBoth, view, style, gops,
+                          kScrollbarBoth);
 
       Item & clips_container =
         layout_scrollview(kScrollbarVertical, view, style, clips);

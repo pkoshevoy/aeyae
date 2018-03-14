@@ -774,9 +774,8 @@ namespace yae
       }
     }
 
-    if (attr == NULL)
+    if (!attr)
     {
-      YAE_ASSERT(false);
       return false;
     }
 

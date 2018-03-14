@@ -17,8 +17,11 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderTop::CalcSliderTop
   //
-  CalcSliderTop::CalcSliderTop(const Scrollview & view, const Item & slider):
+  CalcSliderTop::CalcSliderTop(const Scrollview & view,
+                               const Item & scrollbar,
+                               const Item & slider):
     view_(view),
+    scrollbar_(scrollbar),
     slider_(slider)
   {}
 
@@ -28,8 +31,9 @@ namespace yae
   void
   CalcSliderTop::evaluate(double & result) const
   {
-    result = view_.top();
+    result = scrollbar_.top();
 
+    double scrollbarHeight = scrollbar_.height();
     double sceneHeight = view_.content_->height();
     double viewHeight = view_.height();
     if (sceneHeight <= viewHeight)
@@ -39,8 +43,8 @@ namespace yae
 
     double scale = viewHeight / sceneHeight;
     double minHeight = slider_.width() * 5.0;
-    double height = minHeight + (viewHeight - minHeight) * scale;
-    double y = (viewHeight - height) * view_.position_.y();
+    double height = minHeight + (scrollbarHeight - minHeight) * scale;
+    double y = (scrollbarHeight - height) * view_.position_.y();
     result += y;
   }
 
@@ -49,8 +53,10 @@ namespace yae
   // CalcSliderHeight::CalcSliderHeight
   //
   CalcSliderHeight::CalcSliderHeight(const Scrollview & view,
+                                     const Item & scrollbar,
                                      const Item & slider):
     view_(view),
+    scrollbar_(scrollbar),
     slider_(slider)
   {}
 
@@ -60,25 +66,29 @@ namespace yae
   void
   CalcSliderHeight::evaluate(double & result) const
   {
+    double scrollbarHeight = scrollbar_.height();
     double sceneHeight = view_.content_->height();
     double viewHeight = view_.height();
     if (sceneHeight <= viewHeight)
     {
-      result = viewHeight;
+      result = scrollbarHeight;
       return;
     }
 
     double scale = viewHeight / sceneHeight;
     double minHeight = slider_.width() * 5.0;
-    result = minHeight + (viewHeight - minHeight) * scale;
+    result = minHeight + (scrollbarHeight - minHeight) * scale;
   }
 
 
   //----------------------------------------------------------------
   // CalcSliderLeft::CalcSliderLeft
   //
-  CalcSliderLeft::CalcSliderLeft(const Scrollview & view, const Item & slider):
+  CalcSliderLeft::CalcSliderLeft(const Scrollview & view,
+                                 const Item & scrollbar,
+                                 const Item & slider):
     view_(view),
+    scrollbar_(scrollbar),
     slider_(slider)
   {}
 
@@ -88,8 +98,9 @@ namespace yae
   void
   CalcSliderLeft::evaluate(double & result) const
   {
-    result = view_.top();
+    result = scrollbar_.left();
 
+    double scrollbarWidth = scrollbar_.width();
     double sceneWidth = view_.content_->width();
     double viewWidth = view_.width();
     if (sceneWidth <= viewWidth)
@@ -99,8 +110,8 @@ namespace yae
 
     double scale = viewWidth / sceneWidth;
     double minWidth = slider_.height() * 5.0;
-    double width = minWidth + (viewWidth - minWidth) * scale;
-    double x = (viewWidth - width) * view_.position_.x();
+    double width = minWidth + (scrollbarWidth - minWidth) * scale;
+    double x = (scrollbarWidth - width) * view_.position_.x();
     result += x;
   }
 
@@ -109,8 +120,10 @@ namespace yae
   // CalcSliderWidth::CalcSliderWidth
   //
   CalcSliderWidth::CalcSliderWidth(const Scrollview & view,
+                                   const Item & scrollbar,
                                    const Item & slider):
     view_(view),
+    scrollbar_(scrollbar),
     slider_(slider)
   {}
 
@@ -120,17 +133,18 @@ namespace yae
   void
   CalcSliderWidth::evaluate(double & result) const
   {
+    double scrollbarWidth = scrollbar_.width();
     double sceneWidth = view_.content_->width();
     double viewWidth = view_.width();
     if (sceneWidth <= viewWidth)
     {
-      result = viewWidth;
+      result = scrollbarWidth;
       return;
     }
 
     double scale = viewWidth / sceneWidth;
     double minWidth = slider_.height() * 5.0;
-    result = minWidth + (viewWidth - minWidth) * scale;
+    result = minWidth + (scrollbarWidth - minWidth) * scale;
   }
 
 
@@ -237,6 +251,16 @@ namespace yae
       return false;
     }
 
+    BBox bbox;
+    Item::get(kPropertyBBox, bbox);
+
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
+    yae_assert_gl_no_error();
+    YAE_OGL_11(glScissor(bbox.x_, canvas->canvasHeight() - bbox.bottom(),
+                         bbox.w_, bbox.h_));
+    yae_assert_gl_no_error();
+
     TVec2D origin;
     Segment xView;
     Segment yView;
@@ -247,6 +271,7 @@ namespace yae
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
     content.paint(xView, yView, canvas);
 
+    YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
     return true;
   }
 
@@ -368,12 +393,12 @@ namespace yae
     bool horizontal = viewWidth < sceneWidth;
     bool vertical = viewHeight < sceneHeight;
 
-    if (horizontal)
+    if (horizontal && zh > 0.0)
     {
       viewHeight -= zh;
     }
 
-    if (vertical)
+    if (vertical && zv > 0.0)
     {
       viewWidth -= zv;
     }

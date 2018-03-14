@@ -1736,10 +1736,12 @@ namespace yae
 
     // configure scrollbar slider:
     RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
-    slider.anchors_.top_ = slider.addExpr(new CalcSliderTop(sview, slider));
+    slider.anchors_.top_ = slider.
+      addExpr(new CalcSliderTop(sview, scrollbar, slider));
     slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
     slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-    slider.height_ = slider.addExpr(new CalcSliderHeight(sview, slider));
+    slider.height_ = slider.
+      addExpr(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = ColorRef::transparent(background, kPropertyColor);
     slider.color_ = slider.
