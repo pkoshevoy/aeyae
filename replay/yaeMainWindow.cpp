@@ -45,6 +45,7 @@
 // local includes:
 #include "yaeMainWindow.h"
 #include "yaePortaudioRenderer.h"
+#include "yaeReplay.h"
 #include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
@@ -71,9 +72,8 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
-  MainWindow::MainWindow(const TDemuxerInterfacePtr & demuxer):
+  MainWindow::MainWindow():
     QMainWindow(NULL, 0),
-    demuxer_(demuxer),
     canvasWidget_(NULL),
     canvas_(NULL)
   {
@@ -192,8 +192,113 @@ namespace yae
   // MainWindow::setPlaylist
   //
   void
-  MainWindow::setPlaylist(const std::list<QString> & playlist)
+  MainWindow::set(const std::set<std::string> & sources,
+                  const std::list<ClipInfo> & clips)
   {
+    typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
+    typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
+    std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
+    std::map<std::string, DemuxerSummary> summaries;
+
+    // these are expressed in seconds:
+    static const double buffer_duration = 1.0;
+    static const double discont_tolerance = 0.017;
+
+    for (std::set<std::string>::const_iterator
+           i = sources.begin(); i != sources.end(); ++i)
+    {
+      const std::string & filePath = *i;
+
+      std::list<TDemuxerPtr> demuxers;
+      if (!open_primary_and_aux_demuxers(filePath, demuxers))
+      {
+        // failed to open the primary resource:
+        av_log(NULL, AV_LOG_WARNING,
+               "failed to open %s, skipping...",
+               filePath.c_str());
+        continue;
+      }
+
+      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
+
+      // wrap each demuxer in a DemuxerBuffer, build a summary:
+      for (std::list<TDemuxerPtr>::const_iterator
+             i = demuxers.begin(); i != demuxers.end(); ++i)
+      {
+        const TDemuxerPtr & demuxer = *i;
+
+        TDemuxerInterfacePtr
+          buffer(new DemuxerBuffer(demuxer, buffer_duration));
+
+        DemuxerSummary summary;
+        buffer->summarize(summary, discont_tolerance);
+#if 0
+        std::cout
+          << "\n" << demuxer->resourcePath() << ":\n"
+          << summary << std::endl;
+#endif
+        parallel_demuxer->append(buffer, summary);
+      }
+
+      // summarize the demuxer:
+      DemuxerSummary summary;
+      parallel_demuxer->summarize(summary, discont_tolerance);
+
+      parallel_demuxers[filePath] = parallel_demuxer;
+      summaries[filePath] = summary;
+
+#if 0
+      // show the summary:
+      std::cout << "\nparallel:\n" << summary << std::endl;
+#endif
+    }
+
+    for (std::list<ClipInfo>::const_iterator
+           i = clips.begin(); i != clips.end(); ++i)
+    {
+      const ClipInfo & trim = *i;
+
+      const TParallelDemuxerPtr & demuxer =
+        yae::at(parallel_demuxers, trim.source_);
+
+      const DemuxerSummary & summary =
+        yae::at(summaries, trim.source_);
+
+      model_.remux_.push_back(TClipPtr(new Clip()));
+      Clip & clip = *(model_.remux_.back());
+
+      clip.src_ = demuxer;
+      clip.summary_ = summary;
+      clip.track_ = summary.timeline_.begin()->second.tracks_.rbegin()->first;
+      clip.keep_ = summary.timeline_.begin()->second.bbox_pts_;
+
+      if (trim.track_.empty())
+      {
+        // use the whole file:
+        continue;
+      }
+
+      const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
+      double fps = fe.best_guess();
+
+      Timespan pts_span;
+      if (!parse_time(pts_span.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
+        continue;
+      }
+
+      if (!parse_time(pts_span.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
+        continue;
+      }
+
+      clip.track_ = trim.track_;
+      clip.keep_ = pts_span;
+    }
+
+    view_.layoutChanged();
   }
 
   //----------------------------------------------------------------
@@ -270,7 +375,7 @@ namespace yae
       yae::addToPlaylist(playlist, *i);
     }
 
-    setPlaylist(playlist);
+    // setPlaylist(playlist);
   }
 
   //----------------------------------------------------------------
@@ -328,7 +433,7 @@ namespace yae
       }
     }
 
-    setPlaylist(playlist);
+    // setPlaylist(playlist);
   }
 
   //----------------------------------------------------------------

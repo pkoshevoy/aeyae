@@ -33,15 +33,17 @@ namespace yae
   //
   TDemuxerInterfacePtr
   load(DemuxerSummary & summary,
-       const std::list<std::string> & sources,
-       const std::map<std::string, ClipInfo> & clip,
+       const std::set<std::string> & sources,
+       const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration,
        const double discont_tolerance)
   {
-    boost::shared_ptr<SerialDemuxer> serial_demuxer(new SerialDemuxer());
+    typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
+    std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
+    std::map<std::string, DemuxerSummary> summaries;
 
-    for (std::list<std::string>::const_iterator i = sources.begin();
+    for (std::set<std::string>::const_iterator i = sources.begin();
          i != sources.end(); ++i)
     {
       const std::string & filePath = *i;
@@ -81,52 +83,67 @@ namespace yae
       // summarize the demuxer:
       DemuxerSummary summary;
       parallel_demuxer->summarize(summary, discont_tolerance);
+
+      parallel_demuxers[filePath] = parallel_demuxer;
+      summaries[filePath] = summary;
+
 #if 0
       // show the summary:
       std::cout << "\nparallel:\n" << summary << std::endl;
 #endif
-      if (yae::has(clip, filePath))
+    }
+
+    typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
+    TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
+
+    for (std::list<ClipInfo>::const_iterator
+           i = clips.begin(); i != clips.end(); ++i)
+    {
+      const ClipInfo & trim = *i;
+
+      const TParallelDemuxerPtr & demuxer =
+        yae::at(parallel_demuxers, trim.source_);
+
+      const DemuxerSummary & summary =
+        yae::at(summaries, trim.source_);
+
+      if (trim.track_.empty())
       {
-        const ClipInfo & trim = yae::at(clip, filePath);
-        const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
+        // use the whole file:
+        serial_demuxer->append(demuxer, summary);
+        continue;
+      }
 
-        double fps = fe.best_guess();
+      const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
+      double fps = fe.best_guess();
 
-        for (std::size_t i = 0, z = trim.t0_.size(); i < z; i++)
-        {
-          const std::string & t0 = trim.t0_[i];
-          const std::string & t1 = trim.t1_[i];
+      const std::string & t0 = trim.t0_;
+      const std::string & t1 = trim.t1_;
 
-          Timespan pts_span;
-          if (!parse_time(pts_span.t0_, t0.c_str(), NULL, NULL, fps))
-          {
-            av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t0.c_str());
-            return TDemuxerInterfacePtr();
-          }
+      Timespan pts_span;
+      if (!parse_time(pts_span.t0_, t0.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t0.c_str());
+        return TDemuxerInterfacePtr();
+      }
 
-          if (!parse_time(pts_span.t1_, t1.c_str(), NULL, NULL, fps))
-          {
-            av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t1.c_str());
-            return TDemuxerInterfacePtr();
-          }
+      if (!parse_time(pts_span.t1_, t1.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t1.c_str());
+        return TDemuxerInterfacePtr();
+      }
 
-          boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
-          clip_demuxer->trim(parallel_demuxer, summary, trim.track_, pts_span);
+      boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
+      clip_demuxer->trim(demuxer, summary, trim.track_, pts_span);
 
-          // summarize clip demuxer:
-          DemuxerSummary clip_summary;
-          clip_demuxer->summarize(clip_summary, discont_tolerance);
+      // summarize clip demuxer:
+      DemuxerSummary clip_summary;
+      clip_demuxer->summarize(clip_summary, discont_tolerance);
 #if 0
-          // show clip summary:
-          std::cout << "\ntrimmed:\n" << clip_summary << std::endl;
+      // show clip summary:
+      std::cout << "\ntrimmed:\n" << clip_summary << std::endl;
 #endif
-          serial_demuxer->append(clip_demuxer, clip_summary);
-        }
-      }
-      else
-      {
-        serial_demuxer->append(parallel_demuxer, summary);
-      }
+      serial_demuxer->append(clip_demuxer, clip_summary);
     }
 
     if (serial_demuxer->empty())

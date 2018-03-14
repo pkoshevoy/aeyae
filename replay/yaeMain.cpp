@@ -116,14 +116,16 @@ namespace yae
       {
         return QApplication::event(e);
       }
-
+#if 0
       // handle the apple event to open a document:
       QString filename = static_cast<QFileOpenEvent *>(e)->file();
       std::list<QString> playlist;
       yae::addToPlaylist(playlist, filename);
       mainWindow->setPlaylist(playlist);
-
       return true;
+#else
+      return false;
+#endif
     }
   };
 }
@@ -210,10 +212,12 @@ mainMayThrowException(int argc, char ** argv)
   QStringList args = app.arguments();
 
   // parse input parameters:
-  std::list<std::string> sources;
-  std::map<std::string, yae::ClipInfo> clip;
+  std::set<std::string> sources;
+  std::string curr_source;
+  std::list<yae::ClipInfo> clips;
+  std::set<std::string> clipped;
   std::string output_path;
-  std::string track;
+  std::string curr_track;
   bool save_keyframes = false;
 
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
@@ -226,28 +230,37 @@ mainMayThrowException(int argc, char ** argv)
       std::string filePath;
       if (yae::convert_path_to_utf8(*i, filePath))
       {
-        sources.push_back(filePath);
+        if (!curr_source.empty() && !yae::has(clipped, curr_source))
+        {
+          // untrimmed:
+          clips.push_back(yae::ClipInfo(curr_source));
+        }
+
+        sources.insert(filePath);
+        curr_source = filePath;
       }
     }
     else if (arg == "-track")
     {
       ++i;
-      track = i->toUtf8().constData();
+      curr_track = i->toUtf8().constData();
     }
     else if (arg == "-t")
     {
       // clip boundaries should be evaluated after the source is analyzed
       // and framerate is known:
-      yae::ClipInfo & trim = clip[sources.back()];
-      trim.track_ = track;
+      clips.push_back(yae::ClipInfo(curr_source, curr_track));
+      yae::ClipInfo & trim = clips.back();
 
       ++i;
       std::string t0 = i->toUtf8().constData();
-      trim.t0_.push_back(t0);
+      trim.t0_ = t0;
 
       ++i;
       std::string t1 = i->toUtf8().constData();
-      trim.t1_.push_back(t1);
+      trim.t1_ = t1;
+
+      clipped.insert(curr_source);
     }
     else if (arg == "-o")
     {
@@ -260,6 +273,7 @@ mainMayThrowException(int argc, char ** argv)
     }
   }
 
+#if 0
   // these are expressed in seconds:
   const double buffer_duration = 1.0;
   const double discont_tolerance = 0.017;
@@ -267,7 +281,7 @@ mainMayThrowException(int argc, char ** argv)
   // load the sources:
   yae::DemuxerSummary summary;
   yae::TDemuxerInterfacePtr demuxer =
-    yae::load(summary, sources, clip, buffer_duration, discont_tolerance);
+    yae::load(summary, sources, clips, buffer_duration, discont_tolerance);
 
   // show the summary:
   std::cout << "\nsummary:\n" << summary << std::endl;
@@ -294,8 +308,10 @@ mainMayThrowException(int argc, char ** argv)
     yae::demux(demuxer, summary, output_path, save_keyframes);
     return 0;
   }
+#endif
 
-  yae::mainWindow = new yae::MainWindow(demuxer);
+  yae::mainWindow = new yae::MainWindow();
+  yae::mainWindow->set(sources, clips);
   yae::mainWindow->show();
 
   // initialize the player widget canvas, connect additional signals/slots:

@@ -28,9 +28,20 @@ namespace yae
   //
   struct ClipInfo
   {
+    ClipInfo(const std::string & source = std::string(),
+             const std::string & track = std::string(),
+             const std::string & t0 = std::string(),
+             const std::string & t1 = std::string()):
+      source_(source),
+      track_(track),
+      t0_(t0),
+      t1_(t1)
+    {}
+
+    std::string source_;
     std::string track_;
-    std::vector<std::string> t0_;
-    std::vector<std::string> t1_;
+    std::string t0_;
+    std::string t1_;
   };
 
   //----------------------------------------------------------------

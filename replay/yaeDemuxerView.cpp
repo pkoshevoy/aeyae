@@ -190,7 +190,7 @@ namespace yae
         btn.width_ = ItemRef::reference(root.height_, 0.8);
         btn.height_ = btn.width_;
         btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-        btn.anchors_.left_ = ItemRef::reference(root.height_, 1);
+        btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
         btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
 
         Text & label = btn.addNew<Text>("label");
@@ -205,7 +205,7 @@ namespace yae
       btn.width_ = ItemRef::reference(root.height_, 0.8);
       btn.height_ = btn.width_;
       btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-      btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
+      btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 0.5);
       btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
 
       Text & label = btn.addNew<Text>("label");
@@ -683,6 +683,7 @@ namespace yae
     inputHandlers_.clear();
 
     Item & root = *root_;
+    root.children_.clear();
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);

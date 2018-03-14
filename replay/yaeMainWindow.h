@@ -26,6 +26,7 @@
 #endif
 #include "yaeCanvasWidget.h"
 #include "yaeDemuxerView.h"
+#include "yaeReplay.h"
 
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
@@ -67,7 +68,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    MainWindow(const TDemuxerInterfacePtr & demuxer);
+    MainWindow();
     ~MainWindow();
 
     void initCanvasWidget();
@@ -84,8 +85,8 @@ namespace yae
     bool load(const QString & path);
 
   public:
-    // specify a playlist of files to load:
-    void setPlaylist(const std::list<QString> & playlist);
+    void set(const std::set<std::string> & sources,
+             const std::list<yae::ClipInfo> & clips);
 
   public slots:
     // file menu:

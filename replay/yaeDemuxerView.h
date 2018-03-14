@@ -39,6 +39,7 @@ namespace yae
   struct YAE_API Clip
   {
     TDemuxerInterfacePtr src_;
+    DemuxerSummary summary_;
     std::string track_;
     Timespan keep_;
   };
@@ -56,9 +57,6 @@ namespace yae
     RemuxModel():
       current_(0)
     {}
-
-    TDemuxerInterfacePtr src_;
-    DemuxerSummary summary_;
 
     // composition of the remuxed output:
     std::vector<TClipPtr> remux_;
