@@ -797,49 +797,49 @@ namespace yae
     seek.anchors_.fill(timeline);
 
     ColorRef colorCursor = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kCursor));
+      (style_color_ref(*playlist, &ItemViewStyle::cursor_));
 
     ColorRef colorExcluded = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineExcluded));
+      (style_color_ref(*playlist, &ItemViewStyle::timeline_excluded_));
 
     ColorRef colorOutPt = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded, 1, 1));
+      (style_color_ref(*playlist, &ItemViewStyle::timeline_included_, 1, 1));
 
     ColorRef colorOutPtBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded, 0));
+      (style_color_ref(*playlist, &ItemViewStyle::timeline_included_, 0));
 
     ColorRef colorIncluded = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelineIncluded));
+      (style_color_ref(*playlist, &ItemViewStyle::timeline_included_));
 
     ColorRef colorPlayed = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelinePlayed));
+      (style_color_ref(*playlist, &PlaylistViewStyle::timeline_played_));
 
     ColorRef colorPlayedBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kTimelinePlayed, 0));
+      (style_color_ref(*playlist, &PlaylistViewStyle::timeline_played_, 0));
 
     ColorRef colorTextBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_timecode_));
 
     ColorRef colorTextFg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_timecode_));
 
     ColorRef colorFocusBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgFocus));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_focus_));
 
     ColorRef colorFocusFg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgFocus));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_focus_));
 
     ColorRef colorHighlightBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgEditSelected));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_edit_selected_));
 
     ColorRef colorHighlightFg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgEditSelected));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_edit_selected_));
 
     ColorRef colorFullscreenToggleBg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode, 0.64));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_timecode_, 0.64));
 
     ColorRef colorFullscreenToggleFg = timeline.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_timecode_));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -1107,7 +1107,7 @@ namespace yae
 
     // add other player controls:
     ColorRef colorControlsBg = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgControls));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_controls_));
 
     Item & playlistButton = root.addNew<Item>("playlistButton");
     TogglePlaylist & playlistToggle = root.add(new TogglePlaylist(*this));

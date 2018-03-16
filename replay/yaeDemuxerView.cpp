@@ -137,8 +137,12 @@ namespace yae
         frame.width_ = ItemRef::reference(style.title_height_, 16.0 / 9.0);
         frame.height_ = ItemRef::reference(style.title_height_);
         frame.radius_ = ItemRef::constant(3);
-        frame.background_ = frame.addExpr(new ColorAttr(view, "bg_", 0));
-        frame.color_ = frame.addExpr(new ColorAttr(view, "scrollbar_"));
+
+        frame.background_ = frame.
+          addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
+
+        frame.color_ = frame.
+          addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
 
         prev = &frame;
       }
@@ -191,7 +195,8 @@ namespace yae
         btn.height_ = btn.width_;
         btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
         btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
-        btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
+        btn.color_ = btn.
+          addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
         Text & label = btn.addNew<Text>("label");
         label.anchors_.center(btn);
@@ -206,7 +211,8 @@ namespace yae
       btn.height_ = btn.width_;
       btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
       btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 0.5);
-      btn.color_ = btn.addExpr(new ColorAttr(view, "bg_controls_"));
+      btn.color_ = btn.
+        addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
       Text & label = btn.addNew<Text>("label");
       label.anchors_.center(btn);
@@ -232,163 +238,16 @@ namespace yae
         row.anchors_.top_ = prev ?
           ItemRef::reference(*prev, kPropertyBottom) :
           ItemRef::reference(root, kPropertyTop);
-        row.color_ = row.addExpr(new ColorAttr
-                                 (view, "bg_controls_", (i % 2) ? 1.0 : 0.5));
+        row.color_ = row.addExpr(style_color_ref
+                                 (view,
+                                  &ItemViewStyle::bg_controls_,
+                                  (i % 2) ? 1.0 : 0.5));
 
         style.layout_clip_->layout(model, i, view, style, row);
         prev = &row;
       }
     }
   };
-
-  //----------------------------------------------------------------
-  // layout_scrollview
-  //
-  static Item &
-  layout_scrollview(ScrollbarId scrollbars,
-                    ItemView & view,
-                    const RemuxViewStyle & style,
-                    Item & root,
-                    ScrollbarId inset = kScrollbarNone,
-                    bool clipContent = true)
-  {
-    bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
-    bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
-
-    Scrollview & sview = root.
-      addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
-    sview.clipContent_ = clipContent;
-
-    Item & scrollbar = root.addNew<Item>("scrollbar");
-    Item & hscrollbar = root.addNew<Item>("hscrollbar");
-
-    scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
-    scrollbar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
-    scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-    scrollbar.visible_ = scrollbar.
-      addExpr(new ScrollbarRequired
-              (*sview.content_,
-               kScrollbarVertical,
-
-               // vertical scrollbar width:
-               (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(inset_v ? -1.0 : 0.0),
-
-               // horizontal scrollbar width:
-               (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(inset_h ? -1.0 : 0.0),
-
-               ItemRef::uncacheable(sview, kPropertyLeft),
-               ItemRef::uncacheable(root, kPropertyRight),
-               ItemRef::uncacheable(sview, kPropertyTop),
-               ItemRef::uncacheable(root, kPropertyBottom)));
-
-    scrollbar.width_ = scrollbar.addExpr
-      (new Conditional<ItemRef>
-       (scrollbar.visible_,
-        ItemRef::uncacheable(style.title_height_, 0.2),
-        ItemRef::constant(0.0)));
-
-    hscrollbar.setAttr("vertical", false);
-    hscrollbar.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
-    hscrollbar.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
-    hscrollbar.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
-
-    hscrollbar.visible_ = hscrollbar.
-      addExpr(new ScrollbarRequired
-              (*sview.content_,
-               kScrollbarHorizontal,
-
-               (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(inset_v ? -1.0 : 0.0),
-
-               (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               ItemRef::uncacheable(style.title_height_, 0.2) :
-               ItemRef::constant(inset_h ? -1.0 : 0.0),
-
-               ItemRef::uncacheable(sview, kPropertyLeft),
-               ItemRef::uncacheable(root, kPropertyRight),
-               ItemRef::uncacheable(sview, kPropertyTop),
-               ItemRef::uncacheable(root, kPropertyBottom)));
-
-    hscrollbar.height_ = hscrollbar.addExpr
-      (new Conditional<ItemRef>
-       (hscrollbar.visible_,
-        ItemRef::uncacheable(style.title_height_, 0.2),
-        ItemRef::constant(0.0)));
-
-    sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-    sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-
-    sview.anchors_.right_ =
-      inset_v ?
-      ItemRef::reference(root, kPropertyRight) :
-      ItemRef::reference(scrollbar, kPropertyLeft);
-
-    sview.anchors_.bottom_ =
-      inset_h ?
-      ItemRef::reference(root, kPropertyBottom) :
-      ItemRef::reference(hscrollbar, kPropertyTop);
-
-    Item & content = *(sview.content_);
-    content.anchors_.left_ = ItemRef::constant(0.0);
-    content.anchors_.top_ = ItemRef::constant(0.0);
-
-    if ((scrollbars & kScrollbarHorizontal) != kScrollbarHorizontal)
-    {
-      content.width_ = ItemRef::reference(sview, kPropertyWidth);
-    }
-
-    FlickableArea & maScrollview =
-      sview.add(new FlickableArea("ma_sview",
-                                  view,
-                                  &scrollbar,
-                                  &hscrollbar));
-    maScrollview.anchors_.fill(sview);
-
-    InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
-    maScrollbar.anchors_.fill(scrollbar);
-
-    // configure scrollbar slider:
-    RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
-    slider.anchors_.top_ = slider.
-      addExpr(new CalcSliderTop(sview, scrollbar, slider));
-    slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
-    slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-    slider.height_ = slider.
-      addExpr(new CalcSliderHeight(sview, scrollbar, slider));
-    slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
-    slider.background_ = slider.addExpr(new ColorAttr(view, "bg_", 0));
-    slider.color_ = slider.addExpr(new ColorAttr(view, "scrollbar_"));
-
-    SliderDrag & maSlider =
-      slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
-    maSlider.anchors_.fill(slider);
-
-    InputArea & maHScrollbar = scrollbar.addNew<InputArea>("ma_hscrollbar");
-    maHScrollbar.anchors_.fill(hscrollbar);
-
-    // configure horizontal scrollbar slider:
-    RoundRect & hslider = hscrollbar.addNew<RoundRect>("hslider");
-    hslider.anchors_.top_ = ItemRef::offset(hscrollbar, kPropertyTop, 2);
-    hslider.anchors_.bottom_ = ItemRef::offset(hscrollbar, kPropertyBottom, -2);
-    hslider.anchors_.left_ =
-      hslider.addExpr(new CalcSliderLeft(sview, hscrollbar, hslider));
-    hslider.width_ =
-      hslider.addExpr(new CalcSliderWidth(sview, hscrollbar, hslider));
-    hslider.radius_ = ItemRef::scale(hslider, kPropertyHeight, 0.5);
-    hslider.background_ = hslider.addExpr(new ColorAttr(view, "bg_", 0));
-    hslider.color_ = hslider.addExpr(new ColorAttr(view, "scrollbar_"));
-
-    SliderDrag & maHSlider =
-      hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));
-    maHSlider.anchors_.fill(hslider);
-
-    return content;
-  }
 
   //----------------------------------------------------------------
   // RemuxLayout
@@ -401,7 +260,7 @@ namespace yae
     {
       Rectangle & bg = root.addNew<Rectangle>("background");
       bg.anchors_.fill(root);
-      bg.color_ = bg.addExpr(new ColorAttr(view, "bg_"));
+      bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
 
       Item & gops = root.addNew<Item>("gops");
       Item & clips = root.addNew<Item>("clips");
@@ -412,8 +271,7 @@ namespace yae
       // sep.anchors_.vcenter_ = ItemRef::scale(root, kPropertyHeight, 0.75);
       sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -100);
       sep.height_ = ItemRef::reference(style.title_height_, 0.1);
-      sep.color_ = sep.
-        addExpr(new ColorAttr(view, "fg_"));
+      sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
 
       gops.anchors_.fill(root);
       gops.anchors_.bottom_ = ItemRef::reference(sep, kPropertyTop);
@@ -445,99 +303,8 @@ namespace yae
     layout_gops_(new RemuxLayoutGops()),
     layout_gop_(new RemuxLayoutGop())
   {
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_small_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-
-    font_small_.setStyleHint(QFont::SansSerif);
-    font_small_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
-
-    // main font:
-    font_ = font_small_;
-    font_large_ = font_small_;
-
-    static bool hasImpact =
-      QFontInfo(QFont("impact")).family().
-      contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
-
-    if (hasImpact)
-    {
-      font_large_.setFamily("impact");
-
-#if !(defined(_WIN32) ||                        \
-      defined(__APPLE__) ||                     \
-      QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-      font_large_.setStretch(QFont::Condensed);
-#endif
-    }
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
-    else
-#endif
-    {
-      font_large_.setStretch(QFont::Condensed);
-      font_large_.setWeight(QFont::Black);
-    }
-
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_fixed_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-
-    font_fixed_.setFamily("Menlo, "
-                          "Monaco, "
-                          "Droid Sans Mono, "
-                          "DejaVu Sans Mono, "
-                          "Bitstream Vera Sans Mono, "
-                          "Consolas, "
-                          "Lucida Sans Typewriter, "
-                          "Lucida Console, "
-                          "Courier New");
-    font_fixed_.setStyleHint(QFont::Monospace);
-    font_fixed_.setFixedPitch(true);
-    font_fixed_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
-
-    title_height_ = addExpr(new CalcTitleHeight(view, 50.0));
-    title_height_.cachingEnabled_ = false;
-
     frame_width_ = ItemRef::reference(title_height_, 2.0);
     row_height_ = ItemRef::reference(title_height_, 0.5);
-    font_size_ = ItemRef::reference(title_height_, 0.15);
-
-    // color palette:
-    bg_ = setStyleAttr("bg_", Color(0x1f1f1f, 0.87));
-    fg_ = setStyleAttr("fg_", Color(0xffffff, 1.0));
-
-    border_ = setStyleAttr("border_", Color(0x7f7f7f, 1.0));
-    cursor_ = setStyleAttr("cursor_", Color(0xf12b24, 1.0));
-    scrollbar_ = setStyleAttr("scrollbar_", Color(0x7f7f7f, 0.5));
-    separator_ = setStyleAttr("separator_", scrollbar_.get());
-    underline_ = setStyleAttr("underline_", cursor_.get());
-
-    bg_timecode_ = setStyleAttr("bg_timecode_", Color(0x7f7f7f, 0.25));
-    fg_timecode_ = setStyleAttr("fg_timecode_", Color(0xFFFFFF, 0.5));
-
-    bg_controls_ =
-      setStyleAttr("bg_controls_", bg_timecode_.get());
-    fg_controls_ =
-      setStyleAttr("fg_controls_", fg_timecode_.get().opaque(0.75));
-
-    bg_focus_ = setStyleAttr("bg_focus_", Color(0x7f7f7f, 0.5));
-    fg_focus_ = setStyleAttr("fg_focus_", Color(0xffffff, 1.0));
-
-    bg_edit_selected_ =
-      setStyleAttr("bg_edit_selected_", Color(0xffffff, 1.0));
-    fg_edit_selected_ =
-      setStyleAttr("fg_edit_selected_", Color(0x000000, 1.0));
-
-    timeline_excluded_ =
-      setStyleAttr("timeline_excluded_", Color(0xFFFFFF, 0.2));
-    timeline_included_ =
-      setStyleAttr("timeline_included_", Color(0xFFFFFF, 0.5));
   }
 
   //----------------------------------------------------------------

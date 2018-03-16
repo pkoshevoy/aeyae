@@ -24,41 +24,6 @@ namespace yae
   ListViewStyle::ListViewStyle(const char * id, PlaylistView & playlist):
     PlaylistViewStyle(id, playlist)
   {
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_small_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-    font_small_.setStyleHint(QFont::SansSerif);
-    font_small_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
-
-    // main font:
-    font_ = font_small_;
-    font_large_ = font_small_;
-
-    static bool hasImpact =
-      QFontInfo(QFont("impact")).family().
-      contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
-
-    if (hasImpact)
-    {
-      font_large_.setFamily("impact");
-
-#if !(defined(_WIN32) ||                        \
-      defined(__APPLE__) ||                     \
-      QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
-      font_large_.setStretch(QFont::Condensed);
-#endif
-    }
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
-    else
-#endif
-    {
-      font_large_.setStretch(QFont::Condensed);
-      font_large_.setWeight(QFont::Black);
-    }
-
     // filter shadow gradient:
     filter_shadow_.reset(new TGradient());
     {
@@ -82,97 +47,104 @@ namespace yae
     }
 
     // color palette:
-    bg_ = Color(0x1f1f1f, 0.87);
-    fg_ = Color(0xffffff, 1.0);
+    bg_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
+    fg_ = ColorRef::constant(Color(0xffffff, 1.0));
 
-    border_ = Color(0x7f7f7f, 1.0);
-    cursor_ = Color(0xf12b24, 1.0);
-    scrollbar_ = Color(0x7f7f7f, 0.5);
+    border_ = ColorRef::constant(Color(0x7f7f7f, 1.0));
+    cursor_ = ColorRef::constant(Color(0xf12b24, 1.0));
+    scrollbar_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
     separator_ = scrollbar_;
     underline_ = cursor_;
 
-    bg_xbutton_ = Color(0x000000, 0.0);
-    fg_xbutton_ = Color(0xffffff, 0.5);
+    bg_xbutton_ = ColorRef::constant(Color(0x000000, 0.0));
+    fg_xbutton_ = ColorRef::constant(Color(0xffffff, 0.5));
 
-    bg_focus_ = Color(0x7f7f7f, 0.5);
-    fg_focus_ = Color(0xffffff, 1.0);
+    bg_focus_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    fg_focus_ = ColorRef::constant(Color(0xffffff, 1.0));
 
-    bg_edit_selected_ = Color(0xffffff, 1.0);
-    fg_edit_selected_ = Color(0x000000, 1.0);
+    bg_edit_selected_ = ColorRef::constant(Color(0xffffff, 1.0));
+    fg_edit_selected_ = ColorRef::constant(Color(0x000000, 1.0));
 
-    bg_timecode_ = Color(0x7f7f7f, 0.25);
-    fg_timecode_ = Color(0xFFFFFF, 0.5);
+    bg_timecode_ = ColorRef::constant(Color(0x7f7f7f, 0.25));
+    fg_timecode_ = ColorRef::constant(Color(0xFFFFFF, 0.5));
 
     bg_controls_ = bg_timecode_;
-    fg_controls_ = fg_timecode_.opaque(0.75);
+    fg_controls_ = ColorRef::constant(fg_timecode_.get().opaque(0.75));
 
-    bg_hint_ = Color(0x1f1f1f, 0.0);
-    fg_hint_ = Color(0xffffff, 0.5);
+    bg_hint_ = ColorRef::constant(Color(0x1f1f1f, 0.0));
+    fg_hint_ = ColorRef::constant(Color(0xffffff, 0.5));
 
-    bg_badge_ = Color(0x7f7f7f, 0.5);
-    fg_badge_ = Color(0xffffff, 1.0);
+    bg_badge_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    fg_badge_ = ColorRef::constant(Color(0xffffff, 1.0));
 
-    bg_group_ = Color(0x7f7f7f, 0.75);
-    fg_group_ = Color(0xffffff, 1.0);
+    bg_group_ = ColorRef::constant(Color(0x7f7f7f, 0.75));
+    fg_group_ = ColorRef::constant(Color(0xffffff, 1.0));
 
-    bg_item_ = Color(0x000000, 0.0);
-    bg_item_playing_ = Color(0x7f7f7f, 0.1);
-    bg_item_selected_ = Color(0x7f7f7f, 0.2);
+    bg_item_ = ColorRef::constant(Color(0x000000, 0.0));
+    bg_item_playing_ = ColorRef::constant(Color(0x7f7f7f, 0.1));
+    bg_item_selected_ = ColorRef::constant(Color(0x7f7f7f, 0.2));
 
-    bg_label_ = Color(0x3f3f3f, 0.5);
-    fg_label_ = Color(0xffffff, 1.0);
+    bg_label_ = ColorRef::constant(Color(0x3f3f3f, 0.5));
+    fg_label_ = ColorRef::constant(Color(0xffffff, 1.0));
 
-    bg_label_selected_ = bg_item_selected_.transparent();
-    fg_label_selected_ = Color(0xffffff, 1.0);
+    bg_label_selected_ = ColorRef::constant(bg_item_selected_.get().
+                                            transparent());
+    fg_label_selected_ = ColorRef::constant(Color(0xffffff, 1.0));
 
     timeline_played_ = cursor_;
-    timeline_included_ = Color(0xFFFFFF, 0.5);
-    timeline_excluded_ = Color(0xFFFFFF, 0.2);
-
-    // configure common style attributes:
-    title_height_.height_ =
-      title_height_.addExpr(new CalcTitleHeight(playlist_, 24.0));
+    timeline_included_ = ColorRef::constant(Color(0xFFFFFF, 0.5));
+    timeline_excluded_ = ColorRef::constant(Color(0xFFFFFF, 0.2));
 
     // generate an x-button texture:
     {
-      QImage img =
-        xbuttonImage(128, fg_xbutton_, fg_xbutton_.transparent(), 0.1);
+      QImage img = xbuttonImage(128,
+                                fg_xbutton_.get(),
+                                fg_xbutton_.get().transparent(),
+                                0.1);
       xbutton_->setImage(img);
     }
 
     // generate collapsed group button texture:
     {
-      QImage img =
-        triangleImage(128, fg_group_, bg_group_.transparent(), 90.0);
+      QImage img = triangleImage(128,
+                                 fg_group_.get(),
+                                 bg_group_.get().transparent(),
+                                 90.0);
       collapsed_->setImage(img);
     }
 
     // generate expanded group button texture:
     {
-      QImage img =
-        triangleImage(128, fg_group_, bg_group_.transparent(), 180.0);
+      QImage img = triangleImage(128,
+                                 fg_group_.get(),
+                                 bg_group_.get().transparent(),
+                                 180.0);
       expanded_->setImage(img);
     }
 
     // generate pause button texture:
     {
-      QImage img =
-        barsImage(128, fg_controls_, bg_controls_.transparent(), 2, 0.8);
+      QImage img = barsImage(128,
+                             fg_controls_.get(),
+                             bg_controls_.get().transparent(),
+                             2, 0.8);
       pause_->setImage(img);
     }
 
     // generate play button texture:
     {
-      QImage img =
-        triangleImage(128, fg_controls_, bg_controls_.transparent(), 90.0);
+      QImage img = triangleImage(128,
+                                 fg_controls_.get(),
+                                 bg_controls_.get().transparent(),
+                                 90.0);
       play_->setImage(img);
     }
 
     // generate playlist grid on button texture:
     {
       QImage img = barsImage(128,
-                             fg_controls_,
-                             bg_controls_.transparent(),
+                             fg_controls_.get(),
+                             bg_controls_.get().transparent(),
                              3, 0.7, 90);
       grid_on_->setImage(img);
     }
@@ -180,38 +152,33 @@ namespace yae
     // generate playlist grid off button texture:
     {
       QImage img = barsImage(128,
-                             fg_controls_.a_scaled(0.3),
-                             bg_controls_.transparent(),
+                             fg_controls_.get().a_scaled(0.3),
+                             bg_controls_.get().transparent(),
                              3, 0.7, 90);
       grid_off_->setImage(img);
     }
 
-    cell_width_.width_ = cell_width_.
-      addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
+    // configure common style attributes:
+    title_height_ = addExpr(new CalcTitleHeight(playlist_, 24.0));
 
-    cell_height_.height_ =
-      ItemRef::scale(title_height_, kPropertyHeight, 0.84);
+    cell_width_ = addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
+    cell_height_ = ItemRef::reference(title_height_, 0.84);
 
-    font_size_.height_ =
-      ItemRef::scale(title_height_, kPropertyHeight, 0.46);
+    font_size_ = ItemRef::reference(title_height_, 0.46);
 
     now_playing_.anchors_.top_ = ItemRef::constant(0.0);
     now_playing_.anchors_.left_ = ItemRef::constant(0.0);
     now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("now playing")));
     now_playing_.font_ = font_small_;
     now_playing_.font_.setBold(true);
-    now_playing_.fontSize_ = ItemRef::scale(font_size_,
-                                            kPropertyHeight,
-                                            0.7 * kDpiScale);
+    now_playing_.fontSize_ = ItemRef::reference(font_size_, 0.7 * kDpiScale);
 
     eyetv_badge_.font_ = font_large_;
     eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
     eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
     eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
     eyetv_badge_.font_.setBold(false);
-    eyetv_badge_.fontSize_ = ItemRef::scale(font_size_,
-                                            kPropertyHeight,
-                                            1.0 * kDpiScale);
+    eyetv_badge_.fontSize_ = ItemRef::reference(font_size_, 1.0 * kDpiScale);
 
     layout_root_.reset(new GroupListLayout());
     layout_group_.reset(new ItemListLayout());

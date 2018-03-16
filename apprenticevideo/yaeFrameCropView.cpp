@@ -453,13 +453,13 @@ namespace yae
                                    new StyleTitleHeight(*playlist)));
 
     ColorRef colorControlsBg = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgControls));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_controls_));
 
     ColorRef colorTextBg = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kBgTimecode));
+      (style_color_ref(*playlist, &ItemViewStyle::bg_timecode_));
 
     ColorRef colorTextFg = root.addExpr
-      (new StyleColor(*playlist, PlaylistViewStyle::kFgTimecode));
+      (style_color_ref(*playlist, &ItemViewStyle::fg_timecode_));
 
     const PlaylistViewStyle & style = playlist->playlistViewStyle();
 

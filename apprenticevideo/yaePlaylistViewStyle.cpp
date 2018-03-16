@@ -255,38 +255,9 @@ namespace yae
                                        PlaylistView & playlist):
     ItemViewStyle(id, playlist),
     playlist_(playlist),
-    title_height_(Item::addNewHidden<Item>("title_height")),
-    cell_width_(Item::addNewHidden<Item>("cell_width")),
-    cell_height_(Item::addNewHidden<Item>("cell_height")),
-    font_size_(Item::addNewHidden<Item>("font_size")),
     now_playing_(Item::addNewHidden<Text>("now_playing")),
-    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge")),
-    font_fixed_("")
+    eyetv_badge_(Item::addNewHidden<Text>("eyetv_badge"))
   {
-#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
-    font_fixed_.setHintingPreference(QFont::PreferFullHinting);
-#endif
-    font_fixed_.setFamily("Menlo, "
-                          "Monaco, "
-                          "Droid Sans Mono, "
-                          "DejaVu Sans Mono, "
-                          "Bitstream Vera Sans Mono, "
-                          "Consolas, "
-                          "Lucida Sans Typewriter, "
-                          "Lucida Console, "
-                          "Courier New");
-    font_fixed_.setStyleHint(QFont::Monospace);
-    font_fixed_.setFixedPitch(true);
-    font_fixed_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
-
-    anchors_.top_ = ItemRef::constant(0);
-    anchors_.left_ = ItemRef::constant(0);
-    width_ = ItemRef::constant(0);
-    height_ = ItemRef::constant(0);
-
     xbutton_ = Item::addHidden<Texture>
       (new Texture("xbutton", QImage())).sharedPtr<Texture>();
 
@@ -310,118 +281,39 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlaylistViewStyle::color
+  // PlaylistViewStyle::uncache
   //
-  const Color &
-  PlaylistViewStyle::color(PlaylistViewStyle::ColorId id) const
+  void
+  PlaylistViewStyle::uncache()
   {
-    switch (id)
-    {
-      case kBg:
-        return bg_;
+    cell_width_.uncache();
+    cell_height_.uncache();
 
-      case kFg:
-        return fg_;
+    bg_xbutton_.uncache();
+    fg_xbutton_.uncache();
 
-      case kBorder:
-        return border_;
+    bg_hint_.uncache();
+    fg_hint_.uncache();
 
-      case kCursor:
-        return cursor_;
+    bg_badge_.uncache();
+    fg_badge_.uncache();
 
-      case kScrollbar:
-        return scrollbar_;
+    bg_label_.uncache();
+    fg_label_.uncache();
 
-      case kSeparator:
-        return separator_;
+    bg_label_selected_.uncache();
+    fg_label_selected_.uncache();
 
-      case kUnderline:
-        return underline_;
+    bg_group_.uncache();
+    fg_group_.uncache();
 
-      case kBgControls:
-        return bg_controls_;
+    bg_item_.uncache();
+    bg_item_playing_.uncache();
+    bg_item_selected_.uncache();
 
-      case kFgControls:
-        return fg_controls_;
+    timeline_played_.uncache();
 
-      case kBgXButton:
-        return bg_xbutton_;
-
-      case kFgXButton:
-        return fg_xbutton_;
-
-      case kBgFocus:
-        return bg_focus_;
-
-      case kFgFocus:
-        return fg_focus_;
-
-      case kBgEditSelected:
-        return bg_edit_selected_;
-
-      case kFgEditSelected:
-        return fg_edit_selected_;
-
-      case kBgTimecode:
-        return bg_timecode_;
-
-      case kFgTimecode:
-        return fg_timecode_;
-
-      case kBgHint:
-        return bg_hint_;
-
-      case kFgHint:
-        return fg_hint_;
-
-      case kBgBadge:
-        return bg_badge_;
-
-      case kFgBadge:
-        return fg_badge_;
-
-      case kBgLabel:
-        return bg_label_;
-
-      case kFgLabel:
-        return fg_label_;
-
-      case kBgLabelSelected:
-        return bg_label_selected_;
-
-      case kFgLabelSelected:
-        return fg_label_selected_;
-
-      case kBgGroup:
-        return bg_group_;
-
-      case kFgGroup:
-        return fg_group_;
-
-      case kBgItem:
-        return bg_item_;
-
-      case kBgItemPlaying:
-        return bg_item_playing_;
-
-      case kBgItemSelected:
-        return bg_item_selected_;
-
-      case kTimelineExcluded:
-        return timeline_excluded_;
-
-      case kTimelineIncluded:
-        return timeline_included_;
-
-      case kTimelinePlayed:
-        return timeline_played_;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return bg_;
+    ItemViewStyle::uncache();
   }
 
 }

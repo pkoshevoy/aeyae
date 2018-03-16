@@ -119,42 +119,9 @@ namespace yae
     TLayoutPtr layout_gops_;
     TLayoutPtr layout_gop_;
 
-    // font palette:
-    QFont font_;
-    QFont font_small_;
-    QFont font_large_;
-    QFont font_fixed_;
-
     // shared common properties:
-    ItemRef title_height_;
     ItemRef frame_width_;
     ItemRef row_height_;
-    ItemRef font_size_;
-
-    // color palette:
-    ColorRef bg_;
-    ColorRef fg_;
-
-    ColorRef border_;
-    ColorRef cursor_;
-    ColorRef scrollbar_;
-    ColorRef separator_;
-    ColorRef underline_;
-
-    ColorRef bg_controls_;
-    ColorRef fg_controls_;
-
-    ColorRef bg_focus_;
-    ColorRef fg_focus_;
-
-    ColorRef bg_edit_selected_;
-    ColorRef fg_edit_selected_;
-
-    ColorRef bg_timecode_;
-    ColorRef fg_timecode_;
-
-    ColorRef timeline_excluded_;
-    ColorRef timeline_included_;
   };
 
 

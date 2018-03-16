@@ -74,109 +74,41 @@ namespace yae
   {
     PlaylistViewStyle(const char * id, PlaylistView & playlist);
 
+    virtual void uncache();
+
     // the view:
     PlaylistView & playlist_;
 
     // shared common properties:
-    Item & title_height_;
-    Item & cell_width_;
-    Item & cell_height_;
-    Item & font_size_;
+    ItemRef cell_width_;
+    ItemRef cell_height_;
     Text & now_playing_;
     Text & eyetv_badge_;
 
-    // font palette:
-    QFont font_;
-    QFont font_small_;
-    QFont font_large_;
-    QFont font_fixed_;
-
-    enum ColorId
-    {
-      kBg,
-      kFg,
-      kBorder,
-      kCursor,
-      kScrollbar,
-      kSeparator,
-      kUnderline,
-      kBgControls,
-      kFgControls,
-      kBgXButton,
-      kFgXButton,
-      kBgFocus,
-      kFgFocus,
-      kBgEditSelected,
-      kFgEditSelected,
-      kBgTimecode,
-      kFgTimecode,
-      kBgHint,
-      kFgHint,
-      kBgBadge,
-      kFgBadge,
-      kBgLabel,
-      kFgLabel,
-      kBgLabelSelected,
-      kFgLabelSelected,
-      kBgGroup,
-      kFgGroup,
-      kBgItem,
-      kBgItemPlaying,
-      kBgItemSelected,
-      kTimelineExcluded,
-      kTimelineIncluded,
-      kTimelinePlayed
-    };
-
-    const Color & color(ColorId id) const;
-
     // color palette:
-    Color bg_;
-    Color fg_;
+    ColorRef bg_xbutton_;
+    ColorRef fg_xbutton_;
 
-    Color border_;
-    Color cursor_;
-    Color scrollbar_;
-    Color separator_;
-    Color underline_;
+    ColorRef bg_hint_;
+    ColorRef fg_hint_;
 
-    Color bg_controls_;
-    Color fg_controls_;
+    ColorRef bg_badge_;
+    ColorRef fg_badge_;
 
-    Color bg_xbutton_;
-    Color fg_xbutton_;
+    ColorRef bg_label_;
+    ColorRef fg_label_;
 
-    Color bg_focus_;
-    Color fg_focus_;
+    ColorRef bg_label_selected_;
+    ColorRef fg_label_selected_;
 
-    Color bg_edit_selected_;
-    Color fg_edit_selected_;
+    ColorRef bg_group_;
+    ColorRef fg_group_;
 
-    Color bg_timecode_;
-    Color fg_timecode_;
+    ColorRef bg_item_;
+    ColorRef bg_item_playing_;
+    ColorRef bg_item_selected_;
 
-    Color bg_hint_;
-    Color fg_hint_;
-
-    Color bg_badge_;
-    Color fg_badge_;
-
-    Color bg_label_;
-    Color fg_label_;
-
-    Color bg_label_selected_;
-    Color fg_label_selected_;
-
-    Color bg_group_;
-    Color fg_group_;
-
-    Color bg_item_;
-    Color bg_item_playing_;
-    Color bg_item_selected_;
-
-    Color timeline_excluded_;
-    Color timeline_included_;
-    Color timeline_played_;
+    ColorRef timeline_played_;
 
     // gradients:
     TGradientPtr filter_shadow_;
@@ -368,76 +300,6 @@ namespace yae
     }
 
     const PlaylistView & playlist_;
-  };
-
-
-  //----------------------------------------------------------------
-  // StyleColor
-  //
-  struct StyleColor : public TColorExpr
-  {
-    StyleColor(const PlaylistView & playlist,
-               PlaylistViewStyle::ColorId id,
-               double alphaScale = 1.0,
-               double alphaTranslate = 0.0):
-      playlist_(playlist),
-      id_(id),
-      alphaScale_(alphaScale),
-      alphaTranslate_(alphaTranslate)
-    {}
-
-    // virtual:
-    void evaluate(Color & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.color(id_).a_scaled(alphaScale_, alphaTranslate_);
-    }
-
-    const PlaylistView & playlist_;
-    PlaylistViewStyle::ColorId id_;
-    double alphaScale_;
-    double alphaTranslate_;
-  };
-
-
-  //----------------------------------------------------------------
-  // StyleTitleHeight
-  //
-  struct StyleTitleHeight : public TDoubleExpr
-  {
-    StyleTitleHeight(const PlaylistView & playlist,
-                     double s = 1.0,
-                     double t = 0.0,
-                     bool oddRoundUp = false):
-      playlist_(playlist),
-      scale_(s),
-      translate_(t),
-      oddRoundUp_(oddRoundUp)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-
-      double v = 0.0;
-      style.title_height_.get(kPropertyHeight, v);
-      v *= scale_;
-      v += translate_;
-
-      if (oddRoundUp_)
-      {
-        int i = 1 | int(ceil(v));
-        v = double(i);
-      }
-
-      result = v;
-    }
-
-    const PlaylistView & playlist_;
-    double scale_;
-    double translate_;
-    bool oddRoundUp_;
   };
 
 }

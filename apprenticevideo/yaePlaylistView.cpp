@@ -141,7 +141,7 @@ namespace yae
   struct GridCellLeft : public TDoubleExpr
   {
     GridCellLeft(const TPlaylistModelItem & item,
-                 const Item & cellWidth):
+                 const ItemRef & cellWidth):
       item_(item),
       cellWidth_(cellWidth)
     {}
@@ -151,9 +151,7 @@ namespace yae
     {
       Item & grid = item_.parent<Item>();
       double gridWidth = grid.width();
-
-      double cellWidth = 0.0;
-      cellWidth_.get(kPropertyWidth, cellWidth);
+      double cellWidth = cellWidth_.get();
 
       unsigned int cellsPerRow = std::floor(gridWidth / cellWidth);
       unsigned int cellIndex = item_.modelIndex().row();
@@ -163,7 +161,7 @@ namespace yae
     }
 
     const TPlaylistModelItem & item_;
-    const Item & cellWidth_;
+    const ItemRef & cellWidth_;
   };
 
   //----------------------------------------------------------------
@@ -172,8 +170,8 @@ namespace yae
   struct GridCellTop : public TDoubleExpr
   {
     GridCellTop(const TPlaylistModelItem & item,
-                const Item & cellWidth,
-                const Item & cellHeight):
+                const ItemRef & cellWidth,
+                const ItemRef & cellHeight):
       item_(item),
       cellWidth_(cellWidth),
       cellHeight_(cellHeight)
@@ -185,12 +183,8 @@ namespace yae
       Item & grid = item_.parent<Item>();
       std::size_t numCells = grid.children_.size();
       double gridWidth = grid.width();
-
-      double cellWidth = 0.0;
-      cellWidth_.get(kPropertyWidth, cellWidth);
-
-      double cellHeight = 0.0;
-      cellHeight_.get(kPropertyHeight, cellHeight);
+      double cellWidth = cellWidth_.get();
+      double cellHeight = cellHeight_.get();
       cellHeight += 2;
 
       unsigned int cellsPerRow = std::floor(gridWidth / cellWidth);
@@ -203,8 +197,8 @@ namespace yae
     }
 
     const TPlaylistModelItem & item_;
-    const Item & cellWidth_;
-    const Item & cellHeight_;
+    const ItemRef & cellWidth_;
+    const ItemRef & cellHeight_;
   };
 
 
@@ -590,20 +584,27 @@ namespace yae
 
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
-    const Item & fontSize = style.font_size_;
+    const ItemRef & fontSize = style.font_size_;
     const Item & scrollbar = playlist["scrollbar"];
     const Text & nowPlaying = style.now_playing_;
 
-    ColorRef colorCursor = ColorRef::constant(style.cursor_);
-    ColorRef colorSort = ColorRef::constant(style.fg_hint_);
-    ColorRef colorTextBg = ColorRef::constant(style.bg_focus_.a_scaled(0.5));
-    ColorRef colorTextFg = ColorRef::constant(style.fg_focus_.a_scaled(0.5));
-    ColorRef colorEditBg = ColorRef::constant(style.bg_focus_.a_scaled(0.0));
-    ColorRef colorFocusBg = ColorRef::constant(style.bg_focus_);
-    ColorRef colorFocusFg = ColorRef::constant(style.fg_focus_);
-    ColorRef colorHighlightBg = ColorRef::constant(style.bg_edit_selected_);
-    ColorRef colorHighlightFg = ColorRef::constant(style.fg_edit_selected_);
-    ColorRef colorUnderline = ColorRef::constant(style.underline_);
+    const ColorRef & colorCursor = style.cursor_;
+    const ColorRef & colorSort = style.fg_hint_;
+
+    ColorRef colorTextBg =
+      ColorRef::constant(style.bg_focus_.get().a_scaled(0.5));
+
+    ColorRef colorTextFg =
+      ColorRef::constant(style.fg_focus_.get().a_scaled(0.5));
+
+    ColorRef colorEditBg =
+      ColorRef::constant(style.bg_focus_.get().a_scaled(0.0));
+
+    const ColorRef & colorFocusBg = style.bg_focus_;
+    const ColorRef & colorFocusFg = style.fg_focus_;
+    const ColorRef & colorHighlightBg = style.bg_edit_selected_;
+    const ColorRef & colorHighlightFg = style.fg_edit_selected_;
+    const ColorRef & colorUnderline = style.underline_;
 
     Gradient & filterShadow = item.addNew<Gradient>("filterShadow");
     filterShadow.anchors_.fill(item);
@@ -633,7 +634,7 @@ namespace yae
       circle.background_ = circle.
         addExpr(new PremultipliedTransparent(filter, kPropertyColor));
       circle.color_ = colorFocusBg;
-      circle.colorBorder_ = ColorRef::constant(style.border_);
+      circle.colorBorder_ = style.border_;
 
       Transform & xform = icon.addNew<Transform>("xform");
       xform.anchors_.hcenter_ = circle.anchors_.hcenter_;
@@ -691,8 +692,7 @@ namespace yae
     text.elide_ = Qt::ElideLeft;
     text.color_ = colorTextFg;
     text.text_ = TVarRef::reference(editProxy, kPropertyText);
-    text.fontSize_ =
-      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
 
     edit.anchors_.fill(text);
     edit.margins_.left_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
@@ -724,9 +724,7 @@ namespace yae
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     // layout sort-and-order:
-    ItemRef smallFontSize = ItemRef::scale(fontSize,
-                                           kPropertyHeight,
-                                           0.7 * kDpiScale);
+    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7 * kDpiScale);
     QFont smallFont(style.font_small_);
     smallFont.setBold(true);
 
@@ -887,35 +885,29 @@ namespace yae
     // in-case of a re-layout:
     footer.children_.clear();
 
-    const Item & fontSize = style.font_size_;
+    const ItemRef & fontSize = style.font_size_;
 
     Rectangle & separator = footer.addNew<Rectangle>("footer_separator");
     separator.anchors_.fill(footer);
     separator.anchors_.bottom_.reset();
     separator.height_ = ItemRef::constant(2.0);
-    separator.color_ = ColorRef::constant(style.separator_);
+    separator.color_ = style.separator_;
 
     QFont smallFont(style.font_small_);
     smallFont.setBold(true);
-    ItemRef smallFontSize = ItemRef::scale(fontSize,
-                                           kPropertyHeight,
-                                           0.7 * kDpiScale);
+    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7 * kDpiScale);
 
     Text & footNote = footer.addNew<Text>("footNote");
-    footNote.anchors_.top_ =
-      ItemRef::reference(footer, kPropertyTop);
-    footNote.anchors_.right_ =
-      ItemRef::reference(footer, kPropertyRight);
-    footNote.margins_.top_ =
-      ItemRef::scale(fontSize, kPropertyHeight, 0.5 * kDpiScale);
-    footNote.margins_.right_ =
-      ItemRef::scale(fontSize, kPropertyHeight, 0.8 * kDpiScale);
+    footNote.anchors_.top_ = ItemRef::reference(footer, kPropertyTop);
+    footNote.anchors_.right_ = ItemRef::reference(footer, kPropertyRight);
+    footNote.margins_.top_ = ItemRef::reference(fontSize, 0.5 * kDpiScale);
+    footNote.margins_.right_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
 
     footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
     footNote.font_ = smallFont;
     footNote.fontSize_ = smallFontSize;
-    footNote.color_ = ColorRef::constant(style.fg_hint_);
-    footNote.background_ = ColorRef::constant(style.bg_.a_scaled(0.0));
+    footNote.color_ = style.fg_hint_;
+    footNote.background_ = ColorRef::constant(style.bg_.get().a_scaled(0.0));
   }
 
   //----------------------------------------------------------------
@@ -1040,15 +1032,15 @@ namespace yae
   static void
   layoutPlaylistItem(Item & grid,
                      TPlaylistModelItem & cell,
-                     const Item & cellWidth,
-                     const Item & cellHeight,
+                     const ItemRef & cellWidth,
+                     const ItemRef & cellHeight,
                      PlaylistView & view,
                      PlaylistModelProxy & model,
                      const QModelIndex & itemIndex,
                      const PlaylistViewStyle & style)
   {
-    cell.width_ = ItemRef::reference(cellWidth, kPropertyWidth);
-    cell.height_ = ItemRef::reference(cellHeight, kPropertyHeight);
+    cell.width_ = cellWidth;
+    cell.height_ = cellHeight;
 
     cell.anchors_.left_ =
       cell.addExpr(new GridCellLeft(cell, cellWidth));
@@ -1077,17 +1069,17 @@ namespace yae
     const Scrollview & sview = root.get<Scrollview>("scrollview");
 
     // reuse pre-computed properties:
-    const Item & fontSize = style.font_size_;
-    const Item & cellWidth = style.cell_width_;
-    const Item & cellHeight = style.cell_height_;
-    const Item & titleHeight = style.title_height_;
+    const ItemRef & fontSize = style.font_size_;
+    const ItemRef & cellWidth = style.cell_width_;
+    const ItemRef & cellHeight = style.cell_height_;
+    const ItemRef & titleHeight = style.title_height_;
     const Text & nowPlaying = style.now_playing_;
 
     Item & spacer = group.addNew<Item>("group_spacer");
     spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
     spacer.width_ = ItemRef::reference(group, kPropertyWidth);
-    spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+    spacer.height_ = ItemRef::reference(titleHeight, 0.2);
 
     Item & title = group.addNew<Item>("group_title");
     title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
@@ -1138,14 +1130,13 @@ namespace yae
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
     text.text_ = text.addExpr
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-    text.fontSize_ =
-      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
 #if defined(__APPLE__)
     text.supersample_ = text.addExpr(new Supersample<Text>(text));
 #endif
     text.elide_ = Qt::ElideMiddle;
-    text.color_ = ColorRef::constant(style.fg_group_);
-    text.background_ = ColorRef::constant(style.bg_group_);
+    text.color_ = style.fg_group_;
+    text.background_ = style.bg_group_;
 
     // remove group [x] button:
     rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
@@ -1211,7 +1202,7 @@ namespace yae
     footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
     footer.width_ = ItemRef::reference(group, kPropertyWidth);
-    footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+    footer.height_ = titleHeight;
   }
 
 
@@ -1228,16 +1219,16 @@ namespace yae
     Item & root = *(view.root());
     const Scrollview & sview = root.get<Scrollview>("scrollview");
 
-    const Item & fontSize = style.font_size_;
+    const ItemRef & fontSize = style.font_size_;
 
     Rectangle & frame = cell.addNew<Rectangle>("frame");
     frame.anchors_.fill(cell);
     frame.color_ = frame.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.bg_item_,
-                                     style.bg_item_selected_,
-                                     style.bg_item_playing_));
+                                     style.bg_item_.get(),
+                                     style.bg_item_selected_.get(),
+                                     style.bg_item_playing_.get()));
 
     Image & thumbnail = cell.addNew<Image>("thumbnail");
     thumbnail.setContext(view);
@@ -1267,22 +1258,20 @@ namespace yae
     badge.color_ = badge.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.fg_badge_,
-                                     style.fg_label_selected_,
-                                     style.fg_badge_));
+                                     style.fg_badge_.get(),
+                                     style.fg_label_selected_.get(),
+                                     style.fg_badge_.get()));
     badge.text_ = badge.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-    badge.fontSize_ = ItemRef::scale(fontSize,
-                                     kPropertyHeight,
-                                     0.8 * kDpiScale);
+    badge.fontSize_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
 
     badgeBg.anchors_.inset(badge, -3, 0);
     badgeBg.color_ = badge.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.bg_badge_,
-                                     style.bg_label_selected_,
-                                     style.bg_badge_));
+                                     style.bg_badge_.get(),
+                                     style.bg_label_selected_.get(),
+                                     style.bg_badge_.get()));
 
     Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
     Text & label = cell.addNew<Text>("label");
@@ -1291,7 +1280,7 @@ namespace yae
     label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-    label.fontSize_ = ItemRef::scale(fontSize, kPropertyHeight, kDpiScale);
+    label.fontSize_ = ItemRef::reference(fontSize, kDpiScale);
 #if defined(__APPLE__)
     label.supersample_ = label.addExpr(new Supersample<Text>(label));
 #endif
@@ -1300,17 +1289,17 @@ namespace yae
     label.color_ = label.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.fg_label_,
-                                     style.fg_label_selected_,
-                                     style.fg_label_));
+                                     style.fg_label_.get(),
+                                     style.fg_label_selected_.get(),
+                                     style.fg_label_.get()));
 
     labelBg.anchors_.inset(label, -3, -1);
     labelBg.color_ = labelBg.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.bg_label_,
-                                     style.bg_label_selected_,
-                                     style.bg_label_));
+                                     style.bg_label_.get(),
+                                     style.bg_label_selected_.get(),
+                                     style.bg_label_.get()));
 
     Item & rm = cell.addNew<Item>("remove item");
 
@@ -1324,9 +1313,7 @@ namespace yae
     playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
-    playing.fontSize_ = ItemRef::scale(fontSize,
-                                       kPropertyHeight,
-                                       0.8 * kDpiScale);
+    playing.fontSize_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
 
     playingBg.anchors_.inset(playing, -3, -1);
     playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
@@ -1354,7 +1341,7 @@ namespace yae
     underline.anchors_.right_ = ItemRef::offset(playing, kPropertyRight, 1);
     underline.anchors_.top_ = ItemRef::offset(playing, kPropertyBottom, 2);
     underline.height_ = ItemRef::constant(2);
-    underline.color_ = ColorRef::constant(style.cursor_);
+    underline.color_ = style.cursor_;
     underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
     underline.visible_.cachingEnabled_ = false;
 
@@ -1363,7 +1350,7 @@ namespace yae
     cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
-    cur.color_ = ColorRef::constant(style.underline_);
+    cur.color_ = style.underline_;
     cur.visible_ = cur.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
     cur.visible_.cachingEnabled_ = false;
@@ -1388,24 +1375,24 @@ namespace yae
     const Scrollview & sview = root.get<Scrollview>("scrollview");
 
     // reuse pre-computed properties:
-    const Item & fontSize = style.font_size_;
-    const Item & cellWidth = style.cell_width_;
-    const Item & cellHeight = style.cell_height_;
-    const Item & titleHeight = style.title_height_;
+    const ItemRef & fontSize = style.font_size_;
+    const ItemRef & cellWidth = style.cell_width_;
+    const ItemRef & cellHeight = style.cell_height_;
+    const ItemRef & titleHeight = style.title_height_;
     const Text & nowPlaying = style.now_playing_;
 
     Item & spacer = group.addNew<Item>("group_spacer");
     spacer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     spacer.anchors_.top_ = ItemRef::reference(group, kPropertyTop);
     spacer.width_ = ItemRef::reference(group, kPropertyWidth);
-    spacer.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 0.2);
+    spacer.height_ = ItemRef::reference(titleHeight, 0.2);
 
     Rectangle & title = group.addNew<Rectangle>("group_title");
     title.anchors_.top_ = ItemRef::offset(spacer, kPropertyBottom, 5);
     title.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     title.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-    title.height_ = ItemRef::scale(titleHeight, kPropertyHeight, 1.2);
-    title.color_ = ColorRef::constant(style.bg_group_);
+    title.height_ = ItemRef::reference(titleHeight, 1.2);
+    title.color_ = style.bg_group_;
 
     Item & toggle = title.addNew<Item>("toggle");
     TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
@@ -1451,10 +1438,9 @@ namespace yae
     text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
     text.text_ = text.addExpr
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-    text.fontSize_ =
-      ItemRef::scale(fontSize, kPropertyHeight, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
     text.elide_ = Qt::ElideMiddle;
-    text.color_ = ColorRef::constant(style.fg_group_);
+    text.color_ = style.fg_group_;
     text.background_ = ColorRef::transparent(title, kPropertyColor);
     // text.background_ = text.
     //   addExpr(new PremultipliedTransparent(title, kPropertyColor));
@@ -1516,7 +1502,7 @@ namespace yae
     footer.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     footer.anchors_.top_ = ItemRef::reference(grid, kPropertyBottom);
     footer.width_ = ItemRef::reference(group, kPropertyWidth);
-    footer.height_ = ItemRef::reference(titleHeight, kPropertyHeight);
+    footer.height_ = titleHeight;
   }
 
 
@@ -1533,7 +1519,7 @@ namespace yae
     Item & root = *(view.root());
     const Scrollview & sview = root.get<Scrollview>("scrollview");
 
-    const Item & fontSize = style.font_size_;
+    const ItemRef & fontSize = style.font_size_;
     const Text & nowPlaying = style.now_playing_;
     const Text & eyetvBadge = style.eyetv_badge_;
 
@@ -1542,9 +1528,9 @@ namespace yae
     frame.color_ = frame.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.bg_item_,
-                                     style.bg_item_selected_,
-                                     style.bg_item_playing_));
+                                     style.bg_item_.get(),
+                                     style.bg_item_selected_.get(),
+                                     style.bg_item_playing_.get()));
 
     Item & badgeItem = cell.addNew<Item>("badge_item");
     badgeItem.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
@@ -1562,23 +1548,21 @@ namespace yae
     badge.color_ = badge.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.fg_badge_,
-                                     style.bg_item_selected_.opaque(),
-                                     style.bg_item_playing_.opaque()));
+                                     style.fg_badge_.get(),
+                                     style.bg_item_selected_.get().opaque(),
+                                     style.bg_item_playing_.get().opaque()));
     badge.elide_ = Qt::ElideRight;
     badge.text_ = badge.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-    badge.fontSize_ = ItemRef::scale(fontSize,
-                                     kPropertyHeight,
-                                     0.7 * kDpiScale);
+    badge.fontSize_ = ItemRef::reference(fontSize, 0.7 * kDpiScale);
 
     badgeBg.anchors_.inset(badge, -3, 0);
     badgeBg.color_ = badge.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.bg_badge_,
-                                     style.fg_badge_,
-                                     style.fg_badge_));
+                                     style.bg_badge_.get(),
+                                     style.fg_badge_.get(),
+                                     style.fg_badge_.get()));
 
     Text & label = cell.addNew<Text>("label");
     Item & rm = cell.addNew<Item>("remove item");
@@ -1590,18 +1574,16 @@ namespace yae
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.elide_ = Qt::ElideMiddle;
-    label.fontSize_ = ItemRef::scale(fontSize,
-                                     kPropertyHeight,
-                                     0.9 * kDpiScale);
+    label.fontSize_ = ItemRef::reference(fontSize, 0.9 * kDpiScale);
     label.background_ = ColorRef::transparent(frame, kPropertyColor);
     // label.background_ = label.
     //  addExpr(new PremultipliedTransparent(frame, kPropertyColor));
     label.color_ = label.
       addExpr(new ItemHighlightColor(model,
                                      index,
-                                     style.fg_label_,
-                                     style.fg_label_selected_,
-                                     style.fg_label_selected_));
+                                     style.fg_label_.get(),
+                                     style.fg_label_selected_.get(),
+                                     style.fg_label_selected_.get()));
 
     Text & playing = cell.addNew<Text>("now playing");
     playing.copySettings(nowPlaying);
@@ -1634,7 +1616,7 @@ namespace yae
     cur.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -3);
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
-    cur.color_ = ColorRef::constant(style.underline_);
+    cur.color_ = style.underline_;
     cur.visible_ = cur.addExpr
       (new IsCurrentNotSelected(model, index));
     cur.visible_.cachingEnabled_ = false;
@@ -1686,7 +1668,7 @@ namespace yae
     Rectangle & background = root.addNew<Rectangle>("background");
     background.anchors_.fill(root);
     background.color_ = background.
-      addExpr(new StyleColor(*this, PlaylistViewStyle::kBg));
+      addExpr(style_color_ref(*this, &ItemViewStyle::bg_));
 
     Scrollview & sview = root.addNew<Scrollview>("scrollview");
 
@@ -1745,7 +1727,7 @@ namespace yae
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = ColorRef::transparent(background, kPropertyColor);
     slider.color_ = slider.
-      addExpr(new StyleColor(*this, PlaylistViewStyle::kSeparator));
+      addExpr(style_color_ref(*this, &ItemViewStyle::separator_));
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
@@ -2161,7 +2143,7 @@ namespace yae
     const PlaylistViewStyle & style = view.playlistViewStyle();
     Scrollview & sview = root.get<Scrollview>("scrollview");
     double rowWidth = sview.width();
-    double cellWidth = style.cell_width_.width();
+    double cellWidth = style.cell_width_.get();
     return calcItemsPerRow(rowWidth, cellWidth);
   }
 
@@ -2664,8 +2646,8 @@ namespace yae
     if (parent.isValid())
     {
       // adding group items:
-      const Item & cellWidth = style.cell_width_;
-      const Item & cellHeight = style.cell_height_;
+      const ItemRef & cellWidth = style.cell_width_;
+      const ItemRef & cellHeight = style.cell_height_;
 
       int groupIndex = parent.row();
 

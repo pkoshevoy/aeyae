@@ -20,6 +20,7 @@
 #endif
 
 // Qt interfaces:
+#include <QFont>
 #include <QMouseEvent>
 #include <QObject>
 #include <QString>
@@ -275,20 +276,17 @@ namespace yae
   //
   struct YAE_API ItemViewStyle : public Item
   {
-    ItemViewStyle(const char * id, const ItemView & view):
-      Item(id),
-      view_(view)
-    {}
+    ItemViewStyle(const char * id, const ItemView & view);
 
+    virtual void uncache();
+    /*
     // for user-defined item attributes:
     template <typename TData>
     inline DataRef<TData>
     setStyleAttr(const char * key, Expression<TData> * e)
     {
       attr_[std::string(key)] = TPropertiesBasePtr(e);
-       DataRef<TData> r = DataRef<TData>::expression(*e);
-       r.cachingEnabled_ = false;
-       return r;
+      return DataRef<TData>::expression(*e);
     }
 
     template <typename TData>
@@ -334,21 +332,59 @@ namespace yae
       return value;
     }
 
+    // user-defined properties associated with this item:
+    std::map<std::string, TPropertiesBasePtr> attr_;
+    */
     // the view that owns this style:
     const ItemView & view_;
 
-    // user-defined properties associated with this item:
-    std::map<std::string, TPropertiesBasePtr> attr_;
+    // font palette:
+    QFont font_;
+    QFont font_small_;
+    QFont font_large_;
+    QFont font_fixed_;
+
+    // shared common properties:
+    ItemRef title_height_;
+    ItemRef font_size_;
+
+    // color palette:
+    ColorRef bg_;
+    ColorRef fg_;
+
+    ColorRef border_;
+    ColorRef cursor_;
+    ColorRef scrollbar_;
+    ColorRef separator_;
+    ColorRef underline_;
+
+    ColorRef bg_controls_;
+    ColorRef fg_controls_;
+
+    ColorRef bg_focus_;
+    ColorRef fg_focus_;
+
+    ColorRef bg_edit_selected_;
+    ColorRef fg_edit_selected_;
+
+    ColorRef bg_timecode_;
+    ColorRef fg_timecode_;
+
+    ColorRef timeline_excluded_;
+    ColorRef timeline_included_;
   };
 
 
   //----------------------------------------------------------------
-  // ColorAttr
+  // StyleAttr
   //
-  template <typename TData = double>
-  struct YAE_API StyleAttr : public Expression<TData>
+  template <typename TStyle, typename TDataRef>
+  struct YAE_API StyleAttr : public Expression<typename TDataRef::value_type>
   {
-    StyleAttr(const ItemView & view, const char * attr):
+    typedef typename TDataRef::value_type TData;
+
+    StyleAttr(const ItemView & view,
+              TDataRef TStyle::* const attr):
       view_(view),
       attr_(attr)
     {}
@@ -356,27 +392,87 @@ namespace yae
     // virtual:
     void evaluate(TData & result) const
     {
-      const ItemViewStyle * style = view_.style();
+      const TStyle * style = dynamic_cast<const TStyle *>(view_.style());
 
       if (!style)
       {
-        throw std::runtime_error("view has no style");
+        throw std::runtime_error("item view lacks expected style");
       }
 
-      style->getStyleAttr<TData>(attr_, result);
+      result = ((*style).*attr_).get();
     }
 
     const ItemView & view_;
-    std::string attr_;
+    TDataRef TStyle::* const attr_;
   };
 
   //----------------------------------------------------------------
-  // ColorAttr
+  // StyleAttr<TStyle, ItemRef>
   //
-  struct YAE_API ColorAttr : public TColorExpr
+  template <typename TStyle>
+  struct YAE_API StyleAttr<TStyle, ItemRef> : public TDoubleExpr
   {
-    ColorAttr(const ItemView & view,
-              const char * attr,
+    StyleAttr(const ItemView & view,
+              ItemRef TStyle::* const attr,
+              double scale = 1.0,
+              double translate = 0.0,
+              bool odd_round_up = false):
+      view_(view),
+      attr_(attr),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      const TStyle * style = dynamic_cast<const TStyle *>(view_.style());
+
+      if (!style)
+      {
+        throw std::runtime_error("item view lacks expected style");
+      }
+
+      result = ((*style).*attr_).get();
+      result *= scale_;
+      result += translate_;
+
+      if (odd_round_up_)
+      {
+        int i = 1 | int(ceil(result));
+        result = double(i);
+      }
+    }
+
+    const ItemView & view_;
+    ItemRef TStyle::* const attr_;
+    double scale_;
+    double translate_;
+    bool odd_round_up_;
+  };
+
+  //----------------------------------------------------------------
+  // style_item_ref
+  //
+  template <typename TStyle>
+  inline StyleAttr<TStyle, ItemRef> *
+  style_item_ref(const ItemView & view,
+                 ItemRef TStyle::* const attr,
+                 double s = 1.0,
+                 double t = 0.0,
+                 bool odd_round_up = false)
+  {
+    return new StyleAttr<TStyle, ItemRef>(view, attr, s, t, odd_round_up);
+  }
+
+  //----------------------------------------------------------------
+  // StyleAttr<TStyle, ColorRef>
+  //
+  template <typename TStyle>
+  struct YAE_API StyleAttr<TStyle, ColorRef> : public TColorExpr
+  {
+    StyleAttr(const ItemView & view,
+              ColorRef TStyle::* const attr,
               double alphaScale = 1.0,
               double alphaTranslate = 0.0):
       view_(view),
@@ -388,25 +484,50 @@ namespace yae
     // virtual:
     void evaluate(Color & result) const
     {
-      const ItemViewStyle * style = view_.style();
+      const TStyle * style = dynamic_cast<const TStyle *>(view_.style());
 
       if (!style)
       {
-        throw std::runtime_error("view has no style");
+        throw std::runtime_error("item view lacks expected style");
       }
 
-      if (style->getStyleAttr<Color>(attr_, result))
-      {
-        result = result.a_scaled(alphaScale_, alphaTranslate_);
-      }
+      result = ((*style).*attr_).get();
+      result = result.a_scaled(alphaScale_, alphaTranslate_);
     }
 
     const ItemView & view_;
-    std::string attr_;
+    ColorRef TStyle::* const attr_;
     double alphaScale_;
     double alphaTranslate_;
   };
 
+  //----------------------------------------------------------------
+  // style_color_ref
+  //
+  template <typename TStyle>
+  inline StyleAttr<TStyle, ColorRef> *
+  style_color_ref(const ItemView & view,
+                  ColorRef TStyle::* const attr,
+                  double s = 1.0,
+                  double t = 0.0)
+  {
+    return new StyleAttr<TStyle, ColorRef>(view, attr, s, t);
+  }
+
+  //----------------------------------------------------------------
+  // StyleTitleHeight
+  //
+  struct StyleTitleHeight : public StyleAttr<ItemViewStyle, ItemRef>
+  {
+    typedef StyleAttr<ItemViewStyle, ItemRef> TBase;
+
+    StyleTitleHeight(const ItemView & view,
+                     double s = 1.0,
+                     double t = 0.0,
+                     bool odd_round_up = false):
+      TBase(view, &ItemViewStyle::title_height_, s, t, odd_round_up)
+    {}
+  };
 
   //----------------------------------------------------------------
   // CalcTitleHeight

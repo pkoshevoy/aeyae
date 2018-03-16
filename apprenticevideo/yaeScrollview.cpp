@@ -8,6 +8,9 @@
 
 // local interfaces:
 #include "yaeCanvasRenderer.h"
+#include "yaeFlickableArea.h"
+#include "yaeItemView.h"
+#include "yaeRoundRect.h"
 #include "yaeScrollview.h"
 
 
@@ -427,5 +430,158 @@ namespace yae
     }
 
     return (ScrollbarId)required;
+  }
+
+  //----------------------------------------------------------------
+  // layout_scrollview
+  //
+  Item &
+  layout_scrollview(ScrollbarId scrollbars,
+                    ItemView & view,
+                    const ItemViewStyle & style,
+                    Item & root,
+                    ScrollbarId inset,
+                    bool clipContent)
+  {
+    bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
+    bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
+
+    Scrollview & sview = root.
+      addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
+    sview.clipContent_ = clipContent;
+
+    Item & scrollbar = root.addNew<Item>("scrollbar");
+    Item & hscrollbar = root.addNew<Item>("hscrollbar");
+
+    scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
+    scrollbar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
+    scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+    scrollbar.visible_ = scrollbar.
+      addExpr(new ScrollbarRequired
+              (*sview.content_,
+               kScrollbarVertical,
+
+               // vertical scrollbar width:
+               (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
+               ItemRef::uncacheable(style.title_height_, 0.2) :
+               ItemRef::constant(inset_v ? -1.0 : 0.0),
+
+               // horizontal scrollbar width:
+               (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
+               ItemRef::uncacheable(style.title_height_, 0.2) :
+               ItemRef::constant(inset_h ? -1.0 : 0.0),
+
+               ItemRef::uncacheable(sview, kPropertyLeft),
+               ItemRef::uncacheable(root, kPropertyRight),
+               ItemRef::uncacheable(sview, kPropertyTop),
+               ItemRef::uncacheable(root, kPropertyBottom)));
+
+    scrollbar.width_ = scrollbar.addExpr
+      (new Conditional<ItemRef>
+       (scrollbar.visible_,
+        ItemRef::uncacheable(style.title_height_, 0.2),
+        ItemRef::constant(0.0)));
+
+    hscrollbar.setAttr("vertical", false);
+    hscrollbar.anchors_.left_ = ItemRef::reference(sview, kPropertyLeft);
+    hscrollbar.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
+    hscrollbar.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+
+    hscrollbar.visible_ = hscrollbar.
+      addExpr(new ScrollbarRequired
+              (*sview.content_,
+               kScrollbarHorizontal,
+
+               (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
+               ItemRef::uncacheable(style.title_height_, 0.2) :
+               ItemRef::constant(inset_v ? -1.0 : 0.0),
+
+               (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
+               ItemRef::uncacheable(style.title_height_, 0.2) :
+               ItemRef::constant(inset_h ? -1.0 : 0.0),
+
+               ItemRef::uncacheable(sview, kPropertyLeft),
+               ItemRef::uncacheable(root, kPropertyRight),
+               ItemRef::uncacheable(sview, kPropertyTop),
+               ItemRef::uncacheable(root, kPropertyBottom)));
+
+    hscrollbar.height_ = hscrollbar.addExpr
+      (new Conditional<ItemRef>
+       (hscrollbar.visible_,
+        ItemRef::uncacheable(style.title_height_, 0.2),
+        ItemRef::constant(0.0)));
+
+    sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+    sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+
+    sview.anchors_.right_ =
+      inset_v ?
+      ItemRef::reference(root, kPropertyRight) :
+      ItemRef::reference(scrollbar, kPropertyLeft);
+
+    sview.anchors_.bottom_ =
+      inset_h ?
+      ItemRef::reference(root, kPropertyBottom) :
+      ItemRef::reference(hscrollbar, kPropertyTop);
+
+    Item & content = *(sview.content_);
+    content.anchors_.left_ = ItemRef::constant(0.0);
+    content.anchors_.top_ = ItemRef::constant(0.0);
+
+    if ((scrollbars & kScrollbarHorizontal) != kScrollbarHorizontal)
+    {
+      content.width_ = ItemRef::reference(sview, kPropertyWidth);
+    }
+
+    FlickableArea & maScrollview =
+      sview.add(new FlickableArea("ma_sview",
+                                  view,
+                                  &scrollbar,
+                                  &hscrollbar));
+    maScrollview.anchors_.fill(sview);
+
+    InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
+    maScrollbar.anchors_.fill(scrollbar);
+
+    // configure scrollbar slider:
+    RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
+    slider.anchors_.top_ = slider.
+      addExpr(new CalcSliderTop(sview, scrollbar, slider));
+    slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
+    slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
+    slider.height_ = slider.
+      addExpr(new CalcSliderHeight(sview, scrollbar, slider));
+    slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
+    slider.background_ = slider.
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
+    slider.color_ = slider.
+      addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
+
+    SliderDrag & maSlider =
+      slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
+    maSlider.anchors_.fill(slider);
+
+    InputArea & maHScrollbar = scrollbar.addNew<InputArea>("ma_hscrollbar");
+    maHScrollbar.anchors_.fill(hscrollbar);
+
+    // configure horizontal scrollbar slider:
+    RoundRect & hslider = hscrollbar.addNew<RoundRect>("hslider");
+    hslider.anchors_.top_ = ItemRef::offset(hscrollbar, kPropertyTop, 2);
+    hslider.anchors_.bottom_ = ItemRef::offset(hscrollbar, kPropertyBottom, -2);
+    hslider.anchors_.left_ =
+      hslider.addExpr(new CalcSliderLeft(sview, hscrollbar, hslider));
+    hslider.width_ =
+      hslider.addExpr(new CalcSliderWidth(sview, hscrollbar, hslider));
+    hslider.radius_ = ItemRef::scale(hslider, kPropertyHeight, 0.5);
+    hslider.background_ = hslider.
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
+    hslider.color_ = hslider.
+      addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
+
+    SliderDrag & maHSlider =
+      hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));
+    maHSlider.anchors_.fill(hslider);
+
+    return content;
   }
 }

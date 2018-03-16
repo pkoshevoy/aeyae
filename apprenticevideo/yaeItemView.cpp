@@ -13,6 +13,7 @@
 
 // Qt library:
 #include <QApplication>
+#include <QFontInfo>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QTabletEvent>
@@ -856,6 +857,146 @@ namespace yae
                              const TImageProviderPtr & p)
   {
     imageProviders_[providerId] = p;
+  }
+
+
+  //----------------------------------------------------------------
+  // ItemViewStyle::ItemViewStyle
+  //
+  ItemViewStyle::ItemViewStyle(const char * id, const ItemView & view):
+    Item(id),
+    view_(view)
+  {
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
+    font_small_.setHintingPreference(QFont::PreferFullHinting);
+#endif
+
+    font_small_.setStyleHint(QFont::SansSerif);
+    font_small_.setStyleStrategy((QFont::StyleStrategy)
+                                 (QFont::PreferOutline |
+                                  QFont::PreferAntialias |
+                                  QFont::OpenGLCompatible));
+
+    // main font:
+    font_ = font_small_;
+    font_large_ = font_small_;
+
+    static bool hasImpact =
+      QFontInfo(QFont("impact")).family().
+      contains(QString::fromUtf8("impact"), Qt::CaseInsensitive);
+
+    if (hasImpact)
+    {
+      font_large_.setFamily("impact");
+
+#if !(defined(_WIN32) ||                        \
+      defined(__APPLE__) ||                     \
+      QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      font_large_.setStretch(QFont::Condensed);
+#endif
+    }
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0)) || !defined(__APPLE__)
+    else
+#endif
+    {
+      font_large_.setStretch(QFont::Condensed);
+      font_large_.setWeight(QFont::Black);
+    }
+
+#if (QT_VERSION >= QT_VERSION_CHECK(4, 8, 0))
+    font_fixed_.setHintingPreference(QFont::PreferFullHinting);
+#endif
+
+    font_fixed_.setFamily("Menlo, "
+                          "Monaco, "
+                          "Droid Sans Mono, "
+                          "DejaVu Sans Mono, "
+                          "Bitstream Vera Sans Mono, "
+                          "Consolas, "
+                          "Lucida Sans Typewriter, "
+                          "Lucida Console, "
+                          "Courier New");
+    font_fixed_.setStyleHint(QFont::Monospace);
+    font_fixed_.setFixedPitch(true);
+    font_fixed_.setStyleStrategy((QFont::StyleStrategy)
+                                 (QFont::PreferOutline |
+                                  QFont::PreferAntialias |
+                                  QFont::OpenGLCompatible));
+
+    anchors_.top_ = ItemRef::constant(0);
+    anchors_.left_ = ItemRef::constant(0);
+    width_ = ItemRef::constant(0);
+    height_ = ItemRef::constant(0);
+
+    title_height_ = addExpr(new CalcTitleHeight(view, 50.0));
+    font_size_ = ItemRef::reference(title_height_, 0.15);
+
+    // color palette:
+    bg_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
+    fg_ = ColorRef::constant(Color(0xffffff, 1.0));
+
+    border_ = ColorRef::constant(Color(0x7f7f7f, 1.0));
+    cursor_ = ColorRef::constant(Color(0xf12b24, 1.0));
+    scrollbar_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    separator_ = ColorRef::constant(scrollbar_.get());
+    underline_ = ColorRef::constant(cursor_.get());
+
+    bg_timecode_ = ColorRef::constant(Color(0x7f7f7f, 0.25));
+    fg_timecode_ = ColorRef::constant(Color(0xFFFFFF, 0.5));
+
+    bg_controls_ =
+      ColorRef::constant(bg_timecode_.get());
+    fg_controls_ =
+      ColorRef::constant(fg_timecode_.get().opaque(0.75));
+
+    bg_focus_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
+    fg_focus_ = ColorRef::constant(Color(0xffffff, 1.0));
+
+    bg_edit_selected_ =
+      ColorRef::constant(Color(0xffffff, 1.0));
+    fg_edit_selected_ =
+      ColorRef::constant(Color(0x000000, 1.0));
+
+    timeline_excluded_ =
+      ColorRef::constant(Color(0xFFFFFF, 0.2));
+    timeline_included_ =
+      ColorRef::constant(Color(0xFFFFFF, 0.5));
+  }
+
+  //----------------------------------------------------------------
+  // ItemViewStyle::uncache
+  //
+  void
+  ItemViewStyle::uncache()
+  {
+    title_height_.uncache();
+    font_size_.uncache();
+
+    bg_.uncache();
+    fg_.uncache();
+
+    border_.uncache();
+    cursor_.uncache();
+    scrollbar_.uncache();
+    separator_.uncache();
+    underline_.uncache();
+
+    bg_controls_.uncache();
+    fg_controls_.uncache();
+
+    bg_focus_.uncache();
+    fg_focus_.uncache();
+
+    bg_edit_selected_.uncache();
+    fg_edit_selected_.uncache();
+
+    bg_timecode_.uncache();
+    fg_timecode_.uncache();
+
+    timeline_excluded_.uncache();
+    timeline_included_.uncache();
+
+    Item::uncache();
   }
 
 }
