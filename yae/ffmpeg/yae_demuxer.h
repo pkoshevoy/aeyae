@@ -710,6 +710,29 @@ namespace yae
                 double source_dar = 0.0,
                 double output_par = 1.0);
 
+  //----------------------------------------------------------------
+  // TVideoFrameCallback
+  //
+  typedef void(*TVideoFrameCallback)(const TVideoFramePtr &, void *);
+
+  //----------------------------------------------------------------
+  // decode_video
+  //
+  YAE_API bool
+  decode_gop(// source:
+             const TDemuxerInterfacePtr & demuxer,
+             const DemuxerSummary & summary,
+             const std::string & track_id,
+             std::size_t k0,
+             std::size_t k1,
+             // output:
+             unsigned int envelope_w,
+             unsigned int envelope_h,
+             double source_dar,
+             double output_par,
+             // delivery:
+             TVideoFrameCallback callback,
+             void * context);
 }
 
 

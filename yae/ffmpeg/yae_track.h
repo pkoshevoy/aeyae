@@ -312,6 +312,12 @@ namespace yae
   protected:
     int decoderPull(AVCodecContext * ctx);
     int decode(AVCodecContext * ctx, const AvPkt & pkt);
+
+  public:
+    void decode(const TPacketPtr & packetPtr);
+    void flush();
+
+  protected:
     bool switchDecoder();
     void tryToSwitchDecoder(const std::string & name);
 

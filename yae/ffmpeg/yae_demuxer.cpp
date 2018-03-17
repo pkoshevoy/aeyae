@@ -3516,4 +3516,168 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // pull
+  //
+  static void
+  pull(VideoTrack & decoder,
+       const Timespan & pts_span,
+       TVideoFrameCallback callback,
+       void * context)
+  {
+    while (true)
+    {
+      TVideoFramePtr vf_ptr;
+      if (!decoder.frameQueue_.pop(vf_ptr, NULL, false))
+      {
+        break;
+      }
+
+      if (!vf_ptr)
+      {
+        continue;
+      }
+
+      const TVideoFrame & vf = *vf_ptr;
+      if (!pts_span.contains(vf.time_))
+      {
+        continue;
+      }
+
+      if (callback)
+      {
+        callback(vf_ptr, context);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // decode_gop
+  //
+  bool
+  decode_gop(// source:
+             const TDemuxerInterfacePtr & demuxer_ptr,
+             const DemuxerSummary & summary,
+             const std::string & track_id,
+             std::size_t k0,
+             std::size_t k1,
+             // output:
+             unsigned int envelope_w,
+             unsigned int envelope_h,
+             double source_dar,
+             double output_par,
+             // delivery:
+             TVideoFrameCallback callback,
+             void * context)
+  {
+    // configure decoder:
+    VideoTrackPtr decoder_ptr;
+    {
+      TrackPtr track = yae::get(summary.decoders_, track_id);
+      decoder_ptr = boost::dynamic_pointer_cast<VideoTrack, Track>(track);
+    }
+
+    if (!decoder_ptr)
+    {
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    VideoTrack & decoder = *decoder_ptr;
+    {
+      VideoTraits traits;
+      decoder.getTraits(traits);
+
+      double native_dar =
+        double(traits.visibleWidth_) / double(traits.visibleHeight_);
+
+      double source_par =
+        source_dar ? (source_dar / native_dar) : 0.0;
+
+      traits.offsetTop_ = 0;
+      traits.offsetLeft_ = 0;
+      traits.visibleWidth_ = envelope_w;
+      traits.visibleHeight_ = envelope_h;
+      traits.pixelAspectRatio_ = output_par;
+      traits.cameraRotation_ = 0;
+      traits.isUpsideDown_ = false;
+
+      bool deint = false;
+      decoder.setTraitsOverride(traits, deint, source_par);
+
+      const pixelFormat::Traits * ptts = NULL;
+      if (!decoder.getTraitsOverride(traits) ||
+          !(ptts = pixelFormat::getTraits(traits.pixelFormat_)))
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      decoder.frameQueue_.setMaxSizeUnlimited();
+    }
+
+    // configure demuxer:
+    const Timeline::Track & track = summary.get_track_timeline(track_id);
+    const TTime & dts_a = track.dts_[k0];
+    const TTime & pts_a = track.pts_[k0];
+
+    const TTime dts_b =
+      (k1 < track.dts_.size()) ?
+      track.dts_[k1] :
+      track.dts_.back() + track.dur_.back();
+
+    const TTime pts_b =
+      (k1 < track.pts_.size()) ?
+      track.pts_[k1] :
+      track.pts_.back() + track.dur_.back();
+
+    Timespan dts_span(dts_a, dts_b);
+    Timespan pts_span(pts_a, pts_b);
+
+    DemuxerInterface & demuxer = *(demuxer_ptr.get());
+    demuxer.seek(AVSEEK_FLAG_BACKWARD, dts_span.t0_, track_id);
+    demuxer.populate();
+
+    // decode:
+    decoder.decoderStartup();
+
+    while (true)
+    {
+      AVStream * src = NULL;
+      TPacketPtr packet_ptr = demuxer.get(src);
+      if (!packet_ptr)
+      {
+        break;
+      }
+
+      const AvPkt & pkt = *packet_ptr;
+      const AVPacket & packet = pkt.get();
+
+      TTime t0(packet.dts * src->time_base.num, src->time_base.den);
+      TTime dt(packet.duration * src->time_base.num, src->time_base.den);
+      TTime t1 = t0 + dt;
+
+      if (t1 < dts_span.t0_)
+      {
+        continue;
+      }
+
+      if (dts_span.t1_ < t0)
+      {
+        break;
+      }
+
+      decoder.decode(packet_ptr);
+      pull(decoder, pts_span, callback, context);
+    }
+
+    // flush:
+    decoder.flush();
+    pull(decoder, pts_span, callback, context);
+
+    // done:
+    decoder.decoderShutdown();
+    return true;
+  }
+
 }

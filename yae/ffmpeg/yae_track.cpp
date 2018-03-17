@@ -710,6 +710,77 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Track::decode
+  //
+  void
+  Track::decode(const TPacketPtr & packetPtr)
+  {
+    if (!packetPtr)
+    {
+      this->flush();
+      return;
+    }
+
+    const AvPkt & pkt = *packetPtr;
+    const AVPacket & packet = pkt.get();
+
+    if (switchDecoderToRecommended_ && packet.flags & AV_PKT_FLAG_KEY)
+    {
+      candidates_.clear();
+      candidates_.splice(candidates_.end(), recommended_);
+      switchDecoderToRecommended_ = false;
+
+      // flush any buffered frames:
+      this->flush();
+
+      // close the codec:
+      codecContext_.reset();
+    }
+
+    AVCodecContext * ctx = this->open();
+    if (!ctx)
+    {
+      // codec is not supported
+      return;
+    }
+
+    if (sent_ > 60)
+    {
+      packets_.pop_front();
+    }
+    packets_.push_back(packetPtr);
+
+    uint64_t receivedPrior = received_;
+    int err = decode(ctx, pkt);
+
+    if (received_ > receivedPrior)
+    {
+      packets_.clear();
+      sent_ = 0;
+      errors_ = 0;
+    }
+    else if (err < 0 && err != AVERROR(EAGAIN) &&
+             (!received_ || errors_ >= 6))
+    {
+      this->switchDecoder();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Track::flush
+  //
+  void
+  Track::flush()
+  {
+    AVCodecContext * ctx = codecContext_.get();
+    if (ctx)
+    {
+      // flush out buffered frames with an empty packet:
+      this->decode(ctx, AvPkt());
+    }
+  }
+
+  //----------------------------------------------------------------
   // Track::switchDecoder
   //
   bool
@@ -803,66 +874,7 @@ namespace yae
           break;
         }
 
-        if (!packetPtr)
-        {
-          if (codecContext_)
-          {
-            // flush out buffered frames with an empty packet:
-            AVCodecContext * ctx = codecContext_.get();
-            AvPkt pkt;
-            decode(ctx, pkt);
-          }
-        }
-        else
-        {
-          const AvPkt & pkt = *packetPtr;
-          const AVPacket & packet = pkt.get();
-
-          if (switchDecoderToRecommended_ && packet.flags & AV_PKT_FLAG_KEY)
-          {
-            candidates_.clear();
-            candidates_.splice(candidates_.end(), recommended_);
-            switchDecoderToRecommended_ = false;
-
-            // flush any buffered frames:
-            if (codecContext_)
-            {
-              AvPkt flushPkt;
-              decode(codecContext_.get(), flushPkt);
-            }
-
-            // close the codec:
-            codecContext_.reset();
-          }
-
-          AVCodecContext * ctx = open();
-          if (!ctx)
-          {
-            // codec is not supported
-            break;
-          }
-
-          if (sent_ > 60)
-          {
-            packets_.pop_front();
-          }
-          packets_.push_back(packetPtr);
-
-          uint64_t receivedPrior = received_;
-          int err = decode(ctx, pkt);
-
-          if (received_ > receivedPrior)
-          {
-            packets_.clear();
-            sent_ = 0;
-            errors_ = 0;
-          }
-          else if (err < 0 && err != AVERROR(EAGAIN) &&
-                   (!received_ || errors_ >= 6))
-          {
-            switchDecoder();
-          }
-        }
+        decode(packetPtr);
       }
       catch (...)
       {
