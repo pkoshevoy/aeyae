@@ -279,62 +279,7 @@ namespace yae
     ItemViewStyle(const char * id, const ItemView & view);
 
     virtual void uncache();
-    /*
-    // for user-defined item attributes:
-    template <typename TData>
-    inline DataRef<TData>
-    setStyleAttr(const char * key, Expression<TData> * e)
-    {
-      attr_[std::string(key)] = TPropertiesBasePtr(e);
-      return DataRef<TData>::expression(*e);
-    }
 
-    template <typename TData>
-    inline DataRef<TData>
-    setStyleAttr(const char * key, const TData & value)
-    {
-      Expression<TData> * e = new ConstExpression<TData>(value);
-      return this->setStyleAttr(key, e);
-    }
-
-    template <typename TData>
-    inline bool
-    getStyleAttr(const std::string & key, TData & value) const
-    {
-      std::map<std::string, TPropertiesBasePtr>::const_iterator
-        found = attr_.find(key);
-
-      if (found == attr_.end())
-      {
-        return false;
-      }
-
-      const IPropertiesBase * base = found->second.get();
-      const IProperties<TData> * styleAttr =
-        dynamic_cast<const IProperties<TData> *>(base);
-
-      if (!styleAttr)
-      {
-        YAE_ASSERT(false);
-        return false;
-      }
-
-      styleAttr->get(kPropertyExpression, value);
-      return true;
-    }
-
-    template <typename TData>
-    TData
-    styleAttr(const char * attr, const TData & defaultValue = TData())
-    {
-      TData value = defaultValue;
-      getStyleAttr(std::string(attr), value);
-      return value;
-    }
-
-    // user-defined properties associated with this item:
-    std::map<std::string, TPropertiesBasePtr> attr_;
-    */
     // the view that owns this style:
     const ItemView & view_;
 
