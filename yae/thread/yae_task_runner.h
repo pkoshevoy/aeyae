@@ -20,35 +20,35 @@
 namespace yae
 {
   //----------------------------------------------------------------
-  // Task
+  // TaskRunner
   //
-  struct YAE_API Task
+  struct YAE_API TaskRunner
   {
     //----------------------------------------------------------------
     // TimePoint
     //
     typedef boost::chrono::steady_clock::time_point TimePoint;
 
-    Task(const TimePoint & start = boost::chrono::steady_clock::now()):
-      start_(start)
-    {}
+    //----------------------------------------------------------------
+    // Task
+    //
+    struct YAE_API Task
+    {
+      Task(const TimePoint & start = boost::chrono::steady_clock::now()):
+        start_(start)
+      {}
 
-    virtual ~Task() {}
-    virtual void run() = 0;
+      virtual ~Task() {}
+      virtual void run() = 0;
 
-    TimePoint start_;
-  };
+      TimePoint start_;
+    };
 
-  //----------------------------------------------------------------
-  // TaskPtr
-  //
-  typedef boost::shared_ptr<Task> TaskPtr;
+    //----------------------------------------------------------------
+    // TaskPtr
+    //
+    typedef boost::shared_ptr<Task> TaskPtr;
 
-  //----------------------------------------------------------------
-  // Todo
-  //
-  struct Todo : public Task
-  {
     //----------------------------------------------------------------
     // Status
     //
@@ -71,24 +71,24 @@ namespace yae
       bool done_;
     };
 
-    Todo(Status & status):
-      status_(status)
-    {}
+    //----------------------------------------------------------------
+    // Todo
+    //
+    struct Todo : public Task
+    {
+      Todo(Status & status):
+        status_(status)
+      {}
 
-    Status & status_;
-  };
+      Status & status_;
+    };
 
-  //----------------------------------------------------------------
-  // TaskRunner
-  //
-  struct YAE_API TaskRunner
-  {
     static TaskRunner & singleton();
 
     TaskRunner();
     ~TaskRunner();
 
-    void add(const Task::TimePoint & t, const TaskPtr & task);
+    void add(const TimePoint & t, const TaskPtr & task);
 
   private:
     // intentionally disabled:
@@ -97,6 +97,34 @@ namespace yae
 
     struct TPrivate;
     TPrivate * private_;
+  };
+
+
+  //----------------------------------------------------------------
+  // AsyncTaskQueue
+  //
+  struct AsyncTaskQueue
+  {
+    struct Task
+    {
+      virtual ~Task() {}
+      virtual void run() = 0;
+    };
+
+    typedef boost::weak_ptr<Task> TaskPtr;
+
+    AsyncTaskQueue();
+    ~AsyncTaskQueue();
+
+    void add(const TaskPtr & task);
+
+  protected:
+    // intentionally disabled:
+    AsyncTaskQueue(const AsyncTaskQueue &);
+    AsyncTaskQueue & operator = (const AsyncTaskQueue &);
+
+    struct Private;
+    Private * private_;
   };
 }
 
