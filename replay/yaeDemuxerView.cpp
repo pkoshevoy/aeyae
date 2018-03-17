@@ -173,11 +173,24 @@ namespace yae
       frame.background_ = frame.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
 
-      Timespan span(track.dts_[i], track.pts_[i] + track.dur_[i]);
+      Timespan span(track.pts_[i], track.pts_[i] + track.dur_[i]);
       frame.color_ = frame.
         addExpr(new FrameColor(clip, span,
                                style.scrollbar_.get(),
                                style.cursor_.get()));
+
+      Text & t0 = frame.addNew<Text>("t0");
+      t0.font_ = style.font_large_;
+      t0.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
+      t0.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
+      t0.text_ = TVarRef::constant(TVar(span.t0_.to_hhmmss_ms().c_str()));
+      t0.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
+#if defined(__APPLE__)
+      t0.supersample_ = t0.addExpr(new Supersample<Text>(t0));
+#endif
+      t0.elide_ = Qt::ElideNone;
+      t0.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
+      t0.background_ = frame.color_;
 
       prev = &frame;
     }
