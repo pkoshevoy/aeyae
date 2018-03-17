@@ -132,10 +132,10 @@ namespace yae
         RoundRect & frame = root.addNew<RoundRect>("frame");
         frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
         frame.anchors_.left_ = prev ?
-          ItemRef::reference(*prev, kPropertyRight) :
-          ItemRef::reference(root, kPropertyLeft);
-        frame.width_ = ItemRef::reference(style.title_height_, 16.0 / 9.0);
-        frame.height_ = ItemRef::reference(style.title_height_);
+          frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
+          ItemRef::reference(root, kPropertyLeft, 0.0, 1);
+        frame.height_ = ItemRef::reference(style.title_height_, 2.0);
+        frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
         frame.radius_ = ItemRef::constant(3);
 
         frame.background_ = frame.
@@ -194,7 +194,7 @@ namespace yae
         btn.width_ = ItemRef::reference(root.height_, 0.8);
         btn.height_ = btn.width_;
         btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-        btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 1.5);
+        btn.anchors_.left_ = ItemRef::reference(root.height_, 1.6);
         btn.color_ = btn.
           addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
@@ -210,7 +210,7 @@ namespace yae
       btn.width_ = ItemRef::reference(root.height_, 0.8);
       btn.height_ = btn.width_;
       btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-      btn.anchors_.hcenter_ = ItemRef::reference(root.height_, 0.5);
+      btn.anchors_.left_ = ItemRef::reference(root.height_, 0.6);
       btn.color_ = btn.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
@@ -303,8 +303,7 @@ namespace yae
     layout_gops_(new RemuxLayoutGops()),
     layout_gop_(new RemuxLayoutGop())
   {
-    frame_width_ = ItemRef::reference(title_height_, 2.0);
-    row_height_ = ItemRef::reference(title_height_, 0.5);
+    row_height_ = ItemRef::reference(title_height_, 0.55);
   }
 
   //----------------------------------------------------------------

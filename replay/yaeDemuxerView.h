@@ -120,7 +120,6 @@ namespace yae
     TLayoutPtr layout_gop_;
 
     // shared common properties:
-    ItemRef frame_width_;
     ItemRef row_height_;
   };
 
