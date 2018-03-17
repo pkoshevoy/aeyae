@@ -699,10 +699,8 @@ namespace yae
         track_id = make_track_id('_', to_ + stream->index);
       }
 
-      int prog_id = yae::get(streamIndexToProgramIndex_,
-                             stream->index,
-                             ctx.nb_programs);
-      prog_lut[track_id] = prog_id;
+      const TProgramInfo * prog = getProgram(stream->index);
+      prog_lut[track_id] = prog ? prog->id_ : 0;
     }
   }
 

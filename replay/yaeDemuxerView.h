@@ -68,22 +68,20 @@ namespace yae
   //----------------------------------------------------------------
   // ILayout
   //
-  template <typename TModel,
-            typename TModelIndex,
-            typename TView,
-            typename TViewStyle>
+  template <typename TModel, typename TView, typename TViewStyle>
   struct YAE_API ILayout
   {
     typedef TModel model_type;
-    typedef TModelIndex index_type;
     typedef TView view_type;
     typedef TViewStyle style_type;
 
     virtual ~ILayout() {}
 
-    virtual void layout(TModel & model, const TModelIndex & index,
-                        TView & view, const TViewStyle & style,
-                        Item & item) = 0;
+    virtual void layout(TModel & model,
+                        TView & view,
+                        const TViewStyle & style,
+                        Item & item,
+                        void * context = NULL) = 0;
 
     // shortcut:
     inline void layout(Item & item,
@@ -91,14 +89,14 @@ namespace yae
                        TModel & model,
                        const TViewStyle & style)
     {
-      this->layout(model, TModelIndex(), view, style, item);
+      this->layout(model, view, style, item, NULL);
     }
   };
 
   //----------------------------------------------------------------
   // TLayout
   //
-  typedef ILayout<RemuxModel, std::size_t, RemuxView, RemuxViewStyle> TLayout;
+  typedef ILayout<RemuxModel, RemuxView, RemuxViewStyle> TLayout;
 
   //----------------------------------------------------------------
   // TLayoutPtr
@@ -115,9 +113,7 @@ namespace yae
 
     TLayoutPtr layout_root_;
     TLayoutPtr layout_clips_;
-    TLayoutPtr layout_clip_;
     TLayoutPtr layout_gops_;
-    TLayoutPtr layout_gop_;
 
     // shared common properties:
     ItemRef row_height_;

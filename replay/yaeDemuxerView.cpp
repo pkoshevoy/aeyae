@@ -116,118 +116,170 @@ namespace yae
     double cellHeightScale_;
   };
 
+
   //----------------------------------------------------------------
-  // RemuxLayoutGop
+  // FrameColor
   //
-  struct RemuxLayoutGop : public TLayout
+  struct FrameColor : public TColorExpr
   {
-    void layout(RemuxModel & model, const std::size_t & index,
-                RemuxView & view, const RemuxViewStyle & style,
-                Item & root)
+    FrameColor(const Clip & clip,
+               const Timespan & span,
+               const Color & drop,
+               const Color & keep):
+      clip_(clip),
+      span_(span),
+      drop_(drop),
+      keep_(keep)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
     {
-      const Item * prev = NULL;
-      const std::size_t n = std::size_t(1.0 + 29.0 * drand48());
-      for (std::size_t i = 0; i <= n; ++i)
-      {
-        RoundRect & frame = root.addNew<RoundRect>("frame");
-        frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-        frame.anchors_.left_ = prev ?
-          frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
-          ItemRef::reference(root, kPropertyLeft, 0.0, 1);
-        frame.height_ = ItemRef::reference(style.title_height_, 2.0);
-        frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
-        frame.radius_ = ItemRef::constant(3);
-
-        frame.background_ = frame.
-          addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
-
-        frame.color_ = frame.
-          addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
-
-        prev = &frame;
-      }
-
+      bool selected = clip_.keep_.contains(span_.t1_);
+      result = selected ? keep_ : drop_;
     }
+
+    const Clip & clip_;
+    Timespan span_;
+    Color drop_;
+    Color keep_;
   };
+
+  //----------------------------------------------------------------
+  // layout_gop
+  //
+  static void
+  layout_gop(const Clip & clip,
+             const Timeline::Track & track,
+             RemuxView & view,
+             const RemuxViewStyle & style,
+             Item & root,
+             std::size_t i0,
+             std::size_t i1)
+  {
+    const Item * prev = NULL;
+    for (std::size_t i = i0; i < i1; ++i)
+    {
+      RoundRect & frame = root.addNew<RoundRect>("frame");
+      frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+      frame.anchors_.left_ = prev ?
+        frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
+        ItemRef::reference(root, kPropertyLeft, 0.0, 1);
+
+      frame.height_ = ItemRef::reference(style.title_height_, 0.9);
+      frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
+      frame.radius_ = ItemRef::constant(3);
+
+      frame.background_ = frame.
+        addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
+
+      Timespan span(track.dts_[i], track.pts_[i] + track.dur_[i]);
+      frame.color_ = frame.
+        addExpr(new FrameColor(clip, span,
+                               style.scrollbar_.get(),
+                               style.cursor_.get()));
+
+      prev = &frame;
+    }
+  }
 
   //----------------------------------------------------------------
   // RemuxLayoutGops
   //
   struct RemuxLayoutGops : public TLayout
   {
-    void layout(RemuxModel & model, const std::size_t & index,
-                RemuxView & view, const RemuxViewStyle & style,
-                Item & root)
+    void layout(RemuxModel & model,
+                RemuxView & view,
+                const RemuxViewStyle & style,
+                Item & root,
+                void * context)
     {
+      if (model.remux_.size() <= model.current_)
+      {
+        return;
+      }
+
+      const Clip & clip = *(model.remux_[model.current_]);
+
+      const Timeline::Track & track =
+        clip.summary_.get_track_timeline(clip.track_);
+
       const Item * prev = NULL;
-      for (std::size_t i = 0; i <= 59; ++i)
+      for (std::set<std::size_t>::const_iterator
+             i = track.keyframes_.begin(); i != track.keyframes_.end(); ++i)
       {
         Item & gop = root.addNew<Item>("gop");
         gop.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
         gop.anchors_.top_ = prev ?
-          ItemRef::reference(*prev, kPropertyBottom) :
-          ItemRef::reference(root, kPropertyTop);
+          gop.addExpr(new OddRoundUp(*prev, kPropertyBottom)) :
+          ItemRef::reference(root, kPropertyTop, 0.0, 1);
 
-        style.layout_gop_->layout(model, i, view, style, gop);
+        std::set<std::size_t>::const_iterator i1 = i;
+        std::advance(i1, 1);
+
+        layout_gop(clip, track, view, style, gop,
+                   *i, i1 == track.keyframes_.end() ? track.dts_.size() : *i1);
         prev = &gop;
       }
     }
   };
 
   //----------------------------------------------------------------
-  // RemuxLayoutClip
+  // layout_clip
   //
-  struct RemuxLayoutClip : public TLayout
+  static void
+  layout_clip(RemuxModel & model,
+              RemuxView & view,
+              const RemuxViewStyle & style,
+              Item & root,
+              std::size_t index)
   {
-    void layout(RemuxModel & model, const std::size_t & index,
-                RemuxView & view, const RemuxViewStyle & style,
-                Item & root)
+    root.height_ = ItemRef::reference(style.row_height_);
+
+    const std::size_t num_clips = model.remux_.size();
+    if (index == num_clips)
     {
-      root.height_ = ItemRef::reference(style.row_height_);
-
-      const std::size_t num_clips = model.remux_.size();
-      if (index == num_clips)
-      {
-        RoundRect & btn = root.addNew<RoundRect>("append");
-        btn.border_ = ItemRef::constant(1.0);
-        btn.radius_ = ItemRef::constant(3.0);
-        btn.width_ = ItemRef::reference(root.height_, 0.8);
-        btn.height_ = btn.width_;
-        btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-        btn.anchors_.left_ = ItemRef::reference(root.height_, 1.6);
-        btn.color_ = btn.
-          addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
-
-        Text & label = btn.addNew<Text>("label");
-        label.anchors_.center(btn);
-        label.text_ = TVarRef::constant(TVar("+"));
-        return;
-      }
-
-      RoundRect & btn = root.addNew<RoundRect>("remove");
+      RoundRect & btn = root.addNew<RoundRect>("append");
       btn.border_ = ItemRef::constant(1.0);
       btn.radius_ = ItemRef::constant(3.0);
       btn.width_ = ItemRef::reference(root.height_, 0.8);
       btn.height_ = btn.width_;
       btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-      btn.anchors_.left_ = ItemRef::reference(root.height_, 0.6);
+      btn.anchors_.left_ = ItemRef::reference(root.height_, 1.6);
       btn.color_ = btn.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
       Text & label = btn.addNew<Text>("label");
       label.anchors_.center(btn);
-      label.text_ = TVarRef::constant(TVar("-"));
+      label.text_ = TVarRef::constant(TVar("+"));
+      return;
     }
-  };
+
+    RoundRect & btn = root.addNew<RoundRect>("remove");
+    btn.border_ = ItemRef::constant(1.0);
+    btn.radius_ = ItemRef::constant(3.0);
+    btn.width_ = ItemRef::reference(root.height_, 0.8);
+    btn.height_ = btn.width_;
+    btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
+    btn.anchors_.left_ = ItemRef::reference(root.height_, 0.6);
+    btn.color_ = btn.
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
+
+    Text & label = btn.addNew<Text>("label");
+    label.anchors_.center(btn);
+    label.text_ = TVarRef::constant(TVar("-"));
+  }
 
   //----------------------------------------------------------------
   // RemuxLayoutClips
   //
   struct RemuxLayoutClips : public TLayout
   {
-    void layout(RemuxModel & model, const std::size_t &,
-                RemuxView & view, const RemuxViewStyle & style,
-                Item & root)
+    void layout(RemuxModel & model,
+                RemuxView & view,
+                const RemuxViewStyle & style,
+                Item & root,
+                void * context)
     {
       const Item * prev = NULL;
       for (std::size_t i = 0; i <= model.remux_.size(); ++i)
@@ -243,7 +295,7 @@ namespace yae
                                   &ItemViewStyle::bg_controls_,
                                   (i % 2) ? 1.0 : 0.5));
 
-        style.layout_clip_->layout(model, i, view, style, row);
+        layout_clip(model, view, style, row, i);
         prev = &row;
       }
     }
@@ -254,9 +306,11 @@ namespace yae
   //
   struct RemuxLayout : public TLayout
   {
-    void layout(RemuxModel & model, const std::size_t &,
-                RemuxView & view, const RemuxViewStyle & style,
-                Item & root)
+    void layout(RemuxModel & model,
+                RemuxView & view,
+                const RemuxViewStyle & style,
+                Item & root,
+                void * context)
     {
       Rectangle & bg = root.addNew<Rectangle>("background");
       bg.anchors_.fill(root);
@@ -299,9 +353,7 @@ namespace yae
     ItemViewStyle(id, view),
     layout_root_(new RemuxLayout()),
     layout_clips_(new RemuxLayoutClips()),
-    layout_clip_(new RemuxLayoutClip()),
-    layout_gops_(new RemuxLayoutGops()),
-    layout_gop_(new RemuxLayoutGop())
+    layout_gops_(new RemuxLayoutGops())
   {
     row_height_ = ItemRef::reference(title_height_, 0.55);
   }
