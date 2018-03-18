@@ -189,16 +189,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::setPlaylist
+  // MainWindow::add
   //
   void
-  MainWindow::set(const std::set<std::string> & sources,
-                  const std::list<ClipInfo> & clips)
+  MainWindow::add(const std::set<std::string> & sources,
+                  const std::list<ClipInfo> & src_clips)
   {
     typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
     typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
     std::map<std::string, DemuxerSummary> summaries;
+    std::list<ClipInfo> clips = src_clips;
 
     // these are expressed in seconds:
     static const double buffer_duration = 1.0;
@@ -207,15 +208,15 @@ namespace yae
     for (std::set<std::string>::const_iterator
            i = sources.begin(); i != sources.end(); ++i)
     {
-      const std::string & filePath = *i;
+      const std::string & source = *i;
 
       std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(filePath, demuxers))
+      if (!open_primary_and_aux_demuxers(source, demuxers))
       {
         // failed to open the primary resource:
         av_log(NULL, AV_LOG_WARNING,
                "failed to open %s, skipping...",
-               filePath.c_str());
+               source.c_str());
         continue;
       }
 
@@ -244,13 +245,26 @@ namespace yae
       DemuxerSummary summary;
       parallel_demuxer->summarize(summary, discont_tolerance);
 
-      parallel_demuxers[filePath] = parallel_demuxer;
-      summaries[filePath] = summary;
+      parallel_demuxers[source] = parallel_demuxer;
+      summaries[source] = summary;
 
 #if 0
       // show the summary:
       std::cout << "\nparallel:\n" << summary << std::endl;
 #endif
+
+      if (src_clips.empty())
+      {
+        std::string track_id("v:000");
+        if (yae::has(summary.decoders_, track_id))
+        {
+          const Timeline::Track & track = summary.get_track_timeline(track_id);
+          clips.push_back(ClipInfo(source,
+                                   track_id,
+                                   track.pts_.front().to_hhmmss_ms(),
+                                   track.pts_.back().to_hhmmss_ms()));
+        }
+      }
     }
 
     for (std::list<ClipInfo>::const_iterator
@@ -307,6 +321,9 @@ namespace yae
   bool
   MainWindow::load(const QString & path)
   {
+    std::set<std::string> sources;
+    sources.insert(std::string(path.toUtf8().constData()));
+    add(sources);
     return true;
   }
 
@@ -368,14 +385,15 @@ namespace yae
       return;
     }
 
-    std::list<QString> playlist;
+    std::set<std::string> sources;
     for (QStringList::const_iterator i = filenames.begin();
          i != filenames.end(); ++i)
     {
-      yae::addToPlaylist(playlist, *i);
+      const QString & source = *i;
+      sources.insert(std::string(source.toUtf8().constData()));
     }
 
-    // setPlaylist(playlist);
+    add(sources);
   }
 
   //----------------------------------------------------------------
@@ -411,7 +429,7 @@ namespace yae
   void
   MainWindow::processDropEventUrls(const QList<QUrl> & urls)
   {
-    std::list<QString> playlist;
+    std::set<std::string> sources;
     for (QList<QUrl>::const_iterator i = urls.begin(); i != urls.end(); ++i)
     {
       QUrl url = *i;
@@ -426,14 +444,10 @@ namespace yae
 #endif
 
       QString fullpath = QFileInfo(url.toLocalFile()).canonicalFilePath();
-      if (!addToPlaylist(playlist, fullpath))
-      {
-        QString strUrl = url.toString();
-        addToPlaylist(playlist, strUrl);
-      }
+      sources.insert(std::string(fullpath.toUtf8().constData()));
     }
 
-    // setPlaylist(playlist);
+    add(sources);
   }
 
   //----------------------------------------------------------------

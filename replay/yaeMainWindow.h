@@ -85,8 +85,9 @@ namespace yae
     bool load(const QString & path);
 
   public:
-    void set(const std::set<std::string> & sources,
-             const std::list<yae::ClipInfo> & clips);
+    void add(const std::set<std::string> & sources,
+             const std::list<yae::ClipInfo> & clips =
+             std::list<yae::ClipInfo>());
 
   public slots:
     // file menu:

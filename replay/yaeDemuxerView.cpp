@@ -190,8 +190,8 @@ namespace yae
                  gop_end_,
 
                  // output:
-                 160, // envelope width
-                 120, // envelope height
+                 256, // envelope width
+                 256, // envelope height
                  0.0, // source DAR override
                  0.0, // output PAR override
 
@@ -446,7 +446,7 @@ namespace yae
         frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
         ItemRef::reference(root, kPropertyLeft, 0.0, 1);
 
-      frame.height_ = ItemRef::reference(style.title_height_, 0.9);
+      frame.height_ = ItemRef::reference(style.title_height_, 3.0);
       frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
       frame.radius_ = ItemRef::constant(3);
 
