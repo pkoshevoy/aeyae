@@ -3639,6 +3639,7 @@ namespace yae
     demuxer.populate();
 
     // decode:
+    decoder.resetTimeCounters(dts_span.t0_.sec(), false);
     decoder.decoderStartup();
 
     while (true)
@@ -3651,17 +3652,21 @@ namespace yae
       }
 
       const AvPkt & pkt = *packet_ptr;
-      const AVPacket & packet = pkt.get();
-
-      TTime t0(packet.dts * src->time_base.num, src->time_base.den);
-      TTime dt(packet.duration * src->time_base.num, src->time_base.den);
-      TTime t1 = t0 + dt;
-
-      if (t1 < dts_span.t0_)
+      if (pkt.trackId_ != track_id)
       {
         continue;
       }
 
+      const AVPacket & packet = pkt.get();
+      TTime t0(packet.dts * src->time_base.num, src->time_base.den);
+      TTime dt(packet.duration * src->time_base.num, src->time_base.den);
+      TTime t1 = t0 + dt;
+#if 1
+      if (t1 < dts_span.t0_)
+      {
+        continue;
+      }
+#endif
       if (dts_span.t1_ < t0)
       {
         break;

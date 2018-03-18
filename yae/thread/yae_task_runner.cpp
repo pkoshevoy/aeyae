@@ -190,6 +190,22 @@ namespace yae
   {
     typedef AsyncTaskQueue::Task Task;
     typedef AsyncTaskQueue::TaskPtr TaskPtr;
+    typedef AsyncTaskQueue::TCallback TCallback;
+
+    struct Todo
+    {
+      Todo(const TaskPtr & task = TaskPtr(),
+           TCallback callback = NULL,
+           void * context = NULL):
+        task_(task),
+        callback_(callback),
+        context_(context)
+      {}
+
+      TaskPtr task_;
+      TCallback callback_;
+      void * context_;
+    };
 
     Private()
     {
@@ -203,10 +219,10 @@ namespace yae
       thread_.wait();
     }
 
-    void add(const TaskPtr & task)
+    void add(const TaskPtr & task, TCallback callback, void * context)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      tasks_.push_front(task);
+      todo_.push_front(Todo(task, callback, context));
       signal_.notify_all();
     }
 
@@ -216,22 +232,41 @@ namespace yae
       {
         // wait for work:
         boost::unique_lock<boost::mutex> lock(mutex_);
-        while (tasks_.empty())
+        while (todo_.empty())
         {
           // sleep until there is at least one task in the queue:
           signal_.wait(lock);
           boost::this_thread::interruption_point();
         }
 
-        while (!tasks_.empty())
+        while (!todo_.empty())
         {
-          boost::shared_ptr<Task> task = tasks_.front().lock();
-          tasks_.pop_front();
+          Todo todo = todo_.front();
+          todo_.pop_front();
 
+          boost::shared_ptr<Task> task = todo.task_.lock();
           if (task)
           {
             lock.unlock();
-            task->run();
+
+            try
+            {
+              task->run();
+
+              if (todo.callback_)
+              {
+                todo.callback_(task, todo.context_);
+              }
+            }
+            catch (const std::exception & e)
+            {
+              YAE_ASSERT(false);
+            }
+            catch (...)
+            {
+              YAE_ASSERT(false);
+            }
+
             lock.lock();
           }
 
@@ -241,7 +276,7 @@ namespace yae
     }
 
     boost::mutex mutex_;
-    std::list<TaskPtr> tasks_;
+    std::list<Todo> todo_;
     boost::condition_variable signal_;
     Thread<AsyncTaskQueue::Private> thread_;
   };
@@ -266,9 +301,11 @@ namespace yae
   // AsyncTaskQueue::add
   //
   void
-  AsyncTaskQueue::add(const AsyncTaskQueue::TaskPtr & task)
+  AsyncTaskQueue::add(const AsyncTaskQueue::TaskPtr & task,
+                      AsyncTaskQueue::TCallback callback,
+                      void * context)
   {
-    private_->add(task);
+    private_->add(task, callback, context);
   }
 
 }

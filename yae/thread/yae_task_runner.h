@@ -112,11 +112,14 @@ namespace yae
     };
 
     typedef boost::weak_ptr<Task> TaskPtr;
+    typedef void(*TCallback)(const boost::shared_ptr<Task> &, void *);
 
     AsyncTaskQueue();
     ~AsyncTaskQueue();
 
-    void add(const TaskPtr & task);
+    void add(const TaskPtr & task,
+             TCallback callback = NULL,
+             void * context = NULL);
 
   protected:
     // intentionally disabled:

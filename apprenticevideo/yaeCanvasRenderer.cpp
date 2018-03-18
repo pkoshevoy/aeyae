@@ -2259,7 +2259,7 @@ namespace yae
   // TModernCanvas::draw
   //
   void
-  TModernCanvas::draw(double opacity)
+  TModernCanvas::draw(double opacity) const
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty())
@@ -2894,7 +2894,7 @@ namespace yae
   // TLegacyCanvas::draw
   //
   void
-  TLegacyCanvas::draw(double opacity)
+  TLegacyCanvas::draw(double opacity) const
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty() || !frame_)
@@ -3017,29 +3017,28 @@ namespace yae
   //
   CanvasRenderer::CanvasRenderer():
     legacy_(new TLegacyCanvas()),
-    modern_(NULL),
-    maxTexSize_(getTextureEdgeMax())
+    modern_(NULL)
   {
     YAE_OGL_11_HERE();
 
     const char * vendor =
       ((const char *)YAE_OGL_11(glGetString(GL_VENDOR)));
-    openglVendorInfo_ = vendor ? vendor : "";
+    std::string openglVendorInfo = vendor ? vendor : "";
 
     const char * renderer =
       ((const char *)YAE_OGL_11(glGetString(GL_RENDERER)));
-    openglRendererInfo_ = renderer ? renderer : "";
+    std::string openglRendererInfo = renderer ? renderer : "";
 
     const char * version =
       ((const char *)YAE_OGL_11(glGetString(GL_VERSION)));
-    openglVersionInfo_ = version ? version : "";
+    std::string openglVersionInfo = version ? version : "";
 
     // rectangular textures do not work correctly on VirtualBox VMs,
     // so try to detect this and fall back to power-of-2 textures:
     bool virtualBoxVM =
-      (openglVendorInfo_ == "Humper" ||
-       openglRendererInfo_ == "Chromium" ||
-       openglVersionInfo_ == "2.1 Chromium 1.9");
+      (openglVendorInfo == "Humper" ||
+       openglRendererInfo == "Chromium" ||
+       openglVersionInfo == "2.1 Chromium 1.9");
 
     if (yae_is_opengl_extension_supported("GL_ARB_texture_rectangle") &&
         !virtualBoxVM)
@@ -3076,17 +3075,23 @@ namespace yae
   {
     if (modern_)
     {
+      // maximum texture size supported by the GL_EXT_texture_rectangle;
+      // frames with width/height in excess of this value will be processed
+      // using the legacy canvas renderer, which cuts frames into tiles
+      // of supported size and renders them seamlessly:
+      GLsizei maxTexSize = getTextureEdgeMax();
+
       if (renderer_ == modern_)
       {
-        if (maxTexSize_ < vtts.encodedWidth_ ||
-            maxTexSize_ < vtts.encodedHeight_)
+        if (maxTexSize < vtts.encodedWidth_ ||
+            maxTexSize < vtts.encodedHeight_)
         {
           // use tiled legacy OpenGL renderer:
           return legacy_;
         }
       }
-      else if (maxTexSize_ >= vtts.encodedWidth_ &&
-               maxTexSize_ >= vtts.encodedHeight_)
+      else if (maxTexSize >= vtts.encodedWidth_ &&
+               maxTexSize >= vtts.encodedHeight_)
       {
         // use to modern OpenGL renderer:
         return modern_;
@@ -3255,14 +3260,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // CanvasRenderer::paintImage
+  // TBaseRenderer::paintImage
   //
   void
-  CanvasRenderer::paintImage(double x,
-                             double y,
-                             double w_max,
-                             double h_max,
-                             double opacity) const
+  TBaseCanvas::paintImage(double x,
+                          double y,
+                          double w_max,
+                          double h_max,
+                          double opacity) const
   {
     double croppedWidth = 0.0;
     double croppedHeight = 0.0;
@@ -3317,4 +3322,5 @@ namespace yae
     this->draw(opacity);
     yae_assert_gl_no_error();
   }
+
 }

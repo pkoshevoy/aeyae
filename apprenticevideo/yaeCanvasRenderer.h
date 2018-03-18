@@ -421,7 +421,7 @@ namespace yae
     virtual bool loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame) = 0;
 
-    virtual void draw(double opacity) = 0;
+    virtual void draw(double opacity) const = 0;
 
     // helper:
     const pixelFormat::Traits * pixelTraits() const;
@@ -453,6 +453,13 @@ namespace yae
     // helper:
     const TFragmentShader *
     fragmentShaderFor(TPixelFormatId format) const;
+
+    // helper:
+    void paintImage(double x,
+                    double y,
+                    double w_max,
+                    double h_max,
+                    double opacity = 1.0) const;
 
   protected:
     // helper:
@@ -499,7 +506,7 @@ namespace yae
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
-    void draw(double opacity);
+    void draw(double opacity) const;
 
   protected:
     std::vector<GLuint> texId_;
@@ -568,7 +575,7 @@ namespace yae
     bool loadFrame(IOpenGLContext & context, const TVideoFramePtr & frame);
 
     // virtual:
-    void draw(double opacity);
+    void draw(double opacity) const;
 
   protected:
     // unpadded image dimensions:
@@ -585,19 +592,9 @@ namespace yae
   //
   class CanvasRenderer
   {
-    std::string openglVendorInfo_;
-    std::string openglRendererInfo_;
-    std::string openglVersionInfo_;
-
     TLegacyCanvas * legacy_;
     TModernCanvas * modern_;
     TBaseCanvas * renderer_;
-
-    // maximum texture size supported by the GL_EXT_texture_rectangle;
-    // frames with width/height in excess of this value will be processed
-    // using the legacy canvas renderer, which cuts frames into tiles
-    // of supported size and renders them seamlessly:
-    unsigned int maxTexSize_;
 
   public:
     CanvasRenderer();
@@ -639,11 +636,13 @@ namespace yae
     fragmentShaderFor(const VideoTraits & vtts) const;
 
     // helper:
-    void paintImage(double x,
-                    double y,
-                    double w_max,
-                    double h_max,
-                    double opacity = 1.0) const;
+    inline void paintImage(double x,
+                           double y,
+                           double w_max,
+                           double h_max,
+                           double opacity = 1.0) const
+
+    { renderer_->paintImage(x, y, w_max, h_max, opacity); }
   };
 }
 

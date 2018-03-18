@@ -145,6 +145,286 @@ namespace yae
     Color keep_;
   };
 
+
+  //----------------------------------------------------------------
+  // DecodeFrame
+  //
+  struct YAE_API DecodeFrame : public AsyncTaskQueue::Task
+  {
+    DecodeFrame(// source:
+                const TDemuxerInterfacePtr & demuxer,
+                const DemuxerSummary & summary,
+                const std::string & track_id,
+                std::size_t gop_start,
+                std::size_t gop_end,
+                std::size_t frame,
+                // output:
+                TVideoFrameCache & cache):
+      demuxer_(demuxer),
+      summary_(summary),
+      track_id_(track_id),
+      gop_start_(gop_start),
+      gop_end_(gop_end),
+      frame_(frame),
+      cache_(cache)
+    {}
+
+    virtual void run()
+    {
+      const Timeline::Track & track = summary_.get_track_timeline(track_id_);
+      const TTime & pts = track.pts_[frame_];
+      FrameId key(demuxer_.get(), track_id_, pts);
+
+      if (cache_.get(key))
+      {
+        // frame is already available:
+        return;
+      }
+
+      // decode and cache the entire GOP:
+      decode_gop(// source:
+                 demuxer_,
+                 summary_,
+                 track_id_,
+                 gop_start_,
+                 gop_end_,
+
+                 // output:
+                 160, // envelope width
+                 120, // envelope height
+                 0.0, // source DAR override
+                 0.0, // output PAR override
+
+                 // delivery:
+                 &DecodeFrame::callback, this);
+    }
+
+    void decoded(const TVideoFramePtr & vf_ptr)
+    {
+      if (vf_ptr)
+      {
+        const TVideoFrame & vf = *vf_ptr;
+        FrameId key(demuxer_.get(), track_id_, vf.time_);
+        cache_.put(key, vf_ptr);
+      }
+    }
+
+    static void callback(const TVideoFramePtr & vf_ptr, void * context)
+    {
+      DecodeFrame * task = (DecodeFrame *)context;
+      task->decoded(vf_ptr);
+    }
+
+    TDemuxerInterfacePtr demuxer_;
+    const DemuxerSummary & summary_;
+    std::string track_id_;
+    std::size_t gop_start_;
+    std::size_t gop_end_;
+    std::size_t frame_;
+    TVideoFrameCache & cache_;
+  };
+
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::Private
+  //
+  struct VideoFrameItem::Private
+  {
+    Private(const TDemuxerInterfacePtr & demuxer,
+            const DemuxerSummary & summary,
+            const std::string & track_id,
+            std::size_t gop_start,
+            std::size_t gop_end,
+            std::size_t frame,
+            AsyncTaskQueue & queue,
+            TVideoFrameCache & cache):
+      demuxer_(demuxer),
+      summary_(summary),
+      track_id_(track_id),
+      gop_start_(gop_start),
+      gop_end_(gop_end),
+      frame_(frame),
+      queue_(queue),
+      cache_(cache),
+      layer_(NULL),
+      failed_(false)
+    {}
+
+    static void
+    callback(const boost::shared_ptr<AsyncTaskQueue::Task> & task, void * ctx)
+    {
+      Private * p = (Private *)ctx;
+      p->done();
+    }
+
+    void done()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      if (!async_)
+      {
+        // task was cancelled, ignore the results:
+        return;
+      }
+
+      const Timeline::Track & track = summary_.get_track_timeline(track_id_);
+      const TTime & pts = track.pts_[frame_];
+      FrameId key(demuxer_.get(), track_id_, pts);
+      ref_ = cache_.get(key);
+      if (!ref_)
+      {
+        std::cerr << "FIXME: pkoshevoy: lookup failed: " << pts << std::endl;
+        failed_ = true;
+      }
+
+      if (layer_)
+      {
+        layer_->delegate()->requestRepaint();
+      }
+
+      async_.reset();
+    }
+
+    void setContext(const Canvas::ILayer & layer)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      layer_ = &layer;
+    }
+
+    void paint(const VideoFrameItem & item)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      if (!layer_)
+      {
+        return;
+      }
+
+      if (!ref_ || !ref_->value())
+      {
+        if (!async_ && !failed_)
+        {
+          async_.reset(new DecodeFrame(demuxer_,
+                                       summary_,
+                                       track_id_,
+                                       gop_start_,
+                                       gop_end_,
+                                       frame_,
+                                       cache_));
+          queue_.add(async_, &VideoFrameItem::Private::callback, this);
+        }
+
+        return;
+      }
+
+      if (!renderer_)
+      {
+        renderer_.reset(new TLegacyCanvas());
+        renderer_->loadFrame(*(layer_->context()), ref_->value());
+      }
+
+      double x = item.left();
+      double y = item.top();
+      double w_max = item.width();
+      double h_max = item.height();
+      double opacity = item.opacity_.get();
+      renderer_->paintImage(x, y, w_max, h_max, opacity);
+    }
+
+    void unpaint()
+    {
+      async_.reset();
+      ref_.reset();
+      renderer_.reset();
+    }
+
+    TDemuxerInterfacePtr demuxer_;
+    const DemuxerSummary & summary_;
+    std::string track_id_;
+    std::size_t gop_start_;
+    std::size_t gop_end_;
+    std::size_t frame_;
+    AsyncTaskQueue & queue_;
+    TVideoFrameCache & cache_;
+
+    mutable boost::mutex mutex_;
+    TVideoFrameCache::TRefPtr ref_;
+    boost::shared_ptr<DecodeFrame> async_;
+
+    const Canvas::ILayer * layer_;
+    boost::shared_ptr<TLegacyCanvas> renderer_;
+    bool failed_;
+  };
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::VideoFrameItem
+  //
+  VideoFrameItem::VideoFrameItem(const char * id,
+                                 const TDemuxerInterfacePtr & demuxer,
+                                 const DemuxerSummary & summary,
+                                 const std::string & track_id,
+                                 std::size_t gop_start,
+                                 std::size_t gop_end,
+                                 std::size_t frame,
+                                 AsyncTaskQueue & queue,
+                                 TVideoFrameCache & cache):
+    Item(id),
+    private_(new VideoFrameItem::Private(demuxer,
+                                         summary,
+                                         track_id,
+                                         gop_start,
+                                         gop_end,
+                                         frame,
+                                         queue,
+                                         cache)),
+    opacity_(ItemRef::constant(1.0))
+  {}
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::~VideoFrameItem
+  //
+  VideoFrameItem::~VideoFrameItem()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::setContext
+  //
+  void
+  VideoFrameItem::setContext(const Canvas::ILayer & view)
+  {
+    private_->setContext(view);
+  }
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::uncache
+  //
+  void
+  VideoFrameItem::uncache()
+  {
+    opacity_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::paintContent
+  //
+  void
+  VideoFrameItem::paintContent() const
+  {
+    private_->paint(*this);
+  }
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::unpaintContent
+  //
+  void
+  VideoFrameItem::unpaintContent() const
+  {
+    private_->unpaint();
+  }
+
+
+
   //----------------------------------------------------------------
   // layout_gop
   //
@@ -178,6 +458,19 @@ namespace yae
         addExpr(new FrameColor(clip, span,
                                style.scrollbar_.get(),
                                style.cursor_.get()));
+
+      VideoFrameItem & video = frame.add
+        (new VideoFrameItem("video",
+                            clip.src_,
+                            clip.summary_,
+                            clip.track_,
+                            i0,
+                            i1,
+                            i,
+                            view.async_,
+                            view.frames_));
+      video.anchors_.fill(frame, 2);
+      video.setContext(view);
 
       Text & t0 = frame.addNew<Text>("t0");
       t0.font_ = style.font_large_;
@@ -378,7 +671,9 @@ namespace yae
     ItemView("RemuxView"),
     style_("RemuxViewStyle", *this),
     model_(NULL)
-  {}
+  {
+    frames_.set_capacity(8192);
+  }
 
   //----------------------------------------------------------------
   // RemuxView::setModel

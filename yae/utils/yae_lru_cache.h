@@ -206,6 +206,29 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // put
+    //
+    TRefPtr
+    put(const TKey & key, const TValue & value)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      while (referenced_ >= capacity_)
+      {
+        cond_.wait(lock);
+      }
+
+      // make sure there is room for a new cached value instance:
+      if (capacity_ <= referenced_ + unreferenced_)
+      {
+        purge_one(lock);
+      }
+
+      cache_[key].referenced_.push_back(value);
+      referenced_++;
+      return TCache::TRefPtr(new TCache::Ref(*this, key, value));
+    }
+
+    //----------------------------------------------------------------
     // purge_one
     //
     void

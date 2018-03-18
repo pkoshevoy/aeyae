@@ -17,6 +17,9 @@
 
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/thread/yae_task_runner.h"
+#include "yae/utils/yae_lru_cache.h"
+#include "yae/video/yae_video.h"
 
 // local:
 #include "yaeInputArea.h"
@@ -121,6 +124,79 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // FrameId
+  //
+  struct YAE_API FrameId
+  {
+    FrameId(const DemuxerInterface * demuxer = NULL,
+            const std::string & track = std::string(),
+            const TTime & pts = TTime()):
+      demuxer_(demuxer),
+      track_(track),
+      pts_(pts)
+    {}
+
+    inline bool operator < (const FrameId & other) const
+    {
+      return (demuxer_ < other.demuxer_ ||
+              (demuxer_ == other.demuxer_ &&
+               (track_ < other.track_ ||
+                (track_ == other.track_ &&
+                 pts_ < other.pts_))));
+    }
+
+    const DemuxerInterface * demuxer_;
+    std::string track_;
+    TTime pts_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TVideoFrameCache
+  //
+  typedef LRUCache<FrameId, TVideoFramePtr> TVideoFrameCache;
+
+
+  //----------------------------------------------------------------
+  // VideoFrameItem
+  //
+  struct YAE_API VideoFrameItem : public Item
+  {
+    VideoFrameItem(const char * id,
+                   const TDemuxerInterfacePtr & demuxer,
+                   const DemuxerSummary & summary,
+                   const std::string & track_id,
+                   std::size_t gop_start,
+                   std::size_t gop_end,
+                   std::size_t frame,
+                   AsyncTaskQueue & queue,
+                   TVideoFrameCache & cache);
+    ~VideoFrameItem();
+
+    // repaint requests, etc...
+    void setContext(const Canvas::ILayer & view);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
+    void unpaintContent() const;
+
+    ItemRef opacity_;
+
+  protected:
+    // intentionally disabled:
+    VideoFrameItem(const VideoFrameItem &);
+    VideoFrameItem & operator = (const VideoFrameItem &);
+
+    // this gets complicated due to asynchronous decoding of video frames:
+    struct Private;
+    Private * private_;
+  };
+
+
+  //----------------------------------------------------------------
   // RemuxView
   //
   class YAE_API RemuxView : public ItemView
@@ -158,6 +234,10 @@ namespace yae
   protected:
     RemuxViewStyle style_;
     RemuxModel * model_;
+
+  public:
+    AsyncTaskQueue async_;
+    TVideoFrameCache frames_;
   };
 
 }
