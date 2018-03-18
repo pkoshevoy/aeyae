@@ -150,6 +150,16 @@ namespace yae
     TTime pts_;
   };
 
+  //----------------------------------------------------------------
+  // operator
+  //
+  inline std::ostream &
+  operator << (std::ostream & os, const FrameId & fid)
+  {
+    os << "(" << fid.demuxer_ << ", " << fid.track_ << ", " << fid.pts_ << ")";
+    return os;
+  }
+
 
   //----------------------------------------------------------------
   // TVideoFrameCache

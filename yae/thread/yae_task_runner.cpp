@@ -222,7 +222,8 @@ namespace yae
     void add(const TaskPtr & task, TCallback callback, void * context)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      todo_.push_front(Todo(task, callback, context));
+      // todo_.push_front(Todo(task, callback, context));
+      todo_.push_back(Todo(task, callback, context));
       signal_.notify_all();
     }
 

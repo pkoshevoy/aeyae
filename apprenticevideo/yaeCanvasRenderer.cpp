@@ -1736,7 +1736,7 @@ namespace yae
     std::map<TPixelFormatId, TFragmentShader>::const_iterator
       found = shaders_.find(format);
 
-#if !defined(NDEBUG)
+#if 0 // !defined(NDEBUG)
     // for debugging only:
     {
       const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);

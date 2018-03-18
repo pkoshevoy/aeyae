@@ -245,28 +245,43 @@ namespace yae
       {
         const boost::uint64_t & revision = i->first;
         const TKey & key = i->second;
-        Cache & cache = cache_[key];
 
-        if (cache.unreferenced_.empty())
+        typename std::map<TKey, Cache>::iterator found = cache_.find(key);
+        if (found != cache_.end())
+        {
+          Cache & cache = found->second;
+          if (cache.unreferenced_.empty())
+          {
+            YAE_ASSERT(false);
+            continue;
+          }
+
+          cache.unreferenced_.pop_front();
+          unreferenced_--;
+
+          if (cache.referenced_.empty() && cache.unreferenced_.empty())
+          {
+            cache_.erase(found);
+          }
+        }
+        else
         {
           YAE_ASSERT(false);
           continue;
         }
 
-        cache.unreferenced_.pop_front();
-        unreferenced_--;
-
-        // update LRU:
+        // remove unused keys from the lookup table:
         std::list<boost::uint64_t> & revisions = yae::at(revisions_, key);
         YAE_ASSERT(revisions.front() == revision);
         revisions.pop_front();
-        lru_.erase(i);
 
-        // remove unused keys from the lookup table:
         if (revisions.empty())
         {
           revisions_.erase(key);
         }
+
+        // update LRU:
+        lru_.erase(i);
 
         return;
       }
