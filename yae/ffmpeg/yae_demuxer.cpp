@@ -3661,12 +3661,12 @@ namespace yae
       TTime t0(packet.dts * src->time_base.num, src->time_base.den);
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
       TTime t1 = t0 + dt;
-#if 1
+
       if (t1 < dts_span.t0_)
       {
         continue;
       }
-#endif
+
       if (dts_span.t1_ < t0)
       {
         break;
