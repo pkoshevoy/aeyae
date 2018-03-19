@@ -312,6 +312,7 @@ namespace yae
       clip.keep_ = pts_span;
     }
 
+    model_.current_ = model_.remux_.empty() ? 0 : model_.remux_.size() - 1;
     view_.layoutChanged();
   }
 

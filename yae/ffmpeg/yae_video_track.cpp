@@ -288,10 +288,20 @@ namespace yae
     if (overridePixelAspectRatio > 0.0 &&
         overridePixelAspectRatio != output_.pixelAspectRatio_)
     {
-      output_.visibleWidth_ = int(output_.visibleWidth_ *
-                                  output_.pixelAspectRatio_ /
-                                  overridePixelAspectRatio + 0.5);
-      output_.encodedWidth_ = output_.visibleWidth_;
+      if (overridePixelAspectRatio > 1.0)
+      {
+        output_.visibleWidth_ = int(output_.visibleWidth_ *
+                                    output_.pixelAspectRatio_ /
+                                    overridePixelAspectRatio + 0.5);
+        output_.encodedWidth_ = output_.visibleWidth_;
+      }
+      else
+      {
+        output_.visibleHeight_ = int(output_.visibleHeight_ *
+                                     overridePixelAspectRatio + 0.5);
+        output_.encodedHeight_ = output_.visibleHeight_;
+
+      }
       output_.pixelAspectRatio_ = overridePixelAspectRatio;
     }
 

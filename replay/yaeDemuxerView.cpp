@@ -190,10 +190,10 @@ namespace yae
                  gop_end_,
 
                  // output:
-                 256, // envelope width
-                 256, // envelope height
+                 128, // envelope width
+                 128, // envelope height
                  0.0, // source DAR override
-                 0.0, // output PAR override
+                 (64.0 * 16.0 / 9.0) / 128.0, // output PAR override
 
                  // delivery:
                  &DecodeFrame::callback, this);
@@ -446,8 +446,10 @@ namespace yae
         frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
         ItemRef::reference(root, kPropertyLeft, 0.0, 1);
 
-      frame.height_ = ItemRef::reference(style.title_height_, 3.0);
-      frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
+      // frame.height_ = ItemRef::reference(style.title_height_, 3.0);
+      // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
+      frame.width_ = ItemRef::constant(130);
+      frame.height_ = ItemRef::constant(98);
       frame.radius_ = ItemRef::constant(3);
 
       frame.background_ = frame.
@@ -469,7 +471,7 @@ namespace yae
                             i,
                             view.async_,
                             view.frames_));
-      video.anchors_.fill(frame, 2);
+      video.anchors_.fill(frame, 1);
       video.setContext(view);
 
       Text & t0 = frame.addNew<Text>("t0");
