@@ -46,8 +46,8 @@ namespace yae
     //----------------------------------------------------------------
     // LRUCache
     //
-    LRUCache():
-      capacity_(0),
+    LRUCache(std::size_t capacity = 0):
+      capacity_(capacity),
       referenced_(0),
       unreferenced_(0),
       revision_(0)

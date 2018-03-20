@@ -36,21 +36,47 @@ namespace yae
   class RemuxView;
   struct RemuxViewStyle;
 
+
+  //----------------------------------------------------------------
+  // Media
+  //
+  struct YAE_API Media
+  {
+    Media(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
+          const DemuxerSummary & summary = DemuxerSummary()):
+      demuxer_(demuxer),
+      summary_(summary)
+    {}
+
+    inline bool operator < (const Media & other) const
+    { return demuxer_ < other.demuxer_; }
+
+    TDemuxerInterfacePtr demuxer_;
+    DemuxerSummary summary_;
+  };
+
+  //----------------------------------------------------------------
+  // TMediaPtr
+  //
+  typedef boost::shared_ptr<Media> TMediaPtr;
+
   //----------------------------------------------------------------
   // Clip
   //
   struct YAE_API Clip
   {
-    TDemuxerInterfacePtr src_;
-    DemuxerSummary summary_;
+    Clip(const TMediaPtr & media = TMediaPtr(),
+         const std::string & track = std::string(),
+         const Timespan & keep = Timespan()):
+      media_(media),
+      track_(track),
+      keep_(keep)
+    {}
+
+    TMediaPtr media_;
     std::string track_;
     Timespan keep_;
   };
-
-  //----------------------------------------------------------------
-  // TClipPtr
-  //
-  typedef boost::shared_ptr<Clip> TClipPtr;
 
   //----------------------------------------------------------------
   // RemuxModel
@@ -61,8 +87,11 @@ namespace yae
       current_(0)
     {}
 
+    // media, indexed by source path:
+    std::map<std::string, TMediaPtr> media_;
+
     // composition of the remuxed output:
-    std::vector<TClipPtr> remux_;
+    std::vector<Clip> clips_;
 
     // index of currently selected clip:
     std::size_t current_;
@@ -122,69 +151,69 @@ namespace yae
     ItemRef row_height_;
   };
 
-
   //----------------------------------------------------------------
-  // FrameId
+  // Gop
   //
-  struct YAE_API FrameId
+  struct YAE_API Gop
   {
-    FrameId(const DemuxerInterface * demuxer = NULL,
-            const std::string & track = std::string(),
-            const TTime & pts = TTime()):
-      demuxer_(demuxer),
-      track_(track),
-      pts_(pts)
+    Gop(Media * media = NULL,
+        const std::string & track_id = std::string(),
+        std::size_t gop_start_packet_index = 0,
+        std::size_t gop_end_packet_index = 0):
+      media_(media),
+      track_(track_id),
+      i0_(gop_start_packet_index),
+      i1_(gop_end_packet_index)
     {}
 
-    inline bool operator < (const FrameId & other) const
+    inline bool operator < (const Gop & other) const
     {
-      return (demuxer_ < other.demuxer_ ||
-              (demuxer_ == other.demuxer_ &&
+      return (media_ < other.media_ ||
+              (media_ == other.media_ &&
                (track_ < other.track_ ||
                 (track_ == other.track_ &&
-                 pts_ < other.pts_))));
+                 (i0_ < other.i0_ ||
+                  (i0_ == other.i0_ &&
+                   i1_ < other.i1_))))));
     }
 
-    const DemuxerInterface * demuxer_;
+    Media * media_;
     std::string track_;
-    TTime pts_;
+    std::size_t i0_;
+    std::size_t i1_;
   };
 
   //----------------------------------------------------------------
   // operator
   //
   inline std::ostream &
-  operator << (std::ostream & os, const FrameId & fid)
+  operator << (std::ostream & os, const Gop & gop)
   {
-    os << "(" << fid.demuxer_ << ", " << fid.track_ << ", " << fid.pts_ << ")";
+    os << gop.media_ << ' ' << gop.track_ << ' ' << gop.i0_ << ' ' << gop.i1_;
     return os;
   }
 
+  //----------------------------------------------------------------
+  // TVideoFrames
+  //
+  typedef std::vector<TVideoFramePtr> TVideoFrames;
 
   //----------------------------------------------------------------
-  // TVideoFrameCache
+  // TVideoFramesPtr
   //
-  typedef LRUCache<FrameId, TVideoFramePtr> TVideoFrameCache;
+  typedef boost::shared_ptr<TVideoFrames> TVideoFramesPtr;
 
+  //----------------------------------------------------------------
+  // TGopCache
+  //
+  typedef LRUCache<Gop, TVideoFramesPtr> TGopCache;
 
   //----------------------------------------------------------------
   // VideoFrameItem
   //
   struct YAE_API VideoFrameItem : public Item
   {
-    VideoFrameItem(const char * id,
-                   const TDemuxerInterfacePtr & demuxer,
-                   const DemuxerSummary & summary,
-                   const std::string & track_id,
-                   std::size_t gop_start,
-                   std::size_t gop_end,
-                   std::size_t frame,
-                   AsyncTaskQueue & queue,
-                   TVideoFrameCache & cache);
-    ~VideoFrameItem();
-
-    // repaint requests, etc...
-    void setContext(const Canvas::ILayer & view);
+    VideoFrameItem(const char * id, std::size_t frame);
 
     // virtual:
     void uncache();
@@ -200,9 +229,56 @@ namespace yae
     VideoFrameItem(const VideoFrameItem &);
     VideoFrameItem & operator = (const VideoFrameItem &);
 
-    // this gets complicated due to asynchronous decoding of video frames:
-    struct Private;
-    Private * private_;
+    std::size_t frame_;
+    mutable boost::shared_ptr<TLegacyCanvas> renderer_;
+  };
+
+  //----------------------------------------------------------------
+  // GopItem
+  //
+  struct YAE_API GopItem : public Item
+  {
+    GopItem(const char * id, const Gop & gop);
+
+    // repaint requests, etc...
+    void setContext(const Canvas::ILayer & view);
+
+    // virtual:
+    void paintContent() const;
+    void unpaintContent() const;
+
+    // accessor, used by the VideoFrameItem:
+    inline TGopCache::TRefPtr cached() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return cached_;
+    }
+
+    // accessor, used by the VideoFrameItem:
+    inline const Canvas::ILayer * getLayer() const
+    { return layer_; }
+
+    // accessor:
+    inline const Gop & gop() const
+    { return gop_; }
+
+  protected:
+    // called asynchronously upon completion of GOP decoding task:
+    static void
+    cb(const boost::shared_ptr<AsyncTaskQueue::Task> & task, void * ctx);
+
+    // intentionally disabled:
+    GopItem(const GopItem &);
+    GopItem & operator = (const GopItem &);
+
+    Gop gop_;
+    const Canvas::ILayer * layer_;
+    mutable boost::mutex mutex_;
+    mutable boost::shared_ptr<AsyncTaskQueue::Task> async_;
+    mutable TGopCache::TRefPtr cached_;
+
+    // keep track if decoding fails to avoid trying and failing again:
+    bool failed_;
   };
 
 
@@ -244,10 +320,6 @@ namespace yae
   protected:
     RemuxViewStyle style_;
     RemuxModel * model_;
-
-  public:
-    AsyncTaskQueue async_;
-    TVideoFrameCache frames_;
   };
 
 }

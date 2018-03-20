@@ -248,6 +248,10 @@ namespace yae
       parallel_demuxers[source] = parallel_demuxer;
       summaries[source] = summary;
 
+      // update the model:
+      TMediaPtr media(new Media(parallel_demuxer, summary));
+      model_.media_[source] = media;
+
 #if 0
       // show the summary:
       std::cout << "\nparallel:\n" << summary << std::endl;
@@ -272,47 +276,47 @@ namespace yae
     {
       const ClipInfo & trim = *i;
 
-      const TParallelDemuxerPtr & demuxer =
-        yae::at(parallel_demuxers, trim.source_);
+      std::string track_id =
+        trim.track_.empty() ? std::string("v:000") : trim.track_;
 
-      const DemuxerSummary & summary =
-        yae::at(summaries, trim.source_);
-
-      model_.remux_.push_back(TClipPtr(new Clip()));
-      Clip & clip = *(model_.remux_.back());
-
-      clip.src_ = demuxer;
-      clip.summary_ = summary;
-      clip.track_ = summary.timeline_.begin()->second.tracks_.rbegin()->first;
-      clip.keep_ = summary.timeline_.begin()->second.bbox_pts_;
-
-      if (trim.track_.empty())
+      if (!al::starts_with(track_id, "v:"))
       {
-        // use the whole file:
+        // not a video track:
         continue;
       }
+
+      const TMediaPtr & media = yae::at(model_.media_, trim.source_);
+      const TDemuxerInterfacePtr & demuxer = media->demuxer_;
+      const DemuxerSummary & summary = media->summary_;
+
+      if (!yae::has(summary.decoders_, track_id))
+      {
+        // no such track:
+        continue;
+      }
+
+      const Timeline::Track & track = summary.get_track_timeline(track_id);
+      Timespan keep(track.pts_.front(), track.pts_.back());
 
       const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
       double fps = fe.best_guess();
 
-      Timespan pts_span;
-      if (!parse_time(pts_span.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+      if (!trim.t0_.empty() &&
+          !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
       {
         av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
-        continue;
       }
 
-      if (!parse_time(pts_span.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+      if (!trim.t1_.empty() &&
+          !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
       {
         av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
-        continue;
       }
 
-      clip.track_ = trim.track_;
-      clip.keep_ = pts_span;
+      model_.clips_.push_back(Clip(media, track_id, keep));
     }
 
-    model_.current_ = model_.remux_.empty() ? 0 : model_.remux_.size() - 1;
+    model_.current_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
     view_.layoutChanged();
   }
 
