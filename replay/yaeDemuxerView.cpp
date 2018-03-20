@@ -231,7 +231,7 @@ namespace yae
   static TGopCache &
   gop_cache()
   {
-    static TGopCache cache(8192);
+    static TGopCache cache(1024);
     return cache;
   }
 
