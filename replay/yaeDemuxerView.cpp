@@ -189,13 +189,16 @@ namespace yae
       const Gop & gop = gop_item.gop();
       std::size_t i = frame_ - gop.i0_;
       const TVideoFrames & frames = *(cached->value());
-      if (frames.size() <= i)
+      if (frames.size() <= i || !frames[i])
       {
         return;
       }
 
       renderer_.reset(new TLegacyCanvas());
       renderer_->loadFrame(*(layer->context()), frames[i]);
+
+      Text & pts = parent_->get<Text>("pts");
+      pts.uncache();
     }
 
     double x = left();
@@ -214,6 +217,69 @@ namespace yae
   {
     renderer_.reset();
   }
+
+  //----------------------------------------------------------------
+  // VideoFrameItem::videoFrame
+  //
+  TVideoFramePtr
+  VideoFrameItem::videoFrame() const
+  {
+    TVideoFramePtr vf_ptr;
+
+    if (renderer_)
+    {
+      renderer_->getFrame(vf_ptr);
+    }
+
+    return vf_ptr;
+  }
+
+
+  //----------------------------------------------------------------
+  // HasFramePts
+  //
+  struct HasFramePts : public TBoolExpr
+  {
+    HasFramePts(const VideoFrameItem & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      TVideoFramePtr vf_ptr = item_.videoFrame();
+      result = !!vf_ptr;
+    }
+
+    const VideoFrameItem & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFramePts
+  //
+  struct GetFramePts : public TVarExpr
+  {
+    GetFramePts(const VideoFrameItem & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      TVideoFramePtr vf_ptr = item_.videoFrame();
+      if (vf_ptr)
+      {
+        result = QString::fromUtf8(vf_ptr->time_.to_hhmmss_ms().c_str());
+      }
+      else
+      {
+        result = QVariant();
+      }
+    }
+
+    const VideoFrameItem & item_;
+  };
+
 
   //----------------------------------------------------------------
   // async_task_queue
@@ -235,6 +301,37 @@ namespace yae
     return cache;
   }
 
+  //----------------------------------------------------------------
+  // get_pts_order_lut
+  //
+  // GOP members are naturally stored in DTS order.
+  //
+  // Use this to generate an index mapping lookup table
+  // to access GOP members in PTS order.
+  //
+  static void
+  get_pts_order_lut(const Gop & gop, std::vector<std::size_t> & lut)
+  {
+    const Timeline::Track & track =
+      gop.media_->summary_.get_track_timeline(gop.track_);
+
+    // sort the gop so the pts is in ascending order:
+    std::set<std::pair<TTime, std::size_t> > sorted_pts;
+    for (std::size_t i = gop.i0_; i < gop.i1_; i++)
+    {
+      const TTime & pts = track.pts_[i];
+      sorted_pts.insert(std::make_pair(pts, i));
+    }
+
+    lut.resize(gop.i1_ - gop.i0_);
+    std::size_t j = 0;
+
+    for (std::set<std::pair<TTime, std::size_t> >::const_iterator
+           i = sorted_pts.begin(); i != sorted_pts.end(); ++i, j++)
+    {
+      lut[j] = i->second;
+    }
+  }
 
   //----------------------------------------------------------------
   // DecodeGop
@@ -255,7 +352,7 @@ namespace yae
         return;
       }
 
-      // shortcuts:
+      // shortcut:
       Media & media = *(gop_.media_);
 
       // decode and cache the entire GOP:
@@ -275,8 +372,82 @@ namespace yae
                  // delivery:
                  &DecodeGop::callback, this);
 
-      // cache the decoded frames:
-      cache.put(gop_, frames_);
+      // shortcut:
+      const Timeline::Track & track =
+        media.summary_.get_track_timeline(gop_.track_);
+
+      // GOP PTS span may not match the actual decoded PTS span,
+      // compensate for the differences:
+      TTime offset = pts_.t0_ - track.dts_[gop_.i0_];
+
+      if (fabs((pts_.t0_ - track.pts_[gop_.i0_]).sec()) > 1e-3)
+      {
+        // if the GOP first PTS doesn't match the first decoded PTS
+        // then align to the last decoded PTS to the last packet DTS instead:
+        offset = pts_.t1_ - track.dts_[gop_.i1_ - 1];
+      }
+
+      // build a map from end point of each packet [pts, pts + dur)
+      // timespan to the corresponding packet index:
+      std::map<TTime, std::size_t> pts_to_index;
+      for (std::size_t i = gop_.i0_; i < gop_.i1_; i++)
+      {
+        // this probably won't work for VFR source:
+        const TTime & dts = track.dts_[i];
+        const TTime & dur = track.dur_[i];
+        pts_to_index[dts + offset + dur] = i;
+      }
+
+      // reorder decoded frames by DTS:
+      TVideoFramesPtr frames_ptr(new TVideoFrames(gop_.i1_ - gop_.i0_));
+      TVideoFrames & frames = *frames_ptr;
+
+      for (TVideoFrames::const_iterator
+             i = frames_->begin(), end = frames_->end(); i != end; ++i)
+      {
+        const TVideoFramePtr & vf_ptr = *i;
+        const TVideoFrame & vf = *vf_ptr;
+
+        std::map<TTime, std::size_t>::const_iterator
+          found = pts_to_index.upper_bound(vf.time_);
+
+        if (found != pts_to_index.end())
+        {
+          std::size_t index = found->second;
+          std::size_t j = index - gop_.i0_;
+          if (!frames[j])
+          {
+            frames[j] = vf_ptr;
+          }
+          else
+          {
+            // more than one frame stored per packet:
+            std::cerr
+              << "multiple frames per packet: dts "
+              << track.dts_[index]
+              << ", pts "
+              << frames[j]->time_
+              << " and "
+              << vf.time_
+              << std::endl;
+            // YAE_ASSERT(false);
+          }
+        }
+        else
+        {
+          std::cerr
+            << "frame pts " << vf.time_ << " is outside GOP pts range ["
+            << (offset + track.dts_[gop_.i0_]) << ", "
+            << (offset +
+                track.dts_[gop_.i1_ - 1] +
+                track.dur_[gop_.i1_ - 1]) << ")"
+            << std::endl;
+          // YAE_ASSERT(false);
+        }
+      }
+
+      // cache the decoded frames, in DTS order:
+      cache.put(gop_, frames_ptr);
     }
 
     static void callback(const TVideoFramePtr & vf_ptr, void * context)
@@ -290,11 +461,16 @@ namespace yae
       // collect the decoded frames:
       DecodeGop & task = *((DecodeGop *)context);
       task.frames_->push_back(vf_ptr);
+
+      const TVideoFrame & vf = *vf_ptr;
+      task.pts_.t0_ = std::min(task.pts_.t0_, vf.time_);
+      task.pts_.t1_ = std::max(task.pts_.t1_, vf.time_);
     }
 
   protected:
     Gop gop_;
     TVideoFramesPtr frames_;
+    Timespan pts_;
   };
 
 
@@ -389,12 +565,17 @@ namespace yae
              const Timeline::Track & track,
              RemuxView & view,
              const RemuxViewStyle & style,
-             Item & root,
+             GopItem & root,
              const Gop & gop)
   {
+    std::vector<std::size_t> lut;
+    get_pts_order_lut(gop, lut);
+
     const Item * prev = NULL;
-    for (std::size_t i = gop.i0_; i < gop.i1_; ++i)
+    for (std::size_t i = gop.i0_; i < gop.i1_; i++)
     {
+      std::size_t j = lut[i - gop.i0_];
+
       RoundRect & frame = root.addNew<RoundRect>("frame");
       frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       frame.anchors_.left_ = prev ?
@@ -410,7 +591,7 @@ namespace yae
       frame.background_ = frame.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
 
-      Timespan span(track.pts_[i], track.pts_[i] + track.dur_[i]);
+      Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
       frame.color_ = frame.
         addExpr(new FrameColor(clip, span,
                                style.scrollbar_.get(),
@@ -419,18 +600,41 @@ namespace yae
       VideoFrameItem & video = frame.add(new VideoFrameItem("video", i));
       video.anchors_.fill(frame, 1);
 
-      Text & t0 = frame.addNew<Text>("t0");
-      t0.font_ = style.font_large_;
-      t0.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
-      t0.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
-      t0.text_ = TVarRef::constant(TVar(span.t0_.to_hhmmss_ms().c_str()));
-      t0.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
-#if defined(__APPLE__)
-      t0.supersample_ = t0.addExpr(new Supersample<Text>(t0));
+      Text & dts = frame.addNew<Text>("dts");
+      dts.font_ = style.font_large_;
+      dts.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
+      dts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
+#if 1
+      dts.text_ = TVarRef::constant(TVar(track.dts_[j].to_hhmmss_ms().c_str()));
+#else
+      dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
-      t0.elide_ = Qt::ElideNone;
-      t0.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
-      t0.background_ = frame.color_;
+      dts.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
+#if defined(__APPLE__)
+      dts.supersample_ = dts.addExpr(new Supersample<Text>(dts));
+#endif
+      dts.elide_ = Qt::ElideNone;
+      dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
+      dts.background_ = frame.color_;
+
+      Text & pts = frame.addNew<Text>("pts");
+      pts.font_ = style.font_large_;
+#if 0
+      pts.anchors_.bottom_ = ItemRef::reference(frame, kPropertyBottom, 1, -5);
+      pts.anchors_.right_ = ItemRef::reference(frame, kPropertyRight, 1, -5);
+#else
+      pts.anchors_.bottom_ = ItemRef::reference(frame, kPropertyBottom, 1, -5);
+      pts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
+#endif
+      pts.visible_ = pts.addExpr(new HasFramePts(video));
+      pts.text_ = pts.addExpr(new GetFramePts(video));
+      pts.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
+#if defined(__APPLE__)
+      pts.supersample_ = pts.addExpr(new Supersample<Text>(pts));
+#endif
+      pts.elide_ = Qt::ElideNone;
+      pts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
+      pts.background_ = frame.color_;
 
       prev = &frame;
     }

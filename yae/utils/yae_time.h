@@ -59,6 +59,9 @@ namespace yae
     TTime & operator -= (const TTime & dt);
     TTime operator - (const TTime & dt) const;
 
+    TTime & operator *= (double s);
+    TTime operator * (double s) const;
+
     bool operator < (const TTime & t) const;
     bool operator == (const TTime & t) const;
 

@@ -280,6 +280,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::operator *=
+  //
+  TTime &
+  TTime::operator *= (double s)
+  {
+    time_ = int64_t(::round(time_ * s));
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::operator *
+  //
+  TTime
+  TTime::operator * (double s) const
+  {
+    return TTime(int64_t(::round(time_ * s)), base_);
+  }
+
+  //----------------------------------------------------------------
   // TTime::operator <
   //
   bool

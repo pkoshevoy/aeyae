@@ -222,6 +222,9 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
+    // helper:
+    TVideoFramePtr videoFrame() const;
+
     ItemRef opacity_;
 
   protected:
