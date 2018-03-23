@@ -372,6 +372,13 @@ namespace yae
                  // delivery:
                  &DecodeGop::callback, this);
 
+      if (frames_->size() == (gop_.i1_ - gop_.i0_))
+      {
+        // cache the decoded frames, as-is:
+        cache.put(gop_, frames_);
+        return;
+      }
+
       // shortcut:
       const Timeline::Track & track =
         media.summary_.get_track_timeline(gop_.track_);
@@ -446,7 +453,7 @@ namespace yae
         }
       }
 
-      // cache the decoded frames, in DTS order:
+      // cache the decoded frames:
       cache.put(gop_, frames_ptr);
     }
 
