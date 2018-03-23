@@ -372,89 +372,9 @@ namespace yae
                  // delivery:
                  &DecodeGop::callback, this);
 
-      if (frames_->size() == (gop_.i1_ - gop_.i0_))
-      {
-        // cache the decoded frames, as-is:
-        cache.put(gop_, frames_);
-        return;
-      }
-
-      // shortcut:
-      const Timeline::Track & track =
-        media.summary_.get_track_timeline(gop_.track_);
-
-      // GOP PTS span may not match the actual decoded PTS span,
-      // compensate for the differences:
-      TTime offset = pts_.t0_ - track.dts_[gop_.i0_];
-
-      if (fabs((pts_.t0_ - track.pts_[gop_.i0_]).sec()) > 1e-3)
-      {
-        // if the GOP first PTS doesn't match the first decoded PTS
-        // then align to the last decoded PTS to the last packet DTS instead:
-        offset = pts_.t1_ - track.dts_[gop_.i1_ - 1];
-      }
-
-      // build a map from end point of each packet [pts, pts + dur)
-      // timespan to the corresponding packet index:
-      std::map<TTime, std::size_t> pts_to_index;
-      for (std::size_t i = gop_.i0_; i < gop_.i1_; i++)
-      {
-        // this probably won't work for VFR source:
-        const TTime & dts = track.dts_[i];
-        const TTime & dur = track.dur_[i];
-        pts_to_index[dts + offset + dur] = i;
-      }
-
-      // reorder decoded frames by DTS:
-      TVideoFramesPtr frames_ptr(new TVideoFrames(gop_.i1_ - gop_.i0_));
-      TVideoFrames & frames = *frames_ptr;
-
-      for (TVideoFrames::const_iterator
-             i = frames_->begin(), end = frames_->end(); i != end; ++i)
-      {
-        const TVideoFramePtr & vf_ptr = *i;
-        const TVideoFrame & vf = *vf_ptr;
-
-        std::map<TTime, std::size_t>::const_iterator
-          found = pts_to_index.upper_bound(vf.time_);
-
-        if (found != pts_to_index.end())
-        {
-          std::size_t index = found->second;
-          std::size_t j = index - gop_.i0_;
-          if (!frames[j])
-          {
-            frames[j] = vf_ptr;
-          }
-          else
-          {
-            // more than one frame stored per packet:
-            std::cerr
-              << "multiple frames per packet: dts "
-              << track.dts_[index]
-              << ", pts "
-              << frames[j]->time_
-              << " and "
-              << vf.time_
-              << std::endl;
-            // YAE_ASSERT(false);
-          }
-        }
-        else
-        {
-          std::cerr
-            << "frame pts " << vf.time_ << " is outside GOP pts range ["
-            << (offset + track.dts_[gop_.i0_]) << ", "
-            << (offset +
-                track.dts_[gop_.i1_ - 1] +
-                track.dur_[gop_.i1_ - 1]) << ")"
-            << std::endl;
-          // YAE_ASSERT(false);
-        }
-      }
-
-      // cache the decoded frames:
-      cache.put(gop_, frames_ptr);
+      // cache the decoded frames, don't bother to match them
+      // to the packets because that's not useful anyway:
+      cache.put(gop_, frames_);
     }
 
     static void callback(const TVideoFramePtr & vf_ptr, void * context)
@@ -472,11 +392,13 @@ namespace yae
       const TVideoFrame & vf = *vf_ptr;
       task.pts_.t0_ = std::min(task.pts_.t0_, vf.time_);
       task.pts_.t1_ = std::max(task.pts_.t1_, vf.time_);
+      task.fps_.push(vf.time_);
     }
 
   protected:
     Gop gop_;
     TVideoFramesPtr frames_;
+    FramerateEstimator fps_;
     Timespan pts_;
   };
 
