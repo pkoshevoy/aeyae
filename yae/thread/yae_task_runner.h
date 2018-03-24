@@ -103,7 +103,7 @@ namespace yae
   //----------------------------------------------------------------
   // AsyncTaskQueue
   //
-  struct AsyncTaskQueue
+  struct YAE_API AsyncTaskQueue
   {
     struct Task
     {
