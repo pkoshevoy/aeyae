@@ -3664,6 +3664,16 @@ namespace yae
 
       if (t1 < dts_span.t0_)
       {
+#ifndef NDEBUG
+        av_log(NULL, AV_LOG_INFO,
+               "decode_gop skipping %spacket [%s, %s) "
+               "because its outside GOP range [%s, %s)\n",
+               (packet.flags & AV_PKT_FLAG_KEY) ? "KEYFRAME " : "",
+               t0.to_hhmmss_ms().c_str(),
+               t1.to_hhmmss_ms().c_str(),
+               dts_span.t0_.to_hhmmss_ms().c_str(),
+               dts_span.t1_.to_hhmmss_ms().c_str());
+#endif
         continue;
       }
 
