@@ -159,6 +159,7 @@ namespace yae
             AVDictionary * opts)
   {
     unsigned int nthreads = boost::thread::hardware_concurrency();
+    nthreads = std::min<unsigned int>(16, nthreads);
 
     AvCodecContextPtr ctx(avcodec_alloc_context3(c));
     if (params)
