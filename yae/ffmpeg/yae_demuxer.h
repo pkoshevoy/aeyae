@@ -459,9 +459,8 @@ namespace yae
 
     virtual void populate() = 0;
 
-    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                     const TTime & seekTime,
+                     const TTime & dts,
                      const std::string & trackId = std::string()) = 0;
 
     // lookup front packet, pass back its AVStream:
@@ -531,9 +530,13 @@ namespace yae
 
     virtual void populate();
 
-    // NOTE: in general seekTime refers to DTS
+    // NOTE: if the underlying demuxer implements seeking by PTS,
+    // that is (AVFormatContext.AVInputFormat.flags & AVFMT_SEEK_TO_PTS) != 0,
+    // then DemuxerBuffer will find a matching PTS for the given DTS
+    // and will seek to the PTS instead:
+    //
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                     const TTime & seekTime,
+                     const TTime & dts,
                      const std::string & trackId = std::string());
 
     // lookup front packet, pass back its AVStream:
@@ -561,9 +564,8 @@ namespace yae
 
     virtual void populate();
 
-    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                     const TTime & seekTime,
+                     const TTime & dts,
                      const std::string & trackId = std::string());
 
     // lookup front packet, pass back its AVStream:
@@ -611,9 +613,8 @@ namespace yae
 
     virtual void populate();
 
-    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                     const TTime & seekTime,
+                     const TTime & dts,
                      const std::string & trackId = std::string());
 
     // lookup front packet, pass back its AVStream:
@@ -648,9 +649,8 @@ namespace yae
 
     virtual void populate();
 
-    // NOTE: in general seekTime refers to DTS
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                     const TTime & seekTime,
+                     const TTime & dts,
                      const std::string & trackId = std::string());
 
     // lookup front packet, pass back its AVStream:

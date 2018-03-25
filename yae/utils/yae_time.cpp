@@ -1296,6 +1296,26 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // Timeline::Track::dts_sample_index
+  //
+  bool
+  Timeline::Track::find_sample_by_dts(const TTime & dts, std::size_t & i) const
+  {
+    std::vector<TTime>::const_iterator found =
+      std::upper_bound(dts_.begin(), dts_.end(), dts);
+
+    if (found != dts_.end())
+    {
+      i = (found - dts_.begin()) - 1;
+      return i >= 0;
+    }
+
+    i = dts_.size() - 1;
+    TTime end = dts_.back() + dur_.back();
+    return dts < end;
+  }
+
 
   //----------------------------------------------------------------
   // Timeline::add_frame

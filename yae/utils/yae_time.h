@@ -377,6 +377,9 @@ namespace yae
                                 samples.ib_);
       }
 
+      // find sample index of the sample that spans a given DTS time point:
+      bool find_sample_by_dts(const TTime & dts, std::size_t & index) const;
+
       // timespan built-up in [dts, dts + dur) increments,
       // should be quick due to monotonically increasing dts:
       std::list<Timespan> dts_span_;

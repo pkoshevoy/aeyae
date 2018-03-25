@@ -2031,9 +2031,30 @@ namespace yae
   //
   int
   DemuxerBuffer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                      const TTime & seekTime,
+                      const TTime & dts,
                       const std::string & trackId)
   {
+    TTime seekTime = dts;
+
+    if (!trackId.empty())
+    {
+      // if the input format implements seeking by PTS,
+      // then convert given seekTime (referencing DTS timeline) to PTS,
+      const AVFormatContext & context = src_.context();
+
+      if ((context.iformat->flags & AVFMT_SEEK_TO_PTS) == AVFMT_SEEK_TO_PTS)
+      {
+        const DemuxerSummary & summary = this->summary();
+        const Timeline::Track & track = summary.get_track_timeline(trackId);
+
+        std::size_t sample_index = 0;
+        if (track.find_sample_by_dts(dts, sample_index))
+        {
+          seekTime = track.pts_[sample_index];
+        }
+      }
+    }
+
     return src_.seek(seekFlags, seekTime, trackId);
   }
 
@@ -2244,7 +2265,7 @@ namespace yae
   //
   int
   ParallelDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                        const TTime & seekTime,
+                        const TTime & dts,
                         const std::string & trackId)
   {
     int result = 0;
@@ -2253,7 +2274,7 @@ namespace yae
            i = src_.begin(); i != src_.end() && !result; ++i)
     {
       DemuxerInterface & demuxer = *(i->get());
-      int err = demuxer.seek(seekFlags, seekTime, trackId);
+      int err = demuxer.seek(seekFlags, dts, trackId);
 
       if (err < 0 && !result)
       {
@@ -2931,7 +2952,7 @@ namespace yae
   //
   int
   TrimmedDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
-                       const TTime & seekTime,
+                       const TTime & dts,
                        const std::string & trackId)
   {
     if (!src_)
@@ -2945,7 +2966,7 @@ namespace yae
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
-    TTime ts = (seekTime.time_ < 0) ? origin : seekTime + origin;
+    TTime ts = (dts.time_ < 0) ? origin : dts + origin;
 
     // clamp to trimmed region:
     ts = std::min(trim.d_, std::max(trim.a_, ts));
