@@ -537,7 +537,7 @@ namespace yae
 #else
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
-      dts.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
+      dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
 #if defined(__APPLE__)
       dts.supersample_ = dts.addExpr(new Supersample<Text>(dts));
 #endif
@@ -556,7 +556,7 @@ namespace yae
 #endif
       pts.visible_ = pts.addExpr(new HasFramePts(video));
       pts.text_ = pts.addExpr(new GetFramePts(video));
-      pts.fontSize_ = ItemRef::reference(style.font_size_, 1.25 * kDpiScale);
+      pts.fontSize_ = dts.fontSize_;
 #if defined(__APPLE__)
       pts.supersample_ = pts.addExpr(new Supersample<Text>(pts));
 #endif
