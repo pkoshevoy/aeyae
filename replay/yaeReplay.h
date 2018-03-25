@@ -48,9 +48,8 @@ namespace yae
   // load
   //
   TDemuxerInterfacePtr
-  load(DemuxerSummary & summary,
-       const std::list<std::string> & sources,
-       const std::map<std::string, ClipInfo> & clip,
+  load(const std::set<std::string> & sources,
+       const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
        const double discont_tolerance = 0.017);
@@ -60,7 +59,6 @@ namespace yae
   //
   void
   demux(const TDemuxerInterfacePtr & demuxer,
-        const DemuxerSummary & summary,
         const std::string & output_path = std::string(),
         bool save_keyframes = false);
 }

@@ -444,6 +444,11 @@ namespace yae
   YAE_API std::ostream &
   operator << (std::ostream & oss, const DemuxerSummary & summary);
 
+  //----------------------------------------------------------------
+  // TDemuxerSummaryPtr
+  //
+  typedef boost::shared_ptr<DemuxerSummary> TDemuxerSummaryPtr;
+
 
   //----------------------------------------------------------------
   // DemuxerInterface
@@ -465,6 +470,25 @@ namespace yae
     virtual void summarize(DemuxerSummary & summary,
                            double tolerance = 0.017) = 0;
 
+    // helpers:
+    inline const DemuxerSummary & update_summary(double tolerance = 0.017)
+    {
+      TDemuxerSummaryPtr summary(new DemuxerSummary);
+      this->summarize(*summary, tolerance);
+      summary_ = summary;
+      return *summary;
+    }
+
+    inline const DemuxerSummary & summary() const
+    {
+      if (!summary_)
+      {
+        throw std::runtime_error("DemuxerSummary is NULL");
+      }
+
+      return *summary_;
+    }
+
     // NOTE: pkt must have originated from
     // an immediately prior peek call,
     // as in the get function below:
@@ -472,6 +496,9 @@ namespace yae
 
     // helper:
     TPacketPtr get(AVStream *& src);
+
+  protected:
+    TDemuxerSummaryPtr summary_;
   };
 
   //----------------------------------------------------------------
@@ -524,17 +551,13 @@ namespace yae
   //
   struct YAE_API ParallelDemuxer : DemuxerInterface
   {
-    void append(const TDemuxerInterfacePtr & src,
-                const DemuxerSummary & summary);
+    void append(const TDemuxerInterfacePtr & src);
 
     inline bool empty() const
     { return src_.empty(); }
 
     inline const std::list<TDemuxerInterfacePtr> & sources() const
     { return src_; }
-
-    inline const std::list<DemuxerSummary> & summaries() const
-    { return summary_; }
 
     virtual void populate();
 
@@ -551,7 +574,6 @@ namespace yae
 
   protected:
     std::list<TDemuxerInterfacePtr> src_;
-    std::list<DemuxerSummary> summary_;
   };
 
 
@@ -569,17 +591,14 @@ namespace yae
   // remux
   //
   YAE_API int
-  remux(const char * output_path,
-        const DemuxerSummary & summary,
-        DemuxerInterface & demuxer);
+  remux(const char * output_path, DemuxerInterface & demuxer);
 
   //----------------------------------------------------------------
   // SerialDemuxer
   //
   struct YAE_API SerialDemuxer : DemuxerInterface
   {
-    void append(const TDemuxerInterfacePtr & src,
-                const DemuxerSummary & summary);
+    void append(const TDemuxerInterfacePtr & src);
 
     inline bool empty() const
     { return src_.empty(); }
@@ -589,9 +608,6 @@ namespace yae
 
     inline const std::vector<TDemuxerInterfacePtr> & sources() const
     { return src_; }
-
-    inline const std::vector<DemuxerSummary> & summaries() const
-    { return summary_; }
 
     virtual void populate();
 
@@ -611,7 +627,6 @@ namespace yae
     std::size_t find(const TTime & seek_time, int prog_id) const;
 
     std::vector<TDemuxerInterfacePtr> src_;
-    std::vector<DemuxerSummary> summary_;
     std::map<int, std::vector<TTime> > t0_;
     std::map<int, std::vector<TTime> > t1_;
     std::map<int, std::vector<TTime> > offset_;
@@ -625,7 +640,6 @@ namespace yae
   struct YAE_API TrimmedDemuxer : DemuxerInterface
   {
     void trim(const TDemuxerInterfacePtr & src,
-              const DemuxerSummary & summary,
               // a source may have more than one program with completely
               // separate timelines, so we need to know which timeline
               // we are trimming:
@@ -672,7 +686,7 @@ namespace yae
 
   protected:
     TDemuxerInterfacePtr src_;
-    DemuxerSummary summary_;
+    DemuxerSummary src_summary_;
     std::string track_;
     Timespan timespan_;
     int program_;
@@ -721,7 +735,6 @@ namespace yae
   YAE_API bool
   decode_gop(// source:
              const TDemuxerInterfacePtr & demuxer,
-             const DemuxerSummary & summary,
              const std::string & track_id,
              std::size_t k0,
              std::size_t k1,

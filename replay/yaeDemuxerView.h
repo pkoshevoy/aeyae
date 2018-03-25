@@ -42,17 +42,14 @@ namespace yae
   //
   struct YAE_API Media
   {
-    Media(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
-          const DemuxerSummary & summary = DemuxerSummary()):
-      demuxer_(demuxer),
-      summary_(summary)
+    Media(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr()):
+      demuxer_(demuxer)
     {}
 
     inline bool operator < (const Media & other) const
     { return demuxer_ < other.demuxer_; }
 
     TDemuxerInterfacePtr demuxer_;
-    DemuxerSummary summary_;
   };
 
   //----------------------------------------------------------------

@@ -32,8 +32,7 @@ namespace yae
   // load
   //
   TDemuxerInterfacePtr
-  load(DemuxerSummary & summary,
-       const std::set<std::string> & sources,
+  load(const std::set<std::string> & sources,
        const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration,
@@ -41,7 +40,6 @@ namespace yae
   {
     typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
-    std::map<std::string, DemuxerSummary> summaries;
 
     for (std::set<std::string>::const_iterator i = sources.begin();
          i != sources.end(); ++i)
@@ -70,27 +68,13 @@ namespace yae
         TDemuxerInterfacePtr
           buffer(new DemuxerBuffer(demuxer, buffer_duration));
 
-        DemuxerSummary summary;
-        buffer->summarize(summary, discont_tolerance);
-#if 0
-        std::cout
-          << "\n" << demuxer->resourcePath() << ":\n"
-          << summary << std::endl;
-#endif
-        parallel_demuxer->append(buffer, summary);
+        buffer->update_summary(discont_tolerance);
+        parallel_demuxer->append(buffer);
       }
 
       // summarize the demuxer:
-      DemuxerSummary summary;
-      parallel_demuxer->summarize(summary, discont_tolerance);
-
+      parallel_demuxer->update_summary(discont_tolerance);
       parallel_demuxers[filePath] = parallel_demuxer;
-      summaries[filePath] = summary;
-
-#if 0
-      // show the summary:
-      std::cout << "\nparallel:\n" << summary << std::endl;
-#endif
     }
 
     typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
@@ -104,46 +88,46 @@ namespace yae
       const TParallelDemuxerPtr & demuxer =
         yae::at(parallel_demuxers, trim.source_);
 
-      const DemuxerSummary & summary =
-        yae::at(summaries, trim.source_);
+      std::string track_id =
+        trim.track_.empty() ? std::string("v:000") : trim.track_;
 
-      if (trim.track_.empty())
+      if (!al::starts_with(track_id, "v:"))
       {
-        // use the whole file:
-        serial_demuxer->append(demuxer, summary);
+        // not a video track:
+        continue;
+      }
+      const DemuxerSummary & summary = demuxer->summary();
+
+      if (!yae::has(summary.decoders_, track_id))
+      {
+        // no such track:
         continue;
       }
 
-      const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
+      const Timeline::Track & track = summary.get_track_timeline(track_id);
+      Timespan keep(track.pts_.front(), track.pts_.back());
+
+      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
       double fps = fe.best_guess();
 
-      const std::string & t0 = trim.t0_;
-      const std::string & t1 = trim.t1_;
-
-      Timespan pts_span;
-      if (!parse_time(pts_span.t0_, t0.c_str(), NULL, NULL, fps))
+      if (!trim.t0_.empty() &&
+          !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
       {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t0.c_str());
-        return TDemuxerInterfacePtr();
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
       }
 
-      if (!parse_time(pts_span.t1_, t1.c_str(), NULL, NULL, fps))
+      if (!trim.t1_.empty() &&
+          !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
       {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", t1.c_str());
-        return TDemuxerInterfacePtr();
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
       }
 
       boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
-      clip_demuxer->trim(demuxer, summary, trim.track_, pts_span);
+      clip_demuxer->trim(demuxer, track_id, keep);
 
       // summarize clip demuxer:
-      DemuxerSummary clip_summary;
-      clip_demuxer->summarize(clip_summary, discont_tolerance);
-#if 0
-      // show clip summary:
-      std::cout << "\ntrimmed:\n" << clip_summary << std::endl;
-#endif
-      serial_demuxer->append(clip_demuxer, clip_summary);
+      clip_demuxer->update_summary(discont_tolerance);
+      serial_demuxer->append(clip_demuxer);
     }
 
     if (serial_demuxer->empty())
@@ -155,11 +139,10 @@ namespace yae
     // unwrap serial demuxer if there is just 1 source:
     if (serial_demuxer->num_sources() == 1)
     {
-      summary = serial_demuxer->summaries().front();
       return serial_demuxer->sources().front();
     }
 
-    serial_demuxer->summarize(summary, discont_tolerance);
+    serial_demuxer->update_summary(discont_tolerance);
     return serial_demuxer;
   }
 
@@ -168,10 +151,11 @@ namespace yae
   //
   void
   demux(const TDemuxerInterfacePtr & demuxer,
-        const DemuxerSummary & summary,
         const std::string & output_path,
         bool save_keyframes)
   {
+    const DemuxerSummary & summary = demuxer->summary();
+
     std::map<int, TTime> prog_dts;
     while (true)
     {

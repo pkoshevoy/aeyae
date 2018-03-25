@@ -2220,11 +2220,9 @@ namespace yae
   // ParallelDemuxer::append
   //
   void
-  ParallelDemuxer::append(const TDemuxerInterfacePtr & src,
-                          const DemuxerSummary & summary)
+  ParallelDemuxer::append(const TDemuxerInterfacePtr & src)
   {
     src_.push_back(src);
-    summary_.push_back(summary);
   }
 
   //----------------------------------------------------------------
@@ -2311,10 +2309,10 @@ namespace yae
   void
   ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    for (std::list<DemuxerSummary>::const_iterator
-           i = summary_.begin(); i != summary_.end(); ++i)
+    for (std::list<TDemuxerInterfacePtr>::const_iterator
+           i = src_.begin(); i != src_.end(); ++i)
     {
-      const DemuxerSummary & src = *i;
+      const DemuxerSummary & src = (*i)->summary();
       std::map<int, TTime> prog_offset;
       summary.extend(src, prog_offset, tolerance);
     }
@@ -2403,10 +2401,11 @@ namespace yae
   // remux
   //
   int
-  remux(const char * output_path,
-        const DemuxerSummary & summary,
-        DemuxerInterface & demuxer)
+  remux(const char * output_path, DemuxerInterface & demuxer)
   {
+    // shortcut:
+    const DemuxerSummary & summary = demuxer.summary();
+
     AvOutputContextPtr muxer_ptr(avformat_alloc_context());
 
     // setup output format:
@@ -2635,9 +2634,10 @@ namespace yae
   // SerialDemuxer::append
   //
   void
-  SerialDemuxer::append(const TDemuxerInterfacePtr & src,
-                        const DemuxerSummary & summary)
+  SerialDemuxer::append(const TDemuxerInterfacePtr & src)
   {
+    const DemuxerSummary & summary = src->summary();
+
     for (std::map<int, yae::Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
@@ -2660,7 +2660,8 @@ namespace yae
 
       if (!t1.empty())
       {
-        const Timeline & prev = yae::at(summary_.back().timeline_, prog_id);
+        const DemuxerSummary & prev_summary = src_.back()->summary();
+        const Timeline & prev = yae::at(prev_summary.timeline_, prog_id);
         src_t0 = pick_src_start(prev, timeline);
       }
 
@@ -2673,20 +2674,6 @@ namespace yae
     }
 
     src_.push_back(src);
-
-    // add a chapter marker to the summary if there isn't one already:
-    DemuxerSummary src_summary = summary;
-    if (src_summary.chapters_.empty())
-    {
-      std::ostringstream oss;
-      oss << "Part " << std::setw(2) << std::setfill('0') << src_.size();
-
-      const Timeline & timeline = src_summary.timeline_.begin()->second;
-      TChapter c(oss.str(), timeline.bbox_pts_);
-      src_summary.chapters_[timeline.bbox_pts_.t0_] = c;
-    }
-
-    summary_.push_back(src_summary);
   }
 
   //----------------------------------------------------------------
@@ -2768,7 +2755,7 @@ namespace yae
       if (curr_ < src_.size())
       {
         DemuxerInterface & next = const_cast<DemuxerInterface &>(*src_[curr_]);
-        const DemuxerSummary & summary = summary_[curr_];
+        const DemuxerSummary & summary = next.summary();
 
         // rewind the source:
         int err = next.seek(AVSEEK_FLAG_BACKWARD,
@@ -2808,7 +2795,7 @@ namespace yae
   void
   SerialDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    for (std::size_t i = 0; i < summary_.size(); i++)
+    for (std::size_t i = 0; i < src_.size(); i++)
     {
       std::map<int, TTime> prog_offset;
       for (std::map<int, std::vector<TTime> >::const_iterator
@@ -2819,8 +2806,20 @@ namespace yae
         prog_offset[prog_id] = offsets[i];
       }
 
-      const DemuxerSummary & src = summary_[i];
-      summary.extend(src, prog_offset, tolerance);
+      // add a chapter marker to the summary if there isn't one already:
+      DemuxerSummary src_summary = src_[i]->summary();
+
+      if (src_summary.chapters_.empty())
+      {
+        std::ostringstream oss;
+        oss << "Part " << std::setw(2) << std::setfill('0') << src_.size();
+
+        const Timeline & timeline = src_summary.timeline_.begin()->second;
+        TChapter c(oss.str(), timeline.bbox_pts_);
+        src_summary.chapters_[timeline.bbox_pts_.t0_] = c;
+      }
+
+      summary.extend(src_summary, prog_offset, tolerance);
     }
 
     // get the track id and time position of the "first" packet:
@@ -2833,31 +2832,30 @@ namespace yae
   //
   void
   TrimmedDemuxer::trim(const TDemuxerInterfacePtr & src,
-                       const DemuxerSummary & summary,
                        const std::string & trackId,
                        const Timespan & ptsSpan)
   {
     YAE_ASSERT(!src_);
 
     src_ = src;
-    summary_ = summary;
+    src_summary_ = src->summary();
     track_ = trackId;
     timespan_ = ptsSpan;
 
     // zero-duration packets could cause problems, try to prevent them:
-    summary_.replace_missing_durations();
+    src_summary_.replace_missing_durations();
 
     // figure out the origin and region of interest:
     Timeline::Track::Trim x;
     {
-      const Timeline::Track & tt = summary_.get_track_timeline(trackId);
+      const Timeline::Track & tt = src_summary_.get_track_timeline(trackId);
       if (!tt.find_samples_for(ptsSpan, x))
       {
         YAE_ASSERT(false);
         throw std::out_of_range("track does not overlap span, trim failed");
       }
 
-      program_ = summary_.find_program(trackId);
+      program_ = src_summary_.find_program(trackId);
       // origin_[program_] = tt.pts_[x.ia_];
       origin_[program_] = tt.pts_[x.ka_];
       trim_[trackId] = Trim(tt.dts_[x.ka_],
@@ -2867,12 +2865,13 @@ namespace yae
       x_[trackId] = x;
     }
 
-    // shortcut:
-    const Timeline & ref = yae::at(summary_.timeline_, program_);
+    // shortcuts:
+    const std::map<int, Timeline> & timelines = src_summary_.timeline_;
+    const Timeline & ref = yae::at(timelines, program_);
 
     // trim every other program/track to match:
     for (std::map<int, Timeline>::const_iterator
-           i = summary_.timeline_.begin(); i != summary_.timeline_.end(); ++i)
+           i = timelines.begin(); i != timelines.end(); ++i)
     {
       const int & program = i->first;
       const Timeline & t = i->second;
@@ -2941,8 +2940,8 @@ namespace yae
     }
 
     std::string track_id = trackId.empty() ? track_ : trackId;
-    const int program = summary_.find_program(track_id);
-    const Timeline::Track & track = summary_.get_track_timeline(track_id);
+    const int program = src_summary_.find_program(track_id);
+    const Timeline::Track & track = src_summary_.get_track_timeline(track_id);
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
@@ -3058,9 +3057,12 @@ namespace yae
       return;
     }
 
+    // shortcut:
+    const std::map<int, Timeline> & timelines = src_summary_.timeline_;
+
     // re-summarize the trimmed region:
     for (std::map<int, Timeline>::const_iterator
-           i = summary_.timeline_.begin(); i != summary_.timeline_.end(); ++i)
+           i = timelines.begin(); i != timelines.end(); ++i)
     {
       const int & program = i->first;
       const Timeline & timeline = i->second;
@@ -3121,10 +3123,12 @@ namespace yae
 
     // trim the chapters, under the assumption that chapters refer
     // to the track that was trimmed:
-    YAE_ASSERT(summary_.chapters_.empty() || origin_.size() == 1);
+    const std::map<TTime, TChapter> & src_chapters = src_summary_.chapters_;
+    YAE_ASSERT(src_chapters.empty() || origin_.size() == 1);
+
     std::vector<TChapter> chapters;
     for (std::map<TTime, TChapter>::const_iterator
-           i = summary_.chapters_.begin(); i != summary_.chapters_.end(); ++i)
+           i = src_chapters.begin(); i != src_chapters.end(); ++i)
     {
       TChapter chapter = i->second;
       if (!timespan_.overlaps(chapter.span_))
@@ -3152,12 +3156,12 @@ namespace yae
     }
 
     // copy the rest:
-    summary.metadata_ = summary_.metadata_;
-    summary.trk_meta_ = summary_.trk_meta_;
-    summary.streams_ = summary_.streams_;
-    summary.decoders_ = summary_.decoders_;
-    summary.programs_ = summary_.programs_;
-    summary.trk_prog_ = summary_.trk_prog_;
+    summary.metadata_ = src_summary_.metadata_;
+    summary.trk_meta_ = src_summary_.trk_meta_;
+    summary.streams_ = src_summary_.streams_;
+    summary.decoders_ = src_summary_.decoders_;
+    summary.programs_ = src_summary_.programs_;
+    summary.trk_prog_ = src_summary_.trk_prog_;
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
@@ -3308,10 +3312,12 @@ namespace yae
                 double source_dar,
                 double output_par)
   {
+    std::string url = al::starts_with(path, "file:") ? path : ("file:" + path);
+
     // setup output format:
     AvOutputContextPtr muxer_ptr(avformat_alloc_context());
     AVFormatContext * muxer = muxer_ptr.get();
-    av_strlcpy(muxer->filename, path.c_str(), sizeof(muxer->filename));
+    muxer->url = av_strndup(url.c_str(), url.size());
     muxer->oformat = av_guess_format(NULL, path.c_str(), NULL);
 
     const AVCodec * codec = avcodec_find_encoder(muxer->oformat->video_codec);
@@ -3557,7 +3563,6 @@ namespace yae
   bool
   decode_gop(// source:
              const TDemuxerInterfacePtr & demuxer_ptr,
-             const DemuxerSummary & summary,
              const std::string & track_id,
              std::size_t k0,
              std::size_t k1,
@@ -3570,6 +3575,8 @@ namespace yae
              TVideoFrameCallback callback,
              void * context)
   {
+    const DemuxerSummary & summary = demuxer_ptr->summary();
+
     // configure decoder:
     VideoTrackPtr decoder_ptr;
     {

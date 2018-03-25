@@ -198,7 +198,6 @@ namespace yae
     typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
     typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
-    std::map<std::string, DemuxerSummary> summaries;
     std::list<ClipInfo> clips = src_clips;
 
     // these are expressed in seconds:
@@ -231,25 +230,18 @@ namespace yae
         TDemuxerInterfacePtr
           buffer(new DemuxerBuffer(demuxer, buffer_duration));
 
-        DemuxerSummary summary;
-        buffer->summarize(summary, discont_tolerance);
-#if 0
-        std::cout
-          << "\n" << demuxer->resourcePath() << ":\n"
-          << summary << std::endl;
-#endif
-        parallel_demuxer->append(buffer, summary);
+        buffer->update_summary(discont_tolerance);
+        parallel_demuxer->append(buffer);
       }
 
       // summarize the demuxer:
-      DemuxerSummary summary;
-      parallel_demuxer->summarize(summary, discont_tolerance);
+      const DemuxerSummary & summary =
+        parallel_demuxer->update_summary(discont_tolerance);
 
       parallel_demuxers[source] = parallel_demuxer;
-      summaries[source] = summary;
 
       // update the model:
-      TMediaPtr media(new Media(parallel_demuxer, summary));
+      TMediaPtr media(new Media(parallel_demuxer));
       model_.media_[source] = media;
 
 #if 0
@@ -287,7 +279,7 @@ namespace yae
 
       const TMediaPtr & media = yae::at(model_.media_, trim.source_);
       const TDemuxerInterfacePtr & demuxer = media->demuxer_;
-      const DemuxerSummary & summary = media->summary_;
+      const DemuxerSummary & summary = demuxer->summary();
 
       if (!yae::has(summary.decoders_, track_id))
       {
@@ -298,7 +290,7 @@ namespace yae
       const Timeline::Track & track = summary.get_track_timeline(track_id);
       Timespan keep(track.pts_.front(), track.pts_.back());
 
-      const FramerateEstimator & fe = yae::at(summary.fps_, trim.track_);
+      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
       double fps = fe.best_guess();
 
       if (!trim.t0_.empty() &&

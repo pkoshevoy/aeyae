@@ -313,7 +313,7 @@ namespace yae
   get_pts_order_lut(const Gop & gop, std::vector<std::size_t> & lut)
   {
     const Timeline::Track & track =
-      gop.media_->summary_.get_track_timeline(gop.track_);
+      gop.media_->demuxer_->summary().get_track_timeline(gop.track_);
 
     // sort the gop so the pts is in ascending order:
     std::set<std::pair<TTime, std::size_t> > sorted_pts;
@@ -358,7 +358,6 @@ namespace yae
       // decode and cache the entire GOP:
       decode_gop(// source:
                  media.demuxer_,
-                 media.summary_,
                  gop_.track_,
                  gop_.i0_,
                  gop_.i1_,
@@ -589,7 +588,7 @@ namespace yae
       Media * media = clip.media_.get();
 
       const Timeline::Track & track =
-        media->summary_.get_track_timeline(clip.track_);
+        media->demuxer_->summary().get_track_timeline(clip.track_);
 
       const Item * prev = NULL;
       for (std::set<std::size_t>::const_iterator

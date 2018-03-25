@@ -219,6 +219,7 @@ mainMayThrowException(int argc, char ** argv)
   std::string output_path;
   std::string curr_track;
   bool save_keyframes = false;
+  bool no_ui = false;
 
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
@@ -234,6 +235,7 @@ mainMayThrowException(int argc, char ** argv)
         {
           // untrimmed:
           clips.push_back(yae::ClipInfo(curr_source));
+          clipped.insert(curr_source);
         }
 
         sources.insert(filePath);
@@ -271,44 +273,56 @@ mainMayThrowException(int argc, char ** argv)
     {
       save_keyframes = true;
     }
+    else if (arg == "-no-ui")
+    {
+      no_ui = true;
+    }
   }
 
-#if 0
-  // these are expressed in seconds:
-  const double buffer_duration = 1.0;
-  const double discont_tolerance = 0.017;
-
-  // load the sources:
-  yae::DemuxerSummary summary;
-  yae::TDemuxerInterfacePtr demuxer =
-    yae::load(summary, sources, clips, buffer_duration, discont_tolerance);
-
-  // show the summary:
-  std::cout << "\nsummary:\n" << summary << std::endl;
-
-  if (!output_path.empty())
+  if (!curr_source.empty() && !yae::has(clipped, curr_source))
   {
-    if (!demuxer)
-    {
-      return 1;
-    }
-
-    // start from the beginning:
-    demuxer->seek(AVSEEK_FLAG_BACKWARD,
-                  summary.rewind_.second,
-                  summary.rewind_.first);
-
-    if (!save_keyframes)
-    {
-      int err = yae::remux(output_path.c_str(), summary, *demuxer);
-      return err;
-    }
-
-    // save the keyframes:
-    yae::demux(demuxer, summary, output_path, save_keyframes);
-    return 0;
+    // untrimmed:
+    clips.push_back(yae::ClipInfo(curr_source));
+    clipped.insert(curr_source);
   }
-#endif
+
+  if (no_ui)
+  {
+    // these are expressed in seconds:
+    const double buffer_duration = 1.0;
+    const double discont_tolerance = 0.017;
+
+    // load the sources:
+    yae::TDemuxerInterfacePtr demuxer =
+      yae::load(sources, clips, buffer_duration, discont_tolerance);
+
+    // show the summary:
+    const yae::DemuxerSummary & summary = demuxer->summary();
+    std::cout << "\nsummary:\n" << summary << std::endl;
+
+    if (!output_path.empty())
+    {
+      if (!demuxer)
+      {
+        return 1;
+      }
+
+      // start from the beginning:
+      demuxer->seek(AVSEEK_FLAG_BACKWARD,
+                    summary.rewind_.second,
+                    summary.rewind_.first);
+
+      if (!save_keyframes)
+      {
+        int err = yae::remux(output_path.c_str(), *demuxer);
+        return err;
+      }
+
+      // save the keyframes:
+      yae::demux(demuxer, output_path, save_keyframes);
+      return 0;
+    }
+  }
 
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->add(sources, clips);

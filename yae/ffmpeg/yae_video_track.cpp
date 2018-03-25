@@ -457,7 +457,7 @@ namespace yae
       AVFrame & decoded = decodedFrameCopy.get();
       framesDecoded_++;
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       {
         boost::chrono::steady_clock::time_point
           t1 = boost::chrono::steady_clock::now();
@@ -854,7 +854,7 @@ namespace yae
           }
         }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       {
         boost::chrono::steady_clock::time_point
           t1 = boost::chrono::steady_clock::now();
