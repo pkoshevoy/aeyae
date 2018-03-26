@@ -724,13 +724,55 @@ namespace yae
       return true;
     }
 
+    // virtual:
     bool onDrag(const TVec2D & itemCSysOrigin,
                 const TVec2D & rootCSysDragStart,
                 const TVec2D & rootCSysDragEnd)
     {
       offset_ = rootCSysDragEnd - rootCSysDragStart;
-      std::cerr << "ClipItem: drag offset: " << offset_ << std::endl;
       return true;
+    }
+
+    // virtual:
+    bool onDragEnd(const TVec2D & itemCSysOrigin,
+                   const TVec2D & rootCSysDragStart,
+                   const TVec2D & rootCSysDragEnd)
+    {
+      // reorder clips:
+      offset_ = rootCSysDragEnd - rootCSysDragStart;
+
+      // Item & root = parent<Item>();
+      double h = this->height();
+      double d = round(offset_.y() / h);
+      double n = model_.clips_.size();
+
+      std::size_t index =
+        std::size_t(std::max(0.0, std::min(n - 1, double(index_) + d)));
+
+      // shortcut:
+      TClipPtr clip = model_.clips_[index_];
+
+      if (index != index_)
+      {
+        model_.clips_.erase(model_.clips_.begin() + index_);
+        model_.clips_.insert(model_.clips_.begin() + index, clip);
+        model_.selected_ = index;
+        view_.requestUncache();
+      }
+
+      offset_ = TVec2D();
+      view_.requestRepaint();
+      return true;
+    }
+
+    bool paint(const Segment & xregion,
+               const Segment & yregion,
+               Canvas * canvas) const
+    {
+      TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glTranslated(offset_.x(), offset_.y(), 0.0));
+      return Item::paint(xregion, yregion, canvas);
     }
 
     RemuxModel & model_;
