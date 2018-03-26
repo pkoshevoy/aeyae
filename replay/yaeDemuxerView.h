@@ -95,6 +95,9 @@ namespace yae
     // media, indexed by source path:
     std::map<std::string, TMediaPtr> media_;
 
+    // source path, indexed by media:
+    std::map<TMediaPtr, std::string> source_;
+
     // composition of the remuxed output:
     std::vector<TClipPtr> clips_;
 

@@ -646,6 +646,33 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetClipName
+  //
+  struct GetClipName : public TVarExpr
+  {
+    GetClipName(const RemuxModel & model, std::size_t index):
+      model_(model),
+      index_(index)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      const Clip & clip = *(model_.clips_[index_]);
+      const std::string & name = yae::at(model_.source_, clip.media_);
+
+      std::string dirname;
+      std::string basename;
+      parseFilePath(name, dirname, basename);
+
+      result = QString::fromUtf8(basename.c_str());
+    }
+
+    const RemuxModel & model_;
+    const std::size_t index_;
+  };
+
+  //----------------------------------------------------------------
   // layout_clip
   //
   static void
@@ -665,9 +692,16 @@ namespace yae
     btn.color_ = btn.
       addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
-    Text & label = btn.addNew<Text>("label");
-    label.anchors_.center(btn);
-    label.text_ = TVarRef::constant(TVar("-"));
+    Text & btn_text = btn.addNew<Text>("btn_text");
+    btn_text.anchors_.center(btn);
+    btn_text.text_ = TVarRef::constant(TVar("-"));
+
+    Text & src_name = root.addNew<Text>("src_name");
+    src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 2.6);
+    src_name.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+    src_name.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
+    src_name.text_ = src_name.addExpr(new GetClipName(model, index));
+    src_name.elide_ = Qt::ElideLeft;
   }
 
   //----------------------------------------------------------------
@@ -689,9 +723,9 @@ namespace yae
     btn.color_ = btn.
       addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
-    Text & label = btn.addNew<Text>("label");
-    label.anchors_.center(btn);
-    label.text_ = TVarRef::constant(TVar("+"));
+    Text & btn_text = btn.addNew<Text>("btn_text");
+    btn_text.anchors_.center(btn);
+    btn_text.text_ = TVarRef::constant(TVar("+"));
   }
 
 

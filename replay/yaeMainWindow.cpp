@@ -243,6 +243,7 @@ namespace yae
       // update the model:
       TMediaPtr media(new Media(parallel_demuxer));
       model_.media_[source] = media;
+      model_.source_[media] = source;
 
 #if 0
       // show the summary:
