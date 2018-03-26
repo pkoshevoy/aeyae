@@ -305,10 +305,10 @@ namespace yae
         av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
       }
 
-      model_.clips_.push_back(Clip(media, track_id, keep));
+      model_.clips_.push_back(TClipPtr(new Clip(media, track_id, keep)));
     }
 
-    model_.current_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
+    model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
     view_.layoutChanged();
   }
 

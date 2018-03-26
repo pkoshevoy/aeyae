@@ -522,8 +522,8 @@ namespace yae
       Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
       frame.color_ = frame.
         addExpr(new FrameColor(clip, span,
-                               style.scrollbar_.get(),
-                               style.cursor_.get()));
+                               style.cursor_.get(),
+                               style.scrollbar_.get()));
 
       VideoFrameItem & video = frame.add(new VideoFrameItem("video", i));
       video.anchors_.fill(frame, 1);
@@ -569,6 +569,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // IsClipSelected
+  //
+  struct IsClipSelected : TBoolExpr
+  {
+    IsClipSelected(const RemuxModel & model, const TClipPtr & clip):
+      model_(model),
+      clip_(clip)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = model_.selected_clip() == clip_;
+    }
+
+    const RemuxModel & model_;
+    TClipPtr clip_;
+  };
+
+
+  //----------------------------------------------------------------
   // RemuxLayoutGops
   //
   struct RemuxLayoutGops : public TLayout
@@ -576,44 +597,50 @@ namespace yae
     void layout(RemuxModel & model,
                 RemuxView & view,
                 const RemuxViewStyle & style,
-                Item & root,
+                Item & container,
                 void * context)
     {
-      if (model.clips_.size() <= model.current_)
+      for (std::size_t j = 0, n = model.clips_.size(); j < n; j++)
       {
-        return;
-      }
+        const TClipPtr & clip_ptr = model.clips_[j];
+        const Clip & clip = *clip_ptr;
+        Media * media = clip.media_.get();
 
-      const Clip & clip = model.clips_[model.current_];
-      Media * media = clip.media_.get();
+        const Timeline::Track & track =
+          media->demuxer_->summary().get_track_timeline(clip.track_);
 
-      const Timeline::Track & track =
-        media->demuxer_->summary().get_track_timeline(clip.track_);
+        Item & root = container.addNew<Item>("clip_layout");
+        root.visible_ = root.addExpr(new IsClipSelected(model, clip_ptr));
+        root.anchors_.fill(container);
 
-      const Item * prev = NULL;
-      for (std::set<std::size_t>::const_iterator
-             i = track.keyframes_.begin(); i != track.keyframes_.end(); ++i)
-      {
-        std::set<std::size_t>::const_iterator next = i;
-        std::advance(next, 1);
+        Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
+                                        kScrollbarBoth);
 
-        std::size_t i0 = *i;
-        std::size_t i1 =
-          (next == track.keyframes_.end()) ?
-          track.dts_.size() :
-          *next;
+        const Item * prev = NULL;
+        for (std::set<std::size_t>::const_iterator
+               i = track.keyframes_.begin(); i != track.keyframes_.end(); ++i)
+        {
+          std::set<std::size_t>::const_iterator next = i;
+          std::advance(next, 1);
 
-        Gop gop(media, clip.track_, i0, i1);
+          std::size_t i0 = *i;
+          std::size_t i1 =
+            (next == track.keyframes_.end()) ?
+            track.dts_.size() :
+            *next;
 
-        GopItem & item = root.add<GopItem>(new GopItem("gop", gop));
-        item.setContext(view);
-        item.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-        item.anchors_.top_ = prev ?
-          item.addExpr(new OddRoundUp(*prev, kPropertyBottom)) :
-          ItemRef::reference(root, kPropertyTop, 0.0, 1);
+          Gop gop(media, clip.track_, i0, i1);
 
-        layout_gop(clip, track, view, style, item, gop);
-        prev = &item;
+          GopItem & item = gops.add<GopItem>(new GopItem("gop", gop));
+          item.setContext(view);
+          item.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
+          item.anchors_.top_ = prev ?
+            item.addExpr(new OddRoundUp(*prev, kPropertyBottom)) :
+            ItemRef::reference(gops, kPropertyTop, 0.0, 1);
+
+          layout_gop(clip, track, view, style, item, gop);
+          prev = &item;
+        }
       }
     }
   };
@@ -628,34 +655,13 @@ namespace yae
               Item & root,
               std::size_t index)
   {
-    root.height_ = ItemRef::reference(style.row_height_);
-
-    const std::size_t num_clips = model.clips_.size();
-    if (index == num_clips)
-    {
-      RoundRect & btn = root.addNew<RoundRect>("append");
-      btn.border_ = ItemRef::constant(1.0);
-      btn.radius_ = ItemRef::constant(3.0);
-      btn.width_ = ItemRef::reference(root.height_, 0.8);
-      btn.height_ = btn.width_;
-      btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-      btn.anchors_.left_ = ItemRef::reference(root.height_, 1.6);
-      btn.color_ = btn.
-        addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
-
-      Text & label = btn.addNew<Text>("label");
-      label.anchors_.center(btn);
-      label.text_ = TVarRef::constant(TVar("+"));
-      return;
-    }
-
     RoundRect & btn = root.addNew<RoundRect>("remove");
     btn.border_ = ItemRef::constant(1.0);
     btn.radius_ = ItemRef::constant(3.0);
-    btn.width_ = ItemRef::reference(root.height_, 0.8);
+    btn.width_ = ItemRef::reference(root, kPropertyHeight, 0.8);
     btn.height_ = btn.width_;
     btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
-    btn.anchors_.left_ = ItemRef::reference(root.height_, 0.6);
+    btn.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 0.6);
     btn.color_ = btn.
       addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
 
@@ -663,6 +669,75 @@ namespace yae
     label.anchors_.center(btn);
     label.text_ = TVarRef::constant(TVar("-"));
   }
+
+  //----------------------------------------------------------------
+  // layout_add_clip_btn
+  //
+  static void
+  layout_add_clip_btn(RemuxModel & model,
+                      RemuxView & view,
+                      const RemuxViewStyle & style,
+                      Item & root)
+  {
+    RoundRect & btn = root.addNew<RoundRect>("append");
+    btn.border_ = ItemRef::constant(1.0);
+    btn.radius_ = ItemRef::constant(3.0);
+    btn.width_ = ItemRef::reference(root, kPropertyHeight, 0.8);
+    btn.height_ = btn.width_;
+    btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
+    btn.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
+    btn.color_ = btn.
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
+
+    Text & label = btn.addNew<Text>("label");
+    label.anchors_.center(btn);
+    label.text_ = TVarRef::constant(TVar("+"));
+  }
+
+
+  //----------------------------------------------------------------
+  // ClipItem
+  //
+  struct ClipItem : public ClickableItem
+  {
+    ClipItem(const char * id,
+             RemuxModel & model,
+             RemuxView & view,
+             std::size_t clip_index):
+      ClickableItem(id, true),
+      model_(model),
+      view_(view),
+      index_(clip_index)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (model_.selected_ != index_)
+      {
+        std::cerr << "ClipItem: select: " << index_ << std::endl;
+        model_.selected_ = index_;
+        view_.dataChanged();
+      }
+
+      return true;
+    }
+
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      offset_ = rootCSysDragEnd - rootCSysDragStart;
+      std::cerr << "ClipItem: drag offset: " << offset_ << std::endl;
+      return true;
+    }
+
+    RemuxModel & model_;
+    RemuxView & view_;
+    std::size_t index_;
+    TVec2D offset_;
+  };
 
   //----------------------------------------------------------------
   // RemuxLayoutClips
@@ -676,22 +751,36 @@ namespace yae
                 void * context)
     {
       const Item * prev = NULL;
-      for (std::size_t i = 0; i <= model.clips_.size(); ++i)
+      for (std::size_t i = 0, n = model.clips_.size(); i < n; ++i)
       {
-        Rectangle & row = root.addNew<Rectangle>("clip");
-        row.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-        row.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-        row.anchors_.top_ = prev ?
+        ClipItem & clip = root.add(new ClipItem("clip_item", model, view, i));
+        clip.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+        clip.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+        clip.anchors_.top_ = prev ?
           ItemRef::reference(*prev, kPropertyBottom) :
           ItemRef::reference(root, kPropertyTop);
-        row.color_ = row.addExpr(style_color_ref
-                                 (view,
-                                  &ItemViewStyle::bg_controls_,
-                                  (i % 2) ? 1.0 : 0.5));
+        clip.height_ = ItemRef::reference(style.row_height_);
 
-        layout_clip(model, view, style, row, i);
-        prev = &row;
+        if ((n - i) % 2)
+        {
+          Rectangle & row = clip.addNew<Rectangle>("bg");
+          row.anchors_.fill(clip);
+          row.color_ = row.addExpr(style_color_ref
+                                   (view, &ItemViewStyle::bg_controls_, 0.5));
+        }
+
+        layout_clip(model, view, style, clip, i);
+        prev = &clip;
       }
+
+      Item & row = root.addNew<Item>("add_clip");
+      row.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+      row.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+      row.anchors_.top_ = prev ?
+        ItemRef::reference(*prev, kPropertyBottom) :
+        ItemRef::reference(root, kPropertyTop);
+      row.height_ = ItemRef::reference(style.row_height_);
+      layout_add_clip_btn(model, view, style, row);
     }
   };
 
@@ -727,15 +816,12 @@ namespace yae
       clips.anchors_.fill(root);
       clips.anchors_.top_ = ItemRef::reference(sep, kPropertyBottom);
 
-      Item & gops_container =
-        layout_scrollview(kScrollbarBoth, view, style, gops,
-                          kScrollbarBoth);
-
       Item & clips_container =
-        layout_scrollview(kScrollbarVertical, view, style, clips);
+        layout_scrollview(kScrollbarVertical, view, style, clips,
+                          kScrollbarVertical);
 
       style.layout_clips_->layout(clips_container, view, model, style);
-      style.layout_gops_->layout(gops_container, view, model, style);
+      style.layout_gops_->layout(gops, view, model, style);
     }
   };
 
@@ -805,29 +891,15 @@ namespace yae
   RemuxView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
   {
     bool processed = ItemView::processMouseEvent(canvas, e);
-    /*
+
     QEvent::Type et = e->type();
     if (et == QEvent::MouseButtonPress &&
         (e->button() == Qt::LeftButton) &&
         !inputHandlers_.empty())
     {
-      const TModelInputArea * ia = findModelInputArea(inputHandlers_);
-      if (ia)
-      {
-        QModelIndex index = ia->modelIndex();
-        int groupRow = -1;
-        int itemRow = -1;
-        RemuxModel::mapToGroupRowItemRow(index, groupRow, itemRow);
-
-        if (!(groupRow < 0 || itemRow < 0))
-        {
-          // update selection:
-          SelectionFlags selectionFlags = get_selection_flags(e);
-          select_items(*model_, groupRow, itemRow, selectionFlags);
-        }
-      }
+      std::cerr << "FIXME: pkoshevoy: left click" << std::endl;
     }
-    */
+
     return processed;
   }
 

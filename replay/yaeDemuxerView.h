@@ -76,22 +76,30 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TClipPtr
+  //
+  typedef boost::shared_ptr<Clip> TClipPtr;
+
+  //----------------------------------------------------------------
   // RemuxModel
   //
   struct YAE_API RemuxModel
   {
     RemuxModel():
-      current_(0)
+      selected_(0)
     {}
+
+    inline TClipPtr selected_clip() const
+    { return (selected_ < clips_.size()) ? clips_[selected_] : TClipPtr(); }
 
     // media, indexed by source path:
     std::map<std::string, TMediaPtr> media_;
 
     // composition of the remuxed output:
-    std::vector<Clip> clips_;
+    std::vector<TClipPtr> clips_;
 
     // index of currently selected clip:
-    std::size_t current_;
+    std::size_t selected_;
   };
 
   //----------------------------------------------------------------
