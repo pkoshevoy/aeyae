@@ -224,6 +224,8 @@ namespace yae
   //
   struct InputHandler
   {
+    typedef InputArea item_type;
+
     InputHandler(InputArea * inputArea = NULL,
                  const TVec2D & csysOrigin = TVec2D());
 
@@ -244,6 +246,43 @@ namespace yae
   // TInputHandlerCRIter
   //
   typedef std::list<InputHandler>::const_reverse_iterator TInputHandlerCRIter;
+
+
+  //----------------------------------------------------------------
+  // VisibleItem
+  //
+  struct VisibleItem
+  {
+    typedef Item item_type;
+
+    VisibleItem(Item * item = NULL,
+                const TVec2D & csysOrigin = TVec2D());
+
+    boost::weak_ptr<Item> item_;
+    TVec2D csysOrigin_;
+  };
+
+  //----------------------------------------------------------------
+  // find
+  //
+  template <typename TItem>
+  inline typename std::list<TItem>::const_iterator
+  find(const std::list<TItem> & items, const typename TItem::item_type & item)
+  {
+    typedef typename std::list<TItem>::const_iterator const_iter_t;
+    typedef typename TItem::item_type item_t;
+
+    for (const_iter_t i = items.begin(); i != items.end(); ++i)
+    {
+      boost::shared_ptr<item_t> ptr = i->item_.lock();
+      if (ptr.get() == &item)
+      {
+        return i;
+      }
+    }
+
+    return items.end();
+  }
 
 
   //----------------------------------------------------------------
@@ -532,6 +571,37 @@ namespace yae
       inputHandlers.clear();
       this->getInputHandlers(TVec2D(0.0, 0.0), itemCSysPoint, inputHandlers);
       return !inputHandlers.empty();
+    }
+
+    // breadth-first search for visible items overlapping a given point
+    virtual void
+    getVisibleItems(// coordinate system origin of
+                    // the item, expressed in the
+                    // coordinate system of the root item:
+                    const TVec2D & itemCSysOrigin,
+
+                    // point expressed in the coord. system of the item,
+                    // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                    const TVec2D & itemCSysPoint,
+
+                    // pass back visible items overlapping above point,
+                    // along with its coord. system origin expressed
+                    // in the coordinate system of the root item:
+                    std::list<VisibleItem> & visibleItems);
+
+    inline bool
+    getVisibleItems(// point expressed in the coord. system of the item,
+                    // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                    const TVec2D & itemCSysPoint,
+
+                    // pass back visible items overlapping above point,
+                    // along with its coord. system origin expressed
+                    // in the coordinate system of the root item:
+                    std::list<VisibleItem> & visibleItems)
+    {
+      visibleItems.clear();
+      this->getVisibleItems(TVec2D(0.0, 0.0), itemCSysPoint, visibleItems);
+      return !visibleItems.empty();
     }
 
     virtual void onFocus();

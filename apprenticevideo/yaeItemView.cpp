@@ -626,6 +626,8 @@ namespace yae
     TVec2D pt = device_pixel_pos(canvas, e);
     mousePt_ = pt;
 
+    root_->getVisibleItems(mousePt_, mouseOverItems_);
+
     QEvent::Type et = e->type();
     if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
           (e->button() == Qt::LeftButton)))

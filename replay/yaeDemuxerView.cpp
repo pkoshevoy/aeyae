@@ -763,6 +763,48 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ClipItemColor
+  //
+  struct ClipItemColor : public TColorExpr
+  {
+    ClipItemColor(const RemuxModel & model,
+                  std::size_t index,
+                  const ItemView & view,
+                  const InputArea & item):
+      model_(model),
+      index_(index),
+      view_(view),
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const ItemViewStyle & style = *view_.style();
+
+      TVec4D v = style.bg_.get().a_scaled(0.0);
+      if (model_.selected_clip() == model_.clips_[index_])
+      {
+        v = style.bg_controls_.get();
+      }
+
+      const std::list<VisibleItem> & items = view_.mouseOverItems();
+      std::list<VisibleItem>::const_iterator found = yae::find(items, item_);
+      if (found != items.end())
+      {
+        v += TVec4D(0.1, 0.1, 0.1, 0.1);
+      }
+
+      result = Color(v);
+    }
+
+    const RemuxModel & model_;
+    const std::size_t index_;
+    const ItemView & view_;
+    const Item & item_;
+  };
+
+  //----------------------------------------------------------------
   // RemuxLayoutClips
   //
   struct RemuxLayoutClips : public TLayout
@@ -784,13 +826,10 @@ namespace yae
           ItemRef::reference(root, kPropertyTop);
         clip.height_ = ItemRef::reference(style.row_height_);
 
-        if ((n - i) % 2)
-        {
-          Rectangle & row = clip.addNew<Rectangle>("bg");
-          row.anchors_.fill(clip);
-          row.color_ = row.addExpr(style_color_ref
-                                   (view, &ItemViewStyle::bg_controls_, 0.5));
-        }
+        Rectangle & row = clip.addNew<Rectangle>("bg");
+        row.anchors_.fill(clip);
+        row.color_ = row.addExpr(new ClipItemColor(model, i, view, clip));
+        row.color_.cachingEnabled_ = false;
 
         layout_clip(model, view, style, clip, i);
         prev = &clip;

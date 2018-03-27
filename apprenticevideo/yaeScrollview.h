@@ -129,6 +129,21 @@ namespace yae
                           // in the coordinate system of the root item:
                           std::list<InputHandler> & inputHandlers);
 
+    // virtual:
+    void getVisibleItems(// coordinate system origin of
+                         // the item, expressed in the
+                         // coordinate system of the root item:
+                         const TVec2D & itemCSysOrigin,
+
+                         // point expressed in the coord. system of the item,
+                         // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                         const TVec2D & itemCSysPoint,
+
+                         // pass back visible items overlapping above point,
+                         // along with its coord. system origin expressed
+                         // in the coordinate system of the root item:
+                         std::list<VisibleItem> & visibleItems);
+
 #ifndef NDEBUG
     // virtual:
     void dump(std::ostream & os,

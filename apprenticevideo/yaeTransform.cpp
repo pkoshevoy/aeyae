@@ -154,6 +154,48 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Transform::getVisibleItems
+  //
+  void
+  Transform::getVisibleItems(// coordinate system origin of
+                             // the item, expressed in the
+                             // coordinate system of the root item:
+                             const TVec2D & itemCSysOrigin,
+
+                             // point expressed in the coord.sys. of the item,
+                             // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                             const TVec2D & itemCSysPoint,
+
+                             // pass back items overlapping above point,
+                             // along with its coord. system origin expressed
+                             // in the coordinate system of the root item:
+                             std::list<VisibleItem> & visibleItems)
+  {
+    if (!(Item::visible() && Item::overlaps(itemCSysPoint)))
+    {
+      return;
+    }
+
+    TVec2D origin;
+    TVec2D u_axis;
+    TVec2D v_axis;
+    getCSys(origin, u_axis, v_axis);
+
+    // transform point to local coordinate system:
+    TVec2D localCSysOffset = itemCSysOrigin + origin;
+    TVec2D ptInLocalCoords = wcs_to_lcs(origin, u_axis, v_axis, itemCSysPoint);
+
+    for (std::vector<ItemPtr>::const_iterator i = Item::children_.begin();
+         i != Item::children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->getVisibleItems(localCSysOffset, ptInLocalCoords, visibleItems);
+    }
+
+    visibleItems.push_back(VisibleItem(this, itemCSysOrigin));
+  }
+
+  //----------------------------------------------------------------
   // Transform::paint
   //
   bool

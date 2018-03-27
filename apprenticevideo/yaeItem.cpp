@@ -622,6 +622,27 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // VisibleItem::VisibleItem
+  //
+  VisibleItem::VisibleItem(Item * item, const TVec2D & csysOrigin):
+    csysOrigin_(csysOrigin)
+  {
+    if (item)
+    {
+      boost::shared_ptr<Item> item_ptr = item->self_.lock();
+
+      if (!item_ptr)
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("failed to acquire item pointer");
+      }
+
+      item_ = item_ptr;
+    }
+  }
+
+
+  //----------------------------------------------------------------
   // Item::Item
   //
   Item::Item(const char * id):
@@ -1262,6 +1283,39 @@ namespace yae
       const ItemPtr & child = *i;
       child->getInputHandlers(itemCSysOrigin, itemCSysPoint, inputHandlers);
     }
+  }
+
+  //----------------------------------------------------------------
+  // Item::getVisibleItems
+  //
+  void
+  Item::getVisibleItems(// coordinate system origin of
+                        // the item, expressed in the
+                        // coordinate system of the root item:
+                        const TVec2D & itemCSysOrigin,
+
+                        // point expressed in the coord.sys. of the item,
+                        // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                        const TVec2D & itemCSysPoint,
+
+                        // pass back visible items overlapping above point,
+                        // along with its coord. system origin expressed
+                        // in the coordinate system of the root item:
+                        std::list<VisibleItem> & visibleItems)
+  {
+    if (!(visible() && overlaps(itemCSysPoint)))
+    {
+      return;
+    }
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->getVisibleItems(itemCSysOrigin, itemCSysPoint, visibleItems);
+    }
+
+    visibleItems.push_back(VisibleItem(this, itemCSysOrigin));
   }
 
   //----------------------------------------------------------------

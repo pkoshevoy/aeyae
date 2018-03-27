@@ -211,6 +211,10 @@ namespace yae
     inline const TVec2D & mousePt() const
     { return mousePt_; }
 
+    // accessor to the list of items under last-known mouse position:
+    inline const std::list<VisibleItem> & mouseOverItems() const
+    { return mouseOverItems_; }
+
     // virtual:
     TImageProviderPtr
     getImageProvider(const QString & imageUrl, QString & imageId) const
@@ -253,6 +257,10 @@ namespace yae
     // button press occurred, will be cleared if layout changes
     // or mouse button release occurs:
     std::list<InputHandler> inputHandlers_;
+
+    // a list of items under the mouse,
+    // will be cleared if layout changes:
+    std::list<VisibleItem> mouseOverItems_;
 
     // mouse event handling house keeping helpers:
     InputHandler * pressed_;

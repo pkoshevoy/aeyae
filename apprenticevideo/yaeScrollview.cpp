@@ -240,6 +240,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Scrollview::getVisibleItems
+  //
+  void
+  Scrollview::getVisibleItems(// coordinate system origin of
+                              // the item, expressed in the
+                              // coordinate system of the root item:
+                              const TVec2D & itemCSysOrigin,
+
+                              // point expressed in the coord.sys. of the item,
+                              // rootCSysPoint = itemCSysOrigin + itemCSysPoint
+                              const TVec2D & itemCSysPoint,
+
+                              // pass back items overlapping above point,
+                              // along with its coord. system origin expressed
+                              // in the coordinate system of the root item:
+                              std::list<VisibleItem> & visibleItems)
+  {
+    Item::getVisibleItems(itemCSysOrigin, itemCSysPoint, visibleItems);
+
+    TVec2D origin;
+    Segment xView;
+    Segment yView;
+    getContentView(origin, xView, yView);
+
+    TVec2D ptInViewCoords = itemCSysPoint - origin;
+    TVec2D offsetToView = itemCSysOrigin + origin;
+    content_->getVisibleItems(offsetToView, ptInViewCoords, visibleItems);
+  }
+
+  //----------------------------------------------------------------
   // Scrollview::paint
   //
   bool
