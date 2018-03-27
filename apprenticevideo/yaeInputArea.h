@@ -165,6 +165,48 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DraggableItem
+  //
+  struct DraggableItem : public ClickableItem
+  {
+    DraggableItem(const char * id):
+      ClickableItem(id, true)
+    {}
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      dragVec_ = rootCSysDragEnd - rootCSysDragStart;
+      return true;
+    }
+
+    // virtual:
+    bool onDragEnd(const TVec2D & itemCSysOrigin,
+                   const TVec2D & rootCSysDragStart,
+                   const TVec2D & rootCSysDragEnd)
+    {
+      dragVec_ = TVec2D();
+      return true;
+    }
+
+    bool paint(const Segment & xregion,
+               const Segment & yregion,
+               Canvas * canvas) const
+    {
+      TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glTranslated(dragVec_.x(), dragVec_.y(), 0.0));
+      return ClickableItem::paint(xregion, yregion, canvas);
+    }
+
+  protected:
+    TVec2D dragVec_;
+  };
+
+
+  //----------------------------------------------------------------
   // ModelInputArea
   //
   template <typename Model>

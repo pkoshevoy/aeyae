@@ -83,41 +83,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // GetFontSize
-  //
-  struct GetFontSize : public TDoubleExpr
-  {
-    GetFontSize(const Item & titleHeight, double titleHeightScale,
-                const Item & cellHeight, double cellHeightScale):
-      titleHeight_(titleHeight),
-      cellHeight_(cellHeight),
-      titleHeightScale_(titleHeightScale),
-      cellHeightScale_(cellHeightScale)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double t = 0.0;
-      titleHeight_.get(kPropertyHeight, t);
-      t *= titleHeightScale_;
-
-      double c = 0.0;
-      cellHeight_.get(kPropertyHeight, c);
-      c *= cellHeightScale_;
-
-      result = std::min(t, c);
-    }
-
-    const Item & titleHeight_;
-    const Item & cellHeight_;
-
-    double titleHeightScale_;
-    double cellHeightScale_;
-  };
-
-
-  //----------------------------------------------------------------
   // FrameColor
   //
   struct FrameColor : public TColorExpr
@@ -732,13 +697,13 @@ namespace yae
   //----------------------------------------------------------------
   // ClipItem
   //
-  struct ClipItem : public ClickableItem
+  struct ClipItem : public DraggableItem
   {
     ClipItem(const char * id,
              RemuxModel & model,
              RemuxView & view,
              std::size_t clip_index):
-      ClickableItem(id, true),
+      DraggableItem(id),
       model_(model),
       view_(view),
       index_(clip_index)
@@ -750,20 +715,10 @@ namespace yae
     {
       if (model_.selected_ != index_)
       {
-        std::cerr << "ClipItem: select: " << index_ << std::endl;
         model_.selected_ = index_;
         view_.dataChanged();
       }
 
-      return true;
-    }
-
-    // virtual:
-    bool onDrag(const TVec2D & itemCSysOrigin,
-                const TVec2D & rootCSysDragStart,
-                const TVec2D & rootCSysDragEnd)
-    {
-      offset_ = rootCSysDragEnd - rootCSysDragStart;
       return true;
     }
 
@@ -773,11 +728,11 @@ namespace yae
                    const TVec2D & rootCSysDragEnd)
     {
       // reorder clips:
-      offset_ = rootCSysDragEnd - rootCSysDragStart;
+      TVec2D offset = rootCSysDragEnd - rootCSysDragStart;
 
       // Item & root = parent<Item>();
       double h = this->height();
-      double d = round(offset_.y() / h);
+      double d = round(offset.y() / h);
       double n = model_.clips_.size();
 
       std::size_t index =
@@ -794,19 +749,11 @@ namespace yae
         view_.requestUncache();
       }
 
-      offset_ = TVec2D();
-      view_.requestRepaint();
+      // view_.requestRepaint();
+      DraggableItem::onDragEnd(itemCSysOrigin,
+                               rootCSysDragStart,
+                               rootCSysDragEnd);
       return true;
-    }
-
-    bool paint(const Segment & xregion,
-               const Segment & yregion,
-               Canvas * canvas) const
-    {
-      TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glTranslated(offset_.x(), offset_.y(), 0.0));
-      return Item::paint(xregion, yregion, canvas);
     }
 
     RemuxModel & model_;
