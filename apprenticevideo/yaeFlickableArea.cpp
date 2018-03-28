@@ -99,6 +99,27 @@ namespace yae
     double estimateVelocity(int nsamples) const
     {
       int n = std::min<int>(nsamples, nsamples_);
+
+      if (n > 1)
+      {
+        int prev = (nsamples_ - 2) % TPrivate::kMaxSamples;
+        int curr = (nsamples_ - 1) % TPrivate::kMaxSamples;
+
+        const double & t0 = t_[prev];
+        const double & t1 = t_[curr];
+        double dt = t1 - t0;
+
+        if (dt > 1e-1)
+        {
+          // significant pause between final 2 samples,
+          // probably not a flick but a simple drag-and-release:
+          return 0.0;
+        }
+#if 0
+        std::cerr << "FIXME: estimateVelocity, dt: " << dt << std::endl;
+#endif
+      }
+
       int i0 = (nsamples_ - n) % TPrivate::kMaxSamples;
       int i1 = (nsamples_ - 1) % TPrivate::kMaxSamples;
       return estimateVelocity(i0, i1);
