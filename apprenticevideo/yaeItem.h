@@ -385,6 +385,14 @@ namespace yae
     // discard cached properties so they would get re-calculated (on-demand):
     virtual void uncache();
 
+    // discard cached properties for this item only,
+    // does not recurse into children or payload (scrollview content):
+    virtual void uncacheSelf();
+
+    // discard cached properties for this item and its children recursively,
+    // does not recurse into payload (scrollview content):
+    virtual void uncacheSelfAndChildren();
+
     // virtual:
     void get(Property property, double & value) const;
 

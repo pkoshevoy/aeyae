@@ -691,6 +691,15 @@ namespace yae
       child->uncache();
     }
 
+    uncacheSelf();
+  }
+
+  //----------------------------------------------------------------
+  // Item::uncacheSelf
+  //
+  void
+  Item::uncacheSelf()
+  {
     anchors_.uncache();
     margins_.uncache();
     width_.uncache();
@@ -702,6 +711,22 @@ namespace yae
     visible_.uncache();
 
     notifyObservers(kOnUncache);
+  }
+
+  //----------------------------------------------------------------
+  // Item::uncacheSelfAndChildren
+  //
+  void
+  Item::uncacheSelfAndChildren()
+  {
+    for (std::vector<ItemPtr>::iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->uncacheSelfAndChildren();
+    }
+
+    uncacheSelf();
   }
 
   //----------------------------------------------------------------

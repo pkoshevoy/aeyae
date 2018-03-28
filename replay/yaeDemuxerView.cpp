@@ -749,7 +749,7 @@ namespace yae
         view_.requestUncache();
       }
 
-      // view_.requestRepaint();
+      view_.requestRepaint();
       DraggableItem::onDragEnd(itemCSysOrigin,
                                rootCSysDragStart,
                                rootCSysDragEnd);
@@ -846,6 +846,69 @@ namespace yae
     }
   };
 
+
+  //----------------------------------------------------------------
+  // VSplitter
+  //
+  struct VSplitter : public InputArea
+  {
+    VSplitter(const char * id,
+              const ItemRef & lowerBound,
+              const ItemRef & upperBound,
+              ItemRef & anchorRef):
+      InputArea(id, true),
+      lowerBound_(lowerBound),
+      upperBound_(upperBound),
+      anchorRef_(anchorRef),
+      anchorPos_(0),
+      offsetPos_(0)
+    {}
+
+    // virtual:
+    void uncache()
+    {
+      lowerBound_.uncache();
+      upperBound_.uncache();
+      InputArea::uncache();
+    }
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      anchorPos_ = anchorRef_.get();
+      offsetPos_ = anchorRef_.translate_;
+      return true;
+    }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      double dy = rootCSysDragEnd.y() - rootCSysDragStart.y();
+      double v_min = lowerBound_.get();
+      double v_max = upperBound_.get();
+      double v = anchorPos_ + dy;
+      v = std::min(v_max, std::max(v_min, v));
+
+      double dv = v - anchorPos_;
+      anchorRef_.translate_ = offsetPos_ + dv;
+
+      // this avoids uncaching the scrollview content:
+      parent_->uncacheSelfAndChildren();
+
+      return true;
+    }
+
+    ItemRef lowerBound_;
+    ItemRef upperBound_;
+    ItemRef & anchorRef_;
+    double anchorPos_;
+    double offsetPos_;
+  };
+
+
   //----------------------------------------------------------------
   // RemuxLayout
   //
@@ -871,6 +934,13 @@ namespace yae
       sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -100);
       sep.height_ = ItemRef::reference(style.title_height_, 0.1);
       sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
+
+      VSplitter & splitter = root.
+        add(new VSplitter("splitter",
+                          ItemRef::reference(root, kPropertyTop, 1.0, 100),
+                          ItemRef::reference(root, kPropertyBottom, 1.0, -100),
+                          sep.anchors_.bottom_));
+      splitter.anchors_.fill(sep);
 
       gops.anchors_.fill(root);
       gops.anchors_.bottom_ = ItemRef::reference(sep, kPropertyTop);
