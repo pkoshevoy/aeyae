@@ -314,9 +314,6 @@ namespace yae
     { return &style_; }
 
     // virtual:
-    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
-
-    // virtual:
     bool resizeTo(const Canvas * canvas);
 
   public slots:

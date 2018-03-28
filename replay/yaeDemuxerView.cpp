@@ -1017,25 +1017,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // RemuxView::processMouseEvent
-  //
-  bool
-  RemuxView::processMouseEvent(Canvas * canvas, QMouseEvent * e)
-  {
-    bool processed = ItemView::processMouseEvent(canvas, e);
-
-    QEvent::Type et = e->type();
-    if (et == QEvent::MouseButtonPress &&
-        (e->button() == Qt::LeftButton) &&
-        !inputHandlers_.empty())
-    {
-      std::cerr << "FIXME: pkoshevoy: left click" << std::endl;
-    }
-
-    return processed;
-  }
-
-  //----------------------------------------------------------------
   // RemuxView::resizeTo
   //
   bool
