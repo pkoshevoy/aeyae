@@ -166,7 +166,7 @@ namespace yae
           revisions.pop_front();
           lru_.erase(revision);
 
-          return TCache::TRefPtr(new TCache::Ref(*this, key, value));
+          return TRefPtr(new Ref(*this, key, value));
         }
       }
 
@@ -186,7 +186,7 @@ namespace yae
         {
           if (assign(ctx, key, value))
           {
-            TCache::TRefPtr ref(new TCache::Ref(*this, key, value));
+            TRefPtr ref(new Ref(*this, key, value));
             referenced_++;
             return ref;
           }
@@ -202,7 +202,7 @@ namespace yae
         cache_[key].referenced_.pop_back();
       }
 
-      return TCache::TRefPtr();
+      return TRefPtr();
     }
 
     //----------------------------------------------------------------
@@ -225,7 +225,7 @@ namespace yae
 
       cache_[key].referenced_.push_back(value);
       referenced_++;
-      return TCache::TRefPtr(new TCache::Ref(*this, key, value));
+      return TRefPtr(new Ref(*this, key, value));
     }
 
     //----------------------------------------------------------------
