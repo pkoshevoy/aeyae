@@ -297,6 +297,7 @@ namespace yae
     // helpers:
     void append_clip(const TClipPtr & clip);
     void remove_clip(std::size_t index);
+    void repeat_clip();
 
   public slots:
     // adjust scrollview position to ensure a given item is visible:

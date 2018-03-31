@@ -713,6 +713,32 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // RepeatClip
+  //
+  struct RepeatClip : public InputArea
+  {
+    RepeatClip(const char * id, RemuxView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.repeat_clip();
+      return true;
+    }
+
+    RemuxView & view_;
+  };
+
+  //----------------------------------------------------------------
   // layout_clips_add
   //
   static void
@@ -734,6 +760,9 @@ namespace yae
     Text & btn_text = btn.addNew<Text>("btn_text");
     btn_text.anchors_.center(btn);
     btn_text.text_ = TVarRef::constant(TVar("+"));
+
+    RepeatClip & btn_ia = root.add<RepeatClip>(new RepeatClip("btn_ia", view));
+    btn_ia.anchors_.fill(btn);
   }
 
 
@@ -1118,6 +1147,45 @@ namespace yae
         break;
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::repeat_clip
+  //
+  void
+  RemuxView::repeat_clip()
+  {
+    RemuxModel & model = *model_;
+    TClipPtr clip_ptr = model.selected_clip();
+    if (!clip_ptr)
+    {
+      return;
+    }
+
+    const Clip & clip = *clip_ptr;
+    const Timeline::Track & track =
+      clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+    Timespan keep(track.pts_.front(), track.pts_.back());
+    if (clip.keep_.t1_ < keep.t1_)
+    {
+      keep.t0_ = clip.keep_.t1_;
+    }
+
+    TClipPtr new_clip(new Clip(clip.demuxer_, clip.track_, keep));
+    if (model.selected_ < model.clips_.size())
+    {
+      model.clips_.insert(model.clips_.begin() + model.selected_ + 1,
+                          new_clip);
+      model.selected_++;
+    }
+    else
+    {
+      model.clips_.push_back(new_clip);
+      model.selected_ = model.clips_.size() - 1;
+    }
+
+    append_clip(new_clip);
   }
 
   //----------------------------------------------------------------
