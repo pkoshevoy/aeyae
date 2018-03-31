@@ -3692,7 +3692,7 @@ namespace yae
 
       if (t1 < dts_span.t0_)
       {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
         av_log(NULL, AV_LOG_INFO,
                "decode_gop skipping %spacket [%s, %s) "
                "because its outside GOP range [%s, %s)\n",

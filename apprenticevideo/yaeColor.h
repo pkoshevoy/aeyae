@@ -77,10 +77,40 @@ namespace yae
       return *this;
     }
 
+    inline TVec4D operator * (const TVec4D & s) const
+    {
+      TVec4D v(*this);
+      v *= s;
+      return v;
+    }
+
     inline TVec4D & operator += (const TVec4D & translate)
     {
       TBase::operator += (translate);
       return *this;
+    }
+
+    inline TVec4D operator + (const TVec4D & t) const
+    {
+      TVec4D v(*this);
+      v += t;
+      return v;
+    }
+
+    inline TVec4D & clamp(double t0 = 0.0, double t1 = 1.0)
+    {
+      TBase::coord_[0] = std::min(t1, std::max(t0, TBase::coord_[0]));
+      TBase::coord_[1] = std::min(t1, std::max(t0, TBase::coord_[1]));
+      TBase::coord_[2] = std::min(t1, std::max(t0, TBase::coord_[2]));
+      TBase::coord_[3] = std::min(t1, std::max(t0, TBase::coord_[3]));
+      return *this;
+    }
+
+    inline TVec4D clamped(double t0 = 0.0, double t1 = 1.0) const
+    {
+      TVec4D v(*this);
+      v.clamp(t0, t1);
+      return v;
     }
   };
 

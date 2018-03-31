@@ -151,9 +151,7 @@ namespace yae
   {
     RemuxViewStyle(const char * id, const ItemView & view);
 
-    TLayoutPtr layout_root_;
-    TLayoutPtr layout_clips_;
-    TLayoutPtr layout_gops_;
+    TLayoutPtr layout_;
 
     // shared common properties:
     ItemRef row_height_;
@@ -315,6 +313,10 @@ namespace yae
 
     // virtual:
     bool resizeTo(const Canvas * canvas);
+
+    // helpers:
+    void append_clip(const TClipPtr & clip);
+    void remove_clip(std::size_t index);
 
   public slots:
     // adjust scrollview position to ensure a given item is visible:
