@@ -278,7 +278,7 @@ namespace yae
   get_pts_order_lut(const Gop & gop, std::vector<std::size_t> & lut)
   {
     const Timeline::Track & track =
-      gop.media_->demuxer_->summary().get_track_timeline(gop.track_);
+      gop.demuxer_->summary().get_track_timeline(gop.track_);
 
     // sort the gop so the pts is in ascending order:
     std::set<std::pair<TTime, std::size_t> > sorted_pts;
@@ -318,12 +318,9 @@ namespace yae
         return;
       }
 
-      // shortcut:
-      Media & media = *(gop_.media_);
-
       // decode and cache the entire GOP:
       decode_gop(// source:
-                 media.demuxer_,
+                 gop_.demuxer_,
                  gop_.track_,
                  gop_.i0_,
                  gop_.i1_,
@@ -590,10 +587,9 @@ namespace yae
     root.visible_ = root.addExpr(new IsClipSelected(model, clip_ptr));
 
     const Clip & clip = *clip_ptr;
-    Media * media = clip.media_.get();
 
     const Timeline::Track & track =
-      media->demuxer_->summary().get_track_timeline(clip.track_);
+      clip.demuxer_->summary().get_track_timeline(clip.track_);
 
     Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
                                     kScrollbarBoth);
@@ -611,7 +607,7 @@ namespace yae
         track.dts_.size() :
         *next;
 
-      Gop gop(media, clip.track_, i0, i1);
+      Gop gop(clip.demuxer_, clip.track_, i0, i1);
 
       GopItem & item = gops.add<GopItem>(new GopItem("gop", gop));
       item.setContext(view);
@@ -639,7 +635,7 @@ namespace yae
     void evaluate(TVar & result) const
     {
       const Clip & clip = *(model_.clips_[index_]);
-      const std::string & name = yae::at(model_.source_, clip.media_);
+      const std::string & name = yae::at(model_.source_, clip.demuxer_);
 
       std::string dirname;
       std::string basename;

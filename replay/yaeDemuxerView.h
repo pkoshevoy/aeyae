@@ -38,39 +38,19 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Media
-  //
-  struct YAE_API Media
-  {
-    Media(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr()):
-      demuxer_(demuxer)
-    {}
-
-    inline bool operator < (const Media & other) const
-    { return demuxer_ < other.demuxer_; }
-
-    TDemuxerInterfacePtr demuxer_;
-  };
-
-  //----------------------------------------------------------------
-  // TMediaPtr
-  //
-  typedef boost::shared_ptr<Media> TMediaPtr;
-
-  //----------------------------------------------------------------
   // Clip
   //
   struct YAE_API Clip
   {
-    Clip(const TMediaPtr & media = TMediaPtr(),
+    Clip(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
          const std::string & track = std::string(),
          const Timespan & keep = Timespan()):
-      media_(media),
+      demuxer_(demuxer),
       track_(track),
       keep_(keep)
     {}
 
-    TMediaPtr media_;
+    TDemuxerInterfacePtr demuxer_;
     std::string track_;
     Timespan keep_;
   };
@@ -92,11 +72,11 @@ namespace yae
     inline TClipPtr selected_clip() const
     { return (selected_ < clips_.size()) ? clips_[selected_] : TClipPtr(); }
 
-    // media, indexed by source path:
-    std::map<std::string, TMediaPtr> media_;
+    // demuxer, indexed by source path:
+    std::map<std::string, TDemuxerInterfacePtr> demuxer_;
 
-    // source path, indexed by media:
-    std::map<TMediaPtr, std::string> source_;
+    // source path, indexed by demuxer:
+    std::map<TDemuxerInterfacePtr, std::string> source_;
 
     // composition of the remuxed output:
     std::vector<TClipPtr> clips_;
@@ -162,11 +142,11 @@ namespace yae
   //
   struct YAE_API Gop
   {
-    Gop(Media * media = NULL,
+    Gop(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
         const std::string & track_id = std::string(),
         std::size_t gop_start_packet_index = 0,
         std::size_t gop_end_packet_index = 0):
-      media_(media),
+      demuxer_(demuxer),
       track_(track_id),
       i0_(gop_start_packet_index),
       i1_(gop_end_packet_index)
@@ -174,8 +154,8 @@ namespace yae
 
     inline bool operator < (const Gop & other) const
     {
-      return (media_ < other.media_ ||
-              (media_ == other.media_ &&
+      return (demuxer_ < other.demuxer_ ||
+              (demuxer_ == other.demuxer_ &&
                (track_ < other.track_ ||
                 (track_ == other.track_ &&
                  (i0_ < other.i0_ ||
@@ -183,7 +163,7 @@ namespace yae
                    i1_ < other.i1_))))));
     }
 
-    Media * media_;
+    TDemuxerInterfacePtr demuxer_;
     std::string track_;
     std::size_t i0_;
     std::size_t i1_;
@@ -195,7 +175,7 @@ namespace yae
   inline std::ostream &
   operator << (std::ostream & os, const Gop & gop)
   {
-    os << gop.media_ << ' ' << gop.track_ << ' ' << gop.i0_ << ' ' << gop.i1_;
+    os << gop.demuxer_ << ' ' << gop.track_ << ' ' << gop.i0_ << ' ' << gop.i1_;
     return os;
   }
 

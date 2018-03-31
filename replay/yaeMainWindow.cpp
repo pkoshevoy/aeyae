@@ -241,9 +241,8 @@ namespace yae
       parallel_demuxers[source] = parallel_demuxer;
 
       // update the model:
-      TMediaPtr media(new Media(parallel_demuxer));
-      model_.media_[source] = media;
-      model_.source_[media] = source;
+      model_.demuxer_[source] = parallel_demuxer;
+      model_.source_[parallel_demuxer] = source;
 
 #if 0
       // show the summary:
@@ -278,8 +277,9 @@ namespace yae
         continue;
       }
 
-      const TMediaPtr & media = yae::at(model_.media_, trim.source_);
-      const TDemuxerInterfacePtr & demuxer = media->demuxer_;
+      const TDemuxerInterfacePtr & demuxer =
+        yae::at(model_.demuxer_, trim.source_);
+
       const DemuxerSummary & summary = demuxer->summary();
 
       if (!yae::has(summary.decoders_, track_id))
@@ -306,11 +306,12 @@ namespace yae
         av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
       }
 
-      model_.clips_.push_back(TClipPtr(new Clip(media, track_id, keep)));
+      TClipPtr clip(new Clip(demuxer, track_id, keep));
+      model_.clips_.push_back(clip);
+      view_.append_clip(clip);
     }
 
     model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
-    view_.layoutChanged();
   }
 
   //----------------------------------------------------------------
