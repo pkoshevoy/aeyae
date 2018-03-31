@@ -531,7 +531,7 @@ namespace yae
 
     template <typename TData>
     TData
-    attr(const char * name, const TData & defaultValue = TData())
+    attr(const char * name, const TData & defaultValue = TData()) const
     {
       TData value = defaultValue;
       getAttr(std::string(name), value);
@@ -540,7 +540,7 @@ namespace yae
 
     template <typename TData>
     TData
-    attr(const std::string & name, const TData & defaultValue = TData())
+    attr(const std::string & name, const TData & defaultValue = TData()) const
     {
       TData value = defaultValue;
       getAttr(name, value);
