@@ -46,6 +46,13 @@ namespace yae
     }
 
     inputHandlers.push_back(InputHandler(this, itemCSysOrigin));
+
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      child->getInputHandlers(itemCSysOrigin, itemCSysPoint, inputHandlers);
+    }
   }
 
   //----------------------------------------------------------------
