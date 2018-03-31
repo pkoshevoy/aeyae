@@ -303,7 +303,8 @@ namespace yae
   //
   struct YAE_API DecodeGop : public AsyncTaskQueue::Task
   {
-    DecodeGop(const Gop & gop):
+    DecodeGop(const boost::weak_ptr<Item> & item, const Gop & gop):
+      item_(item),
       gop_(gop),
       frames_(new TVideoFrames())
     {}
@@ -359,7 +360,11 @@ namespace yae
       task.fps_.push(vf.time_);
     }
 
+    inline ItemPtr item() const
+    { return item_.lock(); }
+
   protected:
+    boost::weak_ptr<Item> item_;
     Gop gop_;
     TVideoFramesPtr frames_;
     FramerateEstimator fps_;
@@ -401,8 +406,8 @@ namespace yae
     }
 
     AsyncTaskQueue & queue = async_task_queue();
-    async_.reset(new DecodeGop(gop_));
-    queue.add(async_, &GopItem::cb, const_cast<GopItem *>(this));
+    async_.reset(new DecodeGop(self_, gop_));
+    queue.add(async_, &GopItem::cb);
   }
 
   //----------------------------------------------------------------
@@ -420,9 +425,25 @@ namespace yae
   // GopItem::cb
   //
   void
-  GopItem::cb(const boost::shared_ptr<AsyncTaskQueue::Task> &, void * ctx)
+  GopItem::cb(const boost::shared_ptr<AsyncTaskQueue::Task> & task_ptr, void *)
   {
-    GopItem & item = *((GopItem *)ctx);
+    boost::shared_ptr<DecodeGop> task =
+      boost::dynamic_pointer_cast<DecodeGop>(task_ptr);
+    if (!task)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    ItemPtr item_ptr = task->item();
+    if (!item_ptr)
+    {
+      // task owner no longer exists, ignore the results:
+      return;
+    }
+
+    // shortcut:
+    GopItem & item = dynamic_cast<GopItem &>(*item_ptr);
 
     boost::lock_guard<boost::mutex> lock(item.mutex_);
     if (!item.async_)
@@ -638,6 +659,70 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // RemoveClip
+  //
+  struct RemoveClip : public InputArea
+  {
+    RemoveClip(const char * id,
+               RemuxModel & model,
+               RemuxView & view,
+               const RemuxViewStyle & style,
+               std::size_t index):
+      InputArea(id),
+      model_(model),
+      view_(view),
+      style_(style),
+      index_(index)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      TClipPtr clip = model_.clips_[index_];
+      Item & root = *view_.root();
+      Item & gops = root["gops"];
+      Item & clips_container =
+        *(root["clips"].
+          get<Scrollview>("clips.scrollview").
+          content_);
+
+      for (std::vector<ItemPtr>::iterator
+             i = gops.children_.begin(); i != gops.children_.end(); ++i)
+      {
+        const Item & item = *(*i);
+        const IsClipSelected * found =
+          dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
+
+        if (found && found->clip_ == clip)
+        {
+          // clips.children_.erase(clips.children_.begin() + index_);
+          model_.clips_.erase(model_.clips_.begin() + index_);
+          model_.selected_ = std::min(index_, model_.clips_.size() - 1);
+
+          gops.children_.erase(i);
+          clips_container.children_.clear();
+          style_.layout_clips_->layout(clips_container, view_, model_, style_);
+          view_.dataChanged();
+          break;
+        }
+      }
+
+      return true;
+    }
+
+    RemuxModel & model_;
+    RemuxView & view_;
+    const RemuxViewStyle & style_;
+    std::size_t index_;
+  };
+
+  //----------------------------------------------------------------
   // layout_clip
   //
   static void
@@ -667,6 +752,10 @@ namespace yae
     src_name.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideLeft;
+
+    RemoveClip & btn_ia = root.
+      add<RemoveClip>(new RemoveClip("remove_ia", model, view, style, index));
+    btn_ia.anchors_.fill(btn);
   }
 
   //----------------------------------------------------------------

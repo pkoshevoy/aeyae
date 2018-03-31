@@ -261,10 +261,16 @@ namespace yae
             }
             catch (const std::exception & e)
             {
+              std::cerr
+                << "AsyncTaskQueue task exception: " << e.what()
+                << std::endl;
               YAE_ASSERT(false);
             }
             catch (...)
             {
+              std::cerr
+                << "AsyncTaskQueue, unknown task exception"
+                << std::endl;
               YAE_ASSERT(false);
             }
 
