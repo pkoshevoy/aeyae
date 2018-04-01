@@ -8,6 +8,7 @@
 
 // Qt library:
 #include <QFontInfo>
+#include <QFontMetricsF>
 
 // local:
 #include "yaeDemuxerView.h"
@@ -840,11 +841,15 @@ namespace yae
     btn_text.text_ = TVarRef::constant(TVar("-"));
 
     Text & src_name = root.addNew<Text>("src_name");
-    src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 2.6);
-    src_name.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
+    src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
+    src_name.anchors_.vcenter_ =
+      src_name.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
     src_name.width_ = ItemRef::reference(style.row_height_, 5.0);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideMiddle;
+    src_name.font_ = style.font_;
+    src_name.fontSize_ = ItemRef::scale(root, kPropertyHeight,
+                                        0.33333333 * kDpiScale);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
@@ -1159,7 +1164,7 @@ namespace yae
 #if 0
     row_height_ = ItemRef::reference(title_height_, 0.55);
 #else
-    row_height_ = ItemRef::constant(42.0 * kDpiScale);
+    row_height_ = ItemRef::constant(QFontMetricsF(font_).height() * 2.0);
 #endif
   }
 
