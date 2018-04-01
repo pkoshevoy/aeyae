@@ -12,6 +12,7 @@
 // local:
 #include "yaeDemuxerView.h"
 #include "yaeFlickableArea.h"
+#include "yaeItemFocus.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
@@ -677,6 +678,144 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetTimecodeText
+  //
+  struct GetTimecodeText : public TVarExpr
+  {
+    GetTimecodeText(const RemuxModel & model,
+                    std::size_t index,
+                    TTime Timespan::* field):
+      model_(model),
+      index_(index),
+      field_(field)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (index_ < model_.clips_.size())
+      {
+        const Clip & clip = *(model_.clips_[index_]);
+        const TTime & t = clip.keep_.*field_;
+        result = QString::fromUtf8(t.to_hhmmss_ms().c_str());
+      }
+      else
+      {
+        result = QVariant();
+      }
+    }
+
+    const RemuxModel & model_;
+    const std::size_t index_;
+    TTime Timespan::* field_;
+  };
+
+  //----------------------------------------------------------------
+  // str
+  //
+  template <typename TData>
+  inline static std::string
+  str(const std::string & a, const TData & b)
+  {
+    std::ostringstream oss;
+    oss << a << b;
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
+  // str
+  //
+  template <typename TData>
+  inline static std::string
+  str(const char * a, const TData & b)
+  {
+    std::ostringstream oss;
+    oss << a << b;
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
+  // layout_timeedit
+  //
+  static Text &
+  layout_timeedit(RemuxModel & model,
+                  RemuxView & view,
+                  const RemuxViewStyle & style,
+                  Item & root,
+                  std::size_t index,
+                  TTime Timespan::* field)
+  {
+    int subindex = (field == &Timespan::t0_) ? 0 : 1;
+    int focus_index = index * 2 + subindex;
+
+    Rectangle & text_bg = root.addNew<Rectangle>
+      (str("text_bg_", focus_index).c_str());
+
+    Text & text = root.addNew<Text>
+      (str("text_", focus_index).c_str());
+
+    TextInput & edit = root.addNew<TextInput>
+      (str("edit_", focus_index).c_str());
+
+    TextInputProxy & focus = root.
+      add(new TextInputProxy(str("focus_", focus_index).c_str(), text, edit));
+
+    focus.anchors_.fill(text_bg);
+    focus.copyViewToEdit_ = true;
+    focus.bgNoFocus_ = style.bg_timecode_;
+    focus.bgOnFocus_ = style.bg_focus_;
+
+    ItemFocus::singleton().setFocusable(view, focus, focus_index);
+
+    text.anchors_.vcenter_ =
+      text.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
+
+    text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+    text.color_ = style.fg_timecode_;
+    text.text_ = text.addExpr(new GetTimecodeText(model, index, field));
+    text.font_ = style.font_fixed_;
+    text.fontSize_ = ItemRef::scale(root, kPropertyHeight,
+                                    0.33333333 * kDpiScale);
+
+    text_bg.anchors_.offset(text, -3, 3, -3, 3);
+    text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+
+    edit.anchors_.fill(text);
+    edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
+    edit.visible_ = edit.addExpr(new ShowWhenFocused(focus, true));
+
+    edit.color_ = style.fg_focus_;
+    edit.cursorColor_ = style.cursor_;
+    edit.font_ = text.font_;
+    edit.fontSize_ = text.fontSize_;
+    edit.selectionBg_ = style.bg_edit_selected_;
+    edit.selectionFg_ = style.fg_edit_selected_;
+
+    return text;
+  }
+
+  //----------------------------------------------------------------
+  // layout_timeline
+  //
+  static void
+  layout_timeline(RemuxModel & model,
+                  RemuxView & view,
+                  const RemuxViewStyle & style,
+                  Item & root,
+                  std::size_t index)
+  {
+    Text & t0_text =
+      layout_timeedit(model, view, style, root, index, &Timespan::t0_);
+    t0_text.anchors_.left_ = ItemRef::offset(root, kPropertyLeft, 3);
+    t0_text.margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.1);
+
+    Text & t1_text =
+      layout_timeedit(model, view, style, root, index, &Timespan::t1_);
+    t1_text.anchors_.right_ = ItemRef::offset(root, kPropertyRight, -3);
+    t1_text.margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+  }
+
+  //----------------------------------------------------------------
   // layout_clip
   //
   static void
@@ -702,10 +841,17 @@ namespace yae
 
     Text & src_name = root.addNew<Text>("src_name");
     src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 2.6);
-    src_name.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     src_name.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
+    src_name.width_ = ItemRef::reference(style.row_height_, 5.0);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
-    src_name.elide_ = Qt::ElideLeft;
+    src_name.elide_ = Qt::ElideMiddle;
+
+    Item & timeline = root.addNew<Item>("timeline");
+    timeline.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+    timeline.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+    timeline.anchors_.left_ = ItemRef::reference(src_name, kPropertyRight);
+    timeline.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+    layout_timeline(model, view, style, timeline, index);
 
     RemoveClip & btn_ia = root.add<RemoveClip>
       (new RemoveClip("btn_ia", view, index));
@@ -878,31 +1024,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ClipsRowYPos
-  //
-  struct ClipsRowYPos : public TDoubleExpr
-  {
-    ClipsRowYPos(const Item & root,
-                 const RemuxViewStyle & style,
-                 std::size_t index):
-      root_(root),
-      style_(style),
-      index_(index)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      result = root_.top() + style_.row_height_.get() * double(index_);
-    }
-
-    const Item & root_;
-    const RemuxViewStyle & style_;
-    std::size_t index_;
-  };
-
-
-  //----------------------------------------------------------------
   // VSplitter
   //
   struct VSplitter : public InputArea
@@ -987,7 +1108,7 @@ namespace yae
       sep.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
       // sep.anchors_.vcenter_ = ItemRef::scale(root, kPropertyHeight, 0.75);
       sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -100);
-      sep.height_ = ItemRef::reference(style.title_height_, 0.1);
+      sep.height_ = ItemRef::reference(style.row_height_, 0.15);
       sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
 
       VSplitter & splitter = root.
@@ -1035,7 +1156,11 @@ namespace yae
     ItemViewStyle(id, view),
     layout_(new RemuxLayout())
   {
+#if 0
     row_height_ = ItemRef::reference(title_height_, 0.55);
+#else
+    row_height_ = ItemRef::constant(42.0 * kDpiScale);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1097,8 +1222,19 @@ namespace yae
     ClipItem & row = clip_list.add(new ClipItem("row", model, view, index));
     row.anchors_.left_ = ItemRef::reference(clip_list, kPropertyLeft);
     row.anchors_.right_ = ItemRef::reference(clip_list, kPropertyRight);
-    row.anchors_.top_ = row.addExpr(new ClipsRowYPos(root, style_, index));
+#if 0
+    row.anchors_.top_ = (index > 0) ?
+      ItemRef::reference(*(clip_list.children_[index - 1]), kPropertyBottom) :
+      ItemRef::reference(clip_list, kPropertyTop);
     row.height_ = ItemRef::reference(style_.row_height_);
+#else
+    row.anchors_.top_ = (index > 0) ?
+      row.addExpr(new OddRoundUp(*(clip_list.children_[index - 1]),
+                                 kPropertyBottom)) :
+      row.addExpr(new OddRoundUp(clip_list, kPropertyTop));
+    row.height_ =
+      row.addExpr(new OddRoundUp(clips_add, kPropertyHeight));
+#endif
 
     Rectangle & bg = row.addNew<Rectangle>("bg");
     bg.anchors_.fill(row);

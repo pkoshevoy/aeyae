@@ -74,6 +74,7 @@ namespace yae
     {
       ref_ = NULL;
       property_ = kPropertyUnspecified;
+      cachingEnabled_ = true;
     }
 
     // constructor helpers:
@@ -193,11 +194,22 @@ namespace yae
     //
     ItemRef(const TDataRef & dataRef,
             double scale = 1.0,
-            double translate = 0.0):
+            double translate = 0.0,
+            bool cachingEnabled = true):
       TDataRef(dataRef),
       scale_(scale),
       translate_(translate)
-    {}
+    {
+      cachingEnabled_ = cachingEnabled;
+
+      if (property_ == kPropertyConstant)
+      {
+        // pre-evaluate constant values:
+        value_ = value_ * scale + translate;
+        scale_ = 1.0;
+        translate_ = 0.0;
+      }
+    }
 
     inline void reset()
     {
@@ -224,14 +236,21 @@ namespace yae
     inline static ItemRef
     reference(const TDataRef & dataRef,
               double s = 1.0,
-              double t = 0.0)
-    { return ItemRef(dataRef, s, t); }
+              double t = 0.0,
+              bool cachingEnabled = true)
+    { return ItemRef(dataRef, s, t, cachingEnabled); }
 
     inline static ItemRef
     reference(const ItemRef & dataRef,
               double s = 1.0,
-              double t = 0.0)
-    { return ItemRef(dataRef, s * dataRef.scale_, s * dataRef.translate_ + t); }
+              double t = 0.0,
+              bool cachingEnabled = true)
+    {
+      return ItemRef(dataRef,
+                     s * dataRef.scale_,
+                     s * dataRef.translate_ + t,
+                     cachingEnabled);
+    }
 
     inline static ItemRef
     uncacheable(const TDataRef & dataRef,
@@ -362,7 +381,7 @@ namespace yae
       scale_(1.0, 1.0, 1.0, 1.0),
       translate_(0.0, 0.0, 0.0, 0.0)
     {}
-
+    /*
     //----------------------------------------------------------------
     // ColorRef
     //
@@ -373,7 +392,7 @@ namespace yae
       scale_(scale),
       translate_(translate)
     {}
-
+    */
     //----------------------------------------------------------------
     // ColorRef
     //
