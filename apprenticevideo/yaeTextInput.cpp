@@ -380,11 +380,34 @@ namespace yae
       QPointF offset(-offset_, yoffset);
 
       QPainter painter(&img);
+      painter.setRenderHints(QPainter::TextAntialiasing);
       textLayout_.draw(&painter, offset, ranges);
 
-      const Color & cursorColor = item.cursorColor_.get();
-      painter.setPen(QColor(cursorColor));
+      QColor cursorColor(item.cursorColor_.get());
+      QPen cursorPen(cursorColor);
+      painter.setPen(cursorPen);
+
+      // It appears Qt 5.9.3+ QTextLayout::drawCursor uses
+      // QPainter::RasterOp_NotDestination composition mode,
+      // which doesn't work as expected with a custom cursor color:
+#if 0
       textLayout_.drawCursor(&painter, offset, cursorPos, cursorWidth);
+#else
+      if (cursorWidth > 1)
+      {
+        painter.setCompositionMode(QPainter::CompositionMode_Multiply);
+      }
+      else
+      {
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
+      }
+
+      painter.fillRect(cx0 - offset_,
+                       -yoffset,
+                       cx1 - cx0,
+                       lineHeight,
+                       cursorPen.brush());
+#endif
     }
 
     // do not upload supersampled texture at full size, scale down first:

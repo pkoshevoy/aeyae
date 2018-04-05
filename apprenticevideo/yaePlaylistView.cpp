@@ -695,7 +695,7 @@ namespace yae
     text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
 
     edit.anchors_.fill(text);
-    edit.margins_.left_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
+    edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
     edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
     edit.background_ = colorEditBg;
     edit.color_ = colorFocusFg;
