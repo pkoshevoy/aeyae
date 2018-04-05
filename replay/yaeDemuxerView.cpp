@@ -484,16 +484,15 @@ namespace yae
     std::vector<std::size_t> lut;
     get_pts_order_lut(gop, lut);
 
-    const Item * prev = NULL;
     for (std::size_t i = gop.i0_; i < gop.i1_; i++)
     {
-      std::size_t j = lut[i - gop.i0_];
+      std::size_t k = i - gop.i0_;
+      std::size_t j = lut[k];
 
       RoundRect & frame = root.addNew<RoundRect>("frame");
       frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
-      frame.anchors_.left_ = prev ?
-        frame.addExpr(new OddRoundUp(*prev, kPropertyRight)) :
-        ItemRef::reference(root, kPropertyLeft, 0.0, 1);
+      frame.anchors_.left_ =
+        ItemRef::reference(root, kPropertyLeft, 1, 1 + k * 130);
 
       // frame.height_ = ItemRef::reference(style.title_height_, 3.0);
       // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
@@ -548,8 +547,6 @@ namespace yae
       pts.elide_ = Qt::ElideNone;
       pts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       pts.background_ = frame.color_;
-
-      prev = &frame;
     }
   }
 
@@ -596,9 +593,9 @@ namespace yae
     Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
                                     kScrollbarBoth);
 
-    const Item * prev = NULL;
-    for (std::set<std::size_t>::const_iterator
-           i = track.keyframes_.begin(); i != track.keyframes_.end(); ++i)
+    std::size_t row = 0;
+    for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();
+         i != track.keyframes_.end(); ++i, row++)
     {
       std::set<std::size_t>::const_iterator next = i;
       std::advance(next, 1);
@@ -614,12 +611,10 @@ namespace yae
       GopItem & item = gops.add<GopItem>(new GopItem("gop", gop));
       item.setContext(view);
       item.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
-      item.anchors_.top_ = prev ?
-        item.addExpr(new OddRoundUp(*prev, kPropertyBottom)) :
-        ItemRef::reference(gops, kPropertyTop, 0.0, 1);
+      item.anchors_.top_ =
+        ItemRef::reference(gops, kPropertyTop, 1, 1 + row * 100);
 
       layout_gop(clip, track, view, style, item, gop);
-      prev = &item;
     }
   }
 
@@ -844,7 +839,7 @@ namespace yae
     src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
     src_name.anchors_.vcenter_ =
       src_name.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
-    src_name.width_ = ItemRef::reference(style.row_height_, 5.0);
+    src_name.width_ = ItemRef::reference(style.row_height_, 10.0);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideMiddle;
     src_name.font_ = style.font_;

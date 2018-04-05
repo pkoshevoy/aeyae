@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <list>
 #include <map>
+#include <set>
 #include <stdexcept>
 #include <string.h>
 #include <sstream>
