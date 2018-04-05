@@ -3690,9 +3690,10 @@ namespace yae
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
       TTime t1 = t0 + dt;
 
+#if 0
       if (t1 < dts_span.t0_)
       {
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
         av_log(NULL, AV_LOG_INFO,
                "decode_gop skipping %spacket [%s, %s) "
                "because its outside GOP range [%s, %s)\n",
@@ -3704,6 +3705,7 @@ namespace yae
 #endif
         continue;
       }
+#endif
 
       if (dts_span.t1_ < t0)
       {
