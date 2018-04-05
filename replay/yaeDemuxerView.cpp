@@ -508,6 +508,7 @@ namespace yae
         addExpr(new FrameColor(clip, span,
                                style.cursor_.get(),
                                style.scrollbar_.get()));
+      frame.color_.cachingEnabled_ = false;
 
       VideoFrameItem & video = frame.add(new VideoFrameItem("video", i));
       video.anchors_.fill(frame, 1);
@@ -592,6 +593,9 @@ namespace yae
 
     Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
                                     kScrollbarBoth);
+
+    Scrollview & sv = root.get<Scrollview>("clip_layout.scrollview");
+    sv.uncacheContent_ = false;
 
     std::size_t row = 0;
     for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();

@@ -100,7 +100,9 @@ namespace yae
   //
   struct YAE_API Scrollview : public Item
   {
-    Scrollview(const char * id, bool clipContent = false);
+    Scrollview(const char * id,
+               bool clipContent = false,
+               bool uncacheContent = true);
 
     // helper:
     void getContentView(TVec2D & origin,
@@ -160,6 +162,10 @@ namespace yae
 
     // set to true to clip content that extends beyond the scroll view:
     bool clipContent_;
+
+    // set to false if content doesn't need to be uncached
+    // together with the scrollview:
+    bool uncacheContent_;
   };
 
   //----------------------------------------------------------------

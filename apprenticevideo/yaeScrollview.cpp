@@ -154,10 +154,13 @@ namespace yae
   //----------------------------------------------------------------
   // Scrollview::Scrollview
   //
-  Scrollview::Scrollview(const char * id, bool clipContent):
+  Scrollview::Scrollview(const char * id,
+                         bool clipContent,
+                         bool uncacheContent):
     Item(id),
     content_(new Item((std::string(id) + ".content").c_str())),
-    clipContent_(clipContent)
+    clipContent_(clipContent),
+    uncacheContent_(uncacheContent)
   {
     content_->self_ = content_;
   }
@@ -169,7 +172,11 @@ namespace yae
   Scrollview::uncache()
   {
     Item::uncache();
-    content_->uncache();
+
+    if (uncacheContent_)
+    {
+      content_->uncache();
+    }
   }
 
   //----------------------------------------------------------------
