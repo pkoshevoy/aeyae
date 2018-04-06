@@ -873,6 +873,12 @@ namespace yae
     font_small_.setHintingPreference(QFont::PreferFullHinting);
 #endif
 
+    font_small_.setFamily("Segoe UI, "
+                          "Arial, "
+                          "Helvetica, "
+                          "DejaVu Sans, "
+                          "Bitstream Vera Sans");
+
     font_small_.setStyleHint(QFont::SansSerif);
     font_small_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |

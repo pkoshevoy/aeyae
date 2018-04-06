@@ -268,6 +268,7 @@ namespace yae
       img.fill(QColor(bg).rgba());
 
       QPainter painter(&img);
+      painter.setRenderHints(QPainter::TextAntialiasing);
       QFont font = item.font_;
       double fontSize = item.fontSize_.get();
       font.setPointSizeF(fontSize * supersample);

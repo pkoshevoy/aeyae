@@ -523,9 +523,6 @@ namespace yae
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
       dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
-#if 0 // defined(__APPLE__)
-      dts.supersample_ = dts.addExpr(new Supersample<Text>(dts));
-#endif
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       dts.background_ = frame.color_;
@@ -542,9 +539,6 @@ namespace yae
       pts.visible_ = pts.addExpr(new HasFramePts(video));
       pts.text_ = pts.addExpr(new GetFramePts(video));
       pts.fontSize_ = dts.fontSize_;
-#if 0 // defined(__APPLE__)
-      pts.supersample_ = pts.addExpr(new Supersample<Text>(pts));
-#endif
       pts.elide_ = Qt::ElideNone;
       pts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       pts.background_ = frame.color_;
@@ -762,8 +756,8 @@ namespace yae
 
     focus.anchors_.fill(text_bg);
     focus.copyViewToEdit_ = true;
-    focus.bgNoFocus_ = style.bg_timecode_;
-    focus.bgOnFocus_ = style.bg_focus_;
+    focus.bgNoFocus_ = ColorRef::constant(Color(0, 0.0));
+    focus.bgOnFocus_ = ColorRef::constant(Color(0, 0.3));
 
     ItemFocus::singleton().setFocusable(view, focus, focus_index);
 
@@ -772,19 +766,23 @@ namespace yae
 
     text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
     text.color_ = style.fg_timecode_;
+    text.background_ = ColorRef::transparent(focus, kPropertyColorNoFocusBg);
     text.text_ = text.addExpr(new GetTimecodeText(model, index, field));
     text.font_ = style.font_fixed_;
     text.fontSize_ = ItemRef::scale(root, kPropertyHeight,
-                                    0.33333333 * kDpiScale);
+                                    // 0.33333333 * kDpiScale);
+                                    0.38 * kDpiScale);
 
     text_bg.anchors_.offset(text, -3, 3, -3, 3);
     text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+    text_bg.color_.cachingEnabled_ = false;
 
     edit.anchors_.fill(text);
     edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
     edit.visible_ = edit.addExpr(new ShowWhenFocused(focus, true));
 
-    edit.color_ = style.fg_focus_;
+    edit.color_ = style.fg_timecode_;
+    edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
     edit.cursorColor_ = style.cursor_;
     edit.font_ = text.font_;
     edit.fontSize_ = text.fontSize_;
@@ -846,9 +844,12 @@ namespace yae
     src_name.width_ = ItemRef::reference(style.row_height_, 10.0);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideMiddle;
-    src_name.font_ = style.font_;
+    src_name.font_ = style.font_small_;
+    src_name.color_ = style.fg_timecode_;
+    src_name.background_ = ColorRef::constant(style.bg_.get().transparent());
     src_name.fontSize_ = ItemRef::scale(root, kPropertyHeight,
-                                        0.33333333 * kDpiScale);
+                                        // 0.33333333 * kDpiScale);
+                                        0.37 * kDpiScale);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
@@ -1164,7 +1165,7 @@ namespace yae
     row_height_ = ItemRef::reference(title_height_, 0.55);
 #else
     double fh = QFontMetricsF(font_).height();
-    fh = std::max(fh, 11.0);
+    fh = std::max(fh, 13.0);
     row_height_ = ItemRef::constant(fh * 2.0);
 #endif
   }
