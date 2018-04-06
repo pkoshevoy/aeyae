@@ -1163,7 +1163,9 @@ namespace yae
 #if 0
     row_height_ = ItemRef::reference(title_height_, 0.55);
 #else
-    row_height_ = ItemRef::constant(QFontMetricsF(font_).height() * 2.0);
+    double fh = QFontMetricsF(font_).height();
+    fh = std::max(fh, 11.0);
+    row_height_ = ItemRef::constant(fh * 2.0);
 #endif
   }
 
