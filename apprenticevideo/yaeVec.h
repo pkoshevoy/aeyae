@@ -43,6 +43,22 @@ namespace yae
       return coord_[i];
     }
 
+    inline bool operator == (const TVec & v) const
+    {
+      bool eq = true;
+      for (unsigned int i = 0; eq && i < Cardinality; i++)
+      {
+        eq = coord_[i] == v.coord_[i];
+      }
+
+      return eq;
+    }
+
+    inline bool operator != (const TVec & v) const
+    {
+      return !(this->operator == (v));
+    }
+
     inline TVec & operator *= (const TData & scale)
     {
       for (unsigned int i = 0; i < Cardinality; i++)

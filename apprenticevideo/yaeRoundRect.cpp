@@ -26,10 +26,53 @@ namespace yae
     TPrivate();
     ~TPrivate();
 
+    struct Signature
+    {
+      Signature():
+        r_(-std::numeric_limits<double>::max()),
+        b_(-std::numeric_limits<double>::max())
+      {}
+
+      Signature(const RoundRect & rr)
+      {
+        assign(rr);
+      }
+
+      inline bool operator == (const Signature & sig) const
+      {
+        return (r_ == sig.r_ &&
+                b_ == sig.b_ &&
+                fg_ == sig.fg_ &&
+                cb_ == sig.cb_ &&
+                bg_ == sig.bg_);
+      }
+
+      inline bool operator != (const Signature & sig) const
+      {
+        return !(this->operator == (sig));
+      }
+
+      void assign(const RoundRect & rr)
+      {
+        r_ = rr.radius_.get();
+        b_ = rr.radius_.get();
+        fg_ = rr.color_.get();
+        cb_ = rr.colorBorder_.get();
+        bg_ = rr.background_.get();
+      }
+
+      double r_;
+      double b_;
+      Vec<double, 4> fg_; // color
+      Vec<double, 4> cb_; // color border
+      Vec<double, 4> bg_; // background
+    };
+
     void uncache();
     bool uploadTexture(const RoundRect & item);
     void paint(const RoundRect & item);
 
+    Signature sig_;
     BoolRef ready_;
     GLuint texId_;
     GLuint iw_;
@@ -70,6 +113,8 @@ namespace yae
   bool
   RoundRect::TPrivate::uploadTexture(const RoundRect & item)
   {
+    sig_.assign(item);
+
     // get the corner radius:
     double r = item.radius_.get();
 
@@ -252,8 +297,8 @@ namespace yae
 
     YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
     YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-
   }
+
 
   //----------------------------------------------------------------
   // RoundRect::RoundRect
@@ -301,6 +346,11 @@ namespace yae
   void
   RoundRect::paintContent() const
   {
+    if (p_->ready_.get() && p_->sig_ != TPrivate::Signature(*this))
+    {
+      p_->uncache();
+    }
+
     if (p_->ready_.get())
     {
       p_->paint(*this);

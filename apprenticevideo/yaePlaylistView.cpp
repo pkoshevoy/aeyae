@@ -682,6 +682,7 @@ namespace yae
       TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
 
     filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy));
+    filter.color_.cachingEnabled_ = false;
 
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);

@@ -40,7 +40,7 @@ namespace yae
 {
 
   // forward declarations:
-  class ItemViewStyle;
+  struct ItemViewStyle;
 
 
   // helper: convert from device independent "pixels" to device pixels:
