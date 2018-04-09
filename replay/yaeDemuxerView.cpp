@@ -769,9 +769,7 @@ namespace yae
     text.background_ = ColorRef::transparent(focus, kPropertyColorNoFocusBg);
     text.text_ = text.addExpr(new GetTimecodeText(model, index, field));
     text.font_ = style.font_fixed_;
-    text.fontSize_ = ItemRef::scale(root, kPropertyHeight,
-                                    // 0.33333333 * kDpiScale);
-                                    0.38 * kDpiScale);
+    text.fontSize_ = ItemRef::scale(root, kPropertyHeight, 0.285);
 
     text_bg.anchors_.offset(text, -3, 3, -3, 3);
     text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
@@ -847,9 +845,7 @@ namespace yae
     src_name.font_ = style.font_small_;
     src_name.color_ = style.fg_timecode_;
     src_name.background_ = ColorRef::constant(style.bg_.get().transparent());
-    src_name.fontSize_ = ItemRef::scale(root, kPropertyHeight,
-                                        // 0.33333333 * kDpiScale);
-                                        0.37 * kDpiScale);
+    src_name.fontSize_ = ItemRef::scale(root, kPropertyHeight, 0.2775);
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
