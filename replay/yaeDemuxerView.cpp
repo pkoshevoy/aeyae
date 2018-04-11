@@ -23,37 +23,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // IsMouseOver
-  //
-  struct IsMouseOver : public TBoolExpr
-  {
-    IsMouseOver(const ItemView & view,
-                const Scrollview & sview,
-                const Item & item):
-      view_(view),
-      sview_(sview),
-      item_(item)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      TVec2D origin;
-      Segment xView;
-      Segment yView;
-      sview_.getContentView(origin, xView, yView);
-
-      const TVec2D & pt = view_.mousePt();
-      TVec2D lcs_pt = pt - origin;
-      result = item_.overlaps(lcs_pt);
-    }
-
-    const ItemView & view_;
-    const Scrollview & sview_;
-    const Item & item_;
-  };
-
-  //----------------------------------------------------------------
   // ClearTextInput
   //
   struct ClearTextInput : public InputArea
@@ -729,9 +698,40 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextEdit
+  //
+  struct TextEdit
+  {
+    TextEdit(Rectangle * bg = NULL,
+             Text * text = NULL,
+             TextInput * edit = NULL,
+             TextInputProxy * focus = NULL):
+      bg_(bg),
+      text_(text),
+      edit_(edit),
+      focus_(focus)
+    {}
+
+    TextEdit(Rectangle & bg,
+             Text & text,
+             TextInput & edit,
+             TextInputProxy & focus):
+      bg_(&bg),
+      text_(&text),
+      edit_(&edit),
+      focus_(&focus)
+    {}
+
+    Rectangle * bg_;
+    Text * text_;
+    TextInput * edit_;
+    TextInputProxy * focus_;
+  };
+
+  //----------------------------------------------------------------
   // layout_timeedit
   //
-  static Text &
+  static TextEdit
   layout_timeedit(RemuxModel & model,
                   RemuxView & view,
                   const RemuxViewStyle & style,
@@ -787,8 +787,111 @@ namespace yae
     edit.selectionBg_ = style.bg_edit_selected_;
     edit.selectionFg_ = style.fg_edit_selected_;
 
-    return text;
+    TextEdit r(text_bg, text, edit, focus);
+    return r;
   }
+
+  //----------------------------------------------------------------
+  // TimelinePos
+  //
+  struct TimelinePos : public TDoubleExpr
+  {
+    TimelinePos(const Item & timeline,
+                const RemuxModel & model,
+                std::size_t index,
+                TTime Timespan::* field):
+      timeline_(timeline),
+      model_(model),
+      index_(index),
+      field_(field)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      if (index_ >= model_.clips_.size())
+      {
+        YAE_ASSERT(false);
+        return;
+      }
+
+      const Clip & clip = *(model_.clips_[index_]);
+      const TTime & tt = clip.keep_.*field_;
+
+      const Timeline::Track & track =
+        clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+      const TTime & t0 = track.pts_span_.front().t0_;
+      const TTime & t1 = track.pts_span_.back().t1_;
+
+      double dt = (t1 - t0).sec();
+      double t = tt.sec();
+
+      double x0 = timeline_.left();
+      double w = timeline_.width();
+      double s = dt <= 0 ? 0.0 : (t / dt);
+      result = x0 + s * w;
+    }
+
+    const Item & timeline_;
+    const RemuxModel & model_;
+    std::size_t index_;
+    TTime Timespan::* field_;
+  };
+
+  //----------------------------------------------------------------
+  // TimelineHeight
+  //
+  struct TimelineHeight : public TDoubleExpr
+  {
+    TimelineHeight(ItemView & view, Item & container, Item & timeline):
+      view_(view),
+      container_(container),
+      timeline_(timeline)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      int h = std::max<int>(1, ~1 & (int(0.5 + timeline_.height()) / 8));
+
+      const std::list<VisibleItem> & items = view_.mouseOverItems();
+      if (yae::find(items, container_) != items.end())
+      {
+        h *= 2;
+      }
+
+      h |= 1;
+
+      result = double(h);
+    }
+
+    ItemView & view_;
+    Item & container_;
+    Item & timeline_;
+  };
+
+  //----------------------------------------------------------------
+  // IsMouseOverItem
+  //
+  struct IsMouseOverItem : public TBoolExpr
+  {
+    IsMouseOverItem(const ItemView & view, const Item & item):
+      view_(view),
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      const std::list<VisibleItem> & items = view_.mouseOverItems();
+      std::list<VisibleItem>::const_iterator found = yae::find(items, item_);
+      result = (found != items.end());
+    }
+
+    const ItemView & view_;
+    const Item & item_;
+  };
 
   //----------------------------------------------------------------
   // layout_timeline
@@ -800,15 +903,84 @@ namespace yae
                   Item & root,
                   std::size_t index)
   {
-    Text & t0_text =
+    TextEdit t0 =
       layout_timeedit(model, view, style, root, index, &Timespan::t0_);
-    t0_text.anchors_.left_ = ItemRef::offset(root, kPropertyLeft, 3);
-    t0_text.margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.1);
 
-    Text & t1_text =
+    t0.text_->anchors_.left_ = ItemRef::offset(root, kPropertyLeft, 3);
+    t0.text_->margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.1);
+
+    TextEdit t1 =
       layout_timeedit(model, view, style, root, index, &Timespan::t1_);
-    t1_text.anchors_.right_ = ItemRef::offset(root, kPropertyRight, -3);
-    t1_text.margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+
+    t1.text_->anchors_.right_ = ItemRef::offset(root, kPropertyRight, -3);
+    t1.text_->margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+
+    Item & timeline = root.addNew<Item>("timeline");
+    timeline.anchors_.fill(root);
+    timeline.anchors_.left_ = ItemRef::reference(*t0.bg_, kPropertyRight);
+    timeline.anchors_.right_ = ItemRef::reference(*t1.bg_, kPropertyLeft);
+
+    Rectangle & ra = timeline.addNew<Rectangle>("ra");
+    ra.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
+    ra.anchors_.right_ = ra.addExpr(new TimelinePos(timeline,
+                                                    model,
+                                                    index,
+                                                    &Timespan::t0_));
+    ra.anchors_.vcenter_ = ItemRef::reference(timeline, kPropertyVCenter);
+    ra.height_ = ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
+    ra.color_ = style.fg_timecode_;
+    // ra.opacity_ = shadow.opacity_;
+
+    Rectangle & rb = timeline.addNew<Rectangle>("rb");
+    rb.anchors_.left_ = ItemRef::reference(ra, kPropertyRight);
+    rb.anchors_.right_ = rb.addExpr(new TimelinePos(timeline,
+                                                    model,
+                                                    index,
+                                                    &Timespan::t1_));
+    rb.anchors_.vcenter_ = ra.anchors_.vcenter_;
+    rb.height_ = ra.height_;
+    rb.color_ = style.cursor_;
+    // rb.opacity_ = shadow.opacity_;
+
+    Rectangle & rc = timeline.addNew<Rectangle>("rc");
+    rc.anchors_.left_ = ItemRef::reference(rb, kPropertyRight);
+    rc.anchors_.right_ = ItemRef::reference(timeline, kPropertyRight);
+    rc.anchors_.vcenter_ = ra.anchors_.vcenter_;
+    rc.height_ = ra.height_;
+    rc.color_ = style.fg_timecode_;
+    // rc.opacity_ = shadow.opacity_;
+
+    RoundRect & p0 = root.addNew<RoundRect>("p0");
+    p0.anchors_.hcenter_ = ItemRef::reference(ra, kPropertyRight);
+    p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter);
+    p0.width_ = ItemRef::scale(ra, kPropertyHeight, 2.0);
+    p0.height_ = p0.width_;
+    p0.radius_ = ItemRef::scale(p0, kPropertyHeight, 0.5);
+    p0.color_ = style.cursor_;
+    // p0.background_ = p0.color_;
+    // p0.visible_ = p0.addExpr(new IsMouseOverItem(view, *root.parent_));
+    // p0.opacity_ = shadow.opacity_;
+
+    RoundRect & p1 = root.addNew<RoundRect>("p1");
+    p1.anchors_.hcenter_ = ItemRef::reference(rb, kPropertyRight);
+    p1.anchors_.vcenter_ = ra.anchors_.vcenter_;
+    p1.width_ = p0.width_;
+    p1.height_ = p1.width_;
+    p1.radius_ = ItemRef::scale(p1, kPropertyHeight, 0.5);
+    p1.color_ = style.cursor_;
+    // p1.background_ = p1.color_;
+    // p1.visible_ = p0.visible_;
+    // p1.opacity_ = shadow.opacity_;
+
+#if 0
+    SliderInPoint & sliderInPoint =
+      root.add(new SliderInPoint(*this, timeline));
+    sliderInPoint.anchors_.offset(p0, -1, 0, -1, 0);
+
+    SliderOutPoint & sliderOutPoint =
+      root.add(new SliderOutPoint(*this, timeline));
+    sliderOutPoint.anchors_.offset(p1, -1, 0, -1, 0);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1202,6 +1374,23 @@ namespace yae
     {
       return false;
     }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::processMouseTracking
+  //
+  bool
+  RemuxView::processMouseTracking(const TVec2D & mousePt)
+  {
+    if (!this->isEnabled())
+    {
+      return false;
+    }
+
+    Item & root = *root_;
+    requestUncache(&(root["clips"]));
 
     return true;
   }

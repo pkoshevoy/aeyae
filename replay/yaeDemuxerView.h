@@ -294,6 +294,9 @@ namespace yae
     // virtual:
     bool resizeTo(const Canvas * canvas);
 
+    // virtual:
+    bool processMouseTracking(const TVec2D & mousePt);
+
     // helpers:
     void append_clip(const TClipPtr & clip);
     void remove_clip(std::size_t index);
