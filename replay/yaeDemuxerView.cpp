@@ -894,6 +894,87 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TimelineSlider
+  //
+  struct TimelineSlider : public InputArea
+  {
+    TimelineSlider(const char * id,
+                   RemuxView & view,
+                   Item & timeline,
+                   RemuxModel & model,
+                   std::size_t index,
+                   TTime Timespan::* field):
+      InputArea(id),
+      view_(view),
+      timeline_(timeline),
+      model_(model),
+      index_(index),
+      field_(field)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (index_ >= model_.clips_.size())
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      const Clip & clip = *(model_.clips_[index_]);
+      const Timeline::Track & track =
+        clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+      t0_ = track.pts_span_.front().t0_;
+      const TTime & t1 = track.pts_span_.back().t1_;
+      dt_ = (t1 - t0_).sec();
+      if (dt_ <= 0)
+      {
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      const TTime & tp = clip.keep_.*field_;
+      const bool is_t0 = (&tp == &clip.keep_.t0_);
+      const TTime & tq = is_t0 ? clip.keep_.t1_ : clip.keep_.t0_;
+
+      min_ = (is_t0 ? t0_ : tq).sec() / dt_;
+      max_ = (is_t0 ? tq : t1).sec() / dt_;
+      pos_ = tp.sec() / dt_;
+      return true;
+    }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      double w = timeline_.width();
+      double dx = rootCSysDragEnd.x() - rootCSysDragStart.x();
+      double pos = std::min(max_, std::max(min_, pos_ + dx / w));
+
+      Clip & clip = *(model_.clips_[index_]);
+      TTime & t = clip.keep_.*field_;
+      t = t0_ + pos * dt_;
+      view_.requestUncache(&timeline_);
+      view_.requestRepaint();
+      return true;
+    }
+
+    RemuxView & view_;
+    Item & timeline_;
+    RemuxModel & model_;
+    std::size_t index_;
+    TTime Timespan::* field_;
+    TTime t0_;
+    double dt_;
+    double pos_;
+    double min_;
+    double max_;
+  };
+
+  //----------------------------------------------------------------
   // layout_timeline
   //
   static void
@@ -919,6 +1000,8 @@ namespace yae
     timeline.anchors_.fill(root);
     timeline.anchors_.left_ = ItemRef::reference(*t0.bg_, kPropertyRight);
     timeline.anchors_.right_ = ItemRef::reference(*t1.bg_, kPropertyLeft);
+    timeline.margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+    timeline.margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
 
     Rectangle & ra = timeline.addNew<Rectangle>("ra");
     ra.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -927,8 +1010,10 @@ namespace yae
                                                     index,
                                                     &Timespan::t0_));
     ra.anchors_.vcenter_ = ItemRef::reference(timeline, kPropertyVCenter);
-    ra.height_ = ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
-    ra.color_ = style.fg_timecode_;
+    ra.height_ =
+      // ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
+      ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
+    ra.color_ = style.timeline_excluded_;
     // ra.opacity_ = shadow.opacity_;
 
     Rectangle & rb = timeline.addNew<Rectangle>("rb");
@@ -939,7 +1024,7 @@ namespace yae
                                                     &Timespan::t1_));
     rb.anchors_.vcenter_ = ra.anchors_.vcenter_;
     rb.height_ = ra.height_;
-    rb.color_ = style.cursor_;
+    rb.color_ = style.timeline_included_;
     // rb.opacity_ = shadow.opacity_;
 
     Rectangle & rc = timeline.addNew<Rectangle>("rc");
@@ -947,40 +1032,42 @@ namespace yae
     rc.anchors_.right_ = ItemRef::reference(timeline, kPropertyRight);
     rc.anchors_.vcenter_ = ra.anchors_.vcenter_;
     rc.height_ = ra.height_;
-    rc.color_ = style.fg_timecode_;
+    rc.color_ = style.timeline_excluded_;
     // rc.opacity_ = shadow.opacity_;
 
-    RoundRect & p0 = root.addNew<RoundRect>("p0");
+    RoundRect & p0 = timeline.addNew<RoundRect>("p0");
     p0.anchors_.hcenter_ = ItemRef::reference(ra, kPropertyRight);
     p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter);
     p0.width_ = ItemRef::scale(ra, kPropertyHeight, 2.0);
     p0.height_ = p0.width_;
     p0.radius_ = ItemRef::scale(p0, kPropertyHeight, 0.5);
-    p0.color_ = style.cursor_;
-    // p0.background_ = p0.color_;
-    // p0.visible_ = p0.addExpr(new IsMouseOverItem(view, *root.parent_));
+    p0.color_ = p0.addExpr
+      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0, 1));
+    p0.background_ = p0.addExpr
+      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0));
+    p0.visible_ = p0.addExpr(new IsMouseOverItem(view, *root.parent_));
     // p0.opacity_ = shadow.opacity_;
 
-    RoundRect & p1 = root.addNew<RoundRect>("p1");
+    RoundRect & p1 = timeline.addNew<RoundRect>("p1");
     p1.anchors_.hcenter_ = ItemRef::reference(rb, kPropertyRight);
     p1.anchors_.vcenter_ = ra.anchors_.vcenter_;
     p1.width_ = p0.width_;
     p1.height_ = p1.width_;
     p1.radius_ = ItemRef::scale(p1, kPropertyHeight, 0.5);
-    p1.color_ = style.cursor_;
-    // p1.background_ = p1.color_;
-    // p1.visible_ = p0.visible_;
+    p1.color_ = p1.addExpr
+      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0, 1));
+    p1.background_ = p1.addExpr
+      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0));
+    p1.visible_ = p0.visible_;
     // p1.opacity_ = shadow.opacity_;
 
-#if 0
-    SliderInPoint & sliderInPoint =
-      root.add(new SliderInPoint(*this, timeline));
-    sliderInPoint.anchors_.offset(p0, -1, 0, -1, 0);
+    TimelineSlider & sa = timeline.add
+      (new TimelineSlider("s0", view, timeline, model, index, &Timespan::t0_));
+    sa.anchors_.offset(p0, -1, 0, -1, 0);
 
-    SliderOutPoint & sliderOutPoint =
-      root.add(new SliderOutPoint(*this, timeline));
-    sliderOutPoint.anchors_.offset(p1, -1, 0, -1, 0);
-#endif
+    TimelineSlider & sb = timeline.add
+      (new TimelineSlider("s1", view, timeline, model, index, &Timespan::t1_));
+    sb.anchors_.offset(p1, -1, 0, -1, 0);
   }
 
   //----------------------------------------------------------------

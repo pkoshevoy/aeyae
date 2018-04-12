@@ -791,7 +791,7 @@ namespace yae
     timeline.margins_.right_ = timeline.margins_.left_;
     timeline.height_ = timeline.addExpr(new OddRoundUp(container,
                                                        kPropertyHeight,
-                                                       0.22222222), 1, 1);
+                                                       0.22222222, 1));
 
     TimelineSeek & seek = timeline.add(new TimelineSeek(*this));
     seek.anchors_.fill(timeline);

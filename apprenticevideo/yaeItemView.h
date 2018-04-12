@@ -525,10 +525,9 @@ namespace yae
       double v = 0.0;
       item_.get(property_, v);
       v *= scale_;
-      v += translate_;
 
       int i = 1 | int(ceil(v));
-      result = double(i);
+      result = double(i) + translate_;
     }
 
     const Item & item_;
