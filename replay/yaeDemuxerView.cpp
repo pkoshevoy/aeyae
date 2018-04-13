@@ -861,8 +861,6 @@ namespace yae
         h *= 2;
       }
 
-      h |= 1;
-
       result = double(h);
     }
 
@@ -957,7 +955,7 @@ namespace yae
       Clip & clip = *(model_.clips_[index_]);
       TTime & t = clip.keep_.*field_;
       t = t0_ + pos * dt_;
-      view_.requestUncache(&timeline_);
+      view_.requestUncache(timeline_.parent_);
       view_.requestRepaint();
       return true;
     }
@@ -1011,9 +1009,11 @@ namespace yae
                                                     &Timespan::t0_));
     ra.anchors_.vcenter_ = ItemRef::reference(timeline, kPropertyVCenter);
     ra.height_ =
-      // ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
-      ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
-    ra.color_ = style.timeline_excluded_;
+      ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
+    // ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
+    // ra.color_ = style.cursor_;
+    ra.color_ = ra.addExpr
+      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.75));
     // ra.opacity_ = shadow.opacity_;
 
     Rectangle & rb = timeline.addNew<Rectangle>("rb");
@@ -1032,13 +1032,13 @@ namespace yae
     rc.anchors_.right_ = ItemRef::reference(timeline, kPropertyRight);
     rc.anchors_.vcenter_ = ra.anchors_.vcenter_;
     rc.height_ = ra.height_;
-    rc.color_ = style.timeline_excluded_;
+    rc.color_ = ra.color_;
     // rc.opacity_ = shadow.opacity_;
 
     RoundRect & p0 = timeline.addNew<RoundRect>("p0");
     p0.anchors_.hcenter_ = ItemRef::reference(ra, kPropertyRight);
-    p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter);
-    p0.width_ = ItemRef::scale(ra, kPropertyHeight, 2.0);
+    p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter, 1.0, -1);
+    p0.width_ = ItemRef::scale(ra, kPropertyHeight, 1.6);
     p0.height_ = p0.width_;
     p0.radius_ = ItemRef::scale(p0, kPropertyHeight, 0.5);
     p0.color_ = p0.addExpr
@@ -1050,22 +1050,22 @@ namespace yae
 
     RoundRect & p1 = timeline.addNew<RoundRect>("p1");
     p1.anchors_.hcenter_ = ItemRef::reference(rb, kPropertyRight);
-    p1.anchors_.vcenter_ = ra.anchors_.vcenter_;
-    p1.width_ = p0.width_;
+    p1.anchors_.vcenter_ = p0.anchors_.vcenter_;
+    p1.width_ = ItemRef::scale(ra, kPropertyHeight, 1.5);
     p1.height_ = p1.width_;
     p1.radius_ = ItemRef::scale(p1, kPropertyHeight, 0.5);
     p1.color_ = p1.addExpr
-      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0, 1));
+      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 1));
     p1.background_ = p1.addExpr
-      (style_color_ref(view, &ItemViewStyle::timeline_included_, 0));
+      (style_color_ref(view, &ItemViewStyle::cursor_, 0));
     p1.visible_ = p0.visible_;
     // p1.opacity_ = shadow.opacity_;
 
-    TimelineSlider & sa = timeline.add
+    TimelineSlider & sa = root.add
       (new TimelineSlider("s0", view, timeline, model, index, &Timespan::t0_));
     sa.anchors_.offset(p0, -1, 0, -1, 0);
 
-    TimelineSlider & sb = timeline.add
+    TimelineSlider & sb = root.add
       (new TimelineSlider("s1", view, timeline, model, index, &Timespan::t1_));
     sb.anchors_.offset(p1, -1, 0, -1, 0);
   }
