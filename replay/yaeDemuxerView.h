@@ -14,6 +14,7 @@
 
 // Qt library:
 #include <QFont>
+#include <QSignalMapper>
 
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
@@ -311,9 +312,16 @@ namespace yae
     void layoutChanged();
     void dataChanged();
 
+    void timecode_changed_t0(int i);
+    void timecode_changed_t1(int i);
+
   protected:
     RemuxViewStyle style_;
     RemuxModel * model_;
+
+  public:
+    QSignalMapper t0_;
+    QSignalMapper t1_;
   };
 
 }

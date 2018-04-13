@@ -987,12 +987,21 @@ namespace yae
 
     t0.text_->anchors_.left_ = ItemRef::offset(root, kPropertyLeft, 3);
     t0.text_->margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.1);
+    bool ok = view.connect(t0.edit_, SIGNAL(editingFinished(const QString &)),
+                           &view.t0_, SLOT(map()));
+    YAE_ASSERT(ok);
+    view.t0_.setMapping(t0.edit_, int(index));
 
     TextEdit t1 =
       layout_timeedit(model, view, style, root, index, &Timespan::t1_);
 
     t1.text_->anchors_.right_ = ItemRef::offset(root, kPropertyRight, -3);
     t1.text_->margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+
+    ok = view.connect(t1.edit_, SIGNAL(editingFinished(const QString &)),
+                      &view.t1_, SLOT(map()));
+    YAE_ASSERT(ok);
+    view.t1_.setMapping(t1.edit_, int(index));
 
     Item & timeline = root.addNew<Item>("timeline");
     timeline.anchors_.fill(root);
@@ -1037,7 +1046,11 @@ namespace yae
 
     RoundRect & p0 = timeline.addNew<RoundRect>("p0");
     p0.anchors_.hcenter_ = ItemRef::reference(ra, kPropertyRight);
+#ifdef __APPLE__
     p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter, 1.0, -1);
+#else
+    p0.anchors_.vcenter_ = ItemRef::reference(ra, kPropertyVCenter);
+#endif
     p0.width_ = ItemRef::scale(ra, kPropertyHeight, 1.6);
     p0.height_ = p0.width_;
     p0.radius_ = ItemRef::scale(p0, kPropertyHeight, 0.5);
@@ -1432,7 +1445,15 @@ namespace yae
     ItemView("RemuxView"),
     style_("RemuxViewStyle", *this),
     model_(NULL)
-  {}
+  {
+    bool ok = connect(&t0_, SIGNAL(mapped(int)),
+                      this, SLOT(timecode_changed_t0(int)));
+    YAE_ASSERT(true);
+
+    ok = connect(&t1_, SIGNAL(mapped(int)),
+                 this, SLOT(timecode_changed_t1(int)));
+    YAE_ASSERT(true);
+  }
 
   //----------------------------------------------------------------
   // RemuxView::setModel
@@ -1526,6 +1547,10 @@ namespace yae
     layout_gops(model, view, style_, gops, clip);
 
     dataChanged();
+
+#ifndef NDEBUG
+    sv.content_->dump(std::cerr);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1541,7 +1566,6 @@ namespace yae
     Item & gops = root["gops"];
     Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
-    Item & clips_add = sv.content_->get<Item>("clips_add");
 
     TClipPtr clip = model.clips_[index];
     for (std::vector<ItemPtr>::iterator
@@ -1559,6 +1583,10 @@ namespace yae
         clip_list.children_.pop_back();
 
         dataChanged();
+
+#ifndef NDEBUG
+        sv.content_->dump(std::cerr);
+#endif
         break;
       }
     }
@@ -1662,6 +1690,92 @@ namespace yae
   {
     requestUncache();
     requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // find_clip_item
+  //
+  static ItemPtr
+  find_clip_item(RemuxView & view, std::size_t index)
+  {
+    Item & root = *view.root();
+    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Item & clip_list = sv.content_->get<Item>("clip_list");
+
+    if (index < clip_list.children_.size())
+    {
+      return clip_list.children_[index];
+    }
+
+    return ItemPtr();
+  }
+
+  //----------------------------------------------------------------
+  // update_time
+  //
+  static void
+  update_time(RemuxView & view,
+              const RemuxModel & model,
+              std::size_t index,
+              TTime Timespan::* field,
+              const std::string & text)
+  {
+    if (text.empty() || model.clips_.size() <= index)
+    {
+      return;
+    }
+
+    Clip & clip = *(model.clips_[index]);
+    const DemuxerSummary & summary = clip.demuxer_->summary();
+    const Timeline::Track & track = summary.get_track_timeline(clip.track_);
+    const FramerateEstimator & fe = yae::at(summary.fps_, clip.track_);
+    double fps = fe.best_guess();
+    parse_time(clip.keep_.*field, text.c_str(), NULL, NULL, fps);
+
+    Item & root = *view.root();
+    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    view.requestUncache(&sv);
+    view.requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::timecode_changed_t0
+  //
+  void
+  RemuxView::timecode_changed_t0(int i)
+  {
+    ItemPtr found = find_clip_item(*this, i);
+    if (!found)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    Item & item = *found;
+    std::string id = str("edit_", i * 2);
+    TextInput & edit = item["timeline"].get<TextInput>(id.c_str());
+    std::string text = edit.text().toUtf8().constData();
+    update_time(*this, *model_, i, &Timespan::t0_, text);
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::timecode_changed_t1
+  //
+  void
+  RemuxView::timecode_changed_t1(int i)
+  {
+    ItemPtr found = find_clip_item(*this, i);
+    if (!found)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    Item & item = *found;
+    std::string id = str("edit_", i * 2 + 1);
+    TextInput & edit = item["timeline"].get<TextInput>(id.c_str());
+    std::string text = edit.text().toUtf8().constData();
+    update_time(*this, *model_, i, &Timespan::t1_, text);
   }
 
 }
