@@ -825,7 +825,7 @@ namespace yae
       const TTime & t1 = track.pts_span_.back().t1_;
 
       double dt = (t1 - t0).sec();
-      double t = tt.sec();
+      double t = (tt - t0).sec();
 
       double x0 = timeline_.left();
       double w = timeline_.width();
@@ -937,9 +937,9 @@ namespace yae
       const bool is_t0 = (&tp == &clip.keep_.t0_);
       const TTime & tq = is_t0 ? clip.keep_.t1_ : clip.keep_.t0_;
 
-      min_ = (is_t0 ? t0_ : tq).sec() / dt_;
-      max_ = (is_t0 ? tq : t1).sec() / dt_;
-      pos_ = tp.sec() / dt_;
+      min_ = ((is_t0 ? t0_ : tq) - t0_).sec() / dt_;
+      max_ = ((is_t0 ? tq : t1) - t0_).sec() / dt_;
+      pos_ = (tp - t0_).sec() / dt_;
       return true;
     }
 
