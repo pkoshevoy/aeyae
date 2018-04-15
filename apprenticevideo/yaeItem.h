@@ -433,6 +433,13 @@ namespace yae
     Item & operator[](const char * id);
 
     template <typename TItem>
+    inline const TItem & get(const char * id) const
+    {
+      const Item & found = this->operator[](id);
+      return dynamic_cast<const TItem &>(found);
+    }
+
+    template <typename TItem>
     inline TItem & get(const char * id)
     {
       Item & found = this->operator[](id);

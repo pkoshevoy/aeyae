@@ -1560,7 +1560,6 @@ namespace yae
   RemuxView::remove_clip(std::size_t index)
   {
     RemuxModel & model = *model_;
-    RemuxView & view = *this;
     Item & root = *root_;
 
     Item & gops = root["gops"];
@@ -1616,19 +1615,45 @@ namespace yae
     }
 
     TClipPtr new_clip(new Clip(clip.demuxer_, clip.track_, keep));
+    std::size_t new_index = model.selected_ + 1;
     if (model.selected_ < model.clips_.size())
     {
       model.clips_.insert(model.clips_.begin() + model.selected_ + 1,
                           new_clip);
-      model.selected_++;
     }
     else
     {
       model.clips_.push_back(new_clip);
-      model.selected_ = model.clips_.size() - 1;
+      new_index = model.clips_.size() - 1;
     }
 
+    // copy scrollview position from source scroll view to the new scroll view:
     append_clip(new_clip);
+
+    Item & root = *root_;
+    Item & gops = root["gops"];
+    Scrollview & new_sv =
+      gops.children_.back()->get<Scrollview>("clip_layout.scrollview");
+
+    for (std::vector<ItemPtr>::iterator
+           i = gops.children_.begin(); i != gops.children_.end(); ++i)
+    {
+      const Item & item = *(*i);
+      const IsClipSelected * found =
+        dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
+
+      if (found && found->clip_ == clip_ptr)
+      {
+        const Scrollview & src_sv =
+          item.get<Scrollview>("clip_layout.scrollview");
+
+        new_sv.position_ = src_sv.position_;
+        break;
+      }
+    }
+
+    // select the new clip:
+    model.selected_ = new_index;
   }
 
   //----------------------------------------------------------------

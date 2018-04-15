@@ -89,6 +89,10 @@ namespace yae
              const std::list<yae::ClipInfo> & clips =
              std::list<yae::ClipInfo>());
 
+  signals:
+    void setInPoint();
+    void setOutPoint();
+
   public slots:
     // file menu:
     void fileOpen();
@@ -98,16 +102,26 @@ namespace yae
     void helpAbout();
 
     // helpers:
+    void toggleFullScreen();
+    void enterFullScreen();
+    void exitFullScreen();
     void processDropEventUrls(const QList<QUrl> & urls);
+    void swapShortcuts();
 
   protected:
     // virtual:
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
+    void keyPressEvent(QKeyEvent * e);
+    void mousePressEvent(QMouseEvent * e);
 
-    // helpers:
-    void canvasSizeSet(double xexpand, double yexpand);
+    // context sensitive menu which includes most relevant actions:
+    QMenu * contextMenu_;
+
+    // shortcuts used during full-screen mode (when menubar is invisible)
+    QShortcut * shortcutExit_;
+    QShortcut * shortcutFullScreen_;
 
     // file reader:
     TDemuxerInterfacePtr demuxer_;

@@ -80,6 +80,9 @@ namespace yae
     setupUi(this);
     setAcceptDrops(true);
 
+    contextMenu_ = new QMenu(this);
+    contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
+
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon =
       QString::fromUtf8(":/apprenticevideo/images/apprenticevideo-256.png");
@@ -122,6 +125,23 @@ namespace yae
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvasWidget_);
 
+#if 1
+    actionFullScreen->setShortcut(tr("Ctrl+F"));
+#elif defined(__APPLE__)
+    actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
+#else
+    actionFullScreen->setShortcut(tr("F11"));
+#endif
+
+    // when in fullscreen mode the menubar is hidden and all actions
+    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
+    // so I am creating these shortcuts as a workaround:
+    shortcutExit_ = new QShortcut(this);
+    shortcutFullScreen_ = new QShortcut(this);
+
+    shortcutExit_->setContext(Qt::ApplicationShortcut);
+    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
@@ -135,8 +155,20 @@ namespace yae
                  this, SLOT(fileExit()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionFullScreen, SIGNAL(triggered()),
+                 this, SLOT(enterFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
+                 actionFullScreen, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionAbout, SIGNAL(triggered()),
                  this, SLOT(helpAbout()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvasWidget_->sigs_), SIGNAL(toggleFullScreen()),
+                 this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
   }
 
@@ -423,6 +455,74 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::toggleFullScreen
+  //
+  void
+  MainWindow::toggleFullScreen()
+  {
+    if (isFullScreen())
+    {
+      exitFullScreen();
+    }
+    else
+    {
+      enterFullScreen();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::enterFullScreen
+  //
+  void
+  MainWindow::enterFullScreen()
+  {
+    if (isFullScreen())
+    {
+      exitFullScreen();
+      return;
+    }
+
+    SignalBlocker blockSignals;
+    blockSignals << actionFullScreen;
+
+    actionFullScreen->setChecked(true);
+    canvas_->setRenderMode(Canvas::kScaleToFit);
+
+    if (isFullScreen())
+    {
+      return;
+    }
+
+    // enter full screen rendering:
+    menuBar()->hide();
+    showFullScreen();
+
+    this->swapShortcuts();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::exitFullScreen
+  //
+  void
+  MainWindow::exitFullScreen()
+  {
+    if (!isFullScreen())
+    {
+      return;
+    }
+
+    // exit full screen rendering:
+    SignalBlocker blockSignals;
+    blockSignals << actionFullScreen;
+
+    actionFullScreen->setChecked(false);
+    menuBar()->show();
+    showNormal();
+    canvas_->setRenderMode(Canvas::kScaleToFit);
+    this->swapShortcuts();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::processDropEventUrls
   //
   void
@@ -447,6 +547,27 @@ namespace yae
     }
 
     add(sources);
+  }
+
+  //----------------------------------------------------------------
+  // swapShortcuts
+  //
+  static inline void
+  swapShortcuts(QShortcut * a, QAction * b)
+  {
+    QKeySequence tmp = a->key();
+    a->setKey(b->shortcut());
+    b->setShortcut(tmp);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::swapShortcuts
+  //
+  void
+  MainWindow::swapShortcuts()
+  {
+    yae::swapShortcuts(shortcutExit_, actionExit);
+    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
   }
 
   //----------------------------------------------------------------
@@ -488,6 +609,59 @@ namespace yae
 
     e->acceptProposedAction();
     processDropEventUrls(e->mimeData()->urls());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::keyPressEvent
+  //
+  void
+  MainWindow::keyPressEvent(QKeyEvent * event)
+  {
+    int key = event->key();
+    if (key == Qt::Key_Escape)
+    {
+      if (isFullScreen())
+      {
+        exitFullScreen();
+      }
+    }
+#if 0
+    else if (key == Qt::Key_I)
+    {
+      emit setInPoint();
+    }
+    else if (key == Qt::Key_O)
+    {
+      emit setOutPoint();
+    }
+#endif
+    else
+    {
+      QMainWindow::keyPressEvent(event);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::mousePressEvent
+  //
+  void
+  MainWindow::mousePressEvent(QMouseEvent * e)
+  {
+    if (e->button() == Qt::RightButton)
+    {
+      QPoint localPt = e->pos();
+      QPoint globalPt = QWidget::mapToGlobal(localPt);
+
+      // populate the context menu:
+      contextMenu_->clear();
+
+      // contextMenu_->addAction(actionSetInPoint);
+      // contextMenu_->addAction(actionSetOutPoint);
+      // contextMenu_->addSeparator();
+      contextMenu_->addAction(actionFullScreen);
+
+      contextMenu_->popup(globalPt);
+    }
   }
 
 }
