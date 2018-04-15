@@ -293,7 +293,7 @@ namespace yae
     { return &style_; }
 
     // virtual:
-    bool resizeTo(const Canvas * canvas);
+    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);

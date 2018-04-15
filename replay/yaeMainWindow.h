@@ -102,6 +102,7 @@ namespace yae
     void helpAbout();
 
     // helpers:
+    void requestToggleFullScreen();
     void toggleFullScreen();
     void enterFullScreen();
     void exitFullScreen();

@@ -168,7 +168,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(&(canvasWidget_->sigs_), SIGNAL(toggleFullScreen()),
-                 this, SLOT(toggleFullScreen()));
+                 this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
   }
 
@@ -452,6 +452,24 @@ namespace yae
     }
 
     about->show();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::requestToggleFullScreen
+  //
+  void
+  MainWindow::requestToggleFullScreen()
+  {
+    // all this to work-around apparent QML bug where
+    // toggling full-screen on double-click leaves Flickable in
+    // a state where it never receives the button-up event
+    // and ends up interpreting all mouse movement as dragging,
+    // very annoying...
+    //
+    // The workaround is to delay fullscreen toggle to allow
+    // Flickable time to receive the button-up event
+
+    QTimer::singleShot(178, this, SLOT(toggleFullScreen()));
   }
 
   //----------------------------------------------------------------

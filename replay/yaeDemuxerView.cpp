@@ -439,6 +439,11 @@ namespace yae
     }
   }
 
+  static const double kFrameOffset = 1;
+  static const double kFrameWidth = 130;
+  static const double kFrameHeight = 100;
+  static const double kFrameRadius = 3;
+
   //----------------------------------------------------------------
   // layout_gop
   //
@@ -461,13 +466,14 @@ namespace yae
       RoundRect & frame = root.addNew<RoundRect>("frame");
       frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       frame.anchors_.left_ =
-        ItemRef::reference(root, kPropertyLeft, 1, 1 + k * 130);
+        ItemRef::reference(root, kPropertyLeft, 1,
+                           kFrameOffset + k * kFrameWidth);
 
       // frame.height_ = ItemRef::reference(style.title_height_, 3.0);
       // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
-      frame.width_ = ItemRef::constant(130);
-      frame.height_ = ItemRef::constant(100);
-      frame.radius_ = ItemRef::constant(3);
+      frame.width_ = ItemRef::constant(kFrameWidth);
+      frame.height_ = ItemRef::constant(kFrameHeight);
+      frame.radius_ = ItemRef::constant(kFrameRadius);
 
       frame.background_ = frame.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
@@ -534,6 +540,243 @@ namespace yae
     TClipPtr clip_;
   };
 
+  //----------------------------------------------------------------
+  // GopCursorItem
+  //
+  struct GopCursorItem : public Rectangle
+  {
+
+    //----------------------------------------------------------------
+    // GetRow
+    //
+    struct GetRow : TDoubleExpr
+    {
+      GetRow(const GopCursorItem & cursor):
+        cursor_(cursor)
+      {}
+
+      // virtual:
+      void evaluate(double & result) const
+      {
+        result = cursor_.get_row(cursor_.frame_);
+      }
+
+      const GopCursorItem & cursor_;
+    };
+
+    //----------------------------------------------------------------
+    // GetColumn
+    //
+    struct GetColumn : TDoubleExpr
+    {
+      GetColumn(const GopCursorItem & cursor): cursor_(cursor) {}
+
+      // virtual:
+      void evaluate(double & result) const
+      {
+        result = cursor_.get_column(cursor_.frame_);
+      }
+
+      const GopCursorItem & cursor_;
+    };
+
+    //----------------------------------------------------------------
+    // GopCursorItem
+    //
+    GopCursorItem(const char * id,
+                  const std::map<std::size_t, std::size_t> & row_lut):
+      Rectangle(id),
+      rows_(row_lut),
+      frame_(0),
+      column_(0)
+    {
+      anchors_.top_ = addExpr(new GetRow(*this),
+                              kFrameHeight, // scale
+                              kFrameOffset);// translate
+
+      anchors_.left_ = addExpr(new GetColumn(*this),
+                               kFrameWidth,  // scale
+                               kFrameOffset);// translate
+
+      width_ = ItemRef::constant(kFrameWidth);
+      height_ = ItemRef::constant(kFrameHeight);
+#if 0
+      for (std::map<std::size_t, std::size_t>::const_iterator
+             i = rows_.begin(); i != rows_.end(); ++i)
+      {
+        const std::size_t & keyframe = i->first;
+        const std::size_t & row = i->second;
+        keys_[row] = keyframe;
+      }
+#endif
+    }
+
+    //----------------------------------------------------------------
+    // get_row
+    //
+    std::size_t get_row(std::size_t frame) const
+    {
+      if (rows_.empty())
+      {
+        YAE_ASSERT(false);
+        return 0;
+      }
+
+      std::map<std::size_t, std::size_t>::const_iterator
+        found = rows_.upper_bound(frame);
+
+      if (found == rows_.end())
+      {
+        return rows_.rbegin()->second;
+      }
+
+      return found->second - 1;
+    }
+
+    //----------------------------------------------------------------
+    // get_keyframe
+    //
+    std::size_t get_keyframe(std::size_t frame) const
+    {
+      if (rows_.empty())
+      {
+        YAE_ASSERT(false);
+        return 0;
+      }
+
+      std::map<std::size_t, std::size_t>::const_iterator
+        found = rows_.upper_bound(frame);
+
+      if (found == rows_.end())
+      {
+        return rows_.rbegin()->first;
+      }
+
+      std::map<std::size_t, std::size_t>::const_iterator gop = found;
+      std::advance(gop, -1);
+      YAE_ASSERT(gop->second + 1 == found->second);
+
+      return gop->first;
+    }
+
+    //----------------------------------------------------------------
+    // get_column
+    //
+    std::size_t get_column(std::size_t frame) const
+    {
+      std::size_t keyframe = get_keyframe(frame);
+      YAE_ASSERT(keyframe <= frame);
+      return (frame - keyframe);
+    }
+
+    //----------------------------------------------------------------
+    // move_up
+    //
+    bool move_up()
+    {
+      if (frame_ == 0)
+      {
+        return false;
+      }
+
+      std::size_t row = get_row(frame_);
+      if (row == 0)
+      {
+        // already at the top row, go to the start of the row:
+        frame_ = 0;
+      }
+      else
+      {
+        std::size_t keyframe = get_keyframe(frame_);
+        std::size_t offset = get_keyframe(keyframe - 1);
+        frame_ = std::min(offset + column_, keyframe - 1);
+      }
+
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // move_down
+    //
+    bool move_down()
+    {
+      std::size_t row = get_row(frame_);
+      if (row + 1 >= rows_.size())
+      {
+        // already at the bottom row:
+        return false;
+      }
+
+      std::map<std::size_t, std::size_t>::const_iterator
+        i1 = rows_.upper_bound(frame_);
+
+      std::map<std::size_t, std::size_t>::const_iterator
+        i2 = rows_.upper_bound(i1->first);
+
+      std::map<std::size_t, std::size_t>::const_iterator i0 = i1;
+      std::advance(i0, -1);
+
+      frame_ = std::min(i1->first + column_,
+                        std::max(i1->first, i2->first - 1));
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // move_left
+    //
+    bool move_left()
+    {
+      if (frame_ == 0)
+      {
+        return false;
+      }
+
+      frame_--;
+      column_ = get_column(frame_);
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // move_right
+    //
+    bool move_right()
+    {
+      if (rows_.empty() || frame_ == rows_.rbegin()->first)
+      {
+        return false;
+      }
+
+      frame_++;
+      column_ = get_column(frame_);
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // move_to_row_start
+    //
+    bool move_to_row_start()
+    {
+      frame_ = get_keyframe(frame_);
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // move_to_row_end
+    //
+    bool move_to_row_end()
+    {
+      std::map<std::size_t, std::size_t>::const_iterator
+        i1 = rows_.upper_bound(frame_);
+      frame_ = i1->first - 1;
+      return true;
+    }
+
+    std::map<std::size_t, std::size_t> rows_; // map keyframe -> row
+    // std::map<std::size_t, std::size_t> keys_; // map row -> keyframe
+    std::size_t frame_;
+    std::size_t column_;
+  };
+
 
   //----------------------------------------------------------------
   // layout_gops
@@ -560,6 +803,9 @@ namespace yae
     Scrollview & sv = root.get<Scrollview>("clip_layout.scrollview");
     sv.uncacheContent_ = false;
 
+    // create a map from rows keyframe index to row index:
+    std::map<std::size_t, std::size_t> row_lut;
+
     std::size_t row = 0;
     for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();
          i != track.keyframes_.end(); ++i, row++)
@@ -573,16 +819,40 @@ namespace yae
         track.dts_.size() :
         *next;
 
+      row_lut[i0] = row;
+
       Gop gop(clip.demuxer_, clip.track_, i0, i1);
 
       GopItem & item = gops.add<GopItem>(new GopItem("gop", gop));
       item.setContext(view);
       item.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
       item.anchors_.top_ =
-        ItemRef::reference(gops, kPropertyTop, 1, 1 + row * 100);
+        ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
 
       layout_gop(clip, track, view, style, item, gop);
     }
+
+    row_lut[track.dts_.size()] = row;
+
+    // add a placeholder item for the cursor position after all the frames:
+    Item & end = gops.addNew<Item>("end");
+    end.width_ = ItemRef::constant(kFrameWidth);
+    end.height_ = ItemRef::constant(kFrameHeight);
+    end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
+    end.anchors_.top_ =
+      ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
+
+    GopCursorItem & cursor = gops.add(new GopCursorItem("cursor", row_lut));
+    cursor.color_ = cursor.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_, 0));
+    cursor.colorBorder_ = cursor.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_));
+    cursor.border_ = ItemRef::constant(2);
+
+    cursor.margins_.top_ = ItemRef::constant(-1);
+    cursor.margins_.left_ = ItemRef::constant(-1);
+    cursor.margins_.bottom_ = ItemRef::constant(1);
+    cursor.margins_.right_ = ItemRef::constant(1);
   }
 
   //----------------------------------------------------------------
@@ -1473,17 +1743,202 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // RemuxView::resizeTo
+  // find_gops_item
+  //
+  static std::vector<ItemPtr>::iterator
+  find_gops_item(Item & gops, const TClipPtr & clip)
+  {
+    for (std::vector<ItemPtr>::iterator
+           i = gops.children_.begin(); i != gops.children_.end(); ++i)
+    {
+      const Item & item = *(*i);
+      const IsClipSelected * found =
+        dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
+
+      if (found && found->clip_ == clip)
+      {
+        return i;
+      }
+    }
+
+    return gops.children_.end();
+  }
+
+  //----------------------------------------------------------------
+  // ensure_frame_visible
+  //
+  static void
+  ensure_frame_visible(RemuxView & view, std::size_t frame)
+  {
+    Item & gops = view.root()->get<Item>("gops");
+    TClipPtr clip = view.model()->selected_clip();
+    std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
+
+    if (found == gops.children_.end())
+    {
+      return;
+    }
+
+    Scrollview & sv = (*found)->get<Scrollview>("clip_layout.scrollview");
+    GopCursorItem & cursor = sv.content_->get<GopCursorItem>("cursor");
+    std::size_t ir = cursor.get_row(frame);
+    std::size_t ic = cursor.get_column(frame);
+
+    Item & scene = *(sv.content_);
+    double scene_h = scene.height();
+    double scene_w = scene.width();
+
+    double view_h = sv.height();
+    double view_w = sv.width();
+
+    double range_h = (view_h < scene_h) ? (scene_h - view_h) : 0.0;
+    double range_w = (view_w < scene_w) ? (scene_w - view_w) : 0.0;
+
+    while (range_h > 0.0)
+    {
+      double view_y0 = range_h * sv.position_.y();
+      double view_y1 = view_y0 + view_h;
+
+      double item_y0 = kFrameOffset + kFrameHeight * ir;
+      double item_y1 = item_y0 + kFrameHeight;
+
+      if (item_y0 < view_y0)
+      {
+        double y = item_y0 / range_h;
+        y = std::min<double>(1.0, y);
+        sv.position_.set_y(y);
+      }
+      else if (item_y1 > view_y1)
+      {
+        double y = (item_y1 - view_h) / range_h;
+        y = std::max<double>(0.0, y);
+        sv.position_.set_y(y);
+      }
+      else
+      {
+        break;
+      }
+
+      Item & vsb = sv.parent_->get<Item>("scrollbar");
+      vsb.uncache();
+      break;
+    }
+
+    while (range_w > 0.0)
+    {
+      double view_x0 = range_w * sv.position_.x();
+      double view_x1 = view_x0 + view_w;
+
+      double item_x0 = kFrameOffset + kFrameWidth * ic;
+      double item_x1 = item_x0 + kFrameWidth;
+
+      if (item_x0 < view_x0)
+      {
+        double x = item_x0 / range_w;
+        x = std::min<double>(1.0, x);
+        sv.position_.set_x(x);
+      }
+      else if (item_x1 > view_x1)
+      {
+        double x = (item_x1 - view_w) / range_w;
+        x = std::max<double>(0.0, x);
+        sv.position_.set_x(x);
+      }
+      else
+      {
+        break;
+      }
+
+      Item & hsb = sv.parent_->get<Item>("hscrollbar");
+      hsb.uncache();
+      break;
+    }
+
+    view.requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::processKeyEvent
   //
   bool
-  RemuxView::resizeTo(const Canvas * canvas)
+  RemuxView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
   {
-    if (!ItemView::resizeTo(canvas))
+    e->ignore();
+
+    if (!model_)
     {
       return false;
     }
 
-    return true;
+    QEvent::Type et = e->type();
+    if (et == QEvent::KeyPress && !ItemFocus::singleton().focus())
+    {
+      int key = e->key();
+
+      if (key == Qt::Key_Left ||
+          key == Qt::Key_Right ||
+          key == Qt::Key_Up ||
+          key == Qt::Key_Down)
+      {
+        Item & root = *root_;
+        Item & gops = root["gops"];
+        TClipPtr clip = model_->selected_clip();
+        std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
+
+        if (found != gops.children_.end())
+        {
+          Scrollview & sv = (*found)->get<Scrollview>("clip_layout.scrollview");
+          GopCursorItem & cursor = sv.content_->get<GopCursorItem>("cursor");
+
+          bool ok = false;
+
+          if (key == Qt::Key_Left)
+          {
+            ok = cursor.move_left();
+          }
+          else if (key == Qt::Key_Right)
+          {
+            ok = cursor.move_right();
+          }
+          else if (key == Qt::Key_Up)
+          {
+            ok = cursor.move_up();
+          }
+          else if (key == Qt::Key_Down)
+          {
+            ok = cursor.move_down();
+          }
+
+          if (ok)
+          {
+            ensure_frame_visible(*this, cursor.frame_);
+            requestUncache(&cursor);
+            requestRepaint();
+          }
+
+          e->accept();
+        }
+      }
+#if 0
+      else if (key == Qt::Key_PageUp ||
+               key == Qt::Key_PageDown ||
+               key == Qt::Key_Home ||
+               key == Qt::Key_End)
+      {
+        scroll(*this, key);
+        e->accept();
+      }
+      else if (key == Qt::Key_Return ||
+               key == Qt::Key_Enter)
+      {
+        QModelIndex currentIndex = model_->currentItem();
+        model_->setPlayingItem(currentIndex);
+        e->accept();
+      }
+#endif
+    }
+
+    return e->isAccepted() ? true : ItemView::processKeyEvent(canvas, e);
   }
 
   //----------------------------------------------------------------
@@ -1559,36 +2014,34 @@ namespace yae
   void
   RemuxView::remove_clip(std::size_t index)
   {
-    RemuxModel & model = *model_;
     Item & root = *root_;
-
     Item & gops = root["gops"];
+
+    RemuxModel & model = *model_;
+    TClipPtr clip = model.clips_[index];
+    std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
+
+    if (found == gops.children_.end())
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    gops.children_.erase(found);
+
+    const Item & item = *(*found);
+    model.clips_.erase(model.clips_.begin() + index);
+    model.selected_ = std::min(index, model.clips_.size() - 1);
+
     Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
-
-    TClipPtr clip = model.clips_[index];
-    for (std::vector<ItemPtr>::iterator
-           i = gops.children_.begin(); i != gops.children_.end(); ++i)
-    {
-      const Item & item = *(*i);
-      const IsClipSelected * found =
-        dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
-
-      if (found && found->clip_ == clip)
-      {
-        model.clips_.erase(model.clips_.begin() + index);
-        model.selected_ = std::min(index, model.clips_.size() - 1);
-        gops.children_.erase(i);
-        clip_list.children_.pop_back();
-
-        dataChanged();
+    clip_list.children_.pop_back();
 
 #ifndef NDEBUG
-        sv.content_->dump(std::cerr);
+    sv.content_->dump(std::cerr);
 #endif
-        break;
-      }
-    }
+
+    dataChanged();
   }
 
   //----------------------------------------------------------------
