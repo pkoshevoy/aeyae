@@ -673,7 +673,7 @@ namespace yae
 
     TextInputProxy & editProxy =
       item.add(new TextInputProxy("filter_focus", text, edit));
-    ItemFocus::singleton().removeFocusable(view, editProxy.id_);
+    ItemFocus::singleton().removeFocusable(editProxy.id_);
     ItemFocus::singleton().setFocusable(view, editProxy, 1);
     editProxy.anchors_.fill(filter);
     editProxy.bgNoFocus_ = colorTextBg;

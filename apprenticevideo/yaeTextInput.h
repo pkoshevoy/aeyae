@@ -107,6 +107,7 @@ namespace yae
   struct TextInputProxy : public InputArea
   {
     TextInputProxy(const char * id, Text & view, TextInput & edit);
+    ~TextInputProxy();
 
     // virtual:
     void uncache();

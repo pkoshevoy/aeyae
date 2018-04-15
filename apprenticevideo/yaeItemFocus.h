@@ -52,7 +52,7 @@ namespace yae
     ItemFocus();
 
     // unregister focusable item so it would no longer receive focus:
-    void removeFocusable(Canvas::ILayer & view, const std::string & id);
+    void removeFocusable(const std::string & id);
 
     // register item that will be allowed to receive focus:
     void setFocusable(Canvas::ILayer & view, Item & item, int index);

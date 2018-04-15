@@ -704,6 +704,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextInputProxy::~TextInputProxy
+  //
+  TextInputProxy::~TextInputProxy()
+  {
+    ItemFocus::singleton().removeFocusable(Item::id_);
+  }
+
+  //----------------------------------------------------------------
   // TextInputProxy::uncache
   //
   void

@@ -57,7 +57,7 @@ namespace yae
   // ItemFocus::removeFocusable
   //
   void
-  ItemFocus::removeFocusable(Canvas::ILayer & view, const std::string & id)
+  ItemFocus::removeFocusable(const std::string & id)
   {
     const Target * target = lookup(idMap_, id);
     if (!target)
@@ -99,6 +99,10 @@ namespace yae
         YAE_ASSERT(false);
         throw std::runtime_error("another item with same index "
                                  "already exists");
+      }
+      else
+      {
+        found->second = target;
       }
     }
 
