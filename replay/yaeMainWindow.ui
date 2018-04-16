@@ -103,22 +103,6 @@
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionSetInPoint">
-   <property name="text">
-    <string>Set &amp;In Point</string>
-   </property>
-   <property name="shortcut">
-    <string>I</string>
-   </property>
-  </action>
-  <action name="actionSetOutPoint">
-   <property name="text">
-    <string>Set &amp;Out Point</string>
-   </property>
-   <property name="shortcut">
-    <string>O</string>
-   </property>
-  </action>
   <action name="actionAbout">
    <property name="text">
     <string>About</string>

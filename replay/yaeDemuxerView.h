@@ -13,6 +13,7 @@
 #include <vector>
 
 // Qt library:
+#include <QAction>
 #include <QFont>
 #include <QSignalMapper>
 
@@ -50,6 +51,11 @@ namespace yae
       track_(track),
       keep_(keep)
     {}
+
+    inline const Timeline::Track & get_track_timeline() const
+    {
+      return demuxer_->summary().get_track_timeline(track_);
+    }
 
     TDemuxerInterfacePtr demuxer_;
     std::string track_;
@@ -209,6 +215,10 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
+    // accessors:
+    inline std::size_t frameIndex() const
+    { return frame_; }
+
     // helper:
     TVideoFramePtr videoFrame() const;
 
@@ -294,9 +304,13 @@ namespace yae
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
+    bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
+
+    // virtual:
+    bool processRightClick();
 
     // helpers:
     void append_clip(const TClipPtr & clip);
@@ -315,6 +329,9 @@ namespace yae
     void timecode_changed_t0(int i);
     void timecode_changed_t1(int i);
 
+    void set_in_point();
+    void set_out_point();
+
   protected:
     RemuxViewStyle style_;
     RemuxModel * model_;
@@ -322,6 +339,9 @@ namespace yae
   public:
     QSignalMapper t0_;
     QSignalMapper t1_;
+
+    QAction actionSetInPoint_;
+    QAction actionSetOutPoint_;
   };
 
 }

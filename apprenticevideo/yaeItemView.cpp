@@ -153,7 +153,7 @@ namespace yae
 
     ok = connect(&animateTimer_, SIGNAL(timeout()), this, SLOT(repaint()));
     YAE_ASSERT(ok);
-   }
+  }
 
   //----------------------------------------------------------------
   // ItemView::setEnabled

@@ -9,6 +9,7 @@
 // Qt library:
 #include <QFontInfo>
 #include <QFontMetricsF>
+#include <QKeySequence>
 
 // local:
 #include "yaeDemuxerView.h"
@@ -670,6 +671,16 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // set_frame
+    //
+    void set_frame(std::size_t frame)
+    {
+      int keyframe = get_keyframe(frame);
+      frame_ = frame;
+      column_ = frame - keyframe;
+    }
+
+    //----------------------------------------------------------------
     // move_up
     //
     bool move_up()
@@ -779,6 +790,21 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // EndFrameItem
+  //
+  struct EndFrameItem : public VideoFrameItem
+  {
+    EndFrameItem(const char * id, std::size_t frame):
+      VideoFrameItem(id, frame)
+    {}
+
+    // virtual:
+    void paintContent() const {}
+    void unpaintContent() const {}
+  };
+
+
+  //----------------------------------------------------------------
   // layout_gops
   //
   static void
@@ -793,9 +819,7 @@ namespace yae
     root.visible_ = root.addExpr(new IsClipSelected(model, clip_ptr));
 
     const Clip & clip = *clip_ptr;
-
-    const Timeline::Track & track =
-      clip.demuxer_->summary().get_track_timeline(clip.track_);
+    const Timeline::Track & track = clip.get_track_timeline();
 
     Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
                                     kScrollbarBoth);
@@ -835,7 +859,8 @@ namespace yae
     row_lut[track.dts_.size()] = row;
 
     // add a placeholder item for the cursor position after all the frames:
-    Item & end = gops.addNew<Item>("end");
+    EndFrameItem & end = gops.add<EndFrameItem>
+      (new EndFrameItem("end", track.dts_.size()));
     end.width_ = ItemRef::constant(kFrameWidth);
     end.height_ = ItemRef::constant(kFrameHeight);
     end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
@@ -1088,9 +1113,7 @@ namespace yae
       const Clip & clip = *(model_.clips_[index_]);
       const TTime & tt = clip.keep_.*field_;
 
-      const Timeline::Track & track =
-        clip.demuxer_->summary().get_track_timeline(clip.track_);
-
+      const Timeline::Track & track = clip.get_track_timeline();
       const TTime & t0 = track.pts_span_.front().t0_;
       const TTime & t1 = track.pts_span_.back().t1_;
 
@@ -1191,8 +1214,7 @@ namespace yae
       }
 
       const Clip & clip = *(model_.clips_[index_]);
-      const Timeline::Track & track =
-        clip.demuxer_->summary().get_track_timeline(clip.track_);
+      const Timeline::Track & track = clip.get_track_timeline();
 
       t0_ = track.pts_span_.front().t0_;
       const TTime & t1 = track.pts_span_.back().t1_;
@@ -1714,8 +1736,18 @@ namespace yae
   RemuxView::RemuxView():
     ItemView("RemuxView"),
     style_("RemuxViewStyle", *this),
-    model_(NULL)
+    model_(NULL),
+    actionSetInPoint_(this),
+    actionSetOutPoint_(this)
   {
+    actionSetInPoint_.setObjectName(QString::fromUtf8("actionSetInPoint_"));
+    actionSetInPoint_.setText(tr("Set &In Point"));
+    actionSetInPoint_.setShortcut(QKeySequence(Qt::Key_I));
+
+    actionSetOutPoint_.setObjectName(QString::fromUtf8("actionSetOutPoint_"));
+    actionSetOutPoint_.setText(tr("Set &Out Point"));
+    actionSetOutPoint_.setShortcut(QKeySequence(Qt::Key_O));
+
     bool ok = connect(&t0_, SIGNAL(mapped(int)),
                       this, SLOT(timecode_changed_t0(int)));
     YAE_ASSERT(true);
@@ -1723,6 +1755,14 @@ namespace yae
     ok = connect(&t1_, SIGNAL(mapped(int)),
                  this, SLOT(timecode_changed_t1(int)));
     YAE_ASSERT(true);
+
+    ok = connect(&actionSetInPoint_, SIGNAL(triggered()),
+                 this, SLOT(set_in_point()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&actionSetOutPoint_, SIGNAL(triggered()),
+                 this, SLOT(set_out_point()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -1765,91 +1805,117 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ensure_frame_visible
+  // get_cursor_item
   //
-  static void
-  ensure_frame_visible(RemuxView & view, std::size_t frame)
+  static GopCursorItem *
+  get_cursor_item(const RemuxView & view, Scrollview ** sv = NULL)
   {
+    if (!view.model())
+    {
+      return NULL;
+    }
+
     Item & gops = view.root()->get<Item>("gops");
     TClipPtr clip = view.model()->selected_clip();
     std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
 
     if (found == gops.children_.end())
     {
+      return NULL;
+    }
+
+    Scrollview & sview = (*found)->get<Scrollview>("clip_layout.scrollview");
+    if (sv)
+    {
+      *sv = &sview;
+    }
+
+    GopCursorItem & cursor = sview.content_->get<GopCursorItem>("cursor");
+    return &cursor;
+  }
+
+  //----------------------------------------------------------------
+  // ensure_frame_visible
+  //
+  static void
+  ensure_frame_visible(RemuxView & view, std::size_t frame)
+  {
+    Scrollview * sv = NULL;
+    GopCursorItem * cursor = get_cursor_item(view, &sv);
+    if (!cursor)
+    {
       return;
     }
 
-    Scrollview & sv = (*found)->get<Scrollview>("clip_layout.scrollview");
-    GopCursorItem & cursor = sv.content_->get<GopCursorItem>("cursor");
-    std::size_t ir = cursor.get_row(frame);
-    std::size_t ic = cursor.get_column(frame);
+    std::size_t ir = cursor->get_row(frame);
+    std::size_t ic = cursor->get_column(frame);
 
-    Item & scene = *(sv.content_);
+    Item & scene = *(sv->content_);
     double scene_h = scene.height();
     double scene_w = scene.width();
 
-    double view_h = sv.height();
-    double view_w = sv.width();
+    double view_h = sv->height();
+    double view_w = sv->width();
 
     double range_h = (view_h < scene_h) ? (scene_h - view_h) : 0.0;
     double range_w = (view_w < scene_w) ? (scene_w - view_w) : 0.0;
 
     while (range_h > 0.0)
     {
-      double view_y0 = range_h * sv.position_.y();
+      double view_y0 = range_h * sv->position_.y();
       double view_y1 = view_y0 + view_h;
 
-      double item_y0 = kFrameOffset + kFrameHeight * ir;
-      double item_y1 = item_y0 + kFrameHeight;
+      double item_y0 = kFrameHeight * ir;
+      double item_y1 = kFrameHeight + kFrameOffset + item_y0;
 
       if (item_y0 < view_y0)
       {
         double y = item_y0 / range_h;
         y = std::min<double>(1.0, y);
-        sv.position_.set_y(y);
+        sv->position_.set_y(y);
       }
       else if (item_y1 > view_y1)
       {
         double y = (item_y1 - view_h) / range_h;
         y = std::max<double>(0.0, y);
-        sv.position_.set_y(y);
+        sv->position_.set_y(y);
       }
       else
       {
         break;
       }
 
-      Item & vsb = sv.parent_->get<Item>("scrollbar");
+      Item & vsb = sv->parent_->get<Item>("scrollbar");
       vsb.uncache();
       break;
     }
 
     while (range_w > 0.0)
     {
-      double view_x0 = range_w * sv.position_.x();
+      double view_x0 = range_w * sv->position_.x();
       double view_x1 = view_x0 + view_w;
 
-      double item_x0 = kFrameOffset + kFrameWidth * ic;
-      double item_x1 = item_x0 + kFrameWidth;
+      double item_x0 = kFrameWidth * ic;
+      double item_x1 = kFrameWidth + kFrameOffset + item_x0;
 
       if (item_x0 < view_x0)
       {
         double x = item_x0 / range_w;
         x = std::min<double>(1.0, x);
-        sv.position_.set_x(x);
+        sv->position_.set_x(x);
       }
       else if (item_x1 > view_x1)
       {
         double x = (item_x1 - view_w) / range_w;
         x = std::max<double>(0.0, x);
-        sv.position_.set_x(x);
+        sv->position_.set_x(x);
       }
       else
       {
         break;
       }
 
-      Item & hsb = sv.parent_->get<Item>("hscrollbar");
+      Item & hsb = sv->parent_->get<Item>("hscrollbar");
       hsb.uncache();
       break;
     }
@@ -1880,43 +1946,50 @@ namespace yae
           key == Qt::Key_Up ||
           key == Qt::Key_Down)
       {
-        Item & root = *root_;
-        Item & gops = root["gops"];
-        TClipPtr clip = model_->selected_clip();
-        std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
-
-        if (found != gops.children_.end())
+        GopCursorItem * cursor = get_cursor_item(*this);
+        if (cursor)
         {
-          Scrollview & sv = (*found)->get<Scrollview>("clip_layout.scrollview");
-          GopCursorItem & cursor = sv.content_->get<GopCursorItem>("cursor");
-
           bool ok = false;
 
           if (key == Qt::Key_Left)
           {
-            ok = cursor.move_left();
+            ok = cursor->move_left();
           }
           else if (key == Qt::Key_Right)
           {
-            ok = cursor.move_right();
+            ok = cursor->move_right();
           }
           else if (key == Qt::Key_Up)
           {
-            ok = cursor.move_up();
+            ok = cursor->move_up();
           }
           else if (key == Qt::Key_Down)
           {
-            ok = cursor.move_down();
+            ok = cursor->move_down();
           }
 
           if (ok)
           {
-            ensure_frame_visible(*this, cursor.frame_);
-            requestUncache(&cursor);
+            ensure_frame_visible(*this, cursor->frame_);
+            requestUncache(cursor);
             requestRepaint();
           }
 
           e->accept();
+        }
+      }
+      else if (key == Qt::Key_I)
+      {
+        if (actionSetInPoint_.isEnabled())
+        {
+          actionSetInPoint_.trigger();
+        }
+      }
+      else if (key == Qt::Key_O)
+      {
+        if (actionSetOutPoint_.isEnabled())
+        {
+          actionSetOutPoint_.trigger();
         }
       }
 #if 0
@@ -1956,6 +2029,56 @@ namespace yae
     requestUncache(&(root["clips"]));
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // find_frame_under_mouse
+  //
+  static VideoFrameItem *
+  find_frame_under_mouse(const std::list<VisibleItem> & mouseOverItems)
+  {
+    for (std::list<VisibleItem>::const_iterator
+           i = mouseOverItems.begin(); i != mouseOverItems.end(); ++i)
+    {
+      Item * item = i->item_.lock().get();
+      VideoFrameItem * frame_item = dynamic_cast<VideoFrameItem *>(item);
+      if (frame_item)
+      {
+        return frame_item;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::processMouseEvent
+  //
+  bool
+  RemuxView::processMouseEvent(Canvas * canvas, QMouseEvent * event)
+  {
+    bool r = ItemView::processMouseEvent(canvas, event);
+
+    QEvent::Type et = event->type();
+    if (et == QEvent::MouseButtonPress)
+    {
+      GopCursorItem * cursor = get_cursor_item(*this);
+      actionSetInPoint_.setEnabled(!!cursor);
+      actionSetOutPoint_.setEnabled(!!cursor);
+
+      if (cursor)
+      {
+        VideoFrameItem * frame = find_frame_under_mouse(mouseOverItems_);
+        if (frame)
+        {
+          cursor->set_frame(frame->frameIndex());
+          requestUncache(cursor);
+          requestRepaint();
+        }
+      }
+    }
+
+    return r;
   }
 
   //----------------------------------------------------------------
@@ -2058,8 +2181,7 @@ namespace yae
     }
 
     const Clip & clip = *clip_ptr;
-    const Timeline::Track & track =
-      clip.demuxer_->summary().get_track_timeline(clip.track_);
+    const Timeline::Track & track = clip.get_track_timeline();
 
     Timespan keep(track.pts_.front(), track.pts_.back());
     if (clip.keep_.t1_ < keep.t1_)
@@ -2254,6 +2376,167 @@ namespace yae
     TextInput & edit = item["timeline"].get<TextInput>(id.c_str());
     std::string text = edit.text().toUtf8().constData();
     update_time(*this, *model_, i, &Timespan::t1_, text);
+  }
+
+  //----------------------------------------------------------------
+  // get_frame_under_cursor
+  //
+  static VideoFrameItem *
+  get_frame_under_cursor(const RemuxView & view, GopItem ** gop_item = NULL)
+  {
+    if (!view.model())
+    {
+      return NULL;
+    }
+
+    TClipPtr clip_ptr = view.model()->selected_clip();
+    if (!clip_ptr)
+    {
+      return NULL;
+    }
+
+    Scrollview * sv = NULL;
+    GopCursorItem * cursor = get_cursor_item(view, &sv);
+    if (!cursor)
+    {
+      return NULL;
+    }
+
+    Clip & clip = *clip_ptr;
+    const Timeline::Track & track = clip.get_track_timeline();
+
+    std::size_t ir = cursor->get_row(cursor->frame_);
+    std::size_t ic = cursor->get_column(cursor->frame_);
+
+    Item & gops = *(sv->content_);
+    if (ir < gops.children_.size())
+    {
+      GopItem * item = dynamic_cast<GopItem *>(gops.children_[ir].get());
+      if (gop_item)
+      {
+        *gop_item = item;
+      }
+
+      if (item)
+      {
+        if (ic < item->children_.size())
+        {
+          VideoFrameItem & video =
+            item->children_[ic]->get<VideoFrameItem>("video");
+          return &video;
+        }
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // get_cursor_pts
+  //
+  static bool
+  get_cursor_pts(const RemuxView & view, TTime & dts, TTime & pts)
+  {
+    if (!view.model())
+    {
+      return false;
+    }
+
+    TClipPtr clip_ptr = view.model()->selected_clip();
+    if (!clip_ptr)
+    {
+      return false;
+    }
+
+    Clip & clip = *clip_ptr;
+    const Timeline::Track & track = clip.get_track_timeline();
+
+    GopItem * gop_item = NULL;
+    VideoFrameItem * frame = get_frame_under_cursor(view, &gop_item);
+    if (!frame)
+    {
+      return false;
+    }
+
+    const Gop & gop = gop_item->gop();
+    std::vector<std::size_t> lut;
+    get_pts_order_lut(gop, lut);
+
+    std::size_t i = frame->frameIndex();
+    std::size_t k = i - gop.i0_;
+    std::size_t j = lut[k];
+
+    dts = track.dts_[j];
+    pts = track.pts_[j];
+
+    // use the decoded PTS time, if available:
+    TVideoFramePtr vf = frame->videoFrame();
+    if (vf)
+    {
+      pts = vf->time_;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::set_in_point
+  //
+  void
+  RemuxView::set_in_point()
+  {
+    std::cerr << "FIXME: pkoshevoy: RemuxView::set_in_point" << std::endl;
+
+    TTime dts;
+    TTime pts;
+    if (!get_cursor_pts(*this, dts, pts))
+    {
+      return;
+    }
+
+    Clip & clip = *(model_->selected_clip());
+    clip.keep_.t0_ = pts;
+
+    if (clip.keep_.t1_ <= clip.keep_.t0_)
+    {
+      const Timeline::Track & track = clip.get_track_timeline();
+      clip.keep_.t1_ = track.pts_span_.back().t1_;
+    }
+
+    Item & root = *root_;
+    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    requestUncache(&sv);
+    requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::set_out_point
+  //
+  void
+  RemuxView::set_out_point()
+  {
+    std::cerr << "FIXME: pkoshevoy: RemuxView::set_out_point" << std::endl;
+
+    TTime dts;
+    TTime pts;
+    if (!get_cursor_pts(*this, dts, pts))
+    {
+      return;
+    }
+
+    Clip & clip = *(model_->selected_clip());
+    clip.keep_.t1_ = pts;
+
+    if (clip.keep_.t1_ <= clip.keep_.t0_)
+    {
+      const Timeline::Track & track = clip.get_track_timeline();
+      clip.keep_.t0_ = track.pts_span_.front().t0_;
+    }
+
+    Item & root = *root_;
+    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    requestUncache(&sv);
+    requestRepaint();
   }
 
 }

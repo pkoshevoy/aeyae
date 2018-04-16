@@ -673,11 +673,25 @@ namespace yae
       // populate the context menu:
       contextMenu_->clear();
 
-      // contextMenu_->addAction(actionSetInPoint);
-      // contextMenu_->addAction(actionSetOutPoint);
-      // contextMenu_->addSeparator();
-      contextMenu_->addAction(actionFullScreen);
+      std::size_t items = 0;
+      if (view_.actionSetInPoint_.isEnabled())
+      {
+        contextMenu_->addAction(&view_.actionSetInPoint_);
+        items++;
+      }
 
+      if (view_.actionSetOutPoint_.isEnabled())
+      {
+        contextMenu_->addAction(&view_.actionSetOutPoint_);
+        items++;
+      }
+
+      if (items)
+      {
+        contextMenu_->addSeparator();
+      }
+
+      contextMenu_->addAction(actionFullScreen);
       contextMenu_->popup(globalPt);
     }
   }
