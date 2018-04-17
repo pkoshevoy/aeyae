@@ -285,7 +285,7 @@ namespace yae
   TTime &
   TTime::operator *= (double s)
   {
-    time_ = int64_t(::round(time_ * s));
+    time_ = int64_t(yae::round(time_ * s));
     return *this;
   }
 
@@ -295,7 +295,7 @@ namespace yae
   TTime
   TTime::operator * (double s) const
   {
-    return TTime(int64_t(::round(time_ * s)), base_);
+    return TTime(int64_t(yae::round(time_ * s)), base_);
   }
 
   //----------------------------------------------------------------

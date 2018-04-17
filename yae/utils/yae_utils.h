@@ -13,6 +13,7 @@
 #include <cstdio>
 #include <list>
 #include <map>
+#include <math.h>
 #include <set>
 #include <stdexcept>
 #include <string.h>
@@ -282,6 +283,21 @@ namespace yae
   protected:
     TOpenable & something_;
   };
+
+#if defined(_MSC_VER) && _MSC_VER < 1800
+  //----------------------------------------------------------------
+  // round
+  //
+  inline double round(double number)
+  {
+    return number < 0.0 ? ::ceil(number - 0.5) : ::floor(number + 0.5);
+  }
+#else
+  inline double round(double number)
+  {
+    return ::round(number);
+  }
+#endif
 
   //----------------------------------------------------------------
   // at
