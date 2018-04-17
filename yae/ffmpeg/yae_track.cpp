@@ -293,7 +293,7 @@ namespace yae
     //
     TDecoders()
     {
-      avcodec_register_all();
+      ensure_ffmpeg_initialized();
 
       void * opaque = NULL;
       for (const AVCodec * c = av_codec_iterate(&opaque); c; c = av_codec_iterate(&opaque))

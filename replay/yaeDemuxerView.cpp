@@ -453,9 +453,16 @@ namespace yae
              const Timeline::Track & track,
              RemuxView & view,
              const RemuxViewStyle & style,
-             GopItem & root,
-             const Gop & gop)
+             Item & gops,
+             const Gop & gop,
+             std::size_t row)
   {
+    GopItem & root = gops.add<GopItem>(new GopItem("gop", gop));
+    root.setContext(view);
+    root.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
+    root.anchors_.top_ =
+      ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
+
     std::vector<std::size_t> lut;
     get_pts_order_lut(gop, lut);
 
@@ -653,11 +660,17 @@ namespace yae
         return rows_.rbegin()->first;
       }
 
-      std::map<std::size_t, std::size_t>::const_iterator gop = found;
-      std::advance(gop, -1);
-      YAE_ASSERT(gop->second + 1 == found->second);
+      if (found != rows_.begin())
+      {
+        std::map<std::size_t, std::size_t>::const_iterator gop = found;
+        std::advance(gop, -1);
+        YAE_ASSERT(gop->second + 1 == found->second);
+        return gop->first;
+      }
 
-      return gop->first;
+      // packet preceeds the first keyframe packet...
+      YAE_ASSERT(false);
+      return 0;
     }
 
     //----------------------------------------------------------------
@@ -723,9 +736,6 @@ namespace yae
 
       std::map<std::size_t, std::size_t>::const_iterator
         i2 = rows_.upper_bound(i1->first);
-
-      std::map<std::size_t, std::size_t>::const_iterator i0 = i1;
-      std::advance(i0, -1);
 
       frame_ = std::min(i1->first + column_,
                         std::max(i1->first, i2->first - 1));
@@ -831,6 +841,26 @@ namespace yae
     std::map<std::size_t, std::size_t> row_lut;
 
     std::size_t row = 0;
+    if (!yae::has<std::size_t>(track.keyframes_, 0))
+    {
+      // if the 1st packet is not a keyframe...
+      // it's a malformed GOP that preceeds the 1st well formed GOP,
+      // and it must be accounted for:
+
+      std::size_t i0 = 0;
+      std::size_t i1 =
+        track.keyframes_.empty() ?
+        track.dts_.size() :
+        *track.keyframes_.begin();
+
+      row_lut[i0] = row;
+
+      Gop gop(clip.demuxer_, clip.track_, i0, i1);
+      layout_gop(clip, track, view, style, gops, gop, row);
+
+      row++;
+    }
+
     for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();
          i != track.keyframes_.end(); ++i, row++)
     {
@@ -846,14 +876,7 @@ namespace yae
       row_lut[i0] = row;
 
       Gop gop(clip.demuxer_, clip.track_, i0, i1);
-
-      GopItem & item = gops.add<GopItem>(new GopItem("gop", gop));
-      item.setContext(view);
-      item.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
-      item.anchors_.top_ =
-        ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
-
-      layout_gop(clip, track, view, style, item, gop);
+      layout_gop(clip, track, view, style, gops, gop, row);
     }
 
     row_lut[track.dts_.size()] = row;

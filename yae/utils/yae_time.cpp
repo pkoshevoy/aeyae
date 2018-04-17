@@ -1169,6 +1169,15 @@ namespace yae
     }
     else
     {
+      // if the 1st packet is not a keyframe...
+      // it's a malformed GOP that preceeds the 1st well formed GOP,
+      // and it must be accounted for:
+      if (!yae::has<std::size_t>(keyframes_, 0))
+      {
+        const TTime & t0 = pts_[0];
+        GOPs[t0] = 0;
+      }
+
       for (std::set<std::size_t>::const_iterator
              i = keyframes_.begin(); i != keyframes_.end(); ++i)
       {
