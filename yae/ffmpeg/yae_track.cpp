@@ -293,7 +293,10 @@ namespace yae
     //
     TDecoders()
     {
-      for (const AVCodec * c = av_codec_next(NULL); c; c = av_codec_next(c))
+      avcodec_register_all();
+
+      void * opaque = NULL;
+      for (const AVCodec * c = av_codec_iterate(&opaque); c; c = av_codec_iterate(&opaque))
       {
         if (av_codec_is_decoder(c))
         {
