@@ -870,9 +870,20 @@ namespace yae
   {
     if (packet.pts != AV_NOPTS_VALUE)
     {
-      pts = TTime(stream->time_base.num * packet.pts,
-                  stream->time_base.den);
-      return true;
+      // check that PTS is not less than DTS, and that PTS and DTS
+      // are reasonably close together:
+      int64_t diff =
+        packet.dts != AV_NOPTS_VALUE ?
+        stream->time_base.num * (packet.pts - packet.dts) /
+        stream->time_base.den :
+        0;
+
+      if (diff >= 0 && diff < 10)
+      {
+        pts = TTime(stream->time_base.num * packet.pts,
+                    stream->time_base.den);
+        return true;
+      }
     }
 
     return false;

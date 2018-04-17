@@ -61,10 +61,12 @@ namespace yae
   {
     FrameColor(const Clip & clip,
                const Timespan & span,
+               const VideoFrameItem & item,
                const Color & drop,
                const Color & keep):
       clip_(clip),
       span_(span),
+      item_(item),
       drop_(drop),
       keep_(keep)
     {}
@@ -73,11 +75,20 @@ namespace yae
     void evaluate(Color & result) const
     {
       bool selected = clip_.keep_.contains(span_.t1_);
+
+      TVideoFramePtr vf_ptr = item_.videoFrame();
+      if (vf_ptr)
+      {
+        TTime frame_t1 = vf_ptr->time_ + span_.dt();
+        selected = clip_.keep_.contains(frame_t1);
+      }
+
       result = selected ? keep_ : drop_;
     }
 
     const Clip & clip_;
     Timespan span_;
+    const VideoFrameItem & item_;
     Color drop_;
     Color keep_;
   };
@@ -486,13 +497,6 @@ namespace yae
       frame.background_ = frame.
         addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
 
-      Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
-      frame.color_ = frame.
-        addExpr(new FrameColor(clip, span,
-                               style.cursor_.get(),
-                               style.scrollbar_.get()));
-      frame.color_.cachingEnabled_ = false;
-
       VideoFrameItem & video = frame.add(new VideoFrameItem("video", i));
       video.anchors_.fill(frame, 1);
 
@@ -525,6 +529,13 @@ namespace yae
       pts.elide_ = Qt::ElideNone;
       pts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       pts.background_ = frame.color_;
+
+      Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
+      frame.color_ = frame.
+        addExpr(new FrameColor(clip, span, video,
+                               style.cursor_.get(),
+                               style.scrollbar_.get()));
+      frame.color_.cachingEnabled_ = false;
     }
   }
 
@@ -2458,7 +2469,7 @@ namespace yae
   // get_cursor_pts
   //
   static bool
-  get_cursor_pts(const RemuxView & view, TTime & dts, TTime & pts)
+  get_cursor_pts(const RemuxView & view, TTime & pts)
   {
     if (!view.model())
     {
@@ -2478,7 +2489,13 @@ namespace yae
     VideoFrameItem * frame = get_frame_under_cursor(view, &gop_item);
     if (!frame)
     {
-      return false;
+      if (track.pts_span_.empty())
+      {
+        return false;
+      }
+
+      pts = track.pts_span_.back().t1_ + track.dur_.back();
+      return true;
     }
 
     const Gop & gop = gop_item->gop();
@@ -2488,8 +2505,6 @@ namespace yae
     std::size_t i = frame->frameIndex();
     std::size_t k = i - gop.i0_;
     std::size_t j = lut[k];
-
-    dts = track.dts_[j];
     pts = track.pts_[j];
 
     // use the decoded PTS time, if available:
@@ -2510,9 +2525,8 @@ namespace yae
   {
     std::cerr << "FIXME: pkoshevoy: RemuxView::set_in_point" << std::endl;
 
-    TTime dts;
     TTime pts;
-    if (!get_cursor_pts(*this, dts, pts))
+    if (!get_cursor_pts(*this, pts))
     {
       return;
     }
@@ -2540,9 +2554,8 @@ namespace yae
   {
     std::cerr << "FIXME: pkoshevoy: RemuxView::set_out_point" << std::endl;
 
-    TTime dts;
     TTime pts;
-    if (!get_cursor_pts(*this, dts, pts))
+    if (!get_cursor_pts(*this, pts))
     {
       return;
     }
