@@ -510,7 +510,8 @@ namespace yae
 #else
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
-      dts.fontSize_ = ItemRef::reference(style.row_height_, 0.25);
+      // dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
+      dts.fontSize_ = ItemRef::reference(style.row_height_, 0.3 * kDpiScale);
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       dts.background_ = frame.color_;
@@ -1762,6 +1763,11 @@ namespace yae
     {
       double dpi = view_.delegate()->logicalDpiY();
       result = dpi / 5;
+
+      double fh = QFontMetricsF(view_.style()->font_).height();
+      fh = std::max(fh, 13.0);
+
+      result = std::max(result, fh * 2.0);
     }
 
     const ItemView & view_;
@@ -1776,7 +1782,7 @@ namespace yae
   {
 #if 1
     row_height_ = addExpr(new GetRowHeight(view));
-    row_height_.cachingEnabled_ = false;
+    // row_height_.cachingEnabled_ = false;
 #elif 0
     row_height_ = ItemRef::reference(title_height_, 0.55);
 #else
