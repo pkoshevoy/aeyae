@@ -488,8 +488,9 @@ namespace yae
         ItemRef::reference(root, kPropertyLeft, 1,
                            kFrameOffset + k * kFrameWidth);
 
-      // frame.height_ = ItemRef::reference(style.title_height_, 3.0);
-      // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0);
+      // frame.height_ = ItemRef::reference(style.row_height_, 3.0);
+      // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0, 2);
+      // frame.radius_ = ItemRef::reference(frame.height_, 0.05);
       frame.width_ = ItemRef::constant(kFrameWidth);
       frame.height_ = ItemRef::constant(kFrameHeight);
       frame.radius_ = ItemRef::constant(kFrameRadius);
@@ -509,7 +510,7 @@ namespace yae
 #else
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
-      dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
+      dts.fontSize_ = ItemRef::reference(style.row_height_, 0.25);
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       dts.background_ = frame.color_;
@@ -1747,6 +1748,24 @@ namespace yae
     }
   };
 
+  //----------------------------------------------------------------
+  // GetRowHeight
+  //
+  struct GetRowHeight : TDoubleExpr
+  {
+    GetRowHeight(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double dpi = view_.delegate()->logicalDpiY();
+      result = dpi / 5;
+    }
+
+    const ItemView & view_;
+  };
 
   //----------------------------------------------------------------
   // RemuxViewStyle::RemuxViewStyle
@@ -1755,7 +1774,10 @@ namespace yae
     ItemViewStyle(id, view),
     layout_(new RemuxLayout())
   {
-#if 0
+#if 1
+    row_height_ = addExpr(new GetRowHeight(view));
+    row_height_.cachingEnabled_ = false;
+#elif 0
     row_height_ = ItemRef::reference(title_height_, 0.55);
 #else
     double fh = QFontMetricsF(font_).height();

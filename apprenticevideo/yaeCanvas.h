@@ -128,6 +128,8 @@ namespace yae
       virtual void repaint() = 0;
       virtual void requestRepaint() = 0;
       virtual void inhibitScreenSaver() = 0;
+      virtual double logicalDpiX() const = 0;
+      virtual double logicalDpiY() const = 0;
     };
 
     //----------------------------------------------------------------

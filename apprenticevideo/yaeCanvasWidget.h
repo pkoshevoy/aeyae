@@ -20,6 +20,7 @@
 // Qt includes:
 #include <QApplication>
 #include <QCursor>
+#include <QDesktopWidget>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #ifdef YAE_USE_QOPENGL_WIDGET
@@ -148,6 +149,32 @@ namespace yae
       virtual void inhibitScreenSaver()
       {
         ssi_.screenSaverInhibit();
+      }
+
+      virtual double logicalDpiX() const
+      {
+        QWidget * sw = screenWidget();
+        double w_mm = sw->widthMM();
+        double w = sw->width();
+        double dpi = w / (w_mm * 0.0393701);
+        return dpi;
+      }
+
+      virtual double logicalDpiY() const
+      {
+        QWidget * sw = screenWidget();
+        double h_mm = sw->heightMM();
+        double h = sw->height();
+        double dpi = h / (h_mm * 0.0393701);
+        return dpi;
+      }
+
+      inline QWidget * screenWidget() const
+      {
+        QDesktopWidget * dw = QApplication::desktop();
+        int sn = dw->screenNumber(&canvas_);
+        QWidget * sw = dw->screen(sn);
+        return sw;
       }
 
     protected:
