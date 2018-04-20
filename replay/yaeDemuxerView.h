@@ -136,11 +136,12 @@ namespace yae
   //
   struct YAE_API RemuxViewStyle : public ItemViewStyle
   {
-    RemuxViewStyle(const char * id, const ItemView & view);
+    RemuxViewStyle(const char * id, const RemuxView & view);
 
     TLayoutPtr layout_;
 
     // shared common properties:
+    ItemRef dpi_;
     ItemRef row_height_;
   };
 
@@ -333,10 +334,11 @@ namespace yae
     void set_out_point();
 
   protected:
-    RemuxViewStyle style_;
     RemuxModel * model_;
 
   public:
+    RemuxViewStyle style_;
+
     QSignalMapper t0_;
     QSignalMapper t1_;
 

@@ -457,6 +457,74 @@ namespace yae
   static const double kFrameRadius = 3;
 
   //----------------------------------------------------------------
+  // get_frame_pos_x
+  //
+  static double
+  get_frame_pos_x(const RemuxView & view, std::size_t column)
+  {
+    double dpi = view.style_.dpi_.get();
+    double s = dpi / 96.0;
+    double w = std::max(kFrameWidth, kFrameWidth * s);
+    double x = w * double(column);
+    return x;
+  }
+
+  //----------------------------------------------------------------
+  // get_frame_pos_y
+  //
+  static double
+  get_frame_pos_y(const RemuxView & view, std::size_t row)
+  {
+    double dpi = view.style_.dpi_.get();
+    double s = dpi / 96.0;
+    double h = std::max(kFrameHeight, kFrameHeight * s);
+    double y = h * double(row);
+    return y;
+  }
+
+
+  //----------------------------------------------------------------
+  // GetFramePosX
+  //
+  struct GetFramePosX : TDoubleExpr
+  {
+    GetFramePosX(const RemuxView & view, std::size_t column):
+      view_(view),
+      column_(column)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = get_frame_pos_x(view_, column_);
+    }
+
+    const RemuxView & view_;
+    std::size_t column_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFramePosY
+  //
+  struct GetFramePosY : TDoubleExpr
+  {
+    GetFramePosY(const RemuxView & view, std::size_t row):
+      view_(view),
+      row_(row)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = get_frame_pos_y(view_, row_);
+    }
+
+    const RemuxView & view_;
+    std::size_t row_;
+  };
+
+
+  //----------------------------------------------------------------
   // layout_gop
   //
   static void
@@ -472,7 +540,9 @@ namespace yae
     root.setContext(view);
     root.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
     root.anchors_.top_ =
-      ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
+      root.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
+    root.anchors_.bottom_ =
+      root.addExpr(new GetFramePosY(view, row + 1));
 
     std::vector<std::size_t> lut;
     get_pts_order_lut(gop, lut);
@@ -484,15 +554,11 @@ namespace yae
 
       RoundRect & frame = root.addNew<RoundRect>("frame");
       frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+      frame.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
       frame.anchors_.left_ =
-        ItemRef::reference(root, kPropertyLeft, 1,
-                           kFrameOffset + k * kFrameWidth);
-
-      // frame.height_ = ItemRef::reference(style.row_height_, 3.0);
-      // frame.width_ = ItemRef::reference(frame.height_, 16.0 / 9.0, 2);
-      // frame.radius_ = ItemRef::reference(frame.height_, 0.05);
-      frame.width_ = ItemRef::constant(kFrameWidth);
-      frame.height_ = ItemRef::constant(kFrameHeight);
+        frame.addExpr(new GetFramePosX(view, k), 1, kFrameOffset);
+      frame.anchors_.right_ =
+        frame.addExpr(new GetFramePosX(view, k + 1));
       frame.radius_ = ItemRef::constant(kFrameRadius);
 
       frame.background_ = frame.
@@ -511,7 +577,7 @@ namespace yae
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
       // dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
-      dts.fontSize_ = ItemRef::reference(style.row_height_, 0.3 * kDpiScale);
+      dts.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       dts.background_ = frame.color_;
@@ -568,68 +634,63 @@ namespace yae
   {
 
     //----------------------------------------------------------------
-    // GetRow
+    // GetCursorPosY
     //
-    struct GetRow : TDoubleExpr
+    struct GetCursorPosY : TDoubleExpr
     {
-      GetRow(const GopCursorItem & cursor):
-        cursor_(cursor)
+      GetCursorPosY(const GopCursorItem & cursor, std::size_t offset = 0):
+        cursor_(cursor),
+        offset_(offset)
       {}
 
       // virtual:
       void evaluate(double & result) const
       {
-        result = cursor_.get_row(cursor_.frame_);
+        std::size_t row = cursor_.get_row(cursor_.frame_);
+        result = get_frame_pos_y(cursor_.view_, row + offset_);
       }
 
       const GopCursorItem & cursor_;
+      std::size_t offset_;
     };
 
     //----------------------------------------------------------------
-    // GetColumn
+    // GetCursorPosX
     //
-    struct GetColumn : TDoubleExpr
+    struct GetCursorPosX : TDoubleExpr
     {
-      GetColumn(const GopCursorItem & cursor): cursor_(cursor) {}
+      GetCursorPosX(const GopCursorItem & cursor, std::size_t offset = 0):
+        cursor_(cursor),
+        offset_(offset)
+      {}
 
       // virtual:
       void evaluate(double & result) const
       {
-        result = cursor_.get_column(cursor_.frame_);
+        std::size_t column = cursor_.get_column(cursor_.frame_);
+        result = get_frame_pos_x(cursor_.view_, column + offset_);
       }
 
       const GopCursorItem & cursor_;
+      std::size_t offset_;
     };
 
     //----------------------------------------------------------------
     // GopCursorItem
     //
-    GopCursorItem(const char * id,
+    GopCursorItem(const RemuxView & view,
+                  const char * id,
                   const std::map<std::size_t, std::size_t> & row_lut):
       Rectangle(id),
+      view_(view),
       rows_(row_lut),
       frame_(0),
       column_(0)
     {
-      anchors_.top_ = addExpr(new GetRow(*this),
-                              kFrameHeight, // scale
-                              kFrameOffset);// translate
-
-      anchors_.left_ = addExpr(new GetColumn(*this),
-                               kFrameWidth,  // scale
-                               kFrameOffset);// translate
-
-      width_ = ItemRef::constant(kFrameWidth);
-      height_ = ItemRef::constant(kFrameHeight);
-#if 0
-      for (std::map<std::size_t, std::size_t>::const_iterator
-             i = rows_.begin(); i != rows_.end(); ++i)
-      {
-        const std::size_t & keyframe = i->first;
-        const std::size_t & row = i->second;
-        keys_[row] = keyframe;
-      }
-#endif
+      anchors_.top_ = addExpr(new GetCursorPosY(*this), 1, kFrameOffset);
+      anchors_.bottom_ = addExpr(new GetCursorPosY(*this, 1));
+      anchors_.left_ = addExpr(new GetCursorPosX(*this), 1, kFrameOffset);
+      anchors_.right_ = addExpr(new GetCursorPosX(*this, 1));
     }
 
     //----------------------------------------------------------------
@@ -805,8 +866,8 @@ namespace yae
       return true;
     }
 
+    const RemuxView & view_;
     std::map<std::size_t, std::size_t> rows_; // map keyframe -> row
-    // std::map<std::size_t, std::size_t> keys_; // map row -> keyframe
     std::size_t frame_;
     std::size_t column_;
   };
@@ -897,13 +958,16 @@ namespace yae
     // add a placeholder item for the cursor position after all the frames:
     EndFrameItem & end = gops.add<EndFrameItem>
       (new EndFrameItem("end", track.dts_.size()));
-    end.width_ = ItemRef::constant(kFrameWidth);
-    end.height_ = ItemRef::constant(kFrameHeight);
     end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
+    end.anchors_.right_ =
+      end.addExpr(new GetFramePosX(view, 1));
     end.anchors_.top_ =
-      ItemRef::reference(gops, kPropertyTop, 1, 1 + row * kFrameHeight);
+      end.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
+    end.anchors_.bottom_ =
+      end.addExpr(new GetFramePosY(view, row + 1));
 
-    GopCursorItem & cursor = gops.add(new GopCursorItem("cursor", row_lut));
+    GopCursorItem & cursor =
+      gops.add(new GopCursorItem(view, "cursor", row_lut));
     cursor.color_ = cursor.addExpr
       (style_color_ref(view, &ItemViewStyle::fg_, 0));
     cursor.colorBorder_ = cursor.addExpr
@@ -1687,6 +1751,69 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ViewDpi
+  //
+  struct ViewDpi : TDoubleExpr
+  {
+    ViewDpi(const RemuxView & view):
+      view_(view),
+      dpi_(0.0)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = view_.delegate()->logicalDpiY();
+
+      if (result != dpi_ && dpi_ > 0.0)
+      {
+        // force all geometry to be recalculated:
+        view_.root()->uncache();
+      }
+
+      // cache the result:
+      dpi_ = result;
+    }
+
+    const RemuxView & view_;
+    mutable double dpi_;
+  };
+
+
+  //----------------------------------------------------------------
+  // get_row_height
+  //
+  static double
+  get_row_height(const RemuxView & view)
+  {
+    double dpi = view.style_.dpi_.get();
+    double rh = dpi / 3.5;
+    double fh = QFontMetricsF(view.style_.font_).height();
+    fh = std::max(fh, 13.0);
+    rh = std::max(rh, fh * 2.0);
+    return rh;
+  }
+
+  //----------------------------------------------------------------
+  // GetRowHeight
+  //
+  struct GetRowHeight : TDoubleExpr
+  {
+    GetRowHeight(const RemuxView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = get_row_height(view_);
+    }
+
+    const RemuxView & view_;
+  };
+
+
+  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -1707,15 +1834,17 @@ namespace yae
       Rectangle & sep = root.addNew<Rectangle>("separator");
       sep.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       sep.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-      // sep.anchors_.vcenter_ = ItemRef::scale(root, kPropertyHeight, 0.75);
-      sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -100);
+      sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom,
+                                             -3.0 * (2 + get_row_height(view)));
       sep.height_ = ItemRef::reference(style.row_height_, 0.15);
       sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
 
       VSplitter & splitter = root.
         add(new VSplitter("splitter",
-                          ItemRef::reference(root, kPropertyTop, 1.0, 100),
-                          ItemRef::reference(root, kPropertyBottom, 1.0, -100),
+                          ItemRef::reference(root, kPropertyTop, 1.0,
+                                             3.0 * (2 + get_row_height(view))),
+                          ItemRef::reference(root, kPropertyBottom, 1.0,
+                                             -3.0 * (2 + get_row_height(view))),
                           sep.anchors_.bottom_));
       splitter.anchors_.fill(sep);
 
@@ -1750,36 +1879,15 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // GetRowHeight
-  //
-  struct GetRowHeight : TDoubleExpr
-  {
-    GetRowHeight(const ItemView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double dpi = view_.delegate()->logicalDpiY();
-      result = dpi / 5;
-
-      double fh = QFontMetricsF(view_.style()->font_).height();
-      fh = std::max(fh, 13.0);
-
-      result = std::max(result, fh * 2.0);
-    }
-
-    const ItemView & view_;
-  };
-
-  //----------------------------------------------------------------
   // RemuxViewStyle::RemuxViewStyle
   //
-  RemuxViewStyle::RemuxViewStyle(const char * id, const ItemView & view):
+  RemuxViewStyle::RemuxViewStyle(const char * id, const RemuxView & view):
     ItemViewStyle(id, view),
     layout_(new RemuxLayout())
   {
+    dpi_ = addExpr(new ViewDpi(view));
+    dpi_.cachingEnabled_ = false;
+
     row_height_ = addExpr(new GetRowHeight(view));
   }
 
@@ -1887,6 +1995,7 @@ namespace yae
     return &cursor;
   }
 
+
   //----------------------------------------------------------------
   // ensure_frame_visible
   //
@@ -1918,8 +2027,8 @@ namespace yae
       double view_y0 = range_h * sv->position_.y();
       double view_y1 = view_y0 + view_h;
 
-      double item_y0 = kFrameHeight * ir;
-      double item_y1 = kFrameHeight + kFrameOffset + item_y0;
+      double item_y0 = get_frame_pos_y(view, ir);
+      double item_y1 = get_frame_pos_y(view, ir + 1);
 
       if (item_y0 < view_y0)
       {
@@ -1948,8 +2057,8 @@ namespace yae
       double view_x0 = range_w * sv->position_.x();
       double view_x1 = view_x0 + view_w;
 
-      double item_x0 = kFrameWidth * ic;
-      double item_x1 = kFrameWidth + kFrameOffset + item_x0;
+      double item_x0 = get_frame_pos_x(view, ic);
+      double item_x1 = get_frame_pos_x(view, ic + 1);
 
       if (item_x0 < view_x0)
       {
