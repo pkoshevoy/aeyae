@@ -1780,16 +1780,7 @@ namespace yae
     ItemViewStyle(id, view),
     layout_(new RemuxLayout())
   {
-#if 1
     row_height_ = addExpr(new GetRowHeight(view));
-    // row_height_.cachingEnabled_ = false;
-#elif 0
-    row_height_ = ItemRef::reference(title_height_, 0.55);
-#else
-    double fh = QFontMetricsF(font_).height();
-    fh = std::max(fh, 13.0);
-    row_height_ = ItemRef::constant(fh * 2.0);
-#endif
   }
 
   //----------------------------------------------------------------

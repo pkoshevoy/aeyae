@@ -154,18 +154,14 @@ namespace yae
       virtual double logicalDpiX() const
       {
         QWidget * sw = screenWidget();
-        double w_mm = sw->widthMM();
-        double w = sw->width();
-        double dpi = w / (w_mm * 0.0393701);
+        double dpi = sw->logicalDpiX();
         return dpi;
       }
 
       virtual double logicalDpiY() const
       {
         QWidget * sw = screenWidget();
-        double h_mm = sw->heightMM();
-        double h = sw->height();
-        double dpi = h / (h_mm * 0.0393701);
+        double dpi = sw->logicalDpiY();
         return dpi;
       }
 
