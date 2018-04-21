@@ -128,8 +128,19 @@ namespace yae
       virtual void repaint() = 0;
       virtual void requestRepaint() = 0;
       virtual void inhibitScreenSaver() = 0;
-      virtual double logicalDpiX() const = 0;
-      virtual double logicalDpiY() const = 0;
+
+      virtual double device_pixel_ratio() const = 0;
+      virtual double screen_width() const = 0;
+      virtual double screen_height() const = 0;
+
+      virtual double screen_width_mm() const = 0;
+      virtual double screen_height_mm() const = 0;
+
+      virtual double physical_dpi_x() const = 0;
+      virtual double physical_dpi_y() const = 0;
+
+      virtual double logical_dpi_x() const = 0;
+      virtual double logical_dpi_y() const = 0;
     };
 
     //----------------------------------------------------------------

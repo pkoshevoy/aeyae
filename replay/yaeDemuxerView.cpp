@@ -1498,6 +1498,7 @@ namespace yae
     Text & btn_text = btn.addNew<Text>("btn_text");
     btn_text.anchors_.center(btn);
     btn_text.text_ = TVarRef::constant(TVar("-"));
+    btn_text.fontSize_ = ItemRef::reference(style.row_height_, 0.5);
 
     Text & src_name = root.addNew<Text>("src_name");
     src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
@@ -1571,6 +1572,7 @@ namespace yae
     Text & btn_text = btn.addNew<Text>("btn_text");
     btn_text.anchors_.center(btn);
     btn_text.text_ = TVarRef::constant(TVar("+"));
+    btn_text.fontSize_ = ItemRef::reference(style.row_height_, 0.5);
 
     RepeatClip & btn_ia = root.add<RepeatClip>(new RepeatClip("btn_ia", view));
     btn_ia.anchors_.fill(btn);
@@ -1763,7 +1765,7 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      result = view_.delegate()->logicalDpiY();
+      result = view_.delegate()->logical_dpi_y();
 
       if (result != dpi_ && dpi_ > 0.0)
       {

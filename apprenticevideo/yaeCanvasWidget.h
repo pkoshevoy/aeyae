@@ -151,26 +151,102 @@ namespace yae
         ssi_.screenSaverInhibit();
       }
 
-      virtual double logicalDpiX() const
-      {
-        QWidget * sw = screenWidget();
-        double dpi = sw->logicalDpiX();
-        return dpi;
-      }
-
-      virtual double logicalDpiY() const
-      {
-        QWidget * sw = screenWidget();
-        double dpi = sw->logicalDpiY();
-        return dpi;
-      }
-
-      inline QWidget * screenWidget() const
+      static QWidget * get_screen_widget(const QWidget * widget)
       {
         QDesktopWidget * dw = QApplication::desktop();
-        int sn = dw->screenNumber(&canvas_);
+        int sn = dw->screenNumber(widget);
         QWidget * sw = dw->screen(sn);
         return sw;
+      }
+
+      inline QWidget * screen_widget() const
+      {
+        return get_screen_widget(&canvas_);
+      }
+
+      static double get_device_pixel_ratio(const QWidget * sw)
+      {
+#if QT_VERSION < 0x050000
+        (void)sw;
+        double s = 1.0;
+#elif QT_VERSION < 0x050600
+        double s = sw->devicePixelRatio();
+#else
+        double s = sw->devicePixelRatioF();
+#endif
+        return s;
+      }
+
+      virtual double device_pixel_ratio() const
+      {
+        QWidget * sw = this->screen_widget();
+        return get_device_pixel_ratio(sw);
+      }
+
+      virtual double screen_width() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double w = sw->width() * s;
+        return w;
+      }
+
+      virtual double screen_height() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double h = sw->height() * s;
+        return h;
+      }
+
+      virtual double screen_width_mm() const
+      {
+        QWidget * sw = this->screen_widget();
+        double w_mm = sw->widthMM();
+        return w_mm;
+      }
+
+      virtual double screen_height_mm() const
+      {
+        QWidget * sw = this->screen_widget();
+        double h_mm = sw->heightMM();
+        return h_mm;
+      }
+
+      virtual double physical_dpi_x() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double h = sw->height() * s;
+        double h_mm = sw->heightMM();
+        double dpi = (h * 25.4) / h_mm;
+        return dpi;
+      }
+
+      virtual double physical_dpi_y() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double w = sw->width() * s;
+        double w_mm = sw->widthMM();
+        double dpi = (w * 25.4) / w_mm;
+        return dpi;
+      }
+
+      virtual double logical_dpi_x() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double dpi = sw->logicalDpiX();
+        return dpi * s;
+      }
+
+      virtual double logical_dpi_y() const
+      {
+        QWidget * sw = this->screen_widget();
+        double s = this->device_pixel_ratio();
+        double dpi = sw->logicalDpiY();
+        return dpi * s;
       }
 
     protected:
@@ -224,11 +300,8 @@ namespace yae
         {
           TWidget::resizeEvent((QResizeEvent *)event);
 
-#if QT_VERSION < 0x050000
-          double devicePixelRatio = 1.0;
-#else
-          double devicePixelRatio = TWidget::devicePixelRatio();
-#endif
+          QWidget * sw = TDelegate::get_screen_widget(this);
+          double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
 
           Canvas::resize(devicePixelRatio,
                          TWidget::width(),
@@ -268,11 +341,9 @@ namespace yae
     // virtual:
     void paintGL()
     {
-#if QT_VERSION < 0x050000
-      double devicePixelRatio = 1.0;
-#else
-      double devicePixelRatio = TWidget::devicePixelRatio();
-#endif
+      QWidget * sw = TDelegate::get_screen_widget(this);
+      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
+
       if (devicePixelRatio != Canvas::devicePixelRatio())
       {
         Canvas::resize(devicePixelRatio, TWidget::width(), TWidget::height());
