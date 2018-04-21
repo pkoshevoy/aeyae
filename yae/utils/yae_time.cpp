@@ -342,7 +342,9 @@ namespace yae
   int64
   TTime::get(uint64 base) const
   {
-    if (base_ == base)
+    if (base_ == base ||
+        time_ == std::numeric_limits<int64_t>::min() ||
+        time_ == std::numeric_limits<int64_t>::max())
     {
       return time_;
     }
