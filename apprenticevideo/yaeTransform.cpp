@@ -267,6 +267,12 @@ namespace yae
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
     YAE_OGL_11(glRotated(degrees, 0.0, 0.0, 1.0));
 
+    TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+    YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
+    YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
+    YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
+    YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
+
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)
     {

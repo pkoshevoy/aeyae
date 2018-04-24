@@ -344,6 +344,8 @@ namespace yae
 
     QAction actionSetInPoint_;
     QAction actionSetOutPoint_;
+
+    TAnimatorPtr spinnerAnimator_;
   };
 
 }

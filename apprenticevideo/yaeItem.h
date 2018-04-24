@@ -147,6 +147,10 @@ namespace yae
       return v;
     }
 
+    // helper, for simulating periodic functions:
+    double get_periodic_value(double period_scale = 1.0,
+                              boost::uint64_t offset_ns = 0) const;
+
     inline double get_spinup_value() const
     { return segment_.begin()->second->evaluate(0.0); }
 
@@ -162,7 +166,7 @@ namespace yae
     Polyline steady_;
     Polyline spindown_;
     std::map<double, const Polyline *> segment_;
-    double duration_ns_;
+    boost::uint64_t duration_ns_;
   };
 
 
@@ -902,6 +906,32 @@ namespace yae
     ItemRef override_;
     ItemRef expression_;
     Transition & transition_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Periodic
+  //
+  struct Periodic : public TDoubleExpr
+  {
+    Periodic(const TransitionItem & item,
+             double period_scale = 1.0,
+             boost::uint64_t offset_ns = 0):
+      item_(item),
+      offset_ns_(offset_ns),
+      period_scale_(period_scale)
+    {}
+
+    // virtual:
+    void evaluate(double & value) const
+    {
+      const Transition & f = item_.transition();
+      value = f.get_periodic_value(period_scale_, offset_ns_);
+    }
+
+    const TransitionItem & item_;
+    double period_scale_;
+    boost::uint64_t offset_ns_;
   };
 
 

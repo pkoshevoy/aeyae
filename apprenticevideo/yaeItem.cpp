@@ -349,7 +349,7 @@ namespace yae
       return false;
     }
 
-    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::chrono::nanoseconds ns = now - t0_;
     boost::uint64_t t = ns.count();
     bool done = (duration_ns_ < t);
     return done;
@@ -367,7 +367,7 @@ namespace yae
       return false;
     }
 
-    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::chrono::nanoseconds ns = now - t0_;
     boost::uint64_t t = ns.count();
     if (t < spinup_.duration_ns_)
     {
@@ -394,7 +394,7 @@ namespace yae
       return Transition::kPending;
     }
 
-    boost::chrono::steady_clock::duration ns = now - t0_;
+    boost::chrono::nanoseconds ns = now - t0_;
     boost::uint64_t t = ns.count();
 
     boost::uint64_t t1 = spinup_.duration_ns_;
@@ -441,13 +441,13 @@ namespace yae
 
     if (current_state == Transition::kSteady)
     {
-      t0_ = now - boost::chrono::steady_clock::duration(spinup_.duration_ns_);
+      t0_ = now - boost::chrono::nanoseconds(spinup_.duration_ns_);
     }
     else if (current_state == Transition::kSpindown)
     {
       boost::uint64_t skip_spinup_ns =
         boost::uint64_t(double(spinup_.duration_ns_) * (1.0 - seg_pos));
-      t0_ = now - boost::chrono::steady_clock::duration(skip_spinup_ns);
+      t0_ = now - boost::chrono::nanoseconds(skip_spinup_ns);
     }
     else if (current_state != Transition::kSpinup)
     {
@@ -462,7 +462,7 @@ namespace yae
   Transition::start_from_steady()
   {
     TimePoint now = boost::chrono::steady_clock::now();
-    t0_ = now - boost::chrono::steady_clock::duration(spinup_.duration_ns_);
+    t0_ = now - boost::chrono::nanoseconds(spinup_.duration_ns_);
   }
 
   //----------------------------------------------------------------
@@ -482,6 +482,34 @@ namespace yae
     {
       result = seg->evaluate(seg_pos);
     }
+  }
+
+  //----------------------------------------------------------------
+  // Transition::get_periodic_value
+  //
+  double
+  Transition::get_periodic_value(double period_scale,
+                                 boost::uint64_t offset_ns) const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+
+    boost::uint64_t period_ns = (boost::uint64_t)
+      // (std::max(1.0, double(duration_ns_ * period_scale)));
+      duration_ns_;
+
+    boost::uint64_t elapsed_ns = boost::chrono::nanoseconds(now - t0_).count();
+    elapsed_ns = (boost::uint64_t)(double(elapsed_ns) / period_scale);
+    elapsed_ns = (elapsed_ns + offset_ns) % period_ns;
+
+    TimePoint t = t0_ + boost::chrono::nanoseconds(elapsed_ns);
+
+    const Polyline * seg = NULL;
+    double seg_pos = 0.0;
+    get_state(t, seg, seg_pos);
+    YAE_ASSERT(seg);
+
+    double v = seg ? seg->evaluate(seg_pos) : 0.0;
+    return v;
   }
 
 
