@@ -501,6 +501,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // str
+  //
+  template <typename TData>
+  inline static std::string
+  str(const std::string & a, const TData & b)
+  {
+    std::ostringstream oss;
+    oss << a << b;
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
+  // str
+  //
+  template <typename TData>
+  inline static std::string
+  str(const char * a, const TData & b)
+  {
+    std::ostringstream oss;
+    oss << a << b;
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
   // toText
   //
   template <typename TData>

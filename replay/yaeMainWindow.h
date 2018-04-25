@@ -19,6 +19,7 @@
 
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/thread/yae_task_runner.h"
 
 // local includes:
 #ifdef __APPLE__
@@ -27,6 +28,7 @@
 #include "yaeCanvasWidget.h"
 #include "yaeDemuxerView.h"
 #include "yaeReplay.h"
+#include "yaeSpinnerView.h"
 
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
@@ -111,6 +113,7 @@ namespace yae
 
   protected:
     // virtual:
+    bool event(QEvent * e);
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
@@ -136,6 +139,9 @@ namespace yae
 
     RemuxModel model_;
     RemuxView view_;
+    SpinnerView spinner_;
+    AsyncTaskQueue async_;
+    boost::shared_ptr<AsyncTaskQueue::Task> task_;
   };
 }
 

@@ -82,6 +82,7 @@ set(project_moc_hxx
 
   yaeDemuxerView.h
   yaeMainWindow.h
+  yaeSpinnerView.h
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
@@ -106,6 +107,8 @@ set(project_sources
   yaeMainWindow.h
   yaeReplay.cpp
   yaeReplay.h
+  yaeSpinnerView.cpp
+  yaeSpinnerView.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h

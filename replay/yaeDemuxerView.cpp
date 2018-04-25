@@ -18,7 +18,6 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
-#include "yaeTransform.h"
 
 
 namespace yae
@@ -1070,30 +1069,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // str
-  //
-  template <typename TData>
-  inline static std::string
-  str(const std::string & a, const TData & b)
-  {
-    std::ostringstream oss;
-    oss << a << b;
-    return oss.str();
-  }
-
-  //----------------------------------------------------------------
-  // str
-  //
-  template <typename TData>
-  inline static std::string
-  str(const char * a, const TData & b)
-  {
-    std::ostringstream oss;
-    oss << a << b;
-    return oss.str();
-  }
-
-  //----------------------------------------------------------------
   // TextEdit
   //
   struct TextEdit
@@ -1816,126 +1791,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // SpinnerAnimator
-  //
-  struct SpinnerAnimator : public ItemView::IAnimator
-  {
-    SpinnerAnimator(RemuxView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animatorPtr)
-    {
-      Item & root = *(view_.root());
-      Item & spinner = root.get<Item>("spinner");
-      view_.requestUncache(&spinner);
-      view_.requestRepaint();
-    }
-
-    RemuxView & view_;
-  };
-
-  //----------------------------------------------------------------
-  // layout_clock_spinner
-  //
-  static void
-  layout_clock_spinner(RemuxView & view,
-                       const RemuxViewStyle & style,
-                       Item & root)
-  {
-    Rectangle & spinner = root.addNew<Rectangle>("spinner");
-    spinner.anchors_.fill(root);
-    spinner.color_ = spinner.
-      addExpr(style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75));
-
-    typedef Transition::Polyline TPolyline;
-    TransitionItem & transition = root.
-      addHidden(new TransitionItem("spinner_transition",
-                                   TPolyline(0.0, 0.1, 0.1),
-                                   TPolyline(0.0, 0.1, 0.1),
-                                   TPolyline(12.0, 1.0, 0.1, 10)));
-
-    for (int i = 0; i < 3; i++)
-    {
-      Transform & xform = spinner.
-        addNew<Transform>(str("xform_", i + 1).c_str());
-
-      xform.anchors_.hcenter_ =
-        ItemRef::reference(root, kPropertyHCenter);
-
-      xform.anchors_.vcenter_ =
-        ItemRef::reference(root, kPropertyVCenter);
-
-      xform.rotation_ = ItemRef::constant(M_PI * double(i) / 6.0);
-          
-      Rectangle & r0 = xform.
-        addNew<Rectangle>(str("hh_", i).c_str());
-
-      Rectangle & r3 = xform.
-        addNew<Rectangle>(str("hh_", i + 3).c_str());
-
-      Rectangle & r6 = xform.
-        addNew<Rectangle>(str("hh_", i + 6).c_str());
-
-      Rectangle & r9 = xform.
-        addNew<Rectangle>(str("hh_", i + 9).c_str());
-
-      r0.anchors_.hcenter_ = ItemRef::constant(0.0);
-      r3.anchors_.vcenter_ = ItemRef::constant(0.0);
-      r6.anchors_.hcenter_ = r0.anchors_.hcenter_;
-      r9.anchors_.vcenter_ = r3.anchors_.vcenter_;
-
-      r0.width_ = r0.
-        addExpr(new OddRoundUp(root, kPropertyHeight, 0.005, 1));
-      r3.height_ = ItemRef::reference(r0, kPropertyWidth);
-      r6.width_ = ItemRef::reference(r0, kPropertyWidth);
-      r9.height_ = ItemRef::reference(r0, kPropertyWidth);
-
-      r0.height_ = ItemRef::reference(root, kPropertyHeight, 0.03);
-      r3.width_ = ItemRef::reference(r0, kPropertyHeight);
-      r6.height_ = ItemRef::reference(r0, kPropertyHeight);
-      r9.width_ = ItemRef::reference(r0, kPropertyHeight);
-
-      r0.anchors_.bottom_ =
-        ItemRef::reference(root, kPropertyHeight, -0.04);
-
-      r3.anchors_.left_ =
-        ItemRef::reference(root, kPropertyHeight, 0.04);
-          
-      r6.anchors_.top_ =
-        ItemRef::reference(root, kPropertyHeight, 0.04);
-
-      r9.anchors_.right_ =
-        ItemRef::reference(root, kPropertyHeight, -0.04);
-
-      r0.color_ = r0.
-        addExpr(style_color_ref(view, &ItemViewStyle::fg_));
-
-      r3.color_ = ColorRef::reference(r0, kPropertyColor);
-      r6.color_ = ColorRef::reference(r0, kPropertyColor);
-      r9.color_ = ColorRef::reference(r0, kPropertyColor);
-
-      r0.opacity_ = r0.addExpr
-        (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(12 - i)));
-
-      r3.opacity_ = r3.addExpr
-        (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(9 - i)));
-
-      r6.opacity_ = r6.addExpr
-        (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(6 - i)));
-
-      r9.opacity_ = r9.addExpr
-        (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(3 - i)));
-    }
-
-    transition.start();
-
-    view.spinnerAnimator_.reset(new SpinnerAnimator(view));
-    view.addAnimator(view.spinnerAnimator_);
-  }
-
-  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -1997,10 +1852,6 @@ namespace yae
         const TClipPtr & clip = model.clips_[i];
         view.append_clip(clip);
       }
-
-#if 0
-      layout_clock_spinner(view, style, root);
-#endif
     }
   };
 

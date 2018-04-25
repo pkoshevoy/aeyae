@@ -119,6 +119,10 @@ namespace yae
     view_.setEnabled(true);
     view_.layoutChanged();
 
+    canvasWidget_->append(&spinner_);
+    spinner_.setStyle(view_.style());
+    spinner_.setEnabled(false);
+
     canvasWidget_->setFocusPolicy(Qt::StrongFocus);
     canvasWidget_->setAcceptDrops(true);
 
@@ -221,25 +225,74 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::add
+  // LoadTask
+  //
+  struct LoadTask : AsyncTaskQueue::Task
+  {
+
+    //----------------------------------------------------------------
+    // LoadTask
+    //
+    LoadTask(QObject * target,
+             const RemuxModel & model,
+             const std::set<std::string> & sources,
+             const std::list<ClipInfo> & src_clips):
+      target_(target),
+      model_(model),
+      sources_(sources),
+      src_clips_(src_clips_)
+    {}
+
+    //----------------------------------------------------------------
+    // Done
+    //
+    struct Done : public QEvent
+    {
+      Done(const RemuxModel & model, std::list<TClipPtr> & new_clips):
+        QEvent(QEvent::User),
+        model_(model)
+      {
+        clips_.swap(new_clips);
+      }
+
+      RemuxModel model_;
+      std::list<TClipPtr> clips_;
+    };
+
+    // virtual:
+    void run();
+
+  protected:
+    QObject * target_;
+    RemuxModel model_;
+    std::set<std::string> sources_;
+    std::list<ClipInfo> src_clips_;
+  };
+
+  //----------------------------------------------------------------
+  // LoadTask::run
   //
   void
-  MainWindow::add(const std::set<std::string> & sources,
-                  const std::list<ClipInfo> & src_clips)
+  LoadTask::run()
   {
     typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
     typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
-    std::list<ClipInfo> clips = src_clips;
+    std::list<ClipInfo> clips = src_clips_;
 
     // these are expressed in seconds:
     static const double buffer_duration = 1.0;
     static const double discont_tolerance = 0.017;
 
     for (std::set<std::string>::const_iterator
-           i = sources.begin(); i != sources.end(); ++i)
+           i = sources_.begin(); i != sources_.end(); ++i)
     {
       const std::string & source = *i;
+      if (yae::has(model_.demuxer_, source))
+      {
+        // already loaded, skip it:
+        continue;
+      }
 
       std::list<TDemuxerPtr> demuxers;
       if (!open_primary_and_aux_demuxers(source, demuxers))
@@ -276,12 +329,7 @@ namespace yae
       model_.demuxer_[source] = parallel_demuxer;
       model_.source_[parallel_demuxer] = source;
 
-#if 0
-      // show the summary:
-      std::cout << "\nparallel:\n" << summary << std::endl;
-#endif
-
-      if (src_clips.empty())
+      if (src_clips_.empty())
       {
         std::string track_id("v:000");
         if (yae::has(summary.decoders_, track_id))
@@ -295,6 +343,7 @@ namespace yae
       }
     }
 
+    std::list<TClipPtr> new_clips;
     for (std::list<ClipInfo>::const_iterator
            i = clips.begin(); i != clips.end(); ++i)
     {
@@ -339,11 +388,22 @@ namespace yae
       }
 
       TClipPtr clip(new Clip(demuxer, track_id, keep));
-      model_.clips_.push_back(clip);
-      view_.append_clip(clip);
+      new_clips.push_back(clip);
     }
 
-    model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
+    qApp->postEvent(target_, new Done(model_, new_clips));
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::add
+  //
+  void
+  MainWindow::add(const std::set<std::string> & sources,
+                  const std::list<ClipInfo> & src_clips)
+  {
+    spinner_.setEnabled(true);
+    task_.reset(new LoadTask(this, model_, sources, src_clips));
+    async_.add(task_);
   }
 
   //----------------------------------------------------------------
@@ -586,6 +646,40 @@ namespace yae
   {
     yae::swapShortcuts(shortcutExit_, actionExit);
     yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::event
+  //
+  bool
+  MainWindow::event(QEvent * e)
+  {
+    if (e->type() == QEvent::User)
+    {
+      LoadTask::Done * load_done = dynamic_cast<LoadTask::Done *>(e);
+      if (load_done)
+      {
+        spinner_.setEnabled(false);
+        load_done->accept();
+
+        model_.demuxer_.swap(load_done->model_.demuxer_);
+        model_.source_.swap(load_done->model_.source_);
+
+        for (std::list<TClipPtr>::const_iterator i = load_done->clips_.begin();
+             i != load_done->clips_.end(); ++i)
+        {
+          const TClipPtr & clip = *i;
+          model_.clips_.push_back(clip);
+          view_.append_clip(clip);
+        }
+
+        model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
+        task_.reset();
+        return true;
+      }
+    }
+
+    return QMainWindow::event(e);
   }
 
   //----------------------------------------------------------------
