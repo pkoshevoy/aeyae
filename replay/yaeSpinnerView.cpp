@@ -160,7 +160,7 @@ namespace yae
       (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
     text.text_ = text.addExpr(new GetSpinnerText(view));
     text.fontSize_ = ItemRef::reference(style.title_height_, 0.3);
-    text.elide_ = Qt::ElideLeft;
+    text.elide_ = Qt::ElideMiddle;
 
     return transition;
   }

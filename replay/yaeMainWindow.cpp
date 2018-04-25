@@ -240,7 +240,7 @@ namespace yae
       target_(target),
       demuxers_(demuxers),
       sources_(sources),
-      src_clips_(src_clips_)
+      src_clips_(src_clips)
     {}
 
     //----------------------------------------------------------------
