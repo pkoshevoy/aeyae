@@ -153,8 +153,15 @@ namespace yae
     QString text = getElidedText(maxWidth * supersample, item, fm, flags);
 
     QRectF rect = fm.boundingRect(maxRect, flags, text);
-    bbox.x_ = rect.x() / supersample;
-    bbox.y_ = rect.y() / supersample;
+
+    bbox.x_ =
+      (maxWidth < double(std::numeric_limits<short int>::max())) ?
+      (rect.x() / supersample) : 0.0;
+
+    bbox.y_ =
+      (maxHeight < double(std::numeric_limits<short int>::max())) ?
+      (rect.y() / supersample) : 0.0;
+
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
   }

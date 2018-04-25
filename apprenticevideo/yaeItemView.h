@@ -280,6 +280,31 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // get_row_height
+  //
+  double get_row_height(const ItemView & view);
+
+
+  //----------------------------------------------------------------
+  // GetRowHeight
+  //
+  struct GetRowHeight : TDoubleExpr
+  {
+    GetRowHeight(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = get_row_height(view_);
+    }
+
+    const ItemView & view_;
+  };
+
+
+  //----------------------------------------------------------------
   // ItemViewStyle
   //
   struct YAE_API ItemViewStyle : public Item
@@ -298,6 +323,8 @@ namespace yae
     QFont font_fixed_;
 
     // shared common properties:
+    ItemRef dpi_;
+    ItemRef row_height_;
     ItemRef title_height_;
     ItemRef font_size_;
 

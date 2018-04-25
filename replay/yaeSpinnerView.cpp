@@ -10,6 +10,7 @@
 // local:
 #include "yaeSpinnerView.h"
 #include "yaeRectangle.h"
+#include "yaeText.h"
 #include "yaeTransform.h"
 
 
@@ -39,10 +40,29 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // GetSpinnerText
+  //
+  struct GetSpinnerText : public TVarExpr
+  {
+    GetSpinnerText(const SpinnerView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      result = view_.text();
+    }
+
+    const SpinnerView & view_;
+  };
+
+
+  //----------------------------------------------------------------
   // layout_clock_spinner
   //
   TransitionItem &
-  layout_clock_spinner(ItemView & view,
+  layout_clock_spinner(SpinnerView & view,
                        const ItemViewStyle & style,
                        Item & root)
   {
@@ -131,6 +151,17 @@ namespace yae
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(3 - i)));
     }
 
+    Text & text = root.addNew<Text>("text");
+    text.anchors_.hcenter_ = ItemRef::reference(spinner, kPropertyHCenter);
+    text.anchors_.vcenter_ = ItemRef::reference(spinner, kPropertyHeight, 0.25);
+    text.width_ = ItemRef::reference(spinner, kPropertyWidth);
+    text.background_ = ColorRef::transparent(spinner, kPropertyColor);
+    text.color_ = text.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
+    text.text_ = text.addExpr(new GetSpinnerText(view));
+    text.fontSize_ = ItemRef::reference(style.title_height_, 0.3);
+    text.elide_ = Qt::ElideLeft;
+
     return transition;
   }
 
@@ -140,7 +171,8 @@ namespace yae
   //
   SpinnerView::SpinnerView():
     ItemView("SpinnerView"),
-    style_(NULL)
+    style_(NULL),
+    text_(tr("please wait"))
   {}
 
   //----------------------------------------------------------------
@@ -187,6 +219,17 @@ namespace yae
     }
 
     ItemView::setEnabled(enable);
+  }
+
+  //----------------------------------------------------------------
+  // SpinnerView::setText
+  //
+  void
+  SpinnerView::setText(const QString & text)
+  {
+    text_ = text;
+    requestUncache(root_.get());
+    requestRepaint();
   }
 
 }

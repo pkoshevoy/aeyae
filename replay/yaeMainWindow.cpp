@@ -244,6 +244,19 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
+    // Began
+    //
+    struct Began : public QEvent
+    {
+      Began(const std::string & source):
+        QEvent(QEvent::User),
+        source_(source)
+      {}
+
+      std::string source_;
+    };
+
+    //----------------------------------------------------------------
     // Done
     //
     struct Done : public QEvent
@@ -293,6 +306,8 @@ namespace yae
         // already loaded, skip it:
         continue;
       }
+
+      qApp->postEvent(target_, new Began(source));
 
       std::list<TDemuxerPtr> demuxers;
       if (!open_primary_and_aux_demuxers(source, demuxers))
@@ -395,7 +410,6 @@ namespace yae
   MainWindow::add(const std::set<std::string> & sources,
                   const std::list<ClipInfo> & src_clips)
   {
-    spinner_.setEnabled(true);
     task_.reset(new LoadTask(this, model_.demuxer_, sources, src_clips));
     async_.add(task_);
   }
@@ -650,6 +664,15 @@ namespace yae
   {
     if (e->type() == QEvent::User)
     {
+      LoadTask::Began * load_began = dynamic_cast<LoadTask::Began *>(e);
+      if (load_began)
+      {
+        spinner_.setEnabled(true);
+        spinner_.setText(str("loading ", load_began->source_));
+        load_began->accept();
+        return true;
+      }
+
       LoadTask::Done * load_done = dynamic_cast<LoadTask::Done *>(e);
       if (load_done)
       {

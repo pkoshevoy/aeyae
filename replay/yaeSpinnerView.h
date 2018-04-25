@@ -11,6 +11,7 @@
 
 // Qt library:
 #include <QObject>
+#include <QString>
 
 // local:
 #include "yaeItemView.h"
@@ -18,15 +19,6 @@
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // layout_clock_spinner
-  //
-  YAE_API TransitionItem &
-  layout_clock_spinner(ItemView & view,
-                       const ItemViewStyle & style,
-                       Item & root);
-
 
   //----------------------------------------------------------------
   // SpinnerView
@@ -47,9 +39,19 @@ namespace yae
     // virtual:
     void setEnabled(bool enable);
 
+    // helper:
+    inline void setText(const std::string & text)
+    { setText(QString::fromUtf8(text.c_str())); }
+
+    void setText(const QString & text);
+
+    inline const QString & text() const
+    { return text_; }
+
  protected:
     const ItemViewStyle * style_;
     TAnimatorPtr animator_;
+    QString text_;
  };
 
 }

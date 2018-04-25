@@ -7,8 +7,6 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // Qt library:
-#include <QFontInfo>
-#include <QFontMetricsF>
 #include <QKeySequence>
 
 // local:
@@ -1727,69 +1725,6 @@ namespace yae
     double offsetPos_;
   };
 
-
-  //----------------------------------------------------------------
-  // ViewDpi
-  //
-  struct ViewDpi : TDoubleExpr
-  {
-    ViewDpi(const RemuxView & view):
-      view_(view),
-      dpi_(0.0)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      result = view_.delegate()->logical_dpi_y();
-
-      if (result != dpi_ && dpi_ > 0.0)
-      {
-        // force all geometry to be recalculated:
-        view_.root()->uncache();
-      }
-
-      // cache the result:
-      dpi_ = result;
-    }
-
-    const RemuxView & view_;
-    mutable double dpi_;
-  };
-
-
-  //----------------------------------------------------------------
-  // get_row_height
-  //
-  static double
-  get_row_height(const RemuxView & view)
-  {
-    double dpi = view.style_.dpi_.get();
-    double rh = dpi / 3.5;
-    double fh = QFontMetricsF(view.style_.font_).height();
-    fh = std::max(fh, 13.0);
-    rh = std::max(rh, fh * 2.0);
-    return rh;
-  }
-
-  //----------------------------------------------------------------
-  // GetRowHeight
-  //
-  struct GetRowHeight : TDoubleExpr
-  {
-    GetRowHeight(const RemuxView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      result = get_row_height(view_);
-    }
-
-    const RemuxView & view_;
-  };
-
   //----------------------------------------------------------------
   // RemuxLayout
   //
@@ -1861,12 +1796,7 @@ namespace yae
   RemuxViewStyle::RemuxViewStyle(const char * id, const RemuxView & view):
     ItemViewStyle(id, view),
     layout_(new RemuxLayout())
-  {
-    dpi_ = addExpr(new ViewDpi(view));
-    dpi_.cachingEnabled_ = false;
-
-    row_height_ = addExpr(new GetRowHeight(view));
-  }
+  {}
 
   //----------------------------------------------------------------
   // RemuxView::RemuxView

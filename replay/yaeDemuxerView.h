@@ -139,10 +139,6 @@ namespace yae
     RemuxViewStyle(const char * id, const RemuxView & view);
 
     TLayoutPtr layout_;
-
-    // shared common properties:
-    ItemRef dpi_;
-    ItemRef row_height_;
   };
 
   //----------------------------------------------------------------

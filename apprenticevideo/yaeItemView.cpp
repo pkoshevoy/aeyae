@@ -14,6 +14,7 @@
 // Qt library:
 #include <QApplication>
 #include <QFontInfo>
+#include <QFontMetricsF>
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QTabletEvent>
@@ -863,6 +864,51 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ViewDpi
+  //
+  struct ViewDpi : TDoubleExpr
+  {
+    ViewDpi(const ItemView & view):
+      view_(view),
+      dpi_(0.0)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = view_.delegate()->logical_dpi_y();
+
+      if (result != dpi_ && dpi_ > 0.0)
+      {
+        // force all geometry to be recalculated:
+        view_.root()->uncache();
+      }
+
+      // cache the result:
+      dpi_ = result;
+    }
+
+    const ItemView & view_;
+    mutable double dpi_;
+  };
+
+
+  //----------------------------------------------------------------
+  // get_row_height
+  //
+  double
+  get_row_height(const ItemView & view)
+  {
+    double dpi = view.style()->dpi_.get();
+    double rh = dpi / 3.5;
+    double fh = QFontMetricsF(view.style()->font_).height();
+    fh = std::max(fh, 13.0);
+    rh = std::max(rh, fh * 2.0);
+    return rh;
+  }
+
+
+  //----------------------------------------------------------------
   // ItemViewStyle::ItemViewStyle
   //
   ItemViewStyle::ItemViewStyle(const char * id, const ItemView & view):
@@ -935,6 +981,10 @@ namespace yae
     anchors_.left_ = ItemRef::constant(0);
     width_ = ItemRef::constant(0);
     height_ = ItemRef::constant(0);
+
+    dpi_ = addExpr(new ViewDpi(view));
+    dpi_.cachingEnabled_ = false;
+    row_height_ = addExpr(new GetRowHeight(view));
 
     title_height_ = addExpr(new CalcTitleHeight(view, 50.0));
     font_size_ = ItemRef::reference(title_height_, 0.15);
