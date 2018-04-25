@@ -301,44 +301,41 @@ namespace yae
            i = sources_.begin(); i != sources_.end(); ++i)
     {
       const std::string & source = *i;
-      if (yae::has(demuxers_, source))
+      if (!yae::has(demuxers_, source))
       {
-        // already loaded, skip it:
-        continue;
+        qApp->postEvent(target_, new Began(source));
+
+        std::list<TDemuxerPtr> demuxers;
+        if (!open_primary_and_aux_demuxers(source, demuxers))
+        {
+          // failed to open the primary resource:
+          av_log(NULL, AV_LOG_WARNING,
+                 "failed to open %s, skipping...",
+                 source.c_str());
+          continue;
+        }
+
+        TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
+
+        // wrap each demuxer in a DemuxerBuffer, build a summary:
+        for (std::list<TDemuxerPtr>::const_iterator
+               i = demuxers.begin(); i != demuxers.end(); ++i)
+        {
+          const TDemuxerPtr & demuxer = *i;
+
+          TDemuxerInterfacePtr
+            buffer(new DemuxerBuffer(demuxer, buffer_duration));
+
+          buffer->update_summary(discont_tolerance);
+          parallel_demuxer->append(buffer);
+        }
+
+        demuxers_[source] = parallel_demuxer;
       }
-
-      qApp->postEvent(target_, new Began(source));
-
-      std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(source, demuxers))
-      {
-        // failed to open the primary resource:
-        av_log(NULL, AV_LOG_WARNING,
-               "failed to open %s, skipping...",
-               source.c_str());
-        continue;
-      }
-
-      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
-
-      // wrap each demuxer in a DemuxerBuffer, build a summary:
-      for (std::list<TDemuxerPtr>::const_iterator
-             i = demuxers.begin(); i != demuxers.end(); ++i)
-      {
-        const TDemuxerPtr & demuxer = *i;
-
-        TDemuxerInterfacePtr
-          buffer(new DemuxerBuffer(demuxer, buffer_duration));
-
-        buffer->update_summary(discont_tolerance);
-        parallel_demuxer->append(buffer);
-      }
-
-      demuxers_[source] = parallel_demuxer;
 
       // summarize the demuxer:
       const DemuxerSummary & summary =
-        parallel_demuxer->update_summary(discont_tolerance);
+        demuxers_[source]->update_summary(discont_tolerance);
 
       if (src_clips_.empty())
       {
