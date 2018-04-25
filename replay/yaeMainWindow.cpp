@@ -234,11 +234,11 @@ namespace yae
     // LoadTask
     //
     LoadTask(QObject * target,
-             const RemuxModel & model,
+             const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
              const std::set<std::string> & sources,
              const std::list<ClipInfo> & src_clips):
       target_(target),
-      model_(model),
+      demuxers_(demuxers),
       sources_(sources),
       src_clips_(src_clips_)
     {}
@@ -248,14 +248,15 @@ namespace yae
     //
     struct Done : public QEvent
     {
-      Done(const RemuxModel & model, std::list<TClipPtr> & new_clips):
-        QEvent(QEvent::User),
-        model_(model)
+      Done(std::map<std::string, TDemuxerInterfacePtr> & demuxers,
+           std::list<TClipPtr> & new_clips):
+        QEvent(QEvent::User)
       {
+        demuxers_.swap(demuxers);
         clips_.swap(new_clips);
       }
 
-      RemuxModel model_;
+      std::map<std::string, TDemuxerInterfacePtr> demuxers_;
       std::list<TClipPtr> clips_;
     };
 
@@ -264,7 +265,7 @@ namespace yae
 
   protected:
     QObject * target_;
-    RemuxModel model_;
+    std::map<std::string, TDemuxerInterfacePtr> demuxers_;
     std::set<std::string> sources_;
     std::list<ClipInfo> src_clips_;
   };
@@ -277,7 +278,6 @@ namespace yae
   {
     typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
     typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
-    std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
     std::list<ClipInfo> clips = src_clips_;
 
     // these are expressed in seconds:
@@ -288,7 +288,7 @@ namespace yae
            i = sources_.begin(); i != sources_.end(); ++i)
     {
       const std::string & source = *i;
-      if (yae::has(model_.demuxer_, source))
+      if (yae::has(demuxers_, source))
       {
         // already loaded, skip it:
         continue;
@@ -319,15 +319,11 @@ namespace yae
         parallel_demuxer->append(buffer);
       }
 
+      demuxers_[source] = parallel_demuxer;
+
       // summarize the demuxer:
       const DemuxerSummary & summary =
         parallel_demuxer->update_summary(discont_tolerance);
-
-      parallel_demuxers[source] = parallel_demuxer;
-
-      // update the model:
-      model_.demuxer_[source] = parallel_demuxer;
-      model_.source_[parallel_demuxer] = source;
 
       if (src_clips_.empty())
       {
@@ -358,9 +354,7 @@ namespace yae
         continue;
       }
 
-      const TDemuxerInterfacePtr & demuxer =
-        yae::at(model_.demuxer_, trim.source_);
-
+      const TDemuxerInterfacePtr & demuxer = yae::at(demuxers_, trim.source_);
       const DemuxerSummary & summary = demuxer->summary();
 
       if (!yae::has(summary.decoders_, track_id))
@@ -391,7 +385,7 @@ namespace yae
       new_clips.push_back(clip);
     }
 
-    qApp->postEvent(target_, new Done(model_, new_clips));
+    qApp->postEvent(target_, new Done(demuxers_, new_clips));
   }
 
   //----------------------------------------------------------------
@@ -402,7 +396,7 @@ namespace yae
                   const std::list<ClipInfo> & src_clips)
   {
     spinner_.setEnabled(true);
-    task_.reset(new LoadTask(this, model_, sources, src_clips));
+    task_.reset(new LoadTask(this, model_.demuxer_, sources, src_clips));
     async_.add(task_);
   }
 
@@ -662,8 +656,20 @@ namespace yae
         spinner_.setEnabled(false);
         load_done->accept();
 
-        model_.demuxer_.swap(load_done->model_.demuxer_);
-        model_.source_.swap(load_done->model_.source_);
+        // shortcut:
+        std::map<std::string, TDemuxerInterfacePtr> &
+          demuxers = load_done->demuxers_;
+
+        // update the model and the view:
+        for (std::map<std::string, TDemuxerInterfacePtr>::const_iterator
+               i = demuxers.begin(); i != demuxers.end(); ++i)
+        {
+          const std::string & source = i->first;
+          const TDemuxerInterfacePtr & demuxer = i->second;
+
+          model_.demuxer_[source] = demuxer;
+          model_.source_[demuxer] = source;
+        }
 
         for (std::list<TClipPtr>::const_iterator i = load_done->clips_.begin();
              i != load_done->clips_.end(); ++i)
