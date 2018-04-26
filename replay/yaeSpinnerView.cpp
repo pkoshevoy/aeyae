@@ -154,7 +154,7 @@ namespace yae
     Text & text = root.addNew<Text>("text");
     text.anchors_.hcenter_ = ItemRef::reference(spinner, kPropertyHCenter);
     text.anchors_.vcenter_ = ItemRef::reference(spinner, kPropertyHeight, 0.25);
-    text.width_ = ItemRef::reference(spinner, kPropertyWidth);
+    text.width_ = ItemRef::reference(spinner, kPropertyWidth, 0.9);
     text.background_ = ColorRef::transparent(spinner, kPropertyColor);
     text.color_ = text.addExpr
       (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));

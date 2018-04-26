@@ -700,8 +700,13 @@ namespace yae
       LoadTask::Began * load_began = dynamic_cast<LoadTask::Began *>(e);
       if (load_began)
       {
+        std::string dirname;
+        std::string basename;
+        parseFilePath(load_began->source_, dirname, basename);
+
         spinner_.setEnabled(true);
-        spinner_.setText(str("loading ", load_began->source_));
+        spinner_.setText(tr("loading: %1").
+                         arg(QString::fromUtf8(basename.c_str())));
 
         load_began->accept();
         return true;
