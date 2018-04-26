@@ -809,8 +809,9 @@ namespace yae
       std::map<std::size_t, std::size_t>::const_iterator
         i2 = rows_.upper_bound(i1->first);
 
-      frame_ = std::min(i1->first + column_,
-                        std::max(i1->first, i2->first - 1));
+      frame_ =
+        (i2 == rows_.end()) ? (i1->first) :
+        std::min(i1->first + column_, std::max(i1->first, i2->first - 1));
       return true;
     }
 
