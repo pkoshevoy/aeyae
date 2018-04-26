@@ -257,21 +257,34 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // Loaded
+    //
+    struct Loaded : public QEvent
+    {
+      Loaded(const std::string & source,
+             const TDemuxerInterfacePtr & demuxer,
+             const TClipPtr & clip):
+        QEvent(QEvent::User),
+        source_(source),
+        demuxer_(demuxer),
+        clip_(clip)
+      {}
+
+      std::string source_;
+      TDemuxerInterfacePtr demuxer_;
+      TClipPtr clip_;
+    };
+
+    //----------------------------------------------------------------
     // Done
     //
     struct Done : public QEvent
     {
-      Done(std::map<std::string, TDemuxerInterfacePtr> & demuxers,
-           std::list<TClipPtr> & new_clips):
-        QEvent(QEvent::User)
-      {
-        demuxers_.swap(demuxers);
-        clips_.swap(new_clips);
-      }
-
-      std::map<std::string, TDemuxerInterfacePtr> demuxers_;
-      std::list<TClipPtr> clips_;
+      Done(): QEvent(QEvent::User) {}
     };
+
+    // helper, for loading a source on-demand:
+    TDemuxerInterfacePtr get_demuxer(const std::string & source);
 
     // virtual:
     void run();
@@ -284,120 +297,142 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // LoadTask::get_demuxer
+  //
+  TDemuxerInterfacePtr
+  LoadTask::get_demuxer(const std::string & source)
+  {
+    if (!yae::has(demuxers_, source))
+    {
+      qApp->postEvent(target_, new Began(source));
+
+      std::list<TDemuxerPtr> demuxers;
+      if (!open_primary_and_aux_demuxers(source, demuxers))
+      {
+        // failed to open the primary resource:
+        av_log(NULL, AV_LOG_WARNING,
+               "failed to open %s, skipping...",
+               source.c_str());
+        return TDemuxerInterfacePtr();
+      }
+
+      typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
+      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
+
+      // these are expressed in seconds:
+      static const double buffer_duration = 1.0;
+      static const double discont_tolerance = 0.017;
+
+      // wrap each demuxer in a DemuxerBuffer, build a summary:
+      for (std::list<TDemuxerPtr>::const_iterator
+             i = demuxers.begin(); i != demuxers.end(); ++i)
+      {
+        const TDemuxerPtr & demuxer = *i;
+
+        TDemuxerInterfacePtr
+          buffer(new DemuxerBuffer(demuxer, buffer_duration));
+
+        buffer->update_summary(discont_tolerance);
+        parallel_demuxer->append(buffer);
+      }
+
+      // summarize the demuxer:
+      parallel_demuxer->update_summary(discont_tolerance);
+
+      demuxers_[source] = parallel_demuxer;
+    }
+
+    return demuxers_[source];
+  }
+
+  //----------------------------------------------------------------
   // LoadTask::run
   //
   void
   LoadTask::run()
   {
-    typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
-    typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::list<ClipInfo> clips = src_clips_;
 
-    // these are expressed in seconds:
-    static const double buffer_duration = 1.0;
-    static const double discont_tolerance = 0.017;
-
-    for (std::set<std::string>::const_iterator
-           i = sources_.begin(); i != sources_.end(); ++i)
+    if (src_clips_.empty())
     {
-      const std::string & source = *i;
-      if (!yae::has(demuxers_, source))
-      {
-        qApp->postEvent(target_, new Began(source));
+      std::string track_id("v:000");
 
-        std::list<TDemuxerPtr> demuxers;
-        if (!open_primary_and_aux_demuxers(source, demuxers))
+      for (std::set<std::string>::const_iterator
+             i = sources_.begin(); i != sources_.end(); ++i)
+      {
+        const std::string & source = *i;
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(source);
+        if (!demuxer)
         {
-          // failed to open the primary resource:
-          av_log(NULL, AV_LOG_WARNING,
-                 "failed to open %s, skipping...",
-                 source.c_str());
           continue;
         }
 
-        TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
-
-        // wrap each demuxer in a DemuxerBuffer, build a summary:
-        for (std::list<TDemuxerPtr>::const_iterator
-               i = demuxers.begin(); i != demuxers.end(); ++i)
-        {
-          const TDemuxerPtr & demuxer = *i;
-
-          TDemuxerInterfacePtr
-            buffer(new DemuxerBuffer(demuxer, buffer_duration));
-
-          buffer->update_summary(discont_tolerance);
-          parallel_demuxer->append(buffer);
-        }
-
-        demuxers_[source] = parallel_demuxer;
-      }
-
-      // summarize the demuxer:
-      const DemuxerSummary & summary =
-        demuxers_[source]->update_summary(discont_tolerance);
-
-      if (src_clips_.empty())
-      {
-        std::string track_id("v:000");
+        // shortcut:
+        const DemuxerSummary & summary = demuxer->summary();
         if (yae::has(summary.decoders_, track_id))
         {
           const Timeline::Track & track = summary.get_track_timeline(track_id);
-          clips.push_back(ClipInfo(source,
-                                   track_id,
-                                   track.pts_.front().to_hhmmss_ms(),
-                                   track.pts_.back().to_hhmmss_ms()));
+          Timespan keep(track.pts_.front(), track.pts_.back());
+          TClipPtr clip(new Clip(demuxer, track_id, keep));
+          qApp->postEvent(target_, new Loaded(source, demuxer, clip));
         }
       }
     }
-
-    std::list<TClipPtr> new_clips;
-    for (std::list<ClipInfo>::const_iterator
-           i = clips.begin(); i != clips.end(); ++i)
+    else
     {
-      const ClipInfo & trim = *i;
-
-      std::string track_id =
-        trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-      if (!al::starts_with(track_id, "v:"))
+      for (std::list<ClipInfo>::const_iterator
+             i = src_clips_.begin(); i != src_clips_.end(); ++i)
       {
-        // not a video track:
-        continue;
+        const ClipInfo & trim = *i;
+
+        std::string track_id =
+          trim.track_.empty() ? std::string("v:000") : trim.track_;
+
+        if (!al::starts_with(track_id, "v:"))
+        {
+          // not a video track:
+          continue;
+        }
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
+        if (!demuxer)
+        {
+          // failed to demux:
+          continue;
+        }
+        
+        const DemuxerSummary & summary = demuxer->summary();
+        if (!yae::has(summary.decoders_, track_id))
+        {
+          // no such track:
+          continue;
+        }
+
+        const Timeline::Track & track = summary.get_track_timeline(track_id);
+        Timespan keep(track.pts_.front(), track.pts_.back());
+
+        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
+        double fps = fe.best_guess();
+
+        if (!trim.t0_.empty() &&
+            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+        {
+          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
+        }
+
+        if (!trim.t1_.empty() &&
+            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+        {
+          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
+        }
+
+        TClipPtr clip(new Clip(demuxer, track_id, keep));
+        qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
       }
-
-      const TDemuxerInterfacePtr & demuxer = yae::at(demuxers_, trim.source_);
-      const DemuxerSummary & summary = demuxer->summary();
-
-      if (!yae::has(summary.decoders_, track_id))
-      {
-        // no such track:
-        continue;
-      }
-
-      const Timeline::Track & track = summary.get_track_timeline(track_id);
-      Timespan keep(track.pts_.front(), track.pts_.back());
-
-      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-      double fps = fe.best_guess();
-
-      if (!trim.t0_.empty() &&
-          !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
-      {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
-      }
-
-      if (!trim.t1_.empty() &&
-          !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
-      {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
-      }
-
-      TClipPtr clip(new Clip(demuxer, track_id, keep));
-      new_clips.push_back(clip);
     }
 
-    qApp->postEvent(target_, new Done(demuxers_, new_clips));
+    qApp->postEvent(target_, new Done());
   }
 
   //----------------------------------------------------------------
@@ -407,8 +442,9 @@ namespace yae
   MainWindow::add(const std::set<std::string> & sources,
                   const std::list<ClipInfo> & src_clips)
   {
-    task_.reset(new LoadTask(this, model_.demuxer_, sources, src_clips));
-    async_.add(task_);
+    TAsyncTaskPtr t(new LoadTask(this, model_.demuxer_, sources, src_clips));
+    tasks_.push_back(t);
+    async_.push_back(t);
   }
 
   //----------------------------------------------------------------
@@ -666,41 +702,31 @@ namespace yae
       {
         spinner_.setEnabled(true);
         spinner_.setText(str("loading ", load_began->source_));
+
         load_began->accept();
+        return true;
+      }
+
+      LoadTask::Loaded * loaded = dynamic_cast<LoadTask::Loaded *>(e);
+      if (loaded)
+      {
+        // update the model and the view:
+        model_.demuxer_[loaded->source_] = loaded->demuxer_;
+        model_.source_[loaded->demuxer_] = loaded->source_;
+        model_.clips_.push_back(loaded->clip_);
+        view_.append_clip(loaded->clip_);
+        model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
+        loaded->accept();
         return true;
       }
 
       LoadTask::Done * load_done = dynamic_cast<LoadTask::Done *>(e);
       if (load_done)
       {
-        spinner_.setEnabled(false);
+        tasks_.pop_front();
+        spinner_.setEnabled(!tasks_.empty());
+
         load_done->accept();
-
-        // shortcut:
-        std::map<std::string, TDemuxerInterfacePtr> &
-          demuxers = load_done->demuxers_;
-
-        // update the model and the view:
-        for (std::map<std::string, TDemuxerInterfacePtr>::const_iterator
-               i = demuxers.begin(); i != demuxers.end(); ++i)
-        {
-          const std::string & source = i->first;
-          const TDemuxerInterfacePtr & demuxer = i->second;
-
-          model_.demuxer_[source] = demuxer;
-          model_.source_[demuxer] = source;
-        }
-
-        for (std::list<TClipPtr>::const_iterator i = load_done->clips_.begin();
-             i != load_done->clips_.end(); ++i)
-        {
-          const TClipPtr & clip = *i;
-          model_.clips_.push_back(clip);
-          view_.append_clip(clip);
-        }
-
-        model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
-        task_.reset();
         return true;
       }
     }

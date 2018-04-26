@@ -117,9 +117,13 @@ namespace yae
     AsyncTaskQueue();
     ~AsyncTaskQueue();
 
-    void add(const TaskPtr & task,
-             TCallback callback = NULL,
-             void * context = NULL);
+    void push_front(const TaskPtr & task,
+                    TCallback callback = NULL,
+                    void * context = NULL);
+
+    void push_back(const TaskPtr & task,
+                   TCallback callback = NULL,
+                   void * context = NULL);
 
   protected:
     // intentionally disabled:
@@ -129,6 +133,7 @@ namespace yae
     struct Private;
     Private * private_;
   };
+
 }
 
 

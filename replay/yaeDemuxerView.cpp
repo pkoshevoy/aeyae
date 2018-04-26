@@ -385,7 +385,7 @@ namespace yae
 
     AsyncTaskQueue & queue = async_task_queue();
     async_.reset(new DecodeGop(self_, gop_));
-    queue.add(async_, &GopItem::cb);
+    queue.push_front(async_, &GopItem::cb);
   }
 
   //----------------------------------------------------------------

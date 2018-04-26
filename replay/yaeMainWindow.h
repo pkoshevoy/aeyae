@@ -140,8 +140,11 @@ namespace yae
     RemuxModel model_;
     RemuxView view_;
     SpinnerView spinner_;
+
+    // load files on a background thread, etc...
+    typedef boost::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
+    std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
-    boost::shared_ptr<AsyncTaskQueue::Task> task_;
   };
 }
 

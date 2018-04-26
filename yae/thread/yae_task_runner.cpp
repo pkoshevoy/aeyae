@@ -219,14 +219,17 @@ namespace yae
       thread_.wait();
     }
 
-    void add(const TaskPtr & task, TCallback callback, void * context)
+    void push_front(const TaskPtr & task, TCallback callback, void * context)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-#if 1
       todo_.push_front(Todo(task, callback, context));
-#else
+      signal_.notify_all();
+    }
+
+    void push_back(const TaskPtr & task, TCallback callback, void * context)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
       todo_.push_back(Todo(task, callback, context));
-#endif
       signal_.notify_all();
     }
 
@@ -308,14 +311,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AsyncTaskQueue::add
+  // AsyncTaskQueue::push_front
   //
   void
-  AsyncTaskQueue::add(const AsyncTaskQueue::TaskPtr & task,
-                      AsyncTaskQueue::TCallback callback,
-                      void * context)
+  AsyncTaskQueue::push_front(const AsyncTaskQueue::TaskPtr & task,
+                             AsyncTaskQueue::TCallback callback,
+                             void * context)
   {
-    private_->add(task, callback, context);
+    private_->push_front(task, callback, context);
+  }
+
+  //----------------------------------------------------------------
+  // AsyncTaskQueue::push_back
+  //
+  void
+  AsyncTaskQueue::push_back(const AsyncTaskQueue::TaskPtr & task,
+                             AsyncTaskQueue::TCallback callback,
+                             void * context)
+  {
+    private_->push_back(task, callback, context);
   }
 
 }
