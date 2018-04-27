@@ -2202,6 +2202,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // prune
+  //
+  static void
+  prune(RemuxModel & model)
+  {
+    std::set<TDemuxerInterfacePtr> set_of_demuxers;
+    for (std::vector<TClipPtr>::const_iterator i = model.clips_.begin();
+         i != model.clips_.end(); ++i)
+    {
+      const TClipPtr & clip = *i;
+      set_of_demuxers.insert(clip->demuxer_);
+    }
+
+    std::map<std::string, TDemuxerInterfacePtr>::iterator
+      i = model.demuxer_.begin();
+    while (i != model.demuxer_.end())
+    {
+      std::string source = i->first;
+      TDemuxerInterfacePtr demuxer = i->second;
+      if (yae::has(set_of_demuxers, demuxer))
+      {
+        ++i;
+      }
+      else
+      {
+        // unused, remove:
+        std::map<std::string, TDemuxerInterfacePtr>::iterator next = i;
+        std::advance(next, 1);
+        model.demuxer_.erase(i);
+        model.source_.erase(demuxer);
+        i = next;
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // RemuxView::remove_clip
   //
   void
@@ -2225,6 +2261,7 @@ namespace yae
     const Item & item = *(*found);
     model.clips_.erase(model.clips_.begin() + index);
     model.selected_ = std::min(index, model.clips_.size() - 1);
+    prune(model);
 
     Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
@@ -2559,8 +2596,6 @@ namespace yae
   void
   RemuxView::set_in_point()
   {
-    std::cerr << "FIXME: pkoshevoy: RemuxView::set_in_point" << std::endl;
-
     TTime pts;
     if (!get_cursor_pts(*this, pts))
     {
@@ -2588,8 +2623,6 @@ namespace yae
   void
   RemuxView::set_out_point()
   {
-    std::cerr << "FIXME: pkoshevoy: RemuxView::set_out_point" << std::endl;
-
     TTime pts;
     if (!get_cursor_pts(*this, pts))
     {
