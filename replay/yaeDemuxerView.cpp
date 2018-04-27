@@ -2256,8 +2256,6 @@ namespace yae
     }
 
     gops.children_.erase(found);
-
-    const Item & item = *(*found);
     model.clips_.erase(model.clips_.begin() + index);
     model.selected_ = std::min(index, model.clips_.size() - 1);
     prune(model);
