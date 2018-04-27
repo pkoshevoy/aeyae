@@ -574,7 +574,6 @@ namespace yae
 #else
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
-      // dts.fontSize_ = ItemRef::constant(9.5 * kDpiScale);
       dts.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
