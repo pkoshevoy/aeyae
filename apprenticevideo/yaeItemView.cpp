@@ -877,7 +877,7 @@ namespace yae
     void evaluate(double & result) const
     {
       result = 0.5 * (view_.delegate()->physical_dpi_y() +
-                      view_.delegate()->logical_dpi_y());
+                      view_.delegate()->logical_dpi_y()) * kDpiScale;
 
       if (result != dpi_ && dpi_ > 0.0)
       {
