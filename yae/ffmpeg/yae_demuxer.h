@@ -43,11 +43,12 @@ namespace yae
   //----------------------------------------------------------------
   // AvInputContextPtr
   //
-  struct AvInputContextPtr : boost::shared_ptr<AVFormatContext>
+  struct YAE_API AvInputContextPtr : public boost::shared_ptr<AVFormatContext>
   {
-    AvInputContextPtr(AVFormatContext * ctx = NULL):
-      boost::shared_ptr<AVFormatContext>(ctx, &AvInputContextPtr::destroy)
-    {}
+    AvInputContextPtr(AVFormatContext * ctx = NULL);
+
+    inline void reset(AVFormatContext * ctx = NULL)
+    { *this = AvInputContextPtr(ctx); }
 
     static void destroy(AVFormatContext * ctx);
   };
@@ -56,11 +57,12 @@ namespace yae
   //----------------------------------------------------------------
   // AvOutputContextPtr
   //
-  struct AvOutputContextPtr : boost::shared_ptr<AVFormatContext>
+  struct YAE_API AvOutputContextPtr : public boost::shared_ptr<AVFormatContext>
   {
-    AvOutputContextPtr(AVFormatContext * ctx = NULL):
-      boost::shared_ptr<AVFormatContext>(ctx, &AvOutputContextPtr::destroy)
-    {}
+    AvOutputContextPtr(AVFormatContext * ctx = NULL);
+
+    inline void reset(AVFormatContext * ctx = NULL)
+    { *this = AvOutputContextPtr(ctx); }
 
     static void destroy(AVFormatContext * ctx);
   };

@@ -32,6 +32,13 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // AvInputContextPtr::AvInputContextPtr
+  //
+  AvInputContextPtr::AvInputContextPtr(AVFormatContext * ctx):
+    boost::shared_ptr<AVFormatContext>(ctx, &AvInputContextPtr::destroy)
+  {}
+
+  //----------------------------------------------------------------
   // AvInputContextPtr::destroy
   //
   void
@@ -45,6 +52,12 @@ namespace yae
     avformat_close_input(&ctx);
   }
 
+  //----------------------------------------------------------------
+  // AvOutputContextPtr::AvOutputContextPtr
+  //
+  AvOutputContextPtr::AvOutputContextPtr(AVFormatContext * ctx):
+    boost::shared_ptr<AVFormatContext>(ctx, &AvOutputContextPtr::destroy)
+  {}
 
   //----------------------------------------------------------------
   // AvOutputContextPtr::destroy
