@@ -383,22 +383,35 @@ namespace yae
     for (std::set<std::string>::const_iterator
            i = sources_.begin(); i != sources_.end(); ++i)
     {
-      const std::string & source = *i;
-
-      TDemuxerInterfacePtr demuxer = get_demuxer(source);
-      if (!demuxer)
+      try
       {
-        continue;
+        const std::string & source = *i;
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(source);
+        if (!demuxer)
+        {
+          continue;
+        }
+
+        // shortcut:
+        const DemuxerSummary & summary = demuxer->summary();
+        if (yae::has(summary.decoders_, track_id))
+        {
+          const Timeline::Track & track = summary.get_track_timeline(track_id);
+          Timespan keep(track.pts_.front(), track.pts_.back());
+          TClipPtr clip(new Clip(demuxer, track_id, keep));
+          qApp->postEvent(target_, new Loaded(source, demuxer, clip));
+        }
       }
-
-      // shortcut:
-      const DemuxerSummary & summary = demuxer->summary();
-      if (yae::has(summary.decoders_, track_id))
+      catch (const std::exception & e)
       {
-        const Timeline::Track & track = summary.get_track_timeline(track_id);
-        Timespan keep(track.pts_.front(), track.pts_.back());
-        TClipPtr clip(new Clip(demuxer, track_id, keep));
-        qApp->postEvent(target_, new Loaded(source, demuxer, clip));
+        av_log(NULL, AV_LOG_WARNING,
+               "LoadTask::load_sources exception: %s", e.what());
+      }
+      catch (...)
+      {
+        av_log(NULL, AV_LOG_WARNING,
+               "LoadTask::load_sources unknown exception");
       }
     }
   }
@@ -412,51 +425,64 @@ namespace yae
     for (std::list<ClipInfo>::const_iterator
            i = src_clips_.begin(); i != src_clips_.end(); ++i)
     {
-      const ClipInfo & trim = *i;
-
-      std::string track_id =
-        trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-      if (!al::starts_with(track_id, "v:"))
+      try
       {
-        // not a video track:
-        continue;
-      }
+        const ClipInfo & trim = *i;
 
-      TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
-      if (!demuxer)
+        std::string track_id =
+          trim.track_.empty() ? std::string("v:000") : trim.track_;
+
+        if (!al::starts_with(track_id, "v:"))
+        {
+          // not a video track:
+          continue;
+        }
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
+        if (!demuxer)
+        {
+          // failed to demux:
+          continue;
+        }
+
+        const DemuxerSummary & summary = demuxer->summary();
+        if (!yae::has(summary.decoders_, track_id))
+        {
+          // no such track:
+          continue;
+        }
+
+        const Timeline::Track & track = summary.get_track_timeline(track_id);
+        Timespan keep(track.pts_.front(), track.pts_.back());
+
+        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
+        double fps = fe.best_guess();
+
+        if (!trim.t0_.empty() &&
+            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+        {
+          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
+        }
+
+        if (!trim.t1_.empty() &&
+            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+        {
+          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
+        }
+
+        TClipPtr clip(new Clip(demuxer, track_id, keep));
+        qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
+      }
+      catch (const std::exception & e)
       {
-        // failed to demux:
-        continue;
+        av_log(NULL, AV_LOG_WARNING,
+               "LoadTask::load_source_clips exception: %s", e.what());
       }
-
-      const DemuxerSummary & summary = demuxer->summary();
-      if (!yae::has(summary.decoders_, track_id))
+      catch (...)
       {
-        // no such track:
-        continue;
+        av_log(NULL, AV_LOG_WARNING,
+               "LoadTask::load_source_clips unknown exception");
       }
-
-      const Timeline::Track & track = summary.get_track_timeline(track_id);
-      Timespan keep(track.pts_.front(), track.pts_.back());
-
-      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-      double fps = fe.best_guess();
-
-      if (!trim.t0_.empty() &&
-          !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
-      {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
-      }
-
-      if (!trim.t1_.empty() &&
-          !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
-      {
-        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
-      }
-
-      TClipPtr clip(new Clip(demuxer, track_id, keep));
-      qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
     }
   }
 
