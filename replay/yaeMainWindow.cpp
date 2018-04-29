@@ -287,9 +287,36 @@ namespace yae
     TDemuxerInterfacePtr get_demuxer(const std::string & source);
 
     // virtual:
-    void run();
+    void run()
+    {
+      try
+      {
+        if (src_clips_.empty())
+        {
+          load_sources();
+        }
+        else
+        {
+          load_source_clips();
+        }
+      }
+      catch (const std::exception & e)
+      {
+        av_log(NULL, AV_LOG_WARNING, "LoadTask::run exception: %s", e.what());
+      }
+      catch (...)
+      {
+        av_log(NULL, AV_LOG_WARNING, "LoadTask::run unknown exception");
+      }
+
+      qApp->postEvent(target_, new Done());
+    }
 
   protected:
+    // helpers:
+    void load_sources();
+    void load_source_clips();
+
     QObject * target_;
     std::map<std::string, TDemuxerInterfacePtr> demuxers_;
     std::set<std::string> sources_;
@@ -349,90 +376,88 @@ namespace yae
   // LoadTask::run
   //
   void
-  LoadTask::run()
+  LoadTask::load_sources()
   {
-    std::list<ClipInfo> clips = src_clips_;
+    std::string track_id("v:000");
 
-    if (src_clips_.empty())
+    for (std::set<std::string>::const_iterator
+           i = sources_.begin(); i != sources_.end(); ++i)
     {
-      std::string track_id("v:000");
+      const std::string & source = *i;
 
-      for (std::set<std::string>::const_iterator
-             i = sources_.begin(); i != sources_.end(); ++i)
+      TDemuxerInterfacePtr demuxer = get_demuxer(source);
+      if (!demuxer)
       {
-        const std::string & source = *i;
-
-        TDemuxerInterfacePtr demuxer = get_demuxer(source);
-        if (!demuxer)
-        {
-          continue;
-        }
-
-        // shortcut:
-        const DemuxerSummary & summary = demuxer->summary();
-        if (yae::has(summary.decoders_, track_id))
-        {
-          const Timeline::Track & track = summary.get_track_timeline(track_id);
-          Timespan keep(track.pts_.front(), track.pts_.back());
-          TClipPtr clip(new Clip(demuxer, track_id, keep));
-          qApp->postEvent(target_, new Loaded(source, demuxer, clip));
-        }
+        continue;
       }
-    }
-    else
-    {
-      for (std::list<ClipInfo>::const_iterator
-             i = src_clips_.begin(); i != src_clips_.end(); ++i)
+
+      // shortcut:
+      const DemuxerSummary & summary = demuxer->summary();
+      if (yae::has(summary.decoders_, track_id))
       {
-        const ClipInfo & trim = *i;
-
-        std::string track_id =
-          trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-        if (!al::starts_with(track_id, "v:"))
-        {
-          // not a video track:
-          continue;
-        }
-
-        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
-        if (!demuxer)
-        {
-          // failed to demux:
-          continue;
-        }
-        
-        const DemuxerSummary & summary = demuxer->summary();
-        if (!yae::has(summary.decoders_, track_id))
-        {
-          // no such track:
-          continue;
-        }
-
         const Timeline::Track & track = summary.get_track_timeline(track_id);
         Timespan keep(track.pts_.front(), track.pts_.back());
-
-        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-        double fps = fe.best_guess();
-
-        if (!trim.t0_.empty() &&
-            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
-        {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
-        }
-
-        if (!trim.t1_.empty() &&
-            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
-        {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
-        }
-
         TClipPtr clip(new Clip(demuxer, track_id, keep));
-        qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
+        qApp->postEvent(target_, new Loaded(source, demuxer, clip));
       }
     }
+  }
 
-    qApp->postEvent(target_, new Done());
+  //----------------------------------------------------------------
+  // LoadTask::load_source_clips
+  //
+  void
+  LoadTask::load_source_clips()
+  {
+    for (std::list<ClipInfo>::const_iterator
+           i = src_clips_.begin(); i != src_clips_.end(); ++i)
+    {
+      const ClipInfo & trim = *i;
+
+      std::string track_id =
+        trim.track_.empty() ? std::string("v:000") : trim.track_;
+
+      if (!al::starts_with(track_id, "v:"))
+      {
+        // not a video track:
+        continue;
+      }
+
+      TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
+      if (!demuxer)
+      {
+        // failed to demux:
+        continue;
+      }
+
+      const DemuxerSummary & summary = demuxer->summary();
+      if (!yae::has(summary.decoders_, track_id))
+      {
+        // no such track:
+        continue;
+      }
+
+      const Timeline::Track & track = summary.get_track_timeline(track_id);
+      Timespan keep(track.pts_.front(), track.pts_.back());
+
+      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
+      double fps = fe.best_guess();
+
+      if (!trim.t0_.empty() &&
+          !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
+      }
+
+      if (!trim.t1_.empty() &&
+          !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+      {
+        av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
+      }
+
+      TClipPtr clip(new Clip(demuxer, track_id, keep));
+      qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
+    }
   }
 
   //----------------------------------------------------------------
