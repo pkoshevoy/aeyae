@@ -4375,11 +4375,11 @@ namespace yae
     VideoTraits vtts;
     if (reader->getVideoTraits(vtts))
     {
+#if 0
       // pixel format shortcut:
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-#if 0
       std::cerr << "yae: native format: ";
       if (ptts)
       {
@@ -4393,69 +4393,15 @@ namespace yae
 #endif
 
 #if 1
-      bool unsupported = ptts == NULL;
+      bool skipColorConverter = actionSkipColorConverter->isChecked();
+      canvas_->skipColorConverter(skipColorConverter);
 
-      if (!unsupported)
+      TPixelFormatId outputFormat = kInvalidPixelFormat;
+      if (canvas_->
+          canvasRenderer()->
+          adjustPixelFormatForOpenGL(skipColorConverter, vtts, outputFormat))
       {
-        unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
-      }
-
-      if (!unsupported)
-      {
-        GLint internalFormatGL;
-        GLenum pixelFormatGL;
-        GLenum dataTypeGL;
-        GLint shouldSwapBytes;
-        unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                       internalFormatGL,
-                                                       pixelFormatGL,
-                                                       dataTypeGL,
-                                                       shouldSwapBytes);
-
-        bool skipColorConverter = actionSkipColorConverter->isChecked();
-        canvas_->skipColorConverter(skipColorConverter);
-
-        const TFragmentShader * fragmentShader =
-          (supportedChannels != ptts->channels_) ?
-          canvas_->fragmentShaderFor(vtts) :
-          NULL;
-
-        if (!supportedChannels && !fragmentShader)
-        {
-          unsupported = true;
-        }
-        else if (supportedChannels != ptts->channels_ &&
-                 !skipColorConverter &&
-                 !fragmentShader)
-        {
-          unsupported = true;
-        }
-      }
-
-      if (unsupported)
-      {
-        vtts.pixelFormat_ = kPixelFormatGRAY8;
-
-        if (ptts)
-        {
-          if ((ptts->flags_ & pixelFormat::kAlpha) &&
-              (ptts->flags_ & pixelFormat::kColor))
-          {
-            vtts.pixelFormat_ = kPixelFormatBGRA;
-          }
-          else if ((ptts->flags_ & pixelFormat::kColor) ||
-                   (ptts->flags_ & pixelFormat::kPaletted))
-          {
-            if (yae_is_opengl_extension_supported("GL_APPLE_ycbcr_422"))
-            {
-              vtts.pixelFormat_ = kPixelFormatYUYV422;
-            }
-            else
-            {
-              vtts.pixelFormat_ = kPixelFormatBGR24;
-            }
-          }
-        }
+        vtts.pixelFormat_ = outputFormat;
 
         // NOTE: overriding frame size implies scaling, so don't do it
         // unless you really want to scale the images in the reader;

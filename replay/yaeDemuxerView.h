@@ -235,7 +235,9 @@ namespace yae
   //
   struct YAE_API GopItem : public Item
   {
-    GopItem(const char * id, const Gop & gop);
+    GopItem(const char * id,
+            const Gop & gop,
+            TPixelFormatId pixelFormatOverride = kInvalidPixelFormat);
 
     // repaint requests, etc...
     void setContext(const Canvas::ILayer & view);
@@ -255,9 +257,12 @@ namespace yae
     inline const Canvas::ILayer * getLayer() const
     { return layer_; }
 
-    // accessor:
+    // accessors:
     inline const Gop & gop() const
     { return gop_; }
+
+    inline TPixelFormatId pixelFormat() const
+    { return pixelFormat_; }
 
   protected:
     // called asynchronously upon completion of GOP decoding task:
@@ -269,6 +274,7 @@ namespace yae
     GopItem & operator = (const GopItem &);
 
     Gop gop_;
+    TPixelFormatId pixelFormat_;
     const Canvas::ILayer * layer_;
     mutable boost::mutex mutex_;
     mutable boost::shared_ptr<AsyncTaskQueue::Task> async_;

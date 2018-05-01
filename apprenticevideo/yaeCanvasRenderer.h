@@ -643,7 +643,22 @@ namespace yae
                            double opacity = 1.0) const
 
     { renderer_->paintImage(x, y, w_max, h_max, opacity); }
+
+    // helper, selects a renderer based on image size,
+    // then calls adjust_pixel_format_for_opengl:
+    bool adjustPixelFormatForOpenGL(bool skipColorConverter,
+                                    const VideoTraits & vtts,
+                                    TPixelFormatId & output) const;
   };
+
+  //----------------------------------------------------------------
+  // adjust_pixel_format_for_opengl
+  //
+  bool
+  adjust_pixel_format_for_opengl(const TBaseCanvas * canvas,
+                                 bool skipColorConverter,
+                                 TPixelFormatId nativeFormat,
+                                 TPixelFormatId & adjustedFormat);
 }
 
 

@@ -3323,4 +3323,98 @@ namespace yae
     yae_assert_gl_no_error();
   }
 
+  //----------------------------------------------------------------
+  // CanvasRenderer::adjustPixelFormatForOpenGL
+  //
+  bool
+  CanvasRenderer::adjustPixelFormatForOpenGL(bool skipColorConverter,
+                                             const VideoTraits & vtts,
+                                             TPixelFormatId & output) const
+  {
+    TBaseCanvas * renderer = rendererFor(vtts);
+    return adjust_pixel_format_for_opengl(renderer,
+                                          skipColorConverter,
+                                          vtts.pixelFormat_,
+                                          output);
+  }
+
+  //----------------------------------------------------------------
+  // adjust_pixel_format_for_opengl
+  //
+  bool
+  adjust_pixel_format_for_opengl(const TBaseCanvas * renderer,
+                                 bool skipColorConverter,
+                                 TPixelFormatId nativeFormat,
+                                 TPixelFormatId & adjustedFormat)
+  {
+    // pixel format traits shortcut:
+    const pixelFormat::Traits * ptts = pixelFormat::getTraits(nativeFormat);
+
+    TPixelFormatId outputFormat = nativeFormat;
+    bool unsupported = (ptts == NULL);
+
+    if (!unsupported)
+    {
+      unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
+    }
+
+    if (!unsupported)
+    {
+      GLint internalFormatGL;
+      GLenum pixelFormatGL;
+      GLenum dataTypeGL;
+      GLint shouldSwapBytes;
+      unsigned int supportedChannels = yae_to_opengl(nativeFormat,
+                                                     internalFormatGL,
+                                                     pixelFormatGL,
+                                                     dataTypeGL,
+                                                     shouldSwapBytes);
+
+      const TFragmentShader * fragmentShader =
+        skipColorConverter ? NULL :
+        supportedChannels == ptts->channels_ ? NULL :
+        renderer->fragmentShaderFor(nativeFormat);
+
+      if (!supportedChannels && !fragmentShader)
+      {
+        unsupported = true;
+      }
+      else if (supportedChannels != ptts->channels_ &&
+               !skipColorConverter &&
+               !fragmentShader)
+      {
+        unsupported = true;
+      }
+    }
+
+    if (unsupported)
+    {
+      outputFormat = kPixelFormatGRAY8;
+
+      if (ptts)
+      {
+        if ((ptts->flags_ & pixelFormat::kAlpha) &&
+            (ptts->flags_ & pixelFormat::kColor))
+        {
+          outputFormat = kPixelFormatBGRA;
+        }
+        else if ((ptts->flags_ & pixelFormat::kColor) ||
+                 (ptts->flags_ & pixelFormat::kPaletted))
+        {
+          if (yae_is_opengl_extension_supported("GL_APPLE_ycbcr_422"))
+          {
+            outputFormat = kPixelFormatYUYV422;
+          }
+          else
+          {
+            outputFormat = kPixelFormatBGR24;
+          }
+        }
+      }
+    }
+
+    adjustedFormat = outputFormat;
+    return unsupported;
+  }
+
 }

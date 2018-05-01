@@ -299,6 +299,16 @@ namespace yae
         return;
       }
 
+      ItemPtr item_ptr = this->item();
+      if (!item_ptr)
+      {
+        // task owner no longer exists, ignore the results:
+        return;
+      }
+
+      // shortcut:
+      const GopItem & item = dynamic_cast<GopItem &>(*item_ptr);
+
       // decode and cache the entire GOP:
       decode_gop(// source:
                  gop_.demuxer_,
@@ -307,6 +317,7 @@ namespace yae
                  gop_.i1_,
 
                  // output:
+                 item.pixelFormat(),
                  128, // envelope width
                  128, // envelope height
                  0.0, // source DAR override
@@ -353,9 +364,10 @@ namespace yae
   //----------------------------------------------------------------
   // GopItem::GopItem
   //
-  GopItem::GopItem(const char * id, const Gop & gop):
+  GopItem::GopItem(const char * id, const Gop & gop, TPixelFormatId fmt):
     Item(id),
     gop_(gop),
+    pixelFormat_(fmt),
     layer_(NULL),
     failed_(false)
   {}
@@ -526,7 +538,8 @@ namespace yae
   // layout_gop
   //
   static void
-  layout_gop(const Clip & clip,
+  layout_gop(TPixelFormatId outputFormat,
+             const Clip & clip,
              const Timeline::Track & track,
              RemuxView & view,
              const RemuxViewStyle & style,
@@ -534,7 +547,7 @@ namespace yae
              const Gop & gop,
              std::size_t row)
   {
-    GopItem & root = gops.add<GopItem>(new GopItem("gop", gop));
+    GopItem & root = gops.add<GopItem>(new GopItem("gop", gop, outputFormat));
     root.setContext(view);
     root.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
     root.anchors_.top_ =
@@ -903,6 +916,32 @@ namespace yae
     const Clip & clip = *clip_ptr;
     const Timeline::Track & track = clip.get_track_timeline();
 
+    // override output pixel format, if necessary:
+    TPixelFormatId outputFormat = kInvalidPixelFormat;
+    {
+      const DemuxerSummary & summary = clip.demuxer_->summary();
+
+      TrackPtr track_ptr =
+        yae::get(summary.decoders_, clip.track_);
+
+      VideoTrackPtr decoder =
+        boost::dynamic_pointer_cast<VideoTrack, Track>(track_ptr);
+
+      if (decoder)
+      {
+        VideoTraits vtts;
+        decoder->getTraits(vtts);
+
+        TMakeCurrentContext currentContext(*view.context());
+        TLegacyCanvas renderer;
+        bool skipColorConverter = false;
+        adjust_pixel_format_for_opengl(&renderer,
+                                       skipColorConverter,
+                                       vtts.pixelFormat_,
+                                       outputFormat);
+      }
+    }
+
     Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
                                     kScrollbarBoth);
 
@@ -928,7 +967,7 @@ namespace yae
       row_lut[i0] = row;
 
       Gop gop(clip.demuxer_, clip.track_, i0, i1);
-      layout_gop(clip, track, view, style, gops, gop, row);
+      layout_gop(outputFormat, clip, track, view, style, gops, gop, row);
 
       row++;
     }
@@ -948,7 +987,7 @@ namespace yae
       row_lut[i0] = row;
 
       Gop gop(clip.demuxer_, clip.track_, i0, i1);
-      layout_gop(clip, track, view, style, gops, gop, row);
+      layout_gop(outputFormat, clip, track, view, style, gops, gop, row);
     }
 
     row_lut[track.dts_.size()] = row;

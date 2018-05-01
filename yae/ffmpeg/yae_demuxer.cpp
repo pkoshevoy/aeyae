@@ -3612,6 +3612,7 @@ namespace yae
              std::size_t k0,
              std::size_t k1,
              // output:
+             TPixelFormatId pixel_format,
              unsigned int envelope_w,
              unsigned int envelope_h,
              double source_dar,
@@ -3653,6 +3654,11 @@ namespace yae
       traits.pixelAspectRatio_ = output_par;
       traits.cameraRotation_ = 0;
       traits.isUpsideDown_ = false;
+
+      if (pixel_format != kInvalidPixelFormat)
+      {
+        traits.pixelFormat_ = pixel_format;
+      }
 
       bool deint = false;
       decoder.setTraitsOverride(traits, deint, source_par);

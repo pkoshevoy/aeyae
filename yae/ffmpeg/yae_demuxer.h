@@ -741,6 +741,7 @@ namespace yae
              std::size_t k0,
              std::size_t k1,
              // output:
+             TPixelFormatId pixel_format,
              unsigned int envelope_w,
              unsigned int envelope_h,
              double source_dar,
