@@ -1833,7 +1833,7 @@ namespace yae
       controls.color_ = sep.color_;
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
-      controls.height_ = ItemRef::reference(style.row_height_, 1.2);
+      controls.height_ = controls.addExpr(new OddRoundUp(clips_add, kPropertyHeight));
 
       // add a button to switch to clip layout view:
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
@@ -1860,7 +1860,7 @@ namespace yae
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
         txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
         txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
@@ -2321,19 +2321,12 @@ namespace yae
     ClipItem & row = clip_list.add(new ClipItem("row", model, view, index));
     row.anchors_.left_ = ItemRef::reference(clip_list, kPropertyLeft);
     row.anchors_.right_ = ItemRef::reference(clip_list, kPropertyRight);
-#if 0
-    row.anchors_.top_ = (index > 0) ?
-      ItemRef::reference(*(clip_list.children_[index - 1]), kPropertyBottom) :
-      ItemRef::reference(clip_list, kPropertyTop);
-    row.height_ = ItemRef::reference(style_.row_height_);
-#else
     row.anchors_.top_ = (index > 0) ?
       row.addExpr(new OddRoundUp(*(clip_list.children_[index - 1]),
                                  kPropertyBottom)) :
       row.addExpr(new OddRoundUp(clip_list, kPropertyTop));
     row.height_ =
       row.addExpr(new OddRoundUp(clips_add, kPropertyHeight));
-#endif
 
     Rectangle & bg = row.addNew<Rectangle>("bg");
     bg.anchors_.fill(row);
