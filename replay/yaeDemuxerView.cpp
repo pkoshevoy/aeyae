@@ -1899,7 +1899,7 @@ namespace yae
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 1.2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
         txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
         txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
@@ -1930,7 +1930,7 @@ namespace yae
         txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
         txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
         txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
