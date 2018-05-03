@@ -1859,8 +1859,9 @@ namespace yae
         txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
+        txt.font_ = style.font_small_;
         txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
-        txt.color_ = btn.addExpr
+        txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
         btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
@@ -1868,8 +1869,8 @@ namespace yae
         btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
         btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
 
-        underline.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
-        underline.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
+        underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
         underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
         underline.margins_.top_ = underline.addExpr
           (new GetFontDescent(txt), -1.0, 1);
@@ -1897,8 +1898,9 @@ namespace yae
         txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 1.2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
+        txt.font_ = style.font_small_;
         txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
-        txt.color_ = btn.addExpr
+        txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
         btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
@@ -1927,8 +1929,9 @@ namespace yae
         txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
         txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
+        txt.font_ = style.font_small_;
         txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
-        txt.color_ = btn.addExpr
+        txt.color_ = txt.addExpr
           (style_color_ref(view, &ItemViewStyle::bg_));
 
         btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
