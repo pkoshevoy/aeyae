@@ -1781,11 +1781,12 @@ namespace yae
 
       Item & gops = root.addNew<Item>("gops");
       Item & clips = root.addNew<Item>("clips");
+      Rectangle & controls = root.addNew<Rectangle>("controls");
 
       Rectangle & sep = root.addNew<Rectangle>("separator");
       sep.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
       sep.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
-      sep.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom,
+      sep.anchors_.bottom_ = ItemRef::offset(controls, kPropertyTop,
                                              -3.0 * (2 + get_row_height(view)));
       sep.height_ = ItemRef::reference(style.row_height_, 0.15);
       sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
@@ -1794,7 +1795,7 @@ namespace yae
         add(new VSplitter("splitter",
                           ItemRef::reference(root, kPropertyTop, 1.0,
                                              3.0 * (2 + get_row_height(view))),
-                          ItemRef::reference(root, kPropertyBottom, 1.0,
+                          ItemRef::reference(controls, kPropertyTop, 1.0,
                                              -3.0 * (2 + get_row_height(view))),
                           sep.anchors_.bottom_));
       splitter.anchors_.fill(sep);
@@ -1804,6 +1805,7 @@ namespace yae
 
       clips.anchors_.fill(root);
       clips.anchors_.top_ = ItemRef::reference(sep, kPropertyBottom);
+      clips.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
       Item & clips_container =
         layout_scrollview(kScrollbarVertical, view, style, clips,
@@ -1825,6 +1827,102 @@ namespace yae
       {
         const TClipPtr & clip = model.clips_[i];
         view.append_clip(clip);
+      }
+
+      // layout the controls:
+      controls.color_ = sep.color_;
+      controls.anchors_.fill(root);
+      controls.anchors_.top_.reset();
+      controls.height_ = ItemRef::reference(style.row_height_, 1.2);
+
+      // add a button to switch to clip layout view:
+      RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
+      {
+        // shortcut:
+        RoundRect & btn = layout_btn;
+
+        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
+        btn.border_ = ItemRef::constant(1.0);
+        btn.radius_ = ItemRef::constant(3.0);
+        btn.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_controls_));
+        btn.colorBorder_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::fg_controls_));
+
+        Text & txt = controls.addNew<Text>("layout_txt");
+        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
+        txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 2);
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
+        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_));
+
+        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
+        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
+      }
+
+      // add a button to switch to preview:
+      RoundRect & preview_btn = controls.addNew<RoundRect>("preview_btn");
+      {
+        // shortcut:
+        RoundRect & btn = preview_btn;
+
+        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
+        btn.border_ = ItemRef::constant(1.0);
+        btn.radius_ = ItemRef::constant(3.0);
+        btn.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_controls_));
+        btn.colorBorder_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::fg_controls_));
+
+        Text & txt = controls.addNew<Text>("preview_txt");
+        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
+        txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 1.2);
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
+        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_));
+
+        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
+        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
+      }
+
+      // add a button to generate the output file:
+      RoundRect & export_btn = controls.addNew<RoundRect>("export_btn");
+      {
+        // shortcut:
+        RoundRect & btn = export_btn;
+
+        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
+        btn.border_ = ItemRef::constant(1.0);
+        btn.radius_ = ItemRef::constant(3.0);
+        btn.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_controls_));
+        btn.colorBorder_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::fg_controls_));
+
+        Text & txt = controls.addNew<Text>("export_txt");
+        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+        txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
+        txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
+        txt.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        txt.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_));
+
+        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
+        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
       }
     }
   };
