@@ -1838,6 +1838,10 @@ namespace yae
       // add a button to switch to clip layout view:
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
       {
+        Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        underline.color_ = underline.addExpr
+          (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.5));
+
         // shortcut:
         RoundRect & btn = layout_btn;
 
@@ -1863,6 +1867,14 @@ namespace yae
         btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
         btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
         btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
+
+        underline.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+        underline.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
+        underline.margins_.top_ = underline.addExpr
+          (new GetFontDescent(txt), -1.0, 1);
+        underline.height_ = underline.addExpr
+          (new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
       }
 
       // add a button to switch to preview:
