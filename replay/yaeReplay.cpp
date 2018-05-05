@@ -38,7 +38,6 @@ namespace yae
        const double buffer_duration,
        const double discont_tolerance)
   {
-    typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
     std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
 
     for (std::set<std::string>::const_iterator i = sources.begin();
@@ -56,8 +55,7 @@ namespace yae
         continue;
       }
 
-      boost::shared_ptr<ParallelDemuxer>
-        parallel_demuxer(new ParallelDemuxer());
+      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
 
       // wrap each demuxer in a DemuxerBuffer, build a summary:
       for (std::list<TDemuxerPtr>::const_iterator
@@ -77,7 +75,6 @@ namespace yae
       parallel_demuxers[filePath] = parallel_demuxer;
     }
 
-    typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
     TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
 
     for (std::list<ClipInfo>::const_iterator
@@ -122,7 +119,7 @@ namespace yae
         av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
       }
 
-      boost::shared_ptr<TrimmedDemuxer> clip_demuxer(new TrimmedDemuxer());
+      TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
       clip_demuxer->trim(demuxer, track_id, keep);
 
       // summarize clip demuxer:

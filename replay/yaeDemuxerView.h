@@ -59,6 +59,8 @@ namespace yae
 
     TDemuxerInterfacePtr demuxer_;
     std::string track_;
+
+    // PTS timeline span to keep:
     Timespan keep_;
   };
 
@@ -72,10 +74,9 @@ namespace yae
   //
   struct YAE_API RemuxModel
   {
-    RemuxModel():
-      selected_(0)
-    {}
+    RemuxModel(): selected_(0) {}
 
+    // helper:
     inline TClipPtr selected_clip() const
     { return (selected_ < clips_.size()) ? clips_[selected_] : TClipPtr(); }
 
@@ -293,6 +294,13 @@ namespace yae
     Q_OBJECT;
 
   public:
+
+    enum ViewMode
+    {
+      kLayoutMode = 0,
+      kPreviewMode = 1
+    };
+
     RemuxView();
 
     // data source:
@@ -320,12 +328,20 @@ namespace yae
     void remove_clip(std::size_t index);
     void repeat_clip();
 
-  public slots:
-    // adjust scrollview position to ensure a given item is visible:
-    // void ensureVisible(const QModelIndex & itemIndex);
+    // helper:
+    inline TClipPtr current_clip() const
+    {
+      return
+        (view_mode_ == kPreviewMode) ?
+        output_clip() :
+        model_->selected_clip();;
+    }
 
-    // shortcut:
-    // void ensureCurrentItemIsVisible();
+    // accessor:
+    inline ViewMode view_mode() const
+    { return view_mode_; }
+
+  public slots:
     void layoutChanged();
     void dataChanged();
 
@@ -335,8 +351,19 @@ namespace yae
     void set_in_point();
     void set_out_point();
 
+    // NOTE: switching to preview mode creates a serial demuxer
+    //       from current source clips:
+    void set_view_mode(RemuxView::ViewMode mode);
+
+    void remux();
+
   protected:
+    TClipPtr output_clip() const;
+
     RemuxModel * model_;
+    ViewMode view_mode_;
+    mutable TClipPtr output_clip_;
+    mutable TSerialDemuxerPtr serial_demuxer_;
 
   public:
     RemuxViewStyle style_;

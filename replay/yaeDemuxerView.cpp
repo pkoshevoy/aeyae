@@ -450,7 +450,8 @@ namespace yae
 
     if (!item.cached_)
     {
-      std::cerr << "decoding failed: " << item.gop_ << std::endl;
+      av_log(NULL, AV_LOG_WARNING, "decoding failed: %s",
+             toText(item.gop_).c_str());
       item.failed_ = true;
     }
 
@@ -622,18 +623,18 @@ namespace yae
   //
   struct IsClipSelected : TBoolExpr
   {
-    IsClipSelected(const RemuxModel & model, const TClipPtr & clip):
-      model_(model),
+    IsClipSelected(const RemuxView & view, const TClipPtr & clip):
+      view_(view),
       clip_(clip)
     {}
 
     // virtual:
     void evaluate(bool & result) const
     {
-      result = model_.selected_clip() == clip_;
+      result = view_.current_clip() == clip_;
     }
 
-    const RemuxModel & model_;
+    const RemuxView & view_;
     TClipPtr clip_;
   };
 
@@ -911,7 +912,7 @@ namespace yae
   {
     Item & root = container.addNew<Item>("clip_layout");
     root.anchors_.fill(container);
-    root.visible_ = root.addExpr(new IsClipSelected(model, clip_ptr));
+    root.visible_ = root.addExpr(new IsClipSelected(view, clip_ptr));
 
     const Clip & clip = *clip_ptr;
     const Timeline::Track & track = clip.get_track_timeline();
@@ -1822,6 +1823,67 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // InLayoutMode
+  //
+  struct InLayoutMode : public TBoolExpr
+  {
+    InLayoutMode(const RemuxView & view): view_(view) {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    { result = (view_.view_mode() == RemuxView::kLayoutMode); }
+
+    const RemuxView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // InPreviewMode
+  //
+  struct InPreviewMode : public TBoolExpr
+  {
+    InPreviewMode(const RemuxView & view): view_(view) {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    { result = (view_.view_mode() == RemuxView::kPreviewMode); }
+
+    const RemuxView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // InvokeMethod
+  //
+  struct InvokeMethodOnClick : public InputArea
+  {
+    InvokeMethodOnClick(const char * id,
+                        QObject & object,
+                        const char * method,
+                        const QGenericArgument & arg = QGenericArgument(0)):
+      InputArea(id),
+      object_(object),
+      method_(method),
+      arg_(arg)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      QMetaObject::invokeMethod(&object_, method_, arg_);
+      return true;
+    }
+
+    QObject & object_;
+    const char * method_;
+    QGenericArgument arg_;
+  };
+
+  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -1833,34 +1895,45 @@ namespace yae
                 void * context)
     {
       Rectangle & bg = root.addNew<Rectangle>("background");
-      bg.anchors_.fill(root);
-      bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
-
-      Item & gops = root.addNew<Item>("gops");
-      Item & clips = root.addNew<Item>("clips");
       Rectangle & controls = root.addNew<Rectangle>("controls");
+      bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
+      bg.anchors_.fill(root);
+      bg.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
-      Rectangle & sep = root.addNew<Rectangle>("separator");
-      sep.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
-      sep.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+      Item & layout = root.addNew<Item>("layout");
+      layout.anchors_.fill(bg);
+      layout.visible_ = layout.addExpr(new InLayoutMode(view));
+      layout.visible_.cachingEnabled_ = false;
+
+      Item & preview = root.addNew<Item>("preview");
+      preview.anchors_.fill(bg);
+      preview.visible_ = layout.addExpr(new InPreviewMode(view));
+      preview.visible_.cachingEnabled_ = false;
+
+      Item & gops = layout.addNew<Item>("gops");
+      Item & clips = layout.addNew<Item>("clips");
+
+      Rectangle & sep = layout.addNew<Rectangle>("separator");
+      sep.anchors_.left_ = ItemRef::reference(layout, kPropertyLeft);
+      sep.anchors_.right_ = ItemRef::reference(layout, kPropertyRight);
       sep.anchors_.bottom_ = ItemRef::offset(controls, kPropertyTop,
                                              -3.0 * (2 + get_row_height(view)));
       sep.height_ = ItemRef::reference(style.row_height_, 0.15);
       sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
 
-      VSplitter & splitter = root.
+      VSplitter & splitter = layout.
         add(new VSplitter("splitter",
-                          ItemRef::reference(root, kPropertyTop, 1.0,
+                          ItemRef::reference(layout, kPropertyTop, 1.0,
                                              3.0 * (2 + get_row_height(view))),
                           ItemRef::reference(controls, kPropertyTop, 1.0,
                                              -3.0 * (2 + get_row_height(view))),
                           sep.anchors_.bottom_));
       splitter.anchors_.fill(sep);
 
-      gops.anchors_.fill(root);
+      gops.anchors_.fill(layout);
       gops.anchors_.bottom_ = ItemRef::reference(sep, kPropertyTop);
 
-      clips.anchors_.fill(root);
+      clips.anchors_.fill(layout);
       clips.anchors_.top_ = ItemRef::reference(sep, kPropertyBottom);
       clips.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
@@ -1897,6 +1970,9 @@ namespace yae
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
       {
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        underline.visible_ = layout.visible_;
+        underline.visible_.cachingEnabled_ = false;
+
         Text & txt = layout_control_button(model,
                                            view,
                                            style,
@@ -1908,12 +1984,24 @@ namespace yae
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
 
         layout_text_underline(view, layout_btn, txt, underline);
-      }
+
+        // NOTE: QGenericArgument does not store the arg value,
+        //       so we must provide storage instead:
+        static const RemuxView::ViewMode mode = RemuxView::kLayoutMode;
+
+        Item & ia = controls.add
+          (new InvokeMethodOnClick("layout_ia", view, "set_view_mode",
+                                   Q_ARG(RemuxView::ViewMode, mode)));
+        ia.anchors_.fill(layout_btn);
+     }
 
       // add a button to switch to preview:
       RoundRect & preview_btn = controls.addNew<RoundRect>("preview_btn");
       {
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        underline.visible_ = preview.visible_;
+        underline.visible_.cachingEnabled_ = false;
+
         Text & txt = layout_control_button(model,
                                            view,
                                            style,
@@ -1925,6 +2013,14 @@ namespace yae
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
 
         layout_text_underline(view, preview_btn, txt, underline);
+
+        // NOTE: QGenericArgument does not store the arg value,
+        //       so we must provide storage instead:
+        static const RemuxView::ViewMode mode = RemuxView::kPreviewMode;
+        Item & ia = controls.add
+          (new InvokeMethodOnClick("preview_ia", view, "set_view_mode",
+                                   Q_ARG(RemuxView::ViewMode, mode)));
+        ia.anchors_.fill(preview_btn);
       }
 
       // add a button to generate the output file:
@@ -1939,6 +2035,10 @@ namespace yae
         txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
         txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
+
+        Item & ia = controls.add
+          (new InvokeMethodOnClick("export_ia", view, "remux"));
+        ia.anchors_.fill(export_btn);
       }
     }
   };
@@ -1958,6 +2058,7 @@ namespace yae
     ItemView("RemuxView"),
     style_("RemuxViewStyle", *this),
     model_(NULL),
+    view_mode_(RemuxView::kLayoutMode),
     actionSetInPoint_(this),
     actionSetOutPoint_(this)
   {
@@ -2036,8 +2137,9 @@ namespace yae
       return NULL;
     }
 
-    Item & gops = view.root()->get<Item>("gops");
-    TClipPtr clip = view.model()->selected_clip();
+    Item & root = *view.root();
+    Item & gops = root["layout"]["gops"];
+    TClipPtr clip = view.current_clip();
     std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
 
     if (found == gops.children_.end())
@@ -2248,7 +2350,7 @@ namespace yae
     }
 
     Item & root = *root_;
-    requestUncache(&(root["clips"]));
+    requestUncache(&(root["layout"]["clips"]));
 
     return true;
   }
@@ -2313,7 +2415,8 @@ namespace yae
     RemuxView & view = *this;
     Item & root = *root_;
 
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
     Item & clips_add = sv.content_->get<Item>("clips_add");
     clips_add.uncache();
@@ -2336,7 +2439,7 @@ namespace yae
 
     layout_clip(model, view, style_, row, index);
 
-    Item & gops = root["gops"];
+    Item & gops = root["layout"]["gops"];
     layout_gops(model, view, style_, gops, clip);
 
     dataChanged();
@@ -2389,7 +2492,7 @@ namespace yae
   RemuxView::remove_clip(std::size_t index)
   {
     Item & root = *root_;
-    Item & gops = root["gops"];
+    Item & gops = root["layout"]["gops"];
 
     RemuxModel & model = *model_;
     TClipPtr clip = model.clips_[index];
@@ -2406,7 +2509,8 @@ namespace yae
     model.selected_ = std::min(index, model.clips_.size() - 1);
     prune(model);
 
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
     clip_list.children_.pop_back();
 
@@ -2456,7 +2560,7 @@ namespace yae
     append_clip(new_clip);
 
     Item & root = *root_;
-    Item & gops = root["gops"];
+    Item & gops = root["layout"]["gops"];
     Scrollview & new_sv =
       gops.children_.back()->get<Scrollview>("clip_layout.scrollview");
 
@@ -2549,7 +2653,8 @@ namespace yae
   find_clip_item(RemuxView & view, std::size_t index)
   {
     Item & root = *view.root();
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     Item & clip_list = sv.content_->get<Item>("clip_list");
 
     if (index < clip_list.children_.size())
@@ -2583,7 +2688,8 @@ namespace yae
     parse_time(clip.keep_.*field, text.c_str(), NULL, NULL, fps);
 
     Item & root = *view.root();
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     view.requestUncache(&sv);
     view.requestRepaint();
   }
@@ -2639,7 +2745,7 @@ namespace yae
       return NULL;
     }
 
-    TClipPtr clip_ptr = view.model()->selected_clip();
+    TClipPtr clip_ptr = view.current_clip();
     if (!clip_ptr)
     {
       return NULL;
@@ -2692,7 +2798,7 @@ namespace yae
       return false;
     }
 
-    TClipPtr clip_ptr = view.model()->selected_clip();
+    TClipPtr clip_ptr = view.current_clip();
     if (!clip_ptr)
     {
       return false;
@@ -2755,7 +2861,8 @@ namespace yae
     }
 
     Item & root = *root_;
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     requestUncache(&sv);
     requestRepaint();
   }
@@ -2782,9 +2889,85 @@ namespace yae
     }
 
     Item & root = *root_;
-    Scrollview & sv = root["clips"].get<Scrollview>("clips.scrollview");
+    Scrollview & sv =
+      root["layout"]["clips"].get<Scrollview>("clips.scrollview");
     requestUncache(&sv);
     requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::set_view_mode
+  //
+  void
+  RemuxView::set_view_mode(RemuxView::ViewMode mode)
+  {
+    if (mode == view_mode_)
+    {
+      return;
+    }
+
+    Item & root = *root_;
+    Item & preview = root["preview"];
+    preview.children_.clear();
+
+    view_mode_ = mode;
+    output_clip_.reset();
+    serial_demuxer_.reset();
+
+    if (mode == kPreviewMode)
+    {
+      preview.uncache();
+      TClipPtr clip = output_clip();
+      layout_gops(*model_, *this, style_, preview, clip);
+      preview.dump(std::cerr);
+    }
+
+    requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::remux
+  //
+  void
+  RemuxView::remux()
+  {
+    std::cerr << "FIXME: pkoshevoy: remux!" << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxModel::output_clip
+  //
+  TClipPtr
+  RemuxView::output_clip() const
+  {
+    if (!output_clip_ && model_ && !model_->clips_.empty())
+    {
+      serial_demuxer_.reset(new SerialDemuxer());
+
+      for (std::vector<TClipPtr>::const_iterator
+             i = model_->clips_.begin(); i != model_->clips_.end(); ++i)
+      {
+        const Clip & clip = *(*i);
+
+        TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
+        clip_demuxer->trim(clip.demuxer_, clip.track_, clip.keep_);
+
+        // summarize clip demuxer:
+        clip_demuxer->update_summary();
+        serial_demuxer_->append(clip_demuxer);
+      }
+
+      // summarize serial demuxer:
+      serial_demuxer_->update_summary();
+
+      const yae::DemuxerSummary & summary = serial_demuxer_->summary();
+      const std::string & track_id = model_->clips_.front()->track_;
+      const Timeline::Track & track = summary.get_track_timeline(track_id);
+      Timespan keep(track.pts_.front(), track.pts_.back());
+      output_clip_.reset(new Clip(serial_demuxer_, track_id, keep));
+    }
+
+    return output_clip_;
   }
 
 }

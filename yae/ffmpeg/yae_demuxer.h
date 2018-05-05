@@ -580,6 +580,10 @@ namespace yae
     std::list<TDemuxerInterfacePtr> src_;
   };
 
+  //----------------------------------------------------------------
+  // TParallelDemuxerPtr
+  //
+  typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
 
   //----------------------------------------------------------------
   // analyze_timeline
@@ -636,6 +640,11 @@ namespace yae
     std::map<std::string, int> prog_lut_;
     mutable std::size_t curr_;
   };
+
+  //----------------------------------------------------------------
+  // TSerialDemuxerPtr
+  //
+  typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
 
   //----------------------------------------------------------------
   // TrimmedDemuxer
