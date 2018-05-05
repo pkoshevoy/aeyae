@@ -2829,7 +2829,7 @@ namespace yae
       return src_.size();
     }
 
-    std::size_t i = std::distance(found, t1.begin());
+    std::size_t i = std::distance(t1.begin(), found);
     const TTime & end_time = t1[i];
     return (seek_time < end_time) ? i : src_.size();
   }
