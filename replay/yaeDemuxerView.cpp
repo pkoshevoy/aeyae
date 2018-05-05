@@ -1765,6 +1765,63 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // layout_control_button
+  //
+  static Text &
+  layout_control_button(RemuxModel & model,
+                        RemuxView & view,
+                        const RemuxViewStyle & style,
+                        Rectangle & controls,
+                        RoundRect & btn)
+  {
+    btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+    btn.height_ = ItemRef::reference(style.row_height_, 0.8);
+    btn.border_ = ItemRef::constant(1.0);
+    btn.radius_ = ItemRef::constant(3.0);
+
+    btn.color_ = btn.addExpr
+      (style_color_ref(view, &ItemViewStyle::bg_controls_));
+
+    btn.colorBorder_ = btn.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_controls_));
+
+    Text & txt = controls.addNew<Text>("layout_txt");
+    txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+    txt.font_ = style.font_small_;
+    txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
+    txt.color_ = txt.addExpr
+      (style_color_ref(view, &ItemViewStyle::bg_));
+
+    btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+    btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
+    btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+    btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
+
+    return txt;
+  }
+
+  //----------------------------------------------------------------
+  // layout_text_underline
+  //
+  static void
+  layout_text_underline(RemuxView & view,
+                        RoundRect & btn,
+                        Text & txt,
+                        Rectangle & underline)
+  {
+    underline.color_ = underline.addExpr
+      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.5));
+
+    underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
+    underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
+    underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
+    underline.margins_.top_ = underline.addExpr
+      (new GetFontDescent(txt), -1.0, 1);
+    underline.height_ = underline.addExpr
+      (new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
+  }
+
+  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -1833,111 +1890,55 @@ namespace yae
       controls.color_ = sep.color_;
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
-      controls.height_ = controls.addExpr(new OddRoundUp(clips_add, kPropertyHeight));
+      controls.height_ = controls.
+        addExpr(new OddRoundUp(clips_add, kPropertyHeight));
 
       // add a button to switch to clip layout view:
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
       {
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
-        underline.color_ = underline.addExpr
-          (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.5));
+        Text & txt = layout_control_button(model,
+                                           view,
+                                           style,
+                                           controls,
+                                           layout_btn);
 
-        // shortcut:
-        RoundRect & btn = layout_btn;
-
-        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
-        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
-        btn.border_ = ItemRef::constant(1.0);
-        btn.radius_ = ItemRef::constant(3.0);
-        btn.color_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_controls_));
-        btn.colorBorder_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::fg_controls_));
-
-        Text & txt = controls.addNew<Text>("layout_txt");
-        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
         txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
-        txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
-        txt.color_ = txt.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_));
 
-        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
-        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
-        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
-
-        underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
-        underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
-        underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
-        underline.margins_.top_ = underline.addExpr
-          (new GetFontDescent(txt), -1.0, 1);
-        underline.height_ = underline.addExpr
-          (new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
+        layout_text_underline(view, layout_btn, txt, underline);
       }
 
       // add a button to switch to preview:
       RoundRect & preview_btn = controls.addNew<RoundRect>("preview_btn");
       {
-        // shortcut:
-        RoundRect & btn = preview_btn;
+        Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        Text & txt = layout_control_button(model,
+                                           view,
+                                           style,
+                                           controls,
+                                           preview_btn);
 
-        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
-        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
-        btn.border_ = ItemRef::constant(1.0);
-        btn.radius_ = ItemRef::constant(3.0);
-        btn.color_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_controls_));
-        btn.colorBorder_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::fg_controls_));
-
-        Text & txt = controls.addNew<Text>("preview_txt");
-        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
         txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
         txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 1.2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
-        txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
-        txt.color_ = txt.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_));
 
-        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
-        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
-        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
+        layout_text_underline(view, preview_btn, txt, underline);
       }
 
       // add a button to generate the output file:
       RoundRect & export_btn = controls.addNew<RoundRect>("export_btn");
       {
-        // shortcut:
-        RoundRect & btn = export_btn;
+        Text & txt = layout_control_button(model,
+                                           view,
+                                           style,
+                                           controls,
+                                           export_btn);
 
-        btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
-        btn.height_ = ItemRef::reference(style.row_height_, 0.8);
-        btn.border_ = ItemRef::constant(1.0);
-        btn.radius_ = ItemRef::constant(3.0);
-        btn.color_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_controls_));
-        btn.colorBorder_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::fg_controls_));
-
-        Text & txt = controls.addNew<Text>("export_txt");
-        txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
         txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
         txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
-        txt.font_ = style.font_small_;
-        txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
-        txt.color_ = txt.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_));
-
-        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-        btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
-        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
-        btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
       }
     }
   };
