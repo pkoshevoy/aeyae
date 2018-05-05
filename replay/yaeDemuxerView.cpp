@@ -2138,7 +2138,10 @@ namespace yae
     }
 
     Item & root = *view.root();
-    Item & gops = root["layout"]["gops"];
+    Item & gops = (view.view_mode() == RemuxView::kLayoutMode ?
+                   root["layout"]["gops"] :
+                   root["preview"]);
+
     TClipPtr clip = view.current_clip();
     std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
 
