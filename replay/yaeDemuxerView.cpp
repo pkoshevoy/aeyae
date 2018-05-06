@@ -2922,7 +2922,9 @@ namespace yae
       preview.uncache();
       TClipPtr clip = output_clip();
       layout_gops(*model_, *this, style_, preview, clip);
+#ifndef NDEBUG
       preview.dump(std::cerr);
+#endif
     }
 
     requestRepaint();
