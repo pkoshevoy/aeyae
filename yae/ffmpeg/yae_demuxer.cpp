@@ -2574,6 +2574,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avio_open2(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return err;
     }
 
@@ -2584,6 +2585,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_header(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return err;
     }
 
@@ -2615,6 +2617,7 @@ namespace yae
         av_log(NULL, AV_LOG_ERROR,
                "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
                output_path, err, yae::av_strerr(err).c_str());
+        YAE_ASSERT(false);
       }
     }
 
@@ -2624,6 +2627,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_trailer(%s) error %i: \"%s\"\n",
              output_path, err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
     }
 
     muxer_ptr.reset();
@@ -2634,10 +2638,10 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // pick_src_start
+  // calc_src_start_offset
   //
   static TTime
-  pick_src_start(const Timeline & a, const Timeline & b)
+  calc_src_gap(const Timeline & a, const Timeline & b)
   {
     TTime ta_max = TTime::min_flicks();
     TTime tb_min = TTime::max_flicks();
@@ -2677,7 +2681,7 @@ namespace yae
       min_gap = std::min(gap, min_gap);
     }
 
-    return ta_max - min_gap;
+    return min_gap;
   }
 
   //----------------------------------------------------------------
@@ -2712,7 +2716,8 @@ namespace yae
       {
         const DemuxerSummary & prev_summary = src_.back()->summary();
         const Timeline & prev = yae::at(prev_summary.timeline_, prog_id);
-        src_t0 = pick_src_start(prev, timeline);
+        TTime src_gap = calc_src_gap(prev, timeline);
+        src_t0 -= src_gap;
       }
 
       TTime src_t1 = src_t0 + src_dt;
@@ -3427,6 +3432,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_alloc_context3(%i) failed, %s\n",
              muxer->oformat->video_codec, path.c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3454,6 +3460,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_open2 error %i: \"%s\"\n",
              err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3472,6 +3479,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_parameters_from_context error %i: \"%s\"\n",
              err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3489,6 +3497,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avio_open2(%s) error %i: \"%s\"\n",
              path.c_str(), err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3503,6 +3512,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_header(%s) error %i: \"%s\"\n",
              path.c_str(), err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3518,6 +3528,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_send_frame error %i: \"%s\"\n",
              err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
@@ -3552,6 +3563,7 @@ namespace yae
         av_log(NULL, AV_LOG_ERROR,
                "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
                path.c_str(), err, yae::av_strerr(err).c_str());
+        YAE_ASSERT(false);
         return false;
       }
 
@@ -3565,6 +3577,7 @@ namespace yae
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_trailer(%s) error %i: \"%s\"\n",
              path.c_str(), err, yae::av_strerr(err).c_str());
+      YAE_ASSERT(false);
       return false;
     }
 
