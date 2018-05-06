@@ -98,6 +98,7 @@ namespace yae
   public slots:
     // file menu:
     void fileOpen();
+    void fileExport();
     void fileExit();
 
     // help menu:

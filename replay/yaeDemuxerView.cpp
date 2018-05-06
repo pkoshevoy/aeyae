@@ -22,6 +22,66 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // RemuxModel::make_serial_demuxer
+  //
+  TSerialDemuxerPtr
+  RemuxModel::make_serial_demuxer() const
+  {
+    std::string prev_fn;
+    std::string prev_track;
+    std::ostringstream oss;
+
+    TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
+
+    for (std::vector<TClipPtr>::const_iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const Clip & clip = *(*i);
+
+      TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
+      clip_demuxer->trim(clip.demuxer_, clip.track_, clip.keep_);
+
+      std::string fn = yae::at(source_, clip.demuxer_);
+      if (fn != prev_fn)
+      {
+        oss << " -i \"" << fn << "\"";
+        prev_fn = fn;
+      }
+
+      if (clip.track_ != prev_track)
+      {
+        oss << " -track " << clip.track_;
+        prev_track = clip.track_;
+      }
+
+      const Timeline::Track & track =
+        clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+      if (clip.keep_.t0_ > track.pts_.front() ||
+          clip.keep_.t1_ < track.pts_.back())
+      {
+        oss << " -t"
+            << " " << clip.keep_.t0_.to_hhmmss_ms()
+            << " " << clip.keep_.t1_.to_hhmmss_ms();
+      }
+
+      // summarize clip demuxer:
+      clip_demuxer->update_summary();
+      serial_demuxer->append(clip_demuxer);
+    }
+
+    // summarize serial demuxer:
+    serial_demuxer->update_summary();
+
+#ifndef NDEBUG
+    av_log(NULL, AV_LOG_WARNING, "yaeReplay args: %s", oss.str().c_str());
+#endif
+
+    return serial_demuxer;
+  }
+
+
+  //----------------------------------------------------------------
   // ClearTextInput
   //
   struct ClearTextInput : public InputArea
@@ -619,11 +679,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // IsClipSelected
+  // IsCurrentClip
   //
-  struct IsClipSelected : TBoolExpr
+  struct IsCurrentClip : TBoolExpr
   {
-    IsClipSelected(const RemuxView & view, const TClipPtr & clip):
+    IsCurrentClip(const RemuxView & view, const TClipPtr & clip):
       view_(view),
       clip_(clip)
     {}
@@ -912,7 +972,7 @@ namespace yae
   {
     Item & root = container.addNew<Item>("clip_layout");
     root.anchors_.fill(container);
-    root.visible_ = root.addExpr(new IsClipSelected(view, clip_ptr));
+    root.visible_ = root.addExpr(new IsCurrentClip(view, clip_ptr));
 
     const Clip & clip = *clip_ptr;
     const Timeline::Track & track = clip.get_track_timeline();
@@ -1612,9 +1672,9 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      if (model_.selected_ != index_)
+      if (view_.selected_ != index_)
       {
-        model_.selected_ = index_;
+        view_.selected_ = index_;
         view_.dataChanged();
       }
 
@@ -1644,7 +1704,7 @@ namespace yae
       {
         model_.clips_.erase(model_.clips_.begin() + index_);
         model_.clips_.insert(model_.clips_.begin() + index, clip);
-        model_.selected_ = index;
+        view_.selected_ = index;
         view_.requestUncache();
       }
 
@@ -1667,12 +1727,12 @@ namespace yae
   struct ClipItemColor : public TColorExpr
   {
     ClipItemColor(const RemuxModel & model,
+                  const RemuxView & view,
                   std::size_t index,
-                  const ItemView & view,
                   const InputArea & item):
       model_(model),
-      index_(index),
       view_(view),
+      index_(index),
       item_(item)
     {}
 
@@ -1682,7 +1742,7 @@ namespace yae
       const ItemViewStyle & style = *view_.style();
 
       TVec4D v = style.bg_.get().a_scaled(0.0);
-      if (model_.selected_clip() == model_.clips_[index_])
+      if (view_.selected_clip() == model_.clips_[index_])
       {
         v = style.bg_controls_.get();
       }
@@ -1698,8 +1758,8 @@ namespace yae
     }
 
     const RemuxModel & model_;
+    const RemuxView & view_;
     const std::size_t index_;
-    const ItemView & view_;
     const Item & item_;
   };
 
@@ -2037,7 +2097,7 @@ namespace yae
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
         Item & ia = controls.add
-          (new InvokeMethodOnClick("export_ia", view, "remux"));
+          (new InvokeMethodOnClick("export_ia", view, "emit_remux"));
         ia.anchors_.fill(export_btn);
       }
     }
@@ -2114,8 +2174,8 @@ namespace yae
            i = gops.children_.begin(); i != gops.children_.end(); ++i)
     {
       const Item & item = *(*i);
-      const IsClipSelected * found =
-        dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
+      const IsCurrentClip * found =
+        dynamic_cast<const IsCurrentClip *>(item.visible_.ref_);
 
       if (found && found->clip_ == clip)
       {
@@ -2331,8 +2391,8 @@ namespace yae
       else if (key == Qt::Key_Return ||
                key == Qt::Key_Enter)
       {
-        QModelIndex currentIndex = model_->currentItem();
-        model_->setPlayingItem(currentIndex);
+        QModelIndex currentIndex = currentItem();
+        setPlayingItem(currentIndex);
         e->accept();
       }
 #endif
@@ -2437,7 +2497,7 @@ namespace yae
 
     Rectangle & bg = row.addNew<Rectangle>("bg");
     bg.anchors_.fill(row);
-    bg.color_ = bg.addExpr(new ClipItemColor(model, index, view, row));
+    bg.color_ = bg.addExpr(new ClipItemColor(model, view, index, row));
     bg.color_.cachingEnabled_ = false;
 
     layout_clip(model, view, style_, row, index);
@@ -2447,7 +2507,7 @@ namespace yae
 
     dataChanged();
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     sv.content_->dump(std::cerr);
 #endif
   }
@@ -2494,6 +2554,12 @@ namespace yae
   void
   RemuxView::remove_clip(std::size_t index)
   {
+    if (view_mode_ != RemuxView::kLayoutMode)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
     Item & root = *root_;
     Item & gops = root["layout"]["gops"];
 
@@ -2509,7 +2575,7 @@ namespace yae
 
     gops.children_.erase(found);
     model.clips_.erase(model.clips_.begin() + index);
-    model.selected_ = std::min(index, model.clips_.size() - 1);
+    selected_ = std::min(index, model.clips_.size() - 1);
     prune(model);
 
     Scrollview & sv =
@@ -2517,7 +2583,7 @@ namespace yae
     Item & clip_list = sv.content_->get<Item>("clip_list");
     clip_list.children_.pop_back();
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     sv.content_->dump(std::cerr);
 #endif
 
@@ -2530,8 +2596,14 @@ namespace yae
   void
   RemuxView::repeat_clip()
   {
+    if (view_mode_ != RemuxView::kLayoutMode)
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
     RemuxModel & model = *model_;
-    TClipPtr clip_ptr = model.selected_clip();
+    TClipPtr clip_ptr = selected_clip();
     if (!clip_ptr)
     {
       return;
@@ -2547,10 +2619,10 @@ namespace yae
     }
 
     TClipPtr new_clip(new Clip(clip.demuxer_, clip.track_, keep));
-    std::size_t new_index = model.selected_ + 1;
-    if (model.selected_ < model.clips_.size())
+    std::size_t new_index = selected_ + 1;
+    if (selected_ < model.clips_.size())
     {
-      model.clips_.insert(model.clips_.begin() + model.selected_ + 1,
+      model.clips_.insert(model.clips_.begin() + selected_ + 1,
                           new_clip);
     }
     else
@@ -2571,8 +2643,8 @@ namespace yae
            i = gops.children_.begin(); i != gops.children_.end(); ++i)
     {
       const Item & item = *(*i);
-      const IsClipSelected * found =
-        dynamic_cast<const IsClipSelected *>(item.visible_.ref_);
+      const IsCurrentClip * found =
+        dynamic_cast<const IsCurrentClip *>(item.visible_.ref_);
 
       if (found && found->clip_ == clip_ptr)
       {
@@ -2585,7 +2657,7 @@ namespace yae
     }
 
     // select the new clip:
-    model.selected_ = new_index;
+    selected_ = new_index;
   }
 
   //----------------------------------------------------------------
@@ -2634,7 +2706,7 @@ namespace yae
 
     style_.layout_->layout(root, *this, *model_, style_);
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     root.dump(std::cerr);
 #endif
   }
@@ -2849,12 +2921,12 @@ namespace yae
   RemuxView::set_in_point()
   {
     TTime pts;
-    if (!get_cursor_pts(*this, pts))
+    if (view_mode_ != RemuxView::kLayoutMode || !get_cursor_pts(*this, pts))
     {
       return;
     }
 
-    Clip & clip = *(model_->selected_clip());
+    Clip & clip = *selected_clip();
     clip.keep_.t0_ = pts;
 
     if (clip.keep_.t1_ <= clip.keep_.t0_)
@@ -2877,12 +2949,12 @@ namespace yae
   RemuxView::set_out_point()
   {
     TTime pts;
-    if (!get_cursor_pts(*this, pts))
+    if (view_mode_ != RemuxView::kLayoutMode || !get_cursor_pts(*this, pts))
     {
       return;
     }
 
-    Clip & clip = *(model_->selected_clip());
+    Clip & clip = *selected_clip();
     clip.keep_.t1_ = pts;
 
     if (clip.keep_.t1_ <= clip.keep_.t0_)
@@ -2922,7 +2994,8 @@ namespace yae
       preview.uncache();
       TClipPtr clip = output_clip();
       layout_gops(*model_, *this, style_, preview, clip);
-#ifndef NDEBUG
+
+#if 0 // ndef NDEBUG
       preview.dump(std::cerr);
 #endif
     }
@@ -2931,12 +3004,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // RemuxView::remux
+  // RemuxView::emit_remux
   //
   void
-  RemuxView::remux()
+  RemuxView::emit_remux()
   {
-    std::cerr << "FIXME: pkoshevoy: remux!" << std::endl;
+    emit remux();
   }
 
   //----------------------------------------------------------------
@@ -2947,24 +3020,7 @@ namespace yae
   {
     if (!output_clip_ && model_ && !model_->clips_.empty())
     {
-      serial_demuxer_.reset(new SerialDemuxer());
-
-      for (std::vector<TClipPtr>::const_iterator
-             i = model_->clips_.begin(); i != model_->clips_.end(); ++i)
-      {
-        const Clip & clip = *(*i);
-
-        TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
-        clip_demuxer->trim(clip.demuxer_, clip.track_, clip.keep_);
-
-        // summarize clip demuxer:
-        clip_demuxer->update_summary();
-        serial_demuxer_->append(clip_demuxer);
-      }
-
-      // summarize serial demuxer:
-      serial_demuxer_->update_summary();
-
+      serial_demuxer_ = model_->make_serial_demuxer();
       const yae::DemuxerSummary & summary = serial_demuxer_->summary();
       const std::string & track_id = model_->clips_.front()->track_;
       const Timeline::Track & track = summary.get_track_timeline(track_id);

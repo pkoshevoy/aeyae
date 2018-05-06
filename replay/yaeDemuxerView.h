@@ -74,11 +74,7 @@ namespace yae
   //
   struct YAE_API RemuxModel
   {
-    RemuxModel(): selected_(0) {}
-
-    // helper:
-    inline TClipPtr selected_clip() const
-    { return (selected_ < clips_.size()) ? clips_[selected_] : TClipPtr(); }
+    TSerialDemuxerPtr make_serial_demuxer() const;
 
     // demuxer, indexed by source path:
     std::map<std::string, TDemuxerInterfacePtr> demuxer_;
@@ -88,9 +84,6 @@ namespace yae
 
     // composition of the remuxed output:
     std::vector<TClipPtr> clips_;
-
-    // index of currently selected clip:
-    std::size_t selected_;
   };
 
   //----------------------------------------------------------------
@@ -329,17 +322,25 @@ namespace yae
     void repeat_clip();
 
     // helper:
+    inline TClipPtr selected_clip() const
+    {
+      return (selected_ < model_->clips_.size() ?
+              model_->clips_[selected_] :
+              TClipPtr());
+    }
+
+    // helper:
     inline TClipPtr current_clip() const
     {
-      return
-        (view_mode_ == kPreviewMode) ?
-        output_clip() :
-        model_->selected_clip();;
+      return (view_mode_ == kPreviewMode) ? output_clip() : selected_clip();
     }
 
     // accessor:
     inline ViewMode view_mode() const
     { return view_mode_; }
+
+  signals:
+    void remux();
 
   public slots:
     void layoutChanged();
@@ -355,7 +356,7 @@ namespace yae
     //       from current source clips:
     void set_view_mode(RemuxView::ViewMode mode);
 
-    void remux();
+    void emit_remux();
 
   protected:
     TClipPtr output_clip() const;
@@ -367,6 +368,9 @@ namespace yae
 
   public:
     RemuxViewStyle style_;
+
+    // index of currently selected clip:
+    std::size_t selected_;
 
     QSignalMapper t0_;
     QSignalMapper t1_;

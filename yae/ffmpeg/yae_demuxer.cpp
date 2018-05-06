@@ -65,6 +65,11 @@ namespace yae
   void
   AvOutputContextPtr::destroy(AVFormatContext * ctx)
   {
+    if (!ctx)
+    {
+      return;
+    }
+
     for (unsigned int i = 0; i < ctx->nb_streams; i++)
     {
       av_freep(&(ctx->streams[i]));

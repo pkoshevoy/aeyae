@@ -51,6 +51,7 @@
      <string>&amp;File</string>
     </property>
     <addaction name="actionOpen"/>
+    <addaction name="actionExport"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
@@ -79,6 +80,11 @@
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionExport">
+   <property name="text">
+    <string>&amp;Export</string>
    </property>
   </action>
   <action name="actionExit">

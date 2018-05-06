@@ -155,6 +155,14 @@ namespace yae
                  this, SLOT(fileOpen()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionExport, SIGNAL(triggered()),
+                 this, SLOT(fileExport()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(remux()),
+                 this, SLOT(fileExport()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionExit, SIGNAL(triggered()),
                  this, SLOT(fileExit()));
     YAE_ASSERT(ok);
@@ -541,7 +549,7 @@ namespace yae
          "*.webm "
          ")");
 
-    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    static QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
 
 #ifndef __APPLE__
     QStringList filenames =
@@ -568,6 +576,8 @@ namespace yae
       return;
     }
 
+    startHere = QFileInfo(filenames.back()).absoluteDir().canonicalPath();
+
     std::set<std::string> sources;
     for (QStringList::const_iterator i = filenames.begin();
          i != filenames.end(); ++i)
@@ -577,6 +587,131 @@ namespace yae
     }
 
     add(sources);
+  }
+
+  //----------------------------------------------------------------
+  // ExportTask
+  //
+  struct ExportTask : AsyncTaskQueue::Task
+  {
+
+    //----------------------------------------------------------------
+    // ExportTask
+    //
+    ExportTask(QObject * target,
+               const RemuxModel & source,
+               const QString & output):
+      target_(target),
+      source_(source),
+      output_(output)
+    {}
+
+    //----------------------------------------------------------------
+    // Began
+    //
+    struct Began : public QEvent
+    {
+      Began(const QString & filename):
+        QEvent(QEvent::User),
+        filename_(filename)
+      {}
+
+      QString filename_;
+    };
+
+    //----------------------------------------------------------------
+    // Done
+    //
+    struct Done : public QEvent
+    {
+      Done(): QEvent(QEvent::User) {}
+    };
+
+    //----------------------------------------------------------------
+    // run
+    //
+    void run()
+    {
+      try
+      {
+        qApp->postEvent(target_, new Began(QFileInfo(output_).fileName()));
+        TSerialDemuxerPtr demuxer = source_.make_serial_demuxer();
+
+        std::string fn = output_.toUtf8().constData();
+        yae::remux(fn.c_str(), *demuxer);
+      }
+      catch (const std::exception & e)
+      {
+        av_log(NULL, AV_LOG_WARNING, "ExportTask::run exception: %s", e.what());
+      }
+      catch (...)
+      {
+        av_log(NULL, AV_LOG_WARNING, "ExportTask::run unknown exception");
+      }
+
+      qApp->postEvent(target_, new Done());
+    }
+
+    QObject * target_;
+    RemuxModel source_;
+    QString output_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::fileExport
+  //
+  void
+  MainWindow::fileExport()
+  {
+    QString filter =
+      tr("movies ("
+         "*.avi "
+         "*.mkv "
+         "*.mov "
+         "*.mp4 "
+         "*.nut "
+         "*.ogm "
+         "*.ts "
+         ")");
+
+    static QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+
+#ifndef __APPLE__
+    QString filename = QFileDialog::getSaveFileName(this,
+                                                    tr("Export As"),
+                                                    startHere,
+                                                    filter);
+#else
+    QFileDialog dialog(this,
+                       tr("Export As"),
+                       startHere,
+                       filter);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    int r = dialog.exec();
+    if (r != QDialog::Accepted)
+    {
+      return;
+    }
+
+    QStringList filenames = dialog.selectedFiles();
+    if (filenames.empty())
+    {
+      return;
+    }
+
+    filename = filenames.back();
+#endif
+
+    if (filename.isEmpty())
+    {
+      return;
+    }
+
+    startHere = QFileInfo(filename).absoluteDir().canonicalPath();
+
+    TAsyncTaskPtr t(new ExportTask(this, model_, filename));
+    tasks_.push_back(t);
+    async_.push_back(t);
   }
 
   //----------------------------------------------------------------
@@ -771,7 +906,7 @@ namespace yae
         model_.source_[loaded->demuxer_] = loaded->source_;
         model_.clips_.push_back(loaded->clip_);
         view_.append_clip(loaded->clip_);
-        model_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
+        view_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
         loaded->accept();
         return true;
       }
@@ -783,6 +918,25 @@ namespace yae
         spinner_.setEnabled(!tasks_.empty());
 
         load_done->accept();
+        return true;
+      }
+
+      ExportTask::Began * export_began = dynamic_cast<ExportTask::Began *>(e);
+      if (export_began)
+      {
+        spinner_.setEnabled(true);
+        spinner_.setText(tr("exporting: %1").arg(export_began->filename_));
+        export_began->accept();
+        return true;
+      }
+
+      ExportTask::Done * export_done = dynamic_cast<ExportTask::Done *>(e);
+      if (export_done)
+      {
+        tasks_.pop_front();
+        spinner_.setEnabled(!tasks_.empty());
+
+        export_done->accept();
         return true;
       }
     }
