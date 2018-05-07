@@ -463,14 +463,35 @@ if (APPLE)
   endif (SECURITY_FRAMEWORK)
 endif (APPLE)
 
+ADD_DEFINITIONS(-DJSON_DLL_BUILD -DJSON_NO_AUTOLINK)
 
 include_directories(AFTER
   .
   ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
+  jsoncpp/include
+  )
+
+set(jsoncpp_sources
+  jsoncpp/include/json/config.h
+  jsoncpp/include/json/forwards.h
+  jsoncpp/include/json/features.h
+  jsoncpp/include/json/value.h
+  jsoncpp/include/json/reader.h
+  jsoncpp/include/json/writer.h
+  jsoncpp/include/json/assertions.h
+  jsoncpp/include/json/version.h
+
+  jsoncpp/src/lib_json/json_tool.h
+  jsoncpp/src/lib_json/json_reader.cpp
+  jsoncpp/src/lib_json/json_valueiterator.inl
+  jsoncpp/src/lib_json/json_value.cpp
+  jsoncpp/src/lib_json/json_writer.cpp
   )
 
 add_library(aeyae SHARED
+
+  ${jsoncpp_sources}
 
   yae/api/yae_api.h
   yae/api/yae_frame_observer_interface.h

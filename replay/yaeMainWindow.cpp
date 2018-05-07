@@ -35,6 +35,9 @@
 #include <QVBoxLayout>
 #include <QWheelEvent>
 
+// jsoncpp:
+#include "json/json.h"
+
 // yae includes:
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_plugin_registry.h"
@@ -153,6 +156,14 @@ namespace yae
 
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSaveAs, SIGNAL(triggered()),
+                 this, SLOT(fileSaveAs()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionImport, SIGNAL(triggered()),
+                 this, SLOT(fileImport()));
     YAE_ASSERT(ok);
 
     ok = connect(actionExport, SIGNAL(triggered()),
@@ -524,7 +535,115 @@ namespace yae
   void
   MainWindow::fileOpen()
   {
-    QString filter =
+    static const QString filter = tr("Aeyae Remux (*.yaerx)");
+
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    startHere = yae::get(startHere_, "docs", startHere);
+
+#ifndef __APPLE__
+    QString filename = QFileDialog::getOpenFileName(this,
+                                                    tr("Open document"),
+                                                    startHere,
+                                                    filter);
+#else
+    QFileDialog dialog(this, tr("Open document"), startHere, filter);
+    int r = dialog.exec();
+    if (r != QDialog::Accepted)
+    {
+      return;
+    }
+
+    QStringList filenames = dialog.selectedFiles();
+
+    if (filenames.empty())
+    {
+      return;
+    }
+
+    QString filename = filenames.back();
+#endif
+
+    if (filename.isEmpty())
+    {
+      return;
+    }
+
+    put(startHere_, "docs", QFileInfo(filename).absoluteDir().canonicalPath());
+
+    std::string json_str =
+      TOpenFile(filename.toUtf8().constData(), "rb").read();
+
+    std::set<std::string> sources;
+    std::list<ClipInfo> src_clips;
+
+    if (RemuxModel::parse_json_str(json_str, sources, src_clips))
+    {
+      model_ = RemuxModel();
+      view_.selected_ = 0;
+      view_.layoutChanged();
+      this->add(sources, src_clips);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::fileSaveAs
+  //
+  void
+  MainWindow::fileSaveAs()
+  {
+    static const QString filter = tr("Aeyae Remux (*.yaerx)");
+
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    startHere = yae::get(startHere_, "docs", startHere);
+
+#ifndef __APPLE__
+    QString filename = QFileDialog::getSaveFileName(this,
+                                                    tr("Save As"),
+                                                    startHere,
+                                                    filter);
+#else
+    QFileDialog dialog(this, tr("Save As"), startHere, filter);
+    dialog.setAcceptMode(QFileDialog::AcceptSave);
+    int r = dialog.exec();
+    if (r != QDialog::Accepted)
+    {
+      return;
+    }
+
+    QStringList filenames = dialog.selectedFiles();
+    if (filenames.empty())
+    {
+      return;
+    }
+
+    filename = filenames.back();
+#endif
+
+    if (filename.isEmpty())
+    {
+      return;
+    }
+
+    static const QString doc_suffix = tr(".yaerx");
+    if (!filename.endsWith(doc_suffix, Qt::CaseInsensitive))
+    {
+      filename += doc_suffix;
+    }
+
+    put(startHere_, "docs", QFileInfo(filename).absoluteDir().canonicalPath());
+
+    std::string json_str = model_.to_json_str();
+    bool ok = TOpenFile(filename.toUtf8().constData(), "wb").write(json_str);
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::fileImport
+  //
+  void
+  MainWindow::fileImport()
+  {
+    static const QString filter =
       tr("movies ("
          "*.avi "
          "*.asf "
@@ -549,7 +668,8 @@ namespace yae
          "*.webm "
          ")");
 
-    static QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    startHere = yae::get(startHere_, "import", startHere);
 
 #ifndef __APPLE__
     QStringList filenames =
@@ -576,7 +696,8 @@ namespace yae
       return;
     }
 
-    startHere = QFileInfo(filenames.back()).absoluteDir().canonicalPath();
+    put(startHere_, "import",
+        QFileInfo(filenames.back()).absoluteDir().canonicalPath());
 
     std::set<std::string> sources;
     for (QStringList::const_iterator i = filenames.begin();
@@ -663,7 +784,7 @@ namespace yae
   void
   MainWindow::fileExport()
   {
-    QString filter =
+    static const QString filter =
       tr("movies ("
          "*.avi "
          "*.mkv "
@@ -674,7 +795,8 @@ namespace yae
          "*.ts "
          ")");
 
-    static QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
+    startHere = yae::get(startHere_, "export", startHere);
 
 #ifndef __APPLE__
     QString filename = QFileDialog::getSaveFileName(this,
@@ -707,7 +829,8 @@ namespace yae
       return;
     }
 
-    startHere = QFileInfo(filename).absoluteDir().canonicalPath();
+    put(startHere_, "export",
+        QFileInfo(filename).absoluteDir().canonicalPath());
 
     TAsyncTaskPtr t(new ExportTask(this, model_, filename));
     tasks_.push_back(t);
@@ -734,7 +857,7 @@ namespace yae
     if (!about)
     {
       about = new AboutDialog(this);
-      about->setWindowTitle(tr("Apprentice Video Remux (%1)").
+      about->setWindowTitle(tr("Aeyae Remux (%1)").
                             arg(QString::fromUtf8(YAE_REVISION)));
     }
 

@@ -247,6 +247,42 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // read
+  //
+  YAE_API std::size_t
+  read(FILE * file, void * buffer, std::size_t buffer_size);
+
+  //----------------------------------------------------------------
+  // read
+  //
+  YAE_API std::string read(FILE * file);
+
+  //----------------------------------------------------------------
+  // load
+  //
+  YAE_API std::size_t
+  load(FILE * file, std::vector<unsigned char> & out);
+
+  //----------------------------------------------------------------
+  // write
+  //
+  YAE_API bool
+  write(FILE * file, const void * buffer, std::size_t buffer_size);
+
+  //----------------------------------------------------------------
+  // write
+  //
+  YAE_API bool
+  write(FILE * file, const std::string & text);
+
+  //----------------------------------------------------------------
+  // write
+  //
+  YAE_API bool
+  write(FILE * file, const char * text);
+
+
+  //----------------------------------------------------------------
   // TOpenFile
   //
   struct YAE_API TOpenFile
@@ -255,6 +291,46 @@ namespace yae
     // or can not be opened.
     TOpenFile(const char * filenameUtf8, const char * mode);
     ~TOpenFile();
+
+    inline bool is_open() const
+    {
+      return file_ != NULL;
+    }
+
+    inline bool is_eof() const
+    {
+      return !file_ || feof(file_);
+    }
+
+    inline bool write(const void * buffer, std::size_t buffer_size)
+    {
+      return yae::write(this->file_, buffer, buffer_size);
+    }
+
+    inline std::size_t read(void * buffer, std::size_t buffer_size)
+    {
+      return yae::read(this->file_, buffer, buffer_size);
+    }
+
+    inline std::string read()
+    {
+      return yae::read(this->file_);
+    }
+
+    inline std::size_t load(std::vector<unsigned char> & out)
+    {
+      return yae::load(this->file_, out);
+    }
+
+    inline bool write(const std::string & text)
+    {
+      return this->write(text.c_str(), text.size());
+    }
+
+    inline bool write(const char * text)
+    {
+      return this->write(text, ::strlen(text));
+    }
 
     // the file handle:
     FILE * file_;
@@ -303,7 +379,7 @@ namespace yae
   // at
   //
   template <typename TValue>
-  static const TValue &
+  inline static const TValue &
   at(const std::vector<TValue> & v, int offset)
   {
     std::size_t i = offset < 0 ? v.size() - offset : offset;
@@ -314,7 +390,7 @@ namespace yae
   // at
   //
   template <typename TValue>
-  static TValue &
+  inline static TValue &
   at(std::vector<TValue> & v, int offset)
   {
     std::size_t i = offset < 0 ? v.size() - offset : offset;
@@ -325,7 +401,7 @@ namespace yae
   // at
   //
   template <typename TKey, typename TValue>
-  static const TValue &
+  inline static const TValue &
   at(const std::map<TKey, TValue> & lut, const TKey & key)
   {
     typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
@@ -343,7 +419,7 @@ namespace yae
   // at
   //
   template <typename TKey, typename TValue>
-  static TValue &
+  inline static TValue &
   at(std::map<TKey, TValue> & lut, const TKey & key)
   {
     typename std::map<TKey, TValue>::iterator found = lut.find(key);
@@ -361,7 +437,7 @@ namespace yae
   // has
   //
   template <typename TKey, typename TValue>
-  static bool
+  inline static bool
   has(const std::map<TKey, TValue> & lut, const TKey & key)
   {
     typename std::map<TKey, TValue>::const_iterator found = lut.find(key);
@@ -372,7 +448,7 @@ namespace yae
   // get
   //
   template <typename TKey, typename TValue>
-  static TValue
+  inline static TValue
   get(const std::map<TKey, TValue> & lut,
       const TKey & key,
       const TValue & defaultValue = TValue())
@@ -385,12 +461,24 @@ namespace yae
   // get
   //
   template <typename TValue>
-  static TValue
+  inline static TValue
   get(const std::map<std::string, TValue> & lut,
       const char * key,
       const TValue & defaultValue = TValue())
   {
     return get<std::string, TValue>(lut, std::string(key), defaultValue);
+  }
+
+  //----------------------------------------------------------------
+  // put
+  //
+  template <typename TValue>
+  inline static void
+  put(std::map<std::string, TValue> & lut,
+      const char * key,
+      const TValue & value)
+  {
+    lut[std::string(key)] = value;
   }
 
   //----------------------------------------------------------------

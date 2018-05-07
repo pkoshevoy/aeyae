@@ -690,6 +690,130 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // read
+  //
+  std::size_t
+  read(FILE * file, void * buffer, std::size_t buffer_size)
+  {
+    std::size_t done_size = 0;
+    unsigned char * dst = (unsigned char *)buffer;
+
+    while (file && done_size < buffer_size)
+    {
+      std::size_t z = buffer_size - done_size;
+      std::size_t n = fread(dst, 1, z, file);
+      done_size += n;
+      dst += n;
+
+      if (n < z)
+      {
+        break;
+      }
+    }
+
+    return done_size;
+  }
+
+  //----------------------------------------------------------------
+  // read
+  //
+  std::string
+  read(FILE * file)
+  {
+    std::string str;
+    char tmp[1024] = { 0 };
+
+    while (file)
+    {
+      std::size_t n = fread(tmp, 1, sizeof(tmp), file);
+      if (n > 0)
+      {
+        str += std::string(tmp, tmp + n);
+      }
+
+      if (n < sizeof(tmp))
+      {
+        break;
+      }
+    }
+
+    return str;
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  std::size_t
+  load(FILE * file, std::vector<unsigned char> & out)
+  {
+    out = std::vector<unsigned char>();
+
+    unsigned char tmp[1024] = { 0 };
+    while (file)
+    {
+      std::size_t n = fread(tmp, 1, sizeof(tmp), file);
+      if (n > 0)
+      {
+        out.insert(out.end(), tmp, tmp + n);
+      }
+
+      if (n < sizeof(tmp))
+      {
+        break;
+      }
+    }
+
+    return out.size();
+  }
+
+  //----------------------------------------------------------------
+  // write
+  //
+  bool
+  write(FILE * file, const void * buffer, std::size_t buffer_size)
+  {
+    if (!file)
+    {
+      return false;
+    }
+
+    const unsigned char * src = (const unsigned char *)buffer;
+    const unsigned char * end = src + buffer_size;
+
+    while (src < end)
+    {
+      std::size_t bytes_written = ::fwrite(src, 1, end - src, file);
+      if (!bytes_written)
+      {
+        return false;
+      }
+
+      src += bytes_written;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // write
+  //
+  bool
+  write(FILE * file, const std::string & text)
+  {
+    return yae::write(file, text.c_str(), text.size());
+  }
+
+  //----------------------------------------------------------------
+  // write
+  //
+  bool
+  write(FILE * file, const char * text)
+  {
+    return yae::write(file, text, ::strlen(text));
+  }
+
+
+  //----------------------------------------------------------------
   // TOpenFile::TOpenFile
   //
   TOpenFile::TOpenFile(const char * filenameUtf8, const char * mode):

@@ -98,6 +98,8 @@ namespace yae
   public slots:
     // file menu:
     void fileOpen();
+    void fileSaveAs();
+    void fileImport();
     void fileExport();
     void fileExit();
 
@@ -146,6 +148,9 @@ namespace yae
     typedef boost::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
     std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
+
+    // for recalling places where files were loaded or saved:
+    std::map<std::string, QString> startHere_;
   };
 }
 

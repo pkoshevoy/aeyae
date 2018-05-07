@@ -26,6 +26,7 @@
 // local:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
+#include "yaeReplay.h"
 #include "yaeScrollview.h"
 
 
@@ -75,6 +76,12 @@ namespace yae
   struct YAE_API RemuxModel
   {
     TSerialDemuxerPtr make_serial_demuxer() const;
+
+    std::string to_json_str() const;
+
+    static bool parse_json_str(const std::string & json_str,
+                               std::set<std::string> & sources,
+                               std::list<ClipInfo> & src_clips);
 
     // demuxer, indexed by source path:
     std::map<std::string, TDemuxerInterfacePtr> demuxer_;
