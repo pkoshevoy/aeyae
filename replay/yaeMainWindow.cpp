@@ -616,7 +616,7 @@ namespace yae
       return;
     }
 
-    filename = filenames.back();
+    QString filename = filenames.back();
 #endif
 
     if (filename.isEmpty())
@@ -821,7 +821,7 @@ namespace yae
       return;
     }
 
-    filename = filenames.back();
+    QString filename = filenames.back();
 #endif
 
     if (filename.isEmpty())
