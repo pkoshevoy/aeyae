@@ -45,6 +45,59 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Clip
+  //
+  struct YAE_API Clip
+  {
+    Clip(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
+         const std::string & track = std::string(),
+         const Timespan & keep = Timespan()):
+      demuxer_(demuxer),
+      track_(track),
+      keep_(keep)
+    {}
+
+    inline const Timeline::Track & get_track_timeline() const
+    {
+      return demuxer_->summary().get_track_timeline(track_);
+    }
+
+    TDemuxerInterfacePtr demuxer_;
+    std::string track_;
+
+    // PTS timeline span to keep:
+    Timespan keep_;
+  };
+
+  //----------------------------------------------------------------
+  // TClipPtr
+  //
+  typedef boost::shared_ptr<Clip> TClipPtr;
+
+  //----------------------------------------------------------------
+  // RemuxModel
+  //
+  struct YAE_API RemuxModel
+  {
+    TSerialDemuxerPtr make_serial_demuxer() const;
+
+    std::string to_json_str() const;
+
+    static bool parse_json_str(const std::string & json_str,
+                               std::set<std::string> & sources,
+                               std::list<ClipInfo> & src_clips);
+
+    // demuxer, indexed by source path:
+    std::map<std::string, TDemuxerInterfacePtr> demuxer_;
+
+    // source path, indexed by demuxer:
+    std::map<TDemuxerInterfacePtr, std::string> source_;
+
+    // composition of the remuxed output:
+    std::vector<TClipPtr> clips_;
+  };
+
+  //----------------------------------------------------------------
   // load
   //
   TDemuxerInterfacePtr

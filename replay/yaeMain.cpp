@@ -283,6 +283,28 @@ mainMayThrowException(int argc, char ** argv)
     {
       no_ui = true;
     }
+    else if (arg == "-load")
+    {
+      ++i;
+      std::string fn = i->toUtf8().constData();
+      std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
+
+      std::set<std::string> s;
+      std::list<yae::ClipInfo> c;
+      if (yae::RemuxModel::parse_json_str(json_str, s, c))
+      {
+        for (std::list<yae::ClipInfo>::const_iterator
+               j = c.begin(); j != c.end(); ++j)
+        {
+          const yae::ClipInfo & clip = *j;
+          clips.push_back(clip);
+          curr_source = clip.source_;
+          curr_track = clip.track_;
+          sources.insert(curr_source);
+          clipped.insert(curr_source);
+        }
+      }
+    }
   }
 
   if (!curr_source.empty() && !yae::has(clipped, curr_source))
