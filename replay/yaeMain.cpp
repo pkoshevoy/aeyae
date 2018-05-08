@@ -116,16 +116,30 @@ namespace yae
       {
         return QApplication::event(e);
       }
-#if 0
+
       // handle the apple event to open a document:
       QString filename = static_cast<QFileOpenEvent *>(e)->file();
-      std::list<QString> playlist;
-      yae::addToPlaylist(playlist, filename);
-      mainWindow->setPlaylist(playlist);
+      std::set<std::string> sources;
+
+      if (filename.endsWith(".yaerx", Qt::CaseInsensitive))
+      {
+        std::string json_str =
+          TOpenFile(filename.toUtf8().constData(), "rb").read();
+
+        std::list<yae::ClipInfo> src_clips;
+        if (RemuxModel::parse_json_str(json_str, sources, src_clips))
+        {
+          mainWindow->add(sources, src_clips);
+        }
+      }
+      else
+      {
+        std::string source = filename.toUtf8().constData();
+        sources.insert(source);
+        mainWindow->add(sources);
+      }
+
       return true;
-#else
-      return false;
-#endif
     }
   };
 }
@@ -283,9 +297,8 @@ mainMayThrowException(int argc, char ** argv)
     {
       no_ui = true;
     }
-    else if (arg == "-load")
+    else if (al::iends_with(arg, ".yaerx"))
     {
-      ++i;
       std::string fn = i->toUtf8().constData();
       std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
 

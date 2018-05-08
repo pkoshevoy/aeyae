@@ -51,6 +51,7 @@
 				<string>wmv</string>
 				<string>weba</string>
 				<string>webm</string>
+				<string>yaerx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>replay</string>
@@ -67,21 +68,21 @@
 	<key>CFBundleExecutable</key>
 	<string>replay</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Apprentice Video Remux by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
+	<string>Aeyae Remux by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
 	<string>replay</string>
 	<key>CFBundleIdentifier</key>
-	<string>apprentice.video.remux</string>
+	<string>aeyae.remux</string>
 	<key>CFBundleName</key>
-	<string>Apprentice Video Remux</string>
+	<string>Aeyae Remux</string>
 	<key>CFBundleDisplayName</key>
-	<string>Apprentice Video Remux</string>
+	<string>Aeyae Remux</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>Revision @PROJ_WC_REVISION@</string>
 	<key>CFBundleSignature</key>
-	<string>.yar</string>
+	<string>.yaerx</string>
 	<key>CFBundleVersion</key>
 	<string>@PROJ_WC_REVISION@</string>
 	<key>NSAppleScriptEnabled</key>
