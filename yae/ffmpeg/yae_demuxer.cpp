@@ -2476,6 +2476,9 @@ namespace yae
       dst->time_base = src->time_base;
       dst->duration = src->duration;
 
+      dst->codecpar->codec_tag = av_codec_get_tag(muxer->oformat->codec_tag,
+                                                  src->codecpar->codec_id);
+
       if (dst->codecpar->codec_type == AVMEDIA_TYPE_VIDEO)
       {
         const FramerateEstimator & fps = yae::at(summary.fps_, track_id);
