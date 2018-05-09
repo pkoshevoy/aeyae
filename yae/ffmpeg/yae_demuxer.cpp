@@ -2541,6 +2541,10 @@ namespace yae
         av->start = ch.span_.t0_.get(dt.base_);
         av->end = ch.span_.t1_.get(dt.base_);
 
+        // some muxer consider negative time invalid:
+        av->start = std::max<int64_t>(0, av->start);
+        av->end = std::max<int64_t>(av->start, av->end);
+
         setDictionary(av->metadata, ch.metadata_);
       }
     }
