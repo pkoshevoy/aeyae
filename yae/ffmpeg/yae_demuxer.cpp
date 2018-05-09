@@ -1018,6 +1018,7 @@ namespace yae
     if (has_dts && dts < next_dts)
     {
       int64 cts = (packet.pts != AV_NOPTS_VALUE) ? packet.pts - packet.dts : 0;
+      YAE_ASSERT(cts >= 0);
 
       dts = next_dts;
       packet.dts = av_rescale_q(dts.time_,
@@ -1026,6 +1027,7 @@ namespace yae
       if (packet.pts != AV_NOPTS_VALUE)
       {
         packet.pts = packet.dts + cts;
+        YAE_ASSERT(packet.dts <= packet.pts);
       }
     }
     else if (!has_dts)
@@ -1034,6 +1036,22 @@ namespace yae
       packet.dts = av_rescale_q(dts.time_,
                                 Rational(1, dts.base_),
                                 stream->time_base);
+      YAE_ASSERT(packet.dts <= packet.pts);
+    }
+
+    if (packet.pts < packet.dts)
+    {
+      int64_t dts_next = av_rescale_q(next_dts.time_,
+                                      Rational(1, next_dts.base_),
+                                      stream->time_base);
+      if (dts_next <= packet.pts)
+      {
+        packet.dts = dts_next;
+      }
+      else
+      {
+        packet.dts = packet.pts;
+      }
     }
 
     std::list<TPacketPtr> & packets = packets_[packet.stream_index];
@@ -1046,6 +1064,7 @@ namespace yae
 
     num_packets_++;
 
+    YAE_ASSERT(packet.dts <= packet.pts);
     t0_ = std::min<TTime>(t0_, dts);
     t1_ = std::max<TTime>(t1_, dts);
 
@@ -2595,6 +2614,11 @@ namespace yae
       YAE_ASSERT(false);
       return err;
     }
+
+    // start from the beginning:
+    demuxer.seek(AVSEEK_FLAG_BACKWARD,
+                 summary.rewind_.second,
+                 summary.rewind_.first);
 
     while (true)
     {
