@@ -569,7 +569,15 @@ namespace yae
     }
 
     put(startHere_, "docs", QFileInfo(filename).absoluteDir().canonicalPath());
+    fileOpen(filename);
+  }
 
+  //----------------------------------------------------------------
+  // MainWindow::fileOpen
+  //
+  void
+  MainWindow::fileOpen(const QString & filename)
+  {
     std::string json_str =
       TOpenFile(filename.toUtf8().constData(), "rb").read();
 
@@ -971,7 +979,14 @@ namespace yae
 #endif
 
       QString fullpath = QFileInfo(url.toLocalFile()).canonicalFilePath();
-      sources.insert(std::string(fullpath.toUtf8().constData()));
+      if (fullpath.endsWith(tr(".yaerx"), Qt::CaseInsensitive))
+      {
+        fileOpen(fullpath);
+      }
+      else
+      {
+        sources.insert(std::string(fullpath.toUtf8().constData()));
+      }
     }
 
     add(sources);

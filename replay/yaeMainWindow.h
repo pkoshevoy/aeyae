@@ -98,6 +98,7 @@ namespace yae
   public slots:
     // file menu:
     void fileOpen();
+    void fileOpen(const QString & filename);
     void fileSaveAs();
     void fileImport();
     void fileExport();
