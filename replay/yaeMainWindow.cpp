@@ -143,9 +143,11 @@ namespace yae
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
+    shortcutSave_ = new QShortcut(this);
     shortcutExit_ = new QShortcut(this);
     shortcutFullScreen_ = new QShortcut(this);
 
+    shortcutSave_->setContext(Qt::ApplicationShortcut);
     shortcutExit_->setContext(Qt::ApplicationShortcut);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
 
@@ -156,6 +158,14 @@ namespace yae
 
     ok = connect(actionOpen, SIGNAL(triggered()),
                  this, SLOT(fileOpen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSave, SIGNAL(triggered()),
+                 this, SLOT(fileSave()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutSave_, SIGNAL(activated()),
+                 actionSave, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionSaveAs, SIGNAL(triggered()),
@@ -176,6 +186,10 @@ namespace yae
 
     ok = connect(actionExit, SIGNAL(triggered()),
                  this, SLOT(fileExit()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutExit_, SIGNAL(activated()),
+                 actionExit, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -586,11 +600,40 @@ namespace yae
 
     if (RemuxModel::parse_json_str(json_str, sources, src_clips))
     {
+      filename_ = filename;
       model_ = RemuxModel();
       view_.selected_ = 0;
       view_.layoutChanged();
       this->add(sources, src_clips);
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::fileSave
+  //
+  void
+  MainWindow::fileSave()
+  {
+    if (filename_.isEmpty())
+    {
+      fileSaveAs();
+    }
+    else
+    {
+      fileSave(filename_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::fileSave
+  //
+  void
+  MainWindow::fileSave(const QString & filename)
+  {
+    filename_ = filename;
+    std::string json_str = model_.to_json_str();
+    bool ok = TOpenFile(filename.toUtf8().constData(), "wb").write(json_str);
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -639,10 +682,7 @@ namespace yae
     }
 
     put(startHere_, "docs", QFileInfo(filename).absoluteDir().canonicalPath());
-
-    std::string json_str = model_.to_json_str();
-    bool ok = TOpenFile(filename.toUtf8().constData(), "wb").write(json_str);
-    YAE_ASSERT(ok);
+    fileSave(filename);
   }
 
   //----------------------------------------------------------------
@@ -1009,6 +1049,7 @@ namespace yae
   void
   MainWindow::swapShortcuts()
   {
+    yae::swapShortcuts(shortcutSave_, actionSave);
     yae::swapShortcuts(shortcutExit_, actionExit);
     yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
   }

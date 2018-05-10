@@ -123,14 +123,7 @@ namespace yae
 
       if (filename.endsWith(".yaerx", Qt::CaseInsensitive))
       {
-        std::string json_str =
-          TOpenFile(filename.toUtf8().constData(), "rb").read();
-
-        std::list<yae::ClipInfo> src_clips;
-        if (RemuxModel::parse_json_str(json_str, sources, src_clips))
-        {
-          mainWindow->add(sources, src_clips);
-        }
+        mainWindow->fileOpen(filename);
       }
       else
       {

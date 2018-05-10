@@ -89,7 +89,6 @@ namespace yae
   //
   Demuxer::Demuxer(std::size_t demuxer_index,
                    std::size_t track_offset):
-    context_(NULL),
     ix_(demuxer_index),
     to_(track_offset),
     interruptDemuxer_(false)
@@ -1315,6 +1314,15 @@ namespace yae
     buffer_sec_(buffer_sec),
     gave_up_(false)
   {
+    init_program_buffers();
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::init_program_buffers
+  //
+  void
+  PacketBuffer::init_program_buffers()
+  {
     const AVFormatContext & ctx = demuxer_->getFormatContext();
     for (unsigned int i = 0; i < ctx.nb_programs; i++)
     {
@@ -1355,6 +1363,30 @@ namespace yae
         stream_[s->index] = buffer;
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // PacketBuffer::PacketBuffer
+  //
+  PacketBuffer::PacketBuffer(const PacketBuffer & pb):
+    buffer_sec_(pb.buffer_sec_),
+    gave_up_(false)
+  {
+    if (pb.demuxer())
+    {
+      const Demuxer & d = *(pb.demuxer());
+      demuxer_ = open_demuxer(d.resourcePath().c_str(),
+                              d.track_offset());
+      if (!demuxer_)
+      {
+        std::ostringstream oss;
+        oss << "failed to clone demuxer for track " << d.track_offset()
+            << ", resource path: " << d.resourcePath();
+        throw std::runtime_error(oss.str().c_str());
+      }
+    }
+
+    init_program_buffers();
   }
 
   //----------------------------------------------------------------
@@ -1490,7 +1522,7 @@ namespace yae
         break;
       }
 
-      if (max_duration > buffer_sec_ * 10.0)
+      if (max_duration > buffer_sec_ * 1.0)
       {
         if (!gave_up_)
         {
@@ -1930,7 +1962,6 @@ namespace yae
     return t;
   }
 
-
   //----------------------------------------------------------------
   // operator <<
   //
@@ -2064,6 +2095,20 @@ namespace yae
   DemuxerBuffer::DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec):
     src_(src, buffer_sec)
   {}
+
+  //----------------------------------------------------------------
+  // DemuxerBuffer::DemuxerBuffer
+  //
+  DemuxerBuffer::DemuxerBuffer(const DemuxerBuffer & d):
+    src_(d.src_)
+  {
+    if (d.summary_)
+    {
+      summary_.reset(new DemuxerSummary(*d.summary_));
+      summary_->decoders_.clear();
+      src_.get_decoders(summary_->decoders_);
+    }
+  }
 
   //----------------------------------------------------------------
   // DemuxerBuffer::populate
@@ -2284,6 +2329,25 @@ namespace yae
                       summary.metadata_);
   }
 
+
+  //----------------------------------------------------------------
+  // ParallelDemuxer::ParallelDemuxer
+  //
+  ParallelDemuxer::ParallelDemuxer(const ParallelDemuxer & d)
+  {
+    for (std::list<TDemuxerInterfacePtr>::const_iterator
+           i = d.src_.begin(); i != d.src_.end(); ++i)
+    {
+      const TDemuxerInterfacePtr & src = *i;
+      src_.push_back(TDemuxerInterfacePtr(src->clone()));
+    }
+
+    if (d.summary_)
+    {
+      summary_.reset(new DemuxerSummary());
+      this->summarize(*summary_);
+    }
+  }
 
   //----------------------------------------------------------------
   // ParallelDemuxer::append
@@ -2716,6 +2780,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SerialDemuxer::SerialDemuxer
+  //
+  SerialDemuxer::SerialDemuxer(const SerialDemuxer & d):
+    t0_(d.t0_),
+    t1_(d.t1_),
+    offset_(d.offset_),
+    prog_lut_(d.prog_lut_),
+    curr_(d.curr_)
+  {
+    std::size_t sz = d.src_.size();
+    src_.resize(sz);
+    for (std::size_t i = 0; i < sz; i++)
+    {
+      const TDemuxerInterfacePtr & src = d.src_[i];
+      src_[i].reset(src->clone());
+    }
+
+    if (d.summary_)
+    {
+      summary_.reset(new DemuxerSummary());
+      this->summarize(*summary_);
+    }
+  }
+
+  //----------------------------------------------------------------
   // SerialDemuxer::append
   //
   void
@@ -2914,6 +3003,21 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TrimmedDemuxer::TrimmedDemuxer
+  //
+  TrimmedDemuxer::TrimmedDemuxer(const TrimmedDemuxer & d)
+  {
+    TDemuxerInterfacePtr src(d.src_->clone());
+    trim(src, d.track_, d.timespan_);
+
+    if (d.summary_)
+    {
+      summary_.reset(new DemuxerSummary());
+      this->summarize(*summary_);
+    }
+  }
+
+  //----------------------------------------------------------------
   // TrimmedDemuxer::trim
   //
   void
@@ -2934,21 +3038,21 @@ namespace yae
     // figure out the origin and region of interest:
     Timeline::Track::Trim x;
     {
-      const Timeline::Track & tt = src_summary_.get_track_timeline(trackId);
-      if (!tt.find_samples_for(ptsSpan, x))
+      const Timeline::Track & tt = src_summary_.get_track_timeline(track_);
+      if (!tt.find_samples_for(timespan_, x))
       {
         YAE_ASSERT(false);
         throw std::out_of_range("track does not overlap span, trim failed");
       }
 
-      program_ = src_summary_.find_program(trackId);
+      program_ = src_summary_.find_program(track_);
       // origin_[program_] = tt.pts_[x.ia_];
       origin_[program_] = tt.pts_[x.ka_];
-      trim_[trackId] = Trim(tt.dts_[x.ka_],
+      trim_[track_] = Trim(tt.dts_[x.ka_],
                             tt.dts_[x.kb_],
                             tt.dts_[x.kc_],
                             tt.dts_[x.ib_]);
-      x_[trackId] = x;
+      x_[track_] = x;
     }
 
     // shortcuts:
@@ -2965,7 +3069,7 @@ namespace yae
       // adjust PTS span based on track origin offset
       // between reference program and this program:
       TTime offset = t.bbox_dts_.t0_ - ref.bbox_dts_.t0_;
-      Timespan span = ptsSpan + offset;
+      Timespan span = timespan_ + offset;
 
       for (Timeline::TTracks::const_iterator
              j = t.tracks_.begin(); j != t.tracks_.end(); ++j)

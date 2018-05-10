@@ -16,11 +16,15 @@
 // boost:
 #include <boost/filesystem/path.hpp>
 
+// jsoncpp:
+#include "json/json.h"
+
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
 
 // local:
 #include "yaeReplay.h"
+#include "yaeVersion.h"
 
 // namespace shortcuts:
 namespace fs = boost::filesystem;
@@ -28,6 +32,177 @@ namespace fs = boost::filesystem;
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // RemuxModel::make_serial_demuxer
+  //
+  TSerialDemuxerPtr
+  RemuxModel::make_serial_demuxer() const
+  {
+    std::string prev_fn;
+    std::string prev_track;
+    std::ostringstream oss;
+
+    TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
+
+    // avoid thread-safety issues by using clones to populate
+    // the serial demuxer, not the originals (which may be accessed
+    // from the UI thread):
+    std::map<TDemuxerInterfacePtr, TDemuxerInterfacePtr> clones;
+
+    for (std::vector<TClipPtr>::const_iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const Clip & clip = *(*i);
+
+      TDemuxerInterfacePtr clone = yae::get(clones, clip.demuxer_);
+      if (!clone)
+      {
+        clone.reset(clip.demuxer_->clone());
+        clones[clip.demuxer_] = clone;
+      }
+
+      TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
+      clip_demuxer->trim(clone, clip.track_, clip.keep_);
+
+      std::string fn = yae::at(source_, clip.demuxer_);
+      if (fn != prev_fn)
+      {
+        oss << " -i \"" << fn << "\"";
+        prev_fn = fn;
+      }
+
+      if (clip.track_ != prev_track)
+      {
+        oss << " -track " << clip.track_;
+        prev_track = clip.track_;
+      }
+
+      const Timeline::Track & track =
+        clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+      if (clip.keep_.t0_ > track.pts_.front() ||
+          clip.keep_.t1_ < track.pts_.back())
+      {
+        oss << " -t"
+            << " " << clip.keep_.t0_.to_hhmmss_ms()
+            << " " << clip.keep_.t1_.to_hhmmss_ms();
+      }
+
+      // summarize clip demuxer:
+      clip_demuxer->update_summary();
+      serial_demuxer->append(clip_demuxer);
+    }
+
+    // summarize serial demuxer:
+    serial_demuxer->update_summary();
+
+#ifndef NDEBUG
+    av_log(NULL, AV_LOG_WARNING, "yaeReplay args: %s", oss.str().c_str());
+#endif
+
+    return serial_demuxer;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxModel::to_json_str
+  //
+  std::string
+  RemuxModel::to_json_str() const
+  {
+    Json::Value jv_clips;
+    for (std::vector<TClipPtr>::const_iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const Clip & clip = *(*i);
+      std::string source = yae::at(source_, clip.demuxer_);
+
+      Json::Value jv_clip;
+      jv_clip["source"] = source;
+      jv_clip["track"] = clip.track_;
+
+      const Timeline::Track & track =
+        clip.demuxer_->summary().get_track_timeline(clip.track_);
+
+      if (clip.keep_.t0_ > track.pts_.front() ||
+          clip.keep_.t1_ < track.pts_.back())
+      {
+        Json::Value jv_keep;
+        jv_keep["t0"] = clip.keep_.t0_.to_hhmmss_ms();
+        jv_keep["t1"] = clip.keep_.t1_.to_hhmmss_ms();
+        jv_clip["keep"] = jv_keep;
+      }
+
+      jv_clips.append(jv_clip);
+    }
+
+    Json::Value jv_aeyae;
+    jv_aeyae["doctype"] = "remux";
+    jv_aeyae["revision"] = YAE_REVISION;
+    jv_aeyae["timestamp"] = YAE_REVISION_TIMESTAMP;
+
+    Json::Value jv_doc;
+    jv_doc["aeyae"] = jv_aeyae;
+    jv_doc["clips"] = jv_clips;
+
+    return Json::StyledWriter().write(jv_doc);
+  }
+
+  //----------------------------------------------------------------
+  // RemuxModel::load_json_str
+  //
+  bool
+  RemuxModel::parse_json_str(const std::string & json_str,
+                             std::set<std::string> & sources,
+                             std::list<ClipInfo> & src_clips)
+  {
+    Json::Value jv_doc;
+    Json::Reader reader;
+    if (!reader.parse(json_str, jv_doc))
+    {
+      return false;
+    }
+
+    if (!(jv_doc.isMember("aeyae") && jv_doc.isMember("clips")))
+    {
+      return false;
+    }
+
+    if (jv_doc["aeyae"].get("doctype", std::string()).asString() != "remux")
+    {
+      return false;
+    }
+
+    Json::Value clips = jv_doc["clips"];
+    if (!clips.isArray())
+    {
+      return false;
+    }
+
+    Json::ArrayIndex n = clips.size();
+    for (Json::ArrayIndex i = 0; i < n; i++)
+    {
+      Json::Value jv_clip = clips[i];
+
+      ClipInfo clip;
+      clip.source_ = jv_clip["source"].asString();
+      clip.track_ = jv_clip["track"].asString();
+
+      if (jv_clip.isMember("keep"))
+      {
+        Json::Value jv_keep = jv_clip["keep"];
+        clip.t0_ = jv_keep["t0"].asString();
+        clip.t1_ = jv_keep["t1"].asString();
+      }
+
+      sources.insert(clip.source_);
+      src_clips.push_back(clip);
+    }
+
+    return true;
+  }
+
+
   //----------------------------------------------------------------
   // load
   //

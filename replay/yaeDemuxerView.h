@@ -319,6 +319,7 @@ namespace yae
     ViewMode view_mode_;
     mutable TClipPtr output_clip_;
     mutable TSerialDemuxerPtr serial_demuxer_;
+    mutable std::string model_json_str_;
 
   public:
     RemuxViewStyle style_;

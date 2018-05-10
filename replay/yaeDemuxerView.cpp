@@ -9,12 +9,6 @@
 // Qt library:
 #include <QKeySequence>
 
-// jsoncpp:
-#include "json/json.h"
-
-// aeyae:
-#include "yaeVersion.h"
-
 // local:
 #include "yaeDemuxerView.h"
 #include "yaeFlickableArea.h"
@@ -26,164 +20,6 @@
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // RemuxModel::make_serial_demuxer
-  //
-  TSerialDemuxerPtr
-  RemuxModel::make_serial_demuxer() const
-  {
-    std::string prev_fn;
-    std::string prev_track;
-    std::ostringstream oss;
-
-    TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
-
-    for (std::vector<TClipPtr>::const_iterator
-           i = clips_.begin(); i != clips_.end(); ++i)
-    {
-      const Clip & clip = *(*i);
-
-      TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
-      clip_demuxer->trim(clip.demuxer_, clip.track_, clip.keep_);
-
-      std::string fn = yae::at(source_, clip.demuxer_);
-      if (fn != prev_fn)
-      {
-        oss << " -i \"" << fn << "\"";
-        prev_fn = fn;
-      }
-
-      if (clip.track_ != prev_track)
-      {
-        oss << " -track " << clip.track_;
-        prev_track = clip.track_;
-      }
-
-      const Timeline::Track & track =
-        clip.demuxer_->summary().get_track_timeline(clip.track_);
-
-      if (clip.keep_.t0_ > track.pts_.front() ||
-          clip.keep_.t1_ < track.pts_.back())
-      {
-        oss << " -t"
-            << " " << clip.keep_.t0_.to_hhmmss_ms()
-            << " " << clip.keep_.t1_.to_hhmmss_ms();
-      }
-
-      // summarize clip demuxer:
-      clip_demuxer->update_summary();
-      serial_demuxer->append(clip_demuxer);
-    }
-
-    // summarize serial demuxer:
-    serial_demuxer->update_summary();
-
-#ifndef NDEBUG
-    av_log(NULL, AV_LOG_WARNING, "yaeReplay args: %s", oss.str().c_str());
-#endif
-
-    return serial_demuxer;
-  }
-
-  //----------------------------------------------------------------
-  // RemuxModel::to_json_str
-  //
-  std::string
-  RemuxModel::to_json_str() const
-  {
-    Json::Value jv_clips;
-    for (std::vector<TClipPtr>::const_iterator
-           i = clips_.begin(); i != clips_.end(); ++i)
-    {
-      const Clip & clip = *(*i);
-      std::string source = yae::at(source_, clip.demuxer_);
-
-      Json::Value jv_clip;
-      jv_clip["source"] = source;
-      jv_clip["track"] = clip.track_;
-
-      const Timeline::Track & track =
-        clip.demuxer_->summary().get_track_timeline(clip.track_);
-
-      if (clip.keep_.t0_ > track.pts_.front() ||
-          clip.keep_.t1_ < track.pts_.back())
-      {
-        Json::Value jv_keep;
-        jv_keep["t0"] = clip.keep_.t0_.to_hhmmss_ms();
-        jv_keep["t1"] = clip.keep_.t1_.to_hhmmss_ms();
-        jv_clip["keep"] = jv_keep;
-      }
-
-      jv_clips.append(jv_clip);
-    }
-
-    Json::Value jv_aeyae;
-    jv_aeyae["doctype"] = "remux";
-    jv_aeyae["revision"] = YAE_REVISION;
-    jv_aeyae["timestamp"] = YAE_REVISION_TIMESTAMP;
-
-    Json::Value jv_doc;
-    jv_doc["aeyae"] = jv_aeyae;
-    jv_doc["clips"] = jv_clips;
-
-    return Json::StyledWriter().write(jv_doc);
-  }
-
-  //----------------------------------------------------------------
-  // RemuxModel::load_json_str
-  //
-  bool
-  RemuxModel::parse_json_str(const std::string & json_str,
-                             std::set<std::string> & sources,
-                             std::list<ClipInfo> & src_clips)
-  {
-    Json::Value jv_doc;
-    Json::Reader reader;
-    if (!reader.parse(json_str, jv_doc))
-    {
-      return false;
-    }
-
-    if (!(jv_doc.isMember("aeyae") && jv_doc.isMember("clips")))
-    {
-      return false;
-    }
-
-    if (jv_doc["aeyae"].get("doctype", std::string()).asString() != "remux")
-    {
-      return false;
-    }
-
-    Json::Value clips = jv_doc["clips"];
-    if (!clips.isArray())
-    {
-      return false;
-    }
-
-    Json::ArrayIndex n = clips.size();
-    for (Json::ArrayIndex i = 0; i < n; i++)
-    {
-      Json::Value jv_clip = clips[i];
-
-      ClipInfo clip;
-      clip.source_ = jv_clip["source"].asString();
-      clip.track_ = jv_clip["track"].asString();
-
-      if (jv_clip.isMember("keep"))
-      {
-        Json::Value jv_keep = jv_clip["keep"];
-        clip.t0_ = jv_keep["t0"].asString();
-        clip.t1_ = jv_keep["t1"].asString();
-      }
-
-      sources.insert(clip.source_);
-      src_clips.push_back(clip);
-    }
-
-    return true;
-  }
-
 
   //----------------------------------------------------------------
   // ClearTextInput
@@ -3087,17 +2923,27 @@ namespace yae
 
     Item & root = *root_;
     Item & preview = root["preview"];
-    preview.children_.clear();
-
     view_mode_ = mode;
-    output_clip_.reset();
-    serial_demuxer_.reset();
 
     if (mode == kPreviewMode)
     {
+      // avoid rebuilding the preview if clip layout hasn't changed:
+      std::string model_json_str = model_->to_json_str();
+      if (model_json_str_ != model_json_str)
+      {
+        model_json_str_ = model_json_str;
+        output_clip_.reset();
+        serial_demuxer_.reset();
+        preview.children_.clear();
+      }
+
+      if (!output_clip_)
+      {
+        TClipPtr clip = output_clip();
+        layout_gops(*model_, *this, style_, preview, clip);
+      }
+
       preview.uncache();
-      TClipPtr clip = output_clip();
-      layout_gops(*model_, *this, style_, preview, clip);
 
 #if 0 // ndef NDEBUG
       preview.dump(std::cerr);

@@ -99,6 +99,8 @@ namespace yae
     // file menu:
     void fileOpen();
     void fileOpen(const QString & filename);
+    void fileSave();
+    void fileSave(const QString & filename);
     void fileSaveAs();
     void fileImport();
     void fileExport();
@@ -128,6 +130,7 @@ namespace yae
     QMenu * contextMenu_;
 
     // shortcuts used during full-screen mode (when menubar is invisible)
+    QShortcut * shortcutSave_;
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
 
@@ -152,6 +155,9 @@ namespace yae
 
     // for recalling places where files were loaded or saved:
     std::map<std::string, QString> startHere_;
+
+    // remember the filename selected for Open or Save As:
+    QString filename_;
   };
 }
 

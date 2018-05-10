@@ -328,6 +328,13 @@ namespace yae
   {
     PacketBuffer(const TDemuxerPtr & demuxer, double buffer_sec = 1.0);
 
+  protected:
+    void init_program_buffers();
+
+  public:
+    // deep copy:
+    PacketBuffer(const PacketBuffer & pb);
+
     void get_metadata(std::map<std::string, TDictionary> & stream_metadata,
                       TDictionary & metadata) const;
 
@@ -368,6 +375,9 @@ namespace yae
     // accessors:
     inline const TDemuxerPtr & demuxer() const
     { return demuxer_; }
+
+    inline double buffer_sec() const
+    { return buffer_sec_; }
 
     // helpers:
     inline const AVFormatContext & context() const
@@ -459,6 +469,9 @@ namespace yae
   {
     virtual ~DemuxerInterface() {}
 
+    // make an independent (deep) copy of a demuxer interface instance:
+    virtual DemuxerInterface * clone() const = 0;
+
     virtual void populate() = 0;
 
     virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
@@ -530,6 +543,13 @@ namespace yae
   {
     DemuxerBuffer(const TDemuxerPtr & src, double buffer_sec = 1.0);
 
+    // deep copy:
+    DemuxerBuffer(const DemuxerBuffer & d);
+
+    // deep copy:
+    virtual DemuxerBuffer * clone() const
+    { return new DemuxerBuffer(*this); }
+
     virtual void populate();
 
     // NOTE: if the underlying demuxer implements seeking by PTS,
@@ -556,6 +576,15 @@ namespace yae
   //
   struct YAE_API ParallelDemuxer : DemuxerInterface
   {
+    ParallelDemuxer() {}
+
+    // deep copy:
+    ParallelDemuxer(const ParallelDemuxer & d);
+
+    // deep copy:
+    virtual ParallelDemuxer * clone() const
+    { return new ParallelDemuxer(*this); }
+
     void append(const TDemuxerInterfacePtr & src);
 
     inline bool empty() const
@@ -606,6 +635,15 @@ namespace yae
   //
   struct YAE_API SerialDemuxer : DemuxerInterface
   {
+    SerialDemuxer() {}
+
+    // deep copy:
+    SerialDemuxer(const SerialDemuxer & d);
+
+    // deep copy:
+    virtual SerialDemuxer * clone() const
+    { return new SerialDemuxer(*this); }
+
     void append(const TDemuxerInterfacePtr & src);
 
     inline bool empty() const
@@ -651,6 +689,15 @@ namespace yae
   //
   struct YAE_API TrimmedDemuxer : DemuxerInterface
   {
+    TrimmedDemuxer() {}
+
+    // deep copy:
+    TrimmedDemuxer(const TrimmedDemuxer & d);
+
+    // deep copy:
+    virtual TrimmedDemuxer * clone() const
+    { return new TrimmedDemuxer(*this); }
+
     void trim(const TDemuxerInterfacePtr & src,
               // a source may have more than one program with completely
               // separate timelines, so we need to know which timeline
