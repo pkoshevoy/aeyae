@@ -27,7 +27,7 @@
 #endif
 #include "yaeCanvasWidget.h"
 #include "yaeDemuxerView.h"
-#include "yaeReplay.h"
+#include "yaeRemux.h"
 #include "yaeSpinnerView.h"
 
 // Qt uic generated files:

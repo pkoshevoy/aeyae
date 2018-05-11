@@ -150,7 +150,7 @@
   </action>
  </widget>
  <resources>
-  <include location="replay.qrc"/>
+  <include location="aeyae-remux.qrc"/>
  </resources>
  <connections/>
 </ui>

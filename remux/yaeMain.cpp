@@ -55,7 +55,7 @@
 
 // local:
 #include "yaeMainWindow.h"
-#include "yaeReplay.h"
+#include "yaeRemux.h"
 #include "yaeUtilsQt.h"
 
 

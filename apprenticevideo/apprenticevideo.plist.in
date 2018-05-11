@@ -53,7 +53,7 @@
 				<string>webm</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>apprenticevideo</string>
+			<string>apprenticevideo.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -69,7 +69,7 @@
 	<key>CFBundleGetInfoString</key>
 	<string>Apprentice Video by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
-	<string>apprenticevideo</string>
+	<string>apprenticevideo.icns</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.aragog.apprenticevideo</string>
 	<key>CFBundleName</key>
@@ -78,17 +78,11 @@
 	<string>apprenticevideo</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>Revision @PROJ_WC_REVISION@</string>
-	<key>CFBundleSignature</key>
-	<string>.yap</string>
-	<key>CFBundleVersion</key>
-	<string>@PROJ_WC_REVISION@</string>
 	<key>NSAppleScriptEnabled</key>
-	<string>YES</string>
-        <key>NSPrincipalClass</key>
+	<string>NO</string>
+	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-        <key>NSHighResolutionCapable</key>
+	<key>NSHighResolutionCapable</key>
 	<string>YES</string>
 </dict>
 </plist>

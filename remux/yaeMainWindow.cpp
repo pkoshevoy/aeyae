@@ -48,7 +48,7 @@
 // local includes:
 #include "yaeMainWindow.h"
 #include "yaePortaudioRenderer.h"
-#include "yaeReplay.h"
+#include "yaeRemux.h"
 #include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"

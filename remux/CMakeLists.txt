@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-project("replay")
-set(PROGNAME "replay")
+project("aeyae-remux")
+set(PROGNAME "aeyae-remux")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
@@ -105,8 +105,8 @@ set(project_sources
   yaeMain.cpp
   yaeMainWindow.cpp
   yaeMainWindow.h
-  yaeReplay.cpp
-  yaeReplay.h
+  yaeRemux.cpp
+  yaeRemux.h
   yaeSpinnerView.cpp
   yaeSpinnerView.h
 
@@ -257,7 +257,7 @@ if (APPLE)
   set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif ()
 
-add_custom_target("update_revision_replay" ALL
+add_custom_target("update_revision_aeyae_remux" ALL
   DEPENDS
   "${YAE_VERSIONED_FILE}.tmp"
   )
@@ -319,7 +319,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "update_revision_replay")
+add_dependencies(${PROGNAME} "update_revision_aeyae_remux")
 
 set(TARGET_LIBS
   ${TARGET_LIBS}

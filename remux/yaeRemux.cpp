@@ -23,7 +23,7 @@
 #include "yae/ffmpeg/yae_demuxer.h"
 
 // local:
-#include "yaeReplay.h"
+#include "yaeRemux.h"
 #include "yaeVersion.h"
 
 // namespace shortcuts:
@@ -98,7 +98,7 @@ namespace yae
     serial_demuxer->update_summary();
 
 #ifndef NDEBUG
-    av_log(NULL, AV_LOG_WARNING, "yaeReplay args: %s", oss.str().c_str());
+    av_log(NULL, AV_LOG_WARNING, "args: %s", oss.str().c_str());
 #endif
 
     return serial_demuxer;

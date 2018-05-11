@@ -10,55 +10,49 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>3gp</string>
-				<string>aac</string>
-				<string>ac3</string>
-				<string>aiff</string>
 				<string>asf</string>
 				<string>avi</string>
 				<string>divx</string>
 				<string>dv</string>
 				<string>flv</string>
 				<string>f4v</string>
-				<string>gif</string>
-				<string>jpg</string>
-				<string>mod</string>
 				<string>mov</string>
 				<string>mpeg</string>
 				<string>mpg</string>
-				<string>mp3</string>
 				<string>mp4</string>
 				<string>m2t</string>
 				<string>m2ts</string>
 				<string>m2v</string>
-				<string>m4a</string>
 				<string>m4v</string>
-				<string>mka</string>
 				<string>mkv</string>
 				<string>mts</string>
 				<string>mxf</string>
-				<string>ogg</string>
 				<string>ogm</string>
 				<string>ogv</string>
-				<string>png</string>
-				<string>ra</string>
-				<string>rm</string>
-				<string>tif</string>
-				<string>tiff</string>
 				<string>ts</string>
-				<string>vob</string>
-				<string>wav</string>
-				<string>wma</string>
 				<string>wmv</string>
-				<string>weba</string>
 				<string>webm</string>
-				<string>yaerx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>replay</string>
+			<string>aeyae-remux.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
 			<false/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>yaerx</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Aeyae Remux Document</string>
+			<key>CFBundleTypeIconFile</key>
+			<string>aeyae-remux.icns</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
 		</dict>
 	</array>
 	<key>LSUIElement</key>
@@ -66,30 +60,26 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
-	<string>replay</string>
+	<string>aeyae-remux</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Aeyae Remux by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
+	<string>Aeyae Remux by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
-	<string>replay</string>
+	<string>aeyae-remux.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>aeyae.remux</string>
+	<string>com.pavel-koshevoy.aeyae-remux</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Aeyae Remux</string>
+	<string>aeyae-remux</string>
 	<key>CFBundleDisplayName</key>
-	<string>Aeyae Remux</string>
+	<string>aeyae-remux</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>Revision @PROJ_WC_REVISION@</string>
-	<key>CFBundleSignature</key>
-	<string>.yaerx</string>
-	<key>CFBundleVersion</key>
-	<string>@PROJ_WC_REVISION@</string>
 	<key>NSAppleScriptEnabled</key>
-	<string>YES</string>
-        <key>NSPrincipalClass</key>
+	<string>NO</string>
+	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
-        <key>NSHighResolutionCapable</key>
+	<key>NSHighResolutionCapable</key>
 	<string>YES</string>
 </dict>
 </plist>

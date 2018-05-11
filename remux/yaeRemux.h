@@ -6,8 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_REPLAY_H_
-#define YAE_REPLAY_H_
+#ifndef YAE_REMUX_H_
+#define YAE_REMUX_H_
 
 // standard:
 #include <list>
@@ -117,4 +117,4 @@ namespace yae
 }
 
 
-#endif // YAE_REPLAY_H_
+#endif // YAE_REMUX_H_
