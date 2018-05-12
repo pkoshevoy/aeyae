@@ -57,6 +57,7 @@
 #include "yaeMainWindow.h"
 #include "yaeRemux.h"
 #include "yaeUtilsQt.h"
+#include "yaeVersion.h"
 
 
 namespace yae
@@ -137,6 +138,64 @@ namespace yae
   };
 }
 
+
+//----------------------------------------------------------------
+// usage
+//
+static void
+usage(char ** argv, const char * message = NULL)
+{
+  std::cerr
+    << "\nUSAGE:\n"
+    << argv[0]
+    << " [-no-ui] [-w] [-o ${output_path}]"
+    << " [[-track track_id]"
+    << " ${source_file}"
+    << " [-t time_in time_out]*]+"
+    << "\n"
+    << argv[0]
+    << " ${aeyae_remux_document}.yaerx"
+    << "\n";
+
+  std::cerr
+    << "\nEXAMPLE:\n"
+    << "\n# load and clip two sources, decode and save keyframes:\n"
+    << argv[0]
+    << " -track v:000"
+    << " ~/Movies/foo.ts -t 25s 32s"
+    << " ~/Movies/bar.ts -t 00:02:29.440 00:02:36.656"
+    << " -no-ui -w -o ~/Movies/keyframes"
+    << "\n"
+    << "\n# load and clip two sources, remux and save output into one file:\n"
+    << argv[0]
+    << " -track v:000"
+    << " ~/Movies/foo.ts -t 25s 32s"
+    << " ~/Movies/bar.ts -t 00:02:29.440 00:02:36.656"
+    << " -no-ui -o ~/Movies/two-clips-joined-together.ts"
+    << "\n"
+    << "\n# load source, show summary and GOP structure, then quit:\n"
+    << argv[0]
+    << " -no-ui ~/Movies/foo.ts"
+    << "\n"
+    << "\n# edit a document:\n"
+    << argv[0]
+    << " ~/Movies/two-clips-joined-together.yaerx"
+    << "\n";
+
+  std::cerr
+    << "\nVERSION: " << YAE_REVISION
+#ifndef NDEBUG
+    << ", Debug build"
+#endif
+    << std::endl;
+
+  if (message != NULL)
+  {
+    std::cerr << "\n" << message << std::endl;
+  }
+
+  ::exit(1);
+}
 
 //----------------------------------------------------------------
 // mainMayThrowException
@@ -238,24 +297,7 @@ mainMayThrowException(int argc, char ** argv)
   {
     std::string arg = i->toUtf8().constData();
 
-    if (arg == "-i")
-    {
-      ++i;
-      std::string filePath;
-      if (yae::convert_path_to_utf8(*i, filePath))
-      {
-        if (!curr_source.empty() && !yae::has(clipped, curr_source))
-        {
-          // untrimmed:
-          clips.push_back(yae::ClipInfo(curr_source));
-          clipped.insert(curr_source);
-        }
-
-        sources.insert(filePath);
-        curr_source = filePath;
-      }
-    }
-    else if (arg == "-track")
+    if (arg == "-track")
     {
       ++i;
       curr_track = i->toUtf8().constData();
@@ -290,24 +332,53 @@ mainMayThrowException(int argc, char ** argv)
     {
       no_ui = true;
     }
-    else if (al::iends_with(arg, ".yaerx"))
+    else
     {
-      std::string fn = i->toUtf8().constData();
-      std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
-
-      std::set<std::string> s;
-      std::list<yae::ClipInfo> c;
-      if (yae::RemuxModel::parse_json_str(json_str, s, c))
+      if (!QFile(*i).exists())
       {
-        for (std::list<yae::ClipInfo>::const_iterator
-               j = c.begin(); j != c.end(); ++j)
+        usage(argv, yae::str("unknown parameter: ",
+                             i->toUtf8().constData()).c_str());
+      }
+
+      if (al::iends_with(arg, ".yaerx"))
+      {
+          std::string fn = i->toUtf8().constData();
+          std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
+
+          std::set<std::string> s;
+          std::list<yae::ClipInfo> c;
+          if (yae::RemuxModel::parse_json_str(json_str, s, c))
+          {
+            clips.clear();
+            sources.clear();
+            clipped.clear();
+
+            for (std::list<yae::ClipInfo>::const_iterator
+                   j = c.begin(); j != c.end(); ++j)
+            {
+              const yae::ClipInfo & clip = *j;
+              clips.push_back(clip);
+              curr_source = clip.source_;
+              curr_track = clip.track_;
+              sources.insert(curr_source);
+              clipped.insert(curr_source);
+            }
+          }
+      }
+      else
+      {
+        std::string filePath;
+        if (yae::convert_path_to_utf8(*i, filePath))
         {
-          const yae::ClipInfo & clip = *j;
-          clips.push_back(clip);
-          curr_source = clip.source_;
-          curr_track = clip.track_;
-          sources.insert(curr_source);
-          clipped.insert(curr_source);
+          if (!curr_source.empty() && !yae::has(clipped, curr_source))
+          {
+            // untrimmed:
+            clips.push_back(yae::ClipInfo(curr_source));
+            clipped.insert(curr_source);
+          }
+
+          sources.insert(filePath);
+          curr_source = filePath;
         }
       }
     }
@@ -329,6 +400,11 @@ mainMayThrowException(int argc, char ** argv)
     // load the sources:
     yae::TDemuxerInterfacePtr demuxer =
       yae::load(sources, clips, buffer_duration, discont_tolerance);
+
+    if (!demuxer)
+    {
+      usage(argv, "failed to import any source files, nothing to do now");
+    }
 
     // show the summary:
     const yae::DemuxerSummary & summary = demuxer->summary();
