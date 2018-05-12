@@ -68,7 +68,7 @@ namespace yae
       std::string fn = yae::at(source_, clip.demuxer_);
       if (fn != prev_fn)
       {
-        oss << " -i \"" << fn << "\"";
+        oss << " \"" << fn << "\"";
         prev_fn = fn;
       }
 
