@@ -88,7 +88,7 @@ namespace yae
 
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon =
-      QString::fromUtf8(":/apprenticevideo/images/apprenticevideo-256.png");
+      QString::fromUtf8(":/images/aeyae-remux-logo.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
 

@@ -21,7 +21,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="apprenticevideo.qrc">
-    <normaloff>:/images/apprenticevideo-256.png</normaloff>:/images/apprenticevideo-256.png</iconset>
+    <normaloff>:/images/aeyae-remux-logo.png</normaloff>:/images/aeyae-remux-logo.png</iconset>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <property name="leftMargin">

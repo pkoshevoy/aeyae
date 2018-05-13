@@ -1,21 +1,7 @@
 <RCC>
   <qresource>
     <file>../apprenticevideo/images/apprenticevideo-about.png</file>
-    <file>../apprenticevideo/images/apprenticevideo-256.png</file>
-    <file>../apprenticevideo/images/yae-256.png</file>
-    <file>../apprenticevideo/images/timeIn.png</file>
-    <file>../apprenticevideo/images/timeOut.png</file>
-    <file>../apprenticevideo/images/playHead.png</file>
-    <file>../apprenticevideo/images/search.png</file>
-    <file>../apprenticevideo/images/clear.png</file>
-    <file>../apprenticevideo/images/clear-dark.png</file>
-    <file>../apprenticevideo/images/audio-speaker.png</file>
-    <file>../apprenticevideo/images/video-frame.png</file>
-    <file>../apprenticevideo/images/broken-glass.png</file>
-    <file>../apprenticevideo/images/music-key.png</file>
-    <file>../apprenticevideo/images/music-note.png</file>
-    <file>../apprenticevideo/images/group-exposed.png</file>
-    <file>../apprenticevideo/images/group-collapsed.png</file>
+    <file>images/aeyae-remux-logo.png</file>
     <file>yaeAbout.html</file>
   </qresource>
 </RCC>
