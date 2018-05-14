@@ -592,7 +592,7 @@ if (NOT (WIN32 OR APPLE))
     DESTINATION share/applications
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-logo.png"
+  install(FILES "${PROJECT_SOURCE_DIR}/images/aeyae-remux-logo.png"
     DESTINATION share/icons
     RENAME "${PROGNAME}.png"
     )
