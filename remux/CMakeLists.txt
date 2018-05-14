@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-project("aeyae-remux")
-set(PROGNAME "aeyae-remux")
+project("aeyaeremux")
+set(PROGNAME "aeyaeremux")
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
@@ -86,12 +86,8 @@ set(project_moc_hxx
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
-#  ../apprenticevideo/yaePlaylist.h
-#  ../apprenticevideo/yaePlaylistModel.h
-#  ../apprenticevideo/yaePlaylistModelProxy.h
   ../apprenticevideo/yaeScreenSaverInhibitor.h
   ../apprenticevideo/yaeTextInput.h
-#  ../apprenticevideo/yaeTimelineModel.h
   )
 
 set(project_uis
@@ -257,7 +253,7 @@ if (APPLE)
   set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif ()
 
-add_custom_target("update_revision_aeyae_remux" ALL
+add_custom_target("update_revision_aeyaeremux" ALL
   DEPENDS
   "${YAE_VERSIONED_FILE}.tmp"
   )
@@ -319,7 +315,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "update_revision_aeyae_remux")
+add_dependencies(${PROGNAME} "update_revision_aeyaeremux")
 
 set(TARGET_LIBS
   ${TARGET_LIBS}
@@ -526,8 +522,80 @@ if (APPLE)
     )
 endif ()
 
+if (WIN32)
+  if (Qt5_FOUND)
+    execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_PLUGINS
+      OUTPUT_VARIABLE QT_PLUGINS_DIR
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+    set(DEPLOY_QT_PLUGINS
+      "-deploy-to" "platforms" "${QT_PLUGINS_DIR}/platforms" "qwindows\.dll"
+      "-deploy-to" "imageformats" "${QT_PLUGINS_DIR}/imageformats" ".*\.dll"
+      )
+  endif ()
+
+  if (MINGW OR MSYS)
+    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico")
+    string(REPLACE "/" "\\\\" NATIVE_DEPENDS_EXE "${DEPENDENCY_WALKER}")
+    string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
+    string(REPLACE "/" "\\\\" NATIVE_CANDLE_EXE "${WIX_CANDLE}")
+    string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
+    string(REPLACE "/" "\\\\" NATIVE_VC_CRT_MSM "${VC_CRT_MSM}")
+  else (MINGW OR MSYS)
+    file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
+    file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
+    file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
+    file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
+    file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
+    file(TO_NATIVE_PATH "${VC_CRT_MSM}" NATIVE_VC_CRT_MSM)
+  endif ()
+
+  add_custom_target("create_aeyaeremux_installer"
+    ALL DEPENDS
+    wixWrapper
+    "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
+    )
+
+  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
+    COMMAND wixWrapper
+    ARGS
+    "-what" "aeyaeremux"
+    "-dep-walker" "${NATIVE_DEPENDS_EXE}"
+    "-allow" "$<TARGET_FILE_DIR:${PROGNAME}>;${NATIVE_ALLOWED_PATHS}"
+    "-wix-candle" "${NATIVE_CANDLE_EXE}"
+    "-wix-light" "${NATIVE_LIGHT_EXE}"
+    "-vc-redist" "${NATIVE_VC_CRT_MSM}"
+    "-icon" "${NATIVE_PROGRAM_ICON}"
+    "-url" "https://github.com/pkoshevoy/aeyae"
+    "-deploy" $<TARGET_FILE:${PROGNAME}>
+    "-deploy" $<TARGET_FILE:aeyae>
+    ${DEPLOY_QT_PLUGINS}
+    DEPENDS ${PROGNAME} wixWrapper
+    COMMENT "create aeyaeremux installer package"
+    )
+endif ()
+
 if (NOT (WIN32 OR APPLE))
   install(TARGETS ${PROGNAME} DESTINATION bin)
+
+  # qmake -query QT_INSTALL_LIBS
+  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
+    OUTPUT_VARIABLE QT_LIBRARIES_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
+    @ONLY
+    )
+
+  install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
+    DESTINATION share/applications
+    )
+
+  install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-logo.png"
+    DESTINATION share/icons
+    RENAME "${PROGNAME}.png"
+    )
 endif ()
 
 add_dependencies(${PROGNAME} aeyae)

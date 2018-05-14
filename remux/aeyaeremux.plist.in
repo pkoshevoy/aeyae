@@ -34,7 +34,7 @@
 				<string>webm</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>aeyae-remux.icns</string>
+			<string>aeyaeremux.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -48,7 +48,7 @@
 			<key>CFBundleTypeName</key>
 			<string>Aeyae Remux Document</string>
 			<key>CFBundleTypeIconFile</key>
-			<string>aeyae-remux.icns</string>
+			<string>aeyaeremux.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -60,19 +60,19 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
-	<string>aeyae-remux</string>
+	<string>aeyaeremux</string>
 	<key>CFBundleGetInfoString</key>
 	<string>Aeyae Remux by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
-	<string>aeyae-remux.icns</string>
+	<string>aeyaeremux.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.pavel-koshevoy.aeyae-remux</string>
+	<string>com.pavelkoshevoy.aeyaeremux</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>aeyae-remux</string>
+	<string>aeyaeremux</string>
 	<key>CFBundleDisplayName</key>
-	<string>aeyae-remux</string>
+	<string>aeyaeremux</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>NSAppleScriptEnabled</key>

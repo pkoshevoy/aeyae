@@ -154,7 +154,7 @@ usage(char ** argv, const char * message = NULL)
     << " [-t time_in time_out]*]+"
     << "\n"
     << argv[0]
-    << " ${aeyae_remux_document}.yaerx"
+    << " ${document}.yaerx"
     << "\n";
 
   std::cerr

@@ -1,6 +1,6 @@
 #include "afxres.h"
 
-IDI_ICON1               ICON    DISCARDABLE     "aeyae-remux.ico"
+IDI_ICON1               ICON    DISCARDABLE     "aeyaeremux.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION	@PROJ_YY_MM_DD_HHMM@
@@ -23,9 +23,9 @@ BEGIN
             VALUE "CompanyName", "Pavel Koshevoy"
             VALUE "FileDescription", "Aeyae Remux, @PROJ_WC_REVISION@"
             VALUE "FileVersion", "@PROJ_YY_MM_DD_HHMM@"
-            VALUE "InternalName", "aeyae-remux"
+            VALUE "InternalName", "aeyaeremux"
             VALUE "LegalCopyright", "Copyright © 2018 Pavel Koshevoy"
-            VALUE "OriginalFilename", "aeyae-remux.exe"
+            VALUE "OriginalFilename", "aeyaeremux.exe"
             VALUE "ProductName", "Aeyae Remux"
             VALUE "ProductVersion", "@PROJ_YY_MM_DD_HHMM@"
         END
