@@ -72,6 +72,12 @@ namespace yae
     // virtual:
     void evaluate(Color & result) const
     {
+      if (view_.view_mode() == RemuxView::kPreviewMode)
+      {
+        result = keep_;
+        return;
+      }
+
       bool selected = true;
 
       const Clip * clip = view_.selected_clip().get();
