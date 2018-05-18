@@ -57,12 +57,12 @@ namespace yae
   //
   struct FrameColor : public TColorExpr
   {
-    FrameColor(const Clip & clip,
+    FrameColor(const RemuxView & view,
                const Timespan & span,
                const VideoFrameItem & item,
                const Color & drop,
                const Color & keep):
-      clip_(clip),
+      view_(view),
       span_(span),
       item_(item),
       drop_(drop),
@@ -72,19 +72,25 @@ namespace yae
     // virtual:
     void evaluate(Color & result) const
     {
-      bool selected = clip_.keep_.contains(span_.t1_);
+      bool selected = true;
 
-      TVideoFramePtr vf_ptr = item_.videoFrame();
-      if (vf_ptr)
+      const Clip * clip = view_.selected_clip().get();
+      if (clip)
       {
-        TTime frame_t1 = vf_ptr->time_ + span_.dt();
-        selected = clip_.keep_.contains(frame_t1);
+        selected = clip->keep_.contains(span_.t1_);
+
+        TVideoFramePtr vf_ptr = item_.videoFrame();
+        if (vf_ptr)
+        {
+          TTime frame_t1 = vf_ptr->time_ + span_.dt();
+          selected = clip->keep_.contains(frame_t1);
+        }
       }
 
       result = selected ? keep_ : drop_;
     }
 
-    const Clip & clip_;
+    const RemuxView & view_;
     Timespan span_;
     const VideoFrameItem & item_;
     Color drop_;
@@ -540,7 +546,6 @@ namespace yae
   //
   static void
   layout_gop(TPixelFormatId outputFormat,
-             const Clip & clip,
              const Timeline::Track & track,
              RemuxView & view,
              const RemuxViewStyle & style,
@@ -611,7 +616,7 @@ namespace yae
 
       Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
       frame.color_ = frame.
-        addExpr(new FrameColor(clip, span, video,
+        addExpr(new FrameColor(view, span, video,
                                style.cursor_.get(),
                                style.scrollbar_.get()));
       frame.color_.cachingEnabled_ = false;
@@ -943,69 +948,94 @@ namespace yae
       }
     }
 
-    Item & gops = layout_scrollview(kScrollbarBoth, view, style, root,
-                                    kScrollbarBoth);
-
-    Scrollview & sv = root.get<Scrollview>("clip_layout.scrollview");
+    Scrollview & sv =
+      layout_scrollview(kScrollbarBoth, view, style, root, kScrollbarBoth);
     sv.uncacheContent_ = false;
 
-    // create a map from rows keyframe index to row index:
-    std::map<std::size_t, std::size_t> row_lut;
+    Item & content = *(sv.content_);
 
-    std::size_t row = 0;
-    if (!yae::has<std::size_t>(track.keyframes_, 0))
+    ItemPtr reuse = yae::get(view.gops_, clip.demuxer_);
+    if (reuse)
     {
-      // if the 1st packet is not a keyframe...
-      // it's a malformed GOP that preceeds the 1st well formed GOP,
-      // and it must be accounted for:
+      // reuse existing layout:
+      content.children_.push_back(reuse);
+    }
+    else
+    {
+      reuse.reset(new Item("gop_items"));
 
-      std::size_t i0 = 0;
-      std::size_t i1 =
-        track.keyframes_.empty() ?
-        track.dts_.size() :
-        *track.keyframes_.begin();
+      Item & gops = *reuse;
+      gops.anchors_.left_ = ItemRef::constant(0.0);
+      gops.anchors_.top_ = ItemRef::constant(0.0);
 
-      row_lut[i0] = row;
+      gops.Item::setParent(NULL, reuse);
+      content.children_.push_back(reuse);
 
-      Gop gop(clip.demuxer_, clip.track_, i0, i1);
-      layout_gop(outputFormat, clip, track, view, style, gops, gop, row);
+      // create a map from rows keyframe index to row index:
+      std::map<std::size_t, std::size_t> row_lut;
 
-      row++;
+      std::size_t row = 0;
+      if (!yae::has<std::size_t>(track.keyframes_, 0))
+      {
+        // if the 1st packet is not a keyframe...
+        // it's a malformed GOP that preceeds the 1st well formed GOP,
+        // and it must be accounted for:
+
+        std::size_t i0 = 0;
+        std::size_t i1 =
+          track.keyframes_.empty() ?
+          track.dts_.size() :
+          *track.keyframes_.begin();
+
+        row_lut[i0] = row;
+
+        Gop gop(clip.demuxer_, clip.track_, i0, i1);
+        layout_gop(outputFormat, track, view, style, gops, gop, row);
+
+        row++;
+      }
+
+      for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();
+           i != track.keyframes_.end(); ++i, row++)
+      {
+        std::set<std::size_t>::const_iterator next = i;
+        std::advance(next, 1);
+
+        std::size_t i0 = *i;
+        std::size_t i1 =
+          (next == track.keyframes_.end()) ?
+          track.dts_.size() :
+          *next;
+
+        row_lut[i0] = row;
+
+        Gop gop(clip.demuxer_, clip.track_, i0, i1);
+        layout_gop(outputFormat, track, view, style, gops, gop, row);
+      }
+
+      row_lut[track.dts_.size()] = row;
+
+      // add a placeholder item for the cursor position after all the frames:
+      EndFrameItem & end = gops.add<EndFrameItem>
+        (new EndFrameItem("end", track.dts_.size()));
+      end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
+      end.anchors_.right_ =
+        end.addExpr(new GetFramePosX(view, 1));
+      end.anchors_.top_ =
+        end.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
+      end.anchors_.bottom_ =
+        end.addExpr(new GetFramePosY(view, row + 1));
+
+      // save the layout so it can be reused:
+      view.gops_[clip.demuxer_] = reuse;
+      view.gops_row_lut_[clip.demuxer_] = row_lut;
     }
 
-    for (std::set<std::size_t>::const_iterator i = track.keyframes_.begin();
-         i != track.keyframes_.end(); ++i, row++)
-    {
-      std::set<std::size_t>::const_iterator next = i;
-      std::advance(next, 1);
-
-      std::size_t i0 = *i;
-      std::size_t i1 =
-        (next == track.keyframes_.end()) ?
-        track.dts_.size() :
-        *next;
-
-      row_lut[i0] = row;
-
-      Gop gop(clip.demuxer_, clip.track_, i0, i1);
-      layout_gop(outputFormat, clip, track, view, style, gops, gop, row);
-    }
-
-    row_lut[track.dts_.size()] = row;
-
-    // add a placeholder item for the cursor position after all the frames:
-    EndFrameItem & end = gops.add<EndFrameItem>
-      (new EndFrameItem("end", track.dts_.size()));
-    end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
-    end.anchors_.right_ =
-      end.addExpr(new GetFramePosX(view, 1));
-    end.anchors_.top_ =
-      end.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
-    end.anchors_.bottom_ =
-      end.addExpr(new GetFramePosY(view, row + 1));
+    const std::map<std::size_t, std::size_t> & row_lut =
+      yae::at(view.gops_row_lut_, clip.demuxer_);
 
     GopCursorItem & cursor =
-      gops.add(new GopCursorItem(view, "cursor", row_lut));
+      content.add(new GopCursorItem(view, "cursor", row_lut));
     cursor.color_ = cursor.addExpr
       (style_color_ref(view, &ItemViewStyle::fg_, 0));
     cursor.colorBorder_ = cursor.addExpr
@@ -1937,9 +1967,11 @@ namespace yae
       clips.anchors_.top_ = ItemRef::reference(sep, kPropertyBottom);
       clips.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
-      Item & clips_container =
+      Scrollview & sv =
         layout_scrollview(kScrollbarVertical, view, style, clips,
                           kScrollbarVertical);
+
+      Item & clips_container = *(sv.content_);
 
       Item & clip_list = clips_container.addNew<Item>("clip_list");
       clip_list.anchors_.fill(clips_container);
@@ -2456,7 +2488,7 @@ namespace yae
   // prune
   //
   static void
-  prune(RemuxModel & model)
+  prune(RemuxModel & model, RemuxView & view)
   {
     std::set<TDemuxerInterfacePtr> set_of_demuxers;
     for (std::vector<TClipPtr>::const_iterator i = model.clips_.begin();
@@ -2483,6 +2515,8 @@ namespace yae
         std::advance(next, 1);
         model.demuxer_.erase(i);
         model.source_.erase(demuxer);
+        view.gops_.erase(demuxer);
+        view.gops_row_lut_.erase(demuxer);
         i = next;
       }
     }
@@ -2516,7 +2550,7 @@ namespace yae
     gops.children_.erase(found);
     model.clips_.erase(model.clips_.begin() + index);
     selected_ = std::min(index, model.clips_.size() - 1);
-    prune(model);
+    prune(model, *this);
 
     Scrollview & sv =
       root["layout"]["clips"].get<Scrollview>("clips.scrollview");
@@ -2779,7 +2813,7 @@ namespace yae
     std::size_t ir = cursor->get_row(cursor->frame_);
     std::size_t ic = cursor->get_column(cursor->frame_);
 
-    Item & gops = *(sv->content_);
+    Item & gops = sv->content_->get<Item>("gop_items");
     if (ir < gops.children_.size())
     {
       GopItem * item = dynamic_cast<GopItem *>(gops.children_[ir].get());

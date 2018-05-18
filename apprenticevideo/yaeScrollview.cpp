@@ -472,7 +472,7 @@ namespace yae
   //----------------------------------------------------------------
   // layout_scrollview
   //
-  Item &
+  Scrollview &
   layout_scrollview(ScrollbarId scrollbars,
                     ItemView & view,
                     const ItemViewStyle & style,
@@ -495,7 +495,7 @@ namespace yae
     scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     scrollbar.visible_ = scrollbar.
       addExpr(new ScrollbarRequired
-              (*sview.content_,
+              (sview,
                kScrollbarVertical,
 
                // vertical scrollbar width:
@@ -526,7 +526,7 @@ namespace yae
 
     hscrollbar.visible_ = hscrollbar.
       addExpr(new ScrollbarRequired
-              (*sview.content_,
+              (sview,
                kScrollbarHorizontal,
 
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
@@ -619,6 +619,6 @@ namespace yae
       hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));
     maHSlider.anchors_.fill(hslider);
 
-    return content;
+    return sview;
   }
 }

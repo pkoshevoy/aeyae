@@ -220,7 +220,7 @@ namespace yae
   //
   struct YAE_API ScrollbarRequired : public TBoolExpr
   {
-    ScrollbarRequired(const Item & content,
+    ScrollbarRequired(const Scrollview & scrollview,
                       const ScrollbarId scrollbarId,
                       const ItemRef & vscrollbarWidth,
                       const ItemRef & hscrollbarWidth,
@@ -228,7 +228,7 @@ namespace yae
                       const ItemRef & right,
                       const ItemRef & top,
                       const ItemRef & bottom):
-      content_(content),
+      scrollview_(scrollview),
       scrollbarId_(scrollbarId),
       vscrollbarWidth_(vscrollbarWidth),
       hscrollbarWidth_(hscrollbarWidth),
@@ -242,7 +242,7 @@ namespace yae
 
     void evaluate(bool & result) const
     {
-      ScrollbarId required = scrollbars_required(content_,
+      ScrollbarId required = scrollbars_required(*(scrollview_.content_),
                                                  left_,
                                                  right_,
                                                  top_,
@@ -252,7 +252,7 @@ namespace yae
       result = (scrollbarId_ & required) != 0;
     }
 
-    const Item & content_;
+    const Scrollview & scrollview_;
     ScrollbarId scrollbarId_;
     ItemRef vscrollbarWidth_;
     ItemRef hscrollbarWidth_;
@@ -265,7 +265,7 @@ namespace yae
   //----------------------------------------------------------------
   // layout_scrollview
   //
-  YAE_API Item &
+  YAE_API Scrollview &
   layout_scrollview(ScrollbarId scrollbars,
                     ItemView & view,
                     const ItemViewStyle & style,

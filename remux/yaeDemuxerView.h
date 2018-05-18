@@ -332,6 +332,12 @@ namespace yae
 
     QAction actionSetInPoint_;
     QAction actionSetOutPoint_;
+
+    // share the same GOP layout between clips of the same source:
+    std::map<TDemuxerInterfacePtr, ItemPtr> gops_;
+
+    typedef std::map<std::size_t, std::size_t> TRowLut;
+    std::map<TDemuxerInterfacePtr, TRowLut> gops_row_lut_;
   };
 
 }
