@@ -132,6 +132,9 @@ BOOST_AUTO_TEST_CASE(yae_shared_ptr)
   DWPtr wd;
   EWPtr we;
 
+  // test sizeof:
+  BOOST_CHECK_EQUAL(sizeof(APtr), sizeof(aaa *));
+
   // test pointer casts:
   {
     APtr aa(new aaa("aa"));
