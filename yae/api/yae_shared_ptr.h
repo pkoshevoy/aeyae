@@ -14,13 +14,20 @@
 #include <cassert>
 #include <iostream>
 
+#if !(__APPLE__ && _ARCH_PPC)
+#define YAE_USE_BOOST_ATOMICS
 // boost library:
 #ifndef Q_MOC_RUN
 #include <boost/atomic.hpp>
 #endif
+#else
+// https://gcc.gnu.org/onlinedocs/libstdc++/manual/ext_concurrency.html
+#include <bits/atomicity.h>
+#endif
 
 // aeyae:
 #include "../api/yae_api.h"
+
 
 
 namespace yae
@@ -46,30 +53,50 @@ namespace yae
 #endif
 
     inline std::size_t shared() const YAE_NOEXCEPT
-    { return shared_; }
+    { return static_cast<std::size_t>(shared_); }
 
     inline std::size_t weak() const YAE_NOEXCEPT
-    { return weak_; }
+    { return static_cast<std::size_t>(weak_); }
 
-    inline std::size_t increment_shared() YAE_NOEXCEPT
-    { return ++shared_; }
+#ifdef YAE_USE_BOOST_ATOMICS
+    inline void increment_shared() YAE_NOEXCEPT
+    { ++shared_; }
 
-    inline std::size_t decrement_shared() YAE_NOEXCEPT
+    inline void decrement_shared() YAE_NOEXCEPT
     {
       std::size_t num_shared = --shared_;
       react_if_no_longer_referenced(num_shared, weak_);
-      return num_shared;
     }
 
-    inline std::size_t increment_weak() YAE_NOEXCEPT
-    { return ++weak_; }
+    inline void increment_weak() YAE_NOEXCEPT
+    { ++weak_; }
 
-    inline std::size_t decrement_weak() YAE_NOEXCEPT
+    inline void decrement_weak() YAE_NOEXCEPT
     {
       std::size_t num_weak = --weak_;
       react_if_no_longer_referenced(shared_, num_weak);
-      return num_weak;
     }
+#else
+    inline void increment_shared() YAE_NOEXCEPT
+    { __gnu_cxx::__atomic_add(&shared_, 1); }
+
+    inline void decrement_shared() YAE_NOEXCEPT
+    {
+      _Atomic_word n_shared = __gnu_cxx::__exchange_and_add(&shared_, -1) - 1;
+      react_if_no_longer_referenced(static_cast<std::size_t>(n_shared),
+                                    static_cast<std::size_t>(weak_));
+    }
+
+    inline void increment_weak() YAE_NOEXCEPT
+    { __gnu_cxx::__atomic_add(&weak_, 1); }
+
+    inline void decrement_weak() YAE_NOEXCEPT
+    {
+      _Atomic_word n_weak = __gnu_cxx::__exchange_and_add(&weak_, -1) - 1;
+      react_if_no_longer_referenced(static_cast<std::size_t>(shared_),
+                                    static_cast<std::size_t>(n_weak));
+    }
+#endif
 
     virtual void destroy_data_ptr() YAE_NOEXCEPT = 0;
 
@@ -89,8 +116,13 @@ namespace yae
       }
     }
 
+#ifdef YAE_USE_BOOST_ATOMICS
     boost::atomic<std::size_t> shared_;
     boost::atomic<std::size_t> weak_;
+#else
+    _Atomic_word shared_;
+    _Atomic_word weak_;
+#endif
   };
 
   //----------------------------------------------------------------

@@ -6,15 +6,6 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae::shared_ptr is currently unused due to build failure on ppc osx
-//
-// /opt/local/include/boost/atomic/detail/ops_gcc_ppc.hpp: In member function
-//  'size_t yae::ref_count_base::increment_weak()':
-// /opt/local/include/boost/atomic/detail/ops_gcc_ppc.hpp:231:
-//   error: impossible constraint in 'asm'
-//
-#if !(__APPLE__ && _ARCH_PPC)
-
 // standard C++ library:
 #include <iostream>
 
@@ -201,6 +192,3 @@ BOOST_AUTO_TEST_CASE(yae_shared_ptr)
   d.reset(new ddd("DDD.2"));
   BOOST_CHECK(d);
 }
-
-
-#endif
