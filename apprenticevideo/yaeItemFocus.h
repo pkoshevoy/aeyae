@@ -14,10 +14,8 @@
 #include <limits>
 #include <map>
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeExpression.h"
@@ -45,7 +43,7 @@ namespace yae
              int index = std::numeric_limits<int>::max());
 
       Canvas::ILayer * view_;
-      boost::weak_ptr<Item> item_;
+      yae::weak_ptr<Item> item_;
       int index_;
     };
 

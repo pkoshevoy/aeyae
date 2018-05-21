@@ -12,9 +12,11 @@
 // boost libraries:
 #ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
-#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
+
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 
 namespace yae
@@ -47,7 +49,7 @@ namespace yae
     //----------------------------------------------------------------
     // TaskPtr
     //
-    typedef boost::shared_ptr<Task> TaskPtr;
+    typedef yae::shared_ptr<Task> TaskPtr;
 
     //----------------------------------------------------------------
     // Status
@@ -111,8 +113,8 @@ namespace yae
       virtual void run() = 0;
     };
 
-    typedef boost::weak_ptr<Task> TaskPtr;
-    typedef void(*TCallback)(const boost::shared_ptr<Task> &, void *);
+    typedef yae::weak_ptr<Task> TaskPtr;
+    typedef void(*TCallback)(const yae::shared_ptr<Task> &, void *);
 
     AsyncTaskQueue();
     ~AsyncTaskQueue();

@@ -442,7 +442,6 @@ mainMayThrowException(int argc, char ** argv)
   // initialize the player widget canvas, connect additional signals/slots:
   yae::mainWindow->initCanvasWidget();
   yae::mainWindow->canvas()->initializePrivateBackend();
-  yae::mainWindow->initItemViews();
 
   app.exec();
   return 0;

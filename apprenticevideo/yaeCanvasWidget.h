@@ -30,6 +30,9 @@
 #endif
 #include <QTimer>
 
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+
 // local includes:
 #include "yaeCanvas.h"
 #include "yaeScreenSaverInhibitor.h"
@@ -258,7 +261,7 @@ namespace yae
     template <typename TArg1>
     CanvasWidget(TArg1 arg1):
       TWidget(arg1),
-      Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
+      Canvas(yae::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
       sigs_(*this)
     {
       init();
@@ -267,7 +270,7 @@ namespace yae
     template <typename TArg1, typename TArg2, typename TArg3>
     CanvasWidget(TArg1 arg1, TArg2 arg2, TArg3 arg3):
       TWidget(arg1, arg2, arg3),
-      Canvas(boost::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
+      Canvas(yae::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
       sigs_(*this)
     {
       init();
@@ -281,7 +284,8 @@ namespace yae
       TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
       TWidget::setAutoFillBackground(false);
       TWidget::setMouseTracking(true);
-      Canvas::setDelegate(boost::shared_ptr<TDelegate>(new TDelegate(*this)));
+      Canvas::setDelegate(yae::shared_ptr<TDelegate, Canvas::IDelegate>
+                          (new TDelegate(*this)));
     }
 
     // virtual:

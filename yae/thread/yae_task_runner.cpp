@@ -251,7 +251,7 @@ namespace yae
           Todo todo = todo_.front();
           todo_.pop_front();
 
-          boost::shared_ptr<Task> task = todo.task_.lock();
+          yae::shared_ptr<Task> task = todo.task_.lock();
           if (task)
           {
             lock.unlock();

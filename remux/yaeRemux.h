@@ -17,6 +17,7 @@
 #include <boost/filesystem/path.hpp>
 
 // aeyae:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 
 
@@ -72,7 +73,7 @@ namespace yae
   //----------------------------------------------------------------
   // TClipPtr
   //
-  typedef boost::shared_ptr<Clip> TClipPtr;
+  typedef yae::shared_ptr<Clip> TClipPtr;
 
   //----------------------------------------------------------------
   // RemuxModel

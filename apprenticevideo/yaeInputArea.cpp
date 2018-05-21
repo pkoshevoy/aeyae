@@ -78,19 +78,18 @@ namespace yae
   //----------------------------------------------------------------
   // InputArea::postponeSingleClickEvent
   //
-  boost::shared_ptr<CancelableEvent::Ticket>
+  yae::shared_ptr<CancelableEvent::Ticket>
   InputArea::postponeSingleClickEvent(PostponeEvent & postponeEvent,
                                       int msec,
                                       QObject * view,
                                       const TVec2D & itemCSysOrigin,
                                       const TVec2D & rootCSysPoint) const
   {
-    boost::shared_ptr<CancelableEvent::Ticket>
+    yae::shared_ptr<CancelableEvent::Ticket>
       ticket(new CancelableEvent::Ticket());
 
     ItemPtr itemPtr = self_.lock();
-    boost::shared_ptr<InputArea> inputAreaPtr =
-      boost::dynamic_pointer_cast<InputArea, Item>(itemPtr);
+    InputAreaPtr inputAreaPtr = itemPtr.cast<InputArea>();
 
     postponeEvent.postpone(msec, view, new SingleClickEvent(ticket,
                                                             inputAreaPtr,

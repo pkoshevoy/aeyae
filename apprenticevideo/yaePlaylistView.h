@@ -12,8 +12,8 @@
 // standard libraries:
 #include <map>
 
-// boost includes:
-#include <boost/shared_ptr.hpp>
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeInputArea.h"
@@ -71,7 +71,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistViewLayoutPtr
   //
-  typedef boost::shared_ptr<TPlaylistViewLayout> TPlaylistViewLayoutPtr;
+  typedef yae::shared_ptr<TPlaylistViewLayout> TPlaylistViewLayoutPtr;
 
   //----------------------------------------------------------------
   // GroupListLayout

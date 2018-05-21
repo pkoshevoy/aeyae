@@ -74,7 +74,6 @@ namespace yae
     ~MainWindow();
 
     void initCanvasWidget();
-    void initItemViews();
 
     // accessor to the player widget:
     inline TCanvasWidget * canvasWidget() const
@@ -141,15 +140,12 @@ namespace yae
     TCanvasWidget * canvasWidget_;
     Canvas * canvas_;
 
-    // frame editing view:
-    boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
-
     RemuxModel model_;
     RemuxView view_;
     SpinnerView spinner_;
 
     // load files on a background thread, etc...
-    typedef boost::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
+    typedef yae::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
     std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
 

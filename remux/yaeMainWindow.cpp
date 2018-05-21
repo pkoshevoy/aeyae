@@ -239,25 +239,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::initItemViews
-  //
-  void
-  MainWindow::initItemViews()
-  {
-#if 0
-    // initialize frame crop view:
-    TMakeCurrentContext currentContext(canvas_->context());
-    frameCropView_.init(&playlistView_);
-
-    CanvasRendererItem & rendererItem =
-      frameCropView_.root()->get<CanvasRendererItem>("uncropped");
-
-    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
-    canvasWidget_->addLoadFrameObserver(onLoadFrame_);
-#endif
-  }
-
-  //----------------------------------------------------------------
   // LoadTask
   //
   struct LoadTask : AsyncTaskQueue::Task
@@ -376,7 +357,6 @@ namespace yae
         return TDemuxerInterfacePtr();
       }
 
-      typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
       TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
 
       // these are expressed in seconds:

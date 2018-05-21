@@ -16,7 +16,6 @@
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
 #endif
 
 // Qt includes:
@@ -25,6 +24,7 @@
 #include <QString>
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_threading.h"
 #include "yae/utils/yae_benchmark.h"
 #include "yae/video/yae_video.h"
@@ -102,14 +102,14 @@ namespace yae
       bool canceled_;
     };
 
-    CancelableEvent(const boost::shared_ptr<Ticket> & ticket):
+    CancelableEvent(const yae::shared_ptr<Ticket> & ticket):
       QEvent(QEvent::User),
       ticket_(ticket)
     {}
 
     virtual bool execute() = 0;
 
-    boost::shared_ptr<Ticket> ticket_;
+    yae::shared_ptr<Ticket> ticket_;
   };
 
   //----------------------------------------------------------------
@@ -151,16 +151,16 @@ namespace yae
       ILayer(): enabled_(true) {}
       virtual ~ILayer() {}
 
-      inline void setContext(const boost::shared_ptr<IOpenGLContext> & context)
+      inline void setContext(const yae::shared_ptr<IOpenGLContext> & context)
       { context_ = context; }
 
-      inline const boost::shared_ptr<IOpenGLContext> & context() const
+      inline const yae::shared_ptr<IOpenGLContext> & context() const
       { return context_; }
 
-      inline void setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+      inline void setDelegate(const yae::shared_ptr<IDelegate> & delegate)
       { delegate_ = delegate; }
 
-      inline const boost::shared_ptr<IDelegate> & delegate() const
+      inline const yae::shared_ptr<IDelegate> & delegate() const
       { return delegate_; }
 
       inline bool isEnabled() const
@@ -182,12 +182,12 @@ namespace yae
       struct IAnimator
       {
         virtual ~IAnimator() {}
-        virtual void animate(ILayer &, boost::shared_ptr<IAnimator> a) = 0;
+        virtual void animate(ILayer &, yae::shared_ptr<IAnimator> a) = 0;
       };
 
       // NOTE: the layer may retain a (weak) pointer for the given animator:
-      virtual void addAnimator(const boost::shared_ptr<IAnimator> & a) = 0;
-      virtual void delAnimator(const boost::shared_ptr<IAnimator> & a) = 0;
+      virtual void addAnimator(const yae::shared_ptr<IAnimator> & a) = 0;
+      virtual void delAnimator(const yae::shared_ptr<IAnimator> & a) = 0;
 
       virtual bool processEvent(Canvas * canvas, QEvent * event) = 0;
 
@@ -196,12 +196,12 @@ namespace yae
       getImageProvider(const QString & imageUrl, QString & imageId) const = 0;
 
     protected:
-      boost::shared_ptr<IOpenGLContext> context_;
-      boost::shared_ptr<IDelegate> delegate_;
+      yae::shared_ptr<IOpenGLContext> context_;
+      yae::shared_ptr<IDelegate> delegate_;
       bool enabled_;
     };
 
-    Canvas(const boost::shared_ptr<IOpenGLContext> & context);
+    Canvas(const yae::shared_ptr<IOpenGLContext> & context);
     ~Canvas();
 
     inline double devicePixelRatio() const
@@ -216,9 +216,9 @@ namespace yae
     inline IOpenGLContext & context()
     { return *context_; }
 
-    void setDelegate(const boost::shared_ptr<IDelegate> & delegate);
+    void setDelegate(const yae::shared_ptr<IDelegate> & delegate);
 
-    inline const boost::shared_ptr<IDelegate> & delegate() const
+    inline const yae::shared_ptr<IDelegate> & delegate() const
     { return delegate_; }
 
     // initialize private backend rendering object,
@@ -276,8 +276,8 @@ namespace yae
       virtual void frameLoaded(Canvas * c, const TVideoFramePtr & f) = 0;
     };
 
-    void addLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> &);
-    void delLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> &);
+    void addLoadFrameObserver(const yae::shared_ptr<ILoadFrameObserver> &);
+    void delLoadFrameObserver(const yae::shared_ptr<ILoadFrameObserver> &);
 
     // helpers:
     bool loadFrame(const TVideoFramePtr & frame);
@@ -470,8 +470,8 @@ namespace yae
     friend struct TEventReceiver;
     TEventReceiver eventReceiver_;
 
-    boost::shared_ptr<IOpenGLContext> context_;
-    boost::shared_ptr<IDelegate> delegate_;
+    yae::shared_ptr<IOpenGLContext> context_;
+    yae::shared_ptr<IDelegate> delegate_;
     PaintCanvasEvent::TPayload paintCanvasEvent_;
     RenderFrameEvent::TPayload renderFrameEvent_;
     CanvasRenderer * private_;
@@ -505,7 +505,7 @@ namespace yae
     std::list<ILayer *> layers_;
 
     // observers notified when loadFrame is called:
-    std::set<boost::weak_ptr<ILoadFrameObserver> > loadFrameObservers_;
+    std::set<yae::weak_ptr<ILoadFrameObserver> > loadFrameObservers_;
   };
 }
 

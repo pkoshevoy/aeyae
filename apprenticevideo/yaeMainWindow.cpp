@@ -336,7 +336,7 @@ namespace yae
     frameCropView_.setEnabled(false);
 
     // add image://thumbnails/... provider:
-    boost::shared_ptr<ThumbnailProvider>
+    yae::shared_ptr<ThumbnailProvider, ImageProvider>
       imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
     playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
                                    imageProvider);

@@ -12,13 +12,11 @@
 // standard libraries:
 #include <cmath>
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // Qt interfaces:
 #include <QVariant>
+
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeBBox.h"
@@ -133,7 +131,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPropertiesBasePtr
   //
-  typedef boost::shared_ptr<IPropertiesBase> TPropertiesBasePtr;
+  typedef yae::shared_ptr<IPropertiesBase> TPropertiesBasePtr;
 
   //----------------------------------------------------------------
   // IProperties

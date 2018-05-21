@@ -17,7 +17,6 @@
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
 #endif
 
 // libass includes:
@@ -27,6 +26,7 @@ extern "C"
 }
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
 
@@ -120,7 +120,7 @@ namespace yae
   //----------------------------------------------------------------
   // TAssTrackPtr
   //
-  typedef boost::shared_ptr<AssTrack> TAssTrackPtr;
+  typedef yae::shared_ptr<AssTrack> TAssTrackPtr;
 
 
   //----------------------------------------------------------------

@@ -71,7 +71,7 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas::Canvas
   //
-  Canvas::Canvas(const boost::shared_ptr<IOpenGLContext> & ctx):
+  Canvas::Canvas(const yae::shared_ptr<IOpenGLContext> & ctx):
     eventReceiver_(*this),
     context_(ctx),
     private_(NULL),
@@ -99,7 +99,7 @@ namespace yae
   // Canvas::setDelegate
   //
   void
-  Canvas::setDelegate(const boost::shared_ptr<IDelegate> & delegate)
+  Canvas::setDelegate(const yae::shared_ptr<IDelegate> & delegate)
   {
     delegate_ = delegate;
     for (std::list<ILayer *>::reverse_iterator i = layers_.rbegin();
@@ -739,7 +739,7 @@ namespace yae
   // Canvas::addLoadFrameObserver
   //
   void
-  Canvas::addLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> & o)
+  Canvas::addLoadFrameObserver(const yae::shared_ptr<ILoadFrameObserver> & o)
   {
     loadFrameObservers_.insert(o);
   }
@@ -748,7 +748,7 @@ namespace yae
   // Canvas::delLoadFrameObserver
   //
   void
-  Canvas::delLoadFrameObserver(const boost::shared_ptr<ILoadFrameObserver> & o)
+  Canvas::delLoadFrameObserver(const yae::shared_ptr<ILoadFrameObserver> & o)
   {
     loadFrameObservers_.erase(o);
   }
@@ -775,14 +775,14 @@ namespace yae
       delegate_->inhibitScreenSaver();
     }
 
-    typedef std::set<boost::weak_ptr<ILoadFrameObserver> >::iterator TIter;
+    typedef std::set<yae::weak_ptr<ILoadFrameObserver> >::iterator TIter;
     TIter i = loadFrameObservers_.begin();
     while (i != loadFrameObservers_.end())
     {
       TIter i0 = i;
       ++i;
 
-      boost::shared_ptr<ILoadFrameObserver> observerPtr = i0->lock();
+      yae::shared_ptr<ILoadFrameObserver> observerPtr = i0->lock();
       if (observerPtr)
       {
         ILoadFrameObserver & observer = *observerPtr;

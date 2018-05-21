@@ -14,11 +14,6 @@
 #include <map>
 #include <set>
 
-// boost libraries:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // Qt interfaces:
 #include <QFont>
 #include <QMouseEvent>
@@ -27,6 +22,7 @@
 #include <QTimer>
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/utils/yae_benchmark.h"
 
 // local interfaces:
@@ -180,13 +176,13 @@ namespace yae
     //----------------------------------------------------------------
     // TAnimatorPtr
     //
-    typedef boost::shared_ptr<Canvas::ILayer::IAnimator> TAnimatorPtr;
+    typedef yae::shared_ptr<Canvas::ILayer::IAnimator> TAnimatorPtr;
 
     // virtual:
-    void addAnimator(const boost::shared_ptr<IAnimator> & a);
+    void addAnimator(const yae::shared_ptr<IAnimator> & a);
 
     // virtual:
-    void delAnimator(const boost::shared_ptr<IAnimator> & a);
+    void delAnimator(const yae::shared_ptr<IAnimator> & a);
 
     // helper: uncache a given item at the next repaint
     //
@@ -244,7 +240,7 @@ namespace yae
     void animate();
 
   protected:
-    std::map<Item *, boost::weak_ptr<Item> > uncache_;
+    std::map<Item *, yae::weak_ptr<Item> > uncache_;
     RequestRepaintEvent::TPayload requestRepaintEvent_;
 
     TImageProviders imageProviders_;
@@ -275,7 +271,7 @@ namespace yae
     QTimer animateTimer_;
 
     // a set of animators, referenced by the animation timer:
-    std::set<boost::weak_ptr<IAnimator> > animators_;
+    std::set<yae::weak_ptr<IAnimator> > animators_;
   };
 
 

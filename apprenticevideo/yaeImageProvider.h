@@ -12,11 +12,6 @@
 // standard libraries:
 #include <map>
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // Qt includes:
 #include <QImage>
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
@@ -26,6 +21,7 @@
 #include <QString>
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/video/yae_reader.h"
 
 // local includes:
@@ -77,7 +73,7 @@ namespace yae
   //----------------------------------------------------------------
   // TImageProviderPtr
   //
-  typedef boost::shared_ptr<ImageProvider> TImageProviderPtr;
+  typedef yae::shared_ptr<ImageProvider> TImageProviderPtr;
 
   //----------------------------------------------------------------
   // TImageProviders

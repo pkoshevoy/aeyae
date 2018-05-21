@@ -634,8 +634,7 @@ namespace yae
     if (inputArea)
     {
       ItemPtr itemPtr = inputArea->self_.lock();
-      boost::shared_ptr<InputArea> inputAreaPtr =
-        boost::dynamic_pointer_cast<InputArea, Item>(itemPtr);
+      InputAreaPtr inputAreaPtr = itemPtr.cast<InputArea>();
 
       if (!inputAreaPtr)
       {
@@ -648,6 +647,15 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // InputHandler::inputArea
+  //
+  InputArea *
+  InputHandler::inputArea() const
+  {
+    return input_.lock().get();
+  }
+
 
   //----------------------------------------------------------------
   // VisibleItem::VisibleItem
@@ -657,7 +665,7 @@ namespace yae
   {
     if (item)
     {
-      boost::shared_ptr<Item> item_ptr = item->self_.lock();
+      yae::shared_ptr<Item> item_ptr = item->self_.lock();
 
       if (!item_ptr)
       {

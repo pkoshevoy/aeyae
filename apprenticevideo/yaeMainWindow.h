@@ -18,6 +18,7 @@
 #include <QTimer>
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_audio_renderer.h"
@@ -406,7 +407,7 @@ namespace yae
 
     // frame editing view:
     FrameCropView frameCropView_;
-    boost::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
+    yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
     // audio renderer:
     IAudioRenderer * audioRenderer_;

@@ -19,6 +19,7 @@
 #include <QString>
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/video/yae_video.h"
 #include "yae/utils/yae_tree.h"
 
@@ -113,7 +114,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistItemPtr
   //
-  typedef boost::shared_ptr<PlaylistItem> TPlaylistItemPtr;
+  typedef yae::shared_ptr<PlaylistItem, PlaylistNode> TPlaylistItemPtr;
 
   //----------------------------------------------------------------
   // PlaylistGroup
@@ -150,7 +151,7 @@ namespace yae
   //----------------------------------------------------------------
   // TPlaylistGroupPtr
   //
-  typedef boost::shared_ptr<PlaylistGroup> TPlaylistGroupPtr;
+  typedef yae::shared_ptr<PlaylistGroup, PlaylistNode> TPlaylistGroupPtr;
 
   //----------------------------------------------------------------
   // TObservePlaylistGroup

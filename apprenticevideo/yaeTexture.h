@@ -101,7 +101,7 @@ namespace yae
   //----------------------------------------------------------------
   // TTexturePtr
   //
-  typedef boost::shared_ptr<Texture> TTexturePtr;
+  typedef yae::shared_ptr<Texture, Item> TTexturePtr;
 
   //----------------------------------------------------------------
   // TTextureRef

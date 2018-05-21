@@ -322,7 +322,7 @@ namespace yae
     // uncache prior to painting:
     while (!uncache_.empty())
     {
-      std::map<Item *, boost::weak_ptr<Item> >::iterator i = uncache_.begin();
+      std::map<Item *, yae::weak_ptr<Item> >::iterator i = uncache_.begin();
       ItemPtr itemPtr = i->second.lock();
       uncache_.erase(i);
 
@@ -406,7 +406,7 @@ namespace yae
   void
   ItemView::animate()
   {
-    typedef std::set<boost::weak_ptr<IAnimator> >::iterator TIter;
+    typedef std::set<yae::weak_ptr<IAnimator> >::iterator TIter;
     TIter i = animators_.begin();
     while (i != animators_.end())
     {

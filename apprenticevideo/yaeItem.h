@@ -22,12 +22,14 @@
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
-#include <boost/shared_ptr.hpp>
 #endif
 
 // Qt interfaces:
 #include <QEvent>
 #include <QPersistentModelIndex>
+
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -221,7 +223,7 @@ namespace yae
   //----------------------------------------------------------------
   // InputAreaPtr
   //
-  typedef boost::shared_ptr<InputArea> InputAreaPtr;
+  typedef yae::shared_ptr<InputArea, Item> InputAreaPtr;
 
   //----------------------------------------------------------------
   // InputHandler
@@ -234,10 +236,9 @@ namespace yae
                  const TVec2D & csysOrigin = TVec2D());
 
     // shortcut:
-    inline InputArea * inputArea() const
-    { return input_.lock().get(); }
+    InputArea * inputArea() const;
 
-    boost::weak_ptr<InputArea> input_;
+    yae::weak_ptr<InputArea, Item> input_;
     TVec2D csysOrigin_;
   };
 
@@ -262,7 +263,7 @@ namespace yae
     VisibleItem(Item * item = NULL,
                 const TVec2D & csysOrigin = TVec2D());
 
-    boost::weak_ptr<Item> item_;
+    yae::weak_ptr<Item> item_;
     TVec2D csysOrigin_;
   };
 
@@ -278,7 +279,7 @@ namespace yae
 
     for (const_iter_t i = items.begin(); i != items.end(); ++i)
     {
-      boost::shared_ptr<item_t> ptr = i->item_.lock();
+      yae::shared_ptr<item_t, Item> ptr = i->item_.lock();
       if (ptr.get() == &item)
       {
         return i;
@@ -303,7 +304,7 @@ namespace yae
     //----------------------------------------------------------------
     // ItemPtr
     //
-    typedef boost::shared_ptr<Item> ItemPtr;
+    typedef yae::shared_ptr<Item> ItemPtr;
 
     Item(const char * id);
     virtual ~Item() {}
@@ -321,8 +322,8 @@ namespace yae
     // sharedPtr
     //
     template <typename TItem>
-    inline boost::shared_ptr<TItem> sharedPtr() const
-    { return boost::dynamic_pointer_cast<TItem, Item>(self_.lock()); }
+    inline yae::shared_ptr<TItem, Item> sharedPtr() const
+    { return self_.lock().cast<TItem>(); }
 
     //----------------------------------------------------------------
     // isParent
@@ -678,7 +679,7 @@ namespace yae
     //----------------------------------------------------------------
     // TObserverPtr
     //
-    typedef boost::shared_ptr<Observer> TObserverPtr;
+    typedef yae::shared_ptr<Observer> TObserverPtr;
 
     //----------------------------------------------------------------
     // TEventObservers
@@ -705,7 +706,7 @@ namespace yae
     Item * parent_;
 
     // weak reference to itself, provided by the parent:
-    boost::weak_ptr<Item> self_;
+    yae::weak_ptr<Item> self_;
 
     // nested items:
     std::vector<ItemPtr> children_;

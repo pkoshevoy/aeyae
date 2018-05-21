@@ -18,6 +18,7 @@
 #include <QSignalMapper>
 
 // aeyae:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/thread/yae_task_runner.h"
 #include "yae/utils/yae_lru_cache.h"
@@ -76,7 +77,7 @@ namespace yae
   //----------------------------------------------------------------
   // TLayoutPtr
   //
-  typedef boost::shared_ptr<TLayout> TLayoutPtr;
+  typedef yae::shared_ptr<TLayout> TLayoutPtr;
 
 
   //----------------------------------------------------------------
@@ -139,7 +140,7 @@ namespace yae
   //----------------------------------------------------------------
   // TVideoFramesPtr
   //
-  typedef boost::shared_ptr<TVideoFrames> TVideoFramesPtr;
+  typedef yae::shared_ptr<TVideoFrames> TVideoFramesPtr;
 
   //----------------------------------------------------------------
   // TGopCache
@@ -175,7 +176,7 @@ namespace yae
     VideoFrameItem & operator = (const VideoFrameItem &);
 
     std::size_t frame_;
-    mutable boost::shared_ptr<TLegacyCanvas> renderer_;
+    mutable yae::shared_ptr<TLegacyCanvas> renderer_;
   };
 
   //----------------------------------------------------------------
@@ -215,7 +216,7 @@ namespace yae
   protected:
     // called asynchronously upon completion of GOP decoding task:
     static void
-    cb(const boost::shared_ptr<AsyncTaskQueue::Task> & task, void * ctx);
+    cb(const yae::shared_ptr<AsyncTaskQueue::Task> & task, void * ctx);
 
     // intentionally disabled:
     GopItem(const GopItem &);
@@ -225,7 +226,7 @@ namespace yae
     TPixelFormatId pixelFormat_;
     const Canvas::ILayer * layer_;
     mutable boost::mutex mutex_;
-    mutable boost::shared_ptr<AsyncTaskQueue::Task> async_;
+    mutable yae::shared_ptr<AsyncTaskQueue::Task> async_;
     mutable TGopCache::TRefPtr cached_;
 
     // keep track if decoding fails to avoid trying and failing again:

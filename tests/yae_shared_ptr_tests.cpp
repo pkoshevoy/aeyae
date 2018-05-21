@@ -8,6 +8,9 @@
 
 // standard C++ library:
 #include <iostream>
+#include <list>
+#include <set>
+#include <vector>
 
 // boost library:
 #include <boost/test/unit_test.hpp>
@@ -191,4 +194,43 @@ BOOST_AUTO_TEST_CASE(yae_shared_ptr)
 
   d.reset(new ddd("DDD.2"));
   BOOST_CHECK(d);
+}
+
+
+//----------------------------------------------------------------
+// Node
+//
+struct Node
+{
+  Node(std::size_t id = 0):
+    id_(id)
+  {}
+
+  yae::weak_ptr<Node> self_;
+  yae::weak_ptr<Node> prev_;
+  std::size_t id_;
+};
+
+BOOST_AUTO_TEST_CASE(yae_weak_ptr)
+{
+  // verify node self-reference via weak_ptr works as expected:
+  std::vector<yae::shared_ptr<Node> > nodes;
+  for (std::size_t i = 0; i < 1000000; i++)
+  {
+    yae::shared_ptr<Node> node(new Node(i));
+    node->self_ = node;
+    if (!nodes.empty())
+    {
+      node->prev_ = nodes.back();
+    }
+
+    nodes.push_back(node);
+  }
+
+  std::list<yae::shared_ptr<Node> > node_list(nodes.begin(), nodes.end());
+  std::set<yae::shared_ptr<Node> > node_set(nodes.begin(), nodes.end());
+  nodes.clear();
+  node_list.clear();
+  node_set.clear();
+  BOOST_CHECK(true);
 }

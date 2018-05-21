@@ -296,7 +296,7 @@ namespace yae
   //
   struct YAE_API DecodeGop : public AsyncTaskQueue::Task
   {
-    DecodeGop(const boost::weak_ptr<Item> & item, const Gop & gop):
+    DecodeGop(const yae::weak_ptr<Item> & item, const Gop & gop):
       item_(item),
       gop_(gop),
       frames_(new TVideoFrames())
@@ -365,7 +365,7 @@ namespace yae
     { return item_.lock(); }
 
   protected:
-    boost::weak_ptr<Item> item_;
+    yae::weak_ptr<Item> item_;
     Gop gop_;
     TVideoFramesPtr frames_;
     FramerateEstimator fps_;
@@ -427,10 +427,10 @@ namespace yae
   // GopItem::cb
   //
   void
-  GopItem::cb(const boost::shared_ptr<AsyncTaskQueue::Task> & task_ptr, void *)
+  GopItem::cb(const yae::shared_ptr<AsyncTaskQueue::Task> & task_ptr, void *)
   {
-    boost::shared_ptr<DecodeGop> task =
-      boost::dynamic_pointer_cast<DecodeGop>(task_ptr);
+    yae::shared_ptr<DecodeGop, AsyncTaskQueue::Task>
+      task = task_ptr.cast<DecodeGop>();
     if (!task)
     {
       YAE_ASSERT(false);

@@ -13,9 +13,6 @@
 #include <algorithm>
 #include <map>
 
-// boost includes:
-#include <boost/shared_ptr.hpp>
-
 // Qt library:
 #if defined(YAE_USE_QT4) || defined(YAE_USE_QT5)
 #include <QColor>
@@ -23,6 +20,7 @@
 
 // yae includes:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeVec.h"
@@ -298,7 +296,7 @@ namespace yae
   //----------------------------------------------------------------
   // TGradientPtr
   //
-  typedef boost::shared_ptr<TGradient> TGradientPtr;
+  typedef yae::shared_ptr<TGradient> TGradientPtr;
 
 }
 

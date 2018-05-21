@@ -29,6 +29,7 @@ extern "C"
 }
 
 // yae includes:
+#include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_audio_track.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/ffmpeg/yae_track.h"
@@ -213,7 +214,7 @@ namespace yae
   //----------------------------------------------------------------
   // TDemuxerPtr
   //
-  typedef boost::shared_ptr<Demuxer> TDemuxerPtr;
+  typedef yae::shared_ptr<Demuxer> TDemuxerPtr;
 
   //----------------------------------------------------------------
   // open_demuxer
@@ -319,7 +320,7 @@ namespace yae
   //----------------------------------------------------------------
   // TProgramBufferPtr
   //
-  typedef boost::shared_ptr<ProgramBuffer> TProgramBufferPtr;
+  typedef yae::shared_ptr<ProgramBuffer> TProgramBufferPtr;
 
   //----------------------------------------------------------------
   // PacketBuffer
@@ -459,7 +460,7 @@ namespace yae
   //----------------------------------------------------------------
   // TDemuxerSummaryPtr
   //
-  typedef boost::shared_ptr<DemuxerSummary> TDemuxerSummaryPtr;
+  typedef yae::shared_ptr<DemuxerSummary> TDemuxerSummaryPtr;
 
 
   //----------------------------------------------------------------
@@ -518,7 +519,7 @@ namespace yae
   //----------------------------------------------------------------
   // TDemuxerInterfacePtr
   //
-  typedef boost::shared_ptr<DemuxerInterface> TDemuxerInterfacePtr;
+  typedef yae::shared_ptr<DemuxerInterface> TDemuxerInterfacePtr;
 
 
   //----------------------------------------------------------------
@@ -612,7 +613,8 @@ namespace yae
   //----------------------------------------------------------------
   // TParallelDemuxerPtr
   //
-  typedef boost::shared_ptr<ParallelDemuxer> TParallelDemuxerPtr;
+  typedef yae::shared_ptr<ParallelDemuxer, DemuxerInterface>
+  TParallelDemuxerPtr;
 
   //----------------------------------------------------------------
   // analyze_timeline
@@ -682,7 +684,7 @@ namespace yae
   //----------------------------------------------------------------
   // TSerialDemuxerPtr
   //
-  typedef boost::shared_ptr<SerialDemuxer> TSerialDemuxerPtr;
+  typedef yae::shared_ptr<SerialDemuxer, DemuxerInterface> TSerialDemuxerPtr;
 
   //----------------------------------------------------------------
   // TrimmedDemuxer
@@ -756,7 +758,7 @@ namespace yae
   //----------------------------------------------------------------
   // TTrimmedDemuxerPtr
   //
-  typedef boost::shared_ptr<TrimmedDemuxer> TTrimmedDemuxerPtr;
+  typedef yae::shared_ptr<TrimmedDemuxer, DemuxerInterface> TTrimmedDemuxerPtr;
 
   //----------------------------------------------------------------
   // decode_keyframe

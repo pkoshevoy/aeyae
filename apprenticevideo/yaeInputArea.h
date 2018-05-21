@@ -13,13 +13,11 @@
 #include <list>
 #include <stdexcept>
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // Qt interfaces:
 #include <QPersistentModelIndex>
+
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
 
 // local interfaces:
 #include "yaeItem.h"
@@ -97,7 +95,7 @@ namespace yae
     { return draggable_; }
 
     // helper:
-    boost::shared_ptr<CancelableEvent::Ticket>
+    yae::shared_ptr<CancelableEvent::Ticket>
     postponeSingleClickEvent(PostponeEvent & postponeEvent,
                              int msec,
                              QObject * view,
@@ -112,8 +110,8 @@ namespace yae
   //
   struct SingleClickEvent : public CancelableEvent
   {
-    SingleClickEvent(const boost::shared_ptr<CancelableEvent::Ticket> & ticket,
-                     const boost::weak_ptr<InputArea> & inputArea,
+    SingleClickEvent(const yae::shared_ptr<CancelableEvent::Ticket> & ticket,
+                     const yae::weak_ptr<InputArea, Item> & inputArea,
                      const TVec2D & itemCSysOrigin,
                      const TVec2D & rootCSysPoint):
       CancelableEvent(ticket),
@@ -127,7 +125,7 @@ namespace yae
     // virtual:
     bool execute()
     {
-      boost::shared_ptr<InputArea> ia = inputArea_.lock();
+      InputAreaPtr ia = inputArea_.lock();
       if (!ia)
       {
         return false;
@@ -136,7 +134,7 @@ namespace yae
       return ia->onSingleClick(itemCSysOrigin_, rootCSysPoint_);
     }
 
-    boost::weak_ptr<InputArea> inputArea_;
+    yae::weak_ptr<InputArea, Item> inputArea_;
     TVec2D itemCSysOrigin_;
     TVec2D rootCSysPoint_;
     YAE_LIFETIME(lifetime);
@@ -222,7 +220,7 @@ namespace yae
     // lookup the closest ancestor model item associated with this input area:
     TModelItem & lookupModelItem() const
     {
-      boost::shared_ptr<TModelItem> modelItem = modelItem_.lock();
+      yae::shared_ptr<TModelItem, Item> modelItem = modelItem_.lock();
       if (!modelItem)
       {
         TModelItem * found = this->hasAncestor<TModelItem>();
@@ -250,7 +248,7 @@ namespace yae
 
   protected:
     // cached model item associated with this input area:
-    mutable boost::weak_ptr<TModelItem> modelItem_;
+    mutable yae::weak_ptr<TModelItem, Item> modelItem_;
   };
 
 

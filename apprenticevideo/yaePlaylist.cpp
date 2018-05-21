@@ -13,7 +13,6 @@
 
 // boost includes:
 #include <boost/filesystem.hpp>
-#include <boost/shared_ptr.hpp>
 
 // Qt includes:
 #include <QCryptographicHash>
@@ -22,11 +21,12 @@
 #include <QUrl>
 
 // yae includes:
-#include <yae/utils/yae_utils.h>
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_utils.h"
 
 // local includes:
-#include <yaePlaylist.h>
-#include <yaeUtilsQt.h>
+#include "yaePlaylist.h"
+#include "yaeUtilsQt.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
@@ -254,11 +254,12 @@ namespace yae
   //
   template <typename TNode>
   static void
-  init_lookup(std::map<typename TNode::TKey, boost::shared_ptr<TNode> > & lut,
-              const std::vector<boost::shared_ptr<TNode> > & nodes)
+  init_lookup
+  (std::map<typename TNode::TKey, yae::shared_ptr<TNode, PlaylistNode> > & lut,
+   const std::vector<yae::shared_ptr<TNode, PlaylistNode> > & nodes)
   {
-    typedef boost::shared_ptr<TNode> TNodePtr;
-    typedef std::vector<boost::shared_ptr<TNode> > TNodes;
+    typedef yae::shared_ptr<TNode, PlaylistNode> TNodePtr;
+    typedef std::vector<TNodePtr> TNodes;
     typedef typename TNodes::const_iterator TNodesIter;
 
     lut.clear();
@@ -274,12 +275,13 @@ namespace yae
   // lookup
   //
   template <typename TNode>
-  static boost::shared_ptr<TNode>
-  lookup(const std::map<typename TNode::TKey, boost::shared_ptr<TNode> > & lut,
+  static yae::shared_ptr<TNode, PlaylistNode>
+  lookup(const std::map
+         <typename TNode::TKey, yae::shared_ptr<TNode, PlaylistNode> > & lut,
          const typename TNode::TKey & key)
   {
-    typedef boost::shared_ptr<TNode> TNodePtr;
-    typedef std::map<typename TNode::TKey, boost::shared_ptr<TNode> > TNodeMap;
+    typedef yae::shared_ptr<TNode, PlaylistNode> TNodePtr;
+    typedef std::map<typename TNode::TKey, TNodePtr> TNodeMap;
 
     typename TNodeMap::const_iterator found = lut.find(key);
     return (found == lut.end()) ? TNodePtr() : found->second;
@@ -302,7 +304,7 @@ namespace yae
 
     // try to keep track of the original playing item,
     // its index may change:
-    boost::weak_ptr<PlaylistItem> playingOld = lookup(playing_);
+    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld = lookup(playing_);
 
     // a temporary playlist tree used for deciding which of the
     // newly added items should be selected for playback:
@@ -873,7 +875,7 @@ namespace yae
 
     // try to keep track of the original playing item,
     // its index may change:
-    boost::weak_ptr<PlaylistItem> playingOld = lookup(playing_);
+    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld = lookup(playing_);
 
     for (int groupRow = groups_.size() - 1; groupRow >= 0; groupRow--)
     {
@@ -941,7 +943,7 @@ namespace yae
 
     // try to keep track of the original playing item,
     // its index may change:
-    boost::weak_ptr<PlaylistItem> playingOld = lookup(playing_);
+    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld = lookup(playing_);
 
     if (itemPtr)
     {
