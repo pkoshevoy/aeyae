@@ -323,7 +323,7 @@ namespace yae
     //
     template <typename TItem>
     inline yae::shared_ptr<TItem, Item> sharedPtr() const
-    { return self_.lock().cast<TItem>(); }
+    { return self_.lock().template cast<TItem>(); }
 
     //----------------------------------------------------------------
     // isParent
