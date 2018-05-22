@@ -15,16 +15,14 @@
 #include <iostream>
 
 // atomics:
-#if defined(__GNUC__)
-# if __APPLE__ && _ARCH_PPC
-#  include <bits/atomicity.h>
-#  define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
-#  define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
-# else
-#  include <ext/atomicity.h>
-#  define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add_dispatch
-#  define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add_dispatch
-# endif
+#if defined(__GNUC__) &&  defined(__APPLE__) && defined(_ARCH_PPC)
+# include <bits/atomicity.h>
+# define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
+# define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
+#elif defined(__GNUC__) && __GNUC_MINOR__ >= 8
+# include <ext/atomicity.h>
+# define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add_dispatch
+# define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add_dispatch
 #else
 # define YAE_USE_BOOST_ATOMICS
 # ifndef Q_MOC_RUN
