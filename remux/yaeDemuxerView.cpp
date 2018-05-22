@@ -625,7 +625,7 @@ namespace yae
         addExpr(new FrameColor(view, span, video,
                                style.cursor_.get(),
                                style.scrollbar_.get()));
-      frame.color_.cachingEnabled_ = false;
+      frame.color_.disableCaching();
     }
   }
 
@@ -1218,7 +1218,7 @@ namespace yae
 
     text_bg.anchors_.offset(text, -3, 3, -3, 3);
     text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
-    text_bg.color_.cachingEnabled_ = false;
+    text_bg.color_.disableCaching();
 
     edit.anchors_.fill(text);
     edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
@@ -1752,10 +1752,12 @@ namespace yae
       InputArea(id, true),
       lowerBound_(lowerBound),
       upperBound_(upperBound),
-      anchorRef_(anchorRef),
+      anchor_(anchorRef.private_),
       anchorPos_(0),
       offsetPos_(0)
-    {}
+    {
+      YAE_ASSERT(anchor_);
+    }
 
     // virtual:
     void uncache()
@@ -1769,8 +1771,8 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      anchorPos_ = anchorRef_.get();
-      offsetPos_ = anchorRef_.translate_;
+      anchorPos_ = anchor_->get_value();
+      offsetPos_ = anchor_->translate_;
       return true;
     }
 
@@ -1786,7 +1788,7 @@ namespace yae
       v = std::min(v_max, std::max(v_min, v));
 
       double dv = v - anchorPos_;
-      anchorRef_.translate_ = offsetPos_ + dv;
+      anchor_->translate_ = offsetPos_ + dv;
 
       // this avoids uncaching the scrollview content:
       parent_->uncacheSelfAndChildren();
@@ -1796,7 +1798,10 @@ namespace yae
 
     ItemRef lowerBound_;
     ItemRef upperBound_;
-    ItemRef & anchorRef_;
+
+    typedef yae::shared_ptr<ItemRef::Affine, ItemRef::IRef> TAnchorRefPtr;
+    TAnchorRefPtr anchor_;
+
     double anchorPos_;
     double offsetPos_;
   };
@@ -1939,12 +1944,12 @@ namespace yae
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
       layout.visible_ = layout.addExpr(new InLayoutMode(view));
-      layout.visible_.cachingEnabled_ = false;
+      layout.visible_.disableCaching();
 
       Item & preview = root.addNew<Item>("preview");
       preview.anchors_.fill(bg);
       preview.visible_ = layout.addExpr(new InPreviewMode(view));
-      preview.visible_.cachingEnabled_ = false;
+      preview.visible_.disableCaching();
 
       Item & gops = layout.addNew<Item>("gops");
       Item & clips = layout.addNew<Item>("clips");
@@ -2009,7 +2014,7 @@ namespace yae
       {
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
         underline.visible_ = layout.visible_;
-        underline.visible_.cachingEnabled_ = false;
+        underline.visible_.disableCaching();
 
         Text & txt = layout_control_button(model,
                                            view,
@@ -2038,7 +2043,7 @@ namespace yae
       {
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
         underline.visible_ = preview.visible_;
-        underline.visible_.cachingEnabled_ = false;
+        underline.visible_.disableCaching();
 
         Text & txt = layout_control_button(model,
                                            view,
@@ -2153,7 +2158,7 @@ namespace yae
     {
       const Item & item = *(*i);
       const IsCurrentClip * found =
-        dynamic_cast<const IsCurrentClip *>(item.visible_.ref_);
+        dynamic_cast<const IsCurrentClip *>(item.visible_.ref());
 
       if (found && found->clip_ == clip)
       {
@@ -2476,7 +2481,7 @@ namespace yae
     Rectangle & bg = row.addNew<Rectangle>("bg");
     bg.anchors_.fill(row);
     bg.color_ = bg.addExpr(new ClipItemColor(model, view, index, row));
-    bg.color_.cachingEnabled_ = false;
+    bg.color_.disableCaching();
 
     layout_clip(model, view, style_, row, index);
 
@@ -2624,7 +2629,7 @@ namespace yae
     {
       const Item & item = *(*i);
       const IsCurrentClip * found =
-        dynamic_cast<const IsCurrentClip *>(item.visible_.ref_);
+        dynamic_cast<const IsCurrentClip *>(item.visible_.ref());
 
       if (found && found->clip_ == clip_ptr)
       {

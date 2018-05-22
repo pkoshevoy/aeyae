@@ -39,43 +39,157 @@ namespace yae
     typedef TData value_type;
 
     //----------------------------------------------------------------
+    // TDataRef
+    //
+    typedef DataRef<TData> TDataRef;
+
+    //----------------------------------------------------------------
     // TDataProperties
     //
     typedef IProperties<TData> TDataProperties;
+
+    //----------------------------------------------------------------
+    // IRef
+    //
+    struct IRef
+    {
+      virtual ~IRef() {}
+
+      virtual const TDataProperties * get_reference() const = 0;
+      virtual Property get_property() const = 0;
+
+      virtual bool is_relative() const = 0;
+      virtual bool is_cached() const = 0;
+      virtual bool is_cacheable() const = 0;
+      virtual void set_cacheable(bool cacheable) = 0;
+      virtual void uncache() const = 0;
+      virtual void cache(const TData & value) const = 0;
+      virtual const TData & get_value() const = 0;
+    };
+
+    //----------------------------------------------------------------
+    // Const
+    //
+    struct Const : IRef
+    {
+      Const(const TData & value):
+        value_(value)
+      {}
+
+      virtual const TDataProperties * get_reference() const { return NULL; }
+      virtual Property get_property() const { return kPropertyConstant; }
+
+      virtual bool is_relative() const { return false; }
+      virtual bool is_cached() const { return true; }
+      virtual bool is_cacheable() const { return false; }
+      virtual void set_cacheable(bool cacheable) { (void)cacheable; }
+      virtual void uncache() const {}
+      virtual void cache(const TData & value) const { (void)value; }
+      virtual const TData & get_value() const { return value_; }
+
+      TData value_;
+   };
+
+    //----------------------------------------------------------------
+    // Ref
+    //
+    struct Ref : IRef
+    {
+      Ref(const TDataProperties & ref, Property prop, bool cacheable = true):
+        ref_(ref),
+        prop_(prop),
+        cacheable_(cacheable),
+        visited_(false),
+        cached_(false)
+      {
+        YAE_ASSERT(prop != kPropertyUnspecified);
+      }
+
+      virtual const TDataProperties * get_reference() const { return &ref_; }
+      virtual Property get_property() const { return prop_; }
+
+      virtual bool is_relative() const { return true; }
+      virtual bool is_cached() const { return cached_; }
+      virtual bool is_cacheable() const { return cacheable_; }
+
+      virtual void set_cacheable(bool cacheable)
+      {
+        cacheable_ = cacheable;
+      }
+
+      // caching is used to avoid re-calculating the same property:
+      virtual void uncache() const
+      {
+        visited_ = false;
+        cached_ = false;
+      }
+
+      // cache an externally computed value:
+      virtual void cache(const TData & value) const
+      {
+        cached_ = cacheable_;
+        value_ = value;
+      }
+
+      virtual const TData & get_value() const
+      {
+        if (cached_)
+        {
+          return value_;
+        }
+
+        if (visited_)
+        {
+          // cycle detected:
+          YAE_ASSERT(false);
+          throw std::runtime_error("property reference cycle detected");
+        }
+
+        // NOTE: reference cycles can not be detected
+        //       for items with disabled caching:
+        visited_ = cacheable_;
+
+        TData v;
+        ref_.get(prop_, v);
+        value_ = v;
+
+        cached_ = cacheable_;
+        return value_;
+      }
+
+      // reference properties:
+      const TDataProperties & ref_;
+      const Property prop_;
+      bool cacheable_;
+
+      // reference state:
+      mutable bool visited_;
+      mutable bool cached_;
+      mutable TData value_;
+    };
+
+    //----------------------------------------------------------------
+    // DataRef
+    //
+    DataRef(const TData & value):
+      private_(new Const(value))
+    {}
 
     //----------------------------------------------------------------
     // DataRef
     //
     DataRef(const TDataProperties * reference = NULL,
             Property property = kPropertyUnspecified,
-            const TData & defaultValue = TData(),
-            bool cachingEnabled = true):
-      ref_(reference),
-      property_(property),
-      cachingEnabled_(cachingEnabled),
-      visited_(false),
-      cached_(false),
-      value_(defaultValue)
-    {}
-
-    //----------------------------------------------------------------
-    // DataRef
-    //
-    DataRef(const TData & constantValue):
-      ref_(NULL),
-      property_(kPropertyConstant),
-      cachingEnabled_(true),
-      visited_(false),
-      cached_(false),
-      value_(constantValue)
-    {}
+            bool cacheable = true)
+    {
+      if (reference)
+      {
+        private_.reset(new Ref(*reference, property, cacheable));
+      }
+    }
 
     inline void reset()
-    {
-      ref_ = NULL;
-      property_ = kPropertyUnspecified;
-      cachingEnabled_ = true;
-    }
+    { private_.reset(); }
 
     // constructor helpers:
     inline static DataRef<TData>
@@ -92,70 +206,53 @@ namespace yae
 
     // check whether this property reference is valid:
     inline bool isValid() const
-    { return property_ != kPropertyUnspecified; }
+    { return private_; }
+
+    // accessor to reference source, if any:
+    inline const TDataProperties * ref() const
+    { return private_ ? private_->get_reference() : NULL; }
 
     // check whether this reference is relative:
     inline bool isRelative() const
-    { return ref_ != NULL; }
+    { return private_ && private_->is_relative(); }
+
+    inline bool isConstant() const
+    { return private_ && private_->get_property() == kPropertyConstant; }
 
     inline bool isCached() const
-    { return cached_; }
+    { return private_ && private_->is_cached(); }
 
     // caching is used to avoid re-calculating the same property:
-    void uncache() const
-    {
-      visited_ = false;
-      cached_ = false;
-    }
+    inline void uncache() const
+    { if (private_) private_->uncache(); }
 
     // cache an externally computed value:
-    void cache(const TData & value) const
+    inline void cache(const TData & value) const
+    { if (private_) private_->cache(value); }
+
+    inline bool isCacheable() const
+    { return private_ && private_->is_cacheable(); }
+
+    inline void enableCaching()
     {
-      cached_ = cachingEnabled_;
-      value_ = value;
+      YAE_ASSERT(private_);
+      private_->set_cacheable(true);
     }
 
-    const TData & get() const
+    inline void disableCaching()
     {
-      if (cached_)
-      {
-        return value_;
-      }
-
-      if (!ref_)
-      {
-        YAE_ASSERT(property_ == kPropertyConstant);
-      }
-      else if (visited_)
-      {
-        // cycle detected:
-        YAE_ASSERT(false);
-        throw std::runtime_error("property reference cycle detected");
-      }
-      else
-      {
-        // NOTE: reference cycles can not be detected
-        //       for items with disabled caching:
-        visited_ = cachingEnabled_;
-
-        TData v;
-        ref_->get(property_, v);
-        value_ = v;
-      }
-
-      cached_ = cachingEnabled_;
-      return value_;
+      YAE_ASSERT(private_);
+      private_->set_cacheable(false);
     }
 
-    // reference properties:
-    const TDataProperties * ref_;
-    Property property_;
-    bool cachingEnabled_;
+    inline const TData & get() const
+    {
+      YAE_ASSERT(private_);
+      return private_->get_value();
+    }
 
-  protected:
-    mutable bool visited_;
-    mutable bool cached_;
-    mutable TData value_;
+    // implementation details:
+    yae::shared_ptr<TDataRef::IRef> private_;
   };
 
   //----------------------------------------------------------------
@@ -167,55 +264,125 @@ namespace yae
     typedef IProperties<double> TDataProperties;
 
     //----------------------------------------------------------------
+    // Affine
+    //
+    struct Affine : public TDataRef::Ref
+    {
+      Affine(const TDataProperties & ref,
+             Property prop,
+             double scale,
+             double translate,
+             bool cacheable = true):
+        TDataRef::Ref(ref, prop, cacheable),
+        scale_(scale),
+        translate_(translate)
+      {}
+
+      virtual const double & get_value() const
+      {
+        if (!TDataRef::Ref::cached_)
+        {
+          double v = TDataRef::Ref::get_value();
+          v *= scale_;
+          v += translate_;
+          TDataRef::Ref::cache(v);
+        }
+
+        return TDataRef::Ref::value_;
+      }
+
+      double scale_;
+      double translate_;
+    };
+
+    //----------------------------------------------------------------
     // ItemRef
     //
     ItemRef(const TDataProperties * reference = NULL,
             Property property = kPropertyUnspecified,
             double scale = 1.0,
             double translate = 0.0,
-            const double & defaultValue = 0.0,
-            bool cachingEnabled = true):
-      TDataRef(reference, property, defaultValue, cachingEnabled),
-      scale_(scale),
-      translate_(translate)
+            bool cacheable = true)
+    {
+      if (reference)
+      {
+        private_.reset(new Affine(*reference,
+                                  property,
+                                  scale,
+                                  translate,
+                                  cacheable));
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ItemRef
+    //
+    ItemRef(const double & value):
+      TDataRef(value)
     {}
 
     //----------------------------------------------------------------
     // ItemRef
     //
-    ItemRef(const double & constantValue):
-      TDataRef(constantValue),
-      scale_(1.0),
-      translate_(0.0)
+    ItemRef(const ItemRef & other):
+      TDataRef(other)
     {}
 
     //----------------------------------------------------------------
     // ItemRef
     //
     ItemRef(const TDataRef & dataRef,
-            double scale = 1.0,
+            double scale,
             double translate = 0.0,
-            bool cachingEnabled = true):
-      TDataRef(dataRef),
-      scale_(scale),
-      translate_(translate)
+            bool cacheable = true)
     {
-      cachingEnabled_ = cachingEnabled;
+      if (!dataRef.isValid())
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("reference to an invalid data reference");
+      }
 
-      if (property_ == kPropertyConstant)
+      // shortcut:
+      const IRef & other = *(dataRef.private_);
+
+      if (other.get_property() == kPropertyConstant)
       {
         // pre-evaluate constant values:
-        value_ = value_ * scale + translate;
-        scale_ = 1.0;
-        translate_ = 0.0;
+        double value = dataRef.get() * scale + translate;
+        private_.reset(new TDataRef::Const(value));
       }
-    }
+      else
+      {
+        double s = scale;
+        double t = translate;
 
-    inline void reset()
-    {
-      TDataRef::reset();
-      scale_ = 1.0;
-      translate_ = 0.0;
+        yae::shared_ptr<Affine, TDataRef::IRef> affine =
+          dataRef.private_.cast<Affine>();
+
+        if (affine)
+        {
+          double s_other = affine->scale_;
+          double t_other = affine->translate_;
+
+          s = scale * s_other;
+          t = scale * t_other + translate;
+        }
+
+        if (s == 1.0 && t == 0.0)
+        {
+          private_.reset(new TDataRef::Ref(*other.get_reference(),
+                                           other.get_property(),
+                                           cacheable));
+        }
+        else
+        {
+          private_.reset(new Affine(*other.get_reference(),
+                                    other.get_property(),
+                                    s,
+                                    t,
+                                    cacheable));
+        }
+      }
     }
 
     // constructor helpers:
@@ -231,48 +398,20 @@ namespace yae
                 Property prop,
                 double s = 1.0,
                 double t = 0.0)
-    { return ItemRef(&ref, prop, s, t, 0.0, false); }
+    { return ItemRef(&ref, prop, s, t, false); }
 
     inline static ItemRef
     reference(const TDataRef & dataRef,
               double s = 1.0,
               double t = 0.0,
-              bool cachingEnabled = true)
-    { return ItemRef(dataRef, s, t, cachingEnabled); }
-
-    inline static ItemRef
-    reference(const ItemRef & dataRef,
-              double s = 1.0,
-              double t = 0.0,
-              bool cachingEnabled = true)
-    {
-      return ItemRef(dataRef,
-                     s * dataRef.scale_,
-                     s * dataRef.translate_ + t,
-                     cachingEnabled);
-    }
+              bool cacheable = true)
+    { return ItemRef(dataRef, s, t, cacheable); }
 
     inline static ItemRef
     uncacheable(const TDataRef & dataRef,
                 double s = 1.0,
                 double t = 0.0)
-    {
-      ItemRef r(dataRef, s, t);
-      r.cached_ = false;
-      r.cachingEnabled_ = false;
-      return r;
-    }
-
-    inline static ItemRef
-    uncacheable(const ItemRef & dataRef,
-                double s = 1.0,
-                double t = 0.0)
-    {
-      ItemRef r(dataRef, s * dataRef.scale_, s * dataRef.translate_ + t);
-      r.cached_ = false;
-      r.cachingEnabled_ = false;
-      return r;
-    }
+    { return ItemRef(dataRef, s, t, false); }
 
     inline static ItemRef
     constant(const double & t)
@@ -289,42 +428,6 @@ namespace yae
     inline static ItemRef
     offset(const TDataProperties & ref, Property prop, double t = 0.0)
     { return ItemRef(&ref, prop, 1.0, t); }
-
-    const double & get() const
-    {
-      if (TDataRef::cached_)
-      {
-        return TDataRef::value_;
-      }
-
-      if (!TDataRef::ref_)
-      {
-        YAE_ASSERT(TDataRef::property_ == kPropertyConstant);
-      }
-      else if (TDataRef::visited_)
-      {
-        // cycle detected:
-        YAE_ASSERT(false);
-        throw std::runtime_error("property reference cycle detected");
-      }
-      else
-      {
-        TDataRef::visited_ = cachingEnabled_;
-
-        double v;
-        ref_->get(TDataRef::property_, v);
-        v *= scale_;
-        v += translate_;
-        TDataRef::value_ = v;
-      }
-
-      TDataRef::cached_ = cachingEnabled_;
-      return TDataRef::value_;
-    }
-
-    // reference properties:
-    double scale_;
-    double translate_;
   };
 
   //----------------------------------------------------------------
@@ -361,52 +464,70 @@ namespace yae
     typedef IProperties<Color> TDataProperties;
 
     //----------------------------------------------------------------
+    // Affine
+    //
+    struct Affine : TDataRef::Ref
+    {
+      Affine(const TDataProperties & ref,
+             Property prop,
+             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0),
+             bool cacheable = true):
+        TDataRef::Ref(ref, prop, cacheable),
+        scale_(scale),
+        translate_(translate)
+      {}
+
+      virtual const Color & get_value() const
+      {
+        if (!TDataRef::Ref::cached_)
+        {
+          TVec4D v(TDataRef::Ref::get_value());
+          v *= scale_;
+          v += translate_;
+          v.clamp(0.0, 1.0);
+          TDataRef::Ref::cache(Color(v));
+        }
+
+        return TDataRef::Ref::value_;
+      }
+
+      TVec4D scale_;
+      TVec4D translate_;
+    };
+
+    //----------------------------------------------------------------
     // ColorRef
     //
     ColorRef(const TDataProperties * reference = NULL,
              Property property = kPropertyUnspecified,
              const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
              const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0),
-             const Color & defaultValue = Color()):
-      TDataRef(reference, property, defaultValue),
-      scale_(scale),
-      translate_(translate)
-    {}
-
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const Color & constantValue):
-      TDataRef(constantValue),
-      scale_(1.0, 1.0, 1.0, 1.0),
-      translate_(0.0, 0.0, 0.0, 0.0)
-    {}
-    /*
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const TDataRef & dataRef,
-             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
-             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0)):
-      TDataRef(dataRef),
-      scale_(scale),
-      translate_(translate)
-    {}
-    */
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const ColorRef & dataRef):
-      TDataRef(dataRef),
-      scale_(dataRef.scale_),
-      translate_(dataRef.translate_)
-    {}
-
-    inline void reset()
+             bool cacheable = true)
     {
-      ref_ = NULL;
-      property_ = kPropertyUnspecified;
+      if (reference)
+      {
+        private_.reset(new Affine(*reference,
+                                  property,
+                                  scale,
+                                  translate,
+                                  cacheable));
+      }
     }
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const Color & value):
+      TDataRef(value)
+    {}
+
+    //----------------------------------------------------------------
+    // ColorRef
+    //
+    ColorRef(const ColorRef & other):
+      TDataRef(other)
+    {}
 
     // constructor helpers:
     inline static ColorRef
@@ -437,45 +558,6 @@ namespace yae
     inline static ColorRef
     transparent(const TDataProperties & ref, Property prop, double sa = 0.0)
     { return ColorRef(&ref, prop, TVec4D(sa, 1.0, 1.0, 1.0)); }
-
-    const Color & get() const
-    {
-      if (TDataRef::cached_)
-      {
-        return TDataRef::value_;
-      }
-
-      if (!TDataRef::ref_)
-      {
-        YAE_ASSERT(TDataRef::property_ == kPropertyConstant);
-      }
-      else if (TDataRef::visited_)
-      {
-        // cycle detected:
-        YAE_ASSERT(false);
-        throw std::runtime_error("property reference cycle detected");
-      }
-      else
-      {
-        TDataRef::visited_ = cachingEnabled_;
-
-        Color color;
-        ref_->get(TDataRef::property_, color);
-
-        TVec4D v(color);
-        v *= scale_;
-        v += translate_;
-        v.clamp(0.0, 1.0);
-
-        TDataRef::value_ = Color(v);
-      }
-
-      TDataRef::cached_ = cachingEnabled_;
-      return TDataRef::value_;
-    }
-
-    TVec4D scale_;
-    TVec4D translate_;
   };
 
   //----------------------------------------------------------------
@@ -486,4 +568,4 @@ namespace yae
 }
 
 
-#endif // UAE_ITEM_REF_H_
+#endif // YAE_ITEM_REF_H_

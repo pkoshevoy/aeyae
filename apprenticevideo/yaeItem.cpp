@@ -1529,7 +1529,7 @@ namespace yae
     Item(id),
     expression_(Item::addExpr(new Transition(spinup, steady, spindown))),
     transition_(*(dynamic_cast<Transition *>
-                  (const_cast<IProperties<double> *>(expression_.ref_))))
+                  (const_cast<IProperties<double> *>(expression_.ref()))))
   {
     override_ = expression_;
   }
@@ -1549,7 +1549,7 @@ namespace yae
   bool
   TransitionItem::is_paused() const
   {
-    bool paused = (override_.ref_ != expression_.ref_);
+    bool paused = (override_.ref() != expression_.ref());
     return paused;
   }
 

@@ -984,7 +984,7 @@ namespace yae
     height_ = ItemRef::constant(0);
 
     dpi_ = addExpr(new ViewDpi(view));
-    dpi_.cachingEnabled_ = false;
+    dpi_.disableCaching();
     row_height_ = addExpr(new GetRowHeight(view));
 
     title_height_ = addExpr(new CalcTitleHeight(view, 50.0));

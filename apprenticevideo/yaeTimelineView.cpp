@@ -1167,7 +1167,7 @@ namespace yae
       ItemRef::scale(titleHeight, kPropertyExpression, 3.0);
     controls.visible_ = controls.
       addExpr(new ExposeControls(*this));
-    controls.visible_.cachingEnabled_ = false;
+    controls.visible_.disableCaching();
     mouseTrapForControls.onScroll_ = false;
     mouseTrapForControls.anchors_.fill(controls);
 

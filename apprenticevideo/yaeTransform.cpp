@@ -91,8 +91,8 @@ namespace yae
     Item::yContent_ = addExpr(new TransformedYContent(*this));
 
     // get rid of base implementation of xExtent and yExtent:
-    Item::expr_.remove_if(SameExpression(Item::xExtent_.ref_));
-    Item::expr_.remove_if(SameExpression(Item::yExtent_.ref_));
+    Item::expr_.remove_if(SameExpression(Item::xExtent_.ref()));
+    Item::expr_.remove_if(SameExpression(Item::yExtent_.ref()));
 
     Item::xExtent_ = Item::xContent_;
     Item::yExtent_ = Item::yContent_;

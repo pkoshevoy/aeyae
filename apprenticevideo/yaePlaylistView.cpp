@@ -682,7 +682,7 @@ namespace yae
       TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
 
     filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy));
-    filter.color_.cachingEnabled_ = false;
+    filter.color_.disableCaching();
 
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
@@ -716,7 +716,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyLeft, -5);
     rm.visible_ = BoolRef::reference(editProxy, kPropertyHasText);
-    rm.visible_.cachingEnabled_ = false;
+    rm.visible_.disableCaching();
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1145,7 +1145,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
-    rm.visible_.cachingEnabled_ = false;
+    rm.visible_.disableCaching();
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1240,13 +1240,13 @@ namespace yae
       (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
     thumbnail.visible_ = thumbnail.addExpr
       (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
-    thumbnail.visible_.cachingEnabled_ = false;
+    thumbnail.visible_.disableCaching();
 
     ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
     liveImage.anchors_.fill(thumbnail);
     liveImage.visible_ = liveImage.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
-    liveImage.visible_.cachingEnabled_ = false;
+    liveImage.visible_.disableCaching();
 
     Rectangle & badgeBg = cell.addNew<Rectangle>("badgeBg");
     Text & badge = cell.addNew<Text>("badge");
@@ -1310,7 +1310,7 @@ namespace yae
     playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
     playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -5);
     playing.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-    playing.visible_.cachingEnabled_ = false;
+    playing.visible_.disableCaching();
     playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
@@ -1318,7 +1318,7 @@ namespace yae
 
     playingBg.anchors_.inset(playing, -3, -1);
     playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-    playingBg.visible_.cachingEnabled_ = false;
+    playingBg.visible_.disableCaching();
     playingBg.color_ = ColorRef::reference(labelBg, kPropertyColor);
 
     rm.width_ = ItemRef::reference(playing, kPropertyHeight);
@@ -1326,7 +1326,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
-    rm.visible_.cachingEnabled_ = false;
+    rm.visible_.disableCaching();
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
@@ -1344,7 +1344,7 @@ namespace yae
     underline.height_ = ItemRef::constant(2);
     underline.color_ = style.cursor_;
     underline.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
-    underline.visible_.cachingEnabled_ = false;
+    underline.visible_.disableCaching();
 
     Rectangle & cur = cell.addNew<Rectangle>("current");
     cur.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 3);
@@ -1354,7 +1354,7 @@ namespace yae
     cur.color_ = style.underline_;
     cur.visible_ = cur.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
-    cur.visible_.cachingEnabled_ = false;
+    cur.visible_.disableCaching();
 
     RemoveModelItems & maRmItem = xbutton.
       add(new RemoveModelItems("ma_remove_item"));
@@ -1452,7 +1452,7 @@ namespace yae
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
-    rm.visible_.cachingEnabled_ = false;
+    rm.visible_.disableCaching();
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
@@ -1592,7 +1592,7 @@ namespace yae
     playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
     playing.visible_ = playing.addExpr
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
-    playing.visible_.cachingEnabled_ = false;
+    playing.visible_.disableCaching();
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
 
@@ -1601,7 +1601,7 @@ namespace yae
     rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
     rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
-    rm.visible_.cachingEnabled_ = false;
+    rm.visible_.disableCaching();
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
@@ -1620,7 +1620,7 @@ namespace yae
     cur.color_ = style.underline_;
     cur.visible_ = cur.addExpr
       (new IsCurrentNotSelected(model, index));
-    cur.visible_.cachingEnabled_ = false;
+    cur.visible_.disableCaching();
 
     RemoveModelItems & maRmItem = xbutton.
       add(new RemoveModelItems("ma_remove_item"));
