@@ -735,7 +735,7 @@ namespace yae
     std::list<TPropertiesBasePtr> expr_;
 
     // storage of event observers associated with this Item:
-    TEventObservers eo_;
+    yae::shared_ptr<TEventObservers> eo_;
 
     // 1D bounding segments of this items content:
     SegmentRef xContent_;
