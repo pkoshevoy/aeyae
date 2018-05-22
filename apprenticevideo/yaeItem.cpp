@@ -1483,8 +1483,13 @@ namespace yae
   void
   Item::notifyObservers(Item::Event e) const
   {
-    TEventObservers::const_iterator found = eo_.find(e);
-    if (found == eo_.end())
+    if (!eo_)
+    {
+      return;
+    }
+
+    TEventObservers::const_iterator found = eo_->find(e);
+    if (found == eo_->end())
     {
       return;
     }

@@ -688,7 +688,15 @@ namespace yae
 
     // add an event observer:
     inline void addObserver(Event e, const TObserverPtr & o)
-    { eo_[e].insert(o); }
+    {
+      if (!eo_)
+      {
+        eo_.reset(new TEventObservers());
+      }
+
+      TEventObservers & observers = *eo_;
+      observers[e].insert(o);
+    }
 
     // helper:
     void notifyObservers(Event e) const;
