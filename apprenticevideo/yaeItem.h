@@ -177,15 +177,66 @@ namespace yae
   //
   struct Margins
   {
-    Margins();
+    struct Refs
+    {
+      Refs();
 
-    void uncache();
-    void set(const ItemRef & ref);
+      void set(const ItemRef & ref);
+      void uncache();
 
-    ItemRef left_;
-    ItemRef right_;
-    ItemRef top_;
-    ItemRef bottom_;
+      ItemRef left_;
+      ItemRef right_;
+      ItemRef top_;
+      ItemRef bottom_;
+    };
+
+    inline void set(const ItemRef & ref)
+    { get_refs().set(ref); }
+
+    inline void uncache()
+    { if (refs_) refs_->uncache(); }
+
+    inline void set_left(const ItemRef & ref)
+    { get_refs().left_ = ref; }
+
+    inline void set_right(const ItemRef & ref)
+    { get_refs().right_ = ref; }
+
+    inline void set_top(const ItemRef & ref)
+    { get_refs().top_ = ref; }
+
+    inline void set_bottom(const ItemRef & ref)
+    { get_refs().bottom_ = ref; }
+
+    inline const ItemRef & get_left() const
+    { return get_refs().left_; }
+
+    inline const ItemRef & get_right() const
+    { return get_refs().right_; }
+
+    inline const ItemRef & get_top() const
+    { return get_refs().top_; }
+
+    inline const ItemRef & get_bottom() const
+    { return get_refs().bottom_; }
+
+    inline double left() const
+    { return refs_ ? refs_->left_.get() : 0.0; }
+
+    inline double right() const
+    { return refs_ ? refs_->right_.get() : 0.0; }
+
+    inline double top() const
+    { return refs_ ? refs_->top_.get() : 0.0; }
+
+    inline double bottom() const
+    { return refs_ ? refs_->bottom_.get() : 0.0; }
+
+  protected:
+    // create Refs on-demand:
+    Refs & get_refs() const;
+
+    mutable yae::optional<Refs> refs_;
   };
 
 
@@ -735,7 +786,7 @@ namespace yae
     std::list<TPropertiesBasePtr> expr_;
 
     // storage of event observers associated with this Item:
-    yae::shared_ptr<TEventObservers> eo_;
+    yae::optional<TEventObservers> eo_;
 
     // 1D bounding segments of this items content:
     SegmentRef xContent_;

@@ -559,10 +559,10 @@ namespace yae
     Text & done = donut.addNew<Text>("done");
     done.anchors_.right_ = ItemRef::offset(d22, kPropertyLeft);
     done.anchors_.bottom_ = ItemRef::offset(d22, kPropertyTop);
-    done.margins_.right_ =
-      ItemRef::reference(titleHeight, kPropertyExpression, 2.0);
-    done.margins_.bottom_ =
-      ItemRef::reference(titleHeight, kPropertyExpression, 1.0);
+    done.margins_.
+      set_right(ItemRef::reference(titleHeight, kPropertyExpression, 2.0));
+    done.margins_.
+      set_bottom(ItemRef::reference(titleHeight, kPropertyExpression, 1.0));
     done.color_ = ColorRef::constant(Color(0x000000, 1.0));
     done.text_ = TVarRef::constant(QVariant(tr("Done")));
     done.font_ = style.font_small_;
@@ -574,12 +574,12 @@ namespace yae
                                                     Color(0xffffff, 1.0)));
     doneBg.colorBorder_ = ColorRef::constant(Color(0x000000, 1.0));
     doneBg.anchors_.fill(done);
-    doneBg.margins_.left_ =
-      ItemRef::scale(titleHeight, kPropertyExpression, -0.9);
-    doneBg.margins_.top_ =
-      ItemRef::scale(titleHeight, kPropertyExpression, -0.3);
-    doneBg.margins_.right_ = doneBg.margins_.left_;
-    doneBg.margins_.bottom_ = doneBg.margins_.top_;
+    doneBg.margins_.
+      set_left(ItemRef::scale(titleHeight, kPropertyExpression, -0.9));
+    doneBg.margins_.
+      set_top(ItemRef::scale(titleHeight, kPropertyExpression, -0.3));
+    doneBg.margins_.set_right(doneBg.margins_.get_left());
+    doneBg.margins_.set_bottom(doneBg.margins_.get_top());
     doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 3.0);
     doneBg.border_ = ItemRef::constant(1.0);
 

@@ -514,18 +514,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Margins::Margins
+  // Margins::Refs::Refs
   //
-  Margins::Margins()
+  Margins::Refs::Refs()
   {
     set(ItemRef::constant(0));
   }
 
   //----------------------------------------------------------------
-  // Margins::uncache
+  // Margins::Refs::set
   //
   void
-  Margins::uncache()
+  Margins::Refs::set(const ItemRef & ref)
+  {
+    left_ = ref;
+    right_ = ref;
+    top_ = ref;
+    bottom_ = ref;
+  }
+
+  //----------------------------------------------------------------
+  // Margins::Refs::uncache
+  //
+  void
+  Margins::Refs::uncache()
   {
     left_.uncache();
     right_.uncache();
@@ -534,15 +546,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Margins::set
+  // Margins::get_refs
   //
-  void
-  Margins::set(const ItemRef & ref)
+  Margins::Refs &
+  Margins::get_refs() const
   {
-    left_ = ref;
-    right_ = ref;
-    top_ = ref;
-    bottom_ = ref;
+    if (!refs_)
+    {
+      refs_.reset(new Refs());
+    }
+
+    return *refs_;
   }
 
 
@@ -829,19 +843,19 @@ namespace yae
     }
     else if (property == kPropertyMarginLeft)
     {
-      value = margins_.left_.get();
+      value = margins_.left();
     }
     else if (property == kPropertyMarginRight)
     {
-      value = margins_.right_.get();
+      value = margins_.right();
     }
     else if (property == kPropertyMarginTop)
     {
-      value = margins_.top_.get();
+      value = margins_.top();
     }
     else if (property == kPropertyMarginBottom)
     {
-      value = margins_.bottom_.get();
+      value = margins_.bottom();
     }
     else
     {
@@ -1007,8 +1021,8 @@ namespace yae
     {
       double l = anchors_.left_.get();
       double r = anchors_.right_.get();
-      l += margins_.left_.get();
-      r -= margins_.right_.get();
+      l += margins_.left();
+      r -= margins_.right();
 
       double w = r - l;
       width_.cache(w);
@@ -1059,8 +1073,8 @@ namespace yae
     {
       double t = anchors_.top_.get();
       double b = anchors_.bottom_.get();
-      t += margins_.top_.get();
-      b -= margins_.bottom_.get();
+      t += margins_.top();
+      b -= margins_.bottom();
 
       double h = b - t;
       height_.cache(h);
@@ -1082,7 +1096,7 @@ namespace yae
     if (anchors_.left_.isValid())
     {
       double l = anchors_.left_.get();
-      l += margins_.left_.get();
+      l += margins_.left();
       return l;
     }
 
@@ -1090,7 +1104,7 @@ namespace yae
     {
       double w = width();
       double r = anchors_.right_.get();
-      double l = (r - margins_.right_.get()) - w;
+      double l = (r - margins_.right()) - w;
       return l;
     }
 
@@ -1102,7 +1116,7 @@ namespace yae
       return l;
     }
 
-    return margins_.left_.get();
+    return margins_.left();
   }
 
   //----------------------------------------------------------------
@@ -1114,7 +1128,7 @@ namespace yae
     if (anchors_.right_.isValid())
     {
       double r = anchors_.right_.get();
-      r -= margins_.right_.get();
+      r -= margins_.right();
       return r;
     }
 
@@ -1133,7 +1147,7 @@ namespace yae
     if (anchors_.top_.isValid())
     {
       double t = anchors_.top_.get();
-      t += margins_.top_.get();
+      t += margins_.top();
       return t;
     }
 
@@ -1141,7 +1155,7 @@ namespace yae
     {
       double h = height();
       double b = anchors_.bottom_.get();
-      double t = (b - margins_.bottom_.get()) - h;
+      double t = (b - margins_.bottom()) - h;
       return t;
     }
 
@@ -1153,7 +1167,7 @@ namespace yae
       return t;
     }
 
-    return margins_.top_.get();
+    return margins_.top();
   }
 
   //----------------------------------------------------------------
@@ -1165,7 +1179,7 @@ namespace yae
     if (anchors_.bottom_.isValid())
     {
       double b = anchors_.bottom_.get();
-      b -= margins_.bottom_.get();
+      b -= margins_.bottom();
       return b;
     }
 
@@ -1184,8 +1198,8 @@ namespace yae
     if (anchors_.hcenter_.isValid())
     {
       double hc = anchors_.hcenter_.get();
-      double ml = margins_.left_.get();
-      double mr = margins_.right_.get();
+      double ml = margins_.left();
+      double mr = margins_.right();
       double c = hc + ml - mr;
       return c;
     }
@@ -1205,8 +1219,8 @@ namespace yae
     if (anchors_.vcenter_.isValid())
     {
       double vc = anchors_.vcenter_.get();
-      double mt = margins_.top_.get();
-      double mb = margins_.bottom_.get();
+      double mt = margins_.top();
+      double mb = margins_.bottom();
       double c = vc + mt - mb;
       return c;
     }

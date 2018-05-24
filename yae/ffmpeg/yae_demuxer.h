@@ -637,7 +637,7 @@ namespace yae
   //
   struct YAE_API SerialDemuxer : DemuxerInterface
   {
-    SerialDemuxer() {}
+    SerialDemuxer();
 
     // deep copy:
     SerialDemuxer(const SerialDemuxer & d);

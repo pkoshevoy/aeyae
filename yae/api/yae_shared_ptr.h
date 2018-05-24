@@ -523,6 +523,202 @@ namespace yae
       return cast_ptr;
     }
   };
+
+
+  //----------------------------------------------------------------
+  // default_copier
+  //
+  struct default_copier
+  {
+    template <typename TData>
+    inline static
+    TData * copy(const TData * src)
+    {
+      return src ? new TData(*src) : NULL;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // optional
+  //
+  template <typename TData,
+            typename TBase = TData,
+            typename TCopier = default_copier,
+            typename TDeallocator = default_deallocator>
+  class optional
+  {
+    template <typename TCast,
+              typename TCastBase,
+              typename TCastCopier,
+              typename TCastDeallocator> friend class optional;
+
+    TBase * ptr_;
+
+  public:
+    typedef TBase base_type;
+    typedef TData element_type;
+    typedef TDeallocator deallocator_type;
+    typedef optional<TData, TBase, TDeallocator> optional_type;
+
+    optional():
+      ptr_(NULL)
+    {}
+
+    explicit optional(TData * data_ptr):
+      ptr_(data_ptr)
+    {}
+
+    optional(const TData & data):
+      ptr_(TCopier::copy(&data))
+    {}
+
+    optional(const optional & other):
+      ptr_(TCopier::copy(other.ptr_))
+    {}
+
+#if __cplusplus >= 201103L
+    optional(optional&& other):
+      ptr_(NULL)
+    {
+      this->swap(other);
+    }
+#endif
+
+    template <typename TFrom>
+    optional(const optional<TFrom, TBase, TCopier, TDeallocator> & other):
+      ptr_(TCopier::copy(other.cast<TData>()))
+    {}
+
+    ~optional()
+    {
+      TDeallocator::destroy(ptr_);
+    }
+
+    optional & operator = (const optional & other) YAE_NOEXCEPT
+    {
+      if (ptr_ != other.ptr_)
+      {
+        TDeallocator::destroy(ptr_);
+        ptr_ = TCopier::copy(other.ptr_);
+      }
+
+      return (*this);
+    }
+
+    template <typename TFrom>
+    optional & operator = (const optional<TFrom, TBase, TCopier, TDeallocator> &
+                           other) YAE_NOEXCEPT
+    {
+      if (ptr_ != other.ptr_)
+      {
+        TDeallocator::destroy(ptr_);
+        ptr_ = TCopier::copy(other.cast<TData>());
+      }
+
+      return *this;
+    }
+
+    inline operator bool() const YAE_NOEXCEPT
+    { return ptr_; }
+
+    inline operator const void * () const YAE_NOEXCEPT
+    { return ptr_; }
+
+    inline void reset(TData * data_ptr = NULL)
+    { this->operator=(optional(data_ptr)); }
+
+    inline void reset(const TData & data)
+    { this->operator=(optional(data)); }
+
+    inline void swap(optional & other) YAE_NOEXCEPT
+    { std::swap(ptr_, other.ptr_); }
+
+    inline operator std::size_t () const YAE_NOEXCEPT
+    { return reinterpret_cast<std::size_t>(ptr_); }
+
+    inline bool operator == (std::size_t value) const YAE_NOEXCEPT
+    { return (ptr_ == reinterpret_cast<TData *>(value)); }
+
+    inline bool operator != (std::size_t value) const YAE_NOEXCEPT
+    { return (!operator == (value)); }
+
+    inline bool operator == (int value) const YAE_NOEXCEPT
+    { return (operator == (std::size_t(value))); }
+
+    inline bool operator != (int value) const YAE_NOEXCEPT
+    { return (!operator == (std::size_t(value))); }
+
+    template <typename TFrom>
+    inline bool
+    operator == (const optional<TFrom, TBase, TCopier, TDeallocator> &
+                 other) const YAE_NOEXCEPT
+    {
+      return (ptr_ && other.ptr_ ?
+              *get() == *other.get() :
+              ptr_ == other.ptr_);
+    }
+
+    template <typename TFrom>
+    inline bool
+    operator != (const optional<TFrom, TBase, TCopier, TDeallocator> &
+                 other) const YAE_NOEXCEPT
+    { return !(operator == (other)); }
+
+    template <typename TFrom>
+    inline bool
+    operator < (const optional<TFrom, TBase, TCopier, TDeallocator> &
+                other) const YAE_NOEXCEPT
+    {
+      return (ptr_ && other.ptr_ ?
+              *get() < *other.get() :
+              ptr_ < other.ptr_);
+    }
+
+    inline TData * get() const YAE_NOEXCEPT
+    { return static_cast<TData *>(ptr_); }
+
+    inline operator TData * () const YAE_NOEXCEPT
+    { return get(); }
+
+    inline operator unsigned char * () const YAE_NOEXCEPT
+    { return reinterpret_cast<unsigned char *>(get()); }
+
+    inline TData * operator -> () const YAE_NOEXCEPT
+    { return get(); }
+
+    inline TData & operator * () const YAE_NOEXCEPT
+    { return *get(); }
+
+    // shared pointer dynamic cast method:
+    template <typename TCast>
+    TCast * cast() const
+    {
+      TData * data = static_cast<TData *>(ptr_);
+      TCast * cast = dynamic_cast<TCast *>(data);
+      return cast;
+    }
+  };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  template <typename TChar,
+            typename TBasicOstreamTraits,
+            typename TData,
+            typename TBase,
+            typename TDeallocator>
+  std::basic_ostream<TChar, TBasicOstreamTraits> &
+  operator << (std::basic_ostream<TChar, TBasicOstreamTraits> & os,
+               const optional<TData, TBase, TDeallocator> & value)
+  {
+    if (value)
+    {
+      os << *value;
+    }
+
+    return os;
+  }
+
 }
 
 

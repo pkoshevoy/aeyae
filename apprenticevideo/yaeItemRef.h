@@ -55,6 +55,15 @@ namespace yae
     {
       virtual ~IRef() {}
 
+      struct Copy
+      {
+        template <typename TRef>
+        inline static TRef * copy(const TRef * ref)
+        { return ref ? ref->copy() : NULL; }
+      };
+
+      virtual IRef * copy() const = 0;
+
       virtual const TDataProperties * get_reference() const = 0;
       virtual Property get_property() const = 0;
 
@@ -75,6 +84,9 @@ namespace yae
       Const(const TData & value):
         value_(value)
       {}
+
+      virtual Const * copy() const
+      { return new Const(*this); }
 
       virtual const TDataProperties * get_reference() const { return NULL; }
       virtual Property get_property() const { return kPropertyConstant; }
@@ -104,6 +116,9 @@ namespace yae
       {
         YAE_ASSERT(prop != kPropertyUnspecified);
       }
+
+      virtual Ref * copy() const
+      { return new Ref(*this); }
 
       virtual const TDataProperties * get_reference() const { return &ref_; }
       virtual Property get_property() const { return prop_; }
@@ -252,7 +267,11 @@ namespace yae
     }
 
     // implementation details:
-    yae::shared_ptr<TDataRef::IRef> private_;
+    typedef
+    yae::optional<TDataRef::IRef, TDataRef::IRef, typename TDataRef::IRef::Copy>
+    TOptionalRef;
+
+    TOptionalRef private_;
   };
 
   //----------------------------------------------------------------
@@ -277,6 +296,9 @@ namespace yae
         scale_(scale),
         translate_(translate)
       {}
+
+      virtual Affine * copy() const
+      { return new Affine(*this); }
 
       virtual const double & get_value() const
       {
@@ -356,9 +378,7 @@ namespace yae
         double s = scale;
         double t = translate;
 
-        yae::shared_ptr<Affine, TDataRef::IRef> affine =
-          dataRef.private_.cast<Affine>();
-
+        Affine * affine = dataRef.private_.cast<Affine>();
         if (affine)
         {
           double s_other = affine->scale_;
@@ -477,6 +497,9 @@ namespace yae
         scale_(scale),
         translate_(translate)
       {}
+
+      virtual Affine * copy() const
+      { return new Affine(*this); }
 
       virtual const Color & get_value() const
       {

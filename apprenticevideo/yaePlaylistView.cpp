@@ -617,7 +617,7 @@ namespace yae
     filter.anchors_.bottom_.reset();
     filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
     filter.radius_ = ItemRef::scale(filter, kPropertyHeight, 0.1);
-    filter.margins_.left_ = ItemRef::offset(filter, kPropertyHeight, -4);
+    filter.margins_.set_left(ItemRef::offset(filter, kPropertyHeight, -4));
 
     Item & icon = filter.addNew<Item>("filter_icon");
     {
@@ -687,8 +687,8 @@ namespace yae
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
     text.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
-    text.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.5);
-    text.margins_.bottom_ = text.addExpr(new GetFontDescent(text), -0.25);
+    text.margins_.set_left(ItemRef::scale(icon, kPropertyWidth, 0.5));
+    text.margins_.set_bottom(text.addExpr(new GetFontDescent(text), -0.25));
     text.visible_ = text.addExpr(new ShowWhenFocused(editProxy, false));
     text.elide_ = Qt::ElideLeft;
     text.color_ = colorTextFg;
@@ -696,7 +696,7 @@ namespace yae
     text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
 
     edit.anchors_.fill(text);
-    edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
+    edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
     edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
     edit.background_ = colorEditBg;
     edit.color_ = colorFocusFg;
@@ -732,7 +732,7 @@ namespace yae
     Item & sortAndOrder = item.addNew<Item>("sort_and_order");
     sortAndOrder.anchors_.top_ = ItemRef::reference(filter, kPropertyBottom);
     sortAndOrder.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
-    sortAndOrder.margins_.left_ = ItemRef::scale(icon, kPropertyWidth, 0.25);
+    sortAndOrder.margins_.set_left(ItemRef::scale(icon, kPropertyWidth, 0.25));
 
     Rectangle & ulName = sortAndOrder.addNew<Rectangle>("underline_name");
     Rectangle & ulTime = sortAndOrder.addNew<Rectangle>("underline_time");
@@ -901,8 +901,8 @@ namespace yae
     Text & footNote = footer.addNew<Text>("footNote");
     footNote.anchors_.top_ = ItemRef::reference(footer, kPropertyTop);
     footNote.anchors_.right_ = ItemRef::reference(footer, kPropertyRight);
-    footNote.margins_.top_ = ItemRef::reference(fontSize, 0.5 * kDpiScale);
-    footNote.margins_.right_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
+    footNote.margins_.set_top(ItemRef::reference(fontSize, 0.5 * kDpiScale));
+    footNote.margins_.set_right(ItemRef::reference(fontSize, 0.8 * kDpiScale));
 
     footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
     footNote.font_ = smallFont;
@@ -1690,7 +1690,7 @@ namespace yae
     sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
     sview.anchors_.top_ = ItemRef::reference(filterItem, kPropertyBottom);
     sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
-    sview.margins_.top_ = ItemRef::scale(filterItem, kPropertyHeight, -0.45);
+    sview.margins_.set_top(ItemRef::scale(filterItem, kPropertyHeight, -0.45));
 
     Item & sviewContent = *(sview.content_);
     sviewContent.anchors_.left_ = ItemRef::constant(0.0);

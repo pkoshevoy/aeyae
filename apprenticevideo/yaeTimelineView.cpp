@@ -786,9 +786,10 @@ namespace yae
     timeline.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     timeline.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
-    timeline.margins_.left_ =
-      ItemRef::scale(titleHeight, kPropertyExpression, 0.5);
-    timeline.margins_.right_ = timeline.margins_.left_;
+    timeline.margins_.set_left(ItemRef::scale(titleHeight,
+                                              kPropertyExpression,
+                                              0.5));
+    timeline.margins_.set_right(timeline.margins_.get_left());
     timeline.height_ = timeline.addExpr(new OddRoundUp(container,
                                                        kPropertyHeight,
                                                        0.22222222, 1));
@@ -955,8 +956,8 @@ namespace yae
     playheadFocus.bgOnFocus_ = colorFocusBg;
     playheadAux.anchors_.left_ =
       ItemRef::offset(timeline, kPropertyLeft, 3);
-    playheadAux.margins_.left_ =
-      ItemRef::reference(container, kPropertyHeight);
+    playheadAux.margins_.
+      set_left(ItemRef::reference(container, kPropertyHeight));
     playheadAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     playheadAux.visible_ =
@@ -973,8 +974,8 @@ namespace yae
 
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);
-    durationAux.margins_.right_ =
-      ItemRef::reference(container, kPropertyHeight);
+    durationAux.margins_.
+      set_right(ItemRef::reference(container, kPropertyHeight));
     durationAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     durationAux.color_ = colorTextFg;
@@ -986,8 +987,8 @@ namespace yae
     durationAuxBg.color_ = colorTextBg;
 
     playheadEdit.anchors_.fill(playheadAux);
-    playheadEdit.margins_.left_ =
-      ItemRef::scale(playheadEdit, kPropertyCursorWidth, -1.0);
+    playheadEdit.margins_.
+      set_left(ItemRef::scale(playheadEdit, kPropertyCursorWidth, -1.0));
     playheadEdit.visible_ =
       playheadEdit.addExpr(new ShowWhenFocused(playheadFocus, true));
     playheadEdit.color_ = colorFocusFg;
@@ -1015,8 +1016,8 @@ namespace yae
       playbackBtn.height_ =
         ItemRef::reference(playheadAuxBg, kPropertyHeight);
 
-      playbackBtn.margins_.left_ = timeline.margins_.left_;
-      playbackBtn.margins_.right_ = timeline.margins_.left_;
+      playbackBtn.margins_.set_left(timeline.margins_.get_left());
+      playbackBtn.margins_.set_right(timeline.margins_.get_left());
 
       Item & square = playbackBtn.addNew<Item>("square");
       square.anchors_.vcenter_ = ItemRef::reference(playbackBtn,
@@ -1057,8 +1058,8 @@ namespace yae
 
       fullscreenBtn.height_ = playbackBtn.height_;
 
-      fullscreenBtn.margins_.left_ = timeline.margins_.left_;
-      fullscreenBtn.margins_.right_ = timeline.margins_.left_;
+      fullscreenBtn.margins_.set_left(timeline.margins_.get_left());
+      fullscreenBtn.margins_.set_right(timeline.margins_.get_left());
 
       Item & square = fullscreenBtn.addNew<Item>("square");
       square.anchors_.vcenter_ = ItemRef::reference(fullscreenBtn,
@@ -1190,8 +1191,8 @@ namespace yae
       bigPlaybackButton.anchors_.left_ =
         ItemRef::reference(controls, kPropertyLeft);
 
-      bigPlaybackButton.margins_.left_ =
-        ItemRef::scale(controls, kPropertyWidth, 0.5 / cells);
+      bigPlaybackButton.margins_.
+        set_left(ItemRef::scale(controls, kPropertyWidth, 0.5 / cells));
 
       bigPlaybackButton.width_ = ItemRef::reference(controls, kPropertyHeight);
       bigPlaybackButton.height_ = bigPlaybackButton.width_;

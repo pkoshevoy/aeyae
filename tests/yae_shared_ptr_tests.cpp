@@ -234,3 +234,95 @@ BOOST_AUTO_TEST_CASE(yae_weak_ptr)
   node_set.clear();
   BOOST_CHECK(true);
 }
+
+
+namespace hypothetical
+{
+  struct Interface
+  {
+    virtual ~Interface() {}
+    virtual Interface * clone() const = 0;
+    virtual const char * name() const = 0;
+  };
+
+  struct Copier
+  {
+    template <typename TData>
+    inline static
+    TData * copy(const TData * src)
+    {
+      return src ? src->clone() : NULL;
+    }
+  };
+
+  struct Hello : Interface
+  {
+    Hello(const char * name = ""):
+      name_(name)
+    {}
+
+    virtual Hello * clone() const
+    { return new Hello(*this); }
+
+    virtual const char * name() const
+    { return name_.c_str(); }
+
+    inline bool operator == (const Hello & other) const
+    { return name_ == other.name_; }
+
+    inline bool operator < (const Hello & other) const
+    { return name_ < other.name_; }
+
+    std::string name_;
+  };
+
+  struct World : Interface
+  {
+    virtual World * clone() const
+    { return new World(*this); }
+
+    virtual const char * name() const
+    { return "World"; }
+  };
+
+  inline std::ostream & operator << (std::ostream & os, const Interface & b)
+  {
+    return (os << b.name());
+  }
+}
+
+BOOST_AUTO_TEST_CASE(yae_optional)
+{
+  typedef yae::optional<hypothetical::Interface,
+                        hypothetical::Interface,
+                        hypothetical::Copier> TBase;
+
+  typedef yae::optional<hypothetical::Hello,
+                        hypothetical::Interface,
+                        hypothetical::Copier> THello;
+
+  typedef yae::optional<hypothetical::World,
+                        hypothetical::Interface,
+                        hypothetical::Copier> TWorld;
+
+  TBase b;
+  b.reset(hypothetical::Hello("hello"));
+
+  THello hb = b;
+  THello hh = hb;
+  BOOST_CHECK_EQUAL(hb, hh);
+
+  TWorld w;
+  w.reset(hypothetical::World());
+  BOOST_CHECK_NE(b.get(), w.get());
+
+  THello h2(hypothetical::Hello("hello"));
+  BOOST_CHECK_EQUAL(hh, h2);
+
+  TWorld w2 = h2;
+  BOOST_CHECK(!w2);
+
+  TBase b2(hypothetical::Hello("b2"));
+  THello h3(b2);
+  BOOST_CHECK_EQUAL(h3, THello(b2));
+}

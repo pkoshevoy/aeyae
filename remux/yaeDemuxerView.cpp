@@ -1048,10 +1048,10 @@ namespace yae
       (style_color_ref(view, &ItemViewStyle::fg_));
     cursor.border_ = ItemRef::constant(2);
 
-    cursor.margins_.top_ = ItemRef::constant(-1);
-    cursor.margins_.left_ = ItemRef::constant(-1);
-    cursor.margins_.bottom_ = ItemRef::constant(1);
-    cursor.margins_.right_ = ItemRef::constant(1);
+    cursor.margins_.set_top(ItemRef::constant(-1));
+    cursor.margins_.set_left(ItemRef::constant(-1));
+    cursor.margins_.set_bottom(ItemRef::constant(1));
+    cursor.margins_.set_right(ItemRef::constant(1));
   }
 
   //----------------------------------------------------------------
@@ -1221,7 +1221,7 @@ namespace yae
     text_bg.color_.disableCaching();
 
     edit.anchors_.fill(text);
-    edit.margins_.right_ = ItemRef::scale(edit, kPropertyCursorWidth, -1.0);
+    edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
     edit.visible_ = edit.addExpr(new ShowWhenFocused(focus, true));
 
     edit.color_ = style.fg_timecode_;
@@ -1428,7 +1428,8 @@ namespace yae
       layout_timeedit(model, view, style, root, index, &Timespan::t0_);
 
     t0.text_->anchors_.left_ = ItemRef::offset(root, kPropertyLeft, 3);
-    t0.text_->margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.1);
+    t0.text_->margins_.
+      set_left(ItemRef::reference(root, kPropertyHeight, 0.1));
     bool ok = view.connect(t0.edit_, SIGNAL(editingFinished(const QString &)),
                            &view.t0_, SLOT(map()));
     YAE_ASSERT(ok);
@@ -1438,7 +1439,8 @@ namespace yae
       layout_timeedit(model, view, style, root, index, &Timespan::t1_);
 
     t1.text_->anchors_.right_ = ItemRef::offset(root, kPropertyRight, -3);
-    t1.text_->margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+    t1.text_->margins_.
+      set_right(ItemRef::reference(root, kPropertyHeight, 0.5));
 
     ok = view.connect(t1.edit_, SIGNAL(editingFinished(const QString &)),
                       &view.t1_, SLOT(map()));
@@ -1449,8 +1451,8 @@ namespace yae
     timeline.anchors_.fill(root);
     timeline.anchors_.left_ = ItemRef::reference(*t0.bg_, kPropertyRight);
     timeline.anchors_.right_ = ItemRef::reference(*t1.bg_, kPropertyLeft);
-    timeline.margins_.left_ = ItemRef::reference(root, kPropertyHeight, 0.5);
-    timeline.margins_.right_ = ItemRef::reference(root, kPropertyHeight, 0.5);
+    timeline.margins_.set_left(ItemRef::reference(root, kPropertyHeight, 0.5));
+    timeline.margins_.set_right(timeline.margins_.get_left());
 
     Rectangle & ra = timeline.addNew<Rectangle>("ra");
     ra.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -1752,7 +1754,7 @@ namespace yae
       InputArea(id, true),
       lowerBound_(lowerBound),
       upperBound_(upperBound),
-      anchor_(anchorRef.private_),
+      anchor_(anchorRef.private_.cast<ItemRef::Affine>()),
       anchorPos_(0),
       offsetPos_(0)
     {
@@ -1799,8 +1801,7 @@ namespace yae
     ItemRef lowerBound_;
     ItemRef upperBound_;
 
-    typedef yae::shared_ptr<ItemRef::Affine, ItemRef::IRef> TAnchorRefPtr;
-    TAnchorRefPtr anchor_;
+    ItemRef::Affine * anchor_;
 
     double anchorPos_;
     double offsetPos_;
@@ -1835,9 +1836,9 @@ namespace yae
       (style_color_ref(view, &ItemViewStyle::bg_));
 
     btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
-    btn.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, -1);
     btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-    btn.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, -1);
+    btn.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, -1));
+    btn.margins_.set_right(btn.margins_.get_left());
 
     return txt;
   }
@@ -1857,8 +1858,8 @@ namespace yae
     underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
     underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
     underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
-    underline.margins_.top_ = underline.addExpr
-      (new GetFontDescent(txt), -1.0, 1);
+    underline.margins_.
+      set_top(underline.addExpr(new GetFontDescent(txt), -1.0, 1));
     underline.height_ = underline.addExpr
       (new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
   }
@@ -2023,7 +2024,7 @@ namespace yae
                                            layout_btn);
 
         txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
-        txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 2);
+        txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 2));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
 
         layout_text_underline(view, layout_btn, txt, underline);
@@ -2052,7 +2053,8 @@ namespace yae
                                            preview_btn);
 
         txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
-        txt.margins_.left_ = ItemRef::reference(controls, kPropertyHeight, 1.2);
+        txt.margins_.
+          set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
 
         layout_text_underline(view, preview_btn, txt, underline);
@@ -2076,7 +2078,8 @@ namespace yae
                                            export_btn);
 
         txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
-        txt.margins_.right_ = ItemRef::reference(controls, kPropertyHeight, 2);
+        txt.margins_.
+          set_right(ItemRef::reference(controls, kPropertyHeight, 2));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
         Item & ia = controls.add
@@ -2976,6 +2979,10 @@ namespace yae
       std::string model_json_str = model_->to_json_str();
       if (model_json_str_ != model_json_str)
       {
+        // remove cached layout data for serial demuxer:
+        gops_.erase(serial_demuxer_);
+        gops_row_lut_.erase(serial_demuxer_);
+
         model_json_str_ = model_json_str;
         output_clip_.reset();
         serial_demuxer_.reset();

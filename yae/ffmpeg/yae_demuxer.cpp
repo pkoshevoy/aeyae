@@ -2782,6 +2782,13 @@ namespace yae
   //----------------------------------------------------------------
   // SerialDemuxer::SerialDemuxer
   //
+  SerialDemuxer::SerialDemuxer():
+    curr_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::SerialDemuxer
+  //
   SerialDemuxer::SerialDemuxer(const SerialDemuxer & d):
     t0_(d.t0_),
     t1_(d.t1_),
