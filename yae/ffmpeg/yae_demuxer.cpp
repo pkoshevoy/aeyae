@@ -3053,12 +3053,12 @@ namespace yae
       }
 
       program_ = src_summary_.find_program(track_);
-      // origin_[program_] = tt.pts_[x.ia_];
-      origin_[program_] = tt.pts_[x.ka_];
-      trim_[track_] = Trim(tt.dts_[x.ka_],
-                            tt.dts_[x.kb_],
-                            tt.dts_[x.kc_],
-                            tt.dts_[x.ib_]);
+
+      origin_[program_] = tt.get_pts(x.ka_);
+      trim_[track_] = Trim(tt.get_dts(x.ka_),
+                           tt.get_dts(x.kb_),
+                           tt.get_dts(x.kc_),
+                           tt.get_dts(x.ib_));
       x_[track_] = x;
     }
 
@@ -3091,14 +3091,13 @@ namespace yae
 
         if (!yae::has(origin_, program))
         {
-          // origin_[program] = tt.pts_[x.ia_];
-          origin_[program] = tt.pts_[x.ka_];
+          origin_[program] = tt.get_pts(x.ka_);
         }
 
-        trim_[track_id] = Trim(tt.dts_[x.ka_],
-                               tt.dts_[x.kb_],
-                               tt.dts_[x.kc_],
-                               tt.dts_[x.ib_]);
+        trim_[track_id] = Trim(tt.get_dts(x.ka_),
+                               tt.get_dts(x.kb_),
+                               tt.get_dts(x.kc_),
+                               tt.get_dts(x.ib_));
         x_[track_id] = x;
       }
     }
@@ -3290,10 +3289,10 @@ namespace yae
         for (std::size_t k = x.ka_; k <= x.ib_; k++)
         {
           const bool keyframe = yae::has(tt.keyframes_, k);
-          const std::size_t size = tt.size_[k];
-          const TTime & dts = tt.dts_[k];
-          const TTime & pts = tt.pts_[k];
-          const TTime & dur = tt.dur_[k];
+          const std::size_t size = tt.get_size(k);
+          const TTime & dts = tt.get_dts(k);
+          const TTime & pts = tt.get_pts(k);
+          const TTime & dur = tt.get_dur(k);
 
           if (is_subtt_track && pts < origin)
           {

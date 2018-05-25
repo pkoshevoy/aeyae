@@ -377,6 +377,34 @@ namespace yae
                                 samples.ib_);
       }
 
+      inline TTime get_dts(std::size_t i) const
+      {
+        const std::size_t n = dts_.size();
+        YAE_ASSERT(n);
+        return i < n ? dts_[i] : n ? dts_.back() + dur_.back() : TTime();
+      }
+
+      inline TTime get_pts(std::size_t i) const
+      {
+        const std::size_t n = pts_.size();
+        YAE_ASSERT(n);
+        return i < n ? pts_[i] : n ? pts_.back() + dur_.back() : TTime();
+      }
+
+      inline TTime get_dur(std::size_t i) const
+      {
+        const std::size_t n = pts_.size();
+        YAE_ASSERT(n);
+        return i < n ? dur_[i] : TTime();
+      }
+
+      inline std::size_t get_size(std::size_t i) const
+      {
+        const std::size_t n = pts_.size();
+        YAE_ASSERT(n);
+        return i < n ? size_[i] : 0;
+      }
+
       // find sample index of the sample that spans a given DTS time point:
       bool find_sample_by_dts(const TTime & dts, std::size_t & index) const;
 
