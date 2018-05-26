@@ -32,7 +32,7 @@
 
 // aeyae:
 #include "../api/yae_api.h"
-
+#include "../utils/yae_benchmark.h"
 
 
 namespace yae
@@ -42,7 +42,14 @@ namespace yae
   //
   struct ref_count_base
   {
-    ref_count_base(): shared_(0), weak_(0) {}
+    ref_count_base():
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_(NULL),
+#endif
+      shared_(0),
+      weak_(0)
+    {}
+
     virtual ~ref_count_base() {}
 
 #if __cplusplus < 201103L
@@ -70,11 +77,25 @@ namespace yae
 #else
       YAE_ATOMIC_ADD(&shared_, 1);
 #endif
+
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
+      {
+        footprint_->capture_backtrace();
+      }
+#endif
     }
 
     inline void decrement_shared() YAE_NOEXCEPT
     {
       YAE_ASSERT(shared_ > 0);
+
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
+      {
+        footprint_->capture_backtrace();
+      }
+#endif
 
 #ifdef YAE_USE_BOOST_ATOMICS
       std::size_t num_shared = --shared_;
@@ -92,11 +113,25 @@ namespace yae
 #else
       YAE_ATOMIC_ADD(&weak_, 1);
 #endif
+
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
+      {
+        footprint_->capture_backtrace();
+      }
+#endif
     }
 
     inline void decrement_weak() YAE_NOEXCEPT
     {
       YAE_ASSERT(weak_ > 0);
+
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
+      {
+        footprint_->capture_backtrace();
+      }
+#endif
 
 #ifdef YAE_USE_BOOST_ATOMICS
       std::size_t num_weak = --weak_;
@@ -108,6 +143,10 @@ namespace yae
     }
 
     virtual void destroy_data_ptr() YAE_NOEXCEPT = 0;
+
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+    TFootprint * footprint_;
+#endif
 
   protected:
     inline void
@@ -148,7 +187,12 @@ namespace yae
     {}
 
     virtual ~ref_count()
-    { assert(!ptr_); }
+    {
+      assert(!ptr_);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      assert(!footprint_);
+#endif
+    }
 
 #if __cplusplus < 201103L
   private:
@@ -224,6 +268,10 @@ namespace yae
 
       virtual void destroy_data_ptr() YAE_NOEXCEPT YAE_OVERRIDE
       {
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+        delete ref_count<TBase>::footprint_;
+        ref_count<TBase>::footprint_ = NULL;
+#endif
         TData * data_ptr = static_cast<TData *>(ref_count<TBase>::ptr_);
         ref_count<TBase>::ptr_ = NULL;
         TDeallocator::destroy(data_ptr);
@@ -256,6 +304,9 @@ namespace yae
       ref_counter_(new ref_counter())
     {
       ref_counter_->ptr_ = static_cast<TBase *>(data_ptr);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      ref_counter_->footprint_ = data_ptr ? TFootprint::create<TData>() : NULL;
+#endif
       ref_counter_->increment_shared();
     }
 
@@ -552,6 +603,10 @@ namespace yae
               typename TCastCopier,
               typename TCastDeallocator> friend class optional;
 
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+    TFootprint * footprint_;
+#endif
+
     TBase * ptr_;
 
   public:
@@ -561,37 +616,62 @@ namespace yae
     typedef optional<TData, TBase, TDeallocator> optional_type;
 
     optional():
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_(NULL),
+#endif
       ptr_(NULL)
     {}
 
     explicit optional(TData * data_ptr):
       ptr_(data_ptr)
-    {}
+    {
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
+    }
 
     optional(const TData & data):
       ptr_(TCopier::copy(&data))
-    {}
+    {
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_ = TFootprint::create<TData>();
+#endif
+    }
 
     optional(const optional & other):
       ptr_(TCopier::copy(other.ptr_))
-    {}
+    {
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
+    }
 
 #if __cplusplus >= 201103L
     optional(optional&& other):
       ptr_(NULL)
     {
       this->swap(other);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
     }
 #endif
 
     template <typename TFrom>
     optional(const optional<TFrom, TBase, TCopier, TDeallocator> & other):
       ptr_(TCopier::copy(other.cast<TData>()))
-    {}
+    {
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
+    }
 
     ~optional()
     {
       TDeallocator::destroy(ptr_);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      delete footprint_;
+#endif
     }
 
     optional & operator = (const optional & other) YAE_NOEXCEPT
@@ -600,6 +680,10 @@ namespace yae
       {
         TDeallocator::destroy(ptr_);
         ptr_ = TCopier::copy(other.ptr_);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+        delete footprint_;
+        footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
       }
 
       return (*this);
@@ -613,6 +697,10 @@ namespace yae
       {
         TDeallocator::destroy(ptr_);
         ptr_ = TCopier::copy(other.cast<TData>());
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+        delete footprint_;
+        footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
+#endif
       }
 
       return *this;
@@ -631,7 +719,12 @@ namespace yae
     { this->operator=(optional(data)); }
 
     inline void swap(optional & other) YAE_NOEXCEPT
-    { std::swap(ptr_, other.ptr_); }
+    {
+      std::swap(ptr_, other.ptr_);
+#if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
+      std::swap(footprint_, other.footprint_);
+#endif
+    }
 
     inline operator std::size_t () const YAE_NOEXCEPT
     { return reinterpret_cast<std::size_t>(ptr_); }

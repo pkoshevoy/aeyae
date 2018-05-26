@@ -571,4 +571,355 @@ namespace yae
     Private::clear();
   }
 
+
+#ifdef YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+  //----------------------------------------------------------------
+  // TFootprint::Private
+  //
+  struct TFootprint::Private
+  {
+    Private(const char * name, std::size_t size);
+    ~Private();
+
+    inline const std::string & name() const
+    { return name_; }
+
+    void capture_backtrace();
+
+    static void show(std::ostream & os);
+    static void clear();
+
+    //----------------------------------------------------------------
+    // Entry
+    //
+    struct Entry
+    {
+      Entry(const std::string & name = std::string()):
+        name_(name),
+        n_(0),
+        z_(0)
+      {}
+
+      std::string name_;
+      uint64 n_; // total number of occurrances
+      uint64 z_; // total footprint, measured in bytes
+      std::set<const Private *> p_;
+    };
+
+  protected:
+    static boost::mutex mutex_;
+    static std::map<std::string, Entry> entries_;
+
+    std::string name_;
+    std::size_t size_;
+    std::list<std::string> bt_;
+  };
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::mutex_
+  //
+  boost::mutex TFootprint::Private::mutex_;
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::entries_
+  //
+  std::map<std::string, TFootprint::Private::Entry>
+  TFootprint::Private::entries_;
+
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::Private
+  //
+  TFootprint::Private::Private(const char * name, std::size_t size)
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+
+    name_ = name;
+    size_ = size;
+
+    std::map<std::string, Entry>::iterator found = entries_.lower_bound(name_);
+
+    if (found == entries_.end() ||
+        entries_.key_comp()(name_, found->first))
+    {
+      // initialize a new measurement
+      Entry entry(name_);
+      found = entries_.insert(found, std::make_pair(name_, entry));
+    }
+
+    Entry & entry = found->second;
+    entry.z_ += size;
+    entry.n_ += 1;
+
+    std::pair<std::set<const Private *>::iterator, bool>
+      inserted = entry.p_.insert(this);
+    YAE_ASSERT(inserted.second);
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::~Private
+  //
+  TFootprint::Private::~Private()
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+
+    std::map<std::string, Entry>::iterator found = entries_.find(name_);
+
+    if (found == entries_.end())
+    {
+      // this Footprint was created before timesheet was cleared, ignore it:
+      return;
+    }
+
+    // lookup this Footprint timesheet entry:
+    Entry & entry = found->second;
+    YAE_ASSERT(entry.name_.size() && entry.name_[0] && entry.n_ > 0);
+
+    entry.n_--;
+    entry.z_ -= size_;
+
+    std::size_t n = entry.p_.erase(this);
+    YAE_ASSERT(n == 1);
+  }
+
+  //----------------------------------------------------------------
+  // StackFrame
+  //
+  struct StackFrame
+  {
+    std::string module_;
+    std::string func_;
+    std::string offset_;
+    std::string address_;
+  };
+
+  //----------------------------------------------------------------
+  // demangle
+  //
+  static void
+  demangle(StackFrame & frame, const char * line)
+  {
+    const char * module = line;
+    const char * symbol = NULL;
+    const char * offset = NULL;
+    const char * address = NULL;
+
+    for (const char * i = line; i && *i; ++i)
+    {
+      if (*i == '(')
+      {
+        if (module < i)
+        {
+          frame.module_.assign(module, i);
+        }
+
+        symbol = i + 1;
+      }
+      else if (*i == '+')
+      {
+        if (symbol && symbol < i)
+        {
+          frame.func_.assign(symbol, i);
+          int status = 0;
+          char * name = abi::__cxa_demangle(frame.func_.c_str(),
+                                            0, 0, &status);
+          if (status == 0 && name)
+          {
+            frame.func_ = name;
+            free(name);
+          }
+        }
+
+        offset = i + 1;
+      }
+      else if (*i == ')')
+      {
+        if (offset && offset < i)
+        {
+          frame.offset_.assign(offset, i);
+        }
+      }
+      else if (*i == '[')
+      {
+        address = i + 1;
+      }
+      else if (*i == ']')
+      {
+        if (address && address < i)
+        {
+          frame.address_.assign(address, i);
+        }
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::capture_backtrace
+  //
+  void
+  TFootprint::Private::capture_backtrace()
+  {
+    void * frames[100] = { NULL };
+    std::size_t num_frames = backtrace(frames, sizeof(frames) / sizeof(void *));
+    char ** symbols = backtrace_symbols(frames, num_frames);
+
+    std::ostringstream oss;
+    for (std::size_t i = 2; i < num_frames; i++)
+    {
+      StackFrame f;
+      demangle(f, symbols[i]);
+      oss << std::right << std::setw(18) << std::setfill(' ') << f.address_
+          << ' ' << f.func_ << "\n";
+    }
+
+    free(symbols);
+
+    std::string bt(oss.str().c_str());
+    bt_.push_back(bt);
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::show
+  //
+  void
+  TFootprint::Private::show(std::ostream & os)
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+
+    std::ostringstream oss;
+    oss <<  "\nFootprints:\n";
+
+    uint64_t total = 0;
+    for (std::map<std::string, Entry>::const_iterator
+           i = entries_.begin(); i != entries_.end(); ++i)
+    {
+      const Entry & entry = i->second;
+      if (entry.n_ < 1)
+      {
+        continue;
+      }
+
+      total += entry.z_;
+
+      oss
+        << std::right << std::setw(9) << std::setfill(' ')
+        << entry.n_
+        << " * "
+        << std::left << std::setw(4) << std::setfill(' ')
+        << (entry.z_ / entry.n_)
+        << " = "
+        << std::left << std::setw(13)
+        << entry.z_
+
+        << " : "
+        << std::left << std::setw(40) << std::setfill(' ')
+        << entry.name_
+        << "\n";
+
+      const std::set<const Private *> & footprints = entry.p_;
+      if (footprints.empty())
+      {
+        continue;
+      }
+
+      for (std::set<const Private *>::const_iterator
+             y = footprints.begin(); y != footprints.end(); ++y)
+      {
+        const Private * footprint = *y;
+        const std::list<std::string> & bt = footprint->bt_;
+
+        if (bt.empty())
+        {
+          continue;
+        }
+
+        oss << "\n-------------------------------------------------------------"
+            << "\n" << entry.name_ << "\n";
+
+        for (std::list<std::string>::const_iterator
+               z = bt.begin(); z != bt.end(); ++z)
+        {
+          oss << *y << "\n";
+        }
+
+        oss << "\n";
+      }
+    }
+
+    oss << "Total footprint: " << total << "\n";
+
+    os << oss.str().c_str() << std::endl;
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::Private::clear
+  //
+  void
+  TFootprint::Private::clear()
+  {
+    boost::lock_guard<boost::mutex> lock(mutex_);
+
+    for (std::map<std::string, Entry>::iterator
+           i = entries_.begin(), i1; i != entries_.end(); )
+    {
+      i1 = i; ++i1;
+
+      entries_.erase(i);
+      i = i1;
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // TFootprint::TFootprint
+  //
+  TFootprint::TFootprint(const char * name, std::size_t size):
+    private_(new TFootprint::Private(name, size))
+  {}
+
+  //----------------------------------------------------------------
+  // TFootprint::~TFootprint
+  //
+  TFootprint::~TFootprint()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::name
+  //
+  const std::string &
+  TFootprint::name() const
+  {
+    return private_->name();
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::capture_backtrace
+  //
+  void
+  TFootprint::capture_backtrace()
+  {
+    private_->capture_backtrace();
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::show
+  //
+  void
+  TFootprint::show(std::ostream & os)
+  {
+    Private::show(os);
+  }
+
+  //----------------------------------------------------------------
+  // TFootprint::clear
+  //
+  void
+  TFootprint::clear()
+  {
+    Private::clear();
+  }
+#endif // YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+
 }

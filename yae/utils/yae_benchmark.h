@@ -9,6 +9,13 @@
 #ifndef YAE_BENCHMARK_H_
 #define YAE_BENCHMARK_H_
 
+// standard:
+#ifdef __GNUC__
+#include <cxxabi.h>
+#include <execinfo.h>
+#endif
+#include <typeinfo>
+
 // aeyae:
 #include "yae_log.h"
 #include "../api/yae_api.h"
@@ -118,6 +125,57 @@ namespace yae
 #  define YAE_LIFETIME_CLEAR()
 # endif
 #endif
+
+
+//----------------------------------------------------------------
+// YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+//
+#if 0 // !defined(NDEBUG) && defined(__GNUC__)
+#define YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+#endif
+
+namespace yae
+{
+
+#ifdef YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+  //----------------------------------------------------------------
+  // TFootprint
+  //
+  struct YAE_API TFootprint
+  {
+    TFootprint(const char * name, std::size_t size);
+    ~TFootprint();
+
+    const std::string & name() const;
+
+    void capture_backtrace();
+
+    template <typename TData>
+    static TFootprint * create()
+    {
+      int status = 0;
+      const std::type_info & ti = typeid(TData);
+      char * name = abi::__cxa_demangle(ti.name(), 0, 0, &status);
+      TFootprint * footprint = new TFootprint(name, sizeof(TData));
+      free(name);
+      return footprint;
+    }
+
+    static void show(std::ostream & os);
+    static void clear();
+
+  private:
+    void init(const char * name, std::size_t size);
+
+    TFootprint(const TFootprint &);
+    TFootprint & operator = (const TFootprint &);
+
+    struct Private;
+    Private * private_;
+  };
+#endif
+
+}
 
 
 #endif // YAE_BENCHMARK_H_

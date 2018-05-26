@@ -302,6 +302,9 @@ namespace yae
       frames_(new TVideoFrames())
     {}
 
+    virtual ~DecodeGop()
+    {}
+
     virtual void run()
     {
       TGopCache & cache = gop_cache();
@@ -382,6 +385,12 @@ namespace yae
     pixelFormat_(fmt),
     layer_(NULL),
     failed_(false)
+  {}
+
+  //----------------------------------------------------------------
+  // GopItem::~GopItem
+  //
+  GopItem::~GopItem()
   {}
 
   //----------------------------------------------------------------
@@ -1102,6 +1111,12 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     {
       view_.remove_clip(index_);
+      gop_cache().purge_unreferenced_entries();
+
+#ifdef YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
+      yae::TFootprint::show(std::cerr);
+#endif
+
       return true;
     }
 
@@ -2992,7 +3007,11 @@ namespace yae
       if (!output_clip_)
       {
         TClipPtr clip = output_clip();
-        layout_gops(*model_, *this, style_, preview, clip);
+
+        if (clip)
+        {
+          layout_gops(*model_, *this, style_, preview, clip);
+        }
       }
 
       preview.uncache();

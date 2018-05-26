@@ -105,15 +105,11 @@ namespace yae
       i1_(gop_end_packet_index)
     {}
 
-    inline bool operator < (const Gop & other) const
+    inline operator std::string() const
     {
-      return (demuxer_ < other.demuxer_ ||
-              (demuxer_ == other.demuxer_ &&
-               (track_ < other.track_ ||
-                (track_ == other.track_ &&
-                 (i0_ < other.i0_ ||
-                  (i0_ == other.i0_ &&
-                   i1_ < other.i1_))))));
+      std::ostringstream oss;
+      oss << demuxer_.get() << "," << track_ << "[" << i0_ << "," << i1_ << ")";
+      return oss.str();
     }
 
     TDemuxerInterfacePtr demuxer_;
@@ -145,7 +141,7 @@ namespace yae
   //----------------------------------------------------------------
   // TGopCache
   //
-  typedef LRUCache<Gop, TVideoFramesPtr> TGopCache;
+  typedef LRUCache<std::string, TVideoFramesPtr> TGopCache;
 
   //----------------------------------------------------------------
   // VideoFrameItem
@@ -187,6 +183,8 @@ namespace yae
     GopItem(const char * id,
             const Gop & gop,
             TPixelFormatId pixelFormatOverride = kInvalidPixelFormat);
+
+    ~GopItem();
 
     // repaint requests, etc...
     void setContext(const Canvas::ILayer & view);

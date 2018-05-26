@@ -287,6 +287,18 @@ namespace yae
       }
     }
 
+    //----------------------------------------------------------------
+    // purge_unreferenced_entries
+    //
+    void purge_unreferenced_entries()
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      while (unreferenced_)
+      {
+        purge_one(lock);
+      }
+    }
+
   protected:
     friend struct TCache::Ref;
 

@@ -133,9 +133,6 @@ namespace yae
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
 
-    // file reader:
-    TDemuxerInterfacePtr demuxer_;
-
     // frame canvas:
     TCanvasWidget * canvasWidget_;
     Canvas * canvas_;
