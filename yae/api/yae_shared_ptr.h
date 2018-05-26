@@ -659,7 +659,7 @@ namespace yae
 
     template <typename TFrom>
     optional(const optional<TFrom, TBase, TCopier, TDeallocator> & other):
-      ptr_(TCopier::copy(other.cast<TData>()))
+      ptr_(TCopier::copy(other.template cast<TData>()))
     {
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
       footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
@@ -696,7 +696,7 @@ namespace yae
       if (ptr_ != other.ptr_)
       {
         TDeallocator::destroy(ptr_);
-        ptr_ = TCopier::copy(other.cast<TData>());
+        ptr_ = TCopier::copy(other.template cast<TData>());
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
         delete footprint_;
         footprint_ = ptr_ ? TFootprint::create<TData>() : NULL;
