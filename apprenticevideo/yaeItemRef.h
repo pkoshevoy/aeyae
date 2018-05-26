@@ -267,9 +267,9 @@ namespace yae
     }
 
     // implementation details:
-    typedef
-    yae::optional<TDataRef::IRef, TDataRef::IRef, typename TDataRef::IRef::Copy>
-    TOptionalRef;
+    typedef yae::optional<typename TDataRef::IRef,
+                          typename TDataRef::IRef,
+                          typename TDataRef::IRef::Copy> TOptionalRef;
 
     TOptionalRef private_;
   };
