@@ -2693,20 +2693,19 @@ namespace yae
         break;
       }
 
-      const AvPkt & pkt = *packet_ptr;
-      const AVPacket & packet = pkt.get();
-      AVPacket * tmp = av_packet_clone(&packet);
+      AvPkt pkt(*packet_ptr);
+      AVPacket & packet = pkt.get();
 
       AVStream * dst = get(lut, pkt.trackId_);
-      tmp->stream_index = dst->index;
+      packet.stream_index = dst->index;
 
-      tmp->dts = av_rescale_q(packet.dts, src->time_base, dst->time_base);
-      tmp->pts = av_rescale_q(packet.pts, src->time_base, dst->time_base);
-      tmp->duration = av_rescale_q(packet.duration,
-                                   src->time_base,
-                                   dst->time_base);
+      packet.dts = av_rescale_q(packet.dts, src->time_base, dst->time_base);
+      packet.pts = av_rescale_q(packet.pts, src->time_base, dst->time_base);
+      packet.duration = av_rescale_q(packet.duration,
+                                     src->time_base,
+                                     dst->time_base);
 
-      err = av_interleaved_write_frame(muxer, tmp);
+      err = av_interleaved_write_frame(muxer, &packet);
       if (err < 0)
       {
         av_log(NULL, AV_LOG_ERROR,
