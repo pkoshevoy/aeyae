@@ -1,4 +1,17 @@
-This is a short summary of development environment requirements for building Apprentice Video player for Mac/Windows/Linux. Download Mac/Windows binaries here: [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/).
+This is a short summary of development environment requirements for building Apprentice Video player and Aeyae Remux for Mac/Windows/Linux.
+
+Download Apprentice Video Mac/Windows binaries: [https://sourceforge.net/projects/apprenticevideo/](https://sourceforge.net/projects/apprenticevideo/).
+
+Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aeyae-remux/](https://sourceforge.net/projects/aeyae-remux/).
+
+##### Checkout the code, configure, build, install:
+    git clone https://github.com/pkoshevoy/aeyae.git
+    cd aeyae
+    git submodule update --init --recursive
+    mkdir -p ../aeyae-build
+    cd ../aeyae-build
+    cmake-gui ../aeyae # Configure (adjust paths as desired), Generate
+    make -j8 && make install
 
 ##### All Platforms:
 ###### OpenGL 1.2 or later
@@ -27,7 +40,7 @@ This is a short summary of development environment requirements for building App
 ###### portaudio v19
 [http://www.portaudio.com/download.html](http://www.portaudio.com/download.html)
 
-*Portaudio* is used for audio playback.
+*Portaudio* is used for audio playback on Windows and Linux.
 
 ###### FFmpeg fresh from git
 [http://ffmpeg.org/download.html](http://ffmpeg.org/download.html)
