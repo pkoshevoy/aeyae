@@ -157,6 +157,8 @@ set(project_sources
   yaeItemRef.h
   yaeItemView.cpp
   yaeItemView.h
+  yaeItemViewStyle.cpp
+  yaeItemViewStyle.h
   yaeLibass.h
   yaeLibass.cpp
   yaeListViewStyle.h

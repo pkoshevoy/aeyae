@@ -71,7 +71,6 @@ namespace yae
   };
 
 
-
   //----------------------------------------------------------------
   // startNewSequence
   //
@@ -361,10 +360,54 @@ namespace yae
   //
   typedef boost::shared_ptr<Track> TrackPtr;
 
+
+  //----------------------------------------------------------------
+  // PacketQueueCloseOnExit
+  //
+  struct YAE_API PacketQueueCloseOnExit
+  {
+    TrackPtr track_;
+
+    PacketQueueCloseOnExit(TrackPtr track):
+      track_(track)
+    {
+      if (track_ && track_->packetQueue_.isClosed())
+      {
+        track_->packetQueue_.open();
+      }
+    }
+
+    ~PacketQueueCloseOnExit()
+    {
+      if (track_)
+      {
+        track_->packetQueue_.close();
+      }
+    }
+  };
+
+
   //----------------------------------------------------------------
   // same_codec
   //
   YAE_API bool same_codec(const TrackPtr & a, const TrackPtr & b);
+
+
+  //----------------------------------------------------------------
+  // blockedOn
+  //
+  static inline bool
+  blockedOn(const Track * a, const Track * b)
+  {
+    if (!a || !b)
+    {
+      return false;
+    }
+
+    bool blocked = (a->packetQueue_.producerIsBlocked() &&
+                    b->packetQueue_.consumerIsBlocked());
+    return blocked;
+  }
 
 }
 

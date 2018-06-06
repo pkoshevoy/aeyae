@@ -144,18 +144,8 @@ set(project_sources
   ../apprenticevideo/yaeItemRef.h
   ../apprenticevideo/yaeItemView.cpp
   ../apprenticevideo/yaeItemView.h
-  #../apprenticevideo/yaeListViewStyle.h
-  #../apprenticevideo/yaeListViewStyle.cpp
-#  ../apprenticevideo/yaePlaylist.h
-#  ../apprenticevideo/yaePlaylist.cpp
-#  ../apprenticevideo/yaePlaylistModel.h
-#  ../apprenticevideo/yaePlaylistModel.cpp
-#  ../apprenticevideo/yaePlaylistModelProxy.h
-#  ../apprenticevideo/yaePlaylistModelProxy.cpp
-  #../apprenticevideo/yaePlaylistView.h
-  #../apprenticevideo/yaePlaylistView.cpp
-  #../apprenticevideo/yaePlaylistViewStyle.h
-  #../apprenticevideo/yaePlaylistViewStyle.cpp
+  ../apprenticevideo/yaeItemViewStyle.cpp
+  ../apprenticevideo/yaeItemViewStyle.h
   ../apprenticevideo/yaeProperty.h
   ../apprenticevideo/yaeRectangle.cpp
   ../apprenticevideo/yaeRectangle.h

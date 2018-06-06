@@ -15,6 +15,7 @@
 
 // local interfaces:
 #include "yaeColor.h"
+#include "yaeItemViewStyle.h"
 #include "yaePlaylistView.h"
 #include "yaeTexture.h"
 
@@ -32,40 +33,6 @@ namespace yae
   //
   YAE_API unsigned int
   calcItemsPerRow(double rowWidth, double cellWidth);
-
-  //----------------------------------------------------------------
-  // xbuttonImage
-  //
-  YAE_API QImage
-  xbuttonImage(unsigned int w,
-               const Color & color,
-               const Color & background = Color(0x000000, 0.0),
-               double thickness = 0.2,
-               double rotateAngle = 45.0);
-
-  //----------------------------------------------------------------
-  // triangleImage
-  //
-  // create an image of an equilateral triangle inscribed within
-  // an invisible circle of diameter w, and rotated about the center
-  // of the circle by a given rotation angle (expressed in degrees):
-  //
-  YAE_API QImage
-  triangleImage(unsigned int w,
-                const Color & color,
-                const Color & background = Color(0x0000000, 0.0),
-                double rotateAngle = 0.0);
-
-  //----------------------------------------------------------------
-  // barsImage
-  //
-  YAE_API QImage
-  barsImage(unsigned int w,
-            const Color & color,
-            const Color & background = Color(0x0000000, 0.0),
-            unsigned int nbars = 2,
-            double thickness = 0.8,
-            double rotateAngle = 0.0);
 
   //----------------------------------------------------------------
   // PlaylistViewStyle
@@ -108,18 +75,13 @@ namespace yae
     ColorRef bg_item_playing_;
     ColorRef bg_item_selected_;
 
-    ColorRef timeline_played_;
-
     // gradients:
     TGradientPtr filter_shadow_;
-    TGradientPtr timeline_shadow_;
 
     // textures:
     TTexturePtr xbutton_;
     TTexturePtr collapsed_;
     TTexturePtr expanded_;
-    TTexturePtr pause_;
-    TTexturePtr play_;
     TTexturePtr grid_on_;
     TTexturePtr grid_off_;
 

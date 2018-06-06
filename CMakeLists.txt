@@ -509,6 +509,8 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_closed_captions.h
   yae/ffmpeg/yae_demuxer.cpp
   yae/ffmpeg/yae_demuxer.h
+  yae/ffmpeg/yae_demuxer_reader.cpp
+  yae/ffmpeg/yae_demuxer_reader.h
   yae/ffmpeg/yae_pixel_format_ffmpeg.cpp
   yae/ffmpeg/yae_pixel_format_ffmpeg.h
   yae/ffmpeg/yae_ffmpeg_audio_filter_graph.cpp

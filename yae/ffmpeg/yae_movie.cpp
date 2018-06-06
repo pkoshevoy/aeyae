@@ -481,32 +481,6 @@ namespace yae
     return track->initTraits();
   }
 
-
-  //----------------------------------------------------------------
-  // PacketQueueCloseOnExit
-  //
-  struct PacketQueueCloseOnExit
-  {
-    TrackPtr track_;
-
-    PacketQueueCloseOnExit(TrackPtr track):
-      track_(track)
-    {
-      if (track_ && track_->packetQueue_.isClosed())
-      {
-        track_->packetQueue_.open();
-      }
-    }
-
-    ~PacketQueueCloseOnExit()
-    {
-      if (track_)
-      {
-        track_->packetQueue_.close();
-      }
-    }
-  };
-
   //----------------------------------------------------------------
   // Movie::threadLoop
   //
@@ -1582,22 +1556,6 @@ namespace yae
                       av->time_base.den);
 
     return true;
-  }
-
-  //----------------------------------------------------------------
-  // blockedOn
-  //
-  static bool
-  blockedOn(const Track * a, const Track * b)
-  {
-    if (!a || !b)
-    {
-      return false;
-    }
-
-    bool blocked = (a->packetQueue_.producerIsBlocked() &&
-                    b->packetQueue_.consumerIsBlocked());
-    return blocked;
   }
 
   //----------------------------------------------------------------

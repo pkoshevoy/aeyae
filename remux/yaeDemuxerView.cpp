@@ -72,7 +72,7 @@ namespace yae
     // virtual:
     void evaluate(Color & result) const
     {
-      if (view_.view_mode() == RemuxView::kPreviewMode)
+      if (view_.view_mode() != RemuxView::kLayoutMode)
       {
         result = keep_;
         return;
@@ -2988,7 +2988,7 @@ namespace yae
     Item & preview = root["preview"];
     view_mode_ = mode;
 
-    if (mode == kPreviewMode)
+    if (mode != kLayoutMode)
     {
       // avoid rebuilding the preview if clip layout hasn't changed:
       std::string model_json_str = model_->to_json_str();
@@ -3008,7 +3008,7 @@ namespace yae
       {
         TClipPtr clip = output_clip();
 
-        if (clip)
+        if (clip && mode == kPreviewMode)
         {
           layout_gops(*model_, *this, style_, preview, clip);
         }

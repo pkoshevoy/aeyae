@@ -27,6 +27,7 @@
 // local:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
+#include "yaeItemViewStyle.h"
 #include "yaeRemux.h"
 #include "yaeScrollview.h"
 
@@ -244,7 +245,8 @@ namespace yae
     enum ViewMode
     {
       kLayoutMode = 0,
-      kPreviewMode = 1
+      kPreviewMode = 1,
+      kPlaybackMode = 2,
     };
 
     RemuxView();
@@ -285,7 +287,7 @@ namespace yae
     // helper:
     inline TClipPtr current_clip() const
     {
-      return (view_mode_ == kPreviewMode) ? output_clip() : selected_clip();
+      return (view_mode_ == kLayoutMode) ? selected_clip() : output_clip();
     }
 
     // accessor:

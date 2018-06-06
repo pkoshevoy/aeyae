@@ -10,6 +10,7 @@
 #include "yaeCanvasRenderer.h"
 #include "yaeFlickableArea.h"
 #include "yaeItemView.h"
+#include "yaeItemViewStyle.h"
 #include "yaeRoundRect.h"
 #include "yaeScrollview.h"
 

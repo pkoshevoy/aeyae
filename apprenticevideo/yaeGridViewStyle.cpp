@@ -137,44 +137,9 @@ namespace yae
       gradient[1.000] = Color(0x000000, 0.0);
     }
 
-    // timeline shadow gradient:
-    timeline_shadow_.reset(new TGradient());
-    {
-      TGradient & gradient = *timeline_shadow_;
-      gradient[0.000000] = Color(0x000000, 0.004);
-      gradient[0.135417] = Color(0x000000, 0.016);
-      gradient[0.208333] = Color(0x000000, 0.031);
-      gradient[0.260417] = Color(0x000000, 0.047);
-      gradient[0.354167] = Color(0x000000, 0.090);
-      gradient[0.447917] = Color(0x000000, 0.149);
-      gradient[0.500000] = Color(0x000000, 0.192);
-      gradient[1.000000] = Color(0x000000, 0.690);
-    }
-
     // color palette:
-    bg_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
-    fg_ = ColorRef::constant(Color(0xffffff, 1.0));
-
-    border_ = ColorRef::constant(Color(0x7f7f7f, 1.0));
-    cursor_ = ColorRef::constant(Color(0xf12b24, 1.0));
-    scrollbar_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
-    separator_ = scrollbar_;
-    underline_ = cursor_;
-
     bg_xbutton_ = ColorRef::constant(Color(0x000000, 0.0));
     fg_xbutton_ = ColorRef::constant(Color(0xffffff, 0.5));
-
-    bg_focus_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
-    fg_focus_ = ColorRef::constant(Color(0xffffff, 1.0));
-
-    bg_edit_selected_ = ColorRef::constant(Color(0xffffff, 1.0));
-    fg_edit_selected_ = ColorRef::constant(Color(0x000000, 1.0));
-
-    bg_timecode_ = ColorRef::constant(Color(0x7f7f7f, 0.25));
-    fg_timecode_ = ColorRef::constant(Color(0xFFFFFF, 0.5));
-
-    bg_controls_ = bg_timecode_;
-    fg_controls_ = fg_timecode_.get().opaque(0.75);
 
     bg_hint_ = ColorRef::constant(Color(0x1f1f1f, 0.0));
     fg_hint_ = ColorRef::constant(Color(0xffffff, 0.5));
@@ -194,10 +159,6 @@ namespace yae
     bg_item_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
     bg_item_playing_ = ColorRef::constant(Color(0x1f1f1f, 0.5));
     bg_item_selected_ = ColorRef::constant(Color(0xffffff, 0.75));
-
-    timeline_excluded_ = ColorRef::constant(Color(0xFFFFFF, 0.2));
-    timeline_included_ = ColorRef::constant(Color(0xFFFFFF, 0.5));
-    timeline_played_ = cursor_;
 
     // generate an x-button texture:
     {
@@ -223,24 +184,6 @@ namespace yae
                                  bg_group_.get().transparent(),
                                  180.0);
       expanded_->setImage(img);
-    }
-
-    // generate pause button texture:
-    {
-      QImage img = barsImage(128,
-                             fg_controls_.get(),
-                             bg_controls_.get().transparent(),
-                             2, 0.8);
-      pause_->setImage(img);
-    }
-
-    // generate play button texture:
-    {
-      QImage img = triangleImage(256,
-                                 fg_controls_.get(),
-                                 bg_controls_.get().transparent(),
-                                 90.0);
-      play_->setImage(img);
     }
 
     // generate playlist grid on button texture:

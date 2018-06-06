@@ -4486,7 +4486,6 @@ namespace yae
                                 std::vector<TTrackInfo> &  subsInfo,
                                 std::vector<TSubsFormat> & subsFormat)
   {
-    std::size_t numPrograms = reader->getNumberOfPrograms();
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
     std::size_t subsCount = reader->subsCount();

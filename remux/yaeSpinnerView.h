@@ -15,6 +15,7 @@
 
 // local:
 #include "yaeItemView.h"
+#include "yaeItemViewStyle.h"
 
 
 namespace yae
