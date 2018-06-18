@@ -6,6 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <stdexcept>
 
 // local includes:
 #include "yae_demuxer_reader.h"
@@ -1172,7 +1174,6 @@ namespace yae
       if (seekTime <= 0.0)
       {
         // must be trying to rewind a stream of undefined duration:
-        YAE_ASSERT(!hasDuration());
         seekFlags |= AVSEEK_FLAG_BYTE;
       }
 
@@ -1184,7 +1185,9 @@ namespace yae
 #ifndef NDEBUG
       av_log(NULL, AV_LOG_DEBUG,
              "avformat_seek_file (%s) returned %s (%i)",
-             seekTime.to_str().c_str(), av_strerr(err).c_str(), err);
+             TTime(seekTime).to_hhmmss_ms().c_str(),
+             av_strerr(err).c_str(),
+             err);
 #endif
 
       return err;
@@ -1597,8 +1600,8 @@ namespace yae
     {
 #ifndef NDEBUG
       av_log(NULL, AV_LOG_DEBUG,
-             "DemuxerReader::threadLoop caught exception: %s"
-             e.what().c_str());
+             "DemuxerReader::threadLoop caught exception: %s",
+             e.what());
 #endif
     }
     catch (...)
