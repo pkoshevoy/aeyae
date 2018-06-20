@@ -47,12 +47,6 @@ namespace yae
 
     expanded_ = Item::addHidden<Texture>
       (new Texture("expanded", QImage())).sharedPtr<Texture>();
-
-    grid_on_ = Item::addHidden<Texture>
-      (new Texture("grid_on", QImage())).sharedPtr<Texture>();
-
-    grid_off_ = Item::addHidden<Texture>
-      (new Texture("grid_off", QImage())).sharedPtr<Texture>();
   }
 
   //----------------------------------------------------------------

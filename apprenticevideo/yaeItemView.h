@@ -150,6 +150,8 @@ namespace yae
 
     ItemView(const char * name);
 
+    void setRoot(const ItemPtr & root);
+
     virtual const ItemViewStyle * style() const
     { return NULL; }
 

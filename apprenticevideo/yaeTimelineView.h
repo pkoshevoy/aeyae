@@ -14,6 +14,7 @@
 
 // local interfaces:
 #include "yaeItemView.h"
+#include "yaeTimelineItem.h"
 
 
 namespace yae
@@ -34,7 +35,9 @@ namespace yae
     TimelineView();
 
     // need to reference playlist view for common style info:
-    void setup(MainWindow * mainWindow, PlaylistView * playlist);
+    void setup(MainWindow * mainWindow,
+               PlaylistView * playlist,
+               TimelineModel * model);
 
     // virtual:
     const ItemViewStyle * style() const;
@@ -47,9 +50,6 @@ namespace yae
 
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
-
-    // timeline data source:
-    void setModel(TimelineModel * model);
 
     // accessors:
     inline TimelineModel * model() const
@@ -66,17 +66,23 @@ namespace yae
 
   public:
     // helpers:
-    void maybeAnimateOpacity();
-    void maybeAnimateControls();
-    void forceAnimateControls();
+    inline TimelineItem & timelineItem()
+    { return *(TimelineItem *)root_.get(); }
+
+    inline void maybeAnimateOpacity()
+    { timelineItem().maybeAnimateOpacity(); }
+
+    inline void maybeAnimateControls()
+    { timelineItem().maybeAnimateControls(); }
+
+    inline void forceAnimateControls()
+    { timelineItem().forceAnimateControls(); }
 
     MainWindow * mainWindow_;
     PlaylistView * playlist_;
 
   protected:
     TimelineModel * model_;
-    TAnimatorPtr animator_;
-    TAnimatorPtr animatorForControls_;
   };
 
 }

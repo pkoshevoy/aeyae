@@ -82,8 +82,6 @@ namespace yae
     TTexturePtr xbutton_;
     TTexturePtr collapsed_;
     TTexturePtr expanded_;
-    TTexturePtr grid_on_;
-    TTexturePtr grid_off_;
 
     // layout delegates:
     TPlaylistViewLayoutPtr layout_root_;
@@ -106,26 +104,6 @@ namespace yae
     {
       const PlaylistViewStyle & style = playlist_.playlistViewStyle();
       result = style.filter_shadow_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-
-  //----------------------------------------------------------------
-  // StyleTimelineShadow
-  //
-  struct StyleTimelineShadow : public TGradientExpr
-  {
-    StyleTimelineShadow(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(TGradientPtr & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.timeline_shadow_;
     }
 
     const PlaylistView & playlist_;
@@ -183,82 +161,6 @@ namespace yae
     {
       const PlaylistViewStyle & style = playlist_.playlistViewStyle();
       result = style.expanded_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StylePauseTexture
-  //
-  struct StylePauseTexture : public TTextureExpr
-  {
-    StylePauseTexture(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(TTexturePtr & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.pause_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StylePlayTexture
-  //
-  struct StylePlayTexture : public TTextureExpr
-  {
-    StylePlayTexture(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(TTexturePtr & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.play_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StyleGridOnTexture
-  //
-  struct StyleGridOnTexture : public TTextureExpr
-  {
-    StyleGridOnTexture(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(TTexturePtr & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.grid_on_;
-    }
-
-    const PlaylistView & playlist_;
-  };
-
-  //----------------------------------------------------------------
-  // StyleGridOffTexture
-  //
-  struct StyleGridOffTexture : public TTextureExpr
-  {
-    StyleGridOffTexture(const PlaylistView & playlist):
-      playlist_(playlist)
-    {}
-
-    // virtual:
-    void evaluate(TTexturePtr & result) const
-    {
-      const PlaylistViewStyle & style = playlist_.playlistViewStyle();
-      result = style.grid_off_;
     }
 
     const PlaylistView & playlist_;

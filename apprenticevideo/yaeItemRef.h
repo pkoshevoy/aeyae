@@ -450,6 +450,7 @@ namespace yae
     { return ItemRef(&ref, prop, 1.0, t); }
   };
 
+
   //----------------------------------------------------------------
   // SegmentRef
   //
@@ -460,10 +461,135 @@ namespace yae
   //
   typedef DataRef<BBox> BBoxRef;
 
+
   //----------------------------------------------------------------
   // BoolRef
   //
-  typedef DataRef<bool> BoolRef;
+  struct BoolRef : public DataRef<bool>
+  {
+    typedef DataRef<bool> TDataRef;
+    typedef IProperties<bool> TDataProperties;
+
+    //----------------------------------------------------------------
+    // Inverse
+    //
+    struct Inverse : TDataRef::Ref
+    {
+      Inverse(const TDataProperties & ref,
+              Property prop,
+              bool cacheable = true):
+        TDataRef::Ref(ref, prop, cacheable)
+      {}
+
+      virtual Inverse * copy() const
+      { return new Inverse(*this); }
+
+      virtual const bool & get_value() const
+      {
+        if (!TDataRef::Ref::cached_)
+        {
+          // invert the value:
+          bool v = !TDataRef::Ref::get_value();
+          TDataRef::Ref::cache(v);
+        }
+
+        return TDataRef::Ref::value_;
+      }
+    };
+
+    //----------------------------------------------------------------
+    // BoolRef
+    //
+    BoolRef(const TDataProperties * reference = NULL,
+            Property property = kPropertyUnspecified,
+            bool inverse = false,
+            bool cacheable = true)
+    {
+      if (reference)
+      {
+        if (inverse)
+        {
+          private_.reset(new Inverse(*reference,
+                                     property,
+                                     cacheable));
+        }
+        else
+        {
+          private_.reset(new TDataRef::Ref(*reference,
+                                           property,
+                                           cacheable));
+        }
+      }
+    }
+
+    //----------------------------------------------------------------
+    // BoolRef
+    //
+    BoolRef(const bool & value):
+      TDataRef(value)
+    {}
+
+    //----------------------------------------------------------------
+    // BoolRef
+    //
+    BoolRef(const BoolRef & other,
+            bool inverse = false,
+            bool cacheable = true)
+    {
+      if (!other.isValid())
+      {
+        YAE_ASSERT(false);
+        throw std::runtime_error("reference to an invalid data reference");
+      }
+
+      if (other.isConstant())
+      {
+        // pre-evaluate constant values:
+        bool value = inverse ^ other.get();
+        private_.reset(new TDataRef::Const(value));
+      }
+      else
+      {
+        const TDataRef::Ref * ref = other.private_.cast<TDataRef::Ref>();
+        const Inverse * inv = other.private_.cast<Inverse>();
+
+        if (inv && inverse || !inv && !inverse)
+        {
+          private_.reset(new TDataRef::Ref(ref->ref_, ref->prop_, cacheable));
+        }
+        else
+        {
+          private_.reset(new Inverse(ref->ref_, ref->prop_, cacheable));
+        }
+      }
+    }
+
+    // constructor helpers:
+    inline static BoolRef
+    constant(const bool & t)
+    { return BoolRef(t); }
+
+    inline static BoolRef
+    reference(const TDataProperties & ref, Property prop, bool inverse = false)
+    { return BoolRef(&ref, prop, inverse); }
+
+    inline static BoolRef
+    reference(const BoolRef & ref, bool inverse = false)
+    { return BoolRef(ref, inverse); }
+
+    inline static BoolRef
+    expression(const TDataProperties & ref, bool inverse = false)
+    { return BoolRef(&ref, kPropertyExpression, inverse); }
+
+    inline static BoolRef
+    inverse(const TDataProperties & ref, Property prop)
+    { return BoolRef(&ref, prop, true); }
+
+    inline static BoolRef
+    inverse(const BoolRef & ref)
+    { return BoolRef(ref, true); }
+  };
+
 
   //----------------------------------------------------------------
   // TVarRef

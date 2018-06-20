@@ -197,6 +197,8 @@ set(project_sources
   yaeTexturedRect.h
   yaeThumbnailProvider.h
   yaeThumbnailProvider.cpp
+  yaeTimelineItem.h
+  yaeTimelineItem.cpp
   yaeTimelineModel.h
   yaeTimelineModel.cpp
   yaeTimelineView.h

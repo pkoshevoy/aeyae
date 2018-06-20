@@ -80,6 +80,8 @@ namespace yae
   }
 #endif
 
+  YAE_DISABLE_DEPRECATION_WARNINGS
+
   //----------------------------------------------------------------
   // ensure_ffmpeg_initialized
   //
@@ -105,6 +107,8 @@ namespace yae
       ffmpeg_initialized = true;
     }
   }
+
+  YAE_ENABLE_DEPRECATION_WARNINGS
 
   //----------------------------------------------------------------
   // av_strerr

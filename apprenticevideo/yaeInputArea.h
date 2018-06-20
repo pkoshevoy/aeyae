@@ -14,6 +14,7 @@
 #include <stdexcept>
 
 // Qt interfaces:
+#include <QObject>
 #include <QPersistentModelIndex>
 
 // aeyae:
@@ -317,6 +318,70 @@ namespace yae
     bool onClick_;
     bool onDoubleClick_;
     bool onDrag_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CallOnClick
+  //
+  template <typename TCallable>
+  struct CallOnClick : public ClickableItem
+  {
+    CallOnClick(const char * name, const TCallable & callable):
+      ClickableItem(name),
+      callable_(callable)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      callable_();
+      return true;
+    }
+
+    TCallable callable_;
+  };
+
+
+  //----------------------------------------------------------------
+  // InvokeMethod
+  //
+  struct YAE_API InvokeMethodOnClick : public InputArea
+  {
+    InvokeMethodOnClick(const char * id,
+                        QObject & object,
+                        const char * method,
+
+                        // NOTE: QGenericArgument does not store the arg value,
+                        // it only stores a reference to the arg,
+                        // so the caller must ensure the lifetime of the arg
+                        // does not end before the method is called,
+                        // otherwise the method will be called
+                        // with a dangling reference to the arg:
+                        const QGenericArgument & arg = QGenericArgument(0)):
+      InputArea(id),
+      object_(object),
+      method_(method),
+      arg_(arg)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      QMetaObject::invokeMethod(&object_, method_, arg_);
+      return true;
+    }
+
+    QObject & object_;
+    const char * method_;
+    QGenericArgument arg_;
   };
 
 }

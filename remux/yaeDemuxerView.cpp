@@ -1908,39 +1908,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // InvokeMethod
-  //
-  struct InvokeMethodOnClick : public InputArea
-  {
-    InvokeMethodOnClick(const char * id,
-                        QObject & object,
-                        const char * method,
-                        const QGenericArgument & arg = QGenericArgument(0)):
-      InputArea(id),
-      object_(object),
-      method_(method),
-      arg_(arg)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    { return true; }
-
-    // virtual:
-    bool onClick(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      QMetaObject::invokeMethod(&object_, method_, arg_);
-      return true;
-    }
-
-    QObject & object_;
-    const char * method_;
-    QGenericArgument arg_;
-  };
-
-  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout

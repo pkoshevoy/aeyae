@@ -114,6 +114,8 @@ namespace yae
     TGradientPtr timeline_shadow_;
 
     // textures:
+    TTexturePtr grid_on_;
+    TTexturePtr grid_off_;
     TTexturePtr pause_;
     TTexturePtr play_;
   };
@@ -272,6 +274,127 @@ namespace yae
       TBase(view, &ItemViewStyle::title_height_, s, t, odd_round_up)
     {}
   };
+
+  //----------------------------------------------------------------
+  // StyleTimelineShadow
+  //
+  struct StyleTimelineShadow : public TGradientExpr
+  {
+    StyleTimelineShadow(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TGradientPtr & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+      YAE_ASSERT(style);
+
+      if (style)
+      {
+        result = style->timeline_shadow_;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleGridOnTexture
+  //
+  struct StyleGridOnTexture : public TTextureExpr
+  {
+    StyleGridOnTexture(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+      YAE_ASSERT(style);
+
+      if (style)
+      {
+        result = style->grid_on_;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // StyleGridOffTexture
+  //
+  struct StyleGridOffTexture : public TTextureExpr
+  {
+    StyleGridOffTexture(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+      YAE_ASSERT(style);
+
+      if (style)
+      {
+        result = style->grid_off_;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // StylePauseTexture
+  //
+  struct StylePauseTexture : public TTextureExpr
+  {
+    StylePauseTexture(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+      YAE_ASSERT(style);
+
+      if (style)
+      {
+        result = style->pause_;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // StylePlayTexture
+  //
+  struct StylePlayTexture : public TTextureExpr
+  {
+    StylePlayTexture(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const ItemViewStyle * style = view_.style();
+      YAE_ASSERT(style);
+
+      if (style)
+      {
+        result = style->play_;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
 }
 
 #endif // YAE_ITEM_VIEW_STYLE_H_

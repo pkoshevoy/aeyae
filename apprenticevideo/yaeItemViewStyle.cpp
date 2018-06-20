@@ -358,11 +358,35 @@ namespace yae
       gradient[1.000000] = Color(0x000000, 0.690);
     }
 
+    grid_on_ = Item::addHidden<Texture>
+      (new Texture("grid_on", QImage())).sharedPtr<Texture>();
+
+    grid_off_ = Item::addHidden<Texture>
+      (new Texture("grid_off", QImage())).sharedPtr<Texture>();
+
     pause_ = Item::addHidden<Texture>
       (new Texture("pause", QImage())).sharedPtr<Texture>();
 
     play_ = Item::addHidden<Texture>
       (new Texture("play", QImage())).sharedPtr<Texture>();
+
+    // generate playlist grid on button texture:
+    {
+      QImage img = barsImage(128,
+                             fg_controls_.get(),
+                             bg_controls_.get().transparent(),
+                             3, 0.7, 90);
+      grid_on_->setImage(img);
+    }
+
+    // generate playlist grid off button texture:
+    {
+      QImage img = barsImage(128,
+                             fg_controls_.get().a_scaled(0.75),
+                             bg_controls_.get().transparent(),
+                             3, 0.7, 90);
+      grid_off_->setImage(img);
+    }
 
     // generate pause button texture:
     {

@@ -566,6 +566,13 @@ namespace yae
       return ItemRef::expression(*e, scale, translate);
     }
 
+    inline BoolRef addExpr(TBoolExpr * e,
+                           bool inverse = false)
+    {
+      expr_.push_back(TPropertiesBasePtr(e));
+      return BoolRef::expression(*e, inverse);
+    }
+
     inline ColorRef
     addExpr(TColorExpr * e,
             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),

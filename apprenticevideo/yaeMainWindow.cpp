@@ -331,8 +331,7 @@ namespace yae
     playlistView_.setup(this);
     playlistView_.setModel(&playlistModel_);
     playlistView_.setEnabled(false);
-    timelineView_.setup(this, &playlistView_);
-    timelineView_.setModel(&timelineModel_);
+    timelineView_.setup(this, &playlistView_, &timelineModel_);
     frameCropView_.setEnabled(false);
 
     // add image://thumbnails/... provider:

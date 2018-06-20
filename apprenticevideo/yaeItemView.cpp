@@ -128,7 +128,6 @@ namespace yae
   //
   ItemView::ItemView(const char * name):
     Canvas::ILayer(),
-    root_(new Item(name)),
     devicePixelRatio_(1.0),
     w_(0.0),
     h_(0.0),
@@ -139,13 +138,7 @@ namespace yae
     mousePt_(std::numeric_limits<double>::max(),
              std::numeric_limits<double>::max())
   {
-    root_->self_ = root_;
-    Item & root = *root_;
-    root.anchors_.left_ = ItemRef::constant(0.0);
-    root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = ItemRef::constant(w_);
-    root.height_ = ItemRef::constant(h_);
-
+    setRoot(ItemPtr(new Item(name)));
     repaintTimer_.setSingleShot(true);
     animateTimer_.setInterval(16);
 
@@ -155,6 +148,22 @@ namespace yae
 
     ok = connect(&animateTimer_, SIGNAL(timeout()), this, SLOT(repaint()));
     YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::setRoot
+  //
+  void
+  ItemView::setRoot(const ItemPtr & item)
+  {
+    root_ = item;
+    root_->self_ = root_;
+
+    Item & root = *root_;
+    root.anchors_.left_ = ItemRef::constant(0.0);
+    root.anchors_.top_ = ItemRef::constant(0.0);
+    root.width_ = ItemRef::constant(w_);
+    root.height_ = ItemRef::constant(h_);
   }
 
   //----------------------------------------------------------------
