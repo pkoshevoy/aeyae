@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local:
+// Qt interfaces:
+#include <QObject>
+
+// local interfaces:
 #include "yaeItemFocus.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -115,6 +118,7 @@ namespace yae
   TimelineItem::TimelineItem(const char * name,
                              ItemView & view,
                              TimelineModel & model):
+    QObject(),
     Item(name),
     view_(view),
     model_(model)
@@ -610,13 +614,36 @@ namespace yae
       mouseDetectForControls.anchors_.fill(controls);
     }
 
-    this->animator_.reset
+    this->opacity_animator_.reset
       (new Animator(*this, mouseDetect));
     maybeAnimateOpacity();
 
-    this->animatorForControls_.reset
+    this->controls_animator_.reset
       (new AnimatorForControls(*this, mouseDetectForControls));
     forceAnimateControls();
+
+    animate_opacity_.reset(new AnimateOpacity(*this));
+    playheadFocus.addObserver(Item::kOnFocus, animate_opacity_);
+    playheadFocus.addObserver(Item::kOnFocusOut, animate_opacity_);
+
+    // connect the model:
+    bool ok = true;
+
+    ok = connect(&model_, SIGNAL(markerTimeInChanged()),
+                 this, SLOT(modelChanged()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&model_, SIGNAL(markerTimeOutChanged()),
+                 this, SLOT(modelChanged()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&model_, SIGNAL(markerPlayheadChanged()),
+                 this, SLOT(modelChanged()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playheadEdit, SIGNAL(editingFinished(const QString &)),
+                 &model_, SLOT(seekTo(const QString &)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -626,17 +653,17 @@ namespace yae
   TimelineItem::maybeAnimateOpacity()
   {
     TransitionItem & opacity = this->get<TransitionItem>("opacity");
-    Animator & animator = dynamic_cast<Animator &>(*(animator_.get()));
+    Animator & animator = dynamic_cast<Animator &>(*(opacity_animator_.get()));
 
     if (animator.needToPause() && opacity.transition().is_steady())
     {
       opacity.pause(ItemRef::constant(opacity.transition().get_value()));
-      view_.delAnimator(animator_);
+      view_.delAnimator(opacity_animator_);
     }
     else
     {
       opacity.start();
-      view_.addAnimator(animator_);
+      view_.addAnimator(opacity_animator_);
     }
 
     opacity.uncache();
@@ -652,7 +679,7 @@ namespace yae
       this->get<TransitionItem>("opacity_for_controls");
 
     AnimatorForControls & animator =
-      dynamic_cast<AnimatorForControls &>(*(animatorForControls_.get()));
+      dynamic_cast<AnimatorForControls &>(*(controls_animator_.get()));
 
     Item & mouseDetectForControls =
       this->get<Item>("mouse_detect_for_controls");
@@ -664,14 +691,14 @@ namespace yae
     if (needToPause && opacity.transition().is_steady())
     {
       opacity.pause(ItemRef::constant(opacity.transition().get_value()));
-      view_.delAnimator(animatorForControls_);
+      view_.delAnimator(controls_animator_);
     }
     else if ((!needToPause && opacity.is_paused()) ||
              mouseDetectForControls.overlaps(pt) ||
              playbackPaused)
     {
       opacity.start();
-      view_.addAnimator(animatorForControls_);
+      view_.addAnimator(controls_animator_);
     }
 
     opacity.uncache();
@@ -692,6 +719,41 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TimelineItem::processMouseTracking
+  //
+  void
+  TimelineItem::processMouseTracking(const TVec2D & pt)
+  {
+    Item & root = *this;
+    Item & timeline = root["timeline"];
+
+    Item & timelineIn = timeline["timelineIn"];
+    view_.requestUncache(&timelineIn);
+
+    Item & timelinePlayhead = timeline["timelinePlayhead"];
+    view_.requestUncache(&timelinePlayhead);
+
+    Item & timelineOut = timeline["timelineOut"];
+    view_.requestUncache(&timelineOut);
+
+    Item & timelineEnd = timeline["timelineEnd"];
+    view_.requestUncache(&timelineEnd);
+
+    Item & inPoint = root["inPoint"];
+    view_.requestUncache(&inPoint);
+
+    Item & playhead = root["playhead"];
+    view_.requestUncache(&playhead);
+
+    Item & outPoint = root["outPoint"];
+    view_.requestUncache(&outPoint);
+
+    // update the opacity transitions:
+    maybeAnimateOpacity();
+    maybeAnimateControls();
+  }
+
+  //----------------------------------------------------------------
   // TimelineItem::uncache
   //
   void
@@ -703,6 +765,19 @@ namespace yae
     is_fullscreen_.uncache();
     is_playlist_visible_.uncache();
     is_timeline_visible_.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineView::modelChanged
+  //
+  void
+  TimelineItem::modelChanged()
+  {
+    if (view_.isEnabled())
+    {
+      view_.requestUncache(this);
+      view_.requestRepaint();
+    }
   }
 
 }

@@ -88,6 +88,8 @@ set(project_moc_hxx
   ../apprenticevideo/yaeItemView.h
   ../apprenticevideo/yaeScreenSaverInhibitor.h
   ../apprenticevideo/yaeTextInput.h
+  ../apprenticevideo/yaeTimelineItem.h
+  ../apprenticevideo/yaeTimelineModel.h
   )
 
 set(project_uis
@@ -123,16 +125,8 @@ set(project_sources
   ../apprenticevideo/yaeExpression.h
   ../apprenticevideo/yaeFlickableArea.cpp
   ../apprenticevideo/yaeFlickableArea.h
-  #../apprenticevideo/yaeFrameCropView.cpp
-  #../apprenticevideo/yaeFrameCropView.h
   ../apprenticevideo/yaeGradient.cpp
   ../apprenticevideo/yaeGradient.h
-  #../apprenticevideo/yaeGridViewStyle.h
-  #../apprenticevideo/yaeGridViewStyle.cpp
-  #../apprenticevideo/yaeImage.cpp
-  #../apprenticevideo/yaeImage.h
-  #../apprenticevideo/yaeImageLive.cpp
-  #../apprenticevideo/yaeImageLive.h
   ../apprenticevideo/yaeImageProvider.cpp
   ../apprenticevideo/yaeImageProvider.h
   ../apprenticevideo/yaeInputArea.cpp
@@ -165,12 +159,10 @@ set(project_sources
   ../apprenticevideo/yaeTexture.h
   ../apprenticevideo/yaeTexturedRect.cpp
   ../apprenticevideo/yaeTexturedRect.h
-#  ../apprenticevideo/yaeThumbnailProvider.h
-#  ../apprenticevideo/yaeThumbnailProvider.cpp
-#  ../apprenticevideo/yaeTimelineModel.h
-#  ../apprenticevideo/yaeTimelineModel.cpp
-  #../apprenticevideo/yaeTimelineView.h
-  #../apprenticevideo/yaeTimelineView.cpp
+  ../apprenticevideo/yaeTimelineItem.h
+  ../apprenticevideo/yaeTimelineItem.cpp
+  ../apprenticevideo/yaeTimelineModel.h
+  ../apprenticevideo/yaeTimelineModel.cpp
   ../apprenticevideo/yaeTransform.cpp
   ../apprenticevideo/yaeTransform.h
   ../apprenticevideo/yaeUtilsQt.h

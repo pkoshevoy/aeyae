@@ -96,6 +96,7 @@ set(project_moc_hxx
   yaePlaylistView.h
   yaeScreenSaverInhibitor.h
   yaeTextInput.h
+  yaeTimelineItem.h
   yaeTimelineModel.h
   yaeTimelineView.h
   )

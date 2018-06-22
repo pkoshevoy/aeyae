@@ -9,6 +9,9 @@
 #ifndef YAE_TIMELINE_ITEM_H_
 #define YAE_TIMELINE_ITEM_H_
 
+// Qt includes:
+#include <QObject>
+
 // local interfaces:
 #include "yaeGradient.h"
 #include "yaeInputArea.h"
@@ -366,8 +369,12 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineConfig
   //
-  struct YAE_API TimelineItem : public Item
+  class YAE_API TimelineItem : public QObject,
+                               public Item
   {
+    Q_OBJECT;
+
+  public:
     TimelineItem(const char * name, ItemView & view, TimelineModel & model);
 
     void layout();
@@ -378,6 +385,13 @@ namespace yae
     // virtual:
     void uncache();
 
+    // helper:
+    void processMouseTracking(const TVec2D & pt);
+
+  public slots:
+    void modelChanged();
+
+  public:
     ItemView & view_;
     TimelineModel & model_;
 
@@ -390,10 +404,30 @@ namespace yae
     ContextCallback toggle_fullscreen_;
     ContextCallback toggle_playlist_;
 
-    ItemView::TAnimatorPtr animator_;
-    ItemView::TAnimatorPtr animatorForControls_;
+    ItemView::TAnimatorPtr opacity_animator_;
+    ItemView::TAnimatorPtr controls_animator_;
+    Item::TObserverPtr animate_opacity_;
   };
 
+
+  //----------------------------------------------------------------
+  // AnimateOpacity
+  //
+  struct YAE_API AnimateOpacity : public Item::Observer
+  {
+    AnimateOpacity(TimelineItem & timeline):
+      timeline_(timeline)
+    {}
+
+    // virtual:
+    void observe(const Item & item, Item::Event e)
+    {
+      timeline_.maybeAnimateOpacity();
+      timeline_.forceAnimateControls();
+    }
+
+    TimelineItem & timeline_;
+  };
 
 }
 

@@ -166,26 +166,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // AnimateOpacity
-  //
-  struct AnimateOpacity : public Item::Observer
-  {
-    AnimateOpacity(TimelineItem & timeline):
-      timeline_(timeline)
-    {}
-
-    // virtual:
-    void observe(const Item & item, Item::Event e)
-    {
-      timeline_.maybeAnimateOpacity();
-      timeline_.forceAnimateControls();
-    }
-
-    TimelineItem & timeline_;
-  };
-
-
-  //----------------------------------------------------------------
   // TimelineView::TimelineView
   //
   TimelineView::TimelineView():
@@ -241,35 +221,11 @@ namespace yae
 
     // re-apply style when playlist is enabled or disabled:
     Item::TObserverPtr repaintTimeline(new Repaint(*this, true));
-    playlist_->root()->addObserver(Item::kOnToggleItemView, repaintTimeline);
+    playlist_->root()->addObserver(Item::kOnToggleItemView,
+                                   repaintTimeline);
 
-    Item::TObserverPtr animateOpacity(new AnimateOpacity(timeline));
-    playlist_->root()->addObserver(Item::kOnToggleItemView, animateOpacity);
-
-    TextInputProxy & playheadFocus =
-      timeline.get<TextInputProxy>("playheadFocus");
-    playheadFocus.addObserver(Item::kOnFocus, animateOpacity);
-    playheadFocus.addObserver(Item::kOnFocusOut, animateOpacity);
-
-    // connect the model:
-    bool ok = true;
-
-    ok = connect(model_, SIGNAL(markerTimeInChanged()),
-                 this, SLOT(modelChanged()));
-    YAE_ASSERT(ok);
-
-    ok = connect(model_, SIGNAL(markerTimeOutChanged()),
-                 this, SLOT(modelChanged()));
-    YAE_ASSERT(ok);
-
-    ok = connect(model_, SIGNAL(markerPlayheadChanged()),
-                 this, SLOT(modelChanged()));
-    YAE_ASSERT(ok);
-
-    TextInput & playheadEdit = timeline.get<TextInput>("playheadEdit");
-    ok = connect(&playheadEdit, SIGNAL(editingFinished(const QString &)),
-                 model_, SLOT(seekTo(const QString &)));
-    YAE_ASSERT(ok);
+    playlist_->root()->addObserver(Item::kOnToggleItemView,
+                                   timeline.animate_opacity_);
   }
 
   //----------------------------------------------------------------
@@ -326,33 +282,8 @@ namespace yae
       return false;
     }
 
-    TimelineItem & timelineItem = this->timelineItem();
-    Item & timeline = timelineItem["timeline"];
-
-    Item & timelineIn = timeline["timelineIn"];
-    requestUncache(&timelineIn);
-
-    Item & timelinePlayhead = timeline["timelinePlayhead"];
-    requestUncache(&timelinePlayhead);
-
-    Item & timelineOut = timeline["timelineOut"];
-    requestUncache(&timelineOut);
-
-    Item & timelineEnd = timeline["timelineEnd"];
-    requestUncache(&timelineEnd);
-
-    Item & inPoint = timelineItem["inPoint"];
-    requestUncache(&inPoint);
-
-    Item & playhead = timelineItem["playhead"];
-    requestUncache(&playhead);
-
-    Item & outPoint = timelineItem["outPoint"];
-    requestUncache(&outPoint);
-
-    // update the opacity transitions:
-    maybeAnimateOpacity();
-    maybeAnimateControls();
+    TimelineItem & item = this->timelineItem();
+    item.processMouseTracking(mousePt);
 
     return true;
   }
@@ -363,11 +294,8 @@ namespace yae
   void
   TimelineView::modelChanged()
   {
-    if (this->isEnabled())
-    {
-      this->requestUncache();
-      this->requestRepaint();
-    }
+    TimelineItem & root = this->timelineItem();
+    root.modelChanged();
   }
 
 }
