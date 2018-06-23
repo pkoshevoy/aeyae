@@ -20,6 +20,7 @@
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_demuxer_reader.h"
 #include "yae/thread/yae_task_runner.h"
 #include "yae/utils/yae_lru_cache.h"
 #include "yae/video/yae_video.h"
@@ -30,6 +31,7 @@
 #include "yaeItemViewStyle.h"
 #include "yaeRemux.h"
 #include "yaeScrollview.h"
+#include "yaeTimelineModel.h"
 
 
 namespace yae
@@ -246,7 +248,7 @@ namespace yae
     {
       kLayoutMode = 0,
       kPreviewMode = 1,
-      kPlaybackMode = 2,
+      kPlayerMode = 2,
     };
 
     RemuxView();
@@ -296,6 +298,7 @@ namespace yae
 
   signals:
     void remux();
+    void toggle_fullscreen();
 
   public slots:
     void layoutChanged();
@@ -307,9 +310,12 @@ namespace yae
     void set_in_point();
     void set_out_point();
 
-    // NOTE: switching to preview mode creates a serial demuxer
+    // NOTE: switching away from layout mode creates a serial demuxer
     //       from current source clips:
     void set_view_mode(RemuxView::ViewMode mode);
+
+    bool is_playback_paused();
+    void toggle_playback();
 
     void emit_remux();
 
@@ -321,9 +327,12 @@ namespace yae
     mutable TClipPtr output_clip_;
     mutable TSerialDemuxerPtr serial_demuxer_;
     mutable std::string model_json_str_;
+    bool playback_paused_;
+    yae::shared_ptr<DemuxerReader, IPlugin, yae::call_destroy> reader_;
 
   public:
     RemuxViewStyle style_;
+    TimelineModel timeline_model_;
 
     // index of currently selected clip:
     std::size_t selected_;

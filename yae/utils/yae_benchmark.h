@@ -17,7 +17,6 @@
 #include <typeinfo>
 
 // aeyae:
-#include "yae_log.h"
 #include "../api/yae_api.h"
 
 // standard C++ library:

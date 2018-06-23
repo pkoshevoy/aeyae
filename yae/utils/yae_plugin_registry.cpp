@@ -69,7 +69,7 @@ namespace yae
 
         for (std::size_t i = 0; ; i++)
         {
-          IPluginPtr plugin(factory(i), IPlugin::Deallocator());
+          IPluginPtr plugin(factory(i));
 
           if (!plugin)
           {

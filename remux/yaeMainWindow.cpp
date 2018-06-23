@@ -73,6 +73,29 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // context_toggle_fullscreen
+  //
+  static void
+  context_toggle_fullscreen(void * context)
+  {
+    MainWindow * mainWindow = (MainWindow *)context;
+    mainWindow->requestToggleFullScreen();
+  }
+
+
+  //----------------------------------------------------------------
+  // context_query_fullscreen
+  //
+  static bool
+  context_query_fullscreen(void * context, bool & fullscreen)
+  {
+    MainWindow * mainWindow = (MainWindow *)context;
+    fullscreen = mainWindow->isFullScreen();
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
@@ -117,10 +140,17 @@ namespace yae
 #endif
     canvasWidget_->setGreeting(greeting);
 
+    view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    view_.query_fullscreen_.reset(&context_query_fullscreen, this);
+
     canvasWidget_->append(&view_);
+
     view_.setModel(&model_);
     view_.setEnabled(true);
     view_.layoutChanged();
+
+    spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
     canvasWidget_->append(&spinner_);
     spinner_.setStyle(view_.style());

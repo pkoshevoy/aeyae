@@ -223,6 +223,22 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // call_destroy
+  //
+  struct call_destroy
+  {
+    template <typename TData>
+    inline static
+    void destroy(TData * data_ptr)
+    {
+      if (data_ptr)
+      {
+        data_ptr->destroy();
+      }
+    }
+  };
+
+  //----------------------------------------------------------------
   // weak_ptr
   //
   template <typename TData, typename TBase, typename TDeallocator>

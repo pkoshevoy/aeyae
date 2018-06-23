@@ -385,7 +385,7 @@ namespace yae
 
     CallOnClick<ContextCallback> & playbackToggle =
       this->add(new CallOnClick<ContextCallback>("playback_toggle_on_click",
-                                                this->toggle_playback_));
+                                                 this->toggle_playback_));
     Item & playbackBtn = container.addNew<Item>("playback_btn");
     {
       playbackBtn.anchors_.vcenter_ =
@@ -429,7 +429,7 @@ namespace yae
 
     CallOnClick<ContextCallback> & fullscreenToggle =
       this->add(new CallOnClick<ContextCallback>("fullscreen_toggle_on_click",
-                                                this->toggle_fullscreen_));
+                                                 this->toggle_fullscreen_));
     Item & fullscreenBtn = container.addNew<Item>("fullscreen_btn");
     {
       fullscreenBtn.anchors_.vcenter_ =
@@ -496,9 +496,11 @@ namespace yae
       (style_color_ref(view_, &ItemViewStyle::bg_controls_));
 
     Item & playlistButton = this->addNew<Item>("playlistButton");
+    playlistButton.visible_ = BoolRef::constant(!toggle_playlist_.is_null());
+
     CallOnClick<ContextCallback> & playlistToggle =
       this->add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
-                                                this->toggle_playlist_));
+                                                 this->toggle_playlist_));
     {
       playlistButton.anchors_.top_ =
         ItemRef::offset(*this, kPropertyTop, 2);
@@ -725,6 +727,11 @@ namespace yae
   TimelineItem::processMouseTracking(const TVec2D & pt)
   {
     Item & root = *this;
+    if (!root.overlaps(pt))
+    {
+      return;
+    }
+
     Item & timeline = root["timeline"];
 
     Item & timelineIn = timeline["timelineIn"];

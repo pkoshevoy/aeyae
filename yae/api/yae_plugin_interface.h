@@ -13,14 +13,10 @@
 #include <cstddef>
 #include <limits>
 
-// boost library:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // aeyae:
 #include "yae_api.h"
 #include "yae_settings_interface.h"
+#include "yae_shared_ptr.h"
 
 
 namespace yae
@@ -62,30 +58,12 @@ namespace yae
     //! parameters required for the operation of this plugin, if any exist.
     //! NOTE: the settings, if there are any, belong to the plugin!
     virtual ISettingGroup * settings() = 0;
-
-    //----------------------------------------------------------------
-    // Deallocator
-    //
-    struct Deallocator
-    {
-      inline static void destroy(IPlugin *& plugin)
-      {
-        if (plugin)
-        {
-          plugin->destroy();
-          plugin = NULL;
-        }
-      }
-
-      inline void operator()(IPlugin *& plugin)
-      { this->destroy(plugin); }
-    };
   };
 
   //----------------------------------------------------------------
   // IPluginPtr
   //
-  typedef boost::shared_ptr<IPlugin> IPluginPtr;
+  typedef yae::shared_ptr<IPlugin, IPlugin, yae::call_destroy> IPluginPtr;
 
   //----------------------------------------------------------------
   // TPluginFactory

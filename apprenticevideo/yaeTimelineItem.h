@@ -9,6 +9,9 @@
 #ifndef YAE_TIMELINE_ITEM_H_
 #define YAE_TIMELINE_ITEM_H_
 
+// standard:
+#include <list>
+
 // Qt includes:
 #include <QObject>
 
@@ -40,8 +43,8 @@ namespace yae
     {
       int h = std::max<int>(2, ~1 & (int(0.5 + timeline_.height()) / 4));
 
-      const TVec2D & pt = view_.mousePt();
-      if (container_.overlaps(pt))
+      const std::list<VisibleItem> & items = view_.mouseOverItems();
+      if (yae::find(items, container_) != items.end())
       {
         h *= 2;
       }
@@ -329,40 +332,6 @@ namespace yae
     TimelineModel & model_;
     Item & timeline_;
     double startPos_;
-  };
-
-
-  //----------------------------------------------------------------
-  // ContextCallback
-  //
-  struct ContextCallback
-  {
-    typedef void(*TCallback)(void *);
-
-    ContextCallback(TCallback func = NULL,
-                    void * context = NULL)
-    {
-      reset(func, context);
-    }
-
-    void reset(TCallback func = NULL,
-               void * context = NULL)
-    {
-      func_ = func;
-      context_ = context;
-    }
-
-    void operator()() const
-    {
-      if (func_)
-      {
-        func_(context_);
-      }
-    }
-
-  protected:
-    TCallback func_;
-    void * context_;
   };
 
 

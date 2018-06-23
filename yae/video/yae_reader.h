@@ -13,12 +13,8 @@
 #include <string>
 #include <list>
 
-// boost library:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
-
 // aeyae:
+#include "../api/yae_shared_ptr.h"
 #include "../api/yae_plugin_interface.h"
 #include "../thread/yae_queue.h"
 #include "../video/yae_synchronous.h"
@@ -154,7 +150,7 @@ namespace yae
   //----------------------------------------------------------------
   // IReaderPtr
   //
-  typedef boost::shared_ptr<IReader> IReaderPtr;
+  typedef yae::shared_ptr<IReader, IPlugin, call_destroy> IReaderPtr;
 
 }
 

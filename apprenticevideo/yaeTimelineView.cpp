@@ -104,37 +104,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // IsFullscreen
-  //
-  struct IsFullscreen : public TBoolExpr
-  {
-    IsFullscreen(TimelineView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      bool fullscreen = (view_.mainWindow_ == NULL ||
-                         view_.mainWindow_->isFullScreen());
-      result = fullscreen;
-    }
-
-    TimelineView & view_;
-  };
-
-  //----------------------------------------------------------------
-  // toggle_fullscreen
-  //
-  static void
-  toggle_fullscreen(void * context)
-  {
-    MainWindow * mainWindow = (MainWindow *)context;
-    mainWindow->requestToggleFullScreen();
-  }
-
-
-  //----------------------------------------------------------------
   // IsPlaylistVisible
   //
   struct IsPlaylistVisible : public TBoolExpr
@@ -214,7 +183,7 @@ namespace yae
       (new IsTimelineVisible(*this));
 
     timeline.toggle_playback_.reset(&toggle_playback, mainWindow_);
-    timeline.toggle_fullscreen_.reset(&toggle_fullscreen, mainWindow_);
+    timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
     timeline.toggle_playlist_.reset(&toggle_playlist, mainWindow_);
 
     timeline.layout();

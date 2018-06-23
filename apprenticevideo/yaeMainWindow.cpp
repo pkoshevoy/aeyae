@@ -237,6 +237,30 @@ namespace yae
   }
 #endif
 
+
+  //----------------------------------------------------------------
+  // context_toggle_fullscreen
+  //
+  static void
+  context_toggle_fullscreen(void * context)
+  {
+    MainWindow * mainWindow = (MainWindow *)context;
+    mainWindow->requestToggleFullScreen();
+  }
+
+
+  //----------------------------------------------------------------
+  // context_query_fullscreen
+  //
+  static bool
+  context_query_fullscreen(void * context, bool & fullscreen)
+  {
+    MainWindow * mainWindow = (MainWindow *)context;
+    fullscreen = mainWindow->isFullScreen();
+    return true;
+  }
+
+
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
@@ -313,6 +337,14 @@ namespace yae
       arg(QString::fromUtf8("\xE2""\x98""\xB0")). // hamburger
       arg(QString::fromUtf8("\xE2""\x86""\x90")). // left arrow
       arg(QString::fromUtf8("\xE2""\x86""\x92")); // right arrow
+
+    playlistView_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    timelineView_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    frameCropView_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+
+    playlistView_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    timelineView_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    frameCropView_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
 #ifdef YAE_USE_QOPENGL_WIDGET
     playerWidget_ = new TPlayerWidget(this);

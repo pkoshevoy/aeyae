@@ -126,6 +126,79 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ContextCallback
+  //
+  struct ContextCallback
+  {
+    typedef void(*TFuncPtr)(void *);
+
+    ContextCallback(TFuncPtr func = NULL,
+                    void * context = NULL)
+    {
+      reset(func, context);
+    }
+
+    inline void reset(TFuncPtr func = NULL,
+                      void * context = NULL)
+    {
+      func_ = func;
+      context_ = context;
+    }
+
+    inline bool is_null() const
+    { return !func_; }
+
+    inline void operator()() const
+    {
+      if (func_)
+      {
+        func_(context_);
+      }
+    }
+
+  protected:
+    TFuncPtr func_;
+    void * context_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ContextQuery
+  //
+  template <typename TData>
+  struct ContextQuery
+  {
+    typedef bool(*TFuncPtr)(void *, TData &);
+
+    ContextQuery(TFuncPtr func = NULL,
+                 void * context = NULL)
+    {
+      reset(func, context);
+    }
+
+    inline void reset(TFuncPtr func = NULL,
+                      void * context = NULL)
+    {
+      func_ = func;
+      context_ = context;
+    }
+
+    inline bool is_null() const
+    { return !func_; }
+
+    inline bool operator()(TData & result) const
+    {
+      bool ok = func_ ? func_(context_, result) : false;
+      return ok;
+    }
+
+  protected:
+    TFuncPtr func_;
+    void * context_;
+  };
+
+
+  //----------------------------------------------------------------
   // ItemView
   //
   class YAE_API ItemView : public QObject,
@@ -240,6 +313,12 @@ namespace yae
   public slots:
     void repaint();
     void animate();
+
+  public:
+    // a mechanism to query and change external properties
+    // without tight (static) coupling to those properties:
+    ContextQuery<bool> query_fullscreen_;
+    ContextCallback toggle_fullscreen_;
 
   protected:
     std::map<Item *, yae::weak_ptr<Item> > uncache_;
@@ -430,6 +509,25 @@ namespace yae
     }
 
     Item & item_;
+  };
+
+
+  //----------------------------------------------------------------
+  // IsFullscreen
+  //
+  struct YAE_API IsFullscreen : public TBoolExpr
+  {
+    IsFullscreen(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      view_.query_fullscreen_(result);
+    }
+
+    const ItemView & view_;
   };
 
 }

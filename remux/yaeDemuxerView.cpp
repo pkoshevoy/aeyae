@@ -16,6 +16,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yaeTimelineItem.h"
 
 
 namespace yae
@@ -1298,11 +1299,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TimelineHeight
+  // ClipTimelineHeight
   //
-  struct TimelineHeight : public TDoubleExpr
+  struct ClipTimelineHeight : public TDoubleExpr
   {
-    TimelineHeight(ItemView & view, Item & container, Item & timeline):
+    ClipTimelineHeight(ItemView & view, Item & container, Item & timeline):
       view_(view),
       container_(container),
       timeline_(timeline)
@@ -1477,7 +1478,7 @@ namespace yae
                                                     &Timespan::t0_));
     ra.anchors_.vcenter_ = ItemRef::reference(timeline, kPropertyVCenter);
     ra.height_ =
-      ra.addExpr(new TimelineHeight(view, *root.parent_, timeline));
+      ra.addExpr(new ClipTimelineHeight(view, *root.parent_, timeline));
     // ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
     // ra.color_ = style.cursor_;
     ra.color_ = ra.addExpr
@@ -1908,6 +1909,50 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // InPlayerMode
+  //
+  struct InPlayerMode : public TBoolExpr
+  {
+    InPlayerMode(const RemuxView & view): view_(view) {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    { result = (view_.view_mode() == RemuxView::kPlayerMode); }
+
+    const RemuxView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // IsPlaybackPaused
+  //
+  struct IsPlaybackPaused : public TBoolExpr
+  {
+    IsPlaybackPaused(RemuxView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = view_.is_playback_paused();
+    }
+
+    RemuxView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // toggle_playback
+  //
+  static void
+  toggle_playback(void * context)
+  {
+    RemuxView * view = (RemuxView *)context;
+    view->toggle_playback();
+  }
+
+
+  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -1933,6 +1978,30 @@ namespace yae
       preview.anchors_.fill(bg);
       preview.visible_ = layout.addExpr(new InPreviewMode(view));
       preview.visible_.disableCaching();
+
+      Item & player = root.addNew<Item>("player");
+      player.anchors_.fill(bg);
+      player.visible_ = layout.addExpr(new InPlayerMode(view));
+      player.visible_.disableCaching();
+
+      TimelineItem & timeline = player.add
+        (new TimelineItem("timeline_item", view, view.timeline_model_));
+      timeline.anchors_.fill(player);
+
+      timeline.is_playback_paused_ = timeline.addExpr
+        (new IsPlaybackPaused(view));
+
+      timeline.is_fullscreen_ = timeline.addExpr
+        (new IsFullscreen(view));
+
+      timeline.is_playlist_visible_ = BoolRef::constant(false);
+      timeline.is_timeline_visible_ = BoolRef::constant(false);
+
+      timeline.toggle_playback_.reset(&toggle_playback, this);
+      timeline.toggle_fullscreen_ = view.toggle_fullscreen_;
+
+      timeline.layout();
+
 
       Item & gops = layout.addNew<Item>("gops");
       Item & clips = layout.addNew<Item>("clips");
@@ -2050,6 +2119,35 @@ namespace yae
         ia.anchors_.fill(preview_btn);
       }
 
+      // add a button to switch to player:
+      RoundRect & player_btn = controls.addNew<RoundRect>("player_btn");
+      {
+        Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        underline.visible_ = player.visible_;
+        underline.visible_.disableCaching();
+
+        Text & txt = layout_control_button(model,
+                                           view,
+                                           style,
+                                           controls,
+                                           player_btn);
+
+        txt.anchors_.left_ = ItemRef::reference(preview_btn, kPropertyRight);
+        txt.margins_.
+          set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Player")));
+
+        layout_text_underline(view, player_btn, txt, underline);
+
+        // NOTE: QGenericArgument does not store the arg value,
+        //       so we must provide storage instead:
+        static const RemuxView::ViewMode mode = RemuxView::kPlayerMode;
+        Item & ia = controls.add
+          (new InvokeMethodOnClick("player_ia", view, "set_view_mode",
+                                   Q_ARG(RemuxView::ViewMode, mode)));
+        ia.anchors_.fill(player_btn);
+      }
+
       // add a button to generate the output file:
       RoundRect & export_btn = controls.addNew<RoundRect>("export_btn");
       {
@@ -2087,6 +2185,7 @@ namespace yae
     style_("RemuxViewStyle", *this),
     model_(NULL),
     view_mode_(RemuxView::kLayoutMode),
+    playback_paused_(true),
     actionSetInPoint_(this),
     actionSetOutPoint_(this)
   {
@@ -2382,6 +2481,13 @@ namespace yae
 
     Item & root = *root_;
     requestUncache(&(root["layout"]["clips"]));
+
+    if (view_mode_ == kPlayerMode)
+    {
+      Item & player = root["player"];
+      TimelineItem & timeline = player.get<TimelineItem>("timeline_item");
+      timeline.processMouseTracking(mousePt);
+    }
 
     return true;
   }
@@ -2953,6 +3059,7 @@ namespace yae
 
     Item & root = *root_;
     Item & preview = root["preview"];
+    Item & player = root["player"];
     view_mode_ = mode;
 
     if (mode != kLayoutMode)
@@ -2981,7 +3088,17 @@ namespace yae
         }
       }
 
+      if (mode == kPlayerMode)
+      {
+        TimelineItem & timeline =
+          player.get<TimelineItem>("timeline_item");
+
+        timeline.maybeAnimateOpacity();
+        timeline.forceAnimateControls();
+      }
+
       preview.uncache();
+      player.uncache();
 
 #if 0 // ndef NDEBUG
       preview.dump(std::cerr);
@@ -2989,6 +3106,33 @@ namespace yae
     }
 
     requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::is_playback_paused
+  //
+  bool
+  RemuxView::is_playback_paused()
+  {
+    return playback_paused_;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::toggle_playback
+  //
+  void
+  RemuxView::toggle_playback()
+  {
+    playback_paused_ = !playback_paused_;
+
+    if (playback_paused_)
+    {
+      // stop playback:
+    }
+    else
+    {
+      // start playback:
+    }
   }
 
   //----------------------------------------------------------------
