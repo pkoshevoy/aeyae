@@ -146,7 +146,7 @@ namespace yae
   DemuxerReader *
   DemuxerReader::create(const TDemuxerInterfacePtr & demuxer)
   {
-    return new DemuxerReader(demuxer);
+    return demuxer ? new DemuxerReader(demuxer) : NULL;
   }
 
   //----------------------------------------------------------------
