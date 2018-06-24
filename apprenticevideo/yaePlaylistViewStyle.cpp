@@ -20,16 +20,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // calcItemsPerRow
-  //
-  unsigned int
-  calcItemsPerRow(double rowWidth, double cellWidth)
-  {
-    double n = std::max(1.0, std::floor(rowWidth / cellWidth));
-    return (unsigned int)n;
-  }
-
-  //----------------------------------------------------------------
   // PlaylistViewStyle::PlaylistViewStyle
   //
   PlaylistViewStyle::PlaylistViewStyle(const char * id,
@@ -55,9 +45,6 @@ namespace yae
   void
   PlaylistViewStyle::uncache()
   {
-    cell_width_.uncache();
-    cell_height_.uncache();
-
     bg_xbutton_.uncache();
     fg_xbutton_.uncache();
 

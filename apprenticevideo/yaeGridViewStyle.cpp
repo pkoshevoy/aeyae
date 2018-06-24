@@ -19,72 +19,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // GetFontSize
-  //
-  struct GetFontSize : public TDoubleExpr
-  {
-    GetFontSize(const ItemRef & titleHeight, double titleHeightScale,
-                const ItemRef & cellHeight, double cellHeightScale):
-      titleHeight_(titleHeight),
-      cellHeight_(cellHeight),
-      titleHeightScale_(titleHeightScale),
-      cellHeightScale_(cellHeightScale)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      double t = titleHeight_.get();
-      t *= titleHeightScale_;
-
-      double c = cellHeight_.get();
-      c *= cellHeightScale_;
-
-      result = std::min(t, c);
-    }
-
-    const ItemRef & titleHeight_;
-    const ItemRef & cellHeight_;
-
-    double titleHeightScale_;
-    double cellHeightScale_;
-  };
-
-  //----------------------------------------------------------------
-  // GridCellWidth
-  //
-  struct GridCellWidth : public TDoubleExpr
-  {
-    GridCellWidth(const PlaylistView & playlist,
-                  unsigned int maxCells = 5,
-                  double minWidth = 160):
-      playlist_(playlist),
-      maxCells_(maxCells),
-      minWidth_(minWidth)
-    {}
-
-    // virtual:
-    void evaluate(double & result) const
-    {
-      Item & root = *(playlist_.root());
-      Scrollview & sview = root.get<Scrollview>("scrollview");
-
-      double rowWidth = 0.0;
-      sview.get(kPropertyWidth, rowWidth);
-
-      unsigned int numCells =
-        std::min(maxCells_, calcItemsPerRow(rowWidth, minWidth_));
-
-      result = (numCells < 2) ? rowWidth : (rowWidth / double(numCells));
-    }
-
-    const PlaylistView & playlist_;
-    unsigned int maxCells_;
-    double minWidth_;
-  };
-
-
-  //----------------------------------------------------------------
   // GridViewStyle::GridViewStyle
   //
   GridViewStyle::GridViewStyle(const char * id, PlaylistView & playlist):
@@ -187,13 +121,10 @@ namespace yae
     }
 
     // configure common style attributes:
-    title_height_ = addExpr(new CalcTitleHeight(playlist_, 24.0));
+    GridCellWidth * cell_width = cell_width_expr();
+    YAE_ASSERT(cell_width);
 
-    cell_width_ = addExpr(new GridCellWidth(playlist_), 1.0, -2.0);
-    cell_height_ = cell_width_;
-
-    font_size_ = addExpr(new GetFontSize(title_height_, 0.52,
-                                         cell_height_, 0.15));
+    cell_width->path_to_grid_container_ = "scrollview";
 
     now_playing_.anchors_.top_ = ItemRef::constant(0.0);
     now_playing_.anchors_.left_ = ItemRef::constant(0.0);

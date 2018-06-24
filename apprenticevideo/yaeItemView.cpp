@@ -887,4 +887,14 @@ namespace yae
     return rh;
   }
 
+  //----------------------------------------------------------------
+  // calc_items_per_row
+  //
+  unsigned int
+  calc_items_per_row(double row_width, double cell_width)
+  {
+    double n = std::max(1.0, std::floor(row_width / cell_width));
+    return (unsigned int)n;
+  }
+
 }

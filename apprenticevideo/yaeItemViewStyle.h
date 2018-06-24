@@ -69,6 +69,12 @@ namespace yae
 
     virtual void uncache();
 
+    // a reference to GridCellWidth 
+    inline GridCellWidth * cell_width_expr() const
+    {
+      return cell_width_.unwrap<GridCellWidth>();
+    }
+
     // the view that owns this style:
     const ItemView & view_;
 
@@ -81,6 +87,8 @@ namespace yae
     // shared common properties:
     ItemRef dpi_;
     ItemRef row_height_;
+    ItemRef cell_width_;
+    ItemRef cell_height_;
     ItemRef title_height_;
     ItemRef font_size_;
 

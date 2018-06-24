@@ -29,12 +29,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // calcItemsPerRow
-  //
-  YAE_API unsigned int
-  calcItemsPerRow(double rowWidth, double cellWidth);
-
-  //----------------------------------------------------------------
   // PlaylistViewStyle
   //
   struct YAE_API PlaylistViewStyle : public ItemViewStyle
@@ -47,8 +41,6 @@ namespace yae
     PlaylistView & playlist_;
 
     // shared common properties:
-    ItemRef cell_width_;
-    ItemRef cell_height_;
     Text & now_playing_;
     Text & eyetv_badge_;
 

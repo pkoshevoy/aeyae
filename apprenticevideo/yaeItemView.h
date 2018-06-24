@@ -390,7 +390,15 @@ namespace yae
   //----------------------------------------------------------------
   // get_row_height
   //
-  YAE_API double get_row_height(const ItemView & view);
+  YAE_API double
+  get_row_height(const ItemView & view);
+
+
+  //----------------------------------------------------------------
+  // calc_items_per_row
+  //
+  YAE_API unsigned int
+  calc_items_per_row(double row_width, double cell_width);
 
 
   //----------------------------------------------------------------
@@ -431,6 +439,71 @@ namespace yae
 
     const ItemView & itemView_;
     double minHeight_;
+  };
+
+  //----------------------------------------------------------------
+  // GetFontSize
+  //
+  struct YAE_API GetFontSize : public TDoubleExpr
+  {
+    GetFontSize(const ItemRef & titleHeight, double titleHeightScale,
+                const ItemRef & cellHeight, double cellHeightScale):
+      titleHeight_(titleHeight),
+      cellHeight_(cellHeight),
+      titleHeightScale_(titleHeightScale),
+      cellHeightScale_(cellHeightScale)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double t = titleHeight_.get();
+      t *= titleHeightScale_;
+
+      double c = cellHeight_.get();
+      c *= cellHeightScale_;
+
+      result = std::min(t, c);
+    }
+
+    const ItemRef & titleHeight_;
+    const ItemRef & cellHeight_;
+
+    double titleHeightScale_;
+    double cellHeightScale_;
+  };
+
+  //----------------------------------------------------------------
+  // GridCellWidth
+  //
+  struct YAE_API GridCellWidth : public TDoubleExpr
+  {
+    GridCellWidth(const ItemView & view,
+                  const char * path_to_grid_container = "/",
+                  unsigned int max_cells = 5,
+                  double min_width = 160):
+      view_(view),
+      path_to_grid_container_(path_to_grid_container),
+      max_cells_(max_cells),
+      min_width_(min_width)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      Item & container = view_.root()->item_at(path_to_grid_container_.c_str());
+      double row_width = container.width();
+
+      unsigned int num_cells =
+        std::min(max_cells_, calc_items_per_row(row_width, min_width_));
+
+      result = (num_cells < 2) ? row_width : (row_width / double(num_cells));
+    }
+
+    const ItemView & view_;
+    std::string path_to_grid_container_;
+    unsigned int max_cells_;
+    double min_width_;
   };
 
   //----------------------------------------------------------------

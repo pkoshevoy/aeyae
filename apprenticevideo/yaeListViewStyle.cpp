@@ -159,8 +159,6 @@ namespace yae
     }
 
     // configure common style attributes:
-    title_height_ = addExpr(new CalcTitleHeight(playlist_, 24.0));
-
     cell_width_ = addExpr(new GetScrollviewWidth(playlist_), 1.0, -2.0);
     cell_height_ = ItemRef::reference(title_height_, 0.84);
 

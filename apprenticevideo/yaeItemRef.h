@@ -266,6 +266,20 @@ namespace yae
       return private_->get_value();
     }
 
+    template <typename TProp>
+    inline TProp *
+    unwrap() const
+    {
+      const Ref * ref = dynamic_cast<const Ref *>(private_.get());
+      if (ref)
+      {
+        const TProp * prop = dynamic_cast<const TProp *>(&ref->ref_);
+        return const_cast<TProp *>(prop);
+      }
+
+      return NULL;
+    }
+
     // implementation details:
     typedef yae::optional<typename TDataRef::IRef,
                           typename TDataRef::IRef,

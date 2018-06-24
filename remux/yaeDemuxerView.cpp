@@ -495,7 +495,7 @@ namespace yae
   static double
   get_frame_pos_x(const RemuxView & view, std::size_t column)
   {
-    double dpi = view.style_.dpi_.get();
+    double dpi = view.style_->dpi_.get();
     double s = dpi / 96.0;
     double w = std::max(kFrameWidth, kFrameWidth * s);
     double x = w * double(column);
@@ -508,7 +508,7 @@ namespace yae
   static double
   get_frame_pos_y(const RemuxView & view, std::size_t row)
   {
-    double dpi = view.style_.dpi_.get();
+    double dpi = view.style_->dpi_.get();
     double s = dpi / 96.0;
     double h = std::max(kFrameHeight, kFrameHeight * s);
     double y = h * double(row);
@@ -2183,13 +2183,17 @@ namespace yae
   //
   RemuxView::RemuxView():
     ItemView("RemuxView"),
-    style_("RemuxViewStyle", *this),
     model_(NULL),
     view_mode_(RemuxView::kLayoutMode),
     playback_paused_(true),
     actionSetInPoint_(this),
     actionSetOutPoint_(this)
   {
+    Item & root = *root_;
+
+    // add style to the root item, so it could be uncached automatically:
+    style_.reset(new RemuxViewStyle("RemuxViewStyle", *this));
+
     actionSetInPoint_.setObjectName(QString::fromUtf8("actionSetInPoint_"));
     actionSetInPoint_.setText(tr("Set &In Point"));
     actionSetInPoint_.setShortcut(QKeySequence(Qt::Key_I));
@@ -2575,10 +2579,10 @@ namespace yae
     bg.color_ = bg.addExpr(new ClipItemColor(model, view, index, row));
     bg.color_.disableCaching();
 
-    layout_clip(model, view, style_, row, index);
+    layout_clip(model, view, *style_, row, index);
 
     Item & gops = root["layout"]["gops"];
-    layout_gops(model, view, style_, gops, clip);
+    layout_gops(model, view, *style_, gops, clip);
 
     dataChanged();
 
@@ -2774,6 +2778,7 @@ namespace yae
 
     Item & root = *root_;
     root.children_.clear();
+    root.addHidden(style_);
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
@@ -2781,7 +2786,7 @@ namespace yae
     root.uncache();
     uncache_.clear();
 
-    style_.layout_->layout(root, *this, *model_, style_);
+    style_->layout_->layout(root, *this, *model_, *style_);
 
 #if 0 // ndef NDEBUG
     root.dump(std::cerr);
@@ -3085,7 +3090,7 @@ namespace yae
       TClipPtr clip = output_clip();
       if (clip && mode == kPreviewMode && preview.children_.empty())
       {
-        layout_gops(*model_, *this, style_, preview, clip);
+        layout_gops(*model_, *this, *style_, preview, clip);
       }
 
       if (mode == kPlayerMode)

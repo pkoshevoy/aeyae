@@ -17,6 +17,7 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <cstring>
 #include <vector>
 
 // boost includes:
@@ -488,6 +489,35 @@ namespace yae
     const Item & operator[](const char * id) const;
     Item & operator[](const char * id);
 
+    template <typename TItem = Item>
+    inline TItem &
+    item_at(const char * path) const
+    {
+      Item * item = const_cast<Item *>(this);
+      while (true)
+      {
+        const char * next = std::strchr(path, '/');
+        if (!next)
+        {
+          item = &(item->operator[](std::string(path).c_str()));
+          break;
+        }
+
+        if (next == path)
+        {
+          item = &(item->operator[]("/"));
+          path = next + 1;
+        }
+        else
+        {
+          item = &(item->operator[](std::string(path, next).c_str()));
+          path = next + 1;
+        }
+      }
+
+      return dynamic_cast<TItem &>(*item);
+    }
+
     template <typename TItem>
     inline const TItem & get(const char * id) const
     {
@@ -523,6 +553,16 @@ namespace yae
     }
 
     template <typename TItem>
+    inline TItem & add(yae::shared_ptr<TItem, Item> & itemPtr)
+    {
+      TItem * newItem = itemPtr.get();
+      YAE_ASSERT(newItem);
+      children_.push_back(itemPtr);
+      newItem->Item::setParent(this, itemPtr);
+      return *newItem;
+    }
+
+    template <typename TItem>
     inline TItem & addNew(const char * id)
     {
       ItemPtr itemPtr(new TItem(id));
@@ -537,6 +577,17 @@ namespace yae
     {
       YAE_ASSERT(newItem);
       ItemPtr itemPtr(newItem);
+      children_.push_back(itemPtr);
+      newItem->Item::setParent(this, itemPtr);
+      newItem->visible_ = BoolRef::constant(false);
+      return *newItem;
+    }
+
+    template <typename TItem>
+    inline TItem & addHidden(const yae::shared_ptr<TItem, Item> & itemPtr)
+    {
+      TItem * newItem = itemPtr.get();
+      YAE_ASSERT(newItem);
       children_.push_back(itemPtr);
       newItem->Item::setParent(this, itemPtr);
       newItem->visible_ = BoolRef::constant(false);

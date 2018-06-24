@@ -2144,7 +2144,7 @@ namespace yae
     Scrollview & sview = root.get<Scrollview>("scrollview");
     double rowWidth = sview.width();
     double cellWidth = style.cell_width_.get();
-    return calcItemsPerRow(rowWidth, cellWidth);
+    return calc_items_per_row(rowWidth, cellWidth);
   }
 
   //----------------------------------------------------------------

@@ -260,8 +260,8 @@ namespace yae
     { return model_; }
 
     // virtual:
-    const ItemViewStyle * style() const
-    { return &style_; }
+    const RemuxViewStyle * style() const
+    { return style_; }
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
@@ -332,7 +332,7 @@ namespace yae
     bool playback_paused_;
 
   public:
-    RemuxViewStyle style_;
+    yae::shared_ptr<RemuxViewStyle, Item> style_;
     TimelineModel timeline_model_;
 
     // index of currently selected clip:

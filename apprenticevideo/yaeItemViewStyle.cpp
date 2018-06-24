@@ -315,8 +315,12 @@ namespace yae
     dpi_.disableCaching();
     row_height_ = addExpr(new GetRowHeight(view));
 
-    title_height_ = addExpr(new CalcTitleHeight(view, 50.0));
-    font_size_ = ItemRef::reference(title_height_, 0.15);
+    cell_width_ = addExpr(new GridCellWidth(view), 1.0, -2.0);
+    cell_height_ = cell_width_;
+
+    title_height_ = addExpr(new CalcTitleHeight(view, 24.0));
+    font_size_ = addExpr(new GetFontSize(title_height_, 0.52,
+                                         cell_height_, 0.15));
 
     // color palette:
     bg_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
@@ -413,6 +417,11 @@ namespace yae
   void
   ItemViewStyle::uncache()
   {
+    dpi_.uncache();
+
+    row_height_.uncache();
+    cell_width_.uncache();
+    cell_height_.uncache();
     title_height_.uncache();
     font_size_.uncache();
 
