@@ -3082,14 +3082,10 @@ namespace yae
         reader_.reset();
       }
 
-      if (!output_clip_)
+      TClipPtr clip = output_clip();
+      if (clip && mode == kPreviewMode && preview.children_.empty())
       {
-        TClipPtr clip = output_clip();
-
-        if (clip && mode == kPreviewMode)
-        {
-          layout_gops(*model_, *this, style_, preview, clip);
-        }
+        layout_gops(*model_, *this, style_, preview, clip);
       }
 
       if (mode == kPlayerMode)
