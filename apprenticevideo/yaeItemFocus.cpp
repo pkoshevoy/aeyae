@@ -15,25 +15,15 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // lookup
-  //
-  static const ItemFocus::Target *
-  lookup(const std::map<std::string, const ItemFocus::Target *> & items,
-         const std::string & id)
-  {
-    std::map<std::string, const ItemFocus::Target *>::const_iterator
-      found = items.find(id);
-
-    return found != items.end() ? found->second : NULL;
-  }
-
-  //----------------------------------------------------------------
   // ItemFocus::Target::Target
   //
-  ItemFocus::Target::Target(Canvas::ILayer * view, Item * item, int index):
+  ItemFocus::Target::Target(Canvas::ILayer * view,
+                            Item * item,
+                            const char * focusGroup,
+                            int index):
     view_(view),
     item_(item->self_),
-    index_(index)
+    index_(std::string(focusGroup), index)
   {}
 
   //----------------------------------------------------------------
@@ -59,7 +49,7 @@ namespace yae
   void
   ItemFocus::removeFocusable(const std::string & id)
   {
-    const Target * target = lookup(idMap_, id);
+    const Target * target = yae::get(idMap_, id, (const Target *)0);
     if (!target)
     {
       return;
@@ -72,7 +62,7 @@ namespace yae
 
     idMap_.erase(id);
 
-    int index = target->index_;
+    TIndex index = target->index_;
     index_.erase(index);
   }
 
@@ -80,24 +70,28 @@ namespace yae
   // ItemFocus::setFocusable
   //
   void
-  ItemFocus::setFocusable(Canvas::ILayer & view, Item & item, int index)
+  ItemFocus::setFocusable(Canvas::ILayer & view,
+                          Item & item,
+                          const char * focusGroup,
+                          int index)
   {
-    Target target(&view, &item, index);
+    Target target(&view, &item, focusGroup, index);
 
-    std::map<int, Target>::iterator found = index_.lower_bound(index);
-    if (found == index_.end() ||
-        index_.key_comp()(index, found->first))
+    std::map<TIndex, Target>::iterator found =
+      index_.lower_bound(target.index_);
+
+    if (found == index_.end() || index_.key_comp()(target.index_, found->first))
     {
       // not found:
-      found = index_.insert(found, std::make_pair(index, target));
+      found = index_.insert(found, std::make_pair(target.index_, target));
     }
     else
     {
-      ItemPtr prevPtr = found->second.item_.lock();
-      if (prevPtr && prevPtr->id_ != item.id_)
+      ItemPtr prev = found->second.item_.lock();
+      if (prev && prev->id_ != item.id_)
       {
         YAE_ASSERT(false);
-        throw std::runtime_error("another item with same index "
+        throw std::runtime_error("another item with same focus group index "
                                  "already exists");
       }
       else
@@ -107,6 +101,24 @@ namespace yae
     }
 
     idMap_[item.id_] = &(found->second);
+  }
+
+  //----------------------------------------------------------------
+  // ItemFocus::enable
+  //
+  void
+  ItemFocus::enable(const char * focusGroup, bool enableFocusGroup)
+  {
+    std::string str(focusGroup);
+
+    if (enableFocusGroup)
+    {
+      disabled_.erase(str);
+    }
+    else
+    {
+      disabled_.insert(str);
+    }
   }
 
   //----------------------------------------------------------------
@@ -148,7 +160,7 @@ namespace yae
       return true;
     }
 
-    const Target * target = lookup(idMap_, id);
+    const Target * target = yae::get(idMap_, id, (const Target *)0);
     if (!target)
     {
       YAE_ASSERT(false);
@@ -232,7 +244,7 @@ namespace yae
   bool
   ItemFocus::focusNext()
   {
-    std::map<int, Target>::const_iterator iter =
+    std::map<TIndex, Target>::const_iterator iter =
       focus_ ? index_.find(focus_->index_) : index_.end();
 
     std::size_t numTargets = index_.size();
@@ -242,6 +254,11 @@ namespace yae
 
       const Target & target = iter->second;
       if (!target.view_->isEnabled())
+      {
+        continue;
+      }
+
+      if (yae::has(disabled_, target.index_.first))
       {
         continue;
       }
@@ -264,7 +281,7 @@ namespace yae
   bool
   ItemFocus::focusPrevious()
   {
-    std::map<int, Target>::const_iterator iter =
+    std::map<TIndex, Target>::const_iterator iter =
       focus_ ? index_.find(focus_->index_) : index_.begin();
 
     const std::size_t numTargets = index_.size();
@@ -274,6 +291,11 @@ namespace yae
 
       const Target & target = iter->second;
       if (!target.view_->isEnabled())
+      {
+        continue;
+      }
+
+      if (yae::has(disabled_, target.index_.first))
       {
         continue;
       }

@@ -333,7 +333,7 @@ namespace yae
 
     TextInputProxy & playheadFocus =
       this->add(new TextInputProxy("playheadFocus", playheadAux, playheadEdit));
-    ItemFocus::singleton().setFocusable(view_, playheadFocus, 2);
+    ItemFocus::singleton().setFocusable(view_, playheadFocus, "player", 2);
     playheadFocus.copyViewToEdit_ = true;
     playheadFocus.bgNoFocus_ = colorTextBg;
     playheadFocus.bgOnFocus_ = colorFocusBg;

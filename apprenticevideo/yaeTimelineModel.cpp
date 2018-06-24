@@ -258,6 +258,13 @@ namespace yae
   bool
   get_duration(const IReader * reader, TTime & start, TTime & duration)
   {
+    if (!reader)
+    {
+      start = TTime(0, 1);
+      duration = TTime(0, 1);
+      return true;
+    }
+
     TTime audioStart;
     TTime audioDuration;
     bool audioOk = reader->getAudioDuration(audioStart, audioDuration);
@@ -292,7 +299,8 @@ namespace yae
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
 
     VideoTraits videoTraits;
-    if (reader->getVideoTraits(videoTraits) &&
+    if (reader &&
+        reader->getVideoTraits(videoTraits) &&
         videoTraits.frameRate_ < 100.0)
     {
       frameRate_ = videoTraits.frameRate_;
@@ -303,7 +311,7 @@ namespace yae
     timelinePosition_ = timelineStart_;
     unknownDuration_ =
       duration.time_ == std::numeric_limits<int64>::max() ||
-      !reader->isSeekable();
+      !reader || !reader->isSeekable();
 
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :

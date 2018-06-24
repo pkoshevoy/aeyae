@@ -1220,7 +1220,8 @@ namespace yae
     focus.bgNoFocus_ = ColorRef::constant(Color(0, 0.0));
     focus.bgOnFocus_ = ColorRef::constant(Color(0, 0.3));
 
-    ItemFocus::singleton().setFocusable(view, focus, focus_index);
+    ItemFocus::singleton().
+      setFocusable(view, focus, "remux_layout", focus_index);
 
     text.anchors_.vcenter_ =
       text.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
@@ -3076,6 +3077,9 @@ namespace yae
         output_clip_.reset();
         serial_demuxer_.reset();
         preview.children_.clear();
+
+        timeline_model_.resetFor(NULL);
+        reader_.reset();
       }
 
       if (!output_clip_)
@@ -3090,6 +3094,9 @@ namespace yae
 
       if (mode == kPlayerMode)
       {
+        reader_.reset(DemuxerReader::create(serial_demuxer_));
+        timeline_model_.resetFor(reader_.get());
+
         TimelineItem & timeline =
           player.get<TimelineItem>("timeline_item");
 
@@ -3104,6 +3111,9 @@ namespace yae
       preview.dump(std::cerr);
 #endif
     }
+
+    ItemFocus::singleton().enable("remux_layout", view_mode_ == kLayoutMode);
+    ItemFocus::singleton().enable("player", view_mode_ == kPlayerMode);
 
     requestRepaint();
   }

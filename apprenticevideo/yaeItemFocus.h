@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <limits>
 #include <map>
+#include <set>
+#include <utility>
 
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
@@ -34,17 +36,23 @@ namespace yae
     static ItemFocus & singleton();
 
     //----------------------------------------------------------------
+    // TIndex
+    //
+    typedef std::pair<std::string, int> TIndex;
+
+    //----------------------------------------------------------------
     // Target
     //
     struct Target
     {
       Target(Canvas::ILayer * view = NULL,
              Item * item = NULL,
+             const char * focusGroup = "",
              int index = std::numeric_limits<int>::max());
 
       Canvas::ILayer * view_;
       yae::weak_ptr<Item> item_;
-      int index_;
+      TIndex index_;
     };
 
     ItemFocus();
@@ -53,7 +61,13 @@ namespace yae
     void removeFocusable(const std::string & id);
 
     // register item that will be allowed to receive focus:
-    void setFocusable(Canvas::ILayer & view, Item & item, int index);
+    void setFocusable(Canvas::ILayer & view,
+                      Item & item,
+                      const char * focusGroup,
+                      int index);
+
+    // used to prevent passing focus to items in disabled focus groups:
+    void enable(const char * focusGroup, bool enable = true);
 
     // clears focus from a given item, or any item if the id is empty:
     bool clearFocus(const std::string & id = std::string());
@@ -76,7 +90,10 @@ namespace yae
     { return focus_; }
 
   protected:
-    std::map<int, Target> index_;
+    // keep track of disabled focus groups, do not move focus
+    // to items that are in a disabled focus group:
+    std::set<std::string> disabled_;
+    std::map<TIndex, Target> index_;
     std::map<std::string, const Target *> idMap_;
     const Target * focus_;
   };

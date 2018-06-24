@@ -327,8 +327,9 @@ namespace yae
     mutable TClipPtr output_clip_;
     mutable TSerialDemuxerPtr serial_demuxer_;
     mutable std::string model_json_str_;
+
+    DemuxerReaderPtr reader_;
     bool playback_paused_;
-    yae::shared_ptr<DemuxerReader, IPlugin, yae::call_destroy> reader_;
 
   public:
     RemuxViewStyle style_;

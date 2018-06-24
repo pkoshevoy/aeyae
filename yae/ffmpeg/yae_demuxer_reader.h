@@ -249,6 +249,12 @@ namespace yae
     yae::TSettingUInt32 audioQueueSize_;
   };
 
+  //----------------------------------------------------------------
+  // DemuxerReaderPtr
+  //
+  typedef yae::shared_ptr<DemuxerReader, yae::IPlugin, yae::call_destroy>
+  DemuxerReaderPtr;
+
 }
 
 
