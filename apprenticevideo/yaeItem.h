@@ -489,9 +489,9 @@ namespace yae
     const Item & operator[](const char * id) const;
     Item & operator[](const char * id);
 
-    template <typename TItem = Item>
+    template <typename TItem>
     inline TItem &
-    item_at(const char * path) const
+    find(const char * path) const
     {
       Item * item = const_cast<Item *>(this);
       while (true)

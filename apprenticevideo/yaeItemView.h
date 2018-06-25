@@ -491,7 +491,9 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      Item & container = view_.root()->item_at(path_to_grid_container_.c_str());
+      Item & container = view_.root()->
+        find<Item>(path_to_grid_container_.c_str());
+
       double row_width = container.width();
 
       unsigned int num_cells =
