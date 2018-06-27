@@ -13,6 +13,7 @@
 #include <string>
 
 // yae includes:
+#include "../api/yae_shared_ptr.h"
 #include "yae_video.h"
 #include "yae_reader.h"
 #include "yae_synchronous.h"
@@ -72,6 +73,12 @@ namespace yae
     inline void resume()
     { pause(false); }
   };
+
+  //----------------------------------------------------------------
+  // TVideoRendererPtr
+  //
+  typedef yae::shared_ptr<VideoRenderer, ISynchronous, yae::call_destroy>
+  TVideoRendererPtr;
 }
 
 

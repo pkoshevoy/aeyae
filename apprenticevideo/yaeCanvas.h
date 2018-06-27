@@ -151,13 +151,13 @@ namespace yae
       ILayer(): enabled_(true) {}
       virtual ~ILayer() {}
 
-      inline void setContext(const yae::shared_ptr<IOpenGLContext> & context)
+      virtual void setContext(const yae::shared_ptr<IOpenGLContext> & context)
       { context_ = context; }
 
       inline const yae::shared_ptr<IOpenGLContext> & context() const
       { return context_; }
 
-      inline void setDelegate(const yae::shared_ptr<IDelegate> & delegate)
+      virtual void setDelegate(const yae::shared_ptr<IDelegate> & delegate)
       { delegate_ = delegate; }
 
       inline const yae::shared_ptr<IDelegate> & delegate() const

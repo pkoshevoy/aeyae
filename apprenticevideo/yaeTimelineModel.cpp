@@ -773,4 +773,36 @@ namespace yae
     return true;
   }
 
+
+  //----------------------------------------------------------------
+  // TIgnoreClockStop::TIgnoreClockStop
+  //
+  TIgnoreClockStop::TIgnoreClockStop(TimelineModel & timeline):
+    timeline_(timeline)
+  {
+    count_++;
+    if (count_ < 2)
+    {
+      timeline_.ignoreClockStoppedEvent(true);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TIgnoreClockStop::~TIgnoreClockStop
+  //
+  TIgnoreClockStop::~TIgnoreClockStop()
+  {
+    count_--;
+    if (!count_)
+    {
+      timeline_.ignoreClockStoppedEvent(false);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TIgnoreClockStop::count_
+  //
+  int
+  TIgnoreClockStop::count_ = 0;
+
 }

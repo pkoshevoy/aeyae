@@ -45,6 +45,12 @@ namespace yae
     TTime(int64 time, uint64 base);
     TTime(double seconds);
 
+    inline bool valid() const
+    { return base_ > 0; }
+
+    inline bool invalid() const
+    { return !valid(); }
+
     // return time expressed in a given time base:
     TTime rebased(uint64 base) const;
 

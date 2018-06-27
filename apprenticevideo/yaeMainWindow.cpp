@@ -2303,44 +2303,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TIgnoreClockStop
-  //
-  struct TIgnoreClockStop
-  {
-    TIgnoreClockStop(TimelineModel & timeline):
-      timeline_(timeline)
-    {
-      count_++;
-      if (count_ < 2)
-      {
-        timeline_.ignoreClockStoppedEvent(true);
-      }
-    }
-
-    ~TIgnoreClockStop()
-    {
-      count_--;
-      if (!count_)
-      {
-        timeline_.ignoreClockStoppedEvent(false);
-      }
-    }
-
-  private:
-    TIgnoreClockStop(const TIgnoreClockStop &);
-    TIgnoreClockStop & operator = (const TIgnoreClockStop &);
-
-    static int count_;
-    TimelineModel & timeline_;
-  };
-
-  //----------------------------------------------------------------
-  // TIgnoreClockStop::count_
-  //
-  int
-  TIgnoreClockStop::count_ = 0;
-
-  //----------------------------------------------------------------
   // MainWindow::playbackColorConverter
   //
   void

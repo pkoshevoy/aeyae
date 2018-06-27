@@ -84,6 +84,8 @@ set(project_moc_hxx
   yaeMainWindow.h
   yaeSpinnerView.h
 
+  yae_player_item.h
+
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
   ../apprenticevideo/yaeScreenSaverInhibitor.h
@@ -107,6 +109,9 @@ set(project_sources
   yaeRemux.h
   yaeSpinnerView.cpp
   yaeSpinnerView.h
+
+  yae_player_item.cpp
+  yae_player_item.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
@@ -186,7 +191,14 @@ if (APPLE)
     ${project_sources}
     ../apprenticevideo/yaeAppleUtils.h
     ../apprenticevideo/yaeAppleUtils.mm
+    ../apprenticevideo/yaeAudioUnitRenderer.h
+    ../apprenticevideo/yaeAudioUnitRenderer.mm
     )
+else ()
+  set(project_sources
+    ${project_sources}
+    ../apprenticevideo/yaePortaudioRenderer.h
+    ../apprenticevideo/yaePortaudioRenderer.cpp)
 endif ()
 
 
@@ -211,6 +223,30 @@ if (LIBASS_LIBRARY)
     ../apprenticevideo/yaeLibass.cpp
     )
 endif ()
+
+
+if (NOT (APPLE))
+  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
+    CACHE
+    PATH "root path for portaudio lib/ and include/ folders")
+
+  find_library(PORTAUDIO_LIBRARY portaudio
+    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
+    DOC "portaudio library")
+
+  find_path(PORTAUDIO_INCLUDE_DIR
+    portaudio.h
+    PATHS
+    ${PORTAUDIO_DIR}/include
+    ${FFMPEG_HEADERS_PATH}
+    /usr/include
+    /usr/local/include
+    /opt/local/include)
+
+  if (PORTAUDIO_INCLUDE_DIR)
+    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
+  endif ()
+endif()
 
 
 find_path(GLEW_INCLUDE_DIR
@@ -302,12 +338,17 @@ add_dependencies(${PROGNAME} "update_revision_aeyaeremux")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   )
+
+if (PORTAUDIO_LIBRARY)
+  set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
+endif ()
 
 if (WIN32)
 

@@ -618,11 +618,9 @@ namespace yae
 
     this->opacity_animator_.reset
       (new Animator(*this, mouseDetect));
-    maybeAnimateOpacity();
 
     this->controls_animator_.reset
       (new AnimatorForControls(*this, mouseDetectForControls));
-    forceAnimateControls();
 
     animate_opacity_.reset(new AnimateOpacity(*this));
     playheadFocus.addObserver(Item::kOnFocus, animate_opacity_);

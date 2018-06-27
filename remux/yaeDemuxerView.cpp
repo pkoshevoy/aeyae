@@ -16,7 +16,6 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
-#include "yaeTimelineItem.h"
 
 
 namespace yae
@@ -1980,29 +1979,11 @@ namespace yae
       preview.visible_ = layout.addExpr(new InPreviewMode(view));
       preview.visible_.disableCaching();
 
-      Item & player = root.addNew<Item>("player");
+      PlayerItem & player = root.add(view.player_);
       player.anchors_.fill(bg);
-      player.visible_ = layout.addExpr(new InPlayerMode(view));
-      player.visible_.disableCaching();
 
-      TimelineItem & timeline = player.add
-        (new TimelineItem("timeline_item", view, view.timeline_model_));
+      TimelineItem & timeline = player.add(view.timeline_);
       timeline.anchors_.fill(player);
-
-      timeline.is_playback_paused_ = timeline.addExpr
-        (new IsPlaybackPaused(view));
-
-      timeline.is_fullscreen_ = timeline.addExpr
-        (new IsFullscreen(view));
-
-      timeline.is_playlist_visible_ = BoolRef::constant(false);
-      timeline.is_timeline_visible_ = BoolRef::constant(false);
-
-      timeline.toggle_playback_.reset(&toggle_playback, this);
-      timeline.toggle_fullscreen_ = view.toggle_fullscreen_;
-
-      timeline.layout();
-
 
       Item & gops = layout.addNew<Item>("gops");
       Item & clips = layout.addNew<Item>("clips");
@@ -2185,7 +2166,6 @@ namespace yae
     ItemView("RemuxView"),
     model_(NULL),
     view_mode_(RemuxView::kLayoutMode),
-    playback_paused_(true),
     actionSetInPoint_(this),
     actionSetOutPoint_(this)
   {
@@ -2217,6 +2197,39 @@ namespace yae
     ok = connect(&actionSetOutPoint_, SIGNAL(triggered()),
                  this, SLOT(set_out_point()));
     YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::setContext
+  //
+  void
+  RemuxView::setContext(const yae::shared_ptr<IOpenGLContext> & context)
+  {
+    ItemView::setContext(context);
+
+    player_.reset(new PlayerItem("player", context));
+    PlayerItem & player = *player_;
+    player.visible_ = player.addExpr(new InPlayerMode(*this));
+    player.visible_.disableCaching();
+
+    timeline_.reset(new TimelineItem("timeline_item",
+                                     *this,
+                                     player.timeline()));
+
+    TimelineItem & timeline = *timeline_;
+    timeline.is_playback_paused_ = timeline.addExpr
+      (new IsPlaybackPaused(*this));
+
+    timeline.is_fullscreen_ = timeline.addExpr
+      (new IsFullscreen(*this));
+
+    timeline.is_playlist_visible_ = BoolRef::constant(false);
+    timeline.is_timeline_visible_ = BoolRef::constant(false);
+    timeline.toggle_playback_.reset(&yae::toggle_playback, this);
+    timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
+    timeline.layout();
+
+    // FIXME: connect timeline item and player item signals/slots:
   }
 
   //----------------------------------------------------------------
@@ -3083,7 +3096,7 @@ namespace yae
         serial_demuxer_.reset();
         preview.children_.clear();
 
-        timeline_model_.resetFor(NULL);
+        player_->playback_stop();
         reader_.reset();
       }
 
@@ -3096,7 +3109,7 @@ namespace yae
       if (mode == kPlayerMode)
       {
         reader_.reset(DemuxerReader::create(serial_demuxer_));
-        timeline_model_.resetFor(reader_.get());
+        player_->playback(reader_);
 
         TimelineItem & timeline =
           player.get<TimelineItem>("timeline_item");
@@ -3125,7 +3138,7 @@ namespace yae
   bool
   RemuxView::is_playback_paused()
   {
-    return playback_paused_;
+    return player_->paused();
   }
 
   //----------------------------------------------------------------
@@ -3134,15 +3147,18 @@ namespace yae
   void
   RemuxView::toggle_playback()
   {
-    playback_paused_ = !playback_paused_;
+    player_->toggle_playback();
 
-    if (playback_paused_)
+    timeline_->modelChanged();
+    timeline_->maybeAnimateOpacity();
+
+    if (!is_playback_paused())
     {
-      // stop playback:
+      timeline_->forceAnimateControls();
     }
     else
     {
-      // start playback:
+      timeline_->maybeAnimateControls();
     }
   }
 

@@ -26,12 +26,13 @@
 #include "yae/video/yae_video.h"
 
 // local:
+#include "yae_player_item.h"
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 #include "yaeRemux.h"
 #include "yaeScrollview.h"
-#include "yaeTimelineModel.h"
+#include "yaeTimelineItem.h"
 
 
 namespace yae
@@ -253,6 +254,9 @@ namespace yae
 
     RemuxView();
 
+    // virtual:
+    void setContext(const yae::shared_ptr<IOpenGLContext> & context);
+
     // data source:
     void setModel(RemuxModel * model);
 
@@ -329,11 +333,11 @@ namespace yae
     mutable std::string model_json_str_;
 
     DemuxerReaderPtr reader_;
-    bool playback_paused_;
 
   public:
     yae::shared_ptr<RemuxViewStyle, Item> style_;
-    TimelineModel timeline_model_;
+    yae::shared_ptr<PlayerItem, Item> player_;
+    yae::shared_ptr<TimelineItem, Item> timeline_;
 
     // index of currently selected clip:
     std::size_t selected_;

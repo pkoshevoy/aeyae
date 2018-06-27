@@ -399,6 +399,7 @@ add_dependencies(${PROGNAME} "update_revision_apprenticevideo")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}

@@ -282,6 +282,23 @@ namespace yae
     QTimer slideshowTimer_;
     QTime slideshowTimerStart_;
   };
+
+  //----------------------------------------------------------------
+  // TIgnoreClockStop
+  //
+  struct YAE_API TIgnoreClockStop
+  {
+    TIgnoreClockStop(TimelineModel & timeline);
+    ~TIgnoreClockStop();
+
+  private:
+    TIgnoreClockStop(const TIgnoreClockStop &);
+    TIgnoreClockStop & operator = (const TIgnoreClockStop &);
+
+    static int count_;
+    TimelineModel & timeline_;
+  };
+
 }
 
 

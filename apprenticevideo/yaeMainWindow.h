@@ -310,7 +310,6 @@ namespace yae
     void stopRenderers();
     void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
     void resumeRenderers(bool loadNextFrameIfPaused = false);
-    void renderOneFrame();
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);
     void selectAudioTrack(IReader * reader, std::size_t audioTrackIndex);
     void selectSubsTrack(IReader * reader, std::size_t subsTrackIndex);
