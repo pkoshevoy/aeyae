@@ -598,6 +598,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // paint_background
+  //
+  static void
+  paint_background(double canvas_x,
+                   double canvas_y,
+                   double canvas_w,
+                   double canvas_h)
+  {
+    YAE_OGL_11_HERE();
+
+    SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
+
+    YAE_OGL_11(glColor3d(0.0, 0.0, 0.0));
+    YAE_OGL_11(glRectd(canvas_x,
+                       canvas_y,
+                       canvas_x + canvas_w,
+                       canvas_y + canvas_h));
+  }
+
+  //----------------------------------------------------------------
   // Canvas::paintCanvas
   //
   void
@@ -707,8 +727,7 @@ namespace yae
     }
     else
     {
-      YAE_OGL_11(glClearColor(0, 0, 0, 1));
-      YAE_OGL_11(glClear(GL_COLOR_BUFFER_BIT));
+      paint_background(canvas_x, canvas_y, canvas_w, canvas_h);
     }
 
     // sanity check:

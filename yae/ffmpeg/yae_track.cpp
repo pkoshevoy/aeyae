@@ -684,10 +684,22 @@ namespace yae
 
       const AVPacket & packet = pkt.get();
       errSend = avcodec_send_packet(ctx, &packet);
+
+      if (errSend == AVERROR_EOF)
+      {
+        avcodec_flush_buffers(ctx);
+        errSend = avcodec_send_packet(ctx, &packet);
+      }
+
       if (errSend < 0 && errSend != AVERROR(EAGAIN) && errSend != AVERROR_EOF)
       {
 #ifndef NDEBUG
-        dump_averror(std::cerr, errSend);
+        av_log(NULL, AV_LOG_WARNING,
+               "[%s] Track::decode(%p), errSend: %i, %s\n",
+               id_.c_str(),
+               packet.data,
+               errSend,
+               av_strerr(errSend).c_str());
 #endif
         errors_++;
         return errSend;
@@ -703,7 +715,12 @@ namespace yae
 #ifndef NDEBUG
         if (errRecv != AVERROR(EAGAIN) && errRecv != AVERROR_EOF)
         {
-          dump_averror(std::cerr, errRecv);
+          av_log(NULL, AV_LOG_WARNING,
+                 "[%s] Track::decode(%p), errRecv: %i, %s\n",
+                 id_.c_str(),
+                 packet.data,
+                 errRecv,
+                 av_strerr(errRecv).c_str());
         }
 #endif
         break;
