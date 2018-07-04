@@ -3081,6 +3081,12 @@ namespace yae
     Item & player = root["player"];
     view_mode_ = mode;
 
+    if (mode != kPlayerMode)
+    {
+      player_->playback_stop();
+      reader_.reset();
+    }
+
     if (mode != kLayoutMode)
     {
       // avoid rebuilding the preview if clip layout hasn't changed:
@@ -3095,9 +3101,6 @@ namespace yae
         output_clip_.reset();
         serial_demuxer_.reset();
         preview.children_.clear();
-
-        player_->playback_stop();
-        reader_.reset();
       }
 
       TClipPtr clip = output_clip();

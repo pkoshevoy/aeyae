@@ -90,8 +90,12 @@ namespace yae
   void
   PlayerItem::paintContent() const
   {
-    canvas_.resize(1.0, this->width(), this->height());
-    canvas_.paintCanvas();
+    double x = this->left();
+    double y = this->top();
+    double w = this->width();
+    double h = this->height();
+    canvas_.resize(1.0, w, h);
+    canvas_.paint_view(x, y, w, h);
   }
 
   //----------------------------------------------------------------
@@ -241,6 +245,11 @@ namespace yae
                        unsigned int cc,
                        const TTime & seek_time)
   {
+    if (!reader)
+    {
+      return;
+    }
+
     ++reader_id_;
     reader->setReaderId(reader_id_);
 

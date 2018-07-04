@@ -47,8 +47,8 @@ namespace yae
     demuxer_(demuxer),
     readerId_(std::numeric_limits<unsigned int>::max()),
     thread_(this),
-    selectedVideoTrack_(0),
-    selectedAudioTrack_(0),
+    selectedVideoTrack_(std::numeric_limits<std::size_t>::max()),
+    selectedAudioTrack_(std::numeric_limits<std::size_t>::max()),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     enableClosedCaptions_(0),
@@ -138,6 +138,12 @@ namespace yae
   DemuxerReader::~DemuxerReader()
   {
     close();
+
+    for (std::size_t i = 0, n = video_.size(); i < n; i++)
+    {
+      const VideoTrackPtr & track = video_[i];
+      track->setSubs(NULL);
+    }
   }
 
   //----------------------------------------------------------------

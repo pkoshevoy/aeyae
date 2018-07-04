@@ -365,8 +365,19 @@ namespace yae
     inline bool overlayHasContent() const
     { return subsInOverlay_ || showTheGreeting_; }
 
-    // helper: paint everything (greeting, video, subtitles)
+    // sets up GL_VIEWPORT to fill the canvas window
+    // and inits GL_PROJECTION with identity matrix,
+    // then calls the helper paint_view:
     void paintCanvas();
+
+    // paint everything (greeting, video, subtitles)
+    // into a given canvas region.
+    //
+    // NOTE: does not change GL_VIEWPORT
+    void paint_view(double canvas_x,
+                    double canvas_y,
+                    double canvas_w,
+                    double canvas_h);
 
     //----------------------------------------------------------------
     // PaintCanvasEvent
@@ -507,6 +518,24 @@ namespace yae
     // observers notified when loadFrame is called:
     std::set<yae::weak_ptr<ILoadFrameObserver> > loadFrameObservers_;
   };
+
+
+  //----------------------------------------------------------------
+  // SetupModelview
+  //
+  struct YAE_API SetupModelview
+  {
+    SetupModelview(double canvas_x,
+                   double canvas_y,
+                   double canvas_w,
+                   double canvas_h,
+                   CanvasRenderer * renderer = NULL,
+                   Canvas::TRenderMode mode = Canvas::kScaleToFit);
+
+  protected:
+    TGLSaveMatrixState modelview_;
+  };
+
 }
 
 

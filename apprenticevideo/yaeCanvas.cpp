@@ -464,130 +464,114 @@ namespace yae
     return h;
   }
 
+
   //----------------------------------------------------------------
-  // paintImage
+  // SetupModelview::SetupModelview
   //
-  static void
-  paintImage(CanvasRenderer * renderer,
-             double canvasWidth,
-             double canvasHeight,
-             Canvas::TRenderMode renderMode)
+  SetupModelview::SetupModelview(double canvas_x,
+                                 double canvas_y,
+                                 double canvas_w,
+                                 double canvas_h,
+                                 CanvasRenderer * renderer,
+                                 Canvas::TRenderMode mode):
+    modelview_(GL_MODELVIEW)
   {
-    double croppedWidth = 0.0;
-    double croppedHeight = 0.0;
-    int cameraRotation = 0;
-    renderer->imageWidthHeightRotated(croppedWidth,
-                                      croppedHeight,
-                                      cameraRotation);
-    if (!croppedWidth || !croppedHeight)
+    double cropped_w = 0.0;
+    double cropped_h = 0.0;
+    int camera_rotation = 0;
+
+    if (renderer)
+    {
+      renderer->imageWidthHeightRotated(cropped_w,
+                                        cropped_h,
+                                        camera_rotation);
+    }
+    else
+    {
+      cropped_w = canvas_w;
+      cropped_h = canvas_h;
+    }
+
+    if (!cropped_w || !cropped_h)
     {
       return;
     }
 
-    double dar = croppedWidth / croppedHeight;
-    double car = canvasWidth / canvasHeight;
+    double dar = cropped_w / cropped_h;
+    double car = canvas_w / canvas_h;
 
-    double x = 0.0;
-    double y = 0.0;
-    double w = canvasWidth;
-    double h = canvasHeight;
+    double x = canvas_x;
+    double y = canvas_y;
+    double w = canvas_w;
+    double h = canvas_h;
 
-    if (renderMode == Canvas::kScaleToFit)
+    if (mode == Canvas::kScaleToFit)
     {
       if (dar < car)
       {
-        w = canvasHeight * dar;
-        x = 0.5 * (canvasWidth - w);
+        w = canvas_h * dar;
+        x = canvas_x + 0.5 * (canvas_w - w);
       }
       else
       {
-        h = canvasWidth / dar;
-        y = 0.5 * (canvasHeight - h);
+        h = canvas_w / dar;
+        y = canvas_y + 0.5 * (canvas_h - h);
       }
     }
     else
     {
       if (dar < car)
       {
-        h = canvasWidth / dar;
-        y = 0.5 * (canvasHeight - h);
+        h = canvas_w / dar;
+        y = canvas_y + 0.5 * (canvas_h - h);
       }
       else
       {
-        w = canvasHeight * dar;
-        x = 0.5 * (canvasWidth - w);
+        w = canvas_h * dar;
+        x = canvas_x + 0.5 * (canvas_w - w);
       }
     }
 
     YAE_OGL_11_HERE();
 
-    YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
-                          GLsizei(w + 0.5), GLsizei(h + 0.5)));
+    YAE_OGL_11(glTranslated(x, y, 0));
 
-    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-    YAE_OGL_11(glLoadIdentity());
-    YAE_OGL_11(glOrtho(0.0, croppedWidth, croppedHeight, 0.0, -1.0, 1.0));
+    double scale = std::min(canvas_w / cropped_w,
+                            canvas_h / cropped_h);
 
-    if (cameraRotation && cameraRotation % 90 == 0)
+    YAE_OGL_11(glScaled(scale, scale, 1));
+
+    if (camera_rotation && camera_rotation % 90 == 0)
     {
-      YAE_OGL_11(glTranslated(0.5 * croppedWidth, 0.5 * croppedHeight, 0));
-      YAE_OGL_11(glRotated(double(cameraRotation), 0, 0, 1));
+      YAE_OGL_11(glTranslated(0.5 * cropped_w,
+                              0.5 * cropped_h, 0));
+      YAE_OGL_11(glRotated(double(camera_rotation), 0, 0, 1));
 
-      if (cameraRotation % 180 != 0)
+      if (camera_rotation % 180 != 0)
       {
-        YAE_OGL_11(glTranslated(-0.5 * croppedHeight, -0.5 * croppedWidth, 0));
+        YAE_OGL_11(glTranslated(-0.5 * cropped_h,
+                                -0.5 * cropped_w, 0));
       }
       else
       {
-        YAE_OGL_11(glTranslated(-0.5 * croppedWidth, -0.5 * croppedHeight, 0));
+        YAE_OGL_11(glTranslated(-0.5 * cropped_w,
+                                -0.5 * cropped_h, 0));
       }
     }
-
-    renderer->draw();
-    yae_assert_gl_no_error();
-
-#if 0
-    // FIXME: for debugging
-    {
-      YAE_OGL_11(glDisable(GL_LIGHTING));
-      YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
-      YAE_OGL_11(glLineWidth(2.0));
-      YAE_OGL_11(glBegin(GL_LINES));
-      {
-        YAE_OGL_11(glColor3ub(0x7f, 0x00, 0x10));
-        YAE_OGL_11(glVertex2i(croppedWidth / 10, croppedHeight / 10));
-        YAE_OGL_11(glVertex2i(2 * croppedWidth / 10, croppedHeight / 10));
-        YAE_OGL_11(glColor3ub(0xff, 0x00, 0x20));
-        YAE_OGL_11(glVertex2i(2 * croppedWidth / 10, croppedHeight / 10));
-        YAE_OGL_11(glVertex2i(3 * croppedWidth / 10, croppedHeight / 10));
-
-        YAE_OGL_11(glColor3ub(0x10, 0x7f, 0x00));
-        YAE_OGL_11(glVertex2i(croppedWidth / 10, croppedHeight / 10));
-        YAE_OGL_11(glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10));
-        YAE_OGL_11(glColor3ub(0x20, 0xff, 0x00));
-        YAE_OGL_11(glVertex2i(croppedWidth / 10, 2 * croppedHeight / 10));
-        YAE_OGL_11(glVertex2i(croppedWidth / 10, 3 * croppedHeight / 10));
-      }
-      YAE_OGL_11(glEnd());
-    }
-#endif
-
-    // reset OpenGL to default/initial state:
-    yae_reset_opengl_to_initial_state();
   }
 
   //----------------------------------------------------------------
-  // paintCheckerBoard
+  // paint_checker_board
   //
   static void
-  paintCheckerBoard(int canvasWidth, int canvasHeight)
+  paint_checker_board(double canvas_x,
+                      double canvas_y,
+                      double canvas_w,
+                      double canvas_h)
   {
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glViewport(0, 0, canvasWidth, canvasHeight));
 
-    TGLSaveMatrixState pushMatrix(GL_PROJECTION);
-    YAE_OGL_11(glLoadIdentity());
-    YAE_OGL_11(glOrtho(0, canvasWidth, canvasHeight, 0, -1.0, 1.0));
+    SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
 
     float zebra[2][3] = {
       { 1.0f, 1.0f, 1.0f },
@@ -596,14 +580,14 @@ namespace yae
 
     int edgeSize = 24;
     bool evenRow = false;
-    for (int y = 0; y < canvasHeight; y += edgeSize, evenRow = !evenRow)
+    for (int y = 0; y < canvas_h; y += edgeSize, evenRow = !evenRow)
     {
-      int y1 = std::min(y + edgeSize, canvasHeight);
+      int y1 = std::min(y + edgeSize, int(canvas_h));
 
       bool evenCol = false;
-      for (int x = 0; x < canvasWidth; x += edgeSize, evenCol = !evenCol)
+      for (int x = 0; x < canvas_w; x += edgeSize, evenCol = !evenCol)
       {
-        int x1 = std::min(x + edgeSize, canvasWidth);
+        int x1 = std::min(x + edgeSize, int(canvas_w));
 
         float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
         YAE_OGL_11(glColor3fv(color));
@@ -666,9 +650,48 @@ namespace yae
       return;
     }
 
-    TGLSaveMatrixState pushMatrix1(GL_MODELVIEW);
+    TGLSaveMatrixState push_modelview(GL_MODELVIEW);
     YAE_OGL_11_HERE();
     YAE_OGL_11(glLoadIdentity());
+    YAE_OGL_11(glViewport(0, 0, canvasWidth, canvasHeight));
+
+    TGLSaveMatrixState push_projection(GL_PROJECTION);
+    YAE_OGL_11(glLoadIdentity());
+    YAE_OGL_11(glOrtho(// left:
+                       0,
+
+                       // right:
+                       canvasWidth,
+
+                       // bottom:
+                       canvasHeight,
+
+                       // top:
+                       0,
+
+                       // near:
+                       -1.0,
+
+                       // far:
+                       1.0));
+
+    paint_view(0, 0, double(canvasWidth), double(canvasHeight));
+
+    // reset OpenGL to default/initial state:
+    yae_reset_opengl_to_initial_state();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::paint_view
+  //
+  void
+  Canvas::paint_view(double canvas_x,
+                     double canvas_y,
+                     double canvas_w,
+                     double canvas_h)
+  {
+    TGLSaveState restore_state(GL_ENABLE_BIT);
+    TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
 
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
@@ -677,7 +700,7 @@ namespace yae
     if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
                                  pixelFormat::kPaletted)))
     {
-      paintCheckerBoard(canvasWidth, canvasHeight);
+      paint_checker_board(canvas_x, canvas_y, canvas_w, canvas_h);
 
       YAE_OGL_11(glEnable(GL_BLEND));
       YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
@@ -691,13 +714,17 @@ namespace yae
     // sanity check:
     yae_assert_gl_no_error();
 
+    // draw the frame:
     if (ptts)
     {
-      // draw the frame:
-      paintImage(private_,
-                 double(canvasWidth),
-                 double(canvasHeight),
-                 renderMode_);
+      SetupModelview modelview(canvas_x,
+                               canvas_y,
+                               canvas_w,
+                               canvas_h,
+                               private_,
+                               renderMode_);
+      private_->draw();
+      yae_assert_gl_no_error();
     }
 
     // draw the overlay:
@@ -707,10 +734,17 @@ namespace yae
       {
         YAE_OGL_11(glEnable(GL_BLEND));
         YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
-        paintImage(overlay_,
-                   double(canvasWidth),
-                   double(canvasHeight),
-                   kScaleToFit);
+
+        SetupModelview modelview(canvas_x,
+                                 canvas_y,
+                                 canvas_w,
+                                 canvas_h,
+                                 overlay_,
+                                 kScaleToFit);
+
+        overlay_->draw();
+        yae_assert_gl_no_error();
+
         YAE_OGL_11(glDisable(GL_BLEND));
       }
       else
@@ -731,6 +765,9 @@ namespace yae
         continue;
       }
 
+      TGLSaveState restore_state(GL_ENABLE_BIT);
+      TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
+      SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
       layer->paint(this);
     }
   }
