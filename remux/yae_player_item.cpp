@@ -90,12 +90,33 @@ namespace yae
   void
   PlayerItem::paintContent() const
   {
+    TGLSaveState restore_state(GL_ENABLE_BIT);
+    TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
+
     double x = this->left();
     double y = this->top();
     double w = this->width();
     double h = this->height();
     canvas_.resize(1.0, w, h);
-    canvas_.paint_view(x, y, w, h);
+
+    if (reader_)
+    {
+      VideoTraits vtts;
+
+      if (reader_->getVideoTraits(vtts))
+      {
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+
+        if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
+                                     pixelFormat::kPaletted)))
+        {
+          canvas_.paint_checkerboard(x, y, w, h);
+        }
+      }
+    }
+
+    canvas_.paint_canvas(x, y, w, h);
   }
 
   //----------------------------------------------------------------

@@ -598,13 +598,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // paint_background
+  // paint_black_rectangle
   //
   static void
-  paint_background(double canvas_x,
-                   double canvas_y,
-                   double canvas_w,
-                   double canvas_h)
+  paint_black_rectangle(double canvas_x,
+                        double canvas_y,
+                        double canvas_w,
+                        double canvas_h)
   {
     YAE_OGL_11_HERE();
 
@@ -695,24 +695,59 @@ namespace yae
                        // far:
                        1.0));
 
-    paint_view(0, 0, double(canvasWidth), double(canvasHeight));
+    TGLSaveState restore_state(GL_ENABLE_BIT);
+    TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
+
+    paint_background(0, 0, double(canvasWidth), double(canvasHeight));
+    paint_canvas(0, 0, double(canvasWidth), double(canvasHeight));
+    paint_layers(0, 0, double(canvasWidth), double(canvasHeight));
 
     // reset OpenGL to default/initial state:
     yae_reset_opengl_to_initial_state();
   }
 
   //----------------------------------------------------------------
-  // Canvas::paint_view
+  // Canvas::paint_black
   //
   void
-  Canvas::paint_view(double canvas_x,
-                     double canvas_y,
-                     double canvas_w,
-                     double canvas_h)
+  Canvas::paint_black(double canvas_x,
+                      double canvas_y,
+                      double canvas_w,
+                      double canvas_h)
   {
-    TGLSaveState restore_state(GL_ENABLE_BIT);
-    TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
+    yae::paint_black_rectangle(canvas_x, canvas_y, canvas_w, canvas_h);
 
+    // sanity check:
+    yae_assert_gl_no_error();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::paint_checkerboard
+  //
+  void
+  Canvas::paint_checkerboard(double canvas_x,
+                             double canvas_y,
+                             double canvas_w,
+                             double canvas_h)
+  {
+    yae::paint_checker_board(canvas_x, canvas_y, canvas_w, canvas_h);
+
+    YAE_OGL_11(glEnable(GL_BLEND));
+    YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+    // sanity check:
+    yae_assert_gl_no_error();
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::paint_background
+  //
+  void
+  Canvas::paint_background(double canvas_x,
+                           double canvas_y,
+                           double canvas_w,
+                           double canvas_h)
+  {
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
 
@@ -720,18 +755,25 @@ namespace yae
     if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
                                  pixelFormat::kPaletted)))
     {
-      paint_checker_board(canvas_x, canvas_y, canvas_w, canvas_h);
-
-      YAE_OGL_11(glEnable(GL_BLEND));
-      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+      paint_checkerboard(canvas_x, canvas_y, canvas_w, canvas_h);
     }
     else
     {
-      paint_background(canvas_x, canvas_y, canvas_w, canvas_h);
+      paint_black(canvas_x, canvas_y, canvas_w, canvas_h);
     }
+  }
 
-    // sanity check:
-    yae_assert_gl_no_error();
+  //----------------------------------------------------------------
+  // Canvas::paint_canvas
+  //
+  void
+  Canvas::paint_canvas(double canvas_x,
+                       double canvas_y,
+                       double canvas_w,
+                       double canvas_h)
+  {
+    const pixelFormat::Traits * ptts =
+      private_ ? private_->pixelTraits() : NULL;
 
     // draw the frame:
     if (ptts)
@@ -751,6 +793,7 @@ namespace yae
     {
       if (overlay_ && overlay_->pixelTraits())
       {
+        TGLSaveState restore_state(GL_ENABLE_BIT);
         YAE_OGL_11(glEnable(GL_BLEND));
         YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
@@ -763,8 +806,6 @@ namespace yae
 
         overlay_->draw();
         yae_assert_gl_no_error();
-
-        YAE_OGL_11(glDisable(GL_BLEND));
       }
       else
       {
@@ -773,7 +814,17 @@ namespace yae
                         Qt::HighEventPriority);
       }
     }
+  }
 
+  //----------------------------------------------------------------
+  // Canvas::paint_layers
+  //
+  void
+  Canvas::paint_layers(double canvas_x,
+                       double canvas_y,
+                       double canvas_w,
+                       double canvas_h)
+  {
     // draw the layers:
     for (std::list<ILayer *>::iterator i = layers_.begin();
          i != layers_.end(); ++i)

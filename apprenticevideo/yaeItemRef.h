@@ -567,7 +567,7 @@ namespace yae
         const TDataRef::Ref * ref = other.private_.cast<TDataRef::Ref>();
         const Inverse * inv = other.private_.cast<Inverse>();
 
-        if (inv && inverse || !inv && !inverse)
+        if ((inv && inverse) || !(inv || inverse))
         {
           private_.reset(new TDataRef::Ref(ref->ref_, ref->prop_, cacheable));
         }

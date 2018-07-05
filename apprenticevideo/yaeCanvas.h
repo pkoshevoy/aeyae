@@ -367,17 +367,18 @@ namespace yae
 
     // sets up GL_VIEWPORT to fill the canvas window
     // and inits GL_PROJECTION with identity matrix,
-    // then calls the helper paint_view:
+    // then calls the helper paint_background, paint_canvas, paint_layers:
     void paintCanvas();
 
     // paint everything (greeting, video, subtitles)
     // into a given canvas region.
     //
-    // NOTE: does not change GL_VIEWPORT
-    void paint_view(double canvas_x,
-                    double canvas_y,
-                    double canvas_w,
-                    double canvas_h);
+    // NOTE: these do not change GL_VIEWPORT
+    void paint_black(double x, double y, double w, double h);
+    void paint_checkerboard(double x, double y, double w, double h);
+    void paint_background(double x, double y, double w, double h);
+    void paint_canvas(double x, double y, double w, double h);
+    void paint_layers(double x, double y, double w, double h);
 
     //----------------------------------------------------------------
     // PaintCanvasEvent
