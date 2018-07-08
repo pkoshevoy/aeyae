@@ -142,7 +142,8 @@ namespace yae
       addHidden(new ExpressionItem("style_title_height",
                                    new StyleTitleHeight(view_)));
 
-    Gradient & shadow = this->addNew<Gradient>("shadow");
+    shadow_.reset(new Gradient("shadow"));
+    Gradient & shadow = this->add<Gradient>(shadow_);
     shadow.anchors_.fill(*this);
     shadow.anchors_.top_.reset();
     shadow.height_ = ItemRef::scale(titleHeight, kPropertyExpression, 4.5);

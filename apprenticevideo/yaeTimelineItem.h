@@ -363,6 +363,7 @@ namespace yae
   public:
     ItemView & view_;
     TimelineModel & model_;
+    yae::shared_ptr<Gradient, Item> shadow_;
 
     BoolRef is_playback_paused_;
     BoolRef is_fullscreen_;

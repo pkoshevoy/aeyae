@@ -188,6 +188,10 @@ namespace yae
 
     timeline.layout();
 
+    // fixup the shadow right margin:
+    Gradient & shadow = *(timeline.shadow_);
+    shadow.width_ = shadow.addExpr(new TimelineShadowWidth(*playlist));
+
     // re-apply style when playlist is enabled or disabled:
     Item::TObserverPtr repaintTimeline(new Repaint(*this, true));
     playlist_->root()->addObserver(Item::kOnToggleItemView,
