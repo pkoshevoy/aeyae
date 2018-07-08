@@ -237,6 +237,26 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PlayheadPosition
+  //
+  struct SerialDemuxerPosition
+  {
+    SerialDemuxerPosition():
+      prog_id_(0),
+      pts_(0, 0),
+      src_index_(0),
+      src_dts_(0, 0)
+    {}
+
+    int prog_id_;
+    TTime pts_;
+    yae::weak_ptr<DemuxerInterface> src_;
+    std::size_t src_index_;
+    TTime src_dts_;
+  };
+
+
+  //----------------------------------------------------------------
   // RemuxView
   //
   class YAE_API RemuxView : public ItemView
@@ -333,6 +353,9 @@ namespace yae
     mutable std::string model_json_str_;
 
     DemuxerReaderPtr reader_;
+
+    // timeline playhead position, resilient to re-ordering of clips:
+    SerialDemuxerPosition playhead_;
 
   public:
     yae::shared_ptr<RemuxViewStyle, Item> style_;

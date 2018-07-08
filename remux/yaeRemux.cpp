@@ -47,23 +47,37 @@ namespace yae
 
     // avoid thread-safety issues by using clones to populate
     // the serial demuxer, not the originals (which may be accessed
-    // from the UI thread):
+    // from the UI thread to fetch thumbnails, etc...):
     std::map<TDemuxerInterfacePtr, TDemuxerInterfacePtr> clones;
+
+    // re-use previousely created clones, if there are any:
+    for (std::vector<TClipPtr>::const_iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const Clip & clip = *(*i);
+      if (clip.trimmed_)
+      {
+        clones[clip.demuxer_] = clip.trimmed_->trim_src();
+      }
+    }
 
     for (std::vector<TClipPtr>::const_iterator
            i = clips_.begin(); i != clips_.end(); ++i)
     {
       const Clip & clip = *(*i);
 
-      TDemuxerInterfacePtr clone = yae::get(clones, clip.demuxer_);
-      if (!clone)
+      if (!clip.trimmed_)
       {
-        clone.reset(clip.demuxer_->clone());
-        clones[clip.demuxer_] = clone;
+        TDemuxerInterfacePtr & clone = clones[clip.demuxer_];
+        if (!clone)
+        {
+          clone.reset(clip.demuxer_->clone());
+        }
+
+        clip.trimmed_.reset(new TrimmedDemuxer(clone, clip.track_));
       }
 
-      TTrimmedDemuxerPtr clip_demuxer(new TrimmedDemuxer());
-      clip_demuxer->trim(clone, clip.track_, clip.keep_);
+      clip.trimmed_->set_pts_span(clip.keep_);
 
       std::string fn = yae::at(source_, clip.demuxer_);
       if (fn != prev_fn)
@@ -90,8 +104,8 @@ namespace yae
       }
 
       // summarize clip demuxer:
-      clip_demuxer->update_summary();
-      serial_demuxer->append(clip_demuxer);
+      clip.trimmed_->update_summary();
+      serial_demuxer->append(clip.trimmed_);
     }
 
     // summarize serial demuxer:

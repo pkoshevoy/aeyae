@@ -669,10 +669,41 @@ namespace yae
     virtual void summarize(DemuxerSummary & summary,
                            double tolerance = 0.017);
 
-  protected:
     // find the source corresponding to the given program/time:
     std::size_t find(const TTime & seek_time, int prog_id) const;
 
+    // helpers for mapping time to/from constituent source clip:
+    bool map_to_source(int prog_id,
+                       const TTime & output_pts,
+                       std::size_t & src_index,
+                       yae::weak_ptr<DemuxerInterface> & src,
+                       TTime & src_dts) const;
+
+    bool map_to_output(int prog_id,
+                       const TDemuxerInterfacePtr & src,
+                       const TTime & src_dts,
+                       TTime & output_pts) const;
+
+    // accessors:
+    inline const std::vector<TDemuxerInterfacePtr> & get_src() const
+    { return src_; }
+
+    inline const std::vector<TTime> & get_t0(int prog_id) const
+    { return yae::at(t0_, prog_id); }
+
+    inline const std::vector<TTime> & get_t1(int prog_id) const
+    { return yae::at(t1_, prog_id); }
+
+    inline const std::vector<TTime> & get_offset(int prog_id) const
+    { return yae::at(offset_, prog_id); }
+
+    inline const std::map<std::string, int> & prog_lut() const
+    { return prog_lut_; }
+
+    inline std::size_t get_curr() const
+    { return curr_; }
+
+  protected:
     std::vector<TDemuxerInterfacePtr> src_;
     std::map<int, std::vector<TTime> > t0_;
     std::map<int, std::vector<TTime> > t1_;
@@ -691,7 +722,8 @@ namespace yae
   //
   struct YAE_API TrimmedDemuxer : DemuxerInterface
   {
-    TrimmedDemuxer() {}
+    TrimmedDemuxer(const TDemuxerInterfacePtr & src = TDemuxerInterfacePtr(),
+                   const std::string & trackId = std::string());
 
     // deep copy:
     TrimmedDemuxer(const TrimmedDemuxer & d);
@@ -699,6 +731,14 @@ namespace yae
     // deep copy:
     virtual TrimmedDemuxer * clone() const
     { return new TrimmedDemuxer(*this); }
+
+    void init(const TDemuxerInterfacePtr & src,
+              // a source may have more than one program with completely
+              // separate timelines, so we need to know which timeline
+              // we are trimming:
+              const std::string & trackId);
+
+    void set_pts_span(const Timespan & ptsSpan);
 
     void trim(const TDemuxerInterfacePtr & src,
               // a source may have more than one program with completely
@@ -743,6 +783,19 @@ namespace yae
       TTime c_;
       TTime d_;
     };
+
+    // accessors:
+    inline const TDemuxerInterfacePtr & trim_src() const
+    { return src_; }
+
+    inline const std::string & trim_track() const
+    { return track_; }
+
+    inline const Timespan & trim_pts() const
+    { return timespan_; }
+
+    inline int trim_program() const
+    { return program_; }
 
   protected:
     TDemuxerInterfacePtr src_;

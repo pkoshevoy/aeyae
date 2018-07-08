@@ -2971,6 +2971,64 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SerialDemuxer::map_to_source
+  //
+  bool
+  SerialDemuxer::map_to_source(int prog_id,
+                               const TTime & output_pts,
+                               std::size_t & src_index,
+                               yae::weak_ptr<DemuxerInterface> & src,
+                               TTime & src_dts) const
+  {
+    const Timeline & timeline = yae::at(summary().timeline_, prog_id);
+    TTime dts_offset = timeline.bbox_dts_.t0_ - timeline.bbox_pts_.t0_;
+    TTime output_dts = output_pts + dts_offset;
+
+    const std::vector<TTime> & t1 = yae::at(t1_, prog_id);
+    std::vector<TTime>::const_iterator found = std::upper_bound(t1.begin(),
+                                                                t1.end(),
+                                                                output_dts);
+    if (found == t1.end())
+    {
+      return false;
+    }
+
+    src_index = std::distance(t1.begin(), found);
+    const TTime & end_time = t1[src_index];
+    const std::vector<TTime> & t0 = yae::at(t0_, prog_id);
+
+    src = src_[src_index];
+    src_dts = output_dts - t0[src_index];
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // SerialDemuxer::map_to_output
+  //
+  bool
+  SerialDemuxer::map_to_output(int prog_id,
+                               const TDemuxerInterfacePtr & src,
+                               const TTime & src_dts,
+                               TTime & output_pts) const
+  {
+    const std::vector<TTime> & t0 = yae::at(t0_, prog_id);
+    for (std::size_t i = 0, n = src_.size(); i < n; i++)
+    {
+      if (src_[i] != src)
+      {
+        continue;
+      }
+
+      const Timeline & timeline = yae::at(summary().timeline_, prog_id);
+      TTime dts_offset = timeline.bbox_dts_.t0_ - timeline.bbox_pts_.t0_;
+      output_pts = (t0[i] + src_dts) - dts_offset;
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // SerialDemuxer::summarize
   //
   void
@@ -3011,6 +3069,18 @@ namespace yae
   //----------------------------------------------------------------
   // TrimmedDemuxer::TrimmedDemuxer
   //
+  TrimmedDemuxer::TrimmedDemuxer(const TDemuxerInterfacePtr & src,
+                                 const std::string & trackId)
+  {
+    if (src)
+    {
+      init(src, trackId);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::TrimmedDemuxer
+  //
   TrimmedDemuxer::TrimmedDemuxer(const TrimmedDemuxer & d)
   {
     TDemuxerInterfacePtr src(d.src_->clone());
@@ -3024,22 +3094,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TrimmedDemuxer::trim
+  // TrimmedDemuxer::init
   //
   void
-  TrimmedDemuxer::trim(const TDemuxerInterfacePtr & src,
-                       const std::string & trackId,
-                       const Timespan & ptsSpan)
+  TrimmedDemuxer::init(const TDemuxerInterfacePtr & src,
+                       const std::string & trackId)
   {
     YAE_ASSERT(!src_);
 
     src_ = src;
     src_summary_ = src->summary();
     track_ = trackId;
-    timespan_ = ptsSpan;
 
     // zero-duration packets could cause problems, try to prevent them:
     src_summary_.replace_missing_durations();
+
+    program_ = src_summary_.find_program(track_);
+  }
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::set_pts_span
+  //
+  void
+  TrimmedDemuxer::set_pts_span(const Timespan & ptsSpan)
+  {
+    timespan_ = ptsSpan;
 
     // figure out the origin and region of interest:
     Timeline::Track::Trim x;
@@ -3050,8 +3129,6 @@ namespace yae
         YAE_ASSERT(false);
         throw std::out_of_range("track does not overlap span, trim failed");
       }
-
-      program_ = src_summary_.find_program(track_);
 
       origin_[program_] = tt.get_pts(x.ka_);
       trim_[track_] = Trim(tt.get_dts(x.ka_),
@@ -3104,9 +3181,22 @@ namespace yae
     // seek to the starting position, to lower peek latency:
     src_->seek(AVSEEK_FLAG_BACKWARD, yae::at(trim_, track_).a_, track_);
     src_->populate();
+
     // NOTE: if re-encoding then do it here, once, and store
     // the resulting re-encoded samples in TrimmedDemuxer both
     // for the leading and trailing re-encoded regions
+  }
+
+  //----------------------------------------------------------------
+  // TrimmedDemuxer::trim
+  //
+  void
+  TrimmedDemuxer::trim(const TDemuxerInterfacePtr & src,
+                       const std::string & trackId,
+                       const Timespan & ptsSpan)
+  {
+    init(src, trackId);
+    set_pts_span(ptsSpan);
   }
 
   //----------------------------------------------------------------

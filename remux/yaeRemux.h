@@ -68,6 +68,8 @@ namespace yae
 
     // PTS timeline span to keep:
     Timespan keep_;
+
+    mutable TTrimmedDemuxerPtr trimmed_;
   };
 
   //----------------------------------------------------------------
