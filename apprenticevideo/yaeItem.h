@@ -617,9 +617,15 @@ namespace yae
       return ItemRef::expression(*e, scale, translate);
     }
 
-    inline BoolRef addExpr(TBoolExpr * e,
-                           bool inverse = false)
+    inline BoolRef addExpr(TBoolExpr * e)
     {
+      expr_.push_back(TPropertiesBasePtr(e));
+      return BoolRef::expression(*e);
+    }
+
+    inline BoolRef addInverse(TBoolExpr * e)
+    {
+      bool inverse = true;
       expr_.push_back(TPropertiesBasePtr(e));
       return BoolRef::expression(*e, inverse);
     }

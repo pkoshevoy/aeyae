@@ -49,7 +49,7 @@ namespace yae
     void playback(const IReaderPtr & reader,
                   std::size_t vtrack = 0,
                   std::size_t atrack = 0,
-                  std::size_t strack = std::numeric_limits<std::size_t>::max(),
+                  std::size_t strack = 0,
                   unsigned int cc = 0,
                   const TTime & seek_time = TTime(0, 0));
 

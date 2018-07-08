@@ -2040,8 +2040,17 @@ namespace yae
       controls.color_ = sep.color_;
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
-      controls.height_ = controls.
+      controls.visible_ = controls.addInverse(new IsFullscreen(view));
+
+      Item & hidden = controls.addHidden(new Item("hidden"));
+      hidden.height_ = hidden.
         addExpr(new OddRoundUp(clips_add, kPropertyHeight));
+
+      controls.height_ = controls.addExpr
+        (new Conditional<ItemRef>
+         (controls.visible_,
+          ItemRef::uncacheable(hidden.height_),
+          ItemRef::constant(0.0)));
 
       // add a button to switch to clip layout view:
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
