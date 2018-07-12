@@ -536,8 +536,10 @@ namespace yae
 
     YAE_OGL_11(glTranslated(x, y, 0));
 
-    double scale = std::min(canvas_w / cropped_w,
-                            canvas_h / cropped_h);
+    double scale =
+      mode == Canvas::kScaleToFit ?
+      std::min(canvas_w / cropped_w, canvas_h / cropped_h) :
+      std::max(canvas_w / cropped_w, canvas_h / cropped_h);
 
     YAE_OGL_11(glScaled(scale, scale, 1));
 
