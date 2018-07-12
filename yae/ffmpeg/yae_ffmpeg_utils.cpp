@@ -22,6 +22,7 @@
 extern "C"
 {
 #include <libavformat/avformat.h>
+#include <libavutil/log.h>
 }
 
 
@@ -371,6 +372,60 @@ namespace yae
       const std::string & v = i->second;
       av_dict_set(&av_dict, k.c_str(), v.c_str(), 0);
     }
+  }
+
+
+  //----------------------------------------------------------------
+  // LogToFFmpeg::destroy
+  //
+  void
+  LogToFFmpeg::destroy()
+  {
+    delete this;
+  }
+
+  //----------------------------------------------------------------
+  // LogToFFmpeg::deliver
+  //
+  void
+  LogToFFmpeg::deliver(IMessageCarrier::TPriority priority,
+                       const char * source,
+                       const char * message)
+  {
+    if (priority < threshold_)
+    {
+      return;
+    }
+
+    int log_level =
+      priority < IMessageCarrier::kInfo ? AV_LOG_DEBUG :
+      priority < IMessageCarrier::kWarning ? AV_LOG_INFO :
+      priority < IMessageCarrier::kError ? AV_LOG_WARNING :
+      AV_LOG_ERROR;
+
+    av_log(NULL, log_level, "%s: %s\n", source, message);
+  }
+
+
+  //----------------------------------------------------------------
+  // AvLog
+  //
+  struct AvLog : public TLog
+  {
+    AvLog()
+    {
+      assign(std::string("av_log"), new LogToFFmpeg());
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // logger
+  //
+  TLog & logger()
+  {
+    static AvLog * singleton = new AvLog();
+    return *singleton;
   }
 
 }

@@ -57,7 +57,7 @@ namespace yae
     TLog & operator = (const TLog &) = delete;
 #endif
 
-    // dispose of all carriers assiciated with this log instance:
+    // dispose of all carriers associated with this log instance:
     inline void clear()
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -148,12 +148,93 @@ namespace yae
     inline void debug(const char * source, const char * message)
     { deliver(IMessageCarrier::kDebug, source, message); }
 
+    //----------------------------------------------------------------
+    // Scribe
+    //
+    struct Scribe
+    {
+      struct Private
+      {
+        Private(TLog & logger,
+                IMessageCarrier::TPriority priority,
+                const char * source):
+          logger_(logger),
+          priority_(priority),
+          source_(source)
+        {}
+
+        ~Private()
+        {
+          logger_.deliver(priority_, source_, oss_.str().c_str());
+        }
+
+        TLog & logger_;
+        IMessageCarrier::TPriority priority_;
+        const char * source_;
+        mutable std::ostringstream oss_;
+      };
+
+      Scribe(TLog & logger,
+             IMessageCarrier::TPriority priority,
+             const char * source):
+        private_(new Private(logger, priority, source))
+      {}
+
+      template <typename TData>
+      Scribe
+      operator << (const TData & data) const
+      {
+        private_->oss_ << data;
+        return Scribe(*this);
+      };
+
+    protected:
+      yae::shared_ptr<Private> private_;
+    };
+
+    inline Scribe error(const char * source)
+    { return Scribe(*this, IMessageCarrier::kError, source); }
+
+    inline Scribe warn(const char * source)
+    { return Scribe(*this, IMessageCarrier::kWarning, source); }
+
+    inline Scribe info(const char * source)
+    { return Scribe(*this, IMessageCarrier::kInfo, source); }
+
+    inline Scribe debug(const char * source)
+    { return Scribe(*this, IMessageCarrier::kDebug, source); }
+
   protected:
     mutable boost::mutex mutex_;
     std::map<std::string, IMessageCarrier *> carriers_;
   };
 
+  //----------------------------------------------------------------
+  // logger
+  //
+  YAE_API TLog & logger();
+
 }
+
+//----------------------------------------------------------------
+// yae_elog
+//
+#define yae_elog logger().error(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_wlog
+//
+#define yae_wlog logger().warn(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_log
+//
+#define yae_log logger().info(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_dlog
+//
+#define yae_dlog logger().debug(__FILE__ ":" YAE_STR(__LINE__))
 
 
 #endif // YAE_LOG_H_

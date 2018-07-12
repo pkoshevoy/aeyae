@@ -11,6 +11,7 @@
 
 // aeyae:
 #include "../api/yae_api.h"
+#include "../utils/yae_log.h"
 #include "../video/yae_video.h"
 
 // standard C++ library:
@@ -124,6 +125,48 @@ namespace yae
   //
   YAE_API void
   setDictionary(AVDictionary *& avdict, const TDictionary & dict);
+
+
+  //----------------------------------------------------------------
+  // LogToFFmpeg
+  //
+  struct YAE_API LogToFFmpeg : public IMessageCarrier
+  {
+    // virtual:
+    void destroy();
+
+    //! a prototype factory method for constructing objects of the same kind,
+    //! but not necessarily deep copies of the original prototype object:
+    // virtual:
+    LogToFFmpeg * clone() const
+    { return new LogToFFmpeg(); }
+
+    // virtual:
+    const char * name() const
+    { return "LogToFFmpeg"; }
+
+    // virtual:
+    const char * guid() const
+    { return "b392b7fc-f08b-438a-95a7-7cc210d634bf"; }
+
+    // virtual:
+    ISettingGroup * settings()
+    { return NULL; }
+
+    // virtual:
+    IMessageCarrier::TPriority priorityThreshold() const
+    { return threshold_; }
+
+    // virtual:
+    void setPriorityThreshold(IMessageCarrier::TPriority priority)
+    { threshold_ = priority; }
+
+    // virtual:
+    void deliver(TPriority priority, const char * src, const char * msg);
+
+  protected:
+    IMessageCarrier::TPriority threshold_;
+  };
 
 }
 
