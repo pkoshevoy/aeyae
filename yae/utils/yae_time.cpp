@@ -702,8 +702,8 @@ namespace yae
 
   protected:
     bool parse(const std::vector<Token> & tokens,
-               const std::size_t num_numbers,
-               const std::size_t num_others,
+               std::size_t num_numbers,
+               std::size_t num_others,
                const char * mm_separator,
                const char * xx_separator)
     {
@@ -712,7 +712,7 @@ namespace yae
         return false;
       }
 
-      const std::size_t num_tokens = tokens.size();
+      std::size_t num_tokens = tokens.size();
       if (num_numbers == num_others && num_tokens % 2 == 0)
       {
         // parse XXu YYu ZZu WWu formatted time:
@@ -729,79 +729,52 @@ namespace yae
         return true;
       }
 
-      if (num_numbers == 1 && num_others == 0)
+      if (num_numbers > 4 || num_numbers != num_others + 1)
       {
-        // seconds:
-        ss_ = toScalar<int64_t>(tokens.front().text_);
-        return true;
-      }
-
-      if (num_numbers == 2 && num_others == 1)
-      {
-        const Token & t3 = tokens[0];
-        const Token & t2 = tokens[1];
-        const Token & t1 = tokens[2];
-
-        if (parse_xx(t2, t1, xx_separator) &&
-            parse(ss_, t3))
-        {
-          return true;
-        }
-
-        if (parse(ss_, t2, t1, mm_separator) &&
-            parse(mm_, t3))
-        {
-          return true;
-        }
-
         return false;
       }
 
-      if (num_numbers == 3 && num_others == 2)
+      const Token * t0 = &(tokens.at(0));
+      const Token * t = t0 + tokens.size();
+
+      static const char * subsec_separators[] = { ".", ";", NULL };
+      if (num_numbers == 4 ||
+          (num_numbers >= 2 &&
+           (xx_separator ?
+            (t[-2].text_ == xx_separator) :
+            (is_one_of(t[-2].text_, subsec_separators) != NULL))))
       {
-        const Token & t5 = tokens[0];
-        const Token & t4 = tokens[1];
-        const Token & t3 = tokens[2];
-        const Token & t2 = tokens[3];
-        const Token & t1 = tokens[4];
-
-        if (parse_xx(t2, t1, xx_separator) &&
-            parse(ss_, t4, t3, mm_separator) &&
-            parse(mm_, t5))
+        if (!parse_xx(t[-2], t[-1], xx_separator))
         {
-          return true;
+          return false;
         }
 
-        if (parse(ss_, t2, t1, mm_separator) &&
-            parse(mm_, t4, t3, mm_separator) &&
-            parse(hh_, t5))
-        {
-          return true;
-        }
+        num_numbers--;
+        num_tokens -= 2;
+        t -= 2;
+      }
 
+      if (num_numbers == 4)
+      {
         return false;
       }
 
-      if (num_numbers == 4 && num_others == 3)
+      if (!num_tokens || !parse(ss_, t[-1]))
       {
-        const Token & t7 = tokens[0];
-        const Token & t6 = tokens[1];
-        const Token & t5 = tokens[2];
-        const Token & t4 = tokens[3];
-        const Token & t3 = tokens[4];
-        const Token & t2 = tokens[5];
-        const Token & t1 = tokens[6];
-
-        if (parse_xx(t2, t1, xx_separator) &&
-            parse(ss_, t4, t3, mm_separator) &&
-            parse(mm_, t6, t5, mm_separator) &&
-            parse(hh_, t7))
-        {
-          return true;
-        }
+        return false;
       }
 
-      return false;
+      if (num_tokens >= 3 && !parse(mm_, t[-2], t[-3], mm_separator))
+      {
+        return false;
+      }
+
+      if (num_tokens >= 5 && !parse(hh_, t[-4], t[-5], mm_separator))
+      {
+        return false;
+      }
+
+      return true;
     }
 
     bool parse_number_and_label(const Token & a, const Token & b)

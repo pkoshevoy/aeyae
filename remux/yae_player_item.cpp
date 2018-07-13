@@ -44,10 +44,10 @@ namespace yae
 
     downmix_to_stereo_ = BoolRef::constant(true);
     loop_playback_ = BoolRef::constant(true);
-    skip_loopfilter_ = BoolRef::constant(true);
-    skip_nonref_frames_ = BoolRef::constant(true);
+    skip_loopfilter_ = BoolRef::constant(false);
+    skip_nonref_frames_ = BoolRef::constant(false);
     skip_color_converter_ = BoolRef::constant(false);
-    deinterlace_ = BoolRef::constant(true);
+    deinterlace_ = BoolRef::constant(false);
     playback_tempo_ = DataRef<double>::constant(1.0);
 
     ok = connect(&timeline_, SIGNAL(userIsSeeking(bool)),

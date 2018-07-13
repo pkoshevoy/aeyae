@@ -3092,7 +3092,7 @@ namespace yae
     RemuxView::ViewMode prev_mode = view_mode_;
     view_mode_ = mode;
 
-    if (prev_mode == kPlayerMode)
+    if (prev_mode == kPlayerMode && serial_demuxer_)
     {
       // capture playhead position:
       playhead_.prog_id_ = 0; // FIXME: should query the reader
@@ -3107,12 +3107,12 @@ namespace yae
         playhead_.src_.reset();
         playhead_.src_index_ = 0;
       }
-    }
 
-    if (mode != kPlayerMode)
-    {
-      player_->playback_stop();
-      reader_.reset();
+      if (mode != kPlayerMode)
+      {
+        player_->playback_stop();
+        reader_.reset();
+      }
     }
 
     if (mode != kLayoutMode)
@@ -3145,7 +3145,7 @@ namespace yae
         TTime playhead_pts = playhead_.pts_;
         TDemuxerInterfacePtr playhead_src = playhead_.src_.lock();
 
-        if (!playhead_src)
+        if (!playhead_src && serial_demuxer_)
         {
           // src was removed, seek to the start of the next source:
           if (playhead_.src_index_ < serial_demuxer_->num_sources())
@@ -3160,13 +3160,16 @@ namespace yae
           playhead_.src_dts_ = TTime(0, 1);
         }
 
-        serial_demuxer_->map_to_output(playhead_.prog_id_,
-                                       playhead_src,
-                                       playhead_.src_dts_,
-                                       playhead_pts);
+        if (serial_demuxer_)
+        {
+          serial_demuxer_->map_to_output(playhead_.prog_id_,
+                                         playhead_src,
+                                         playhead_.src_dts_,
+                                         playhead_pts);
 
-        YAE_ASSERT(playhead_pts.valid());
-        player_->timeline().seekTo(playhead_pts.sec());
+          YAE_ASSERT(playhead_pts.valid());
+          player_->timeline().seekTo(playhead_pts.sec());
+        }
 
         TimelineItem & timeline =
           player.get<TimelineItem>("timeline_item");

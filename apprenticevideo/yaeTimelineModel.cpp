@@ -563,6 +563,7 @@ namespace yae
   bool
   TimelineModel::seekTo(const QString & hhmmssff)
   {
+#if 0
     int hh = 0;
     int mm = 0;
     int ss = 0;
@@ -578,6 +579,17 @@ namespace yae
     double msec = double(ff) / frameRate_;
 
     seekTo(seconds + msec);
+#else
+    TTime t;
+    std::string tc = hhmmssff.toUtf8().constData();
+    if (!parse_time(t, tc.c_str(), NULL, NULL, frameRate_))
+    {
+      return false;
+    }
+
+    seekTo(t.sec());
+#endif
+
     return true;
   }
 

@@ -121,6 +121,22 @@ BOOST_AUTO_TEST_CASE(yae_parse_time)
   BOOST_CHECK(parse_time(t, "01:01:01.01", NULL, NULL, 30000.0 / 1001.0));
   BOOST_CHECK_EQUAL(t.time_, 1 + 100 * (1 + 60 * (1 + 60)));
   BOOST_CHECK_EQUAL(t.base_, 100);
+
+  // 1s
+  BOOST_CHECK(parse_time(t, "1", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.get(1000), 1000);
+
+  // 1.1s
+  BOOST_CHECK(parse_time(t, "1.1", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.get(1000), 1100);
+
+  // 1m 1s
+  BOOST_CHECK(parse_time(t, "01:01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.get(1000), 61000);
+
+  // 1h 1m 1s
+  BOOST_CHECK(parse_time(t, "01:01:01", NULL, NULL, 30000.0 / 1001.0));
+  BOOST_CHECK_EQUAL(t.get(1000), 1000 * (1 + 60 * (1 + 60)));
 }
 
 BOOST_AUTO_TEST_CASE(yae_timeline)
