@@ -2561,6 +2561,7 @@ namespace yae
       pressed_ = NULL;
     }
     inputHandlers_.clear();
+    mouseOverItems_.clear();
 
     Item & root = *root_;
     root.anchors_.left_ = ItemRef::constant(0.0);

@@ -726,11 +726,6 @@ namespace yae
   TimelineItem::processMouseTracking(const TVec2D & pt)
   {
     Item & root = *this;
-    if (!root.overlaps(pt))
-    {
-      return;
-    }
-
     Item & timeline = root["timeline"];
 
     Item & timelineIn = timeline["timelineIn"];

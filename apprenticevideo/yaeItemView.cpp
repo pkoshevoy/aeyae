@@ -490,6 +490,7 @@ namespace yae
 
     if (et == QEvent::Leave)
     {
+      mouseOverItems_.clear();
       mousePt_.set_x(std::numeric_limits<double>::max());
       mousePt_.set_y(std::numeric_limits<double>::max());
       if (processMouseTracking(mousePt_))
