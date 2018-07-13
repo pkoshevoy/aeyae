@@ -2445,6 +2445,7 @@ namespace yae
   MainWindow::playbackShowTimeline()
   {
     saveBooleanSetting(kShowTimeline, actionShowTimeline->isChecked());
+    timelineView_.root()->uncache();
     timelineView_.maybeAnimateOpacity();
   }
 
