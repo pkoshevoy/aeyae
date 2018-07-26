@@ -84,6 +84,7 @@ quiet_pushd()
 		echo ERROR: failed to change current directory to "${DIR}"
 		exit 1;
 	fi
+	# pwd
 }
 
 #----------------------------------------------------------------
@@ -92,6 +93,7 @@ quiet_pushd()
 quiet_popd()
 {
 	popd 1>/dev/null 2>/dev/null
+	# pwd
 }
 
 #----------------------------------------------------------------
@@ -395,7 +397,7 @@ resolve_library()
 	fi
 
 	NAME=$(basename "${NAME}")
-	SRCH_HERE="${BINARIES_DIR}":"${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib/${CMAKE_CFG_INTDIR}":"${CMAKE_INSTALL_PREFIX}/lib":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
+	SRCH_HERE="${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/../lib/${CMAKE_CFG_INTDIR}":"${CMAKE_INSTALL_PREFIX}/lib":"${DYLD_LIBRARY_PATH}":"/Developer/${NATIVE_ARCH}/lib"
 	SRCH_HERE="${SRCH_HERE}":"/Library/Frameworks"
 
 	if [ -n "${3}" ]; then
@@ -548,12 +550,15 @@ DeployFile()
 		exit 11
 	fi
 
-	SEARCH_RPATH=$(GetRunpath "${FILEPATH}")
-	SEARCH_PATH=$(PrependPath "${SEARCH_RPATH}" "${SEARCH_PATH}")
-
 	FILE=$(basename "${FILEPATH}")
 	FDIR=$(dirname "${FILEPATH}")
+
+	SEARCH_RPATH=$(GetRunpath "${FILEPATH}")
+
 	quiet_pushd "${FDIR}"
+	SEARCH_RPATH=${SEARCH_RPATH//@executable_path/${BUNDLE_PATH}\/Contents\/MacOS}
+	SEARCH_RPATH=${SEARCH_RPATH//@loader_path/${PWD}}
+	SEARCH_PATH=$(PrependPath "${SEARCH_RPATH}" "${SEARCH_PATH}")
 
 #	echo FILE: ${FILE}
 #	echo FDIR: ${FDIR}
@@ -619,12 +624,15 @@ DeployFile()
 
 		if [ -n "${AT_LOAD_PATH}" -o -n "${AT_RPATH}" ]; then
 			REF=$(echo "${NEEDS}" | cut -d/ -f2-)
-			if [ -e "${REF}" ]; then
+			if [ -e "${PWD}/${REF}" ]; then
 				DeployFileOnce "${BASEPATH}" "${REF}" "${DONELIST}" "${SEARCH_PATH}"
 				if [ $? != 0 ]; then exit 11; fi
 			else
 				FOUND=$(resolve_library "${REF}" "${FILE_ARCH}" "${SEARCH_PATH}")
-				if [ ! -e "${FOUND}" ]; then exit 21; fi
+				if [ ! -e "${FOUND}" ]; then
+					printf "NOT FOUND: %s, referenced by %s\n" "${NEEDS}" "${2}"
+					exit 21;
+				fi
 
 				NEEDS="${FOUND}"
 			fi
