@@ -27,7 +27,7 @@ namespace yae
   //----------------------------------------------------------------
   // DemuxerReader
   //
-  struct DemuxerReader : public IReader
+  struct YAE_API DemuxerReader : public IReader
   {
   protected:
     DemuxerReader(const TDemuxerInterfacePtr & src = TDemuxerInterfacePtr());
