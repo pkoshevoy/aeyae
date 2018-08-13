@@ -1881,43 +1881,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // InLayoutMode
+  // In
   //
-  struct InLayoutMode : public TBoolExpr
+  template <RemuxView::ViewMode mode>
+  struct In : public TBoolExpr
   {
-    InLayoutMode(const RemuxView & view): view_(view) {}
+    In(const RemuxView & view): view_(view) {}
 
     // virtual:
     void evaluate(bool & result) const
-    { result = (view_.view_mode() == RemuxView::kLayoutMode); }
-
-    const RemuxView & view_;
-  };
-
-  //----------------------------------------------------------------
-  // InPreviewMode
-  //
-  struct InPreviewMode : public TBoolExpr
-  {
-    InPreviewMode(const RemuxView & view): view_(view) {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    { result = (view_.view_mode() == RemuxView::kPreviewMode); }
-
-    const RemuxView & view_;
-  };
-
-  //----------------------------------------------------------------
-  // InPlayerMode
-  //
-  struct InPlayerMode : public TBoolExpr
-  {
-    InPlayerMode(const RemuxView & view): view_(view) {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    { result = (view_.view_mode() == RemuxView::kPlayerMode); }
+    { result = (view_.view_mode() == mode); }
 
     const RemuxView & view_;
   };
@@ -1969,14 +1942,19 @@ namespace yae
       bg.anchors_.fill(root);
       bg.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
+      Item & sources = root.addNew<Item>("sources");
+      sources.anchors_.fill(bg);
+      sources.visible_ = sources.addExpr(new In<RemuxView::kSourceMode>(view));
+      sources.visible_.disableCaching();
+
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
-      layout.visible_ = layout.addExpr(new InLayoutMode(view));
+      layout.visible_ = layout.addExpr(new In<RemuxView::kLayoutMode>(view));
       layout.visible_.disableCaching();
 
       Item & preview = root.addNew<Item>("preview");
       preview.anchors_.fill(bg);
-      preview.visible_ = layout.addExpr(new InPreviewMode(view));
+      preview.visible_ = layout.addExpr(new In<RemuxView::kPreviewMode>(view));
       preview.visible_.disableCaching();
 
       PlayerItem & player = root.add(view.player_);
@@ -2052,6 +2030,35 @@ namespace yae
           ItemRef::uncacheable(hidden.height_),
           ItemRef::constant(0.0)));
 
+      // add a button to switch to clip source view:
+      RoundRect & source_btn = controls.addNew<RoundRect>("source_btn");
+      {
+        Rectangle & underline = controls.addNew<Rectangle>("source_ul");
+        underline.visible_ = sources.visible_;
+        underline.visible_.disableCaching();
+
+        Text & txt = layout_control_button(model,
+                                           view,
+                                           style,
+                                           controls,
+                                           source_btn);
+
+        txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
+        txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 2));
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Source")));
+
+        layout_text_underline(view, source_btn, txt, underline);
+
+        // NOTE: QGenericArgument does not store the arg value,
+        //       so we must provide storage instead:
+        static const RemuxView::ViewMode mode = RemuxView::kSourceMode;
+
+        Item & ia = controls.add
+          (new InvokeMethodOnClick("source_ia", view, "set_view_mode",
+                                   Q_ARG(RemuxView::ViewMode, mode)));
+        ia.anchors_.fill(source_btn);
+     }
+
       // add a button to switch to clip layout view:
       RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
       {
@@ -2065,8 +2072,9 @@ namespace yae
                                            controls,
                                            layout_btn);
 
-        txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
-        txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 2));
+        txt.anchors_.left_ = ItemRef::reference(source_btn, kPropertyRight);
+        txt.margins_.
+           set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
 
         layout_text_underline(view, layout_btn, txt, underline);
@@ -2218,7 +2226,7 @@ namespace yae
 
     player_.reset(new PlayerItem("player", context));
     PlayerItem & player = *player_;
-    player.visible_ = player.addExpr(new InPlayerMode(*this));
+    player.visible_ = player.addExpr(new In<RemuxView::kPlayerMode>(*this));
     player.visible_.disableCaching();
 
     timeline_.reset(new TimelineItem("timeline_item",
@@ -3086,16 +3094,57 @@ namespace yae
     }
 
     Item & root = *root_;
+    Item & sources = root["sources"];
     Item & preview = root["preview"];
     Item & player = root["player"];
 
     RemuxView::ViewMode prev_mode = view_mode_;
     view_mode_ = mode;
 
+    if (mode == kSourceMode)
+    {
+      RemuxView & view = *this;
+      RemuxModel & model = *model_;
+      const RemuxViewStyle & style = *(this->style());
+      sources.children_.clear();
+
+      Scrollview & sv =
+        layout_scrollview(kScrollbarBoth, view, style, sources,
+                          kScrollbarBoth);
+      Item & container = *(sv.content_);
+
+      Item * prev_row = NULL;
+      for (std::map<std::string, TDemuxerInterfacePtr>::const_iterator
+             i = model.demuxer_.begin(); i != model.demuxer_.end(); ++i)
+      {
+        const std::string & name = i->first;
+        const TDemuxerInterfacePtr & src = i->second;
+
+        SourceItem & item = container.add(new SourceItem(name.c_str(),
+                                                         view,
+                                                         name,
+                                                         src));
+        item.anchors_.left_ = ItemRef::reference(container, kPropertyLeft);
+        item.anchors_.top_ = prev_row ?
+          ItemRef::reference(*prev_row, kPropertyBottom) :
+          ItemRef::reference(container, kPropertyTop);
+
+        item.layout();
+
+        prev_row = &item;
+      }
+    }
+
     if (prev_mode == kPlayerMode && serial_demuxer_)
     {
       // capture playhead position:
-      playhead_.prog_id_ = 0; // FIXME: should query the reader
+      TTrackInfo track_info;
+      reader_->getSelectedVideoTrackInfo(track_info);
+
+      TProgramInfo prog_info;
+      reader_->getProgramInfo(track_info.program_, prog_info);
+
+      playhead_.prog_id_ = prog_info.program_;
       playhead_.pts_ = player_->timeline().currentTime();
 
       if (!serial_demuxer_->map_to_source(playhead_.prog_id_,

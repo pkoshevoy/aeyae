@@ -284,6 +284,21 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // StyleRowHeight
+  //
+  struct StyleRowHeight : public StyleAttr<ItemViewStyle, ItemRef>
+  {
+    typedef StyleAttr<ItemViewStyle, ItemRef> TBase;
+
+    StyleRowHeight(const ItemView & view,
+                   double s = 1.0,
+                   double t = 0.0,
+                   bool odd_round_up = false):
+      TBase(view, &ItemViewStyle::row_height_, s, t, odd_round_up)
+    {}
+  };
+
+  //----------------------------------------------------------------
   // StyleTimelineShadow
   //
   struct StyleTimelineShadow : public TGradientExpr

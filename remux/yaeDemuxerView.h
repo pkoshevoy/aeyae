@@ -27,6 +27,7 @@
 
 // local:
 #include "yae_player_item.h"
+#include "yae_source_item.h"
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
@@ -267,9 +268,11 @@ namespace yae
 
     enum ViewMode
     {
-      kLayoutMode = 0,
-      kPreviewMode = 1,
-      kPlayerMode = 2,
+      kSourceMode = 0,
+      kLayoutMode = 1,
+      kPreviewMode = 2,
+      kPlayerMode = 3,
+      kExportMode = 4,
     };
 
     RemuxView();
