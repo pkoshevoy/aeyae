@@ -113,11 +113,24 @@ namespace yae
       boost::uint64_t duration_ns_;
     };
 
+    Transition(double duration,
+               double v0 = 0.0,
+               double v1 = 1.0,
+               unsigned int n_spinup = 10,
+               unsigned int n_steady = 0,
+               unsigned int n_spindown = 0);
+
     Transition(const Polyline & spinup,
                const Polyline & steady,
                const Polyline & spindown);
 
-    // quick check whether transition is done or steady:
+  protected:
+    void init(const Polyline & spinup,
+              const Polyline & steady,
+              const Polyline & spindown);
+
+  public:
+     // quick check whether transition is done or steady:
     bool is_done() const;
     bool is_steady() const;
 

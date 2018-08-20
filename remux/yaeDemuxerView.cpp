@@ -3237,6 +3237,7 @@ namespace yae
 
     ItemFocus::singleton().enable("remux_layout", view_mode_ == kLayoutMode);
     ItemFocus::singleton().enable("player", view_mode_ == kPlayerMode);
+    ItemFocus::singleton().enable("sources", view_mode_ == kSourceMode);
 
     requestRepaint();
   }

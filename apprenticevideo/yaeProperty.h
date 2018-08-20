@@ -107,6 +107,7 @@ namespace yae
     kPropertyVisible,
     kPropertyOpacity,
     kPropertyBorderWidth,
+    kPropertyWeight,
     kPropertyColor,
     kPropertyColorBorder,
     kPropertyColorBg,
@@ -117,7 +118,9 @@ namespace yae
     kPropertyColorOnFocusBg,
     kPropertyCursorWidth,
     kPropertyHasText,
-    kPropertyText
+    kPropertyText,
+    kPropertyEnabled,
+    kPropertyChecked
   };
 
   //----------------------------------------------------------------

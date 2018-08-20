@@ -310,14 +310,41 @@ namespace yae
   //----------------------------------------------------------------
   // Transition::Transition
   //
+  Transition::Transition(double duration,
+                         double v0,
+                         double v1,
+                         unsigned int n_spinup,
+                         unsigned int n_steady,
+                         unsigned int n_spindown)
+  {
+    init(Polyline(duration, v0, v1, n_spinup),
+         Polyline(duration, v1, v1, n_steady),
+         Polyline(duration, v1, v0, n_spindown));
+  }
+
+  //----------------------------------------------------------------
+  // Transition::Transition
+  //
   Transition::Transition(const Polyline & spinup,
                          const Polyline & steady,
-                         const Polyline & spindown):
-    spinup_(spinup),
-    steady_(steady),
-    spindown_(spindown),
-    duration_ns_(0.0)
+                         const Polyline & spindown)
   {
+    init(spinup, steady, spindown);
+  }
+
+  //----------------------------------------------------------------
+  // Transition::init
+  //
+  void
+  Transition::init(const Polyline & spinup,
+                   const Polyline & steady,
+                   const Polyline & spindown)
+  {
+    spinup_ = spinup;
+    steady_ = steady;
+    spindown_ = spindown;
+    duration_ns_ = 0.0;
+
     if (spinup.duration_ns_ > 0.0)
     {
       segment_[duration_ns_] = &spinup_;

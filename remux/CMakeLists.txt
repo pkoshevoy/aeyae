@@ -116,6 +116,13 @@ set(project_sources
   yae_source_item.cpp
   yae_source_item.h
 
+  yae_checkbox_item.cpp
+  yae_checkbox_item.h
+  yae_input_proxy_item.cpp
+  yae_input_proxy_item.h
+  yae_lshape.cpp
+  yae_lshape.h
+
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
   ../apprenticevideo/yaeCanvas.h

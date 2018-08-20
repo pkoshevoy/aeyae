@@ -13,6 +13,8 @@
 #include "yae/utils/yae_utils.h"
 
 // local:
+#include "yae_checkbox_item.h"
+#include "yae_input_proxy_item.h"
 #include "yae_source_item.h"
 #include "yaeItemViewStyle.h"
 
@@ -55,12 +57,13 @@ namespace yae
       Text & text = row.addNew<Text>("text");
       text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
       text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-      text.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+      text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
       text.text_ = TVarRef::constant(TVar(name_.c_str()));
 
       prev_row = &row;
     }
 
+    int track_focus_index = 0;
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
@@ -92,7 +95,7 @@ namespace yae
         Text & text = row.addNew<Text>("text");
         text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
         text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-        text.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
         text.text_ = TVarRef::constant(TVar(oss.str().c_str()));
 
         prev_row = &row;
@@ -132,7 +135,7 @@ namespace yae
           double par = (traits.pixelAspectRatio_ != 0.0 &&
                         traits.pixelAspectRatio_ != 1.0 ?
                         traits.pixelAspectRatio_ : 1.0);
-          unsigned int w = (unsigned int)(0.2775 + par * traits.visibleWidth_);
+          unsigned int w = (unsigned int)(0.5 + par * traits.visibleWidth_);
           oss << ", " << w << " x " << traits.visibleHeight_
               << ", " << traits.frameRate_ << " fps";
         }
@@ -159,17 +162,32 @@ namespace yae
           oss << ", " << label;
         }
 
-        Item & row = prog.addNew<Item>(str("track_", track_id).c_str());
+        InputProxy & row = prog.
+          addNew<InputProxy>(str("track_", track_id).c_str());
         row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
         row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
         row.height_ = ItemRef::reference(style.row_height_);
         row.margins_.set_left(ItemRef::reference(style.row_height_, 1));
 
+        CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view_));
+        cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+        cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        cbox.height_ = ItemRef::reference(row.height_, 0.64);
+        cbox.width_ = cbox.height_;
+
         Text & text = row.addNew<Text>("text");
-        text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+        text.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
+        text.margins_.set_left(ItemRef::reference(cbox, kPropertyWidth));
         text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-        text.fontSize_ = ItemRef::reference(style.row_height_, 0.2775);
+        text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
         text.text_ = TVarRef::constant(TVar(oss.str().c_str()));
+
+        row.ia_ = cbox.self_;
+        ItemFocus::singleton().setFocusable(view_,
+                                            row,
+                                            "sources",
+                                            track_focus_index);
+        track_focus_index++;
 
         prev_row = &row;
       }
