@@ -60,7 +60,7 @@ namespace yae
       void assign(const RoundRect & rr)
       {
         r_ = rr.radius_.get();
-        b_ = rr.radius_.get();
+        b_ = rr.border_.get();
         fg_ = rr.color_.get();
         cb_ = rr.colorBorder_.get();
         bg_ = rr.background_.get();
