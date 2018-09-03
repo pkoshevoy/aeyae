@@ -15,6 +15,11 @@
 #include "yaeTexture.h"
 
 
+//----------------------------------------------------------------
+// YAE_DEBUG_ROUND_RECT
+//
+// #define YAE_DEBUG_ROUND_RECT
+
 namespace yae
 {
 
@@ -75,7 +80,7 @@ namespace yae
     Signature sig_;
     BoolRef ready_;
     GLuint texId_;
-    GLuint iw_;
+    int iw_;
   };
 
   //----------------------------------------------------------------
@@ -122,62 +127,121 @@ namespace yae
     double b = item.border_.get();
 
     // make sure radius is not less than border width:
-    r = std::max<double>(r, b);
+    double c = (b <= 0) ? r : std::max(r, b + 2.0);
 
     // inner radius:
-    double r0 = r - b;
-
-    // we'll be comparing against radius values,
-    Segment outerSegment(0.0, r);
-    Segment innerSegment(0.0, r0);
+    double r0 = (b <= 0) ? r : std::max(0.0, r - b);
 
     // make sure image is at least 2 pixels wide:
-    iw_ = (int)(1.0 + std::ceil(2.0 * r));
+    iw_ = (int)(1.0 + std::ceil(2.0 * c));
 
     // make sure texture size is even:
     iw_ = (iw_ & 1) ? (iw_ + 1) : iw_;
 
     // put origin at the center:
-    double w2 = iw_ / 2;
+    int iw2 = iw_ / 2;
+    double w2 = iw2;
+
+    // we'll be comparing against radius values,
+    double cr = c - r;
+    double cb = c - b;
+
+    TVec2D cornerOrigin = (r < c) ? TVec2D(cr, cr) : TVec2D(0, 0);
+    Segment outerCorner(0, r);
+    Segment innerCorner(0, r0);
+#if 0
+    // NOTE: shift sgement start to prevent supersampling at (0, 0)
+    //       from being interpreted as sampling outside inner rect
+    //
+    // NOTE: segments are defined by (start, length), so to
+    //       offset start to -1 length has to be compensted by +1
+    //
+    Segment outerSegment(-1, c + 1);
+    Segment innerSegment(-1, cb + 1);
+#else
+    Segment outerSegment(0, c);
+    Segment innerSegment(0, cb);
+#endif
 
     // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+#ifndef YAE_DEBUG_ROUND_RECT
+    static const TVec2D sp[] = { TVec2D(-0.25, -0.25), TVec2D(+0.25, -0.25),
+                                 TVec2D(-0.25, +0.25), TVec2D(+0.25, +0.25) };
+    // static const TVec2D sp[] = { TVec2D(+0.00, +0.00) };
+
+
+    Vec<double, 4> outerColor(item.colorBorder_.get());
+    Vec<double, 4> innerColor(item.color_.get());
+    Vec<double, 4> bgColor(item.background_.get());
+#else
+    static const TVec2D sp[] = { TVec2D(+0.00, +0.00) };
+
+    Vec<double, 4> outerColor = Color(0x1d2e3b);
+    Vec<double, 4> innerColor = Color(0x4f7da1);
+    Vec<double, 4> bgColor = Color(0xffffff);
+#endif
 
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
 
     QImage img(iw_, iw_, QImage::Format_ARGB32);
     {
-      Vec<double, 4> outerColor(item.colorBorder_.get());
-      Vec<double, 4> innerColor(item.color_.get());
-      Vec<double, 4> bgColor(item.background_.get());
       TVec2D samplePoint;
 
-      for (int j = 0; j < int(iw_); j++)
+      for (int j = 0; j < iw2; j++)
       {
-        uchar * row = img.scanLine(j);
-        uchar * dst = row;
-        samplePoint.set_y(double(j - w2));
+        uchar * row = img.scanLine(iw2 + j);
+        uchar * dst = row + sizeof(int) * iw2;
+        samplePoint.set_y(double(j));
 
-        for (int i = 0; i < int(iw_); i++, dst += sizeof(int))
+        for (int i = 0; i < iw2; i++, dst += sizeof(int))
         {
-          samplePoint.set_x(double(i - w2));
+          samplePoint.set_x(double(i));
 
           double outer = 0.0;
           double inner = 0.0;
 
           for (unsigned int k = 0; k < supersample; k++)
           {
-            double p =
-              std::max<double>(0.0, (samplePoint + sp[k]).norm() - 1.0);
+            const TVec2D & jitter = sp[k];
+            TVec2D pt = samplePoint + jitter;
 
-            double outerOverlap = outerSegment.pixelOverlap(p);
-            double innerOverlap =
-              (r0 < r) ? innerSegment.pixelOverlap(p) : outerOverlap;
+            if (cornerOrigin.x() <= pt.x() &&
+                cornerOrigin.y() <= pt.y())
+            {
+              // do not allow supersampling to push the point
+              // beyond segment start, that would cause background color
+              // to be blended in when it shouldn't:
+              pt.x() = std::max<double>(0.0, pt.x());
+              pt.y() = std::max<double>(0.0, pt.y());
 
-            outerOverlap = std::max<double>(0.0, outerOverlap - innerOverlap);
-            outer += outerOverlap;
-            inner += innerOverlap;
+              double p = (pt - cornerOrigin).norm();
+              double outerOverlap = outerCorner.pixelOverlap(p);
+              double innerOverlap = ((r0 < r) ?
+                                     innerCorner.pixelOverlap(p) :
+                                     outerOverlap);
+
+              outerOverlap = std::max<double>(0.0, outerOverlap - innerOverlap);
+
+              outer += outerOverlap;
+              inner += innerOverlap;
+            }
+            else
+            {
+              // do not supersample vertical/horizontal bands
+              // to avoid making them look blurry:
+              pt -= jitter;
+
+              double p = (pt.x() < pt.y()) ? pt.y() : pt.x();
+              double outerOverlap = outerSegment.pixelOverlap(p);
+              double innerOverlap = ((b <= 0) ?
+                                     outerOverlap :
+                                     innerSegment.pixelOverlap(p));
+
+              outerOverlap = std::max<double>(0.0, outerOverlap - innerOverlap);
+
+              outer += outerOverlap;
+              inner += innerOverlap;
+            }
           }
 
           double outerWeight = outer / double(supersample);
@@ -190,7 +254,15 @@ namespace yae
                   bgColor * backgroundWeight);
 
           memcpy(dst, &(c.argb_), sizeof(c.argb_));
+
+          // mirror horizontally:
+          uchar * mirror = row + (iw2 - (i + 1)) * sizeof(int);
+          memcpy(mirror, &(c.argb_), sizeof(c.argb_));
         }
+
+        // mirror vertically:
+        uchar * mirror = img.scanLine(iw2 - (j + 1));
+        memcpy(mirror, row, sizeof(int) * iw_);
       }
     }
 
@@ -217,7 +289,7 @@ namespace yae
     bbox.h_ += dh;
 
     // texture width:
-    double wt = double(powerOfTwoGEQ<GLsizei>(iw_));
+    double wt = double(powerOfTwoGEQ<int>(iw_));
 
     double t[4];
     t[0] = 0.0;
