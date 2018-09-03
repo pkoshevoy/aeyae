@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/utils/yae_log.h"
+
 // local:
 #include "yae_checkbox_item.h"
 #include "yae_lshape.h"
@@ -23,8 +26,9 @@ namespace yae
   //
   struct CheckboxColor : public TColorExpr
   {
-    CheckboxColor(const CheckboxItem & item):
-      item_(item)
+    CheckboxColor(const CheckboxItem & item, bool border = true):
+      item_(item),
+      border_(border)
     {}
 
     void evaluate(Color & result) const
@@ -46,6 +50,11 @@ namespace yae
         else
         {
           result = style->fg_controls_.get();
+
+          if (!border_)
+          {
+            result.set_a(0.0);
+          }
         }
       }
       else
@@ -55,6 +64,7 @@ namespace yae
     }
 
     const CheckboxItem & item_;
+    bool border_;
   };
 
   //----------------------------------------------------------------
@@ -97,7 +107,7 @@ namespace yae
     SpotlightAnimator(CheckboxItem & checkbox, RoundRect & spotlight):
       checkbox_(checkbox),
       spotlight_(spotlight),
-      xn_(new Transition(0.5))
+      xn_(new Transition(0.25))
     {
       anchor_[0] = 0.0;
       anchor_[1] = 0.0;
@@ -115,7 +125,7 @@ namespace yae
     // helper:
     void set_anchor(bool focused, bool pressed)
     {
-      anchor_[0] = spotlight_opacity();
+      // anchor_[0] = spotlight_opacity();
 
       if (pressed)
       {
@@ -128,18 +138,26 @@ namespace yae
       else
       {
         const TVec2D & pt = checkbox_.view_.mousePt();
-        anchor_[1] = spotlight_.overlaps(pt) ? 0.1 : 0.0;
+        anchor_[1] = 0.1; // spotlight_.overlaps(pt) ? 0.1 : 0.0;
       }
-
+#if 0
       double dt = fabs(anchor_[1] - anchor_[0]);
-      xn_.reset(new Transition(dt * 1.25));
+      if (dt > 0.0)
+      {
+        yae::shared_ptr<Transition> xn(new Transition(dt * 1.25));
+        xn->start();
+        xn_ = xn;
+      }
+#else
       xn_->start();
+#endif
     }
 
     // virtual:
     void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animator)
     {
       yae::shared_ptr<Transition> xn = xn_;
+      yae_elog << "animate spotlight, done: " << xn->is_done() << '\n';
       if (xn->is_done())
       {
         checkbox_.view_.delAnimator(animator);
@@ -186,16 +204,22 @@ namespace yae
     ClickableItem(id),
     view_(view),
     enabled_(true),
-    checked_(true),
-    color_(Color(0xee75ff))
+    checked_(true)
   {
+    color_ = addExpr(new CheckboxColor(*this));
     RoundRect & spotlight = addNew<RoundRect>("spotlight");
     RoundRect & checkbox = addNew<RoundRect>("checkbox");
     checkbox.anchors_.fill(*this);
-    checkbox.border_ = ItemRef::scale(checkbox, kPropertyWidth, 0.0875);
-    checkbox.color_ = checkbox.addExpr(new CheckboxColor(*this));
+    // checkbox.border_ = ItemRef::scale(checkbox, kPropertyWidth, 0.0875);
+    // checkbox.border_ = ItemRef::constant(2);
+    checkbox.border_ = ItemRef::scale(checkbox, kPropertyWidth, 0.1);
+    checkbox.color_ = addExpr(new CheckboxColor(*this, false));
+    checkbox.color_.disableCaching();
     checkbox.colorBorder_ = ColorRef::reference(*this, kPropertyColor);
-    checkbox.radius_ = ItemRef::scale(checkbox, kPropertyWidth, 0.15);
+    checkbox.colorBorder_.disableCaching();
+    // checkbox.radius_ = ItemRef::scale(checkbox, kPropertyWidth, 0.15);
+    checkbox.radius_ = ItemRef::scale(checkbox, kPropertyWidth, 0.1);
+    // checkbox.radius_ = ItemRef::constant(1.9);
 
     spotlight.anchors_.hcenter_ =
       ItemRef::reference(checkbox, kPropertyHCenter);
@@ -207,8 +231,7 @@ namespace yae
       ItemRef::scale(spotlight, kPropertyWidth, 0.5);
     spotlight.color_ =
       ColorRef::reference(*this, kPropertyColor);
-    spotlight.opacity_ =
-      ItemRef::constant(0.2);
+    spotlight.color_.disableCaching();
     spotlight.height_ = spotlight.width_;
 
     Transform & transform = addNew<Transform>("transform");
@@ -230,12 +253,18 @@ namespace yae
       ItemRef::scale(checkbox, kPropertyWidth, 0.29);
     checkmark.weight_ =
       ItemRef::scale(checkbox, kPropertyWidth, 0.075);
-    checkmark.color_ = checkmark.addExpr(new CheckmarkColor(*this));
+    checkmark.color_ =
+      checkmark.addExpr(new CheckmarkColor(*this));
+    checkmark.visible_ =
+      BoolRef::reference(*this, kPropertyChecked);
+    checkmark.visible_.disableCaching();
 
-    checkmark.visible_ = BoolRef::reference(*this, kPropertyChecked);
-
+    SpotlightAnimator * spotlight_animator = NULL;
     this->spotlight_animator_.reset
-      (new SpotlightAnimator(*this, spotlight));
+      (spotlight_animator = new SpotlightAnimator(*this, spotlight));
+
+    spotlight.opacity_ = addExpr(new SpotlightOpacity(*spotlight_animator));
+    spotlight.opacity_.disableCaching();
   }
 
   //----------------------------------------------------------------
@@ -293,8 +322,110 @@ namespace yae
   CheckboxItem::onMouseOver(const TVec2D & itemCSysOrigin,
                             const TVec2D & rootCSysPoint)
   {
-    
-    return ClickableItem::onMouseOver(itemCSysOrigin, rootCSysPoint);
+    yae_elog << "CheckboxItem::onMouseOver";
+    yae::shared_ptr<SpotlightAnimator, Canvas::ILayer::IAnimator>
+      spotlight_animator = spotlight_animator_;
+    spotlight_animator->set_anchor(false, false);
+    view_.addAnimator(spotlight_animator_);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // CheckboxItem::onPress
+  //
+  bool
+  CheckboxItem::onPress(const TVec2D & itemCSysOrigin,
+                        const TVec2D & rootCSysPoint)
+  {
+    yae_elog << "CheckboxItem::onFocus";
+    yae::shared_ptr<SpotlightAnimator, Canvas::ILayer::IAnimator>
+      spotlight_animator = spotlight_animator_;
+    spotlight_animator->set_anchor(true, true);
+    view_.addAnimator(spotlight_animator_);
+    checked_ = BoolRef::constant(!checked_.get());
+    color_.uncache();
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // CheckboxItem::onFocus
+  //
+  void
+  CheckboxItem::onFocus()
+  {
+    yae_elog << "CheckboxItem::onFocus";
+    yae::shared_ptr<SpotlightAnimator, Canvas::ILayer::IAnimator>
+      spotlight_animator = spotlight_animator_;
+    spotlight_animator->set_anchor(true, false);
+    view_.addAnimator(spotlight_animator_);
+  }
+
+  //----------------------------------------------------------------
+  // CheckboxItem::onFocusOut
+  //
+  void
+  CheckboxItem::onFocusOut()
+  {
+#if 0
+    yae_elog << "CheckboxItem::onFocusOut";
+    yae::shared_ptr<SpotlightAnimator, Canvas::ILayer::IAnimator>
+      spotlight_animator = spotlight_animator_;
+    spotlight_animator->set_anchor(false, false);
+    view_.addAnimator(spotlight_animator_);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // CheckboxItem::processEvent
+  //
+  bool
+  CheckboxItem::processEvent(Canvas::ILayer & canvasLayer,
+                             Canvas * canvas,
+                             QEvent * event)
+  {
+    QEvent::Type et = event->type();
+    if (et == QEvent::KeyPress)
+    {
+      QKeyEvent & ke = *(static_cast<QKeyEvent *>(event));
+      int key = ke.key();
+
+      yae::shared_ptr<SpotlightAnimator, Canvas::ILayer::IAnimator>
+        spotlight_animator = spotlight_animator_;
+
+      bool checked = checked_.get();
+
+      if (key == Qt::Key_Space ||
+          key == Qt::Key_Return ||
+          key == Qt::Key_Enter)
+      {
+        checked_ = BoolRef::constant(!checked);
+      }
+      else if ((key == Qt::Key_Backspace ||
+                key == Qt::Key_Delete ||
+                key == Qt::Key_Minus ||
+                key == Qt::Key_0) &&
+               checked)
+      {
+        checked_ = BoolRef::constant(false);
+      }
+      else if ((key == Qt::Key_Plus ||
+                key == Qt::Key_1) &&
+               !checked)
+      {
+        checked_ = BoolRef::constant(true);
+      }
+      else
+      {
+        return false;
+      }
+
+      spotlight_animator->set_anchor(true, true);
+      view_.addAnimator(spotlight_animator_);
+      color_.uncache();
+      return true;
+    }
+
+    return false;
   }
 
 }

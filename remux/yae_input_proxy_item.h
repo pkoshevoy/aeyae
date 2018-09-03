@@ -58,8 +58,11 @@ namespace yae
     bool draggable() const;
 
     void onFocus();
-
     void onFocusOut();
+
+    bool processEvent(Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * event);
 
     yae::weak_ptr<InputArea, Item> ia_;
   };

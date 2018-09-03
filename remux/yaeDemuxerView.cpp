@@ -9,6 +9,9 @@
 // Qt library:
 #include <QKeySequence>
 
+// aeyae:
+#include "yae/utils/yae_utils.h"
+
 // local:
 #include "yaeDemuxerView.h"
 #include "yaeFlickableArea.h"
@@ -1839,10 +1842,10 @@ namespace yae
     btn.radius_ = ItemRef::constant(3.0);
 
     btn.color_ = btn.addExpr
-      (style_color_ref(view, &ItemViewStyle::bg_controls_));
+      (style_color_ref(view, &ItemViewStyle::fg_controls_));
 
     btn.colorBorder_ = btn.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_controls_));
+      (style_color_ref(view, &ItemViewStyle::bg_controls_));
 
     Text & txt = controls.addNew<Text>("layout_txt");
     txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
@@ -2515,9 +2518,16 @@ namespace yae
     }
 
     Item & root = *root_;
-    requestUncache(&(root["layout"]["clips"]));
 
-    if (view_mode_ == kPlayerMode)
+    if (view_mode_ == kSourceMode)
+    {
+      requestUncache(&(root["sources"]));
+    }
+    else if (view_mode_ == kLayoutMode)
+    {
+      requestUncache(&(root["layout"]["clips"]));
+    }
+    else if (view_mode_ == kPlayerMode)
     {
       Item & player = root["player"];
       TimelineItem & timeline = player.get<TimelineItem>("timeline_item");

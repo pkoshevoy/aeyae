@@ -41,6 +41,16 @@ namespace yae
     bool onMouseOver(const TVec2D & itemCSysOrigin,
                      const TVec2D & rootCSysPoint);
 
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint);
+
+    void onFocus();
+    void onFocusOut();
+
+    bool processEvent(Canvas::ILayer & canvasLayer,
+                      Canvas * canvas,
+                      QEvent * event);
+
     ItemView & view_;
     BoolRef enabled_;
     BoolRef checked_;

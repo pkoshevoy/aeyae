@@ -639,7 +639,17 @@ namespace yae
     mousePt_ = pt;
 
     root_->getVisibleItems(mousePt_, mouseOverItems_);
-
+#if 1
+    for (std::list<VisibleItem>::const_iterator i = mouseOverItems_.begin();
+         i != mouseOverItems_.end(); ++i)
+    {
+      yae::shared_ptr<InputArea, Item> ia = i->item_.lock();
+      if (ia)
+      {
+        ia->onMouseOver(i->csysOrigin_, pt);
+      }
+    }
+#endif
     QEvent::Type et = e->type();
     if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
           (e->button() == Qt::LeftButton)))

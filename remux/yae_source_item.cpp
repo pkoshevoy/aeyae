@@ -162,33 +162,40 @@ namespace yae
           oss << ", " << label;
         }
 
-        InputProxy & row = prog.
-          addNew<InputProxy>(str("track_", track_id).c_str());
+        Item & row = prog.addNew<Item>(str("track_", track_id).c_str());
         row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
         row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
-        row.height_ = ItemRef::reference(style.row_height_);
+        row.height_ = ItemRef::reference(style.row_height_, 1);
         row.margins_.set_left(ItemRef::reference(style.row_height_, 1));
 
         CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view_));
         cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
         cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-        cbox.height_ = ItemRef::reference(row.height_, 0.64);
+        // cbox.height_ = ItemRef::reference(row.height_, 0.64);
+        cbox.height_ = ItemRef::reference(row.height_, 0.75);
         cbox.width_ = cbox.height_;
 
         Text & text = row.addNew<Text>("text");
         text.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
-        text.margins_.set_left(ItemRef::reference(cbox, kPropertyWidth));
+        text.margins_.set_left(ItemRef::reference(cbox, kPropertyWidth, 0.5));
         text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
         text.text_ = TVarRef::constant(TVar(oss.str().c_str()));
+#if 1
+        InputProxy & proxy = row.addNew<InputProxy>
+          (str("proxy_", track_id).c_str());
+        proxy.anchors_.left_ = ItemRef::reference(cbox, kPropertyLeft);
+        proxy.anchors_.right_ = ItemRef::reference(text, kPropertyRight);
+        proxy.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        proxy.height_ = ItemRef::reference(row, kPropertyHeight);
 
-        row.ia_ = cbox.self_;
+        proxy.ia_ = cbox.self_;
         ItemFocus::singleton().setFocusable(view_,
-                                            row,
+                                            proxy,
                                             "sources",
                                             track_focus_index);
         track_focus_index++;
-
+#endif
         prev_row = &row;
       }
     }
