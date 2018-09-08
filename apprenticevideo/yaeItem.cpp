@@ -407,6 +407,66 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Transition::in_spinup
+  //
+  bool
+  Transition::in_spinup() const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    if (now < t0_)
+    {
+      return false;
+    }
+
+    boost::chrono::nanoseconds ns = now - t0_;
+    boost::uint64_t t = ns.count();
+    bool spinup = (t < spinup_.duration_ns_);
+    return spinup;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::in_spindown
+  //
+  bool
+  Transition::in_spindown() const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    if (now < t0_)
+    {
+      return false;
+    }
+
+    boost::chrono::nanoseconds ns = now - t0_;
+    boost::uint64_t t = ns.count();
+    if (t < spinup_.duration_ns_)
+    {
+      return false;
+    }
+
+    t -= spinup_.duration_ns_;
+    bool spindown = (steady_.duration_ns_ <= t);
+    return spindown;
+  }
+
+  //----------------------------------------------------------------
+  // Transition::in_progress
+  //
+  bool
+  Transition::in_progress() const
+  {
+    TimePoint now = boost::chrono::steady_clock::now();
+    if (now < t0_)
+    {
+      return false;
+    }
+
+    boost::chrono::nanoseconds ns = now - t0_;
+    boost::uint64_t t = ns.count();
+    bool done = (duration_ns_ < t);
+    return !done;
+  }
+
+  //----------------------------------------------------------------
   // Transition::get_state
   //
   Transition::State

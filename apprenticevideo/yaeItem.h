@@ -130,9 +130,12 @@ namespace yae
               const Polyline & spindown);
 
   public:
-     // quick check whether transition is done or steady:
+     // quick check whether transition is done, steady, etc...:
     bool is_done() const;
     bool is_steady() const;
+    bool in_spinup() const;
+    bool in_spindown() const;
+    bool in_progress() const;
 
     enum State
     {

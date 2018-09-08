@@ -41,15 +41,21 @@ namespace yae
     bool onMouseOver(const TVec2D & itemCSysOrigin,
                      const TVec2D & rootCSysPoint);
 
+    // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint);
 
+    // virtual:
     void onFocus();
-    void onFocusOut();
 
+    // virtual:
     bool processEvent(Canvas::ILayer & canvasLayer,
                       Canvas * canvas,
                       QEvent * event);
+
+    // helpers:
+    void animate_hover(bool force = false);
+    void animate_click();
 
     ItemView & view_;
     BoolRef enabled_;
@@ -58,7 +64,8 @@ namespace yae
 
     ContextCallback toggle_checked_;
 
-    ItemView::TAnimatorPtr spotlight_animator_;
+    ItemView::TAnimatorPtr hover_;
+    ItemView::TAnimatorPtr click_;
     Item::TObserverPtr animate_spotlight_;
   };
 
