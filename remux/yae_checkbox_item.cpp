@@ -45,11 +45,11 @@ namespace yae
       {
         if (checked)
         {
-          result = style->cursor_.get();
+          result = style->fg_controls_.get();
         }
         else
         {
-          result = style->fg_controls_.get();
+          result = style->cursor_.get();
 
           if (!border_)
           {
@@ -59,7 +59,7 @@ namespace yae
       }
       else
       {
-        result = style->fg_controls_.get();
+        result = style->cursor_.get().a_scaled(0.5);
       }
     }
 
@@ -87,11 +87,12 @@ namespace yae
       bool enabled = item_.enabled_.get();
       if (enabled)
       {
-        result = style->fg_.get();
+        // result = style->fg_.get();
+        result = style->bg_.get();
       }
       else
       {
-        result = style->bg_controls_.get();
+        // result = style->bg_controls_.get();
       }
     }
 

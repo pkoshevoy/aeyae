@@ -52,7 +52,6 @@ namespace yae
   InputProxy::onMouseOver(const TVec2D & itemCSysOrigin,
                           const TVec2D & rootCSysPoint)
   {
-    yae_elog << this << " InputProxy::onMouseOver";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -258,7 +257,6 @@ namespace yae
                            Canvas * canvas,
                            QEvent * event)
   {
-    yae_elog << this << " InputProxy::processEvent";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {

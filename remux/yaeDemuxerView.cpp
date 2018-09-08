@@ -230,7 +230,8 @@ namespace yae
       TVideoFramePtr vf_ptr = item_.videoFrame();
       if (vf_ptr)
       {
-        result = QString::fromUtf8(vf_ptr->time_.to_hhmmss_ms().c_str());
+        result = QString::fromUtf8
+          (str("PTS ", vf_ptr->time_.to_hhmmss_ms()).c_str());
       }
       else
       {
@@ -489,7 +490,7 @@ namespace yae
   static const double kFrameOffset = 1;
   static const double kFrameWidth = 130;
   static const double kFrameHeight = 100;
-  static const double kFrameRadius = 3;
+  static const double kFrameRadius = 7;
 
   //----------------------------------------------------------------
   // get_frame_pos_x
@@ -607,7 +608,8 @@ namespace yae
       dts.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
       dts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
 #if 1
-      dts.text_ = TVarRef::constant(TVar(track.dts_[j].to_hhmmss_ms().c_str()));
+      dts.text_ = TVarRef::constant
+        (TVar(str("DTS ", track.dts_[j].to_hhmmss_ms()).c_str()));
 #else
       dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
 #endif
@@ -664,7 +666,7 @@ namespace yae
   //----------------------------------------------------------------
   // GopCursorItem
   //
-  struct GopCursorItem : public Rectangle
+  struct GopCursorItem : public RoundRect
   {
 
     //----------------------------------------------------------------
@@ -715,7 +717,7 @@ namespace yae
     GopCursorItem(const RemuxView & view,
                   const char * id,
                   const std::map<std::size_t, std::size_t> & row_lut):
-      Rectangle(id),
+      RoundRect(id),
       view_(view),
       rows_(row_lut),
       frame_(0),
@@ -1058,7 +1060,8 @@ namespace yae
       (style_color_ref(view, &ItemViewStyle::fg_, 0));
     cursor.colorBorder_ = cursor.addExpr
       (style_color_ref(view, &ItemViewStyle::fg_));
-    cursor.border_ = ItemRef::constant(2);
+    cursor.radius_ = ItemRef::constant(kFrameRadius);
+    cursor.border_ = ItemRef::constant(kFrameRadius * 0.33);
 
     cursor.margins_.set_top(ItemRef::constant(-1));
     cursor.margins_.set_left(ItemRef::constant(-1));
