@@ -193,14 +193,18 @@ namespace yae
 
     void evaluate(double & result) const
     {
+      double click_opacity = 0.0;
       if (click_animator_.in_progress())
       {
-        click_animator_.transition_item().get(kPropertyTransition, result);
+        click_animator_.transition_item().get(kPropertyTransition,
+                                              click_opacity);
       }
-      else
-      {
-        hover_animator_.transition_item().get(kPropertyTransition, result);
-      }
+
+      double hover_opacity = 0.0;
+      hover_animator_.transition_item().get(kPropertyTransition,
+                                            hover_opacity);
+
+      result = std::max(click_opacity, hover_opacity);
     }
 
     HoverAnimator & hover_animator_;

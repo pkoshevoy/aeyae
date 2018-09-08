@@ -668,6 +668,9 @@ namespace yae
       return this->setAttr(key, e);
     }
 
+    // returns true if an attribute matching given key existed and was removed:
+    bool delAttr(const char * key);
+
     template <typename TData>
     inline bool
     getAttr(const std::string & key, TData & value) const;

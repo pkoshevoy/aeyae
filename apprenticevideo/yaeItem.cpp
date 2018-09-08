@@ -1391,6 +1391,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::delAttr
+  //
+  bool
+  Item::delAttr(const char * key)
+  {
+    for (std::vector<ItemPtr>::iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const Item & child = *(i->get());
+      if (child.id_ == key)
+      {
+        YAE_ASSERT(!child.visible());
+        children_.erase(i);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Item::overlaps
   //
   bool
@@ -1560,15 +1581,31 @@ namespace yae
       }
     }
 
+    // NOTE: reverse order doesn't reverse z-order,
+    // it only affects painting of items at the same z-order level:
+    bool paint_in_reverse = this->attr<bool>("paint-in-reverse-order", false);
+
     for (std::map<double, std::list<ItemPtr> >::iterator
            i = order.begin(); i != order.end(); ++i)
     {
       std::list<ItemPtr> & children = i->second;
-      while (!children.empty())
+      if (paint_in_reverse)
       {
-        const ItemPtr & child = children.front();
-        child->paint(xregion, yregion, canvas);
-        children.pop_front();
+        while (!children.empty())
+        {
+          const ItemPtr & child = children.back();
+          child->paint(xregion, yregion, canvas);
+          children.pop_back();
+        }
+      }
+      else
+      {
+        while (!children.empty())
+        {
+          const ItemPtr & child = children.front();
+          child->paint(xregion, yregion, canvas);
+          children.pop_front();
+        }
       }
     }
   }
