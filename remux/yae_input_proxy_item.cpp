@@ -37,7 +37,6 @@ namespace yae
   void
   InputProxy::onCancel()
   {
-    yae_elog << this << " InputProxy::onCancel";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -69,7 +68,6 @@ namespace yae
                        const TVec2D & rootCSysPoint,
                        double degrees)
   {
-    yae_elog << this << " InputProxy::onScroll";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -86,10 +84,6 @@ namespace yae
   InputProxy::onPress(const TVec2D & itemCSysOrigin,
                       const TVec2D & rootCSysPoint)
   {
-    yae_elog << this
-             << " InputProxy::onPress, " << rootCSysPoint
-             << ", " << itemCSysOrigin;
-
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -116,7 +110,6 @@ namespace yae
   InputProxy::onClick(const TVec2D & itemCSysOrigin,
                       const TVec2D & rootCSysPoint)
   {
-    yae_elog << this << " InputProxy::onClick";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -133,7 +126,6 @@ namespace yae
   InputProxy::onSingleClick(const TVec2D & itemCSysOrigin,
                             const TVec2D & rootCSysPoint)
   {
-    yae_elog << this << " InputProxy::onSingleClick";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -150,7 +142,6 @@ namespace yae
   InputProxy::onDoubleClick(const TVec2D & itemCSysOrigin,
                             const TVec2D & rootCSysPoint)
   {
-    yae_elog << this << " InputProxy::onDoubleClick";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -168,7 +159,6 @@ namespace yae
                      const TVec2D & rootCSysDragStart,
                      const TVec2D & rootCSysDragEnd)
   {
-    yae_elog << this << " InputProxy::onDrag";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -188,7 +178,6 @@ namespace yae
                         const TVec2D & rootCSysDragStart,
                         const TVec2D & rootCSysDragEnd)
   {
-    yae_elog << this << " InputProxy::onDragEnd";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -221,7 +210,6 @@ namespace yae
   void
   InputProxy::onFocus()
   {
-    yae_elog << this << " InputProxy::onFocus";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
@@ -238,7 +226,6 @@ namespace yae
   void
   InputProxy::onFocusOut()
   {
-    yae_elog << this << " InputProxy::onFocusOut";
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {

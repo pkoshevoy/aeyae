@@ -770,8 +770,18 @@ namespace yae
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}
 
-    // NOTE: this will call paintContent,
-    // followed by a call to paint each nested item:
+    // helper:
+    bool visibleInRegion(const Segment & xregion,
+                         const Segment & yregion) const;
+
+    // this will only paint childen that are visible in the given region,
+    // in z-order:
+    virtual void paintChildren(const Segment & xregion,
+                               const Segment & yregion,
+                               Canvas * canvas) const;
+
+    // NOTE: if visible in given region this will call paintContent,
+    // followed by a call to paintChildren;
     virtual bool paint(const Segment & xregion,
                        const Segment & yregion,
                        Canvas * canvas) const;
@@ -1008,7 +1018,7 @@ namespace yae
       return false;
     }
 
-    attr->get(kPropertyExpression, value);
+    attr->Item::get(kPropertyExpression, value);
     return true;
   }
 

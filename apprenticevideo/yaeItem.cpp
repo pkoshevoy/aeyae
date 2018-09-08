@@ -1513,6 +1513,67 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::visibleInRegion
+  //
+  bool
+  Item::visibleInRegion(const Segment & xregion,
+                        const Segment & yregion) const
+  {
+    if (!Item::visible())
+    {
+      return false;
+    }
+
+    const Segment & yfootprint = this->yExtent();
+    if (yregion.disjoint(yfootprint))
+    {
+      return false;
+    }
+
+    const Segment & xfootprint = this->xExtent();
+    if (xregion.disjoint(xfootprint))
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Item::paintChildren
+  //
+  void
+  Item::paintChildren(const Segment & xregion,
+                      const Segment & yregion,
+                      Canvas * canvas) const
+  {
+    // only paint childen that are visible in the painted region, in Z order:
+    std::map<double, std::list<ItemPtr> > order;
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      if (child->visibleInRegion(xregion, yregion))
+      {
+        double z = child->attr<double>("z-order", 0.0);
+        order[z].push_back(child);
+      }
+    }
+
+    for (std::map<double, std::list<ItemPtr> >::iterator
+           i = order.begin(); i != order.end(); ++i)
+    {
+      std::list<ItemPtr> & children = i->second;
+      while (!children.empty())
+      {
+        const ItemPtr & child = children.front();
+        child->paint(xregion, yregion, canvas);
+        children.pop_front();
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // Item::paint
   //
   bool
@@ -1520,21 +1581,7 @@ namespace yae
               const Segment & yregion,
               Canvas * canvas) const
   {
-    if (!Item::visible())
-    {
-      unpaint();
-      return false;
-    }
-
-    const Segment & yfootprint = this->yExtent();
-    if (yregion.disjoint(yfootprint))
-    {
-      unpaint();
-      return false;
-    }
-
-    const Segment & xfootprint = this->xExtent();
-    if (xregion.disjoint(xfootprint))
+    if (!visibleInRegion(xregion, yregion))
     {
       unpaint();
       return false;
@@ -1543,12 +1590,7 @@ namespace yae
     this->paintContent();
     painted_ = true;
 
-    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
-         i != children_.end(); ++i)
-    {
-      const ItemPtr & child = *i;
-      child->paint(xregion, yregion, canvas);
-    }
+    paintChildren(xregion, yregion, canvas);
 
     notifyObservers(kOnPaint);
     return true;

@@ -203,21 +203,7 @@ namespace yae
                    const Segment & yregion,
                    Canvas * canvas) const
   {
-    if (!Item::visible())
-    {
-      unpaint();
-      return false;
-    }
-
-    const Segment & yfootprint = this->yExtent();
-    if (yregion.disjoint(yfootprint))
-    {
-      unpaint();
-      return false;
-    }
-
-    const Segment & xfootprint = this->xExtent();
-    if (xregion.disjoint(xfootprint))
+    if (!visibleInRegion(xregion, yregion))
     {
       unpaint();
       return false;
@@ -273,12 +259,7 @@ namespace yae
     YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
     YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
 
-    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
-         i != children_.end(); ++i)
-    {
-      const ItemPtr & child = *i;
-      child->paint(uregion, vregion, canvas);
-    }
+    this->paintChildren(uregion, vregion, canvas);
 
     return true;
   }
