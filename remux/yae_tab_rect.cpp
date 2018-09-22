@@ -286,16 +286,31 @@ namespace yae
     double u[4];
     double v[4];
 
+    u[0] = 0;
+    u[1] = w2 / wt;
+    u[2] = u[1];
+    u[3] = w / wt;
+
+    if (mirrored)
+    {
+      v[3] = 0;
+      v[2] = sig_.r1_ / ht;
+      v[1] = v[2];
+      v[0] = h / ht;
+    }
+    else
+    {
+      v[0] = 0;
+      v[1] = sig_.r1_ / ht;
+      v[2] = v[1];
+      v[3] = h / ht;
+    }
+
     double x[4];
     double y[4];
 
     if (vertical)
     {
-      u[0] = 0;
-      u[1] = w2 / wt;
-      u[2] = u[1];
-      u[3] = w / wt;
-
       x[0] = floor(bbox.x_ - sig_.r1_ + 0.5);
       x[1] = x[0] + iw2;
       x[3] = x[0] + floor(bbox.w_ + 2.0 * sig_.r1_ + 0.5);
@@ -303,11 +318,6 @@ namespace yae
 
       if (mirrored)
       {
-        v[3] = 0;
-        v[2] = sig_.r1_ / ht;
-        v[1] = v[2];
-        v[0] = h / ht;
-
         y[0] = floor(bbox.y_ + 0.5);
         y[1] = y[0] + sig_.r2_;
         y[3] = y[0] + floor(bbox.h_ + 0.5);
@@ -315,11 +325,6 @@ namespace yae
       }
       else
       {
-        v[0] = 0;
-        v[1] = sig_.r1_ / ht;
-        v[2] = v[1];
-        v[3] = h / ht;
-
         y[0] = floor(bbox.y_ + 0.5);
         y[1] = y[0] + sig_.r1_;
         y[3] = y[0] + floor(bbox.h_ + 0.5);
@@ -328,11 +333,6 @@ namespace yae
     }
     else
     {
-      v[0] = 0;
-      v[1] = double(iw_ / 2) / wt;
-      v[2] = v[1];
-      v[3] = w / wt;
-
       y[0] = floor(bbox.y_ - sig_.r1_ + 0.5);
       y[1] = y[0] + iw2;
       y[3] = y[0] + floor(bbox.h_ + 2.0 * sig_.r1_ + 0.5);
@@ -340,11 +340,6 @@ namespace yae
 
       if (mirrored)
       {
-        u[3] = 0;
-        u[2] = sig_.r1_ / ht;
-        u[1] = u[1];
-        u[0] = h / ht;
-
         x[0] = floor(bbox.x_ + 0.5);
         x[1] = x[0] + sig_.r2_;
         x[3] = x[0] + floor(bbox.w_ + 0.5);
@@ -352,11 +347,6 @@ namespace yae
       }
       else
       {
-        u[0] = 0;
-        u[1] = sig_.r1_ / ht;
-        u[2] = u[1];
-        u[3] = h / ht;
-
         x[0] = floor(bbox.x_ + 0.5);
         x[1] = x[0] + sig_.r1_;
         x[3] = x[0] + floor(bbox.w_ + 0.5);
@@ -398,6 +388,7 @@ namespace yae
         }
 
         YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+        if (vertical)
         {
           YAE_OGL_11(glTexCoord2d(u[i], v[j]));
           YAE_OGL_11(glVertex2d(x[i], y[j]));
@@ -409,6 +400,20 @@ namespace yae
           YAE_OGL_11(glVertex2d(x[i + 1], y[j]));
 
           YAE_OGL_11(glTexCoord2d(u[i + 1], v[j + 1]));
+          YAE_OGL_11(glVertex2d(x[i + 1], y[j + 1]));
+        }
+        else
+        {
+          YAE_OGL_11(glTexCoord2d(u[j], v[i]));
+          YAE_OGL_11(glVertex2d(x[i], y[j]));
+
+          YAE_OGL_11(glTexCoord2d(u[j + 1], v[i]));
+          YAE_OGL_11(glVertex2d(x[i], y[j + 1]));
+
+          YAE_OGL_11(glTexCoord2d(u[j], v[i + 1]));
+          YAE_OGL_11(glVertex2d(x[i + 1], y[j]));
+
+          YAE_OGL_11(glTexCoord2d(u[j + 1], v[i + 1]));
           YAE_OGL_11(glVertex2d(x[i + 1], y[j + 1]));
         }
         YAE_OGL_11(glEnd());
@@ -478,7 +483,7 @@ namespace yae
   // TabRect::TabRect
   //
   TabRect::TabRect(const char * id, ItemView & view, TabPosition orientation):
-    ClickableItem(id),
+    Item(id),
     view_(view),
     p_(new TabRect::TPrivate(orientation)),
     r1_(ItemRef::constant(3.0)),
@@ -595,17 +600,6 @@ namespace yae
     {
       Item::get(property, value);
     }
-  }
-
-  //----------------------------------------------------------------
-  // TabRect::onMouseOver
-  //
-  bool
-  TabRect::onMouseOver(const TVec2D & itemCSysOrigin,
-                       const TVec2D & rootCSysPoint)
-  {
-    animate_hover();
-    return true;
   }
 
   //----------------------------------------------------------------

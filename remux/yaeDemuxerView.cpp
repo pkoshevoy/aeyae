@@ -2030,7 +2030,6 @@ namespace yae
       }
 
       // layout the controls:
-      // controls.color_ = sep.color_;
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
       controls.visible_ = controls.addInverse(new IsFullscreen(view));
@@ -2064,10 +2063,7 @@ namespace yae
                                            controls,
                                            source_btn);
 
-        // txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
-        // txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 1));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Source")));
-
         layout_text_underline(view, source_btn, txt, underline);
 
         // NOTE: QGenericArgument does not store the arg value,
@@ -2097,11 +2093,7 @@ namespace yae
                                            controls,
                                            layout_btn);
 
-        // txt.anchors_.left_ = ItemRef::reference(source_btn, kPropertyRight);
-        // txt.margins_.
-        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
-
         layout_text_underline(view, layout_btn, txt, underline);
 
         // NOTE: QGenericArgument does not store the arg value,
@@ -2131,11 +2123,7 @@ namespace yae
                                            controls,
                                            preview_btn);
 
-        // txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
-        // txt.margins_.
-        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
-
         layout_text_underline(view, preview_btn, txt, underline);
 
         // NOTE: QGenericArgument does not store the arg value,
@@ -2164,11 +2152,7 @@ namespace yae
                                            controls,
                                            player_btn);
 
-        // txt.anchors_.left_ = ItemRef::reference(preview_btn, kPropertyRight);
-        // txt.margins_.
-        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Player")));
-
         layout_text_underline(view, player_btn, txt, underline);
 
         // NOTE: QGenericArgument does not store the arg value,
@@ -2197,11 +2181,7 @@ namespace yae
                                            controls,
                                            export_btn);
 
-        // txt.anchors_.left_ = ItemRef::reference(player_btn, kPropertyRight);
-        // txt.margins_.
-        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
-
         layout_text_underline(view, export_btn, txt, underline);
 
         static const RemuxView::ViewMode mode = RemuxView::kExportMode;
@@ -2210,6 +2190,29 @@ namespace yae
                                    Q_ARG(RemuxView::ViewMode, mode)));
         ia.anchors_.fill(export_btn);
       }
+
+#if 0 // ndef NDEBUG
+      // FIXME: just testing:
+      TabRect & tab_left = bg.add(new TabRect("tab_left", view, kTabLeft));
+      tab_left.anchors_.right_ = ItemRef::reference(bg, kPropertyRight);
+      tab_left.anchors_.vcenter_ = ItemRef::reference(bg, kPropertyVCenter);
+      tab_left.height_ = ItemRef::reference(style.row_height_, 4);
+      tab_left.width_ = ItemRef::reference(style.row_height_);
+      tab_left.opacity_ = ItemRef::constant(1.0);
+      tab_left.r1_ = ItemRef::constant(9.0);
+      tab_left.r2_ = ItemRef::constant(9.0);
+      tab_left.color_ = ColorRef::constant(Color(0xffffff));
+
+      TabRect & tab_right = bg.add(new TabRect("tab_right", view, kTabRight));
+      tab_right.anchors_.left_ = ItemRef::reference(bg, kPropertyLeft);
+      tab_right.anchors_.vcenter_ = ItemRef::reference(bg, kPropertyVCenter);
+      tab_right.height_ = ItemRef::reference(style.row_height_, 4);
+      tab_right.width_ = ItemRef::reference(style.row_height_);
+      tab_right.opacity_ = ItemRef::constant(1.0);
+      tab_right.r1_ = ItemRef::constant(9.0);
+      tab_right.r2_ = ItemRef::constant(9.0);
+      tab_right.color_ = ColorRef::constant(Color(0xffffff));
+#endif
     }
   };
 

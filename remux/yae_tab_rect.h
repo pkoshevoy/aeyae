@@ -39,7 +39,7 @@ namespace yae
   //----------------------------------------------------------------
   // TabRect
   //
-  class TabRect : public ClickableItem
+  class TabRect : public Item
   {
     TabRect(const TabRect &);
     TabRect & operator = (const TabRect &);
@@ -63,10 +63,6 @@ namespace yae
 
     // virtual:
     void get(Property property, Color & value) const;
-
-    // virtual:
-    bool onMouseOver(const TVec2D & itemCSysOrigin,
-                     const TVec2D & rootCSysPoint);
 
     // helpers:
     void animate_hover(bool force = false) const;
