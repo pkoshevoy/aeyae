@@ -19,6 +19,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yae_tab_rect.h"
 
 
 namespace yae
@@ -1837,30 +1838,33 @@ namespace yae
                         RemuxView & view,
                         const RemuxViewStyle & style,
                         Rectangle & controls,
-                        RoundRect & btn)
+                        TabRect & btn)
   {
-    btn.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
-    btn.height_ = ItemRef::reference(style.row_height_, 0.8);
-    btn.border_ = ItemRef::constant(1.0);
-    btn.radius_ = ItemRef::constant(3.0);
-
-    btn.color_ = btn.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_controls_));
-
-    btn.colorBorder_ = btn.addExpr
-      (style_color_ref(view, &ItemViewStyle::bg_controls_));
+    btn.height_ = ItemRef::reference(style.row_height_, 0.95);
+    btn.r1_ = ItemRef::constant(9.0);
+    btn.r2_ = ItemRef::constant(8.0);
+#if 1
+    btn.color_ = btn.
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.5, 0));
+#else
+    btn.color_ = ColorRef::constant(0x7f7f7f);
+#endif
 
     Text & txt = controls.addNew<Text>("layout_txt");
     txt.anchors_.vcenter_ = ItemRef::reference(controls, kPropertyVCenter);
+    txt.anchors_.left_ = ItemRef::reference(btn, kPropertyLeft);
+    txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 0.7));
+    txt.margins_.set_right(txt.margins_.get_left());
     txt.font_ = style.font_small_;
     txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
     txt.color_ = txt.addExpr
-      (style_color_ref(view, &ItemViewStyle::bg_));
+      (style_color_ref(view, &ItemViewStyle::fg_));
 
-    btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+    btn.anchors_.top_ = ItemRef::reference(controls, kPropertyTop);
+    // btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
     btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-    btn.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, -1));
-    btn.margins_.set_right(btn.margins_.get_left());
+    btn.margins_.set_right(ItemRef::reference(txt.margins_.get_left(), -1));
+    // btn.margins_.set_right(btn.margins_.get_left());
 
     return txt;
   }
@@ -1870,7 +1874,7 @@ namespace yae
   //
   static void
   layout_text_underline(RemuxView & view,
-                        RoundRect & btn,
+                        TabRect & btn,
                         Text & txt,
                         Rectangle & underline)
   {
@@ -1969,6 +1973,11 @@ namespace yae
       TimelineItem & timeline = player.add(view.timeline_);
       timeline.anchors_.fill(player);
 
+      Item & output = root.addNew<Item>("export");
+      output.anchors_.fill(bg);
+      output.visible_ = output.addExpr(new In<RemuxView::kExportMode>(view));
+      output.visible_.disableCaching();
+
       Item & gops = layout.addNew<Item>("gops");
       Item & clips = layout.addNew<Item>("clips");
 
@@ -2021,7 +2030,7 @@ namespace yae
       }
 
       // layout the controls:
-      controls.color_ = sep.color_;
+      // controls.color_ = sep.color_;
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
       controls.visible_ = controls.addInverse(new IsFullscreen(view));
@@ -2037,8 +2046,14 @@ namespace yae
           ItemRef::constant(0.0)));
 
       // add a button to switch to clip source view:
-      RoundRect & source_btn = controls.addNew<RoundRect>("source_btn");
+      TabRect & source_btn =
+        controls.add(new TabRect("source_btn", view, kTabBottom));
       {
+        source_btn.anchors_.left_ =
+          ItemRef::reference(controls, kPropertyLeft);
+        source_btn.margins_.
+          set_left(ItemRef::reference(source_btn, kPropertyR1));
+
         Rectangle & underline = controls.addNew<Rectangle>("source_ul");
         underline.visible_ = sources.visible_;
         underline.visible_.disableCaching();
@@ -2049,8 +2064,8 @@ namespace yae
                                            controls,
                                            source_btn);
 
-        txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
-        txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 2));
+        // txt.anchors_.left_ = ItemRef::reference(controls, kPropertyLeft);
+        // txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 1));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Source")));
 
         layout_text_underline(view, source_btn, txt, underline);
@@ -2066,8 +2081,12 @@ namespace yae
      }
 
       // add a button to switch to clip layout view:
-      RoundRect & layout_btn = controls.addNew<RoundRect>("layout_btn");
+      TabRect & layout_btn =
+        controls.add(new TabRect("layout_btn", view, kTabBottom));
       {
+        layout_btn.anchors_.left_ =
+          ItemRef::reference(source_btn, kPropertyRight);
+
         Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
         underline.visible_ = layout.visible_;
         underline.visible_.disableCaching();
@@ -2078,9 +2097,9 @@ namespace yae
                                            controls,
                                            layout_btn);
 
-        txt.anchors_.left_ = ItemRef::reference(source_btn, kPropertyRight);
-        txt.margins_.
-           set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
+        // txt.anchors_.left_ = ItemRef::reference(source_btn, kPropertyRight);
+        // txt.margins_.
+        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Layout")));
 
         layout_text_underline(view, layout_btn, txt, underline);
@@ -2096,9 +2115,13 @@ namespace yae
      }
 
       // add a button to switch to preview:
-      RoundRect & preview_btn = controls.addNew<RoundRect>("preview_btn");
+      TabRect & preview_btn =
+        controls.add(new TabRect("preview_btn", view, kTabBottom));
       {
-        Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        preview_btn.anchors_.left_ =
+          ItemRef::reference(layout_btn, kPropertyRight);
+
+        Rectangle & underline = controls.addNew<Rectangle>("preview_ul");
         underline.visible_ = preview.visible_;
         underline.visible_.disableCaching();
 
@@ -2108,9 +2131,9 @@ namespace yae
                                            controls,
                                            preview_btn);
 
-        txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
-        txt.margins_.
-          set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
+        // txt.anchors_.left_ = ItemRef::reference(layout_btn, kPropertyRight);
+        // txt.margins_.
+        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Preview")));
 
         layout_text_underline(view, preview_btn, txt, underline);
@@ -2125,9 +2148,13 @@ namespace yae
       }
 
       // add a button to switch to player:
-      RoundRect & player_btn = controls.addNew<RoundRect>("player_btn");
+      TabRect & player_btn =
+        controls.add(new TabRect("player_btn", view, kTabBottom));
       {
-        Rectangle & underline = controls.addNew<Rectangle>("layout_ul");
+        player_btn.anchors_.left_ =
+          ItemRef::reference(preview_btn, kPropertyRight);
+
+        Rectangle & underline = controls.addNew<Rectangle>("player_ul");
         underline.visible_ = player.visible_;
         underline.visible_.disableCaching();
 
@@ -2137,9 +2164,9 @@ namespace yae
                                            controls,
                                            player_btn);
 
-        txt.anchors_.left_ = ItemRef::reference(preview_btn, kPropertyRight);
-        txt.margins_.
-          set_left(ItemRef::reference(controls, kPropertyHeight, 1.2));
+        // txt.anchors_.left_ = ItemRef::reference(preview_btn, kPropertyRight);
+        // txt.margins_.
+        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Player")));
 
         layout_text_underline(view, player_btn, txt, underline);
@@ -2154,21 +2181,33 @@ namespace yae
       }
 
       // add a button to generate the output file:
-      RoundRect & export_btn = controls.addNew<RoundRect>("export_btn");
+      TabRect & export_btn =
+        controls.add(new TabRect("export_btn", view, kTabBottom));
       {
+        export_btn.anchors_.left_ =
+          ItemRef::reference(player_btn, kPropertyRight);
+
+        Rectangle & underline = controls.addNew<Rectangle>("export_ul");
+        underline.visible_ = output.visible_;
+        underline.visible_.disableCaching();
+
         Text & txt = layout_control_button(model,
                                            view,
                                            style,
                                            controls,
                                            export_btn);
 
-        txt.anchors_.right_ = ItemRef::reference(controls, kPropertyRight);
-        txt.margins_.
-          set_right(ItemRef::reference(controls, kPropertyHeight, 2));
+        // txt.anchors_.left_ = ItemRef::reference(player_btn, kPropertyRight);
+        // txt.margins_.
+        //   set_left(ItemRef::reference(controls, kPropertyHeight, 1, -0));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
+        layout_text_underline(view, export_btn, txt, underline);
+
+        static const RemuxView::ViewMode mode = RemuxView::kExportMode;
         Item & ia = controls.add
-          (new InvokeMethodOnClick("export_ia", view, "emit_remux"));
+          (new InvokeMethodOnClick("export_ia", view, "set_view_mode",
+                                   Q_ARG(RemuxView::ViewMode, mode)));
         ia.anchors_.fill(export_btn);
       }
     }

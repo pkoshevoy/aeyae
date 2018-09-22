@@ -312,6 +312,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // CheckboxItem::paintContent
+  //
+  void
+  CheckboxItem::paintContent() const
+  {
+    animate_hover();
+    ClickableItem::paintContent();
+  }
+
+  //----------------------------------------------------------------
   // CheckboxItem::get
   //
   void
@@ -434,10 +444,10 @@ namespace yae
   // CheckboxItem::animate_hover
   //
   void
-  CheckboxItem::animate_hover(bool force)
+  CheckboxItem::animate_hover(bool force) const
   {
     HoverAnimator & animator = dynamic_cast<HoverAnimator &>(*(hover_.get()));
-    TransitionItem & opacity = Item::get<TransitionItem>("hover_opacity");
+    TransitionItem & opacity = Item::find<TransitionItem>("hover_opacity");
 
     if (force || animator.item_overlaps_mouse_pt())
     {
@@ -455,10 +465,10 @@ namespace yae
   // CheckboxItem::animate_click
   //
   void
-  CheckboxItem::animate_click()
+  CheckboxItem::animate_click() const
   {
     ClickAnimator & animator = dynamic_cast<ClickAnimator &>(*(click_.get()));
-    TransitionItem & opacity = Item::get<TransitionItem>("click_opacity");
+    TransitionItem & opacity = Item::find<TransitionItem>("click_opacity");
 
     opacity.start();
     view_.addAnimator(click_);

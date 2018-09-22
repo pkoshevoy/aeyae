@@ -10,7 +10,6 @@
 #include <QImage>
 
 // local interfaces:
-#include "yaeCanvasRenderer.h"
 #include "yaeRoundRect.h"
 #include "yaeTexture.h"
 
@@ -150,7 +149,7 @@ namespace yae
     Segment outerCorner(0, r);
     Segment innerCorner(0, r0);
 #if 0
-    // NOTE: shift sgement start to prevent supersampling at (0, 0)
+    // NOTE: shift segment start to prevent supersampling at (0, 0)
     //       from being interpreted as sampling outside inner rect
     //
     // NOTE: segments are defined by (start, length), so to

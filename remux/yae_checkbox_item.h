@@ -32,6 +32,9 @@ namespace yae
     void uncache();
 
     // virtual:
+    void paintContent() const;
+
+    // virtual:
     void get(Property property, bool & value) const;
 
     // virtual:
@@ -54,8 +57,8 @@ namespace yae
                       QEvent * event);
 
     // helpers:
-    void animate_hover(bool force = false);
-    void animate_click();
+    void animate_hover(bool force = false) const;
+    void animate_click() const;
 
     ItemView & view_;
     BoolRef enabled_;

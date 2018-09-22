@@ -122,6 +122,8 @@ set(project_sources
   yae_input_proxy_item.h
   yae_lshape.cpp
   yae_lshape.h
+  yae_tab_rect.cpp
+  yae_tab_rect.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h

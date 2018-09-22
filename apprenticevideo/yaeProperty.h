@@ -120,7 +120,9 @@ namespace yae
     kPropertyHasText,
     kPropertyText,
     kPropertyEnabled,
-    kPropertyChecked
+    kPropertyChecked,
+    kPropertyR1,
+    kPropertyR2
   };
 
   //----------------------------------------------------------------
