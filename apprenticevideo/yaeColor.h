@@ -21,6 +21,7 @@
 // yae includes:
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_utils.h"
 
 // local interfaces:
 #include "yaeVec.h"
@@ -297,6 +298,63 @@ namespace yae
   // TGradientPtr
   //
   typedef yae::shared_ptr<TGradient> TGradientPtr;
+
+  //----------------------------------------------------------------
+  // make_gradient
+  //
+  // see https://github.com/d3/d3-scale-chromatic
+  //
+  inline static void
+  make_gradient(TGradient & g,
+                // d3.schemeCategory10 from
+                // https://github.com/d3/d3-scale-chromatic/
+                // blob/master/src/categorical/category10.js
+                const char * colors =
+                "1f77b4"
+                "ff7f0e"
+                "2ca02c"
+                "d62728"
+                "9467bd"
+                "8c564b"
+                "e377c2"
+                "7f7f7f"
+                "bcbd22"
+                "17becf")
+  {
+    g.clear();
+
+    std::size_t l = strlen(colors);
+    YAE_ASSERT(l % 6 == 0);
+
+    std::size_t n = l / 6;
+    for (std::size_t i = 0; i < n; i++)
+    {
+      double t = double(i) / double(n - 1);
+      g[t] = Color(hex_to_u24(colors + i * 6));
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_ordinal
+  //
+  inline const Color & get_ordinal(const TGradient & g, std::size_t i)
+  {
+    std::size_t z = g.size();
+    if (g.empty())
+    {
+      throw std::runtime_error("invalid gradient color map");
+    }
+
+    std::size_t x = i % z;
+    double t = double(x) / double(z - 1);
+    TGradient::const_iterator found = g.lower_bound(t);
+    if (found == g.end())
+    {
+      throw std::runtime_error("invalid ordinal color map");
+    }
+
+    return found->second;
+  }
 
 }
 

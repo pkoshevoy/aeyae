@@ -18,6 +18,7 @@
 #include <stdexcept>
 #include <string.h>
 #include <sstream>
+#include <vector>
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -692,6 +693,66 @@ namespace yae
   YAE_API void
   extend(TDictionary & dst, const TDictionary & src);
 
+  //----------------------------------------------------------------
+  // unhex
+  //
+  inline unsigned char unhex(char ch)
+  {
+    char shift =
+      (ch >= '0' && ch <= '9') ? '0' :
+      (ch >= 'A' && ch <= 'F') ? 'A' :
+      (ch >= 'a' && ch <= 'f') ? 'a' :
+      0;
+
+    YAE_ASSERT(shift);
+
+    unsigned char offset =
+      ((ch >= 'A' && ch <= 'F') || (ch >= 'a' && ch <= 'f')) ? 10 : 0;
+
+    return offset + (ch - shift);
+  }
+
+  //----------------------------------------------------------------
+  // hex_to_byte
+  //
+  inline unsigned char hex_to_byte(const char * h)
+  {
+    return ((unhex(h[0]) << 4) | unhex(h[1]));
+  }
+
+  //----------------------------------------------------------------
+  // unhex
+  //
+  inline std::vector<unsigned char> unhex(const char * h)
+  {
+    std::size_t l = strlen(h);
+    YAE_ASSERT(l % 2 == 0);
+
+    const char * src = h;
+    const char * end = src + l;
+
+    std::vector<unsigned char> b(l / 2);
+    unsigned char * dst = b.empty() ? NULL : &(b[0]);
+
+    for (; src < end; src += 2, dst += 1)
+    {
+      *dst = hex_to_byte(src);
+    }
+
+    return b;
+  }
+
+  //----------------------------------------------------------------
+  // hex_to_u24
+  //
+  inline unsigned int hex_to_u24(const char * h)
+  {
+    unsigned char b0 = hex_to_byte(h);
+    unsigned char b1 = hex_to_byte(h + 2);
+    unsigned char b2 = hex_to_byte(h + 4);
+    unsigned int u24 = (b0 << 16) | (b1 << 8) | b2;
+    return u24;
+  }
 }
 
 
