@@ -1956,7 +1956,8 @@ namespace yae
       sources.anchors_.fill(bg);
       sources.visible_ = sources.addExpr(new In<RemuxView::kSourceMode>(view));
       sources.visible_.disableCaching();
-      layout_scrollview(kScrollbarBoth, view, style, sources, kScrollbarBoth);
+      layout_scrollview(kScrollbarVertical, view, style, sources,
+                        kScrollbarVertical);
 
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
@@ -2614,7 +2615,12 @@ namespace yae
     QEvent::Type et = event->type();
     if (et == QEvent::MouseButtonPress)
     {
-      GopCursorItem * cursor = get_cursor_item(*this);
+      GopCursorItem * cursor =
+        (view_mode_ == kLayoutMode ||
+         view_mode_ == kPreviewMode) ?
+        get_cursor_item(*this) :
+        NULL;
+
       actionSetInPoint_.setEnabled(!!cursor);
       actionSetOutPoint_.setEnabled(!!cursor);
 
@@ -2648,7 +2654,7 @@ namespace yae
     {
       result = 0.0;
 
-      const RemuxViewStyle & style = *(view_.style());
+      // const RemuxViewStyle & style = *(view_.style());
       RemuxModel & model = *(view_.model());
 
       for (std::list<std::string>::const_iterator i = model.sources_.begin();
@@ -2662,8 +2668,41 @@ namespace yae
 
         const ItemPtr & item = yae::at(view_.source_item_, name);
         double h = item->height();
-        h += style.row_height_.get();
+        // h += style.row_height_.get();
         result += ceil(h);
+      }
+    }
+
+    const RemuxView & view_;
+    std::string name_;
+  };
+
+  //----------------------------------------------------------------
+  // SourceItemVisible
+  //
+  struct SourceItemVisible : public TBoolExpr
+  {
+    SourceItemVisible(const RemuxView & view, const std::string & name):
+      view_(view),
+      name_(name)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = false;
+
+      RemuxModel & model = *(view_.model());
+      for (std::list<std::string>::const_iterator i = model.sources_.begin();
+           i != model.sources_.end(); ++i)
+      {
+        const std::string & name = *i;
+        if (name == name_)
+        {
+          return;
+        }
+
+        result = !result;
       }
     }
 
@@ -2695,14 +2734,29 @@ namespace yae
     Scrollview & ssv = sources.get<Scrollview>("sources.scrollview");
     Item & ssv_content = *(ssv.content_);
 
-    SourceItem & item = ssv_content.add(new SourceItem(name.c_str(),
-                                                       view,
-                                                       name,
-                                                       src));
+    Item & item = ssv_content.addNew<Item>(name.c_str());
+    Rectangle & bg = item.addNew<Rectangle>("bg");
+    SourceItem & src_item = item.add(new SourceItem("src_item",
+                                                    view,
+                                                    name,
+                                                    src));
+    src_item.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    src_item.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    src_item.layout();
+
     source_item_[name] = item.self_.lock();
     item.anchors_.left_ = ItemRef::reference(ssv_content, kPropertyLeft);
     item.anchors_.top_ = item.addExpr(new SourceItemTop(view, name));
-    item.layout();
+
+    bg.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+    bg.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+    bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
+    bg.opacity_ = ItemRef::constant(0.25);
+
+    // const RemuxViewStyle & style = *(view.style());
+    // item.margins_.set_top(ItemRef::reference(style.row_height_));
 
     dataChanged();
   }

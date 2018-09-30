@@ -1035,7 +1035,10 @@ namespace yae
       return false;
     }
 
-    attr->Item::get(kPropertyExpression, value);
+    typedef DataRef<TData> TDataRef;
+    typedef ExprItem<TDataRef> TItem;
+    const TItem * expr = dynamic_cast<const TItem *>(attr);
+    expr->TItem::get(kPropertyExpression, value);
     return true;
   }
 

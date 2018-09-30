@@ -195,6 +195,13 @@ namespace yae
         prev_row = &row;
       }
     }
+#if 1
+    Item & spacer = addNew<Item>("spacer");
+    spacer.anchors_.left_ = ItemRef::constant(0);
+    spacer.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
+    spacer.height_ = ItemRef::reference(style.row_height_);
+    spacer.width_ = ItemRef::constant(0);
+#endif
   }
 
 }
