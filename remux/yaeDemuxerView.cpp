@@ -1956,6 +1956,7 @@ namespace yae
       sources.anchors_.fill(bg);
       sources.visible_ = sources.addExpr(new In<RemuxView::kSourceMode>(view));
       sources.visible_.disableCaching();
+      layout_scrollview(kScrollbarBoth, view, style, sources, kScrollbarBoth);
 
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
@@ -2633,12 +2634,88 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SourceItemTop
+  //
+  struct SourceItemTop : TDoubleExpr
+  {
+    SourceItemTop(const RemuxView & view, const std::string & name):
+      view_(view),
+      name_(name)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = 0.0;
+
+      const RemuxViewStyle & style = *(view_.style());
+      RemuxModel & model = *(view_.model());
+
+      for (std::list<std::string>::const_iterator i = model.sources_.begin();
+           i != model.sources_.end(); ++i)
+      {
+        const std::string & name = *i;
+        if (name == name_)
+        {
+          return;
+        }
+
+        const ItemPtr & item = yae::at(view_.source_item_, name);
+        double h = item->height();
+        h += style.row_height_.get();
+        result += ceil(h);
+      }
+    }
+
+    const RemuxView & view_;
+    std::string name_;
+  };
+
+  //----------------------------------------------------------------
+  // RemuxView::append_source
+  //
+  void
+  RemuxView::append_source(const std::string & name,
+                           const TDemuxerInterfacePtr & src)
+  {
+    RemuxModel & model = *model_;
+    if (yae::has(model.demuxer_, name))
+    {
+      return;
+    }
+
+    model.sources_.push_back(name);
+    model.demuxer_[name] = src;
+    model.source_[src] = name;
+
+    RemuxView & view = *this;
+    Item & root = *root_;
+
+    Item & sources = root["sources"];
+    Scrollview & ssv = sources.get<Scrollview>("sources.scrollview");
+    Item & ssv_content = *(ssv.content_);
+
+    SourceItem & item = ssv_content.add(new SourceItem(name.c_str(),
+                                                       view,
+                                                       name,
+                                                       src));
+    source_item_[name] = item.self_.lock();
+    item.anchors_.left_ = ItemRef::reference(ssv_content, kPropertyLeft);
+    item.anchors_.top_ = item.addExpr(new SourceItemTop(view, name));
+    item.layout();
+
+    dataChanged();
+  }
+
+  //----------------------------------------------------------------
   // RemuxView::append_clip
   //
   void
   RemuxView::append_clip(const TClipPtr & clip)
   {
     RemuxModel & model = *model_;
+    model.clips_.push_back(clip);
+
     RemuxView & view = *this;
     Item & root = *root_;
 
@@ -2690,6 +2767,11 @@ namespace yae
       set_of_demuxers.insert(clip->demuxer_);
     }
 
+    Item & root = *(view.root());
+    Item & sources = root["sources"];
+    Scrollview & ssv = sources.get<Scrollview>("sources.scrollview");
+    Item & ssv_content = *(ssv.content_);
+
     std::map<std::string, TDemuxerInterfacePtr>::iterator
       i = model.demuxer_.begin();
     while (i != model.demuxer_.end())
@@ -2705,10 +2787,14 @@ namespace yae
         // unused, remove:
         std::map<std::string, TDemuxerInterfacePtr>::iterator next = i;
         std::advance(next, 1);
+        model.sources_.remove(source);
         model.demuxer_.erase(i);
         model.source_.erase(demuxer);
         view.gops_.erase(demuxer);
         view.gops_row_lut_.erase(demuxer);
+        ItemPtr source_item = view.source_item_[source];
+        view.source_item_.erase(source);
+        ssv_content.remove(source_item);
         i = next;
       }
     }
@@ -3156,40 +3242,6 @@ namespace yae
     RemuxView::ViewMode prev_mode = view_mode_;
     view_mode_ = mode;
 
-    if (mode == kSourceMode)
-    {
-      RemuxView & view = *this;
-      RemuxModel & model = *model_;
-      const RemuxViewStyle & style = *(this->style());
-      sources.children_.clear();
-
-      Scrollview & sv =
-        layout_scrollview(kScrollbarBoth, view, style, sources,
-                          kScrollbarBoth);
-      Item & container = *(sv.content_);
-
-      Item * prev_row = NULL;
-      for (std::map<std::string, TDemuxerInterfacePtr>::const_iterator
-             i = model.demuxer_.begin(); i != model.demuxer_.end(); ++i)
-      {
-        const std::string & name = i->first;
-        const TDemuxerInterfacePtr & src = i->second;
-
-        SourceItem & item = container.add(new SourceItem(name.c_str(),
-                                                         view,
-                                                         name,
-                                                         src));
-        item.anchors_.left_ = ItemRef::reference(container, kPropertyLeft);
-        item.anchors_.top_ = prev_row ?
-          ItemRef::reference(*prev_row, kPropertyBottom) :
-          ItemRef::reference(container, kPropertyTop);
-
-        item.layout();
-
-        prev_row = &item;
-      }
-    }
-
     if (prev_mode == kPlayerMode && serial_demuxer_)
     {
       // capture playhead position:
@@ -3219,7 +3271,9 @@ namespace yae
       }
     }
 
-    if (mode != kLayoutMode)
+    if (mode == kPreviewMode ||
+        mode == kPlayerMode ||
+        mode == kExportMode)
     {
       // avoid rebuilding the preview if clip layout hasn't changed:
       std::string model_json_str = model_->to_json_str();

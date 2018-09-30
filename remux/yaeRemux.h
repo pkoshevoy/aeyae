@@ -90,6 +90,9 @@ namespace yae
                                std::set<std::string> & sources,
                                std::list<ClipInfo> & src_clips);
 
+    // sources, in order of appearance:
+    std::list<std::string> sources_;
+
     // demuxer, indexed by source path:
     std::map<std::string, TDemuxerInterfacePtr> demuxer_;
 

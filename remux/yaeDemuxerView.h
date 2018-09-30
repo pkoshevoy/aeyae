@@ -301,6 +301,9 @@ namespace yae
     bool processRightClick();
 
     // helpers:
+    void append_source(const std::string & name,
+                       const TDemuxerInterfacePtr & src);
+
     void append_clip(const TClipPtr & clip);
     void remove_clip(std::size_t index);
     void repeat_clip();
@@ -379,6 +382,9 @@ namespace yae
 
     typedef std::map<std::size_t, std::size_t> TRowLut;
     std::map<TDemuxerInterfacePtr, TRowLut> gops_row_lut_;
+
+    // source items, indexed by source file path:
+    std::map<std::string, ItemPtr> source_item_;
   };
 
 }

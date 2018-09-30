@@ -506,6 +506,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Track::getCodecName
+  //
+  const char *
+  Track::getCodecName() const
+  {
+    return stream_ ? avcodec_get_name(stream_->codecpar->codec_id) : NULL;
+  }
+
+  //----------------------------------------------------------------
   // Track::getName
   //
   const char *

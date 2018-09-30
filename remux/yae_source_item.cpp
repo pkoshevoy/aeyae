@@ -114,6 +114,12 @@ namespace yae
         std::ostringstream oss;
         oss << track_id;
 
+        const char * codec_name = track->getCodecName();
+        if (codec_name)
+        {
+          oss << ", " << codec_name;
+        }
+
         if (track_name)
         {
           oss << ", " << track_name;
@@ -152,16 +158,6 @@ namespace yae
               << ", " << int(traits.channelLayout_) << " channels";
         }
 
-        SubttTrackPtr subtt =
-          boost::dynamic_pointer_cast<SubtitlesTrack, Track>(track);
-
-        if (subtt)
-        {
-          TSubsFormat format = subtt->format_;
-          const char * label = getSubsFormatLabel(format);
-          oss << ", " << label;
-        }
-
         Item & row = prog.addNew<Item>(str("track_", track_id).c_str());
         row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
         row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
@@ -192,7 +188,7 @@ namespace yae
         proxy.ia_ = cbox.self_;
         ItemFocus::singleton().setFocusable(view_,
                                             proxy,
-                                            "sources",
+                                            name_.c_str(),
                                             track_focus_index);
         track_focus_index++;
 #endif

@@ -618,6 +618,20 @@ namespace yae
       return item;
     }
 
+    inline bool remove(const ItemPtr & child)
+    {
+      std::vector<ItemPtr>::iterator found =
+        std::find(children_.begin(), children_.end(), child);
+
+      if (found == children_.end())
+      {
+        return false;
+      }
+
+      children_.erase(found);
+      return true;
+    }
+
     template <typename TData>
     inline DataRef<TData> addExpr(Expression<TData> * e)
     {

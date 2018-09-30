@@ -258,6 +258,7 @@ namespace yae
     { return id_; }
 
     // get track name:
+    const char * getCodecName() const;
     const char * getName() const;
     const char * getLang() const;
 

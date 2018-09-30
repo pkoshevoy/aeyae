@@ -1091,9 +1091,7 @@ namespace yae
       if (loaded)
       {
         // update the model and the view:
-        model_.demuxer_[loaded->source_] = loaded->demuxer_;
-        model_.source_[loaded->demuxer_] = loaded->source_;
-        model_.clips_.push_back(loaded->clip_);
+        view_.append_source(loaded->source_, loaded->demuxer_);
         view_.append_clip(loaded->clip_);
         view_.selected_ = model_.clips_.empty() ? 0 : model_.clips_.size() - 1;
         loaded->accept();
