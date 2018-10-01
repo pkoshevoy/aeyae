@@ -58,7 +58,7 @@ namespace yae
     ItemFocus();
 
     // unregister focusable item so it would no longer receive focus:
-    void removeFocusable(const std::string & id);
+    void removeFocusable(const Item * item);
 
     // register item that will be allowed to receive focus:
     void setFocusable(Canvas::ILayer & view,
@@ -66,21 +66,24 @@ namespace yae
                       const char * focusGroup,
                       int index);
 
+    int getGroupOffset(const char * focusGroup) const;
+
     // used to prevent passing focus to items in disabled focus groups:
     void enable(const char * focusGroup, bool enable = true);
 
     // clears focus from a given item, or any item if the id is empty:
-    bool clearFocus(const std::string & id = std::string());
+    bool clearFocus(const Item * item = NULL);
 
     // NOTE: these three will return true even if focus doesn't change
     // in case there is no other suitable focusable item available;
     // false is returned when no focusable items are available at all:
-    bool setFocus(const std::string & id);
+    bool setFocus(const Item * item);
+    bool setFocus(const Target & target);
     bool focusNext();
     bool focusPrevious();
 
-    // check whether focus belongs to an item with a given id:
-    bool hasFocus(const std::string & id) const;
+    // check whether focus belongs to a given item:
+    bool hasFocus(const Item * item) const;
 
     // retrieve focused item:
     ItemPtr focusedItem() const;
@@ -94,7 +97,9 @@ namespace yae
     // to items that are in a disabled focus group:
     std::set<std::string> disabled_;
     std::map<TIndex, Target> index_;
-    std::map<std::string, const Target *> idMap_;
+    std::map<const Item *, const Target *> items_;
+    std::map<std::string, std::set<int> > group_;
+
     const Target * focus_;
   };
 
@@ -111,7 +116,7 @@ namespace yae
     // virtual:
     void evaluate(bool & result) const
     {
-      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+      bool hasFocus = ItemFocus::singleton().hasFocus(&focusProxy_);
       result = hasFocus ? show_ : !show_;
     }
 
@@ -131,7 +136,7 @@ namespace yae
     // virtual:
     void evaluate(Color & result) const
     {
-      bool hasFocus = ItemFocus::singleton().hasFocus(focusProxy_.id_);
+      bool hasFocus = ItemFocus::singleton().hasFocus(&focusProxy_);
       if (hasFocus)
       {
         focusProxy_.get(kPropertyColorOnFocusBg, result);

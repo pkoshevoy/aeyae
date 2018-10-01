@@ -184,15 +184,12 @@ namespace yae
 
       if (focus && focus->view_ == this)
       {
-        std::string focusItemId;
         ItemPtr itemPtr = focus->item_.lock();
         if (itemPtr)
         {
-          focusItemId = itemPtr->id_;
+          TMakeCurrentContext currentContext(*context());
+          ItemFocus::singleton().clearFocus(itemPtr.get());
         }
-
-        TMakeCurrentContext currentContext(*context());
-        ItemFocus::singleton().clearFocus(focusItemId);
       }
     }
     else
@@ -677,7 +674,7 @@ namespace yae
       ItemPtr focus = ItemFocus::singleton().focusedItem();
       if (focus && !has(inputHandlers_, focus.get()))
       {
-        ItemFocus::singleton().clearFocus(focus->id_);
+        ItemFocus::singleton().clearFocus(focus.get());
         requestRepaint();
       }
 

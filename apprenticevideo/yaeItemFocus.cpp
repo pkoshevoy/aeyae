@@ -47,9 +47,9 @@ namespace yae
   // ItemFocus::removeFocusable
   //
   void
-  ItemFocus::removeFocusable(const std::string & id)
+  ItemFocus::removeFocusable(const Item * item)
   {
-    const Target * target = yae::get(idMap_, id, (const Target *)0);
+    const Target * target = yae::get(items_, item, (const Target *)0);
     if (!target)
     {
       return;
@@ -60,10 +60,11 @@ namespace yae
       focus_ = NULL;
     }
 
-    idMap_.erase(id);
+    items_.erase(item);
 
     TIndex index = target->index_;
     index_.erase(index);
+    group_[index.first].erase(index.second);
   }
 
   //----------------------------------------------------------------
@@ -84,6 +85,7 @@ namespace yae
     {
       // not found:
       found = index_.insert(found, std::make_pair(target.index_, target));
+      group_[target.index_.first].insert(target.index_.second);
     }
     else
     {
@@ -100,7 +102,32 @@ namespace yae
       }
     }
 
-    idMap_[item.id_] = &(found->second);
+    items_[&item] = &(found->second);
+  }
+
+  //----------------------------------------------------------------
+  // ItemFocus::getGroupOffset
+  //
+  int
+  ItemFocus::getGroupOffset(const char * focusGroup) const
+  {
+    std::string name(focusGroup);
+    std::map<std::string, std::set<int> >::const_iterator
+      found = group_.find(name);
+
+    if (found == group_.end())
+    {
+      return 0;
+    }
+
+    const std::set<int> & group = found->second;
+    if (group.empty())
+    {
+      return 0;
+    }
+
+    int last = *(group.rbegin());
+    return last + 1;
   }
 
   //----------------------------------------------------------------
@@ -125,23 +152,23 @@ namespace yae
   // ItemFocus::clearFocus
   //
   bool
-  ItemFocus::clearFocus(const std::string & id)
+  ItemFocus::clearFocus(const Item * item)
   {
-    if (!(id.empty() || hasFocus(id)))
+    if (item && !items_.empty() && !hasFocus(item))
     {
       return false;
     }
 
     if (focus_)
     {
-      ItemPtr itemPtr = focus_->item_.lock();
+      ItemPtr focused_ptr = focus_->item_.lock();
       focus_ = NULL;
 
-      if (itemPtr)
+      if (focused_ptr)
       {
-        Item & item = *itemPtr;
-        item.onFocusOut();
-        item.uncache();
+        Item & focused = *focused_ptr;
+        focused.onFocusOut();
+        focused.uncache();
       }
     }
 
@@ -152,27 +179,36 @@ namespace yae
   // ItemFocus::setFocus
   //
   bool
-  ItemFocus::setFocus(const std::string & id)
+  ItemFocus::setFocus(const Item * item)
   {
-    if (hasFocus(id))
+    if (hasFocus(item))
     {
       // already focused:
       return true;
     }
 
-    const Target * target = yae::get(idMap_, id, (const Target *)0);
+    const Target * target = yae::get(items_, item, (const Target *)0);
     if (!target)
     {
       YAE_ASSERT(false);
       throw std::runtime_error("can not give focus to unknown item");
     }
 
+    return setFocus(*target);
+  }
+
+  //----------------------------------------------------------------
+  // ItemFocus::setFocus
+  //
+  bool
+  ItemFocus::setFocus(const Target & target)
+  {
     // Hmm, not sure whether to allow setting focus to an item
     // in a disabled layer...
     //
     // So, allow it, but trigger an assertion in case it happens
     // unintentionally so this could be revisited then:
-    YAE_ASSERT(target->view_->isEnabled());
+    YAE_ASSERT(target.view_->isEnabled());
 
     if (focus_)
     {
@@ -186,7 +222,7 @@ namespace yae
       }
     }
 
-    ItemPtr itemPtr = target->item_.lock();
+    ItemPtr itemPtr = target.item_.lock();
     if (!itemPtr)
     {
       YAE_ASSERT(false);
@@ -194,7 +230,7 @@ namespace yae
       return false;
     }
 
-    focus_ = target;
+    focus_ = &target;
     Item & item = *itemPtr;
     item.onFocus();
 
@@ -267,7 +303,7 @@ namespace yae
       if (itemPtr)
       {
         Item & item = *itemPtr;
-        return setFocus(item.id_);
+        return setFocus(target);
       }
     }
 
@@ -304,7 +340,7 @@ namespace yae
       if (itemPtr)
       {
         Item & item = *itemPtr;
-        return setFocus(item.id_);
+        return setFocus(target);
       }
     }
 
@@ -316,10 +352,10 @@ namespace yae
   // ItemFocus::hasFocus
   //
   bool
-  ItemFocus::hasFocus(const std::string & id) const
+  ItemFocus::hasFocus(const Item * item) const
   {
-    ItemPtr item = focusedItem();
-    return item && (item->id_ == id);
+    ItemPtr focused_item_ptr = focusedItem();
+    return focused_item_ptr && (focused_item_ptr.get() == item);
   }
 
   //----------------------------------------------------------------

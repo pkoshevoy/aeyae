@@ -73,7 +73,7 @@ namespace yae
 
     // when finished editing it is better to clear focus
     // which most likely belongs to a proxy:
-    void setFocusProxyId(const std::string & proxyId);
+    void setFocusProxy(const Item * proxy);
 
   signals:
     void textChanged(const QString & text);

@@ -28,7 +28,7 @@ namespace yae
   //
   InputProxy::~InputProxy()
   {
-    ItemFocus::singleton().removeFocusable(Item::id_);
+    ItemFocus::singleton().removeFocusable(this);
   }
 
   //----------------------------------------------------------------
@@ -92,9 +92,9 @@ namespace yae
         return false;
       }
 
-      if (!ItemFocus::singleton().hasFocus(id_))
+      if (!ItemFocus::singleton().hasFocus(this))
       {
-        ItemFocus::singleton().setFocus(id_);
+        ItemFocus::singleton().setFocus(this);
       }
 
       return true;

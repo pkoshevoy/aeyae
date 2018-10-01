@@ -63,7 +63,7 @@ namespace yae
       prev_row = &row;
     }
 
-    int track_focus_index = 0;
+    int track_focus_index = ItemFocus::singleton().getGroupOffset("sources");
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
@@ -177,7 +177,7 @@ namespace yae
         text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
         text.text_ = TVarRef::constant(TVar(oss.str().c_str()));
-#if 1
+
         InputProxy & proxy = row.addNew<InputProxy>
           (str("proxy_", track_id).c_str());
         proxy.anchors_.left_ = ItemRef::reference(cbox, kPropertyLeft);
@@ -188,20 +188,19 @@ namespace yae
         proxy.ia_ = cbox.self_;
         ItemFocus::singleton().setFocusable(view_,
                                             proxy,
-                                            name_.c_str(),
+                                            "sources",
                                             track_focus_index);
         track_focus_index++;
-#endif
+
         prev_row = &row;
       }
     }
-#if 1
+
     Item & spacer = addNew<Item>("spacer");
     spacer.anchors_.left_ = ItemRef::constant(0);
     spacer.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
     spacer.height_ = ItemRef::reference(style.row_height_);
     spacer.width_ = ItemRef::constant(0);
-#endif
   }
 
 }

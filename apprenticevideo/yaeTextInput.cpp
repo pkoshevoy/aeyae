@@ -67,7 +67,7 @@ namespace yae
     int cursorDragStart_;
 
     // optional id of focus proxy item that manages this text input;
-    std::string proxyId_;
+    const Item * proxy_;
   };
 
   //----------------------------------------------------------------
@@ -79,7 +79,8 @@ namespace yae
     iw_(0),
     ih_(0),
     downsample_(1),
-    cursorDragStart_(0)
+    cursorDragStart_(0),
+    proxy_(NULL)
   {
     lineEdit_.hide();
     lineEdit_.setText(text);
@@ -664,12 +665,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TextInput::setFocusProxyId
+  // TextInput::setFocusProxy
   //
   void
-  TextInput::setFocusProxyId(const std::string & proxyId)
+  TextInput::setFocusProxy(const Item * proxy)
   {
-    p_->proxyId_ = proxyId;
+    p_->proxy_ = proxy;
   }
 
   //----------------------------------------------------------------
@@ -681,9 +682,9 @@ namespace yae
     QString payload = text();
     emit editingFinished(payload);
 
-    if (!p_->proxyId_.empty())
+    if (p_->proxy_)
     {
-      ItemFocus::singleton().clearFocus(p_->proxyId_);
+      ItemFocus::singleton().clearFocus(p_->proxy_);
     }
   }
 
@@ -699,7 +700,7 @@ namespace yae
     edit_(edit),
     copyViewToEdit_(false)
   {
-    edit_.setFocusProxyId(id_);
+    edit_.setFocusProxy(this);
     placeholder_ = TVarRef::constant(TVar(QObject::tr("")));
   }
 
@@ -708,7 +709,7 @@ namespace yae
   //
   TextInputProxy::~TextInputProxy()
   {
-    ItemFocus::singleton().removeFocusable(Item::id_);
+    ItemFocus::singleton().removeFocusable(this);
   }
 
   //----------------------------------------------------------------
@@ -730,9 +731,9 @@ namespace yae
   TextInputProxy::onPress(const TVec2D & itemCSysOrigin,
                           const TVec2D & rootCSysPoint)
   {
-    if (!ItemFocus::singleton().hasFocus(id_))
+    if (!ItemFocus::singleton().hasFocus(this))
     {
-      ItemFocus::singleton().setFocus(id_);
+      ItemFocus::singleton().setFocus(this);
     }
 
     TVec2D originEdit(edit_.left(), edit_.top());
