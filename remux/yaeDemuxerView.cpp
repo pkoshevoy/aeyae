@@ -2236,6 +2236,8 @@ namespace yae
     actionSetInPoint_(this),
     actionSetOutPoint_(this)
   {
+    enable_focus_group();
+
     Item & root = *root_;
 
     // add style to the root item, so it could be uncached automatically:
@@ -3398,11 +3400,20 @@ namespace yae
 #endif
     }
 
+    enable_focus_group();
+
+    requestRepaint();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::enable_focus_group
+  //
+  void
+  RemuxView::enable_focus_group()
+  {
     ItemFocus::singleton().enable("remux_layout", view_mode_ == kLayoutMode);
     ItemFocus::singleton().enable("player", view_mode_ == kPlayerMode);
     ItemFocus::singleton().enable("sources", view_mode_ == kSourceMode);
-
-    requestRepaint();
   }
 
   //----------------------------------------------------------------

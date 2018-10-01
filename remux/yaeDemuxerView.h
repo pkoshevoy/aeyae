@@ -343,6 +343,7 @@ namespace yae
     // NOTE: switching away from layout mode creates a serial demuxer
     //       from current source clips:
     void set_view_mode(RemuxView::ViewMode mode);
+    void enable_focus_group();
 
     bool is_playback_paused();
     void toggle_playback();
