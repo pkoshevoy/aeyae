@@ -636,11 +636,16 @@ namespace yae
     mousePt_ = pt;
 
     root_->getVisibleItems(mousePt_, mouseOverItems_);
+    itemsUnderMouse_.clear();
 #if 1
     for (std::list<VisibleItem>::const_iterator i = mouseOverItems_.begin();
          i != mouseOverItems_.end(); ++i)
     {
-      yae::shared_ptr<InputArea, Item> ia = i->item_.lock();
+      const VisibleItem & visible_item = *i;
+      ItemPtr item = visible_item.item_.lock();
+      itemsUnderMouse_[item.get()] = visible_item.csysOrigin_;
+
+      yae::shared_ptr<InputArea, Item> ia = item;
       if (ia)
       {
         ia->onMouseOver(i->csysOrigin_, pt);
@@ -868,6 +873,21 @@ namespace yae
   {
     (void)mousePt;
     return isEnabled();
+  }
+
+  //----------------------------------------------------------------
+  // ItemView::isMouseOverItem
+  //
+  bool
+  ItemView::isMouseOverItem(const Item & item) const
+  {
+#if 0
+    std::list<VisibleItem>::const_iterator found =
+      yae::find(mouseOverItems_, item);
+    return (found != mouseOverItems_.end());
+#else
+    return yae::has(itemsUnderMouse_, &item);
+#endif
   }
 
   //----------------------------------------------------------------

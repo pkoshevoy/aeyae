@@ -450,11 +450,8 @@ namespace yae
     { return transition_item().transition().in_progress(); }
 
     // helper:
-    bool item_overlaps_mouse_pt() const
-    {
-      const TVec2D & pt = tab_.view_.mousePt();
-      return tab_.overlaps(pt);
-    }
+    inline bool item_overlaps_mouse_pt() const
+    { return tab_.view_.isMouseOverItem(tab_); }
 
     // virtual:
     void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animator)

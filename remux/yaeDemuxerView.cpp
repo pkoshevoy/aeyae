@@ -1348,9 +1348,7 @@ namespace yae
     // virtual:
     void evaluate(bool & result) const
     {
-      const std::list<VisibleItem> & items = view_.mouseOverItems();
-      std::list<VisibleItem>::const_iterator found = yae::find(items, item_);
-      result = (found != items.end());
+      result = view_.isMouseOverItem(item_);
     }
 
     const ItemView & view_;

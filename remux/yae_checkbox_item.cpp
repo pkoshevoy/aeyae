@@ -118,11 +118,8 @@ namespace yae
     { return transition_item().transition().in_progress(); }
 
     // helper:
-    bool item_overlaps_mouse_pt() const
-    {
-      const TVec2D & pt = checkbox_.view_.mousePt();
-      return checkbox_.overlaps(pt);
-    }
+    inline bool item_overlaps_mouse_pt() const
+    { return checkbox_.view_.isMouseOverItem(checkbox_); }
 
     // virtual:
     void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animator)

@@ -286,6 +286,9 @@ namespace yae
     inline const std::list<VisibleItem> & mouseOverItems() const
     { return mouseOverItems_; }
 
+    // helper for checking mouseOverItems:
+    bool isMouseOverItem(const Item & item) const;
+
     // virtual:
     TImageProviderPtr
     getImageProvider(const QString & imageUrl, QString & imageId) const
@@ -338,6 +341,7 @@ namespace yae
     // a list of items under the mouse,
     // will be cleared if layout changes:
     std::list<VisibleItem> mouseOverItems_;
+    std::map<const Item *, TVec2D> itemsUnderMouse_;
 
     // mouse event handling house keeping helpers:
     InputHandler * pressed_;
