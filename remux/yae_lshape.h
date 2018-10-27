@@ -19,7 +19,7 @@ namespace yae
   //----------------------------------------------------------------
   // LShape
   //
-  class LShape : public Item
+  class YAE_API LShape : public Item
   {
     LShape(const LShape &);
     LShape & operator = (const LShape &);

@@ -39,7 +39,7 @@ namespace yae
   //----------------------------------------------------------------
   // TabRect
   //
-  class TabRect : public Item
+  class YAE_API TabRect : public Item
   {
     TabRect(const TabRect &);
     TabRect & operator = (const TabRect &);

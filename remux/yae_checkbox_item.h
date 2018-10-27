@@ -20,7 +20,7 @@ namespace yae
   //----------------------------------------------------------------
   // CheckboxItem
   //
-  class CheckboxItem : public ClickableItem
+  class YAE_API CheckboxItem : public ClickableItem
   {
     CheckboxItem(const CheckboxItem &);
     CheckboxItem & operator = (const CheckboxItem &);
