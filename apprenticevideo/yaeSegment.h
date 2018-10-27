@@ -78,6 +78,26 @@ namespace yae
     inline double radius() const
     { return 0.5 * length_; }
 
+    // convert point from world coordinate system to local coordinate system:
+    inline double to_lcs(double wcs_pt) const
+    {
+      YAE_ASSERT(length_);
+      return length_ ? (wcs_pt - origin_) / length_ : 0.0;
+    }
+
+    // convert point from local coordinate system to world coordinate system:
+    inline double to_wcs(double lcs_pt) const
+    { return origin_ + length_ * lcs_ptr; }
+
+    inline Segment rounded(double margin = 2e-1) const
+    {
+      double x = floor(log10(fabs(length_)));
+      double granularity = pow(10, x - 1);
+      double t0 = floor(origin_ / granularity - margin) * granularity;
+      double t1 = ceil(end() / granularity + margin) * granularity;
+      return Segment(t0, t1);
+    }
+
     double origin_;
     double length_;
   };
