@@ -86,8 +86,16 @@ namespace yae
   class YAE_API PlotItem : public Item
   {
   public:
-    PlotItem(const char * name, const TDataSourcePtr & data);
+    PlotItem(const char * name, const TDataSourcePtr & d = TDataSourcePtr());
     virtual ~PlotItem();
+
+    void setData(const TDataSourcePtr & data);
+
+    // virtual:
+    void uncache();
+
+    // virtual:
+    void paintContent() const;
 
     // virtual:
     bool paint(const Segment & xregion,
@@ -95,11 +103,20 @@ namespace yae
                Canvas * canvas) const;
 
     // virtual:
-    void paintContent() const;
+    void get(Property property, Color & value) const;
 
   protected:
+    // intentionally disabled:
+    PlotItem(const PlotItem &);
+    PlotItem & operator = (const PlotItem &);
+
+    // keep implementation details private:
     struct Private;
     Private * private_;
+
+  public:
+    // line color:
+    ColorRef color_;
   };
 
 }
