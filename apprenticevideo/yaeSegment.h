@@ -12,6 +12,9 @@
 // standard libraries:
 #include <cmath>
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // local interfaces:
 #include "yaeVec.h"
 
@@ -87,7 +90,7 @@ namespace yae
 
     // convert point from local coordinate system to world coordinate system:
     inline double to_wcs(double lcs_pt) const
-    { return origin_ + length_ * lcs_ptr; }
+    { return origin_ + length_ * lcs_pt; }
 
     inline Segment rounded(double margin = 2e-1) const
     {
