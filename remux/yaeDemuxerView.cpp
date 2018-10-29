@@ -2841,14 +2841,12 @@ namespace yae
   // add_plot_tag
   //
   static Text &
-  add_plot_tag(RemuxView & view,
+  add_plot_tag(const ItemViewStyle & style,
                Item & item,
                const PlotItem & plot,
                const std::string & label,
                Text * prev_tag = NULL)
   {
-    const ItemViewStyle & style = *view.style();
-
     Text & tag = item.addNew<Text>((plot.id_ + ".tag").c_str());
     // tag.font_ = style.font_large_;
     tag.anchors_.top_ = prev_tag ?
@@ -2861,6 +2859,31 @@ namespace yae
     tag.color_ = ColorRef::reference(plot, kPropertyColor);
     return tag;
   }
+
+  //----------------------------------------------------------------
+  // GetMax
+  //
+  struct GetMax : TDoubleExpr
+  {
+    GetMax(const ItemRef & a, const ItemRef & b):
+      a_(ItemRef::reference(a)),
+      b_(ItemRef::reference(b))
+    {
+      a_.disableCaching();
+      b_.disableCaching();
+    }
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double a = a_.get();
+      double b = b_.get();
+      result = std::max(a, b);
+    }
+
+    ItemRef a_;
+    ItemRef b_;
+  };
 
   //----------------------------------------------------------------
   // RemuxView::append_source
@@ -2880,6 +2903,7 @@ namespace yae
     model.source_[src] = name;
 
     RemuxView & view = *this;
+    const RemuxViewStyle & style = *style_;
     Item & root = *root_;
 
     Item & sources = root["sources"];
@@ -2889,7 +2913,6 @@ namespace yae
     Item & item = ssv_content.addNew<Item>(name.c_str());
     Rectangle & bg = item.addNew<Rectangle>("bg");
     Item & plots = item.addNew<Item>("plots");
-    Item & plot_tags = item.addNew<Item>("plot_tags");
 
     SourceItem & src_item = item.add(new SourceItem("src_item",
                                                     view,
@@ -2906,41 +2929,91 @@ namespace yae
     bg.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
     bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
     bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    bg.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+    bg.anchors_.bottom_ = bg.
+      addExpr(new GetMax(ItemRef::reference(src_item, kPropertyBottom),
+                         ItemRef::reference(plots, kPropertyBottom)));
     bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
     bg.opacity_ = ItemRef::constant(0.25);
-
-    plots.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
-    plots.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
-    plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    plots.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
-
-    plot_tags.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
-    plot_tags.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
-    plot_tags.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    plot_tags.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
 
     // const RemuxViewStyle & style = *(view.style());
     // item.margins_.set_top(ItemRef::reference(style.row_height_));
 
     // setup the plots:
     TGradient gradient;
-    make_gradient(gradient);
+    make_gradient(gradient,
+#if 0
+                  // d3.schemePaired from
+                  // https://github.com/d3/d3-scale-chromatic/
+                  // blob/master/src/categorical/Paired.js
+                  "a6cee3"
+                  "1f78b4"
+                  "b2df8a"
+                  "33a02c"
+                  "fb9a99"
+                  "e31a1c"
+                  "fdbf6f"
+                  "ff7f00"
+                  "cab2d6"
+                  "6a3d9a"
+                  "ffff99"
+                  "b15928"
+#elif 0
+                  // https://github.com/d3/d3-scale-chromatic/
+                  // blob/master/src/categorical/Set3.js
+                  "8dd3c7"
+                  "ffffb3"
+                  "bebada"
+                  "fb8072"
+                  "80b1d3"
+                  "fdb462"
+                  "b3de69"
+                  "fccde5"
+                  "d9d9d9"
+                  "bc80bd"
+                  "ccebc5"
+                  "ffed6f"
+#endif
+                  );
 
-    Scrollview & psv = layout_scrollview(view,
-                                         plots,
-                                         kScrollbarHorizontal);
-    Item & psv_content = *(psv.content_);
-
-    std::size_t num_plots = 0;
-    const double spacing = 2.0;
-    Text * prev_plot_tag = NULL;
-
+    double rows_per_plot = 10.0;
     const DemuxerSummary & summary = src->summary();
+    plots.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    plots.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+    /*
+    plots.height_ = ItemRef::reference(style.row_height_,
+                                       rows_per_plot *
+                                       summary.timeline_.size());
+    */
+    const double spacing = 2.0;
+    Item * prev_prog = NULL;
+
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
+      int prog_id = i->first;
       const Timeline & timeline = i->second;
+      std::size_t plot_index = 0;
+
+      Item & prog = plots.addNew<Item>(str("prog_", prog_id).c_str());
+      prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+      prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+      prog.anchors_.top_ = prev_prog ?
+        ItemRef::reference(*prev_prog, kPropertyBottom) :
+        ItemRef::reference(item, kPropertyTop);
+      prog.height_ = ItemRef::reference(style.row_height_, rows_per_plot);
+      prev_prog = &prog;
+
+      Item & tags = plots.addNew<Item>(str("tags_", prog_id).c_str());
+      tags.anchors_.fill(prog);
+
+      Scrollview & psv = layout_scrollview(view,
+                                           prog,
+                                           kScrollbarHorizontal,
+                                           false); // no clipping
+      Item & psv_content = *(psv.content_);
+
+      Text * prev_plot_tag = NULL;
       for (Timeline::TTracks::const_iterator
              j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
       {
@@ -2959,16 +3032,16 @@ namespace yae
           pkt_size.anchors_.right_.reset();
           pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
                                               spacing);
-          pkt_size.color_ = pick_color(gradient, num_plots);
+          pkt_size.color_ = pick_color(gradient, plot_index);
           pkt_size.range_ = size_range_;
           size_range_->expand(pkt_size.data_->range());
 
-          prev_plot_tag = &add_plot_tag(view,
-                                        plot_tags,
+          prev_plot_tag = &add_plot_tag(style,
+                                        tags,
                                         pkt_size,
                                         "packet size, " + track_id,
                                         prev_plot_tag);
-          num_plots++;
+          plot_index++;
         }
 #if 0
         if (audio)
@@ -2980,16 +3053,16 @@ namespace yae
           pts_pts.anchors_.right_.reset();
           pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
                                              spacing);
-          pts_pts.color_ = pick_color(gradient, num_plots);
+          pts_pts.color_ = pick_color(gradient, plot_index);
           pts_pts.range_ = time_range_;
           time_range_->expand(pts_pts.data_->range());
 
-          prev_plot_tag = &add_plot_tag(view,
-                                        plot_tags,
+          prev_plot_tag = &add_plot_tag(style,
+                                        tags,
                                         pts_pts,
                                         "pts(i+1) - pts(i), " + track_id,
                                         prev_plot_tag);
-          num_plots++;
+          plot_index++;
         }
 #endif
         if (video)
@@ -3001,16 +3074,16 @@ namespace yae
           pts_dts.anchors_.right_.reset();
           pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
                                              spacing);
-          pts_dts.color_ = pick_color(gradient, num_plots);
+          pts_dts.color_ = pick_color(gradient, plot_index);
           pts_dts.range_ = time_range_;
           time_range_->expand(pts_dts.data_->range());
 
-          prev_plot_tag = &add_plot_tag(view,
-                                        plot_tags,
+          prev_plot_tag = &add_plot_tag(style,
+                                        tags,
                                         pts_dts,
                                         "pts(i) - dts(i), " + track_id,
                                         prev_plot_tag);
-          num_plots++;
+          plot_index++;
 
           PlotItem & dts_dts = psv_content.
             addNew<PlotItem>((track_id + ".dts_dts").c_str());
@@ -3019,16 +3092,16 @@ namespace yae
           dts_dts.anchors_.right_.reset();
           dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
                                              spacing);
-          dts_dts.color_ = pick_color(gradient, num_plots);
+          dts_dts.color_ = pick_color(gradient, plot_index);
           dts_dts.range_ = time_range_;
           time_range_->expand(dts_dts.data_->range());
 
-          prev_plot_tag = &add_plot_tag(view,
-                                        plot_tags,
+          prev_plot_tag = &add_plot_tag(style,
+                                        tags,
                                         dts_dts,
                                         "dts(i+1) - dts(i), " + track_id,
                                         prev_plot_tag);
-          num_plots++;
+          plot_index++;
         }
       }
     }
@@ -3089,25 +3162,37 @@ namespace yae
   rebuild_ranges(Item & src_item)
   {
     Item & plots = src_item.get<Item>("plots");
-    Scrollview & sv = plots.get<Scrollview>("plots.scrollview");
-    Item & container = *sv.content_;
-    for (std::vector<ItemPtr>::iterator i = container.children_.begin();
-         i != container.children_.end(); ++i)
+    for (std::vector<ItemPtr>::iterator i = plots.children_.begin();
+         i != plots.children_.end(); ++i)
     {
-      yae::shared_ptr<PlotItem, Item> plot_ptr = *i;
-      if (!plot_ptr)
+      Item & item = *(*i);
+      if (!al::starts_with(item.id_, "prog_"))
       {
         continue;
       }
 
-      PlotItem & plot = *plot_ptr;
-      if (!(plot.data_ && plot.range_))
-      {
-        continue;
-      }
+      Scrollview & sv =
+        item.get<Scrollview>((item.id_ + ".scrollview").c_str());
 
-      Segment & range = *(plot.range_);
-      range.expand(plot.data_->range());
+      Item & container = *sv.content_;
+      for (std::vector<ItemPtr>::iterator j = container.children_.begin();
+           j != container.children_.end(); ++j)
+      {
+        yae::shared_ptr<PlotItem, Item> plot_ptr = *j;
+        if (!plot_ptr)
+        {
+          continue;
+        }
+
+        PlotItem & plot = *plot_ptr;
+        if (!(plot.data_ && plot.range_))
+        {
+          continue;
+        }
+
+        Segment & range = *(plot.range_);
+        range.expand(plot.data_->range());
+      }
     }
   }
 

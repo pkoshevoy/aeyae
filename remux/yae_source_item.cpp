@@ -114,7 +114,7 @@ namespace yae
         std::ostringstream oss;
         oss << track_id;
 
-        const char * codec_name = track->getCodecName();
+        const char * codec_name = track ? track->getCodecName() : NULL;
         if (codec_name)
         {
           oss << ", " << codec_name;
