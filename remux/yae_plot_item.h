@@ -118,6 +118,11 @@ namespace yae
     Segment range_;
   };
 
+  //----------------------------------------------------------------
+  // TScaleLinearPtr
+  //
+  typedef yae::shared_ptr<Segment> TSegmentPtr;
+
 
   //----------------------------------------------------------------
   // PlotItem
@@ -127,9 +132,6 @@ namespace yae
   public:
     PlotItem(const char * name, const TDataSourcePtr & d = TDataSourcePtr());
     virtual ~PlotItem();
-
-    void setData(const TDataSourcePtr & data);
-    const TDataSourcePtr & data() const;
 
     // virtual:
     void uncache();
@@ -157,6 +159,12 @@ namespace yae
   public:
     // line color:
     ColorRef color_;
+
+    TDataSourcePtr data_;
+
+    // to compare apples-to-apples (overlapping plots of similar data)
+    // make sure to put them on the same scale by using the same range:
+    TSegmentPtr range_;
   };
 
 }

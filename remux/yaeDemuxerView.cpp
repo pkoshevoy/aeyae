@@ -2233,7 +2233,9 @@ namespace yae
     model_(NULL),
     view_mode_(RemuxView::kLayoutMode),
     actionSetInPoint_(this),
-    actionSetOutPoint_(this)
+    actionSetOutPoint_(this),
+    time_range_(new Segment(0, 1)),
+    size_range_(new Segment())
   {
     enable_focus_group();
 
@@ -2766,7 +2768,7 @@ namespace yae
   //----------------------------------------------------------------
   // PtsPtsDataSource
   //
-  // f(i) = pts(i+1) - pts(i), may be negative due to b-frames
+  // f(i) = pts(i+1) - pts(i), use only for audio tracks
   //
   struct PtsPtsDataSource : public TrackDataSource
   {
@@ -2836,6 +2838,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // add_plot_tag
+  //
+  static Text &
+  add_plot_tag(RemuxView & view,
+               Item & item,
+               const PlotItem & plot,
+               const std::string & label,
+               Text * prev_tag = NULL)
+  {
+    const ItemViewStyle & style = *view.style();
+
+    Text & tag = item.addNew<Text>((plot.id_ + ".tag").c_str());
+    // tag.font_ = style.font_large_;
+    tag.anchors_.top_ = prev_tag ?
+      ItemRef::reference(*prev_tag, kPropertyBottom, 1, 5) :
+      ItemRef::reference(item, kPropertyTop, 1, 5);
+    tag.anchors_.right_ = ItemRef::reference(item, kPropertyRight, 1, -5);
+    tag.text_ = TVarRef::constant(TVar(label.c_str()));
+    tag.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
+    tag.elide_ = Qt::ElideNone;
+    tag.color_ = ColorRef::reference(plot, kPropertyColor);
+    return tag;
+  }
+
+  //----------------------------------------------------------------
   // RemuxView::append_source
   //
   void
@@ -2862,6 +2889,7 @@ namespace yae
     Item & item = ssv_content.addNew<Item>(name.c_str());
     Rectangle & bg = item.addNew<Rectangle>("bg");
     Item & plots = item.addNew<Item>("plots");
+    Item & plot_tags = item.addNew<Item>("plot_tags");
 
     SourceItem & src_item = item.add(new SourceItem("src_item",
                                                     view,
@@ -2887,6 +2915,11 @@ namespace yae
     plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
     plots.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
 
+    plot_tags.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    plot_tags.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    plot_tags.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+    plot_tags.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+
     // const RemuxViewStyle & style = *(view.style());
     // item.margins_.set_top(ItemRef::reference(style.row_height_));
 
@@ -2901,6 +2934,7 @@ namespace yae
 
     std::size_t num_plots = 0;
     const double spacing = 2.0;
+    Text * prev_plot_tag = NULL;
 
     const DemuxerSummary & summary = src->summary();
     for (std::map<int, Timeline>::const_iterator
@@ -2913,47 +2947,89 @@ namespace yae
         const std::string & track_id = j->first;
         const Timeline::Track & track = j->second;
 
-        if (!al::starts_with(track_id, "v:"))
-        {
-          continue;
-        }
+        bool audio = al::starts_with(track_id, "a:");
+        bool video = al::starts_with(track_id, "v:");
 
-#if 1
-        PlotItem & pkt_size = psv_content.addNew<PlotItem>("pkt_size");
-        pkt_size.setData(TDataSourcePtr(new PktSizeDataSource(track)));
-        pkt_size.anchors_.fill(psv_content);
-        pkt_size.anchors_.right_.reset();
-        pkt_size.width_ = ItemRef::constant(pkt_size.data()->size() * spacing);
-        pkt_size.color_ = pick_color(gradient, num_plots);
-        num_plots++;
-#endif
-#if 1
-        PlotItem & pts_dts = psv_content.addNew<PlotItem>("pts_dts");
-        pts_dts.setData(TDataSourcePtr(new PtsDtsDataSource(track)));
-        pts_dts.anchors_.fill(psv_content);
-        pts_dts.anchors_.right_.reset();
-        pts_dts.width_ = ItemRef::constant(pts_dts.data()->size() * spacing);
-        pts_dts.color_ = pick_color(gradient, num_plots);
-        num_plots++;
-#endif
-#if 1
-        PlotItem & dts_dts = psv_content.addNew<PlotItem>("dts_dts");
-        dts_dts.setData(TDataSourcePtr(new DtsDtsDataSource(track)));
-        dts_dts.anchors_.fill(psv_content);
-        dts_dts.anchors_.right_.reset();
-        dts_dts.width_ = ItemRef::constant(dts_dts.data()->size() * spacing);
-        dts_dts.color_ = pick_color(gradient, num_plots);
-        num_plots++;
-#endif
+        if (audio || video)
+        {
+          PlotItem & pkt_size = psv_content.
+            addNew<PlotItem>((track_id + ".pkt_size").c_str());
+          pkt_size.data_ = TDataSourcePtr(new PktSizeDataSource(track));
+          pkt_size.anchors_.fill(psv_content);
+          pkt_size.anchors_.right_.reset();
+          pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
+                                              spacing);
+          pkt_size.color_ = pick_color(gradient, num_plots);
+          pkt_size.range_ = size_range_;
+          size_range_->expand(pkt_size.data_->range());
+
+          prev_plot_tag = &add_plot_tag(view,
+                                        plot_tags,
+                                        pkt_size,
+                                        "packet size, " + track_id,
+                                        prev_plot_tag);
+          num_plots++;
+        }
 #if 0
-        PlotItem & pts_pts = psv_content.addNew<PlotItem>("pts_pts");
-        pts_pts.setData(TDataSourcePtr(new PtsPtsDataSource(track)));
-        pts_pts.anchors_.fill(psv_content);
-        pts_pts.anchors_.right_.reset();
-        pts_pts.width_ = ItemRef::constant(pts_pts.data()->size() * spacing);
-        pts_pts.color_ = pick_color(gradient, num_plots);
-        num_plots++;
+        if (audio)
+        {
+          PlotItem & pts_pts = psv_content.
+            addNew<PlotItem>((track_id + ".pts_pts").c_str());
+          pts_pts.data_ = TDataSourcePtr(new PtsPtsDataSource(track));
+          pts_pts.anchors_.fill(psv_content);
+          pts_pts.anchors_.right_.reset();
+          pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
+                                             spacing);
+          pts_pts.color_ = pick_color(gradient, num_plots);
+          pts_pts.range_ = time_range_;
+          time_range_->expand(pts_pts.data_->range());
+
+          prev_plot_tag = &add_plot_tag(view,
+                                        plot_tags,
+                                        pts_pts,
+                                        "pts(i+1) - pts(i), " + track_id,
+                                        prev_plot_tag);
+          num_plots++;
+        }
 #endif
+        if (video)
+        {
+          PlotItem & pts_dts = psv_content.
+            addNew<PlotItem>((track_id + ".pts_dts").c_str());
+          pts_dts.data_ = TDataSourcePtr(new PtsDtsDataSource(track));
+          pts_dts.anchors_.fill(psv_content);
+          pts_dts.anchors_.right_.reset();
+          pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
+                                             spacing);
+          pts_dts.color_ = pick_color(gradient, num_plots);
+          pts_dts.range_ = time_range_;
+          time_range_->expand(pts_dts.data_->range());
+
+          prev_plot_tag = &add_plot_tag(view,
+                                        plot_tags,
+                                        pts_dts,
+                                        "pts(i) - dts(i), " + track_id,
+                                        prev_plot_tag);
+          num_plots++;
+
+          PlotItem & dts_dts = psv_content.
+            addNew<PlotItem>((track_id + ".dts_dts").c_str());
+          dts_dts.data_ = TDataSourcePtr(new DtsDtsDataSource(track));
+          dts_dts.anchors_.fill(psv_content);
+          dts_dts.anchors_.right_.reset();
+          dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
+                                             spacing);
+          dts_dts.color_ = pick_color(gradient, num_plots);
+          dts_dts.range_ = time_range_;
+          time_range_->expand(dts_dts.data_->range());
+
+          prev_plot_tag = &add_plot_tag(view,
+                                        plot_tags,
+                                        dts_dts,
+                                        "dts(i+1) - dts(i), " + track_id,
+                                        prev_plot_tag);
+          num_plots++;
+        }
       }
     }
 
@@ -3007,6 +3083,35 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // rebuild_ranges
+  //
+  static void
+  rebuild_ranges(Item & src_item)
+  {
+    Item & plots = src_item.get<Item>("plots");
+    Scrollview & sv = plots.get<Scrollview>("plots.scrollview");
+    Item & container = *sv.content_;
+    for (std::vector<ItemPtr>::iterator i = container.children_.begin();
+         i != container.children_.end(); ++i)
+    {
+      yae::shared_ptr<PlotItem, Item> plot_ptr = *i;
+      if (!plot_ptr)
+      {
+        continue;
+      }
+
+      PlotItem & plot = *plot_ptr;
+      if (!(plot.data_ && plot.range_))
+      {
+        continue;
+      }
+
+      Segment & range = *(plot.range_);
+      range.expand(plot.data_->range());
+    }
+  }
+
+  //----------------------------------------------------------------
   // prune
   //
   static void
@@ -3025,6 +3130,11 @@ namespace yae
     Scrollview & ssv = sources.get<Scrollview>("sources.scrollview");
     Item & ssv_content = *(ssv.content_);
 
+    // rebuild ranges:
+    view.time_range_->clear();
+    view.size_range_->clear();
+    view.time_range_->expand(Segment(0, 1));
+
     std::map<std::string, TDemuxerInterfacePtr>::iterator
       i = model.demuxer_.begin();
     while (i != model.demuxer_.end())
@@ -3033,6 +3143,9 @@ namespace yae
       TDemuxerInterfacePtr demuxer = i->second;
       if (yae::has(set_of_demuxers, demuxer))
       {
+        // rebuild ranges:
+        ItemPtr source_item = view.source_item_[source];
+        rebuild_ranges(*source_item);
         ++i;
       }
       else

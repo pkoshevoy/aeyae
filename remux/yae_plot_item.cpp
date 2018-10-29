@@ -50,9 +50,8 @@ namespace yae
   //
   struct PlotItem::Private
   {
-    Private(PlotItem & item, const TDataSourcePtr & data):
-      item_(item),
-      data_(data)
+    Private(PlotItem & item):
+      item_(item)
     {}
 
     void paint();
@@ -60,7 +59,6 @@ namespace yae
     PlotItem & item_;
     Segment xregion_;
     Segment yregion_;
-    TDataSourcePtr data_;
   };
 
   //----------------------------------------------------------------
@@ -69,13 +67,13 @@ namespace yae
   void
   PlotItem::Private::paint()
   {
-    if (!data_)
+    if (!(item_.data_))
     {
       return;
     }
 
     const Color & color = item_.color_.get();
-    const TDataSource & data = *data_;
+    const TDataSource & data = *item_.data_;
     std::size_t sz = data.size();
 
     if (!sz)
@@ -83,7 +81,7 @@ namespace yae
       return;
     }
 
-    Segment range = data.range().rounded();
+    Segment range = (item_.range_ ? *item_.range_ : data.range()).rounded();
 
     BBox bbox;
     item_.Item::get(kPropertyBBox, bbox);
@@ -101,8 +99,6 @@ namespace yae
 
     double r0 = xregion_.to_wcs(0.0);
     double r1 = xregion_.to_wcs(1.0);
-
-    // FIXME: should round the domain and range (at their magnitude)
 
     std::size_t i0 = (std::size_t)(std::max<double>(0.0, sx.invert(r0)));
     std::size_t i1 = (std::size_t)(std::min<double>(sz, ceil(sx.invert(r1))));
@@ -139,8 +135,9 @@ namespace yae
   //
   PlotItem::PlotItem(const char * name, const TDataSourcePtr & data):
     Item(name),
-    private_(new PlotItem::Private(*this, data)),
-    color_(ColorRef::constant(Color(0xff0000, 0.7)))
+    private_(new PlotItem::Private(*this)),
+    color_(ColorRef::constant(Color(0xff0000, 0.7))),
+    data_(data)
   {}
 
   //----------------------------------------------------------------
@@ -149,24 +146,6 @@ namespace yae
   PlotItem::~PlotItem()
   {
     delete private_;
-  }
-
-  //----------------------------------------------------------------
-  // PlotItem::setData
-  //
-  void
-  PlotItem::setData(const TDataSourcePtr & data)
-  {
-    private_->data_ = data;
-  }
-
-  //----------------------------------------------------------------
-  // PlotItem::data
-  //
-  const TDataSourcePtr &
-  PlotItem::data() const
-  {
-    return private_->data_;
   }
 
   //----------------------------------------------------------------

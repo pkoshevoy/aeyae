@@ -386,6 +386,12 @@ namespace yae
 
     // source items, indexed by source file path:
     std::map<std::string, ItemPtr> source_item_;
+
+    // use the same scale for all dts/pts plots:
+    yae::shared_ptr<Segment> time_range_;
+
+    // use the same scale for all packet size plots:
+    yae::shared_ptr<Segment> size_range_;
   };
 
 }
