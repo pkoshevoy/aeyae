@@ -83,7 +83,7 @@ namespace yae
       return;
     }
 
-    Segment range = data.range();
+    Segment range = data.range().rounded();
 
     BBox bbox;
     item_.Item::get(kPropertyBBox, bbox);
@@ -158,6 +158,15 @@ namespace yae
   PlotItem::setData(const TDataSourcePtr & data)
   {
     private_->data_ = data;
+  }
+
+  //----------------------------------------------------------------
+  // PlotItem::data
+  //
+  const TDataSourcePtr &
+  PlotItem::data() const
+  {
+    return private_->data_;
   }
 
   //----------------------------------------------------------------

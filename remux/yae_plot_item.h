@@ -129,6 +129,7 @@ namespace yae
     virtual ~PlotItem();
 
     void setData(const TDataSourcePtr & data);
+    const TDataSourcePtr & data() const;
 
     // virtual:
     void uncache();

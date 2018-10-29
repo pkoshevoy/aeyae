@@ -2823,6 +2823,17 @@ namespace yae
     }
   };
 
+  //----------------------------------------------------------------
+  // pick_color
+  //
+  ColorRef
+  pick_color(const TGradient & g, std::size_t plot_index)
+  {
+    std::size_t num_colors = g.size();
+    double t = double(plot_index % num_colors);
+    const Color & c = get_ordinal(g, t);
+    return ColorRef::constant(c);
+  }
 
   //----------------------------------------------------------------
   // RemuxView::append_source
@@ -2888,7 +2899,9 @@ namespace yae
                                          kScrollbarHorizontal);
     Item & psv_content = *(psv.content_);
 
-    int plot_count = 0;
+    std::size_t num_plots = 0;
+    const double spacing = 2.0;
+
     const DemuxerSummary & summary = src->summary();
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
@@ -2905,18 +2918,42 @@ namespace yae
           continue;
         }
 
-        TDataSourcePtr pts_dts_data(new MockDataSource(4096, 0, 12));
+#if 1
+        PlotItem & pkt_size = psv_content.addNew<PlotItem>("pkt_size");
+        pkt_size.setData(TDataSourcePtr(new PktSizeDataSource(track)));
+        pkt_size.anchors_.fill(psv_content);
+        pkt_size.anchors_.right_.reset();
+        pkt_size.width_ = ItemRef::constant(pkt_size.data()->size() * spacing);
+        pkt_size.color_ = pick_color(gradient, num_plots);
+        num_plots++;
+#endif
+#if 1
         PlotItem & pts_dts = psv_content.addNew<PlotItem>("pts_dts");
-        pts_dts.setData(pts_dts_data);
+        pts_dts.setData(TDataSourcePtr(new PtsDtsDataSource(track)));
         pts_dts.anchors_.fill(psv_content);
         pts_dts.anchors_.right_.reset();
-        pts_dts.width_ = ItemRef::constant(pts_dts_data->size());
-
-        double t = (double(plot_count % gradient.size()) /
-                    double(gradient.size()));
-        pts_dts.color_ = ColorRef::constant(get_ordinal(gradient, t));
-
-        plot_count++;
+        pts_dts.width_ = ItemRef::constant(pts_dts.data()->size() * spacing);
+        pts_dts.color_ = pick_color(gradient, num_plots);
+        num_plots++;
+#endif
+#if 1
+        PlotItem & dts_dts = psv_content.addNew<PlotItem>("dts_dts");
+        dts_dts.setData(TDataSourcePtr(new DtsDtsDataSource(track)));
+        dts_dts.anchors_.fill(psv_content);
+        dts_dts.anchors_.right_.reset();
+        dts_dts.width_ = ItemRef::constant(dts_dts.data()->size() * spacing);
+        dts_dts.color_ = pick_color(gradient, num_plots);
+        num_plots++;
+#endif
+#if 0
+        PlotItem & pts_pts = psv_content.addNew<PlotItem>("pts_pts");
+        pts_pts.setData(TDataSourcePtr(new PtsPtsDataSource(track)));
+        pts_pts.anchors_.fill(psv_content);
+        pts_pts.anchors_.right_.reset();
+        pts_pts.width_ = ItemRef::constant(pts_pts.data()->size() * spacing);
+        pts_pts.color_ = pick_color(gradient, num_plots);
+        num_plots++;
+#endif
       }
     }
 
