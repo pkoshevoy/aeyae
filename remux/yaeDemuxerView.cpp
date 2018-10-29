@@ -2861,6 +2861,142 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // add_track_plots
+  //
+  static void
+  add_track_plots(RemuxView & view,
+                  Item & tags,
+                  const std::string & track_id,
+                  const Timeline::Track & track,
+                  Item & sv_content,
+                  Text *& prev_plot_tag,
+                  std::size_t & plot_index)
+  {
+    static const TGradient gradient = make_gradient
+      (
+#if 0
+       // d3.schemePaired from
+       // https://github.com/d3/d3-scale-chromatic/
+       // blob/master/src/categorical/Paired.js
+       "a6cee3"
+       "1f78b4"
+       "b2df8a"
+       "33a02c"
+       "fb9a99"
+       "e31a1c"
+       "fdbf6f"
+       "ff7f00"
+       "cab2d6"
+       "6a3d9a"
+       "ffff99"
+       "b15928"
+#elif 0
+       // https://github.com/d3/d3-scale-chromatic/
+                    // blob/master/src/categorical/Set3.js
+       "8dd3c7"
+       "ffffb3"
+       "bebada"
+       "fb8072"
+       "80b1d3"
+       "fdb462"
+       "b3de69"
+       "fccde5"
+       "d9d9d9"
+       "bc80bd"
+       "ccebc5"
+       "ffed6f"
+#endif
+       );
+
+    static const double spacing = 2.0;
+    bool audio = al::starts_with(track_id, "a:");
+    bool video = al::starts_with(track_id, "v:");
+
+    const RemuxViewStyle & style = *view.style();
+
+    if (audio || video)
+    {
+      PlotItem & pkt_size = sv_content.
+        addNew<PlotItem>((track_id + ".pkt_size").c_str());
+      pkt_size.data_ = TDataSourcePtr(new PktSizeDataSource(track));
+      pkt_size.anchors_.fill(sv_content);
+      pkt_size.anchors_.right_.reset();
+      pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
+                                          spacing);
+      pkt_size.color_ = pick_color(gradient, plot_index);
+      pkt_size.range_ = view.size_range_;
+      view.size_range_->expand(pkt_size.data_->range());
+
+      prev_plot_tag = &add_plot_tag(style,
+                                    tags,
+                                    pkt_size,
+                                    "packet size, " + track_id,
+                                    prev_plot_tag);
+      plot_index++;
+    }
+#if 0
+    if (audio)
+    {
+      PlotItem & pts_pts = sv_content.
+        addNew<PlotItem>((track_id + ".pts_pts").c_str());
+      pts_pts.data_ = TDataSourcePtr(new PtsPtsDataSource(track));
+      pts_pts.anchors_.fill(sv_content);
+      pts_pts.anchors_.right_.reset();
+      pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
+                                         spacing);
+      pts_pts.color_ = pick_color(gradient, plot_index);
+      pts_pts.range_ = view.time_range_;
+      view.time_range_->expand(pts_pts.data_->range());
+
+      prev_plot_tag = &add_plot_tag(style,
+                                    tags,
+                                    pts_pts,
+                                    "pts(i+1) - pts(i), " + track_id,
+                                    prev_plot_tag);
+      plot_index++;
+    }
+#endif
+    if (video)
+    {
+      PlotItem & pts_dts = sv_content.
+        addNew<PlotItem>((track_id + ".pts_dts").c_str());
+      pts_dts.data_ = TDataSourcePtr(new PtsDtsDataSource(track));
+      pts_dts.anchors_.fill(sv_content);
+      pts_dts.anchors_.right_.reset();
+      pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
+                                         spacing);
+      pts_dts.color_ = pick_color(gradient, plot_index);
+      pts_dts.range_ = view.time_range_;
+      view.time_range_->expand(pts_dts.data_->range());
+
+      prev_plot_tag = &add_plot_tag(style,
+                                    tags,
+                                    pts_dts,
+                                    "pts(i) - dts(i), " + track_id,
+                                    prev_plot_tag);
+      plot_index++;
+
+      PlotItem & dts_dts = sv_content.
+        addNew<PlotItem>((track_id + ".dts_dts").c_str());
+      dts_dts.data_ = TDataSourcePtr(new DtsDtsDataSource(track));
+      dts_dts.anchors_.fill(sv_content);
+      dts_dts.anchors_.right_.reset();
+      dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
+                                         spacing);
+      dts_dts.color_ = pick_color(gradient, plot_index);
+      dts_dts.range_ = view.time_range_;
+      view.time_range_->expand(dts_dts.data_->range());
+
+      prev_plot_tag = &add_plot_tag(style,
+                                    tags,
+                                    dts_dts,
+                                    "dts(i+1) - dts(i), " + track_id,
+                                    prev_plot_tag);
+      plot_index++;
+    }
+  }
+
+  //----------------------------------------------------------------
   // GetMax
   //
   struct GetMax : TDoubleExpr
@@ -2939,61 +3075,19 @@ namespace yae
     // item.margins_.set_top(ItemRef::reference(style.row_height_));
 
     // setup the plots:
-    TGradient gradient;
-    make_gradient(gradient,
-#if 0
-                  // d3.schemePaired from
-                  // https://github.com/d3/d3-scale-chromatic/
-                  // blob/master/src/categorical/Paired.js
-                  "a6cee3"
-                  "1f78b4"
-                  "b2df8a"
-                  "33a02c"
-                  "fb9a99"
-                  "e31a1c"
-                  "fdbf6f"
-                  "ff7f00"
-                  "cab2d6"
-                  "6a3d9a"
-                  "ffff99"
-                  "b15928"
-#elif 0
-                  // https://github.com/d3/d3-scale-chromatic/
-                  // blob/master/src/categorical/Set3.js
-                  "8dd3c7"
-                  "ffffb3"
-                  "bebada"
-                  "fb8072"
-                  "80b1d3"
-                  "fdb462"
-                  "b3de69"
-                  "fccde5"
-                  "d9d9d9"
-                  "bc80bd"
-                  "ccebc5"
-                  "ffed6f"
-#endif
-                  );
 
     double rows_per_plot = 10.0;
     const DemuxerSummary & summary = src->summary();
     plots.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
     plots.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
     plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    /*
-    plots.height_ = ItemRef::reference(style.row_height_,
-                                       rows_per_plot *
-                                       summary.timeline_.size());
-    */
-    const double spacing = 2.0;
-    Item * prev_prog = NULL;
 
+    Item * prev_prog = NULL;
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
       int prog_id = i->first;
       const Timeline & timeline = i->second;
-      std::size_t plot_index = 0;
 
       Item & prog = plots.addNew<Item>(str("prog_", prog_id).c_str());
       prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
@@ -3014,95 +3108,46 @@ namespace yae
       Item & psv_content = *(psv.content_);
 
       Text * prev_plot_tag = NULL;
+      std::size_t plot_index = 0;
+
+      // first video:
       for (Timeline::TTracks::const_iterator
              j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
       {
         const std::string & track_id = j->first;
+        if (!al::starts_with(track_id, "v:"))
+        {
+          continue;
+        }
+
         const Timeline::Track & track = j->second;
+        add_track_plots(view,
+                        tags,
+                        track_id,
+                        track,
+                        psv_content,
+                        prev_plot_tag,
+                        plot_index);
+      }
 
-        bool audio = al::starts_with(track_id, "a:");
-        bool video = al::starts_with(track_id, "v:");
-
-        if (audio || video)
+      // then everything except video:
+      for (Timeline::TTracks::const_iterator
+             j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        if (al::starts_with(track_id, "v:"))
         {
-          PlotItem & pkt_size = psv_content.
-            addNew<PlotItem>((track_id + ".pkt_size").c_str());
-          pkt_size.data_ = TDataSourcePtr(new PktSizeDataSource(track));
-          pkt_size.anchors_.fill(psv_content);
-          pkt_size.anchors_.right_.reset();
-          pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
-                                              spacing);
-          pkt_size.color_ = pick_color(gradient, plot_index);
-          pkt_size.range_ = size_range_;
-          size_range_->expand(pkt_size.data_->range());
-
-          prev_plot_tag = &add_plot_tag(style,
-                                        tags,
-                                        pkt_size,
-                                        "packet size, " + track_id,
-                                        prev_plot_tag);
-          plot_index++;
+          continue;
         }
-#if 0
-        if (audio)
-        {
-          PlotItem & pts_pts = psv_content.
-            addNew<PlotItem>((track_id + ".pts_pts").c_str());
-          pts_pts.data_ = TDataSourcePtr(new PtsPtsDataSource(track));
-          pts_pts.anchors_.fill(psv_content);
-          pts_pts.anchors_.right_.reset();
-          pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
-                                             spacing);
-          pts_pts.color_ = pick_color(gradient, plot_index);
-          pts_pts.range_ = time_range_;
-          time_range_->expand(pts_pts.data_->range());
 
-          prev_plot_tag = &add_plot_tag(style,
-                                        tags,
-                                        pts_pts,
-                                        "pts(i+1) - pts(i), " + track_id,
-                                        prev_plot_tag);
-          plot_index++;
-        }
-#endif
-        if (video)
-        {
-          PlotItem & pts_dts = psv_content.
-            addNew<PlotItem>((track_id + ".pts_dts").c_str());
-          pts_dts.data_ = TDataSourcePtr(new PtsDtsDataSource(track));
-          pts_dts.anchors_.fill(psv_content);
-          pts_dts.anchors_.right_.reset();
-          pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
-                                             spacing);
-          pts_dts.color_ = pick_color(gradient, plot_index);
-          pts_dts.range_ = time_range_;
-          time_range_->expand(pts_dts.data_->range());
-
-          prev_plot_tag = &add_plot_tag(style,
-                                        tags,
-                                        pts_dts,
-                                        "pts(i) - dts(i), " + track_id,
-                                        prev_plot_tag);
-          plot_index++;
-
-          PlotItem & dts_dts = psv_content.
-            addNew<PlotItem>((track_id + ".dts_dts").c_str());
-          dts_dts.data_ = TDataSourcePtr(new DtsDtsDataSource(track));
-          dts_dts.anchors_.fill(psv_content);
-          dts_dts.anchors_.right_.reset();
-          dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
-                                             spacing);
-          dts_dts.color_ = pick_color(gradient, plot_index);
-          dts_dts.range_ = time_range_;
-          time_range_->expand(dts_dts.data_->range());
-
-          prev_plot_tag = &add_plot_tag(style,
-                                        tags,
-                                        dts_dts,
-                                        "dts(i+1) - dts(i), " + track_id,
-                                        prev_plot_tag);
-          plot_index++;
-        }
+        const Timeline::Track & track = j->second;
+        add_track_plots(view,
+                        tags,
+                        track_id,
+                        track,
+                        psv_content,
+                        prev_plot_tag,
+                        plot_index);
       }
     }
 

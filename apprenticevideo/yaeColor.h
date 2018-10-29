@@ -335,6 +335,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // make_gradient
+  //
+  inline static TGradient
+  make_gradient(// d3.schemeCategory10 from
+                // https://github.com/d3/d3-scale-chromatic/
+                // blob/master/src/categorical/category10.js
+                const char * colors =
+                "1f77b4"
+                "ff7f0e"
+                "2ca02c"
+                "d62728"
+                "9467bd"
+                "8c564b"
+                "e377c2"
+                "7f7f7f"
+                "bcbd22"
+                "17becf")
+  {
+    TGradient g;
+    make_gradient(g, colors);
+    return g;
+  }
+
+  //----------------------------------------------------------------
   // get_ordinal
   //
   inline const Color & get_ordinal(const TGradient & g, std::size_t i)
