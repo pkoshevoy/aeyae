@@ -19,6 +19,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yae_plot_item.h"
 #include "yae_tab_rect.h"
 
 
@@ -2710,6 +2711,119 @@ namespace yae
     std::string name_;
   };
 
+
+  //----------------------------------------------------------------
+  // TrackDataSource
+  //
+  struct TrackDataSource : public TDataSource
+  {
+    TrackDataSource():
+      min_(std::numeric_limits<double>::max()),
+      max_(-std::numeric_limits<double>::max())
+    {}
+
+    // virtual:
+    std::size_t size() const
+    { return data_.size(); }
+
+    // virtual:
+    double get(std::size_t i) const
+    { return data_[i]; }
+
+    // virtual:
+    void get_range(double & min, double & max) const
+    {
+      min = min_;
+      max = max_;
+    }
+
+    std::vector<double> data_;
+    double min_;
+    double max_;
+  };
+
+  //----------------------------------------------------------------
+  // DtsDtsDataSource
+  //
+  // f(i) = dts(i+1) - dts(i), should be monotonically increasing
+  //
+  struct DtsDtsDataSource : public TrackDataSource
+  {
+    DtsDtsDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.dts_.size() - 1);
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = (track.dts_[i + 1] - track.dts_[i]).sec();
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // PtsPtsDataSource
+  //
+  // f(i) = pts(i+1) - pts(i), may be negative due to b-frames
+  //
+  struct PtsPtsDataSource : public TrackDataSource
+  {
+    PtsPtsDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.pts_.size() - 1);
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = (track.pts_[i + 1] - track.pts_[i]).sec();
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // PtsDtsDataSource
+  //
+  // f(i) = pts(i) - dts(i), must be non-negative, reveals b-frames
+  //
+  struct PtsDtsDataSource : public TrackDataSource
+  {
+    PtsDtsDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.dts_.size());
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = (track.pts_[i] - track.dts_[i]).sec();
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // PktSizeDataSource
+  //
+  struct PktSizeDataSource : public TrackDataSource
+  {
+    PktSizeDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.size_.size());
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = double(track.size_[i]);
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+
   //----------------------------------------------------------------
   // RemuxView::append_source
   //
@@ -2736,6 +2850,8 @@ namespace yae
 
     Item & item = ssv_content.addNew<Item>(name.c_str());
     Rectangle & bg = item.addNew<Rectangle>("bg");
+    Item & plots = item.addNew<Item>("plots");
+
     SourceItem & src_item = item.add(new SourceItem("src_item",
                                                     view,
                                                     name,
@@ -2755,8 +2871,54 @@ namespace yae
     bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
     bg.opacity_ = ItemRef::constant(0.25);
 
+    plots.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    plots.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+    plots.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+
     // const RemuxViewStyle & style = *(view.style());
     // item.margins_.set_top(ItemRef::reference(style.row_height_));
+
+    // setup the plots:
+    TGradient gradient;
+    make_gradient(gradient);
+
+    Scrollview & psv = layout_scrollview(view,
+                                         plots,
+                                         kScrollbarHorizontal);
+    Item & psv_content = *(psv.content_);
+
+    int plot_count = 0;
+    const DemuxerSummary & summary = src->summary();
+    for (std::map<int, Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      const Timeline & timeline = i->second;
+      for (Timeline::TTracks::const_iterator
+             j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        const Timeline::Track & track = j->second;
+
+        if (!al::starts_with(track_id, "v:"))
+        {
+          continue;
+        }
+
+        TDataSourcePtr pts_dts_data(new MockDataSource(4096, 0, 12));
+        PlotItem & pts_dts = psv_content.addNew<PlotItem>("pts_dts");
+        pts_dts.setData(pts_dts_data);
+        pts_dts.anchors_.fill(psv_content);
+        pts_dts.anchors_.right_.reset();
+        pts_dts.width_ = ItemRef::constant(pts_dts_data->size());
+
+        double t = (double(plot_count % gradient.size()) /
+                    double(gradient.size()));
+        pts_dts.color_ = ColorRef::constant(get_ordinal(gradient, t));
+
+        plot_count++;
+      }
+    }
 
     dataChanged();
   }

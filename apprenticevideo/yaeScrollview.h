@@ -272,6 +272,16 @@ namespace yae
                     Item & root,
                     ScrollbarId inset = kScrollbarNone,
                     bool clipContent = true);
+
+  //----------------------------------------------------------------
+  // layout_scrollview
+  //
+  YAE_API Scrollview &
+  layout_scrollview(ItemView & view,
+                    Item & root,
+                    ScrollbarId scroll = kScrollbarBoth,
+                    bool clipContent = true);
+
 }
 
 

@@ -622,4 +622,43 @@ namespace yae
 
     return sview;
   }
+
+  //----------------------------------------------------------------
+  // layout_scrollview
+  //
+  Scrollview &
+  layout_scrollview(ItemView & view,
+                    Item & root,
+                    ScrollbarId scroll,
+                    bool clipContent)
+  {
+    Scrollview & sview = root.
+      addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
+    sview.clipContent_ = clipContent;
+
+    sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
+    sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
+    sview.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
+    sview.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
+
+    Item & content = *(sview.content_);
+    content.anchors_.left_ = ItemRef::constant(0.0);
+    content.anchors_.top_ = ItemRef::constant(0.0);
+
+    if ((scroll & kScrollbarHorizontal) != kScrollbarHorizontal)
+    {
+      content.width_ = ItemRef::reference(sview, kPropertyWidth);
+    }
+
+    if ((scroll & kScrollbarVertical) != kScrollbarVertical)
+    {
+      content.height_ = ItemRef::reference(sview, kPropertyHeight);
+    }
+
+    FlickableArea & maScrollview =
+      sview.add(new FlickableArea("ma_sview", view));
+    maScrollview.anchors_.fill(sview);
+
+    return sview;
+  }
 }

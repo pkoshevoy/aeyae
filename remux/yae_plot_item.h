@@ -24,20 +24,59 @@ namespace yae
   {
     virtual ~IDataSource() {}
     virtual std::size_t size() const = 0;
-    virtual bool get(std::size_t i, TData & v) const = 0;
-    virtual bool get_range(TData & min, TData & max) const = 0;
+    virtual TData get(std::size_t i) const = 0;
+    virtual void get_range(TData & min, TData & max) const = 0;
+
+    inline TData operator[](std::size_t i) const
+    { return this->get(i); }
   };
 
 
   //----------------------------------------------------------------
   // TDataSource
   //
-  typedef IDataSource<double> TDataSource;
+  struct TDataSource : public IDataSource<double>
+  {
+    inline Segment range() const
+    {
+      double v[2];
+      get_range(v[0], v[1]);
+      return Segment(v[0], v[1] - v[0]);
+    }
+  };
 
   //----------------------------------------------------------------
   // TDataSourcePtr
   //
   typedef yae::shared_ptr<TDataSource> TDataSourcePtr;
+
+
+  //----------------------------------------------------------------
+  // MockDataSource
+  //
+  struct YAE_API MockDataSource : public TDataSource
+  {
+    MockDataSource(std::size_t n = 4096, double v_min = 0, double v_max = 1);
+
+    // virtual:
+    std::size_t size() const
+    { return data_.size(); }
+
+    // virtual:
+    double get(std::size_t i) const
+    { return data_[i]; }
+
+    // virtual:
+    void get_range(double & min, double & max) const
+    {
+      min = min_;
+      max = max_;
+    }
+
+    std::vector<double> data_;
+    double min_;
+    double max_;
+  };
 
 
   //----------------------------------------------------------------

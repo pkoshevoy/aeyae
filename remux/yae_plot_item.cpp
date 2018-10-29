@@ -7,7 +7,11 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // system:
+#include <limits>
 #include <math.h>
+
+// boost:
+#include <boost/random/mersenne_twister.hpp>
 
 // local:
 #include "yae_plot_item.h"
@@ -15,6 +19,31 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // MockDataSource::MockDataSource
+  //
+  MockDataSource::MockDataSource(std::size_t n, double v_min, double v_max):
+    min_(std::numeric_limits<double>::max()),
+    max_(-std::numeric_limits<double>::max())
+  {
+    static boost::random::mt11213b prng;
+
+    static const double prng_max =
+      std::numeric_limits<boost::random::mt11213b::result_type>::max();
+
+    const double v_rng = v_max - v_min;
+    const boost::random::mt11213b::result_type offset = prng();
+    data_.resize(n);
+    for (std::size_t i = 0; i < n; i++)
+    {
+      double v = v_min + v_rng * double((offset + i) % 640) / 640.0;
+      min_ = std::min<double>(min_, v);
+      max_ = std::max<double>(max_, v);
+      data_[i] = v;
+    }
+  }
+
 
   //----------------------------------------------------------------
   // PlotItem::Private
@@ -54,13 +83,7 @@ namespace yae
       return;
     }
 
-    double v_min = std::numeric_limits<double>::max();
-    double v_max = std::numeric_limits<double>::min();
-
-    if (!data.get_range(v_min, v_max))
-    {
-      return;
-    }
+    Segment range = data.range();
 
     BBox bbox;
     item_.Item::get(kPropertyBBox, bbox);
@@ -71,13 +94,29 @@ namespace yae
     double y1 = bbox.h_ + y0;
 
     ScaleLinear sx(0, sz, x0, x1);
-    ScaleLinear sy(v_min, v_max, y0, y1);
+    ScaleLinear sy(range.to_wcs(0.0),
+                   range.to_wcs(1.0),
+                   y1 - 1,
+                   y0 + 1);
 
     double r0 = xregion_.to_wcs(0.0);
     double r1 = xregion_.to_wcs(1.0);
 
-    std::size_t i0 = std::max<double>(0.0, sx.invert(r0));
-    std::size_t i1 = std::min<double>(sz, ceil(sx.invert(r1)));
+    // FIXME: should round the domain and range (at their magnitude)
+
+    std::size_t i0 = (std::size_t)(std::max<double>(0.0, sx.invert(r0)));
+    std::size_t i1 = (std::size_t)(std::min<double>(sz, ceil(sx.invert(r1))));
+
+    // this can be cached, and used as a VBO perhaps?
+    std::vector<TVec2D> points(i1 - i0);
+    for (std::size_t i = i0; i < i1; i++)
+    {
+      TVec2D & p = points[i - i0];
+
+      double v = data.get(i);
+      p.set_x(sx(i));
+      p.set_y(sy(v));
+    }
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glColor4ub(color.r(),
@@ -85,14 +124,11 @@ namespace yae
                           color.b(),
                           color.a()));
     YAE_OGL_11(glBegin(GL_LINE_STRIP));
-    for (std::size_t i = i0; i < i1; i++)
+    for (std::vector<TVec2D>::const_iterator
+           i = points.begin(); i != points.end(); ++i)
     {
-      double v = 0.0;
-      data.get(i, v);
-
-      double x = sx(i);
-      double y = sy(v);
-      YAE_OGL_11(glVertex2d(x, y));
+      const TVec2D & p = *i;
+      YAE_OGL_11(glVertex2d(p.x(), p.y()));
     }
     YAE_OGL_11(glEnd());
   }
@@ -103,7 +139,8 @@ namespace yae
   //
   PlotItem::PlotItem(const char * name, const TDataSourcePtr & data):
     Item(name),
-    private_(new PlotItem::Private(*this, data))
+    private_(new PlotItem::Private(*this, data)),
+    color_(ColorRef::constant(Color(0xff0000, 0.7)))
   {}
 
   //----------------------------------------------------------------
