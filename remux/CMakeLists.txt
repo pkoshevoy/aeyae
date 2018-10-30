@@ -85,7 +85,6 @@ set(project_moc_hxx
   yaeSpinnerView.h
 
   yae_player_item.h
-  yae_source_item.h
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
@@ -113,8 +112,6 @@ set(project_sources
 
   yae_player_item.cpp
   yae_player_item.h
-  yae_source_item.cpp
-  yae_source_item.h
 
   yae_checkbox_item.cpp
   yae_checkbox_item.h

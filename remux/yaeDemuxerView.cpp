@@ -19,6 +19,8 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yae_checkbox_item.h"
+#include "yae_input_proxy_item.h"
 #include "yae_plot_item.h"
 #include "yae_tab_rect.h"
 
@@ -2997,29 +2999,219 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // GetMax
+  // layout_source_item_track
   //
-  struct GetMax : TDoubleExpr
+  static Item &
+  layout_source_item_track(ItemView & view,
+                           Item & prog,
+                           const DemuxerSummary & summary,
+                           const std::string & track_id,
+                           const Timeline::Track & tt)
   {
-    GetMax(const ItemRef & a, const ItemRef & b):
-      a_(ItemRef::reference(a)),
-      b_(ItemRef::reference(b))
+    // shortcuts:
+    const ItemViewStyle & style = *(view.style());
+    TrackPtr track = yae::get(summary.decoders_, track_id);
+    const char * track_name = track ? track->getName() : NULL;
+    const char * track_lang = track ? track->getLang() : NULL;
+
+    std::ostringstream oss;
+    oss << track_id;
+
+    const char * codec_name = track ? track->getCodecName() : NULL;
+    if (codec_name)
     {
-      a_.disableCaching();
-      b_.disableCaching();
+      oss << ", " << codec_name;
     }
 
-    // virtual:
-    void evaluate(double & result) const
+    if (track_name)
     {
-      double a = a_.get();
-      double b = b_.get();
-      result = std::max(a, b);
+      oss << ", " << track_name;
     }
 
-    ItemRef a_;
-    ItemRef b_;
-  };
+    if (track_lang)
+    {
+      oss << " (" << track_lang << ")";
+    }
+
+    VideoTrackPtr video =
+      boost::dynamic_pointer_cast<VideoTrack, Track>(track);
+
+    if (video)
+    {
+      VideoTraits traits;
+      video->getTraits(traits);
+
+      double par = (traits.pixelAspectRatio_ != 0.0 &&
+                    traits.pixelAspectRatio_ != 1.0 ?
+                    traits.pixelAspectRatio_ : 1.0);
+      unsigned int w = (unsigned int)(0.5 + par * traits.visibleWidth_);
+      oss << ", " << w << " x " << traits.visibleHeight_
+          << ", " << traits.frameRate_ << " fps";
+    }
+
+    AudioTrackPtr audio =
+      boost::dynamic_pointer_cast<AudioTrack, Track>(track);
+
+    if (audio)
+    {
+      AudioTraits traits;
+      audio->getTraits(traits);
+
+      oss << ", " << traits.sampleRate_ << " Hz"
+          << ", " << int(traits.channelLayout_) << " channels";
+    }
+
+    Item & row = prog.addNew<Item>(str("track_", track_id).c_str());
+    row.height_ = ItemRef::reference(style.row_height_, 1);
+    row.margins_.set_left(ItemRef::reference(style.row_height_, 1));
+
+    CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+    cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+    cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+    cbox.height_ = ItemRef::reference(row.height_, 0.75);
+    cbox.width_ = cbox.height_;
+
+    Text & text = row.addNew<Text>("text");
+    text.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
+    text.margins_.set_left(ItemRef::reference(cbox, kPropertyWidth, 0.5));
+    text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+    text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
+    text.text_ = TVarRef::constant(TVar(oss.str().c_str()));
+
+    InputProxy & proxy = row.addNew<InputProxy>
+      (str("proxy_", track_id).c_str());
+    proxy.anchors_.left_ = ItemRef::reference(cbox, kPropertyLeft);
+    proxy.anchors_.right_ = ItemRef::reference(text, kPropertyRight);
+    proxy.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+    proxy.height_ = ItemRef::reference(row, kPropertyHeight);
+
+    proxy.ia_ = cbox.self_;
+
+    int track_focus_index = ItemFocus::singleton().getGroupOffset("sources");
+    ItemFocus::singleton().setFocusable(view,
+                                        proxy,
+                                        "sources",
+                                        track_focus_index);
+    return row;
+  }
+
+  //----------------------------------------------------------------
+  // layout_source_item_prog
+  //
+  static Item *
+  layout_source_item_prog(ItemView & view,
+                          Item & src_item,
+                          Item * prev_row,
+                          const std::string & src_name,
+                          const DemuxerSummary & summary,
+                          int prog_id,
+                          const Timeline & timeline,
+                          double min_rows = 0.0)
+  {
+    // shortcut:
+    const ItemViewStyle & style = *(view.style());
+    const TProgramInfo & program = yae::at(summary.programs_, prog_id);
+
+    bool multiprogram = summary.timeline_.size() > 1;
+    int num_rows = multiprogram ? 0 : 1;
+
+    Item & prog = src_item.addNew<Item>(str("prog_", prog_id).c_str());
+    prog.anchors_.top_ =
+      prev_row ?
+      ItemRef::reference(*prev_row, kPropertyBottom) :
+      ItemRef::reference(src_item, kPropertyTop);
+    prog.anchors_.left_ = ItemRef::reference(src_item, kPropertyLeft);
+    prog.margins_.set_left(ItemRef::reference(style.row_height_, 1));
+
+    // add source/program name row:
+    {
+      std::ostringstream oss;
+      oss << src_name;
+
+      if (multiprogram)
+      {
+        oss << ", program " << prog_id;
+
+        std::string prog_name = yae::get(program.metadata_, "service_name");
+        if (!prog_name.empty())
+        {
+          oss << ", " << prog_name;
+        }
+      }
+
+      Item & row = src_item.addNew<Item>("title_row");
+      row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
+      row.anchors_.top_ = ItemRef::reference(prog, kPropertyTop);
+      row.height_ = ItemRef::reference(style.row_height_);
+
+      Text & text = row.addNew<Text>("text");
+      text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+      text.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+      text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
+      QString title = QString::fromUtf8(oss.str().c_str());
+      text.text_ = TVarRef::constant(TVar(title));
+      prev_row = &row;
+    }
+
+    // first video:
+    for (std::map<std::string, Timeline::Track>::const_iterator
+           j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+    {
+      // shortcuts:
+      const std::string & track_id = j->first;
+      if (!al::starts_with(track_id, "v:"))
+      {
+        continue;
+      }
+
+      const Timeline::Track & track = j->second;
+      Item & row = layout_source_item_track(view,
+                                            prog,
+                                            summary,
+                                            track_id,
+                                            track);
+      row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
+      row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
+      num_rows++;
+      prev_row = &row;
+    }
+
+    // then everything except video:
+    for (std::map<std::string, Timeline::Track>::const_iterator
+           j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+    {
+      // shortcuts:
+      const std::string & track_id = j->first;
+      if (al::starts_with(track_id, "v:"))
+      {
+        continue;
+      }
+
+      const Timeline::Track & track = j->second;
+      Item & row = layout_source_item_track(view,
+                                            prog,
+                                            summary,
+                                            track_id,
+                                            track);
+      row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
+      row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
+      num_rows++;
+      prev_row = &row;
+    }
+
+    double padding_rows = min_rows - double(num_rows);
+    if (padding_rows > 0.0)
+    {
+      Item & spacer = src_item.addNew<Item>("spacer");
+      spacer.anchors_.left_ = ItemRef::constant(0);
+      spacer.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
+      spacer.height_ = ItemRef::reference(style.row_height_, padding_rows);
+      spacer.width_ = ItemRef::constant(0);
+      prev_row = &spacer;
+    }
+
+    return prev_row;
+  }
 
   //----------------------------------------------------------------
   // RemuxView::append_source
@@ -3047,59 +3239,53 @@ namespace yae
     Item & ssv_content = *(ssv.content_);
 
     Item & item = ssv_content.addNew<Item>(name.c_str());
-    Rectangle & bg = item.addNew<Rectangle>("bg");
-    Item & plots = item.addNew<Item>("plots");
-
-    SourceItem & src_item = item.add(new SourceItem("src_item",
-                                                    view,
-                                                    name,
-                                                    src));
-    src_item.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
-    src_item.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
-    src_item.layout();
-
     source_item_[name] = item.self_.lock();
     item.anchors_.left_ = ItemRef::reference(ssv_content, kPropertyLeft);
     item.anchors_.top_ = item.addExpr(new SourceItemTop(view, name));
 
-    bg.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
-    bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
-    bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    bg.anchors_.bottom_ = bg.
-      addExpr(new GetMax(ItemRef::reference(src_item, kPropertyBottom),
-                         ItemRef::reference(plots, kPropertyBottom)));
-    bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
-    bg.opacity_ = ItemRef::constant(0.25);
+    Rectangle & bg = item.addNew<Rectangle>("bg");
 
-    // const RemuxViewStyle & style = *(view.style());
-    // item.margins_.set_top(ItemRef::reference(style.row_height_));
-
-    // setup the plots:
-
-    double rows_per_plot = 10.0;
-    const DemuxerSummary & summary = src->summary();
+    Item & plots = item.addNew<Item>("plots");
     plots.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
     plots.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
     plots.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
 
-    Item * prev_prog = NULL;
+    Item & src_item = item.addNew<Item>("src_item");
+    src_item.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    src_item.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+
+    // layout the source name row:
+    Item * prev_row = NULL;
+
+    // layot the source programs and program track plots:
+    double rows_per_plot = 10.0;
+    const DemuxerSummary & summary = src->summary();
+
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
       int prog_id = i->first;
       const Timeline & timeline = i->second;
 
+      prev_row = layout_source_item_prog(view,
+                                         src_item,
+                                         prev_row,
+                                         name,
+                                         summary,
+                                         prog_id,
+                                         timeline,
+                                         rows_per_plot);
+
       Item & prog = plots.addNew<Item>(str("prog_", prog_id).c_str());
       prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
       prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-      prog.anchors_.top_ = prev_prog ?
-        ItemRef::reference(*prev_prog, kPropertyBottom) :
-        ItemRef::reference(item, kPropertyTop);
+      prog.anchors_.bottom_ = ItemRef::reference(*prev_row, kPropertyBottom);
       prog.height_ = ItemRef::reference(style.row_height_, rows_per_plot);
-      prev_prog = &prog;
 
       Item & tags = plots.addNew<Item>(str("tags_", prog_id).c_str());
       tags.anchors_.fill(prog);
+      tags.margins_.set_top(ItemRef::reference(style.row_height_, 0.33));
+      tags.margins_.set_right(ItemRef::reference(style.row_height_, 0.67));
 
       Scrollview & psv = layout_scrollview(view,
                                            prog,
@@ -3150,6 +3336,14 @@ namespace yae
                         plot_index);
       }
     }
+
+    // setup source background:
+    bg.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+    bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
+    bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+    bg.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+    bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
+    bg.opacity_ = ItemRef::constant(0.25);
 
     dataChanged();
   }

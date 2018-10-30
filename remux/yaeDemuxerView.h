@@ -27,7 +27,6 @@
 
 // local:
 #include "yae_player_item.h"
-#include "yae_source_item.h"
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
