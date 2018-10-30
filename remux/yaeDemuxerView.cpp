@@ -3183,7 +3183,8 @@ namespace yae
     {
       // shortcuts:
       const std::string & track_id = j->first;
-      if (al::starts_with(track_id, "v:"))
+      if (al::starts_with(track_id, "v:") ||
+          al::starts_with(track_id, "_:"))
       {
         continue;
       }
@@ -3316,7 +3317,7 @@ namespace yae
                         prev_plot_tag,
                         plot_index);
       }
-
+#if 1
       // then everything except video:
       for (Timeline::TTracks::const_iterator
              j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
@@ -3336,6 +3337,7 @@ namespace yae
                         prev_plot_tag,
                         plot_index);
       }
+#endif
     }
 
     // setup source background:
