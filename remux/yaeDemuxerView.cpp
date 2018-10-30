@@ -3112,9 +3112,6 @@ namespace yae
     const ItemViewStyle & style = *(view.style());
     const TProgramInfo & program = yae::at(summary.programs_, prog_id);
 
-    bool multiprogram = summary.timeline_.size() > 1;
-    int num_rows = multiprogram ? 0 : 1;
-
     Item & prog = src_item.addNew<Item>(str("prog_", prog_id).c_str());
     prog.anchors_.top_ =
       prev_row ?
@@ -3123,12 +3120,15 @@ namespace yae
     prog.anchors_.left_ = ItemRef::reference(src_item, kPropertyLeft);
     prog.margins_.set_left(ItemRef::reference(style.row_height_, 1));
 
+    // keep track of number of rows:
+    int num_rows = 0;
+
     // add source/program name row:
     {
       std::ostringstream oss;
       oss << src_name;
 
-      if (multiprogram)
+      if (summary.timeline_.size() > 1)
       {
         oss << ", program " << prog_id;
 
@@ -3150,6 +3150,7 @@ namespace yae
       text.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
       QString title = QString::fromUtf8(oss.str().c_str());
       text.text_ = TVarRef::constant(TVar(title));
+      num_rows++;
       prev_row = &row;
     }
 
