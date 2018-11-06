@@ -2840,17 +2840,70 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TogglePlot
+  //
+  struct TogglePlot : public InputArea
+  {
+    TogglePlot(const char * id,
+               ItemView & view,
+               PlotItem & plot):
+      InputArea(id),
+      view_(view),
+      plot_(plot)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      bool visible = plot_.visible_.get();
+      plot_.visible_ = BoolRef::constant(!visible);
+      view_.requestUncache(&plot_);
+      view_.requestRepaint();
+      return true;
+    }
+
+    ItemView & view_;
+    PlotItem & plot_;
+  };
+
+  //----------------------------------------------------------------
+  // PlotOpacity
+  //
+  struct PlotOpacity : public TDoubleExpr
+  {
+    PlotOpacity(const PlotItem & plot):
+      plot_(plot)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      bool visible = plot_.visible_.get();
+      result = visible ? 1.0 : 0.3;
+    }
+
+    const PlotItem & plot_;
+  };
+
+  //----------------------------------------------------------------
   // add_plot_tag
   //
   static Text &
-  add_plot_tag(const ItemViewStyle & style,
+  add_plot_tag(RemuxView & view,
                Item & item,
-               const PlotItem & plot,
+               PlotItem & plot,
                const std::string & label,
                Text * prev_tag = NULL)
   {
+    const RemuxViewStyle & style = *view.style();
+
     Text & tag = item.addNew<Text>((plot.id_ + ".tag").c_str());
-    // tag.font_ = style.font_large_;
     tag.anchors_.top_ = prev_tag ?
       ItemRef::reference(*prev_tag, kPropertyBottom, 1, 5) :
       ItemRef::reference(item, kPropertyTop, 1, 5);
@@ -2859,6 +2912,12 @@ namespace yae
     tag.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
     tag.elide_ = Qt::ElideNone;
     tag.color_ = ColorRef::reference(plot, kPropertyColor);
+    tag.opacity_  = tag.addExpr(new PlotOpacity(plot));
+
+    TogglePlot & toggle = item.
+      add(new TogglePlot((plot.id_ + ".toggle").c_str(), view, plot));
+    toggle.anchors_.fill(tag);
+
     return tag;
   }
 
@@ -2914,9 +2973,7 @@ namespace yae
     bool audio = al::starts_with(track_id, "a:");
     bool video = al::starts_with(track_id, "v:");
 
-    const RemuxViewStyle & style = *view.style();
-
-    if (audio || video)
+    if (/* audio || */ video)
     {
       PlotItem & pkt_size = sv_content.
         addNew<PlotItem>((track_id + ".pkt_size").c_str());
@@ -2929,7 +2986,7 @@ namespace yae
       pkt_size.range_ = view.size_range_;
       view.size_range_->expand(pkt_size.data_->range());
 
-      prev_plot_tag = &add_plot_tag(style,
+      prev_plot_tag = &add_plot_tag(view,
                                     tags,
                                     pkt_size,
                                     "packet size, " + track_id,
@@ -2950,7 +3007,7 @@ namespace yae
       pts_pts.range_ = view.time_range_;
       view.time_range_->expand(pts_pts.data_->range());
 
-      prev_plot_tag = &add_plot_tag(style,
+      prev_plot_tag = &add_plot_tag(view,
                                     tags,
                                     pts_pts,
                                     "pts(i+1) - pts(i), " + track_id,
@@ -2971,7 +3028,7 @@ namespace yae
       pts_dts.range_ = view.time_range_;
       view.time_range_->expand(pts_dts.data_->range());
 
-      prev_plot_tag = &add_plot_tag(style,
+      prev_plot_tag = &add_plot_tag(view,
                                     tags,
                                     pts_dts,
                                     "pts(i) - dts(i), " + track_id,
@@ -2989,7 +3046,7 @@ namespace yae
       dts_dts.range_ = view.time_range_;
       view.time_range_->expand(dts_dts.data_->range());
 
-      prev_plot_tag = &add_plot_tag(style,
+      prev_plot_tag = &add_plot_tag(view,
                                     tags,
                                     dts_dts,
                                     "dts(i+1) - dts(i), " + track_id,
