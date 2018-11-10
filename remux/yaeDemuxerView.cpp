@@ -3501,6 +3501,8 @@ namespace yae
   static void
   prune(RemuxModel & model, RemuxView & view)
   {
+    AsyncTaskQueue::Pause pause(async_task_queue());
+
     std::set<TDemuxerInterfacePtr> set_of_demuxers;
     for (std::vector<TClipPtr>::const_iterator i = model.clips_.begin();
          i != model.clips_.end(); ++i)

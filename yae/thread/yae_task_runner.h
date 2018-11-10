@@ -127,6 +127,32 @@ namespace yae
                    TCallback callback = NULL,
                    void * context = NULL);
 
+    void pause();
+    void resume();
+
+    //----------------------------------------------------------------
+    // Pause
+    //
+    struct Pause
+    {
+      Pause(AsyncTaskQueue & q):
+        q_(q)
+      {
+        q_.pause();
+      }
+
+      ~Pause()
+      {
+        q_.resume();
+      }
+
+    private:
+      Pause(const Pause &);
+      Pause & operator = (const Pause &);
+
+      AsyncTaskQueue & q_;
+    };
+
   protected:
     // intentionally disabled:
     AsyncTaskQueue(const AsyncTaskQueue &);

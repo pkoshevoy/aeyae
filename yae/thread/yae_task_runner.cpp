@@ -207,7 +207,10 @@ namespace yae
       void * context_;
     };
 
-    Private()
+    Private():
+      stop_(false),
+      pause_(false),
+      paused_(false)
     {
       thread_.setContext(this);
       thread_.run();
@@ -215,8 +218,34 @@ namespace yae
 
     ~Private()
     {
+      // attempt a graceful shutdown:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        stop_ = true;
+        signal_.notify_all();
+      }
+
       thread_.stop();
       thread_.wait();
+    }
+
+    void pause()
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      pause_ = true;
+      signal_.notify_all();
+
+      while (!paused_)
+      {
+        signal_.wait(lock);
+      }
+    }
+
+    void resume()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      pause_ = false;
+      signal_.notify_all();
     }
 
     void push_front(const TaskPtr & task, TCallback callback, void * context)
@@ -235,19 +264,36 @@ namespace yae
 
     void threadLoop()
     {
-      while (true)
+      while (!stop_)
       {
         // wait for work:
         boost::unique_lock<boost::mutex> lock(mutex_);
-        while (todo_.empty())
+        while (!stop_ && todo_.empty())
         {
           // sleep until there is at least one task in the queue:
+          paused_ = true;
+          signal_.notify_all();
           signal_.wait(lock);
           boost::this_thread::interruption_point();
         }
 
-        while (!todo_.empty())
+        paused_ = false;
+        signal_.notify_all();
+
+        while (!stop_ && !todo_.empty())
         {
+          while (!stop_ && pause_)
+          {
+            // sleep until processing is resumed:
+            paused_ = true;
+            signal_.notify_all();
+            signal_.wait(lock);
+            boost::this_thread::interruption_point();
+          }
+
+          paused_ = false;
+          signal_.notify_all();
+
           Todo todo = todo_.front();
           todo_.pop_front();
 
@@ -292,6 +338,9 @@ namespace yae
     std::list<Todo> todo_;
     boost::condition_variable signal_;
     Thread<AsyncTaskQueue::Private> thread_;
+    bool stop_;
+    bool pause_;
+    bool paused_;
   };
 
 
@@ -330,6 +379,24 @@ namespace yae
                              void * context)
   {
     private_->push_back(task, callback, context);
+  }
+
+  //----------------------------------------------------------------
+  // AsyncTaskQueue::pause
+  //
+  void
+  AsyncTaskQueue::pause()
+  {
+    private_->pause();
+  }
+
+  //----------------------------------------------------------------
+  // AsyncTaskQueue::resume
+  //
+  void
+  AsyncTaskQueue::resume()
+  {
+    private_->resume();
   }
 
 }
