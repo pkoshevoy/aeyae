@@ -703,6 +703,9 @@ namespace yae
     inline std::size_t get_curr() const
     { return curr_; }
 
+    inline bool has_program(int prog_id) const
+    { return yae::has(t0_, prog_id); }
+
   protected:
     std::vector<TDemuxerInterfacePtr> src_;
     std::map<int, std::vector<TTime> > t0_;
