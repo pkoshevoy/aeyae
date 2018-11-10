@@ -1670,6 +1670,11 @@ namespace yae
   TTime
   frameDurationForFrameRate(double fps)
   {
+    if (fps == std::numeric_limits<double>::infinity())
+    {
+      return TTime(0, 1);
+    }
+
     double frameDuration = 1000000.0;
     double frac = ceil(fps) - fps;
 

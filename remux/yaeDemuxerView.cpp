@@ -4068,7 +4068,7 @@ namespace yae
           playhead_.src_dts_ = TTime(0, 1);
         }
 
-        if (serial_demuxer_)
+        if (serial_demuxer_ && playhead_.pts_.valid())
         {
           serial_demuxer_->map_to_output(playhead_.prog_id_,
                                          playhead_src,
