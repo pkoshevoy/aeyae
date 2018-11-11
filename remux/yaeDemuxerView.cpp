@@ -3346,11 +3346,15 @@ namespace yae
       tags.margins_.set_top(ItemRef::reference(style.row_height_, 0.33));
       tags.margins_.set_right(ItemRef::reference(style.row_height_, 0.67));
 
-      Scrollview & psv = layout_scrollview(view,
+      Scrollview & psv = layout_scrollview(kScrollbarHorizontal,
+                                           view,
+                                           style,
                                            prog,
-                                           kScrollbarHorizontal,
+                                           // kScrollbarHorizontal,
+                                           kScrollbarNone,
                                            false); // no clipping
       Item & psv_content = *(psv.content_);
+      psv_content.height_ = ItemRef::reference(psv, kPropertyHeight);
 
       Text * prev_plot_tag = NULL;
       std::size_t plot_index = 0;

@@ -391,7 +391,7 @@ namespace yae
 
       // these are expressed in seconds:
       static const double buffer_duration = 1.0;
-      static const double discont_tolerance = 0.017;
+      static const double discont_tolerance = 0.1;
 
       // wrap each demuxer in a DemuxerBuffer, build a summary:
       for (std::list<TDemuxerPtr>::const_iterator

@@ -483,10 +483,10 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const = 0;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017) = 0;
+                           double tolerance = 0.1) = 0;
 
     // helpers:
-    inline const DemuxerSummary & update_summary(double tolerance = 0.017)
+    inline const DemuxerSummary & update_summary(double tolerance = 0.1)
     {
       TDemuxerSummaryPtr summary(new DemuxerSummary);
       this->summarize(*summary, tolerance);
@@ -534,7 +534,7 @@ namespace yae
   YAE_API void
   summarize(DemuxerInterface & demuxer,
             DemuxerSummary & summary,
-            double tolerance = 0.017);
+            double tolerance = 0.1);
 
 
   //----------------------------------------------------------------
@@ -566,7 +566,7 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017);
+                           double tolerance = 0.1);
 
   protected:
     PacketBuffer src_;
@@ -604,7 +604,7 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017);
+                           double tolerance = 0.1);
 
   protected:
     std::list<TDemuxerInterfacePtr> src_;
@@ -624,7 +624,7 @@ namespace yae
                    std::map<std::string, const AVStream *> & streams,
                    std::map<std::string, FramerateEstimator> & fps,
                    std::map<int, Timeline> & programs,
-                   double tolerance = 0.017);
+                   double tolerance = 0.1);
 
   //----------------------------------------------------------------
   // remux
@@ -667,7 +667,7 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017);
+                           double tolerance = 0.1);
 
     // find the source corresponding to the given program/time:
     std::size_t find(const TTime & seek_time, int prog_id) const;
@@ -760,7 +760,7 @@ namespace yae
     virtual TPacketPtr peek(AVStream *& src) const;
 
     virtual void summarize(DemuxerSummary & summary,
-                           double tolerance = 0.017);
+                           double tolerance = 0.1);
 
     //----------------------------------------------------------------
     // Trim
