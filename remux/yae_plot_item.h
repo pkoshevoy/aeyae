@@ -108,6 +108,9 @@ namespace yae
 
     // transform input domain point to output range point:
     inline double operator()(double domain_pt) const
+    { return this->get(domain_pt); }
+
+    inline double get(double domain_pt) const
     { return range_.to_wcs(domain_.to_lcs(domain_pt)); }
 
     // transform output range point to input domain point:

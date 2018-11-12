@@ -157,6 +157,11 @@ namespace yae
     ColorRef background_;
   };
 
+  //----------------------------------------------------------------
+  // TTextPtr
+  //
+  typedef yae::shared_ptr<Text, Item> TTextPtr;
+
 }
 
 

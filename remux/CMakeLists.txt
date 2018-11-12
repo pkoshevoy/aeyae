@@ -113,6 +113,8 @@ set(project_sources
   yae_player_item.cpp
   yae_player_item.h
 
+  yae_axis_item.cpp
+  yae_axis_item.h
   yae_checkbox_item.cpp
   yae_checkbox_item.h
   yae_input_proxy_item.cpp

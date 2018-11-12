@@ -19,6 +19,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yae_axis_item.h"
 #include "yae_checkbox_item.h"
 #include "yae_input_proxy_item.h"
 #include "yae_plot_item.h"
@@ -2922,6 +2923,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // kPlotVertexSpacing
+  //
+  static const double kPlotVertexSpacing = 2.0;
+
+  //----------------------------------------------------------------
   // add_track_plots
   //
   static void
@@ -2969,7 +2975,6 @@ namespace yae
 #endif
        );
 
-    static const double spacing = 2.0;
     bool audio = al::starts_with(track_id, "a:");
     bool video = al::starts_with(track_id, "v:");
 
@@ -2981,7 +2986,7 @@ namespace yae
       pkt_size.anchors_.fill(sv_content);
       pkt_size.anchors_.right_.reset();
       pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
-                                          spacing);
+                                          kPlotVertexSpacing);
       pkt_size.color_ = pick_color(gradient, plot_index);
       pkt_size.range_ = view.size_range_;
       view.size_range_->expand(pkt_size.data_->range());
@@ -3002,7 +3007,7 @@ namespace yae
       pts_pts.anchors_.fill(sv_content);
       pts_pts.anchors_.right_.reset();
       pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
-                                         spacing);
+                                         kPlotVertexSpacing);
       pts_pts.color_ = pick_color(gradient, plot_index);
       pts_pts.range_ = view.time_range_;
       view.time_range_->expand(pts_pts.data_->range());
@@ -3023,7 +3028,7 @@ namespace yae
       pts_dts.anchors_.fill(sv_content);
       pts_dts.anchors_.right_.reset();
       pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
-                                         spacing);
+                                         kPlotVertexSpacing);
       pts_dts.color_ = pick_color(gradient, plot_index);
       pts_dts.range_ = view.time_range_;
       view.time_range_->expand(pts_dts.data_->range());
@@ -3041,7 +3046,7 @@ namespace yae
       dts_dts.anchors_.fill(sv_content);
       dts_dts.anchors_.right_.reset();
       dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
-                                         spacing);
+                                         kPlotVertexSpacing);
       dts_dts.color_ = pick_color(gradient, plot_index);
       dts_dts.range_ = view.time_range_;
       view.time_range_->expand(dts_dts.data_->range());
@@ -3335,7 +3340,8 @@ namespace yae
                                          timeline,
                                          rows_per_plot);
 
-      Item & prog = plots.addNew<Item>(str("prog_", prog_id).c_str());
+      std::string prog_str = str("prog_", prog_id);
+      Item & prog = plots.addNew<Item>(prog_str.c_str());
       prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
       prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
       prog.anchors_.bottom_ = ItemRef::reference(*prev_row, kPropertyBottom);
@@ -3358,6 +3364,7 @@ namespace yae
 
       Text * prev_plot_tag = NULL;
       std::size_t plot_index = 0;
+      std::size_t max_points = 0;
 
       // first video:
       for (Timeline::TTracks::const_iterator
@@ -3370,6 +3377,8 @@ namespace yae
         }
 
         const Timeline::Track & track = j->second;
+        max_points = std::max(max_points, track.dts_.size());
+
         add_track_plots(view,
                         tags,
                         track_id,
@@ -3390,6 +3399,8 @@ namespace yae
         }
 
         const Timeline::Track & track = j->second;
+        // max_points = std::max(max_points, track.dts_.size());
+
         add_track_plots(view,
                         tags,
                         track_id,
@@ -3399,6 +3410,12 @@ namespace yae
                         plot_index);
       }
 #endif
+
+      AxisItem & x_axis = psv_content.addNew<AxisItem>("x_axis");
+      x_axis.anchors_.fill(psv_content);
+      x_axis.anchors_.right_.reset();
+      x_axis.width_ = ItemRef::constant(max_points * kPlotVertexSpacing);
+      x_axis.t1_ = ItemRef::constant(max_points);
     }
 
     // setup source background:
