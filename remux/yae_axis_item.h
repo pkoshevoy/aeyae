@@ -32,6 +32,7 @@ namespace yae
 
     // virtual:
     void paintContent() const;
+    void unpaintContent() const;
 
     // virtual:
     bool paint(const Segment & xregion,
@@ -63,6 +64,9 @@ namespace yae
 
     // label every tickmark[i] where (i mod n == 0):
     ItemRef mark_n_;
+
+    ItemRef font_size_; // in points
+    QFont font_;
   };
 
 }

@@ -28,12 +28,13 @@ namespace yae
     {}
 
     void paint();
+    void unpaint();
 
     AxisItem & item_;
     Segment xregion_;
     Segment yregion_;
 
-    std::map<double, TTextPtr> labels_;
+    std::map<int, TTextPtr> labels_;
   };
 
   //----------------------------------------------------------------
@@ -86,8 +87,55 @@ namespace yae
     YAE_OGL_11(glEnd());
 
     // draw tickmark labels:
+    int i00 = i0 - (i0 % mod_n);
+    int i11 = i1 - (i1 % mod_n);
 
-    // FIXME: pkoshevoy: write me!
+    for (std::size_t i = i00; i <= i11; i += mod_n)
+    {
+      double t = t0 + double(i) * dt;
+      double x = round(sx.get(t));
+
+      TTextPtr & p = labels_[i];
+      if (!p)
+      {
+        p.reset(new Text(str("label_", i).c_str()));
+        Text & text = *p;
+        text.anchors_.left_ = ItemRef::constant(x + 3);
+        text.anchors_.top_ = ItemRef::constant(y1);
+        text.elide_ = Qt::ElideNone;
+        text.fontSize_ = ItemRef::reference(item_.font_size_);
+        text.font_ = item_.font_;
+
+        // FIXME: this should have a delegate:
+        text.text_ = TVarRef::constant(TVar(QString::number(i * dt)));
+      }
+
+      p->paintContent();
+    }
+
+    // prune offscreen labels:
+    if (!labels_.empty())
+    {
+      for (int i = labels_.begin()->first; i < i00; i += mod_n)
+      {
+        labels_.erase(i);
+      }
+
+      for (int i = i11 + mod_n, end = labels_.rbegin()->first;
+           i <= end; i += mod_n)
+      {
+        labels_.erase(i);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AxisItem::Private::unpaint
+  //
+  void
+  AxisItem::Private::unpaint()
+  {
+    labels_.clear();
   }
 
 
@@ -102,7 +150,9 @@ namespace yae
     t1_(ItemRef::constant(10000)),
     tick_dt_(ItemRef::constant(25)),
     mark_n_(ItemRef::constant(4))
-  {}
+  {
+    font_size_ = ItemRef::constant(font_.pointSizeF());
+  }
 
   //----------------------------------------------------------------
   // AxisItem::~AxisItem
@@ -119,6 +169,11 @@ namespace yae
   AxisItem::uncache()
   {
     color_.uncache();
+    t0_.uncache();
+    t1_.uncache();
+    tick_dt_.uncache();
+    mark_n_.uncache();
+    font_size_.uncache();
     Item::uncache();
   }
 
@@ -129,6 +184,15 @@ namespace yae
   AxisItem::paintContent() const
   {
     private_->paint();
+  }
+
+  //----------------------------------------------------------------
+  // AxisItem::unpaintContent
+  //
+  void
+  AxisItem::unpaintContent() const
+  {
+    private_->unpaint();
   }
 
   //----------------------------------------------------------------

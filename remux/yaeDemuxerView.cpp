@@ -3416,6 +3416,7 @@ namespace yae
       x_axis.anchors_.right_.reset();
       x_axis.width_ = ItemRef::constant(max_points * kPlotVertexSpacing);
       x_axis.t1_ = ItemRef::constant(max_points);
+      x_axis.font_size_ = ItemRef::reference(style.row_height_, 0.2875);
     }
 
     // setup source background:
