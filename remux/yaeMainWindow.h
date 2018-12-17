@@ -74,6 +74,7 @@ namespace yae
     ~MainWindow();
 
     void initCanvasWidget();
+    void initItemViews();
 
     // accessor to the player widget:
     inline TCanvasWidget * canvasWidget() const

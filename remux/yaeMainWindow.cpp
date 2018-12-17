@@ -143,19 +143,6 @@ namespace yae
     view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
     view_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
-    canvasWidget_->append(&view_);
-
-    view_.setModel(&model_);
-    view_.setEnabled(true);
-    view_.layoutChanged();
-
-    spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
-
-    canvasWidget_->append(&spinner_);
-    spinner_.setStyle(view_.style());
-    spinner_.setEnabled(false);
-
     canvasWidget_->setFocusPolicy(Qt::StrongFocus);
     canvasWidget_->setAcceptDrops(true);
 
@@ -266,6 +253,26 @@ namespace yae
     // get a shortcut to the Canvas (owned by the QML canvas widget):
     canvas_ = canvasWidget_;
     YAE_ASSERT(canvas_);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::initItemViews
+  //
+  void
+  MainWindow::initItemViews()
+  {
+    canvasWidget_->append(&view_);
+
+    view_.setModel(&model_);
+    view_.setEnabled(true);
+    view_.layoutChanged();
+
+    spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
+
+    canvasWidget_->append(&spinner_);
+    spinner_.setStyle(view_.style());
+    spinner_.setEnabled(false);
   }
 
   //----------------------------------------------------------------

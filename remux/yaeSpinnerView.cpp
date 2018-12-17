@@ -195,6 +195,8 @@ namespace yae
       return;
     }
 
+    TMakeCurrentContext currentContext(*context());
+
     if (!enable && animator_)
     {
       delAnimator(animator_);
