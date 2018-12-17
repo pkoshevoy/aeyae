@@ -148,6 +148,8 @@ namespace yae
     layer->setContext(context_);
     layer->setDelegate(delegate_);
     layers_.push_back(layer);
+    layer->resizeTo(this);
+    layer->requestRepaint();
   }
 
   //----------------------------------------------------------------

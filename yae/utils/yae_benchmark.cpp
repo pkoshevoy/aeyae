@@ -572,6 +572,165 @@ namespace yae
   }
 
 
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  std::ostream &
+  operator << (std::ostream & os, const StackFrame & f)
+  {
+    os << std::right << std::setw(18) << std::setfill(' ') << f.address_
+       << ' ' << f.func_ << " + " << f.offset_;
+    return os;
+  }
+
+  //----------------------------------------------------------------
+  // demangle
+  //
+  void
+  demangle(StackFrame & frame, const char * line)
+  {
+#ifdef __APPLE__
+    std::istringstream iss(line);
+    int index = std::numeric_limits<int>::min();
+    std::string symbol;
+    std::string plus;
+    iss >> index
+        >> frame.module_
+        >> frame.address_
+        >> frame.func_
+        >> plus
+        >> frame.offset_;
+
+    int status = 0;
+    char * name = abi::__cxa_demangle(frame.func_.c_str(),
+                                      0, 0, &status);
+    if (status == 0 && name)
+    {
+      frame.func_ = name;
+      free(name);
+    }
+#else
+    // NOTE: it may be possible to convert symbol + offset
+    // to a file line number, using libbfd -- https://en.wikibooks.org/wiki/
+    // Linux_Applications_Debugging_Techniques/The_call_stack
+
+    const char * module = line;
+    const char * symbol = NULL;
+    const char * offset = NULL;
+    const char * address = NULL;
+
+    for (const char * i = line; i && *i; ++i)
+    {
+      if (*i == '(')
+      {
+        if (module < i)
+        {
+          frame.module_.assign(module, i);
+        }
+
+        symbol = i + 1;
+      }
+      else if (*i == '+')
+      {
+        if (symbol && symbol < i)
+        {
+          frame.func_.assign(symbol, i);
+          int status = 0;
+          char * name = abi::__cxa_demangle(frame.func_.c_str(),
+                                            0, 0, &status);
+          if (status == 0 && name)
+          {
+            frame.func_ = name;
+            free(name);
+          }
+        }
+
+        offset = i + 1;
+      }
+      else if (*i == ')')
+      {
+        if (offset && offset < i)
+        {
+          frame.offset_.assign(offset, i);
+        }
+      }
+      else if (*i == '[')
+      {
+        address = i + 1;
+      }
+      else if (*i == ']')
+      {
+        if (address && address < i)
+        {
+          frame.address_.assign(address, i);
+        }
+      }
+    }
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // capture_backtrace
+  //
+  void
+  capture_backtrace(std::list<StackFrame> & bt, std::size_t offset)
+  {
+    void * frames[100] = { NULL };
+    std::size_t num_frames = backtrace(frames, sizeof(frames) / sizeof(void *));
+    char ** symbols = backtrace_symbols(frames, num_frames);
+
+    for (std::size_t i = offset; i < num_frames; i++)
+    {
+      bt.push_back(StackFrame());
+      StackFrame & f = bt.back();
+      demangle(f, symbols[i]);
+    }
+
+    free(symbols);
+  }
+
+  //----------------------------------------------------------------
+  // dump
+  //
+  std::ostream &
+  dump(std::ostream & os, const std::list<StackFrame> & backtrace)
+  {
+    for (std::list<StackFrame>::const_iterator i = backtrace.begin();
+         i != backtrace.end(); ++i)
+    {
+      const StackFrame & f = *i;
+      os << f << "\n";
+    }
+
+    return os;
+  }
+
+  //----------------------------------------------------------------
+  // dump_stacktrace
+  //
+  std::ostream &
+  dump_stacktrace(std::ostream & os)
+  {
+    std::list<StackFrame> backtrace;
+    capture_backtrace(backtrace);
+    dump(os, backtrace);
+    return os;
+  }
+
+  //----------------------------------------------------------------
+  // get_stacktrace_str
+  //
+  std::string
+  get_stacktrace_str()
+  {
+    std::list<StackFrame> backtrace;
+    capture_backtrace(backtrace);
+    std::ostringstream oss;
+    dump(oss, backtrace);
+    std::string bt(oss.str().c_str());
+    return bt;
+  }
+
 #ifdef YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
   //----------------------------------------------------------------
   // TFootprint::Private
@@ -683,99 +842,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // StackFrame
-  //
-  struct StackFrame
-  {
-    std::string module_;
-    std::string func_;
-    std::string offset_;
-    std::string address_;
-  };
-
-  //----------------------------------------------------------------
-  // demangle
-  //
-  static void
-  demangle(StackFrame & frame, const char * line)
-  {
-    const char * module = line;
-    const char * symbol = NULL;
-    const char * offset = NULL;
-    const char * address = NULL;
-
-    for (const char * i = line; i && *i; ++i)
-    {
-      if (*i == '(')
-      {
-        if (module < i)
-        {
-          frame.module_.assign(module, i);
-        }
-
-        symbol = i + 1;
-      }
-      else if (*i == '+')
-      {
-        if (symbol && symbol < i)
-        {
-          frame.func_.assign(symbol, i);
-          int status = 0;
-          char * name = abi::__cxa_demangle(frame.func_.c_str(),
-                                            0, 0, &status);
-          if (status == 0 && name)
-          {
-            frame.func_ = name;
-            free(name);
-          }
-        }
-
-        offset = i + 1;
-      }
-      else if (*i == ')')
-      {
-        if (offset && offset < i)
-        {
-          frame.offset_.assign(offset, i);
-        }
-      }
-      else if (*i == '[')
-      {
-        address = i + 1;
-      }
-      else if (*i == ']')
-      {
-        if (address && address < i)
-        {
-          frame.address_.assign(address, i);
-        }
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
   // TFootprint::Private::capture_backtrace
   //
   void
   TFootprint::Private::capture_backtrace()
   {
-    void * frames[100] = { NULL };
-    std::size_t num_frames = backtrace(frames, sizeof(frames) / sizeof(void *));
-    char ** symbols = backtrace_symbols(frames, num_frames);
-
-    std::ostringstream oss;
-    for (std::size_t i = 2; i < num_frames; i++)
-    {
-      StackFrame f;
-      demangle(f, symbols[i]);
-      oss << std::right << std::setw(18) << std::setfill(' ') << f.address_
-          << ' ' << f.func_ << "\n";
-    }
-
-    free(symbols);
-
-    std::string bt(oss.str().c_str());
-    bt_.push_back(bt);
+    bt_.push_back(yae::get_stacktrace_str());
   }
 
   //----------------------------------------------------------------
