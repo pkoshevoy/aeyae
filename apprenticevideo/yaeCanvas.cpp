@@ -734,6 +734,7 @@ namespace yae
   {
     yae::paint_checker_board(canvas_x, canvas_y, canvas_w, canvas_h);
 
+    YAE_OGL_11_HERE();
     YAE_OGL_11(glEnable(GL_BLEND));
     YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 
@@ -796,6 +797,7 @@ namespace yae
       if (overlay_ && overlay_->pixelTraits())
       {
         TGLSaveState restore_state(GL_ENABLE_BIT);
+        YAE_OGL_11_HERE();
         YAE_OGL_11(glEnable(GL_BLEND));
         YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
 

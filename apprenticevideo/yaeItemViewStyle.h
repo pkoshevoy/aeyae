@@ -22,7 +22,7 @@ namespace yae
 {
 
   // forward declarations:
-  struct ItemView;
+  class ItemView;
 
 
   //----------------------------------------------------------------

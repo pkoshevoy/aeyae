@@ -1100,8 +1100,8 @@ namespace yae
     }
 
     const TransitionItem & item_;
-    double period_scale_;
     boost::uint64_t offset_ns_;
+    double period_scale_;
   };
 
 

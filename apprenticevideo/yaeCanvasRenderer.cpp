@@ -1905,6 +1905,7 @@ namespace yae
     if (yae_is_opengl_extension_supported("GL_ARB_fragment_program"))
     {
       GLint numTextureUnits = 0;
+      YAE_OGL_11_HERE();
       YAE_OGL_11(glGetIntegerv(GL_MAX_TEXTURE_IMAGE_UNITS_ARB,
                                &numTextureUnits));
       if (numTextureUnits > 2)

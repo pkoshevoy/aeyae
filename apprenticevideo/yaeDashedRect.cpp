@@ -49,6 +49,7 @@ namespace yae
                GLushort pattern,
                GLubyte zoom)
   {
+    YAE_OGL_11_HERE();
     YAE_OGL_11(glLineStipple(zoom, pattern));
     YAE_OGL_11(glColor4ub(color.r(),
                           color.g(),
