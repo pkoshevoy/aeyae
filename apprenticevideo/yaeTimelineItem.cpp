@@ -760,6 +760,7 @@ namespace yae
   void
   TimelineItem::uncache()
   {
+    TMakeCurrentContext currentContext(*view_.context());
     Item::uncache();
 
     is_playback_paused_.uncache();

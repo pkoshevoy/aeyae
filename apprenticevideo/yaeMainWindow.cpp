@@ -360,17 +360,6 @@ namespace yae
     playerWidget_->append(&playlistView_);
     playerWidget_->append(&timelineView_);
     playerWidget_->append(&frameCropView_);
-    playlistView_.setup(this);
-    playlistView_.setModel(&playlistModel_);
-    playlistView_.setEnabled(false);
-    timelineView_.setup(this, &playlistView_, &timelineModel_);
-    frameCropView_.setEnabled(false);
-
-    // add image://thumbnails/... provider:
-    yae::shared_ptr<ThumbnailProvider, ImageProvider>
-      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
-    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
-                                   imageProvider);
 
 #else
     playerWidget_ = new TPlayerWidget(this);
@@ -1151,6 +1140,18 @@ namespace yae
   {
     // initialize frame crop view:
     TMakeCurrentContext currentContext(canvas_->context());
+    playlistView_.setup(this);
+    playlistView_.setModel(&playlistModel_);
+    playlistView_.setEnabled(false);
+
+    // add image://thumbnails/... provider:
+    yae::shared_ptr<ThumbnailProvider, ImageProvider>
+      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
+    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
+                                   imageProvider);
+
+    timelineView_.setup(this, &playlistView_, &timelineModel_);
+    frameCropView_.setEnabled(false);
     frameCropView_.init(&playlistView_);
 
     CanvasRendererItem & rendererItem =

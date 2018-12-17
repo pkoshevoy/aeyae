@@ -59,6 +59,7 @@ namespace yae
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
+    bool stop_;
     bool pause_;
     TTime framePosition_;
 
@@ -73,6 +74,7 @@ namespace yae
     clock_(clock),
     canvas_(NULL),
     reader_(NULL),
+    stop_(false),
     pause_(true)
   {
     thread_.setContext(this);
@@ -90,6 +92,7 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     canvas_ = canvas;
     reader_ = reader;
+    stop_ = false;
     pause_ = true;
     return true;
   }
@@ -101,6 +104,7 @@ namespace yae
   VideoRenderer::TPrivate::stop()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
+    stop_ = true;
     pause_ = false;
     terminator_.stopWaiting(true);
     thread_.stop();
@@ -200,9 +204,9 @@ namespace yae
     static const double secondsToPause = 0.1;
 
     bool ok = true;
-    while (ok)
+    while (ok && !stop_)
     {
-      while (pause_)
+      while (pause_ && !stop_)
       {
         boost::this_thread::sleep_for(boost::chrono::microseconds
                                       (long(secondsToPause * 1e+6)));
@@ -402,7 +406,7 @@ namespace yae
     TVideoFramePtr frame;
     bool ok = true;
 
-    while (ok)
+    while (ok && !stop_)
     {
       ok = reader_->readVideo(frame, &terminator);
       if (!ok)
