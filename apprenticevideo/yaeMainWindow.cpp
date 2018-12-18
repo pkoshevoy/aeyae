@@ -347,7 +347,7 @@ namespace yae
     frameCropView_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
 #ifdef YAE_USE_QOPENGL_WIDGET
-    playerWidget_ = new TPlayerWidget(this);
+    playerWidget_ = new TPlayerWidget(this, Qt::Widget);
     playerWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else
     // request vsync if available:
@@ -3662,7 +3662,9 @@ namespace yae
   bool
   MainWindow::event(QEvent * e)
   {
-    if (e->type() == QEvent::User)
+    QEvent::Type et = e->type();
+
+    if (et == QEvent::User)
     {
       AutoCropEvent * ac = dynamic_cast<AutoCropEvent *>(e);
       if (ac)

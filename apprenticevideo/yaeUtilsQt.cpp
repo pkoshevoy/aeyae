@@ -2061,15 +2061,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // toString
+  // to_str
   //
-  std::string
-  toString(QEvent::Type et)
+  const char *
+  to_str(QEvent::Type et)
   {
     static int eventEnumIndex =
       QEvent::staticMetaObject.indexOfEnumerator("Type");
 
-    std::string name =
+    const char * name =
       QEvent::staticMetaObject.
       enumerator(eventEnumIndex).
       valueToKey(et);

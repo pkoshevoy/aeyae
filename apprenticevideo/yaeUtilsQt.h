@@ -208,10 +208,9 @@ namespace yae
                const std::list<QString> & playlist);
 
   //----------------------------------------------------------------
-  // toString
+  // to_str
   //
-  YAE_API std::string
-  toString(QEvent::Type et);
+  YAE_API const char * to_str(QEvent::Type et);
 
   //----------------------------------------------------------------
   // SignalBlocker

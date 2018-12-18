@@ -438,7 +438,6 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow = new yae::MainWindow();
   yae::mainWindow->add(sources, clips);
   yae::mainWindow->show();
-  app.processEvents();
 
   // initialize the player widget canvas, connect additional signals/slots:
   yae::mainWindow->initCanvasWidget();

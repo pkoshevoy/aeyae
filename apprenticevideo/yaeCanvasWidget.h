@@ -36,6 +36,7 @@
 // local includes:
 #include "yaeCanvas.h"
 #include "yaeScreenSaverInhibitor.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -267,6 +268,15 @@ namespace yae
       init();
     }
 
+    template <typename TArg1, typename TArg2>
+    CanvasWidget(TArg1 arg1, TArg2 arg2):
+      TWidget(arg1, arg2),
+      Canvas(yae::shared_ptr<IOpenGLContext>(new OpenGLContext(*this))),
+      sigs_(*this)
+    {
+      init();
+    }
+
     template <typename TArg1, typename TArg2, typename TArg3>
     CanvasWidget(TArg1 arg1, TArg2 arg2, TArg3 arg3):
       TWidget(arg1, arg2, arg3),
@@ -310,6 +320,7 @@ namespace yae
           Canvas::resize(devicePixelRatio,
                          TWidget::width(),
                          TWidget::height());
+          return true;
         }
 
         if (Canvas::processEvent(event))
