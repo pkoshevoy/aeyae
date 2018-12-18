@@ -19,7 +19,9 @@
 
 // platform includes:
 #ifdef __APPLE__
+#include <AvailabilityMacros.h>
 #include <CoreServices/CoreServices.h>
+#include <IOKit/pwr_mgt/IOPMLib.h>
 #elif !defined(_WIN32)
 #include <QtDBus/QtDBus>
 #endif
@@ -30,6 +32,8 @@
 
 namespace yae
 {
+  static const int inhibit_interval_msec = 29000;
+  static const int uninhibit_interval_msec = 59000;
 
   //----------------------------------------------------------------
   // ScreenSaverInhibitor::ScreenSaverInhibitor
@@ -38,10 +42,10 @@ namespace yae
     cookie_(0)
   {
     timerScreenSaver_.setSingleShot(true);
-    timerScreenSaver_.setInterval(29000);
+    timerScreenSaver_.setInterval(inhibit_interval_msec);
 
     timerScreenSaverUnInhibit_.setSingleShot(true);
-    timerScreenSaverUnInhibit_.setInterval(59000);
+    timerScreenSaverUnInhibit_.setInterval(uninhibit_interval_msec);
 
     bool ok = true;
     ok = connect(&timerScreenSaver_, SIGNAL(timeout()),
@@ -60,7 +64,34 @@ namespace yae
   ScreenSaverInhibitor::screenSaverInhibit()
   {
 #ifdef __APPLE__
+
+#  if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_7)
     UpdateSystemActivity(UsrActivity);
+#  else
+    static const CFStringRef assertion_name = CFSTR("video playback");
+    IOReturn r = kIOReturnSuccess;
+
+    if (cookie_)
+    {
+      r = IOPMAssertionRelease(cookie_);
+      YAE_ASSERT(r == kIOReturnSuccess);
+      cookie_ = 0;
+    }
+
+    r =
+      IOPMAssertionCreateWithDescription
+      (kIOPMAssertPreventUserIdleDisplaySleep,
+       assertion_name,
+       NULL, // CFStringRef Details
+       NULL, // CFStringRef HumanReadableReason
+       NULL, // CFStringRef LocalizationBundlePath
+       (inhibit_interval_msec * 1e-3), // CFTimeInterval Timeout
+       NULL, // CFStringRef TimeoutAction
+       &cookie_);
+
+    YAE_ASSERT(r == kIOReturnSuccess);
+#  endif
+
 #elif defined(_WIN32)
     // http://www.codeproject.com/KB/system/disablescreensave.aspx
     //
