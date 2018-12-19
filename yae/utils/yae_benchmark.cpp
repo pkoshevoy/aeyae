@@ -609,7 +609,7 @@ namespace yae
       frame.func_ = name;
       free(name);
     }
-#else
+#elif !defined(_WIN32)
     // NOTE: it may be possible to convert symbol + offset
     // to a file line number, using libbfd -- https://en.wikibooks.org/wiki/
     // Linux_Applications_Debugging_Techniques/The_call_stack
@@ -675,6 +675,7 @@ namespace yae
   void
   capture_backtrace(std::list<StackFrame> & bt, std::size_t offset)
   {
+#ifndef _WIN32
     void * frames[100] = { NULL };
     std::size_t num_frames = backtrace(frames, sizeof(frames) / sizeof(void *));
     char ** symbols = backtrace_symbols(frames, num_frames);
@@ -687,6 +688,7 @@ namespace yae
     }
 
     free(symbols);
+#endif
   }
 
   //----------------------------------------------------------------
