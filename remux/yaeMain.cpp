@@ -45,6 +45,9 @@
 // Qt includes:
 #include <QCoreApplication>
 #include <QDir>
+#ifdef YAE_USE_QT5
+#include <QSurfaceFormat>
+#endif
 
 // yae includes:
 #include "yae/ffmpeg/yae_demuxer.h"
