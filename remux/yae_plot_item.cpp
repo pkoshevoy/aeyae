@@ -67,41 +67,57 @@ namespace yae
   void
   PlotItem::Private::paint()
   {
-    if (!(item_.data_))
+    if (!(item_.data_x_ && item_.data_y_))
     {
       return;
     }
 
     const Color & color = item_.color_.get();
-    const TDataSource & data = *item_.data_;
-    std::size_t sz = data.size();
+    const TDataSource & data_x = *item_.data_x_;
+    const TDataSource & data_y = *item_.data_y_;
 
+    std::size_t sz = std::min(data_x.size(), data_y.size());
     if (!sz)
     {
       return;
     }
-
-    Segment range = (item_.range_ ? *item_.range_ : data.range()).rounded();
 
     BBox bbox;
     item_.Item::get(kPropertyBBox, bbox);
 
     double x0 = bbox.x_;
     double y0 = bbox.y_;
+
     double x1 = bbox.w_ + x0;
     double y1 = bbox.h_ + y0;
 
-    ScaleLinear sx(0, sz, x0, x1);
+    double t0 = data_x.get(0);
+    double t1 = data_x.get(sz - 1);
+    ScaleLinear si(t0, t1, 0, sz - 1);
+
+    // find data origin within the domain:
+    Segment range_x = data_x.range();
+    Segment domain = (item_.domain_ ? *item_.domain_ : range_x);
+    ScaleLinear sx(domain.to_wcs(0.0),
+                   domain.to_wcs(1.0),
+                   x0,
+                   x1);
+
+    Segment range_y = data_y.range();
+    Segment range = (item_.range_ ? *item_.range_ : range_y).rounded();
     ScaleLinear sy(range.to_wcs(0.0),
                    range.to_wcs(1.0),
                    y1 - 1,
                    y0 + 1);
 
-    double r0 = xregion_.to_wcs(0.0);
-    double r1 = xregion_.to_wcs(1.0);
+    double r0 = sx.invert(xregion_.to_wcs(0.0));
+    double r1 = sx.invert(xregion_.to_wcs(1.0));
 
-    std::size_t i0 = (std::size_t)(std::max<double>(0.0, sx.invert(r0)));
-    std::size_t i1 = (std::size_t)(std::min<double>(sz, ceil(sx.invert(r1))));
+    std::size_t i0 = (std::size_t)
+      (std::min<double>(sz, std::max(0.0, si(r0))));
+
+    std::size_t i1 = (std::size_t)
+      (std::min<double>(sz, std::max(0.0, ceil(si(r1)))));
 
     // this can be cached, and used as a VBO perhaps?
     std::vector<TVec2D> points(i1 - i0);
@@ -109,8 +125,9 @@ namespace yae
     {
       TVec2D & p = points[i - i0];
 
-      double v = data.get(i);
-      p.set_x(sx(i));
+      double u = data_x.get(i);
+      double v = data_y.get(i);
+      p.set_x(sx(u));
       p.set_y(sy(v));
     }
 
@@ -133,11 +150,10 @@ namespace yae
   //----------------------------------------------------------------
   // PlotItem::PlotItem
   //
-  PlotItem::PlotItem(const char * name, const TDataSourcePtr & data):
+  PlotItem::PlotItem(const char * name):
     Item(name),
     private_(new PlotItem::Private(*this)),
-    color_(ColorRef::constant(Color(0xff0000, 0.7))),
-    data_(data)
+    color_(ColorRef::constant(Color(0xff0000, 0.7)))
   {}
 
   //----------------------------------------------------------------
@@ -146,6 +162,36 @@ namespace yae
   PlotItem::~PlotItem()
   {
     delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // PlotItem::set_data
+  //
+  void
+  PlotItem::set_data(const TDataSourcePtr & data_x,
+                          const TDataSourcePtr & data_y)
+  {
+    YAE_ASSERT(!(data_x || data_y) || (data_y->size() <= data_x->size()));
+    data_x_ = data_x;
+    data_y_ = data_y;
+  }
+
+  //----------------------------------------------------------------
+  // PlotItem::set_domain
+  //
+  void
+  PlotItem::set_domain(const TSegmentPtr & domain)
+  {
+    domain_ = domain;
+  }
+
+  //----------------------------------------------------------------
+  // PlotItem::set_range
+  //
+  void
+  PlotItem::set_range(const TSegmentPtr & range)
+  {
+    range_ = range;
   }
 
   //----------------------------------------------------------------

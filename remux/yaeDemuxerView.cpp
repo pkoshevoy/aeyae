@@ -2748,6 +2748,24 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // DtsDataSource
+  //
+  struct DtsDataSource : public TrackDataSource
+  {
+    DtsDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.dts_.size());
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = track.dts_[i].sec();
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+  //----------------------------------------------------------------
   // DtsDtsDataSource
   //
   // f(i) = dts(i+1) - dts(i), should be monotonically increasing
@@ -2933,6 +2951,8 @@ namespace yae
   static void
   add_track_plots(RemuxView & view,
                   Item & tags,
+                  const TSegmentPtr & timeline_domain,
+                  const double plot_item_width,
                   const std::string & track_id,
                   const Timeline::Track & track,
                   Item & sv_content,
@@ -2978,18 +2998,23 @@ namespace yae
     bool audio = al::starts_with(track_id, "a:");
     bool video = al::starts_with(track_id, "v:");
 
+    TDataSourcePtr data_x(new DtsDataSource(track));
+
     if (/* audio || */ video)
     {
       PlotItem & pkt_size = sv_content.
         addNew<PlotItem>((track_id + ".pkt_size").c_str());
-      pkt_size.data_ = TDataSourcePtr(new PktSizeDataSource(track));
+      pkt_size.set_data(data_x, TDataSourcePtr(new PktSizeDataSource(track)));
       pkt_size.anchors_.fill(sv_content);
       pkt_size.anchors_.right_.reset();
-      pkt_size.width_ = ItemRef::constant(pkt_size.data_->size() *
-                                          kPlotVertexSpacing);
+      pkt_size.width_ = ItemRef::constant(plot_item_width);
       pkt_size.color_ = pick_color(gradient, plot_index);
-      pkt_size.range_ = view.size_range_;
-      view.size_range_->expand(pkt_size.data_->range());
+
+      pkt_size.set_domain(timeline_domain);
+      timeline_domain->expand(pkt_size.data_x()->range());
+
+      pkt_size.set_range(view.size_range_);
+      view.size_range_->expand(pkt_size.data_y()->range());
 
       prev_plot_tag = &add_plot_tag(view,
                                     tags,
@@ -2998,19 +3023,22 @@ namespace yae
                                     prev_plot_tag);
       plot_index++;
     }
-#if 0
+#if 1
     if (audio)
     {
       PlotItem & pts_pts = sv_content.
         addNew<PlotItem>((track_id + ".pts_pts").c_str());
-      pts_pts.data_ = TDataSourcePtr(new PtsPtsDataSource(track));
+      pts_pts.set_data(data_x, TDataSourcePtr(new PtsPtsDataSource(track)));
       pts_pts.anchors_.fill(sv_content);
       pts_pts.anchors_.right_.reset();
-      pts_pts.width_ = ItemRef::constant(pts_pts.data_->size() *
-                                         kPlotVertexSpacing);
+      pts_pts.width_ = ItemRef::constant(plot_item_width);
       pts_pts.color_ = pick_color(gradient, plot_index);
-      pts_pts.range_ = view.time_range_;
-      view.time_range_->expand(pts_pts.data_->range());
+
+      pts_pts.set_domain(timeline_domain);
+      timeline_domain->expand(pts_pts.data_x()->range());
+
+      pts_pts.set_range(view.time_range_);
+      view.time_range_->expand(pts_pts.data_y()->range());
 
       prev_plot_tag = &add_plot_tag(view,
                                     tags,
@@ -3024,14 +3052,17 @@ namespace yae
     {
       PlotItem & pts_dts = sv_content.
         addNew<PlotItem>((track_id + ".pts_dts").c_str());
-      pts_dts.data_ = TDataSourcePtr(new PtsDtsDataSource(track));
+      pts_dts.set_data(data_x, TDataSourcePtr(new PtsDtsDataSource(track)));
       pts_dts.anchors_.fill(sv_content);
       pts_dts.anchors_.right_.reset();
-      pts_dts.width_ = ItemRef::constant(pts_dts.data_->size() *
-                                         kPlotVertexSpacing);
+      pts_dts.width_ = ItemRef::constant(plot_item_width);
       pts_dts.color_ = pick_color(gradient, plot_index);
-      pts_dts.range_ = view.time_range_;
-      view.time_range_->expand(pts_dts.data_->range());
+
+      pts_dts.set_domain(timeline_domain);
+      timeline_domain->expand(pts_dts.data_x()->range());
+
+      pts_dts.set_range(view.time_range_);
+      view.time_range_->expand(pts_dts.data_y()->range());
 
       prev_plot_tag = &add_plot_tag(view,
                                     tags,
@@ -3042,14 +3073,17 @@ namespace yae
 
       PlotItem & dts_dts = sv_content.
         addNew<PlotItem>((track_id + ".dts_dts").c_str());
-      dts_dts.data_ = TDataSourcePtr(new DtsDtsDataSource(track));
+      dts_dts.set_data(data_x, TDataSourcePtr(new DtsDtsDataSource(track)));
       dts_dts.anchors_.fill(sv_content);
       dts_dts.anchors_.right_.reset();
-      dts_dts.width_ = ItemRef::constant(dts_dts.data_->size() *
-                                         kPlotVertexSpacing);
+      dts_dts.width_ = ItemRef::constant(plot_item_width);
       dts_dts.color_ = pick_color(gradient, plot_index);
-      dts_dts.range_ = view.time_range_;
-      view.time_range_->expand(dts_dts.data_->range());
+
+      dts_dts.set_domain(timeline_domain);
+      timeline_domain->expand(dts_dts.data_x()->range());
+
+      dts_dts.set_range(view.time_range_);
+      view.time_range_->expand(dts_dts.data_y()->range());
 
       prev_plot_tag = &add_plot_tag(view,
                                     tags,
@@ -3366,21 +3400,33 @@ namespace yae
       std::size_t plot_index = 0;
       std::size_t max_points = 0;
 
+      // put all the plots on the same time scale:
+      const Timespan & timespan = timeline.bbox_dts_;
+      double timespan_sec = timespan.duration_sec();
+
+      TSegmentPtr timeline_domain(new Segment(timespan.t0_.sec(),
+                                              timespan.t1_.sec()));
+
+      // assume 60 fps:
+      double plot_item_width = timespan_sec * (60 * kPlotVertexSpacing);
+
       // first video:
       for (Timeline::TTracks::const_iterator
              j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
       {
+        const Timeline::Track & track = j->second;
+        max_points = std::max(max_points, track.dts_.size());
+
         const std::string & track_id = j->first;
         if (!al::starts_with(track_id, "v:"))
         {
           continue;
         }
 
-        const Timeline::Track & track = j->second;
-        max_points = std::max(max_points, track.dts_.size());
-
         add_track_plots(view,
                         tags,
+                        timeline_domain,
+                        plot_item_width,
                         track_id,
                         track,
                         psv_content,
@@ -3399,10 +3445,10 @@ namespace yae
         }
 
         const Timeline::Track & track = j->second;
-        // max_points = std::max(max_points, track.dts_.size());
-
         add_track_plots(view,
                         tags,
+                        timeline_domain,
+                        plot_item_width,
                         track_id,
                         track,
                         psv_content,
@@ -3414,9 +3460,12 @@ namespace yae
       AxisItem & x_axis = psv_content.addNew<AxisItem>("x_axis");
       x_axis.anchors_.fill(psv_content);
       x_axis.anchors_.right_.reset();
-      x_axis.width_ = ItemRef::constant(max_points * kPlotVertexSpacing);
-      x_axis.t1_ = ItemRef::constant(max_points);
+      x_axis.width_ = ItemRef::constant(plot_item_width);
+      x_axis.t0_ = ItemRef::constant(timespan.t0_.sec());
+      x_axis.t1_ = ItemRef::constant(timespan.t1_.sec());
       x_axis.font_size_ = ItemRef::reference(style.row_height_, 0.2875);
+      x_axis.tick_dt_ = 1;
+      x_axis.mark_n_ = 10;
     }
 
     // setup source background:
@@ -3506,13 +3555,13 @@ namespace yae
         }
 
         PlotItem & plot = *plot_ptr;
-        if (!(plot.data_ && plot.range_))
+        if (!(plot.data_y() && plot.range()))
         {
           continue;
         }
 
-        Segment & range = *(plot.range_);
-        range.expand(plot.data_->range());
+        Segment & range = *(plot.range());
+        range.expand(plot.data_y()->range());
       }
     }
   }

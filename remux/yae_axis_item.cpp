@@ -79,7 +79,7 @@ namespace yae
     {
       double t = t0 + double(i) * dt;
       double x = round(sx.get(t));
-      double z = (i % mod_n == 0) ? 7.0 : 1.0;
+      double z = (i % mod_n == 0) ? 7.0 : 2.0;
       YAE_OGL_11(glVertex2d(x, y1 - 1));
       YAE_OGL_11(glVertex2d(x, y1 + z));
     }

@@ -122,7 +122,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TScaleLinearPtr
+  // TSegmentPtr
   //
   typedef yae::shared_ptr<Segment> TSegmentPtr;
 
@@ -133,8 +133,28 @@ namespace yae
   class YAE_API PlotItem : public Item
   {
   public:
-    PlotItem(const char * name, const TDataSourcePtr & d = TDataSourcePtr());
+    PlotItem(const char * name);
     virtual ~PlotItem();
+
+    // here y[i] = f(x[i]), so cardinality of x and y should be equal:
+    void set_data(const TDataSourcePtr & data_x,
+                  const TDataSourcePtr & data_y);
+
+    void set_domain(const TSegmentPtr & domain);
+    void set_range(const TSegmentPtr & range);
+
+    // accessors:
+    inline const TDataSourcePtr & data_x() const
+    { return data_x_; }
+
+    inline const TDataSourcePtr & data_y() const
+    { return data_y_; }
+
+    inline const TSegmentPtr & domain() const
+    { return domain_; }
+
+    inline const TSegmentPtr & range() const
+    { return range_; }
 
     // virtual:
     void uncache();
@@ -159,15 +179,18 @@ namespace yae
     struct Private;
     Private * private_;
 
+    // y[i] = f(x[i]):
+    TDataSourcePtr data_x_;
+    TDataSourcePtr data_y_;
+
+    // to compare apples-to-apples (overlapping plots of similar data)
+    // make sure to put them on the same scales by using the same domain/range:
+    TSegmentPtr domain_;
+    TSegmentPtr range_;
+
   public:
     // line color:
     ColorRef color_;
-
-    TDataSourcePtr data_;
-
-    // to compare apples-to-apples (overlapping plots of similar data)
-    // make sure to put them on the same scale by using the same range:
-    TSegmentPtr range_;
   };
 
 }
