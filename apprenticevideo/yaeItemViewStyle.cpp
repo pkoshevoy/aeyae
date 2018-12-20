@@ -313,6 +313,8 @@ namespace yae
 
     dpi_ = addExpr(new ViewDpi(view));
     dpi_.disableCaching();
+    device_pixel_ratio_ = addExpr(new ViewDevicePixelRatio(view));
+    device_pixel_ratio_.disableCaching();
     row_height_ = addExpr(new GetRowHeight(view));
 
     cell_width_ = addExpr(new GridCellWidth(view), 1.0, -2.0);

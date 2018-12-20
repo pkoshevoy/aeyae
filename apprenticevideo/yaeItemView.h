@@ -392,6 +392,36 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ViewDevicePixelRatio
+  //
+  struct YAE_API ViewDevicePixelRatio : TDoubleExpr
+  {
+    ViewDevicePixelRatio(const ItemView & view):
+      view_(view),
+      scale_(1.0)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = view_.delegate()->device_pixel_ratio();
+
+      if (result != scale_ && scale_ > 0.0)
+      {
+        // force all geometry to be recalculated:
+        view_.root()->uncache();
+      }
+
+      // cache the result:
+      scale_ = result;
+    }
+
+    const ItemView & view_;
+    mutable double scale_;
+  };
+
+
+  //----------------------------------------------------------------
   // get_row_height
   //
   YAE_API double

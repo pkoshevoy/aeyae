@@ -2998,6 +2998,9 @@ namespace yae
     bool audio = al::starts_with(track_id, "a:");
     bool video = al::starts_with(track_id, "v:");
 
+    const ItemViewStyle & style = *(view.style());
+    ItemRef line_width = ItemRef::reference(style.device_pixel_ratio_);
+
     TDataSourcePtr data_x(new DtsDataSource(track));
 
     if (/* audio || */ video)
@@ -3009,6 +3012,7 @@ namespace yae
       pkt_size.anchors_.right_.reset();
       pkt_size.width_ = ItemRef::constant(plot_item_width);
       pkt_size.color_ = pick_color(gradient, plot_index);
+      pkt_size.line_width_ = line_width;
 
       pkt_size.set_domain(timeline_domain);
       timeline_domain->expand(pkt_size.data_x()->range());
@@ -3033,6 +3037,7 @@ namespace yae
       pts_pts.anchors_.right_.reset();
       pts_pts.width_ = ItemRef::constant(plot_item_width);
       pts_pts.color_ = pick_color(gradient, plot_index);
+      pts_pts.line_width_ = line_width;
 
       pts_pts.set_domain(timeline_domain);
       timeline_domain->expand(pts_pts.data_x()->range());
@@ -3057,6 +3062,7 @@ namespace yae
       pts_dts.anchors_.right_.reset();
       pts_dts.width_ = ItemRef::constant(plot_item_width);
       pts_dts.color_ = pick_color(gradient, plot_index);
+      pts_dts.line_width_ = line_width;
 
       pts_dts.set_domain(timeline_domain);
       timeline_domain->expand(pts_dts.data_x()->range());
@@ -3078,6 +3084,7 @@ namespace yae
       dts_dts.anchors_.right_.reset();
       dts_dts.width_ = ItemRef::constant(plot_item_width);
       dts_dts.color_ = pick_color(gradient, plot_index);
+      dts_dts.line_width_ = line_width;
 
       dts_dts.set_domain(timeline_domain);
       timeline_domain->expand(dts_dts.data_x()->range());

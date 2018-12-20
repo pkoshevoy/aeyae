@@ -136,6 +136,10 @@ namespace yae
                           color.g(),
                           color.b(),
                           color.a()));
+
+    int line_width = int(0.5 + item_.line_width_.get());
+    YAE_OGL_11(glLineWidth(line_width));
+
     YAE_OGL_11(glBegin(GL_LINE_STRIP));
     for (std::vector<TVec2D>::const_iterator
            i = points.begin(); i != points.end(); ++i)
@@ -153,7 +157,8 @@ namespace yae
   PlotItem::PlotItem(const char * name):
     Item(name),
     private_(new PlotItem::Private(*this)),
-    color_(ColorRef::constant(Color(0xff0000, 0.7)))
+    color_(ColorRef::constant(Color(0xff0000, 0.7))),
+    line_width_(ItemRef::constant(1.0))
   {}
 
   //----------------------------------------------------------------

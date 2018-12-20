@@ -191,6 +191,9 @@ namespace yae
   public:
     // line color:
     ColorRef color_;
+
+    // default is 1:
+    ItemRef line_width_;
   };
 
 }

@@ -86,6 +86,7 @@ namespace yae
 
     // shared common properties:
     ItemRef dpi_;
+    ItemRef device_pixel_ratio_;
     ItemRef row_height_;
     ItemRef cell_width_;
     ItemRef cell_height_;
