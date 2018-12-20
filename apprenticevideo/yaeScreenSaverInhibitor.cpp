@@ -65,7 +65,7 @@ namespace yae
   {
 #ifdef __APPLE__
 
-#  if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_7)
+#  if (MAC_OS_X_VERSION_MIN_REQUIRED < 1070)
     UpdateSystemActivity(UsrActivity);
 #  else
     static const CFStringRef assertion_name = CFSTR("video playback");
