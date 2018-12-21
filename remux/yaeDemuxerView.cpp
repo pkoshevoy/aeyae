@@ -3003,7 +3003,7 @@ namespace yae
 
     TDataSourcePtr data_x(new DtsDataSource(track));
 
-    if (/* audio || */ video)
+    if (audio || video)
     {
       PlotItem & pkt_size = sv_content.
         addNew<PlotItem>((track_id + ".pkt_size").c_str());
