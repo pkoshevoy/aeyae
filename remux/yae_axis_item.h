@@ -19,6 +19,21 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // IDataFormatter
+  //
+  struct YAE_API IDataFormatter
+  {
+    virtual ~IDataFormatter() {}
+    virtual std::string get(double i) const = 0;
+  };
+
+  //----------------------------------------------------------------
+  // TDataFormatterPtr
+  //
+  typedef yae::shared_ptr<IDataFormatter> TDataFormatterPtr;
+
+
+  //----------------------------------------------------------------
   // AxisItem
   //
   class YAE_API AxisItem : public Item
@@ -67,6 +82,9 @@ namespace yae
 
     ItemRef font_size_; // in points
     QFont font_;
+
+    // tickmark label formatter:
+    TDataFormatterPtr formatter_;
   };
 
 }

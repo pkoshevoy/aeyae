@@ -106,8 +106,12 @@ namespace yae
         text.fontSize_ = ItemRef::reference(item_.font_size_);
         text.font_ = item_.font_;
 
-        // FIXME: this should have a delegate:
-        text.text_ = TVarRef::constant(TVar(QString::number(i * dt)));
+        std::string label =
+          item_.formatter_ ?
+          item_.formatter_->get(i * dt) :
+          yae::toText(i * dt);
+
+        text.text_ = TVarRef::constant(TVar(QString::fromUtf8(label.c_str())));
       }
 
       p->paintContent();

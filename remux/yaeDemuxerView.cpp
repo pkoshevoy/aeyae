@@ -3319,6 +3319,47 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TimeFormatter
+  //
+  struct TimeFormatter : public IDataFormatter
+  {
+    // virtual:
+    std::string get(double seconds) const
+    {
+      std::ostringstream oss;
+
+      bool negative = (seconds < 0);
+      int64_t t = int64_t(negative ? -seconds : seconds);
+
+      int64_t ss = t % 60;
+      t /= 60;
+
+      int64_t mm = t % 60;
+      t /= 60;
+
+      int64_t hh = t % 24;
+
+      if (hh)
+      {
+        oss << hh << ':'
+            << std::setw(2) << std::setfill('0') << mm << ':'
+            << std::setw(2) << std::setfill('0') << ss;
+      }
+      else if (mm)
+      {
+        oss << mm << ':'
+            << std::setw(2) << std::setfill('0') << ss;
+      }
+      else
+      {
+        oss << ss;
+      }
+
+      return oss.str();
+    }
+  };
+
+  //----------------------------------------------------------------
   // RemuxView::append_source
   //
   void
@@ -3473,6 +3514,7 @@ namespace yae
       x_axis.font_size_ = ItemRef::reference(style.row_height_, 0.2875);
       x_axis.tick_dt_ = 1;
       x_axis.mark_n_ = 10;
+      x_axis.formatter_.reset(new TimeFormatter());
     }
 
     // setup source background:
