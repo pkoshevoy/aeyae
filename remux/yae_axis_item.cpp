@@ -58,6 +58,8 @@ namespace yae
     double dt = item_.tick_dt_.get();
     int mod_n = int(item_.mark_n_.get());
 
+    double offset = fmod(t0, dt);
+
     ScaleLinear sx(t0, t1, x0, x1);
     double r0 = xregion_.to_wcs(0.0);
     double r1 = xregion_.to_wcs(1.0);
@@ -77,7 +79,7 @@ namespace yae
 
     for (std::size_t i = i0; i < i1; i++)
     {
-      double t = t0 + double(i) * dt;
+      double t = t0 - offset + double(i) * dt;
       double x = round(sx.get(t));
       double z = (i % mod_n == 0) ? 7.0 : 2.0;
       YAE_OGL_11(glVertex2d(x, y1 - 1));
@@ -92,7 +94,7 @@ namespace yae
 
     for (std::size_t i = i00; i <= i11; i += mod_n)
     {
-      double t = t0 + double(i) * dt;
+      double t = t0 - offset + double(i) * dt;
       double x = round(sx.get(t));
 
       TTextPtr & p = labels_[i];
@@ -108,8 +110,8 @@ namespace yae
 
         std::string label =
           item_.formatter_ ?
-          item_.formatter_->get(t0 + i * dt) :
-          yae::toText(i * dt);
+          item_.formatter_->get(t) :
+          yae::toText(t);
 
         text.text_ = TVarRef::constant(TVar(QString::fromUtf8(label.c_str())));
       }

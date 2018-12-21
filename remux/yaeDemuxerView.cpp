@@ -3373,19 +3373,21 @@ namespace yae
       {
         oss << hh << ':'
             << std::setw(2) << std::setfill('0') << mm << ':'
-            << std::setw(2) << std::setfill('0') << ss << '.'
-            << std::setw(3) << std::setfill('0') << ms;
+            << std::setw(2) << std::setfill('0') << ss;
       }
       else if (mm)
       {
         oss << mm << ':'
-            << std::setw(2) << std::setfill('0') << ss << '.'
-            << std::setw(3) << std::setfill('0') << ms;
+            << std::setw(2) << std::setfill('0') << ss;
       }
       else
       {
-        oss << ss << '.'
-            << std::setw(3) << std::setfill('0') << ms;
+        oss << ss;
+      }
+
+      if (ms)
+      {
+        oss << '.' << std::setw(3) << std::setfill('0') << ms;
       }
 
       std::string txt = oss.str();
@@ -3547,7 +3549,7 @@ namespace yae
       x_axis.t1_ = ItemRef::constant(timespan.t1_.sec());
       x_axis.font_size_ = ItemRef::reference(style.row_height_, 0.2875);
       x_axis.tick_dt_ = 1;
-      x_axis.mark_n_ = 10;
+      x_axis.mark_n_ = 2;
       x_axis.formatter_.reset(new TimeFormatter());
     }
 
