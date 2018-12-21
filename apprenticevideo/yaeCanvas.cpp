@@ -145,8 +145,8 @@ namespace yae
       return;
     }
 
-    layer->setContext(context_);
     layer->setDelegate(delegate_);
+    layer->setContext(context_);
     layers_.push_back(layer);
     layer->resizeTo(this);
     layer->requestRepaint();

@@ -42,6 +42,10 @@ namespace yae
   public:
     PlayerItem(const char * id, const yae::shared_ptr<IOpenGLContext> & ctx);
 
+    // canvas delegate calls screensaver inhibitor,
+    // so set it if you need it:
+    void setCanvasDelegate(const yae::shared_ptr<Canvas::IDelegate> & d);
+
     // virtual:
     void uncache();
     void paintContent() const;

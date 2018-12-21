@@ -2285,6 +2285,9 @@ namespace yae
     player.visible_ = player.addExpr(new In<RemuxView::kPlayerMode>(*this));
     player.visible_.disableCaching();
 
+    YAE_ASSERT(delegate_);
+    player.setCanvasDelegate(delegate_);
+
     timeline_.reset(new TimelineItem("timeline_item",
                                      *this,
                                      player.timeline()));

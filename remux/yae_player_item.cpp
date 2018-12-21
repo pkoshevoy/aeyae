@@ -68,6 +68,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerItem::setCanvasDelegate
+  //
+  void
+  PlayerItem::setCanvasDelegate(const yae::shared_ptr<Canvas::IDelegate> & d)
+  {
+    canvas_.setDelegate(d);
+  }
+
+  //----------------------------------------------------------------
   // PlayerItem::uncache
   //
   void
