@@ -43,6 +43,11 @@ namespace yae
       get_range(v[0], v[1]);
       return Segment(v[0], v[1] - v[0]);
     }
+
+    // find index of a value less than or equal to the given value...
+    // unless the value is ot of range in which case it returns the index
+    // of the closest value (either the first or the last item)
+    std::size_t find_leq(double v) const;
   };
 
   //----------------------------------------------------------------

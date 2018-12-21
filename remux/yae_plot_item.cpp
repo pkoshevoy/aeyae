@@ -62,6 +62,35 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TDataSource::find_leq
+  //
+  std::size_t
+  TDataSource::find_leq(double v) const
+  {
+    std::size_t i0 = 0;
+    std::size_t i1 = this->size() - 1;
+
+    while (i1 - i0 > 1)
+    {
+      std::size_t i = (i0 + i1) / 2;
+      double vi = this->get(i);
+
+      if (v <= vi)
+      {
+        i1 = i;
+      }
+
+      if (vi <= v)
+      {
+        i0 = i;
+      }
+    }
+
+    double v1 = this->get(i1);
+    return (v1 <= v) ? i1 : i0;
+  }
+
+  //----------------------------------------------------------------
   // PlotItem::Private::paint
   //
   void
@@ -112,12 +141,11 @@ namespace yae
 
     double r0 = sx.invert(xregion_.to_wcs(0.0));
     double r1 = sx.invert(xregion_.to_wcs(1.0));
+    YAE_ASSERT(r0 <= r1);
 
-    std::size_t i0 = (std::size_t)
-      (std::min<double>(sz, std::max(0.0, si(r0))));
-
-    std::size_t i1 = (std::size_t)
-      (std::min<double>(sz, std::max(0.0, ceil(si(r1)))));
+    std::size_t i0 = std::min(data_x.find_leq(r0), sz - 1);
+    std::size_t i1 = std::min(data_x.find_leq(r1) + 1, sz - 1);
+    YAE_ASSERT(i0 <= i1);
 
     // this can be cached, and used as a VBO perhaps?
     std::vector<TVec2D> points(i1 - i0);
