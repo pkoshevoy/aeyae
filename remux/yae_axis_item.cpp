@@ -62,8 +62,8 @@ namespace yae
     double r0 = xregion_.to_wcs(0.0);
     double r1 = xregion_.to_wcs(1.0);
 
-    int i0 = int(sx.invert(r0) / dt);
-    int i1 = int(sx.invert(r1) / dt) + 1;
+    int i0 = int((sx.invert(r0) - t0) / dt);
+    int i1 = int((sx.invert(r1) - t0) / dt) + 1;
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glColor4ub(color.r(),
@@ -108,7 +108,7 @@ namespace yae
 
         std::string label =
           item_.formatter_ ?
-          item_.formatter_->get(i * dt) :
+          item_.formatter_->get(t0 + i * dt) :
           yae::toText(i * dt);
 
         text.text_ = TVarRef::constant(TVar(QString::fromUtf8(label.c_str())));
