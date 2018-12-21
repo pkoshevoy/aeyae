@@ -3478,7 +3478,7 @@ namespace yae
         (new GetPlotItemWidth(view, timespan_sec));
 
       TSegmentPtr timeline_domain(new Segment(timespan.t0_.sec(),
-                                              timespan.t1_.sec()));
+                                              timespan_sec));
 
       // first video:
       for (Timeline::TTracks::const_iterator
