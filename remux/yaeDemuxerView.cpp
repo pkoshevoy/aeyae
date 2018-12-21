@@ -2946,13 +2946,35 @@ namespace yae
   static const double kPlotVertexSpacing = 2.0;
 
   //----------------------------------------------------------------
+  // GetPlotItemWidth
+  //
+  struct YAE_API GetPlotItemWidth : TDoubleExpr
+  {
+    GetPlotItemWidth(const ItemView & view, double timespan_sec):
+      view_(view),
+      seconds_(timespan_sec)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double scale = view_.delegate()->device_pixel_ratio();
+
+      // assume 60 fps:
+      result = scale * seconds_ * 60 * kPlotVertexSpacing;
+    }
+
+    const ItemView & view_;
+    double seconds_;
+  };
+  //----------------------------------------------------------------
   // add_track_plots
   //
   static void
   add_track_plots(RemuxView & view,
                   Item & tags,
                   const TSegmentPtr & timeline_domain,
-                  const double plot_item_width,
+                  const ItemRef & plot_item_width,
                   const std::string & track_id,
                   const Timeline::Track & track,
                   Item & sv_content,
@@ -3010,7 +3032,7 @@ namespace yae
       pkt_size.set_data(data_x, TDataSourcePtr(new PktSizeDataSource(track)));
       pkt_size.anchors_.fill(sv_content);
       pkt_size.anchors_.right_.reset();
-      pkt_size.width_ = ItemRef::constant(plot_item_width);
+      pkt_size.width_ = plot_item_width;
       pkt_size.color_ = pick_color(gradient, plot_index);
       pkt_size.line_width_ = line_width;
 
@@ -3035,7 +3057,7 @@ namespace yae
       pts_pts.set_data(data_x, TDataSourcePtr(new PtsPtsDataSource(track)));
       pts_pts.anchors_.fill(sv_content);
       pts_pts.anchors_.right_.reset();
-      pts_pts.width_ = ItemRef::constant(plot_item_width);
+      pts_pts.width_ = plot_item_width;
       pts_pts.color_ = pick_color(gradient, plot_index);
       pts_pts.line_width_ = line_width;
 
@@ -3060,7 +3082,7 @@ namespace yae
       pts_dts.set_data(data_x, TDataSourcePtr(new PtsDtsDataSource(track)));
       pts_dts.anchors_.fill(sv_content);
       pts_dts.anchors_.right_.reset();
-      pts_dts.width_ = ItemRef::constant(plot_item_width);
+      pts_dts.width_ = plot_item_width;
       pts_dts.color_ = pick_color(gradient, plot_index);
       pts_dts.line_width_ = line_width;
 
@@ -3082,7 +3104,7 @@ namespace yae
       dts_dts.set_data(data_x, TDataSourcePtr(new DtsDtsDataSource(track)));
       dts_dts.anchors_.fill(sv_content);
       dts_dts.anchors_.right_.reset();
-      dts_dts.width_ = ItemRef::constant(plot_item_width);
+      dts_dts.width_ = plot_item_width;
       dts_dts.color_ = pick_color(gradient, plot_index);
       dts_dts.line_width_ = line_width;
 
@@ -3452,11 +3474,11 @@ namespace yae
       const Timespan & timespan = timeline.bbox_dts_;
       double timespan_sec = timespan.duration_sec();
 
+      ItemRef plot_item_width = psv_content.addExpr
+        (new GetPlotItemWidth(view, timespan_sec));
+
       TSegmentPtr timeline_domain(new Segment(timespan.t0_.sec(),
                                               timespan.t1_.sec()));
-
-      // assume 60 fps:
-      double plot_item_width = timespan_sec * (60 * kPlotVertexSpacing);
 
       // first video:
       for (Timeline::TTracks::const_iterator
@@ -3508,7 +3530,7 @@ namespace yae
       AxisItem & x_axis = psv_content.addNew<AxisItem>("x_axis");
       x_axis.anchors_.fill(psv_content);
       x_axis.anchors_.right_.reset();
-      x_axis.width_ = ItemRef::constant(plot_item_width);
+      x_axis.width_ = plot_item_width;
       x_axis.t0_ = ItemRef::constant(timespan.t0_.sec());
       x_axis.t1_ = ItemRef::constant(timespan.t1_.sec());
       x_axis.font_size_ = ItemRef::reference(style.row_height_, 0.2875);
