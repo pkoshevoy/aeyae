@@ -930,14 +930,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // is_monotonically_increasing
+  //
+  inline static bool
+  is_monotonically_increasing(const std::list<TPacketPtr> & packets,
+                              const int64_t & dts)
+  {
+    if (packets.empty() || packets.back()->get().dts <= dts)
+    {
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // is_monotonically_increasing
+  //
+  inline static bool
+  is_monotonically_increasing(const std::list<TPacketPtr> & packets,
+                              const AVStream & stream,
+                              const TTime & dts)
+  {
+    int64_t t = av_rescale_q(dts.time_,
+                             Rational(1, dts.base_),
+                             stream.time_base);
+    return is_monotonically_increasing(packets, t);
+  }
+
+  //----------------------------------------------------------------
   // append
   //
-  static bool
+  inline static bool
   append(std::list<TPacketPtr> & packets, const TPacketPtr & packet_ptr)
   {
     const AVPacket & packet = packet_ptr->get();
-
-    if (packets.empty() || packets.back()->get().dts <= packet.dts)
+    if (is_monotonically_increasing(packets, packet.dts))
     {
       packets.push_back(packet_ptr);
       return true;
@@ -1014,8 +1042,10 @@ namespace yae
     TTime dts = next_dts;
     bool has_dts = get_dts(dts, stream, packet);
 
-#if 0 // disabled as it breaks mp4 with 24fps bumper and 60 fps main content
-    if (has_dts && dts < next_dts)
+    std::list<TPacketPtr> & packets = packets_[packet.stream_index];
+    bool valid_dts = is_monotonically_increasing(packets, *stream, dts);
+
+    if (has_dts && !valid_dts)
     {
       int64 cts = (packet.pts != AV_NOPTS_VALUE) ? packet.pts - packet.dts : 0;
       YAE_ASSERT(cts >= 0);
@@ -1030,7 +1060,6 @@ namespace yae
         YAE_ASSERT(packet.dts <= packet.pts);
       }
     }
-#endif
 
     if (!has_dts)
     {
@@ -1056,7 +1085,6 @@ namespace yae
       }
     }
 
-    std::list<TPacketPtr> & packets = packets_[packet.stream_index];
     bool ok = append(packets, packet_ptr);
     YAE_ASSERT(ok);
     if (!ok)
