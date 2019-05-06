@@ -64,6 +64,27 @@
 # define YAE_ALIGN(N, T) T
 #endif
 
+
+//----------------------------------------------------------------
+// YAE_BREAKPOINT
+//
+#if defined(NDEBUG)
+# define YAE_BREAKPOINT()
+#else
+# if defined(__APPLE__)
+#  if defined(__ppc__)
+#   define YAE_BREAKPOINT()__asm { trap }
+#  else
+#   define YAE_BREAKPOINT() asm("int $3")
+#  endif
+# elif __GNUC__
+#   define YAE_BREAKPOINT() asm("int $3")
+# else
+#   define YAE_BREAKPOINT()
+# endif
+#endif
+
+
 //----------------------------------------------------------------
 // YAE_ASSERT
 //
