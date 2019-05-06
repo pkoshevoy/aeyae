@@ -1014,6 +1014,7 @@ namespace yae
     TTime dts = next_dts;
     bool has_dts = get_dts(dts, stream, packet);
 
+#if 0 // disabled as it breaks mp4 with 24fps bumper and 60 fps main content
     if (has_dts && dts < next_dts)
     {
       int64 cts = (packet.pts != AV_NOPTS_VALUE) ? packet.pts - packet.dts : 0;
@@ -1029,7 +1030,9 @@ namespace yae
         YAE_ASSERT(packet.dts <= packet.pts);
       }
     }
-    else if (!has_dts)
+#endif
+
+    if (!has_dts)
     {
       dts = next_dts;
       packet.dts = av_rescale_q(dts.time_,
