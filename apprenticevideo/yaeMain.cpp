@@ -273,6 +273,7 @@ mainMayThrowException(int argc, char ** argv)
   // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
   // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
   yae::Application::setAttribute(Qt::AA_ShareOpenGLContexts, true);
+  // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
 
   yae::Application app(argc, argv);

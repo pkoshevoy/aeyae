@@ -466,7 +466,8 @@ namespace yae
     void evaluate(double & result) const
     {
       double w = itemView_.width();
-      double s = itemView_.devicePixelRatio();
+      double s = itemView_.delegate()->logical_dpi_y() / 96.0;
+      s = std::max(s, itemView_.devicePixelRatio());
       result = std::max<double>(minHeight_ * s, 24.0 * w / 800.0);
     }
 

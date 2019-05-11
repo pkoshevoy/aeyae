@@ -263,6 +263,10 @@ namespace yae
     // main font:
     font_ = font_small_;
     font_large_ = font_small_;
+    font_large_.setStyleStrategy((QFont::StyleStrategy)
+                                 (QFont::PreferOutline |
+                                  QFont::PreferAntialias |
+                                  QFont::OpenGLCompatible));
 
     static bool hasImpact =
       QFontInfo(QFont("impact")).family().

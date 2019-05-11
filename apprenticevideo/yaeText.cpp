@@ -8,6 +8,7 @@
 
 // Qt library:
 #include <QColor>
+#include <QCoreApplication>
 #include <QFontMetricsF>
 #include <QImage>
 #include <QPainter>
@@ -164,6 +165,15 @@ namespace yae
 
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
+#if 1
+    if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
+    {
+      bbox.x_ -= 0.8;
+      bbox.y_ -= 0.8;
+      bbox.w_ += 1.6;
+      bbox.h_ += 1.6;
+    }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -332,7 +342,7 @@ namespace yae
     color_(ColorRef::constant(Color(0xffffff, 1.0))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
-    fontSize_ = ItemRef::constant(font_.pointSizeF());
+    fontSize_ = ItemRef::constant(font_.pixelSize());
     supersample_ = ItemRef::constant(1.0);
     bboxText_ = addExpr(new CalcTextBBox(*this));
     p_->ready_ = addExpr(new UploadTexture<Text>(*this));
