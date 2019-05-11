@@ -373,7 +373,7 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      result = view_.delegate()->physical_dpi_y();
+      result = view_.delegate()->logical_dpi_y();
 
       if (result != dpi_ && dpi_ > 0.0)
       {

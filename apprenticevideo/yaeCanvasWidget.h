@@ -221,19 +221,23 @@ namespace yae
       {
         QWidget * sw = this->screen_widget();
         double s = this->device_pixel_ratio();
-        double h = sw->height() * s;
-        double h_mm = sw->heightMM();
-        double dpi = (h * 25.4) / h_mm;
+        double w = sw->width() * s;
+        double w_mm = sw->widthMM();
+        double dpi = (w * 25.4) / w_mm;
         return dpi;
       }
 
       virtual double physical_dpi_y() const
       {
         QWidget * sw = this->screen_widget();
+#if 0
         double s = this->device_pixel_ratio();
-        double w = sw->width() * s;
-        double w_mm = sw->widthMM();
-        double dpi = (w * 25.4) / w_mm;
+        double h = sw->height() * s;
+        double h_mm = sw->heightMM();
+        double dpi = (h * 25.4) / h_mm;
+#else
+        int dpi = sw->physicalDpiX();
+#endif
         return dpi;
       }
 
