@@ -427,6 +427,11 @@ namespace yae
       decoders.find(params, untried, preferSoftwareDecoder);
     }
 
+    if (untried.empty())
+    {
+      return AvCodecContextPtr();
+    }
+
     AvCodecContextPtr ctx = untried.front();
     untried.pop_front();
 
