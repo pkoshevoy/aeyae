@@ -139,7 +139,7 @@ namespace yae
                double maxHeight)
   {
     QFont font = item.font_;
-    double fontSize = item.fontSize_.get();
+    double fontSize = std::max(9.0, item.fontSize_.get());
     double supersample = item.supersample_.get();
 
     font.setPixelSize(fontSize * supersample);
@@ -277,7 +277,7 @@ namespace yae
       QPainter painter(&img);
       painter.setRenderHints(QPainter::TextAntialiasing);
       QFont font = item.font_;
-      double fontSize = item.fontSize_.get();
+      double fontSize = std::max(9.0, item.fontSize_.get());
       font.setPixelSize(fontSize * supersample);
       painter.setFont(font);
 
@@ -367,7 +367,7 @@ namespace yae
   Text::fontAscent() const
   {
     QFont font = font_;
-    double fontSize = fontSize_.get();
+    double fontSize = std::max(9.0, fontSize_.get());
     double supersample = supersample_.get();
 
     font.setPixelSize(fontSize * supersample);
@@ -384,7 +384,7 @@ namespace yae
   Text::fontDescent() const
   {
     QFont font = font_;
-    double fontSize = fontSize_.get();
+    double fontSize = std::max(9.0, fontSize_.get());
     double supersample = supersample_.get();
 
     font.setPixelSize(fontSize * supersample);
@@ -401,7 +401,7 @@ namespace yae
   Text::fontHeight() const
   {
     QFont font = font_;
-    double fontSize = fontSize_.get();
+    double fontSize = std::max(9.0, fontSize_.get());
     double supersample = supersample_.get();
 
     font.setPixelSize(fontSize * supersample);

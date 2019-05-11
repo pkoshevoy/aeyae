@@ -281,7 +281,7 @@ namespace yae
     int textLength = text.length();
 
     font_ = item.font_;
-    double fontSize = item.fontSize_.get();
+    double fontSize = std::max(9.0, item.fontSize_.get());
     font_.setPixelSize(fontSize * supersample);
 
     textLayout_.clearLayout();
