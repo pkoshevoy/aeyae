@@ -165,7 +165,7 @@ namespace yae
 
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
-#if 1
+#if QT_VERSION >= 0x050600
     if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
     {
       bbox.x_ -= 0.8;
