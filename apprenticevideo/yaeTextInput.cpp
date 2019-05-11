@@ -282,7 +282,7 @@ namespace yae
 
     font_ = item.font_;
     double fontSize = item.fontSize_.get();
-    font_.setPointSizeF(fontSize * supersample);
+    font_.setPixelSize(fontSize * supersample);
 
     textLayout_.clearLayout();
     textLayout_.setText(text);

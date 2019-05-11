@@ -169,14 +169,14 @@ namespace yae
     now_playing_.text_ = TVarRef::constant(TVar(QObject::tr("now playing")));
     now_playing_.font_ = font_small_;
     now_playing_.font_.setBold(true);
-    now_playing_.fontSize_ = ItemRef::reference(font_size_, 0.7 * kDpiScale);
+    now_playing_.fontSize_ = ItemRef::reference(font_size_, 0.7);
 
     eyetv_badge_.font_ = font_large_;
     eyetv_badge_.anchors_.top_ = ItemRef::constant(0.0);
     eyetv_badge_.anchors_.left_ = ItemRef::constant(0.0);
     eyetv_badge_.text_ = TVarRef::constant(TVar(QObject::tr("eyetv")));
     eyetv_badge_.font_.setBold(false);
-    eyetv_badge_.fontSize_ = ItemRef::reference(font_size_, 1.0 * kDpiScale);
+    eyetv_badge_.fontSize_ = ItemRef::reference(font_size_, 1.0);
 
     layout_root_.reset(new GroupListLayout());
     layout_group_.reset(new ItemListLayout());

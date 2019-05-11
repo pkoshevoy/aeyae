@@ -350,7 +350,7 @@ namespace yae
     playheadAux.text_ = playheadAux.addExpr(new GetPlayheadAux(model_));
     playheadAux.font_ = timecodeFont;
     playheadAux.fontSize_ =
-      ItemRef::scale(container, kPropertyHeight, 0.33333333 * kDpiScale);
+      ItemRef::scale(container, kPropertyHeight, 0.33333333);
 
     playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
     playheadAuxBg.color_ = playheadAuxBg.

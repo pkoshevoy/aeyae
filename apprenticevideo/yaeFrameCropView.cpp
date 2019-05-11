@@ -566,8 +566,7 @@ namespace yae
     done.color_ = ColorRef::constant(Color(0x000000, 1.0));
     done.text_ = TVarRef::constant(QVariant(tr("Done")));
     done.font_ = style.font_small_;
-    done.fontSize_ =
-      ItemRef::scale(titleHeight, kPropertyExpression, 0.5 * kDpiScale);
+    done.fontSize_ = ItemRef::scale(titleHeight, kPropertyExpression, 0.5);
 
     doneBg.color_ = doneBg.addExpr(new ColorOnHover(*this, doneBg,
                                                     Color(0xffffff, 0.7),

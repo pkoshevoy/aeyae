@@ -692,7 +692,7 @@ namespace yae
     text.elide_ = Qt::ElideLeft;
     text.color_ = colorTextFg;
     text.text_ = TVarRef::reference(editProxy, kPropertyText);
-    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07);
 
     edit.anchors_.fill(text);
     edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
@@ -724,7 +724,7 @@ namespace yae
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
     // layout sort-and-order:
-    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7 * kDpiScale);
+    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7);
     QFont smallFont(style.font_small_);
     smallFont.setBold(true);
 
@@ -895,13 +895,13 @@ namespace yae
 
     QFont smallFont(style.font_small_);
     smallFont.setBold(true);
-    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7 * kDpiScale);
+    ItemRef smallFontSize = ItemRef::reference(fontSize, 0.7);
 
     Text & footNote = footer.addNew<Text>("footNote");
     footNote.anchors_.top_ = ItemRef::reference(footer, kPropertyTop);
     footNote.anchors_.right_ = ItemRef::reference(footer, kPropertyRight);
-    footNote.margins_.set_top(ItemRef::reference(fontSize, 0.5 * kDpiScale));
-    footNote.margins_.set_right(ItemRef::reference(fontSize, 0.8 * kDpiScale));
+    footNote.margins_.set_top(ItemRef::reference(fontSize, 0.5));
+    footNote.margins_.set_right(ItemRef::reference(fontSize, 0.8));
 
     footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
     footNote.font_ = smallFont;
@@ -1130,7 +1130,7 @@ namespace yae
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
     text.text_ = text.addExpr
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07);
 #if defined(__APPLE__)
     text.supersample_ = text.addExpr(new Supersample<Text>(text));
 #endif
@@ -1263,7 +1263,7 @@ namespace yae
                                      style.fg_badge_.get()));
     badge.text_ = badge.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-    badge.fontSize_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
+    badge.fontSize_ = ItemRef::reference(fontSize, 0.8);
 
     badgeBg.anchors_.inset(badge, -3, 0);
     badgeBg.color_ = badge.
@@ -1280,7 +1280,7 @@ namespace yae
     label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
-    label.fontSize_ = ItemRef::reference(fontSize, kDpiScale);
+    label.fontSize_ = ItemRef::reference(fontSize);
 #if defined(__APPLE__)
     label.supersample_ = label.addExpr(new Supersample<Text>(label));
 #endif
@@ -1313,7 +1313,7 @@ namespace yae
     playing.text_ = TVarRef::constant(TVar(QObject::tr("NOW PLAYING")));
     playing.color_ = ColorRef::reference(label, kPropertyColor);
     playing.background_ = ColorRef::reference(label, kPropertyColorBg);
-    playing.fontSize_ = ItemRef::reference(fontSize, 0.8 * kDpiScale);
+    playing.fontSize_ = ItemRef::reference(fontSize, 0.8);
 
     playingBg.anchors_.inset(playing, -3, -1);
     playingBg.visible_ = BoolRef::reference(liveImage, kPropertyVisible);
@@ -1438,7 +1438,7 @@ namespace yae
     text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
     text.text_ = text.addExpr
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
-    text.fontSize_ = ItemRef::reference(fontSize, 1.07 * kDpiScale);
+    text.fontSize_ = ItemRef::reference(fontSize, 1.07);
     text.elide_ = Qt::ElideMiddle;
     text.color_ = style.fg_group_;
     text.background_ = ColorRef::transparent(title, kPropertyColor);
@@ -1554,7 +1554,7 @@ namespace yae
     badge.elide_ = Qt::ElideRight;
     badge.text_ = badge.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
-    badge.fontSize_ = ItemRef::reference(fontSize, 0.7 * kDpiScale);
+    badge.fontSize_ = ItemRef::reference(fontSize, 0.7);
 
     badgeBg.anchors_.inset(badge, -3, 0);
     badgeBg.color_ = badge.
@@ -1574,7 +1574,7 @@ namespace yae
     label.text_ = label.addExpr
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.elide_ = Qt::ElideMiddle;
-    label.fontSize_ = ItemRef::reference(fontSize, 0.9 * kDpiScale);
+    label.fontSize_ = ItemRef::reference(fontSize, 0.9);
     label.background_ = ColorRef::transparent(frame, kPropertyColor);
     // label.background_ = label.
     //  addExpr(new PremultipliedTransparent(frame, kPropertyColor));

@@ -142,7 +142,7 @@ namespace yae
     double fontSize = item.fontSize_.get();
     double supersample = item.supersample_.get();
 
-    font.setPointSizeF(fontSize * supersample);
+    font.setPixelSize(fontSize * supersample);
     QFontMetricsF fm(font);
 
     QRectF maxRect(0.0, 0.0,
@@ -278,7 +278,7 @@ namespace yae
       painter.setRenderHints(QPainter::TextAntialiasing);
       QFont font = item.font_;
       double fontSize = item.fontSize_.get();
-      font.setPointSizeF(fontSize * supersample);
+      font.setPixelSize(fontSize * supersample);
       painter.setFont(font);
 
       QFontMetricsF fm(font);
@@ -370,7 +370,7 @@ namespace yae
     double fontSize = fontSize_.get();
     double supersample = supersample_.get();
 
-    font.setPointSizeF(fontSize * supersample);
+    font.setPixelSize(fontSize * supersample);
     QFontMetricsF fm(font);
 
     double ascent = fm.ascent() / supersample;
@@ -387,7 +387,7 @@ namespace yae
     double fontSize = fontSize_.get();
     double supersample = supersample_.get();
 
-    font.setPointSizeF(fontSize * supersample);
+    font.setPixelSize(fontSize * supersample);
     QFontMetricsF fm(font);
 
     double descent = fm.descent() / supersample;
@@ -404,7 +404,7 @@ namespace yae
     double fontSize = fontSize_.get();
     double supersample = supersample_.get();
 
-    font.setPointSizeF(fontSize * supersample);
+    font.setPixelSize(fontSize * supersample);
     QFontMetricsF fm(font);
 
     double fh = fm.height() / supersample;
