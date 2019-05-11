@@ -1584,7 +1584,7 @@ namespace yae
     src_name.width_ = ItemRef::reference(style.row_height_, 10.0);
     src_name.text_ = src_name.addExpr(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideMiddle;
-    src_name.font_ = style.font_small_;
+    // src_name.font_ = style.font_small_;
     src_name.color_ = style.fg_timecode_;
     src_name.background_ = ColorRef::constant(style.bg_.get().transparent());
     src_name.fontSize_ = ItemRef::scale(root, kPropertyHeight, 0.2775);
@@ -1857,8 +1857,8 @@ namespace yae
     txt.anchors_.left_ = ItemRef::reference(btn, kPropertyLeft);
     txt.margins_.set_left(ItemRef::reference(controls, kPropertyHeight, 0.7));
     txt.margins_.set_right(txt.margins_.get_left());
-    txt.font_ = style.font_small_;
-    txt.fontSize_ = ItemRef::reference(controls, kPropertyHeight, 0.2775);
+    // txt.font_ = style.font_small_;
+    txt.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
     txt.color_ = txt.addExpr
       (style_color_ref(view, &ItemViewStyle::fg_));
 

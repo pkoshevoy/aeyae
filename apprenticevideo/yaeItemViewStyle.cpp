@@ -257,7 +257,7 @@ namespace yae
     font_small_.setStyleHint(QFont::SansSerif);
     font_small_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
+                                  // QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
 
     // main font:
@@ -303,7 +303,7 @@ namespace yae
     font_fixed_.setFixedPitch(true);
     font_fixed_.setStyleStrategy((QFont::StyleStrategy)
                                  (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
+                                  // QFont::PreferAntialias |
                                   QFont::OpenGLCompatible));
 
     anchors_.top_ = ItemRef::constant(0);
