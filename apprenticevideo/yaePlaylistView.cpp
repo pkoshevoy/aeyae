@@ -1567,7 +1567,6 @@ namespace yae
     Text & label = cell.addNew<Text>("label");
     Item & rm = cell.addNew<Item>("remove item");
 
-    label.font_ = style.font_;
     label.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     label.anchors_.left_ = ItemRef::offset(badgeItem, kPropertyRight, 5);
     label.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
