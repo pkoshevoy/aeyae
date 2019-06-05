@@ -3591,7 +3591,7 @@ namespace yae
     bg.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
     bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
     bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-    bg.anchors_.bottom_ = ItemRef::reference(src_item, kPropertyBottom);
+    bg.anchors_.bottom_ = ItemRef::reference(plots, kPropertyBottom);
     bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
     bg.opacity_ = ItemRef::constant(0.25);
 
