@@ -2970,6 +2970,7 @@ namespace yae
     const ItemView & view_;
     double seconds_;
   };
+
   //----------------------------------------------------------------
   // add_track_plots
   //
@@ -3399,6 +3400,30 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // PlotBottomPos
+  //
+  struct YAE_API PlotBottomPos : TDoubleExpr
+  {
+    PlotBottomPos(Item & tracks, Item & tags, Item & plot):
+      tracks_(tracks),
+      tags_(tags),
+      plot_(plot)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double bottom = std::max(tracks_.bottom(), tags_.bottom());
+      double height = plot_.height();
+      result = bottom + height;
+    }
+
+    Item & tracks_;
+    Item & tags_;
+    Item & plot_;
+  };
+
+  //----------------------------------------------------------------
   // RemuxView::append_source
   //
   void
@@ -3442,7 +3467,7 @@ namespace yae
     // layout the source name row:
     Item * prev_row = NULL;
 
-    // layot the source programs and program track plots:
+    // layout the source programs and program track plots:
     double rows_per_plot = 10.0;
     const DemuxerSummary & summary = src->summary();
 
@@ -3462,16 +3487,22 @@ namespace yae
                                          rows_per_plot);
 
       std::string prog_str = str("prog_", prog_id);
-      Item & prog = plots.addNew<Item>(prog_str.c_str());
-      prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
-      prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-      prog.anchors_.bottom_ = ItemRef::reference(*prev_row, kPropertyBottom);
-      prog.height_ = ItemRef::reference(style.row_height_, rows_per_plot);
+      Item & tracks = src_item[prog_str.c_str()];
 
+      Item & prog = plots.addNew<Item>(prog_str.c_str());
       Item & tags = plots.addNew<Item>(str("tags_", prog_id).c_str());
-      tags.anchors_.fill(prog);
+      tags.anchors_.top_ = ItemRef::reference(tracks, kPropertyTop);
+      tags.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+      tags.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
       tags.margins_.set_top(ItemRef::reference(style.row_height_, 0.33));
       tags.margins_.set_right(ItemRef::reference(style.row_height_, 0.67));
+
+      prog.height_ = ItemRef::reference(style.row_height_, rows_per_plot);
+      prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
+      prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
+      prog.anchors_.bottom_ = prog.
+        addExpr(new PlotBottomPos(tracks, tags, prog));
+
 
       Scrollview & psv = layout_scrollview(kScrollbarHorizontal,
                                            view,
