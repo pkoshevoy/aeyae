@@ -3637,6 +3637,10 @@ namespace yae
     Item & gops = root["layout"]["gops"];
     layout_gops(model, view, *style_, gops, clip);
 
+    capture_playhead_position();
+    maybe_layout_gops();
+    maybe_update_player();
+
     dataChanged();
 
 #if 0 // ndef NDEBUG
@@ -4181,111 +4185,13 @@ namespace yae
     Item & preview = root["preview"];
     Item & player = root["player"];
 
-    RemuxView::ViewMode prev_mode = view_mode_;
+    capture_playhead_position();
+
+    // change view mode:
     view_mode_ = mode;
 
-    if (prev_mode == kPlayerMode && serial_demuxer_)
-    {
-      // capture playhead position:
-      TTrackInfo track_info;
-      reader_->getSelectedVideoTrackInfo(track_info);
-
-      TProgramInfo prog_info;
-      reader_->getProgramInfo(track_info.program_, prog_info);
-
-      playhead_.prog_id_ = prog_info.program_;
-      playhead_.pts_ = player_->timeline().currentTime();
-
-      if (!serial_demuxer_->map_to_source(playhead_.prog_id_,
-                                          playhead_.pts_,
-                                          playhead_.src_index_,
-                                          playhead_.src_,
-                                          playhead_.src_dts_))
-      {
-        playhead_.src_.reset();
-        playhead_.src_index_ = 0;
-      }
-
-      if (mode != kPlayerMode)
-      {
-        player_->playback_stop();
-        reader_.reset();
-      }
-    }
-
-    if (mode == kPreviewMode ||
-        mode == kPlayerMode ||
-        mode == kExportMode)
-    {
-      // avoid rebuilding the preview if clip layout hasn't changed:
-      std::string model_json_str = model_->to_json_str();
-      if (model_json_str_ != model_json_str)
-      {
-        // remove cached layout data for serial demuxer:
-        gops_.erase(serial_demuxer_);
-        gops_row_lut_.erase(serial_demuxer_);
-
-        model_json_str_ = model_json_str;
-        output_clip_.reset();
-        serial_demuxer_.reset();
-        preview.children_.clear();
-      }
-
-      TClipPtr clip = output_clip();
-      if (clip && mode == kPreviewMode && preview.children_.empty())
-      {
-        layout_gops(*model_, *this, *style_, preview, clip);
-      }
-
-      if (mode == kPlayerMode)
-      {
-        reader_.reset(DemuxerReader::create(serial_demuxer_));
-        player_->playback(reader_);
-
-        TTime playhead_pts = playhead_.pts_;
-        TDemuxerInterfacePtr playhead_src = playhead_.src_.lock();
-
-        if (!playhead_src && serial_demuxer_)
-        {
-          // src was removed, seek to the start of the next source:
-          if (playhead_.src_index_ < serial_demuxer_->num_sources())
-          {
-            playhead_src = serial_demuxer_->sources().at(playhead_.src_index_);
-          }
-          else
-          {
-            playhead_src = serial_demuxer_->sources().front();
-          }
-
-          playhead_.src_dts_ = TTime(0, 1);
-        }
-
-        if (serial_demuxer_ &&
-            serial_demuxer_->has_program(playhead_.prog_id_))
-        {
-          serial_demuxer_->map_to_output(playhead_.prog_id_,
-                                         playhead_src,
-                                         playhead_.src_dts_,
-                                         playhead_pts);
-
-          YAE_ASSERT(playhead_pts.valid());
-          player_->timeline().seekTo(playhead_pts.sec());
-        }
-
-        TimelineItem & timeline =
-          player.get<TimelineItem>("timeline_item");
-
-        timeline.maybeAnimateOpacity();
-        timeline.forceAnimateControls();
-      }
-
-      preview.uncache();
-      player.uncache();
-
-#if 0 // ndef NDEBUG
-      preview.dump(std::cerr);
-#endif
-    }
+    maybe_layout_gops();
+    maybe_update_player();
 
     enable_focus_group();
 
@@ -4359,6 +4265,140 @@ namespace yae
     }
 
     return output_clip_;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::capture_playhead_position
+  //
+  void
+  RemuxView::capture_playhead_position()
+  {
+    if (view_mode_ != kPlayerMode || !serial_demuxer_)
+    {
+      return;
+    }
+
+    // capture playhead position:
+    TTrackInfo track_info;
+    reader_->getSelectedVideoTrackInfo(track_info);
+
+    TProgramInfo prog_info;
+    reader_->getProgramInfo(track_info.program_, prog_info);
+
+    playhead_.prog_id_ = prog_info.program_;
+    playhead_.pts_ = player_->timeline().currentTime();
+
+    if (!serial_demuxer_->map_to_source(playhead_.prog_id_,
+                                        playhead_.pts_,
+                                        playhead_.src_index_,
+                                        playhead_.src_,
+                                        playhead_.src_dts_))
+    {
+      playhead_.src_.reset();
+      playhead_.src_index_ = 0;
+    }
+
+    player_->playback_stop();
+    reader_.reset();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::maybe_layout_gops
+  //
+  void
+  RemuxView::maybe_layout_gops()
+  {
+    if (view_mode_ != kPreviewMode &&
+        view_mode_ != kPlayerMode &&
+        view_mode_ != kExportMode)
+    {
+      return;
+    }
+
+    Item & root = *root_;
+    Item & preview = root["preview"];
+
+    // avoid rebuilding the preview if clip layout hasn't changed:
+    std::string model_json_str = model_->to_json_str();
+    if (model_json_str_ != model_json_str)
+    {
+      // remove cached layout data for serial demuxer:
+      gops_.erase(serial_demuxer_);
+      gops_row_lut_.erase(serial_demuxer_);
+
+      model_json_str_ = model_json_str;
+      output_clip_.reset();
+      serial_demuxer_.reset();
+      preview.children_.clear();
+    }
+
+    TClipPtr clip = output_clip();
+    if (clip && view_mode_ == kPreviewMode && preview.children_.empty())
+    {
+      layout_gops(*model_, *this, *style_, preview, clip);
+    }
+
+    preview.uncache();
+
+#if 0 // ndef NDEBUG
+    preview.dump(std::cerr);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::update_player
+  //
+  void
+  RemuxView::maybe_update_player()
+  {
+    if (view_mode_ != kPlayerMode)
+    {
+      return;
+    }
+
+    Item & root = *root_;
+    Item & player = root["player"];
+
+    reader_.reset(DemuxerReader::create(serial_demuxer_));
+    player_->playback(reader_);
+
+    TTime playhead_pts = playhead_.pts_;
+    TDemuxerInterfacePtr playhead_src = playhead_.src_.lock();
+
+    if (!playhead_src && serial_demuxer_)
+    {
+      // src was removed, seek to the start of the next source:
+      if (playhead_.src_index_ < serial_demuxer_->num_sources())
+      {
+        playhead_src = serial_demuxer_->sources().at(playhead_.src_index_);
+      }
+      else
+      {
+        playhead_src = serial_demuxer_->sources().front();
+      }
+
+      playhead_.src_dts_ = TTime(0, 1);
+    }
+
+    if (serial_demuxer_ &&
+        serial_demuxer_->has_program(playhead_.prog_id_))
+    {
+      serial_demuxer_->map_to_output(playhead_.prog_id_,
+                                     playhead_src,
+                                     playhead_.src_dts_,
+                                     playhead_pts);
+
+      YAE_ASSERT(playhead_pts.valid());
+      player_->timeline().seekTo(playhead_pts.sec());
+    }
+
+    TimelineItem & timeline =
+      player.get<TimelineItem>("timeline_item");
+
+    timeline.maybeAnimateOpacity();
+    timeline.forceAnimateControls();
+
+    player.uncache();
   }
 
 }

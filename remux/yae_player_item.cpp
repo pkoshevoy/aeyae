@@ -390,6 +390,11 @@ namespace yae
   void
   PlayerItem::user_is_seeking(bool seeking)
   {
+    if (!reader_)
+    {
+      return;
+    }
+
     reader_->setPlaybackEnabled(!seeking && !paused_);
   }
 
@@ -399,6 +404,11 @@ namespace yae
   void
   PlayerItem::move_time_in(double seconds)
   {
+    if (!reader_)
+    {
+      return;
+    }
+
     reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalStart(seconds);
   }
@@ -409,6 +419,11 @@ namespace yae
   void
   PlayerItem::move_time_out(double seconds)
   {
+    if (!reader_)
+    {
+      return;
+    }
+
     reader_->setPlaybackLooping(true);
     reader_->setPlaybackIntervalEnd(seconds);
   }
@@ -419,6 +434,11 @@ namespace yae
   void
   PlayerItem::move_playhead(double seconds)
   {
+    if (!reader_)
+    {
+      return;
+    }
+
     video_->pause();
     audio_->pause();
 
@@ -437,7 +457,11 @@ namespace yae
   PlayerItem::toggle_playback()
   {
     paused_ = !paused_;
-    reader_->setPlaybackEnabled(!paused_);
+
+    if (reader_)
+    {
+      reader_->setPlaybackEnabled(!paused_);
+    }
 
     if (paused_)
     {
@@ -493,6 +517,11 @@ namespace yae
   void
   PlayerItem::prepare_to_render(IReader * reader, bool frame_stepping)
   {
+    if (!reader)
+    {
+      return;
+    }
+
     video_->pause();
     audio_->pause();
 
@@ -694,7 +723,7 @@ namespace yae
   void
   PlayerItem::skip_to_next_frame()
   {
-    if (!paused_)
+    if (!paused_ || !reader_)
     {
       return;
     }

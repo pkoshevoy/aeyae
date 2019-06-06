@@ -352,6 +352,10 @@ namespace yae
   protected:
     TClipPtr output_clip() const;
 
+    void capture_playhead_position();
+    void maybe_layout_gops();
+    void maybe_update_player();
+
     RemuxModel * model_;
     ViewMode view_mode_;
     mutable TClipPtr output_clip_;
