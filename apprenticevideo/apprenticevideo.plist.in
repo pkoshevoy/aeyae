@@ -66,7 +66,13 @@
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
 	<string>apprenticevideo</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<key>CFBundleVersion</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
 	<key>CFBundleGetInfoString</key>
+	<string>Apprentice Video by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
+	<key>NSHumanReadableCopyright</key>
 	<string>Apprentice Video by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
 	<string>apprenticevideo.icns</string>

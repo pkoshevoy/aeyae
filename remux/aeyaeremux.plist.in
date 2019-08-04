@@ -61,7 +61,13 @@
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
 	<string>aeyaeremux</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<key>CFBundleVersion</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
 	<key>CFBundleGetInfoString</key>
+	<string>Aeyae Remux by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
+	<key>NSHumanReadableCopyright</key>
 	<string>Aeyae Remux by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
 	<key>CFBundleIconFile</key>
 	<string>aeyaeremux.icns</string>
