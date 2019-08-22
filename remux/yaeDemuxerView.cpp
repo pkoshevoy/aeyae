@@ -1981,6 +1981,36 @@ namespace yae
       output.anchors_.fill(bg);
       output.visible_ = output.addExpr(new In<RemuxView::kExportMode>(view));
       output.visible_.disableCaching();
+      {
+        RoundRect & btn = output.addNew<RoundRect>("export_btn");
+        btn.anchors_.bottom_ = ItemRef::reference(output, kPropertyBottom);
+        btn.height_ = ItemRef::reference(style.row_height_);
+        btn.border_ = ItemRef::constant(1.0);
+        btn.radius_ = ItemRef::constant(3.0);
+
+        btn.color_ = btn.addExpr
+          (style_color_ref(view, &ItemViewStyle::bg_controls_));
+
+        Text & txt = output.addNew<Text>("layout_txt");
+        txt.anchors_.vcenter_ = ItemRef::reference(btn, kPropertyVCenter);
+        txt.font_ = style.font_small_;
+        txt.fontSize_ = ItemRef::reference(btn, kPropertyHeight, 0.2775);
+
+        btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
+        btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
+        btn.margins_.set_left(ItemRef::reference(btn, kPropertyHeight, -1.0));
+        btn.margins_.set_right(btn.margins_.get_left());
+        btn.margins_.set_bottom(ItemRef::reference(btn, kPropertyHeight, 0.5));
+
+        txt.anchors_.right_ = ItemRef::reference(output, kPropertyRight);
+        txt.margins_.
+          set_right(ItemRef::reference(btn, kPropertyHeight, 1.5));
+        txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
+
+        Item & ia = output.add
+          (new InvokeMethodOnClick("export_ia", view, "emit_remux"));
+        ia.anchors_.fill(btn);
+      }
 
       Item & gops = layout.addNew<Item>("gops");
       Item & clips = layout.addNew<Item>("clips");
