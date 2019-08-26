@@ -257,6 +257,8 @@ namespace yae
     void windowHalfSize();
     void windowFullSize();
     void windowDoubleSize();
+    void windowDecreaseSize();
+    void windowIncreaseSize();
 
     // chapters menu:
     void updateChaptersMenu();

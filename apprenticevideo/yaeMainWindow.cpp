@@ -891,6 +891,14 @@ namespace yae
                  this, SLOT(windowDoubleSize()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionDecreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionIncreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionDownmixToStereo, SIGNAL(triggered()),
                  this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
@@ -3130,6 +3138,24 @@ namespace yae
   MainWindow::windowDoubleSize()
   {
     canvasSizeSet(2.0, 2.0);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowDecreaseSize
+  //
+  void
+  MainWindow::windowDecreaseSize()
+  {
+    canvasSizeSet(xexpand_ * 0.5, yexpand_ * 0.5);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowIncreaseSize
+  //
+  void
+  MainWindow::windowIncreaseSize()
+  {
+    canvasSizeSet(xexpand_ * 2.0, yexpand_ * 2.0);
   }
 
   //----------------------------------------------------------------
