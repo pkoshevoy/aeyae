@@ -224,6 +224,57 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // mkdir_utf8
+  //
+  bool
+  mkdir_utf8(const char * path_utf8)
+  {
+#ifdef _WIN32
+    std::wstring path_utf16 = utf8_to_utf16(path_utf8);
+    int err = _wmkdir(path_utf16.c_str());
+#else
+    int err = mkdir(path_utf8, S_IRWXU);
+#endif
+    return !err;
+  }
+
+  //----------------------------------------------------------------
+  // mkdir_p
+  //
+  bool
+  mkdir_p(const std::string & path_utf8)
+  {
+    TOpenFolder folder;
+    if (folder.open(path_utf8))
+    {
+      return true;
+    }
+
+    std::string dirname;
+    std::string basename;
+    if (!parse_file_path(path_utf8, dirname, basename))
+    {
+      return false;
+    }
+
+    if (!mkdir_p(dirname))
+    {
+      return false;
+    }
+
+    return mkdir_utf8(path_utf8.c_str());
+  }
+
+  //----------------------------------------------------------------
+  // mkdir_p
+  //
+  bool
+  mkdir_p(const char * path_utf8)
+  {
+    return path_utf8 && *path_utf8 && yae::mkdir_p(std::string(path_utf8));
+  }
+
+  //----------------------------------------------------------------
   // rename_utf8
   //
   int
@@ -693,9 +744,9 @@ namespace yae
   //
   struct TOpenFolder::Private
   {
-    //----------------------------------------------------------------
-    // Private
-    //
+    Private()
+    {}
+
     Private(const std::string & folder_path_utf8):
       path_(fs::absolute(fs::path(folder_path_utf8))),
       iter_(path_)
@@ -706,6 +757,15 @@ namespace yae
         oss << "\"" << path_.string() << "\" folder is empty";
         throw std::runtime_error(oss.str().c_str());
       }
+    }
+
+    bool open(const std::string & folder_path_utf8)
+    {
+      path_ = fs::absolute(fs::path(folder_path_utf8));
+
+      boost::system::error_code err;
+      iter_ = fs::directory_iterator(path_, err);
+      return !err;
     }
 
     bool parse_next_item()
@@ -746,6 +806,10 @@ namespace yae
   //----------------------------------------------------------------
   // TOpenFolder::TOpenFolder
   //
+  TOpenFolder::TOpenFolder():
+    private_(new Private())
+  {}
+
   TOpenFolder::TOpenFolder(const std::string & folder_path):
     private_(new Private(folder_path))
   {}
@@ -756,6 +820,15 @@ namespace yae
   TOpenFolder::~TOpenFolder()
   {
     delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // TOpenFolder::open
+  //
+  bool
+  TOpenFolder::open(const std::string & folder_path)
+  {
+    return private_->open(folder_path);
   }
 
   //----------------------------------------------------------------

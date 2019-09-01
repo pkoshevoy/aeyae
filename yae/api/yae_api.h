@@ -89,7 +89,8 @@
 // YAE_ASSERT
 //
 #if defined(NDEBUG)
-# define YAE_ASSERT(expr)
+# define YAE_ASSERT(expr) if ((expr)) {} else   \
+    yae_elog() << "assertion failed: (" << #expr << ")"
 #else
 # if defined(__APPLE__)
 #  if defined(__ppc__)

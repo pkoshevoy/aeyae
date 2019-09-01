@@ -219,22 +219,22 @@ namespace yae
 //----------------------------------------------------------------
 // yae_elog
 //
-#define yae_elog logger().error(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_elog yae::logger().error(__FILE__ ":" YAE_STR(__LINE__))
 
 //----------------------------------------------------------------
 // yae_wlog
 //
-#define yae_wlog logger().warn(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_wlog yae::logger().warn(__FILE__ ":" YAE_STR(__LINE__))
 
 //----------------------------------------------------------------
 // yae_log
 //
-#define yae_log logger().info(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_log yae::logger().info(__FILE__ ":" YAE_STR(__LINE__))
 
 //----------------------------------------------------------------
 // yae_dlog
 //
-#define yae_dlog logger().debug(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_dlog yae::logger().debug(__FILE__ ":" YAE_STR(__LINE__))
 
 
 #endif // YAE_LOG_H_

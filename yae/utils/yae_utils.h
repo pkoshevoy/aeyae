@@ -80,6 +80,26 @@ namespace yae
   get_user_folder_path(const char * folder_utf8);
 
   //----------------------------------------------------------------
+  // mkdir_utf8
+  //
+  YAE_API bool
+  mkdir_utf8(const char * path_utf8);
+
+  //----------------------------------------------------------------
+  // mkdir_p
+  //
+  YAE_API bool
+  mkdir_p(const std::string & path_utf8);
+
+  //----------------------------------------------------------------
+  // mkdir_p
+  //
+  // like `mkdir -p /some/new/path`
+  //
+  YAE_API bool
+  mkdir_p(const char * path_utf8);
+
+  //----------------------------------------------------------------
   // rename_utf8
   //
   YAE_API int
@@ -183,10 +203,16 @@ namespace yae
   //
   struct YAE_API TOpenFolder
   {
-    // NOTE: this will throw an exceptions if the folder doesn't exist
-    // or can not be opened.
+    TOpenFolder();
+
+    // NOTE: this will throw an exceptions if the folder doesn't exist,
+    // or can not be opened, or the folder is empty:
     TOpenFolder(const std::string & folder_path);
     ~TOpenFolder();
+
+    // return false if the folder doesn't exist
+    // or can not be opened.
+    bool open(const std::string & folder_path);
 
     // accessor to the folder path:
     std::string folder_path() const;
