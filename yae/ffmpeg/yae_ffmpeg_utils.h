@@ -11,7 +11,8 @@
 
 // aeyae:
 #include "../api/yae_api.h"
-#include "../utils/yae_log.h"
+#include "../api/yae_log.h"
+#include "../api/yae_message_carrier_interface.h"
 #include "../video/yae_video.h"
 
 // standard C++ library:
@@ -154,18 +155,18 @@ namespace yae
     { return NULL; }
 
     // virtual:
-    IMessageCarrier::TPriority priorityThreshold() const
+    int priorityThreshold() const
     { return threshold_; }
 
     // virtual:
-    void setPriorityThreshold(IMessageCarrier::TPriority priority)
+    void setPriorityThreshold(int priority)
     { threshold_ = priority; }
 
     // virtual:
-    void deliver(TPriority priority, const char * src, const char * msg);
+    void deliver(int priority, const char * src, const char * msg);
 
   protected:
-    IMessageCarrier::TPriority threshold_;
+    int threshold_;
   };
 
 }

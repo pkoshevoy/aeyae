@@ -11,7 +11,6 @@
 
 // aeyae:
 #include "../api/yae_api.h"
-#include "../api/yae_message_carrier_interface.h"
 
 // standard C++ library:
 #include <map>
@@ -19,12 +18,15 @@
 
 // boost library:
 #ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 
 
 namespace yae
 {
+  // forward declarations:
+  struct YAE_API IMessageCarrier;
 
   //----------------------------------------------------------------
   // TLog
@@ -34,16 +36,19 @@ namespace yae
   //
   struct YAE_API TLog
   {
-    TLog(const std::string & carrierId = std::string(),
-         IMessageCarrier * carrier = NULL)
+    enum TPriority
     {
-      assign(carrierId, carrier);
-    }
+      kDebug   = 0,
+      kInfo    = 1,
+      kWarning = 2,
+      kError   = 3
+    };
 
-    ~TLog()
-    {
-      clear();
-    }
+
+    TLog(const std::string & carrierId = std::string(),
+         IMessageCarrier * carrier = NULL);
+
+    ~TLog();
 
 #if __cplusplus < 201103L
   private:
@@ -58,125 +63,53 @@ namespace yae
 #endif
 
     // dispose of all carriers associated with this log instance:
-    inline void clear()
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-
-      for (std::map<std::string, IMessageCarrier *>::iterator
-             i = carriers_.begin(); i != carriers_.end(); ++i)
-      {
-        IMessageCarrier *& carrier = i->second;
-        if (carrier)
-        {
-          carrier->destroy();
-          carrier = NULL;
-        }
-      }
-
-      carriers_.clear();
-    }
+    void clear();
 
     // add or update the carrier associated with a given carrierId:
-    inline void assign(const std::string & carrierId,
-                       IMessageCarrier * carrier)
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-
-      IMessageCarrier * prevCarrier = carriers_[carrierId];
-
-      if (carrier != prevCarrier)
-      {
-        if (prevCarrier)
-        {
-          prevCarrier->destroy();
-        }
-
-        carriers_[carrierId] = carrier;
-      }
-    }
+    void assign(const std::string & carrierId,
+                IMessageCarrier * carrier);
 
     // dispose of a carrier associated with a given carrierId:
-    inline void remove(const std::string & carrierId)
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-
-      std::map<std::string, IMessageCarrier *>::iterator
-        found = carriers_.find(carrierId);
-      if (found == carriers_.end())
-      {
-        return;
-      }
-
-      IMessageCarrier * carrier = found->second;
-      if (carrier)
-      {
-        carrier->destroy();
-      }
-
-      carriers_.erase(found);
-    }
+    void remove(const std::string & carrierId);
 
     //! broadcast a given message to every carrier
     //! registered with this log instance:
-    inline void deliver(IMessageCarrier::TPriority messagePriority,
-                        const char * source,
-                        const char * message)
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-
-      for (std::map<std::string, IMessageCarrier *>::iterator
-             i = carriers_.begin(); i != carriers_.end(); ++i)
-      {
-        IMessageCarrier * carrier = i->second;
-
-        if (carrier && messagePriority >= carrier->priorityThreshold())
-        {
-          carrier->deliver(messagePriority, source, message);
-        }
-      }
-    }
+    void deliver(int messagePriority,
+                 const char * source,
+                 const char * message);
 
     inline void error(const char * source, const char * message)
-    { deliver(IMessageCarrier::kError, source, message); }
+    { deliver(kError, source, message); }
 
     inline void warn(const char * source, const char * message)
-    { deliver(IMessageCarrier::kWarning, source, message); }
+    { deliver(kWarning, source, message); }
 
     inline void info(const char * source, const char * message)
-    { deliver(IMessageCarrier::kInfo, source, message); }
+    { deliver(kInfo, source, message); }
 
     inline void debug(const char * source, const char * message)
-    { deliver(IMessageCarrier::kDebug, source, message); }
+    { deliver(kDebug, source, message); }
 
     //----------------------------------------------------------------
     // Scribe
     //
-    struct Scribe
+    struct YAE_API Scribe
     {
-      struct Private
+      //----------------------------------------------------------------
+      // Private
+      //
+      struct YAE_API Private
       {
-        Private(TLog & logger,
-                IMessageCarrier::TPriority priority,
-                const char * source):
-          logger_(logger),
-          priority_(priority),
-          source_(source)
-        {}
-
-        ~Private()
-        {
-          logger_.deliver(priority_, source_, oss_.str().c_str());
-        }
+        Private(TLog & logger, int priority, const char * source);
+        ~Private();
 
         TLog & logger_;
-        IMessageCarrier::TPriority priority_;
+        int priority_;
         const char * source_;
         mutable std::ostringstream oss_;
       };
 
-      Scribe(TLog & logger,
-             IMessageCarrier::TPriority priority,
-             const char * source):
+      Scribe(TLog & logger, int priority, const char * source):
         private_(new Private(logger, priority, source))
       {}
 
@@ -186,23 +119,23 @@ namespace yae
       {
         private_->oss_ << data;
         return Scribe(*this);
-      };
+      }
 
     protected:
-      yae::shared_ptr<Private> private_;
+      boost::shared_ptr<Private> private_;
     };
 
     inline Scribe error(const char * source)
-    { return Scribe(*this, IMessageCarrier::kError, source); }
+    { return Scribe(*this, kError, source); }
 
     inline Scribe warn(const char * source)
-    { return Scribe(*this, IMessageCarrier::kWarning, source); }
+    { return Scribe(*this, kWarning, source); }
 
     inline Scribe info(const char * source)
-    { return Scribe(*this, IMessageCarrier::kInfo, source); }
+    { return Scribe(*this, kInfo, source); }
 
     inline Scribe debug(const char * source)
-    { return Scribe(*this, IMessageCarrier::kDebug, source); }
+    { return Scribe(*this, kDebug, source); }
 
   protected:
     mutable boost::mutex mutex_;

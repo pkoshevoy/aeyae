@@ -74,9 +74,11 @@ find_path(FFMPEG_BUILD_DIR
   PATHS
   ${FFMPEG_BUILD_PATH}
   "$ENV{HOME}/x86_64/build/ffmpeg-git-build-${lowercase_build_type}"
+  "$ENV{HOME}/x86_64/build/ffmpeg-git-${lowercase_build_type}"
   "$ENV{HOME}/x86_64/build/ffmpeg-${lowercase_build_type}"
   "$ENV{HOME}/x86_64/build/ffmpeg"
   /Developer/x86_64/build/ffmpeg-git-build-${lowercase_build_type}
+  /Developer/x86_64/build/ffmpeg-git-${lowercase_build_type}
   /Developer/x86_64/build/ffmpeg-${lowercase_build_type}
   /Developer/x86_64/build/ffmpeg)
 

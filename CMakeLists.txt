@@ -494,7 +494,10 @@ add_library(aeyae SHARED
   ${jsoncpp_sources}
 
   yae/api/yae_api.h
+  yae/api/yae_assert.h
   yae/api/yae_frame_observer_interface.h
+  yae/api/yae_log.cpp
+  yae/api/yae_log.h
   yae/api/yae_message_carrier_interface.h
   yae/api/yae_plugin_interface.h
   yae/api/yae_settings.h
@@ -535,7 +538,6 @@ add_library(aeyae SHARED
 
   yae/utils/yae_benchmark.cpp
   yae/utils/yae_benchmark.h
-  yae/utils/yae_log.h
   yae/utils/yae_lru_cache.h
   yae/utils/yae_pgm_file.h
   yae/utils/yae_plugin_registry.cpp

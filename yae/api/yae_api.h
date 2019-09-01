@@ -66,47 +66,6 @@
 
 
 //----------------------------------------------------------------
-// YAE_BREAKPOINT
-//
-#if defined(NDEBUG)
-# define YAE_BREAKPOINT()
-#else
-# if defined(__APPLE__)
-#  if defined(__ppc__)
-#   define YAE_BREAKPOINT()__asm { trap }
-#  else
-#   define YAE_BREAKPOINT() asm("int $3")
-#  endif
-# elif __GNUC__
-#   define YAE_BREAKPOINT() asm("int $3")
-# else
-#   define YAE_BREAKPOINT()
-# endif
-#endif
-
-
-//----------------------------------------------------------------
-// YAE_ASSERT
-//
-#if defined(NDEBUG)
-# define YAE_ASSERT(expr) if ((expr)) {} else   \
-    yae_elog() << "assertion failed: (" << #expr << ")"
-#else
-# if defined(__APPLE__)
-#  if defined(__ppc__)
-#   define YAE_ASSERT(expr) if (!(expr)) __asm { trap }
-#  else
-#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
-#  endif
-# elif __GNUC__
-#   define YAE_ASSERT(expr) if (!(expr)) asm("int $3")
-# else
-#  define YAE_ASSERT(expr) assert(expr)
-# endif
-#endif
-
-
-//----------------------------------------------------------------
 // YAE_DISABLE_DEPRECATION_WARNINGS
 //
 #if defined(__ICL) || defined (__INTEL_COMPILER)
@@ -149,6 +108,9 @@ namespace yae
   //
   typedef ::int64_t int64;
 }
+
+
+#include "yae_assert.h"
 
 
 #endif // YAE_API_H_

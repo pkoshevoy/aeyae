@@ -17,32 +17,21 @@
 namespace yae
 {
 
+  //----------------------------------------------------------------
+  // IMessageCarrier
+  //
   struct YAE_API IMessageCarrier : public IPlugin
   {
-
-    //----------------------------------------------------------------
-    // TPriority
-    //
-    //! message priority levels, listed in descending priority order
-    //
-    enum TPriority
-    {
-      kDebug   = 0,
-      kInfo    = 1,
-      kWarning = 2,
-      kError   = 3
-    };
-
     //! accessor to current priority threshold for this message carrier:
-    virtual TPriority priorityThreshold() const = 0;
+    virtual int priorityThreshold() const = 0;
 
     //! set the priority threshold -- messages with priority
     //! that is greater or equal to the threshold should be
     //! accepted for delivery, other messages may be ignored:
-    virtual void setPriorityThreshold(TPriority priority) = 0;
+    virtual void setPriorityThreshold(int priority) = 0;
 
     //! message delivery interface:
-    virtual void deliver(TPriority messagePriority,
+    virtual void deliver(int messagePriority,
                          const char * source,
                          const char * message) = 0;
   };

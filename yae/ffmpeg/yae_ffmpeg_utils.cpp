@@ -388,7 +388,7 @@ namespace yae
   // LogToFFmpeg::deliver
   //
   void
-  LogToFFmpeg::deliver(IMessageCarrier::TPriority priority,
+  LogToFFmpeg::deliver(int priority,
                        const char * source,
                        const char * message)
   {
@@ -398,9 +398,9 @@ namespace yae
     }
 
     int log_level =
-      priority < IMessageCarrier::kInfo ? AV_LOG_DEBUG :
-      priority < IMessageCarrier::kWarning ? AV_LOG_INFO :
-      priority < IMessageCarrier::kError ? AV_LOG_WARNING :
+      priority < TLog::kInfo ? AV_LOG_DEBUG :
+      priority < TLog::kWarning ? AV_LOG_INFO :
+      priority < TLog::kError ? AV_LOG_WARNING :
       AV_LOG_ERROR;
 
     av_log(NULL, log_level, "%s: %s\n", source, message);

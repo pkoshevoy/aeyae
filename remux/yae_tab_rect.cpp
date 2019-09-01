@@ -10,7 +10,7 @@
 #include <QImage>
 
 // aeyae:
-#include "yae/utils/yae_log.h"
+#include "yae/api/yae_log.h"
 
 // local interfaces:
 #include "yae_tab_rect.h"
