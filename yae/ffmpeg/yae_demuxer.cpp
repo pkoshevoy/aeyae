@@ -777,11 +777,11 @@ namespace yae
   {
     std::string folderPath;
     std::string fileName;
-    parseFilePath(filePath, folderPath, fileName);
+    parse_file_path(filePath, folderPath, fileName);
 
     std::string baseName;
     std::string ext;
-    parseFileName(fileName, baseName, ext);
+    parse_file_name(fileName, baseName, ext);
 
     if (!ext.empty())
     {
@@ -811,15 +811,15 @@ namespace yae
       // add auxiliary resources:
       std::size_t trackOffset = 100;
       TOpenFolder folder(folderPath);
-      while (folder.parseNextItem())
+      while (folder.parse_next_item())
       {
-        std::string nm = folder.itemName();
+        std::string nm = folder.item_name();
         if (nm == fileName || !al::starts_with(nm, baseName))
         {
           continue;
         }
 
-        src.push_back(open_demuxer(folder.itemPath().c_str(),
+        src.push_back(open_demuxer(folder.item_path().c_str(),
                                    trackOffset));
         if (!src.back())
         {

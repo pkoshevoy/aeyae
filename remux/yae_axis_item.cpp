@@ -111,7 +111,7 @@ namespace yae
         std::string label =
           item_.formatter_ ?
           item_.formatter_->get(t) :
-          yae::toText(t);
+          yae::to_text(t);
 
         text.text_ = TVarRef::constant(TVar(QString::fromUtf8(label.c_str())));
       }

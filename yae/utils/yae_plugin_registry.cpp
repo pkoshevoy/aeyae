@@ -21,27 +21,27 @@ namespace yae
   // TPluginRegistry::load
   //
   bool
-  TPluginRegistry::load(const char * pluginsFolder)
+  TPluginRegistry::load(const char * plugins_folder)
   {
     try
     {
-      TOpenFolder folder(pluginsFolder);
+      TOpenFolder folder(plugins_folder);
 
       bool foundPlugins = false;
       do
       {
-        std::string srcName = folder.itemName();
-        std::string srcPath = folder.itemPath();
+        std::string src_name = folder.item_name();
+        std::string src_path = folder.item_path();
 
-        if (folder.itemIsFolder())
+        if (folder.item_is_folder())
         {
-          if (strcmp(srcName.c_str(), ".") == 0 ||
-              strcmp(srcName.c_str(), "..") == 0)
+          if (strcmp(src_name.c_str(), ".") == 0 ||
+              strcmp(src_name.c_str(), "..") == 0)
           {
             continue;
           }
 
-          if (this->load(srcPath.c_str()))
+          if (this->load(src_path.c_str()))
           {
             foundPlugins = true;
           }
@@ -49,19 +49,19 @@ namespace yae
           continue;
         }
 
-        if (!boost::algorithm::ends_with(srcName, ".yae"))
+        if (!boost::algorithm::ends_with(src_name, ".yae"))
         {
           continue;
         }
 
-        void * module = loadLibrary(srcPath.c_str());
+        void * module = load_library(src_path.c_str());
         if (!module)
         {
           continue;
         }
 
         TPluginFactory factory =
-          (TPluginFactory)getSymbol(module, "yae_create_plugin");
+          (TPluginFactory)get_symbol(module, "yae_create_plugin");
         if (!factory)
         {
           continue;
@@ -81,7 +81,7 @@ namespace yae
           foundPlugins = true;
         }
 
-      } while (folder.parseNextItem());
+      } while (folder.parse_next_item());
 
       return foundPlugins;
     }

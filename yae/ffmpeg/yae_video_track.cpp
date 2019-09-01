@@ -955,7 +955,7 @@ namespace yae
 
         if (frameRateTag)
         {
-          t.frameRate_ = toScalar<double, const char *>(frameRateTag->value);
+          t.frameRate_ = to_scalar<double, const char *>(frameRateTag->value);
         }
         else if (totalFramesTag &&
                  context_->duration &&
@@ -967,7 +967,7 @@ namespace yae
             double(context_->duration) / double(AV_TIME_BASE);
 
           int64_t totalFrames =
-            toScalar<int64_t, const char *>(totalFramesTag->value);
+            to_scalar<int64_t, const char *>(totalFramesTag->value);
 
           if (totalFrames)
           {
@@ -1022,7 +1022,7 @@ namespace yae
 
       if (rotate)
       {
-        t.cameraRotation_ = toScalar<int>(rotate->value);
+        t.cameraRotation_ = to_scalar<int>(rotate->value);
       }
       else
       {

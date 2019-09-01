@@ -219,7 +219,7 @@ namespace yae
         std::string val;
         if (getXmlElemText(xml, val))
         {
-          bookmark.vtrack_ = toScalar<std::size_t, std::string>(val);
+          bookmark.vtrack_ = to_scalar<std::size_t, std::string>(val);
         }
       }
       else if (elemName == kAudioTrackTag)
@@ -227,7 +227,7 @@ namespace yae
         std::string val;
         if (getXmlElemText(xml, val))
         {
-          bookmark.atrack_ = toScalar<std::size_t, std::string>(val);
+          bookmark.atrack_ = to_scalar<std::size_t, std::string>(val);
         }
       }
       else if (elemName == kSubtitleTrackTag)
@@ -235,7 +235,7 @@ namespace yae
         std::string val;
         if (getXmlElemText(xml, val))
         {
-          std::size_t i = toScalar<std::size_t, std::string>(val);
+          std::size_t i = to_scalar<std::size_t, std::string>(val);
           bookmark.subs_.push_back(i);
         }
       }
@@ -244,7 +244,7 @@ namespace yae
         std::string val;
         if (getXmlElemText(xml, val))
         {
-          bookmark.cc_ = toScalar<unsigned int, std::string>(val);
+          bookmark.cc_ = to_scalar<unsigned int, std::string>(val);
         }
       }
     }

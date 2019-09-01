@@ -1084,7 +1084,7 @@ namespace yae
       {
         std::string dirname;
         std::string basename;
-        parseFilePath(load_began->source_, dirname, basename);
+        parse_file_path(load_began->source_, dirname, basename);
 
         spinner_.setEnabled(true);
         spinner_.setText(tr("loading: %1").

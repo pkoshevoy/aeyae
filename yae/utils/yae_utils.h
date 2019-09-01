@@ -46,103 +46,137 @@ namespace yae
   extern YAE_API const bool parity_lut[256];
 
   //----------------------------------------------------------------
-  // renameUtf8
+  // get_main_args_utf8
   //
-  YAE_API int
-  renameUtf8(const char * fnOldUtf8, const char * fnNewUtf8);
+  YAE_API void
+  get_main_args_utf8(int & argc, char **& argv);
 
   //----------------------------------------------------------------
-  // fopenUtf8
+  // set_console_output_utf8
+  //
+  YAE_API void
+  set_console_output_utf8();
+
+  //----------------------------------------------------------------
+  // getenv_utf8
+  //
+  YAE_API bool
+  getenv_utf8(const char * var_utf8, std::string & value);
+
+  //----------------------------------------------------------------
+  // get_home_path_utf8
+  //
+  // NOTE: this may throw a runtime_error if $HOME is not set
+  //
+  YAE_API std::string
+  get_home_path_utf8();
+
+  //----------------------------------------------------------------
+  // get_user_folder_path
+  //
+  // NOTE: this relies on get_home_path_utf8, so same exceptions apply
+  //
+  YAE_API std::string
+  get_user_folder_path(const char * folder_utf8);
+
+  //----------------------------------------------------------------
+  // rename_utf8
+  //
+  YAE_API int
+  rename_utf8(const char * fn_old_utf8, const char * fn_new_utf8);
+
+  //----------------------------------------------------------------
+  // fopen_utf8
   //
   YAE_API std::FILE *
-  fopenUtf8(const char * filenameUtf8, const char * mode);
+  fopen_utf8(const char * filename_utf8, const char * mode);
 
   //----------------------------------------------------------------
-  // fileOpenUtf8
+  // open_utf8
   //
   YAE_API int
-  fileOpenUtf8(const char * filenameUTF8, int accessMode, int permissions);
+  open_utf8(const char * filename_utf8, int access_mode, int permissions);
 
   //----------------------------------------------------------------
-  // fileSeek64
+  // file_seek64
   //
   YAE_API int64
-  fileSeek64(int fd, int64 offset, int whence);
+  file_seek64(int fd, int64 offset, int whence);
 
   //----------------------------------------------------------------
-  // fileSize64
+  // file_size64
   //
   YAE_API int64
-  fileSize64(int fd);
+  file_size64(int fd);
 
   //----------------------------------------------------------------
   // kDirSeparator
   //
 #ifdef _WIN32
-#define kDirSeparator '\\'
+#define kDirSeparator "\\"
 #else
-#define kDirSeparator '/'
+#define kDirSeparator "/"
 #endif
 
   //----------------------------------------------------------------
-  // joinPaths
+  // join_paths
   //
   YAE_API std::string
-  joinPaths(const std::string & a,
-            const std::string & b,
-            char pathSeparator = kDirSeparator);
+  join_paths(const std::string & a,
+             const std::string & b,
+             const char * pathSeparator = kDirSeparator);
 
   //----------------------------------------------------------------
-  // parseFilePath
+  // parse_file_path
   //
   YAE_API bool
-  parseFilePath(const std::string & filePath,
-                std::string & folder,
-                std::string & name);
+  parse_file_path(const std::string & file_path,
+                  std::string & folder,
+                  std::string & name);
 
   //----------------------------------------------------------------
-  // parseFileName
+  // parse_file_name
   //
   YAE_API bool
-  parseFileName(const std::string & fileName,
-                std::string & name,
-                std::string & ext);
+  parse_file_name(const std::string & fileName,
+                  std::string & name,
+                  std::string & ext);
 
   //----------------------------------------------------------------
-  // getModuleFilename
+  // get_module_filename
   //
   YAE_API bool
-  getModuleFilename(const void * symbol, std::string & filepathUtf8);
+  get_module_filename(const void * symbol, std::string & filepath_utf8);
 
   //----------------------------------------------------------------
-  // getCurrentExecutablePath
+  // get_current_executable_path
   //
   YAE_API bool
-  getCurrentExecutablePath(std::string & exePathUtf8);
+  get_current_executable_path(std::string & exe_path_utf8);
 
   //----------------------------------------------------------------
-  // getCurrentExecutableFolder
+  // get_current_executable_folder
   //
   YAE_API bool
-  getCurrentExecutableFolder(std::string & exeFolderPathUtf8);
+  get_current_executable_folder(std::string & exe_folder_path_utf8);
 
   //----------------------------------------------------------------
-  // getCurrentExecutablePluginsFolder
+  // get_current_executable_plugins_folder
   //
   YAE_API bool
-  getCurrentExecutablePluginsFolder(std::string & pluginsFolderPathUtf8);
+  get_current_executable_plugins_folder(std::string & plugins_folder_path_utf8);
 
   //----------------------------------------------------------------
-  // loadLibrary
+  // load_library
   //
   YAE_API void *
-  loadLibrary(const char * filepathUtf8);
+  load_library(const char * filepath_utf8);
 
   //----------------------------------------------------------------
-  // getSymbol
+  // get_symbol
   //
   YAE_API void *
-  getSymbol(void * module, const char * symbol);
+  get_symbol(void * module, const char * symbol);
 
   //----------------------------------------------------------------
   // TOpenFolder
@@ -151,19 +185,19 @@ namespace yae
   {
     // NOTE: this will throw an exceptions if the folder doesn't exist
     // or can not be opened.
-    TOpenFolder(const std::string & folderPath);
+    TOpenFolder(const std::string & folder_path);
     ~TOpenFolder();
 
     // accessor to the folder path:
-    std::string folderPath() const;
+    std::string folder_path() const;
 
     // parse the next item in the folder:
-    bool parseNextItem();
+    bool parse_next_item();
 
     // accessors to current item:
-    bool itemIsFolder() const;
-    std::string itemName() const;
-    std::string itemPath() const;
+    bool item_is_folder() const;
+    std::string item_name() const;
+    std::string item_path() const;
 
   private:
     TOpenFolder(const TOpenFolder &);
@@ -180,18 +214,18 @@ namespace yae
   //
   template <typename TVisitor>
   static void
-  for_each_file_at(const std::string & pathUtf8, TVisitor & callback)
+  for_each_file_at(const std::string & path_utf8, TVisitor & callback)
   {
     try
     {
-      TOpenFolder folder(pathUtf8);
-      while (folder.parseNextItem())
+      TOpenFolder folder(path_utf8);
+      while (folder.parse_next_item())
       {
-        std::string name = folder.itemName();
-        std::string path = folder.itemPath();
-        bool isSubFolder = folder.itemIsFolder();
+        std::string name = folder.item_name();
+        std::string path = folder.item_path();
+        bool is_subfolder = folder.item_is_folder();
 
-        if (isSubFolder)
+        if (is_subfolder)
         {
           if (name == "." || name == "..")
           {
@@ -199,12 +233,12 @@ namespace yae
           }
         }
 
-        if (!callback(isSubFolder, name, path))
+        if (!callback(is_subfolder, name, path))
         {
           return;
         }
 
-        if (isSubFolder)
+        if (is_subfolder)
         {
           for_each_file_at(path, callback);
         }
@@ -212,8 +246,8 @@ namespace yae
     }
     catch (...)
     {
-      std::string name = fs::path(pathUtf8).filename().string();
-      callback(false, name, pathUtf8);
+      std::string name = fs::path(path_utf8).filename().string();
+      callback(false, name, path_utf8);
     }
   }
 
@@ -229,11 +263,11 @@ namespace yae
       files_(dst)
     {}
 
-    bool operator()(bool isFolder,
+    bool operator()(bool is_folder,
                     const std::string & name,
                     const std::string & path)
     {
-      if (!isFolder && boost::regex_match(name, pattern_))
+      if (!is_folder && boost::regex_match(name, pattern_))
       {
         files_.insert(path);
       }
@@ -290,8 +324,12 @@ namespace yae
   {
     // NOTE: this will throw an exceptions if the file doesn't exist
     // or can not be opened.
-    TOpenFile(const char * filenameUtf8, const char * mode);
+    TOpenFile(const char * filename_utf8, const char * mode);
+    TOpenFile(const std::string & filename_utf8, const char * mode);
     ~TOpenFile();
+
+    bool open(const char * filename_utf8, const char * mode);
+    void close();
 
     inline bool is_open() const
     {
@@ -465,9 +503,9 @@ namespace yae
   inline static TValue
   get(const std::map<std::string, TValue> & lut,
       const char * key,
-      const TValue & defaultValue = TValue())
+      const TValue & default_value = TValue())
   {
-    return get<std::string, TValue>(lut, std::string(key), defaultValue);
+    return get<std::string, TValue>(lut, std::string(key), default_value);
   }
 
   //----------------------------------------------------------------
@@ -506,11 +544,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // isSizeOne
+  // is_size_one
   //
   template <typename TContainer>
   inline bool
-  isSizeOne(const TContainer & c)
+  is_size_one(const TContainer & c)
   {
     typename TContainer::const_iterator i = c.begin();
     typename TContainer::const_iterator e = c.end();
@@ -518,11 +556,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // isSizeTwoOrMore
+  // is_size_two_or_more
   //
   template <typename TContainer>
   inline bool
-  isSizeTwoOrMore(const TContainer & c)
+  is_size_two_or_more(const TContainer & c)
   {
     typename TContainer::const_iterator i = c.begin();
     typename TContainer::const_iterator e = c.end();
@@ -530,13 +568,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // indexOf
+  // index_of
   //
   template <typename TData>
   std::size_t
-  indexOf(const TData & item, const TData * items, std::size_t numItems)
+  index_of(const TData & item, const TData * items, std::size_t num_items)
   {
-    for (std::size_t i = 0; i < numItems; ++i, ++items)
+    for (std::size_t i = 0; i < num_items; ++i, ++items)
     {
       if (item == *items)
       {
@@ -544,7 +582,7 @@ namespace yae
       }
     }
 
-    return numItems;
+    return num_items;
   }
 
   //----------------------------------------------------------------
@@ -567,7 +605,8 @@ namespace yae
   // compare
   //
   template <typename TData>
-  int compare(const TData & a, const TData & b)
+  int
+  compare(const TData & a, const TData & b)
   {
     return memcmp(&a, &b, sizeof(TData));
   }
@@ -614,11 +653,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // toText
+  // to_text
   //
   template <typename TData>
   std::string
-  toText(const TData & data)
+  to_text(const TData & data)
   {
     std::ostringstream os;
     os << data;
@@ -626,11 +665,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // toScalar
+  // to_scalar
   //
   template <typename TScalar, typename TText>
   TScalar
-  toScalar(const TText & text)
+  to_scalar(const TText & text)
   {
     std::istringstream is;
     is.str(std::string(text));
@@ -642,22 +681,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // stripHtmlTags
+  // strip_html_tags
   //
   YAE_API std::string
-  stripHtmlTags(const std::string & in);
+  strip_html_tags(const std::string & in);
 
   //----------------------------------------------------------------
-  // assaToPlainText
+  // assa_to_plain_text
   //
   YAE_API std::string
-  assaToPlainText(const std::string & in);
+  assa_to_plain_text(const std::string & in);
 
   //----------------------------------------------------------------
-  // convertEscapeCodes
+  // convert_escape_codes
   //
   YAE_API std::string
-  convertEscapeCodes(const std::string & in);
+  convert_escape_codes(const std::string & in);
 
   //----------------------------------------------------------------
   // parse_hhmmss_xxx

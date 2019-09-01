@@ -461,7 +461,7 @@ namespace yae
 
     // remove leading redundant keys from abbreviated paths:
     while (!fringeGroups.empty() &&
-           isSizeTwoOrMore(fringeGroups.front().abbreviatedPath_))
+           is_size_two_or_more(fringeGroups.front().abbreviatedPath_))
     {
       const PlaylistKey & head = fringeGroups.front().abbreviatedPath_.front();
 
@@ -471,7 +471,7 @@ namespace yae
       {
         const std::list<PlaylistKey> & abbreviatedPath = i->abbreviatedPath_;
         const PlaylistKey & key = abbreviatedPath.front();
-        same = isSizeTwoOrMore(abbreviatedPath) && (key == head);
+        same = is_size_two_or_more(abbreviatedPath) && (key == head);
       }
 
       if (!same)

@@ -481,7 +481,7 @@ namespace yae
     if (!item.cached_)
     {
       av_log(NULL, AV_LOG_WARNING, "decoding failed: %s",
-             toText(item.gop_).c_str());
+             to_text(item.gop_).c_str());
       item.failed_ = true;
     }
 
@@ -1092,7 +1092,7 @@ namespace yae
 
       std::string dirname;
       std::string basename;
-      parseFilePath(name, dirname, basename);
+      parse_file_path(name, dirname, basename);
 
       result = QString::fromUtf8(basename.c_str());
     }

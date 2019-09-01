@@ -114,36 +114,146 @@ namespace yae
 #endif
 
   //----------------------------------------------------------------
-  // renameUtf8
+  // get_main_args_utf8
+  //
+  void
+  get_main_args_utf8(int & argc, char **& argv)
+  {
+#ifdef _WIN32
+    argc = 0;
+    wchar_t * cmd = GetCommandLineW();
+    wchar_t ** wargv = CommandLineToArgvW(cmd, &argc);
+    for (int i = 0; i < argc; i++)
+    {
+      argv[i] = utf16_to_utf8(wargv[i]);
+    }
+    LocalFree(wargv);
+#else
+    (void)argc;
+    (void)argv;
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // set_console_output_utf8
+  //
+  void
+  set_console_output_utf8()
+  {
+#ifdef _WIN32
+    /* Configure console for UTF-8. */
+    SetConsoleOutputCP(CP_UTF8);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // getenv_utf8
+  //
+  bool
+  getenv_utf8(const char * var_utf8, std::string & value)
+  {
+#ifdef _WIN32
+    std::size_t size = 0;
+    std::wstring var = utf8_to_utf16(var_utf8);
+
+    errno_t err = _wgetenv_s(&size, NULL, 0, var.c_str());
+    if (err || !size)
+    {
+      return false;
+    }
+
+    std::vector<wchar_t> ret(size);
+    err = _wgetenv_s(&size, &(ref[0]), ret.size(), var.c_str());
+    if (err)
+    {
+      assert(false);
+      return false;
+    }
+
+    value = utf16_to_utf8(&ret[0]);
+#else
+    char * ret = getenv(var_utf8);
+    if (ret)
+    {
+      value = std::string(ret);
+    }
+#endif
+
+    return !value.empty();
+  }
+
+  //----------------------------------------------------------------
+  // get_home_path_utf8
+  //
+  std::string
+  get_home_path_utf8()
+  {
+    std::string home;
+    if (getenv_utf8("HOME", home))
+    {
+      return home;
+    }
+
+#ifdef _WIN32
+    if (getenv_utf8("USERPROFILE", home))
+    {
+      return home;
+    }
+
+    std::string homedrive;
+    std::string homepath;
+    if (getenv_utf8("HOMEDRIVE", homedrive) &&
+        getenv_utf8("HOMEPATH", homepath))
+    {
+    }
+#endif
+
+    throw std::runtime_error("unable to determine HOME path");
+    return std::string();
+  }
+
+  //----------------------------------------------------------------
+  // get_user_folder_path
+  //
+  std::string
+  get_user_folder_path(const char * folder_utf8)
+  {
+    std::string home = get_home_path_utf8();
+    std::string path = (fs::path(home) / fs::path(folder_utf8)).string();
+    return path;
+  }
+
+  //----------------------------------------------------------------
+  // rename_utf8
   //
   int
-  renameUtf8(const char * fnOld, const char * fnNew)
+  rename_utf8(const char * fn_old, const char * fn_new)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
-    wchar_t * wold = cstr_to_utf16(fnOld);
-    wchar_t * wnew = cstr_to_utf16(fnNew);
+    wchar_t * wold = cstr_to_utf16(fn_old);
+    wchar_t * wnew = cstr_to_utf16(fn_new);
 
     int ret = _wrename(wold, wnew);
 
     free(wold);
     free(wnew);
 #else
-    int ret = rename(fnOld, fnNew);
+    int ret = rename(fn_old, fn_new);
 #endif
 
     return ret;
   }
 
   //----------------------------------------------------------------
-  // fopenUtf8
+  // fopen_utf8
   //
   std::FILE *
-  fopenUtf8(const char * filenameUtf8, const char * mode)
+  fopen_utf8(const char * filename_utf8, const char * mode)
   {
     std::FILE * file = NULL;
 
 #if defined(_WIN32) && !defined(__MINGW32__)
-    wchar_t * wname = cstr_to_utf16(filenameUtf8);
+    wchar_t * wname = cstr_to_utf16(filename_utf8);
     wchar_t * wmode = cstr_to_utf16(mode);
 
     _wfopen_s(&file, wname, wmode);
@@ -151,39 +261,39 @@ namespace yae
     free(wname);
     free(wmode);
 #else
-    file = fopen(filenameUtf8, mode);
+    file = fopen(filename_utf8, mode);
 #endif
 
     return file;
   }
 
   //----------------------------------------------------------------
-  // fileOpenUtf8
+  // open_utf8
   //
   int
-  fileOpenUtf8(const char * filenameUtf8, int accessMode, int permissions)
+  open_utf8(const char * filename_utf8, int access_mode, int permissions)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
     accessMode |= O_BINARY;
 
-    wchar_t * wname = cstr_to_utf16(filenameUtf8);
+    wchar_t * wname = cstr_to_utf16(filename_utf8);
     int fd = -1;
     int sh = accessMode & (_O_RDWR | _O_WRONLY) ? _SH_DENYWR : _SH_DENYNO;
 
-    errno_t err = _wsopen_s(&fd, wname, accessMode, sh, permissions);
+    errno_t err = _wsopen_s(&fd, wname, access_mode, sh, permissions);
     free(wname);
 #else
-    int fd = open(filenameUtf8, accessMode, permissions);
+    int fd = open(filename_utf8, access_mode, permissions);
 #endif
 
     return fd;
   }
 
   //----------------------------------------------------------------
-  // fileSeek64
+  // file_seek64
   //
   int64
-  fileSeek64(int fd, int64 offset, int whence)
+  file_seek64(int fd, int64 offset, int whence)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
     __int64 pos = _lseeki64(fd, offset, whence);
@@ -197,10 +307,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // fileSize64
+  // file_size64
   //
   int64
-  fileSize64(int fd)
+  file_size64(int fd)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
     struct _stati64 st;
@@ -228,20 +338,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // trimFromTail
+  // trim_from_tail
   //
   static std::string
-  trimFromTail(char c, const char * str, std::size_t strLen)
+  trim_from_tail(const char * c, const char * str, std::size_t str_len)
   {
-    if (!strLen && str)
+    if (!str_len && str)
     {
-      strLen = strlen(str);
+      str_len = strlen(str);
     }
 
-    const char * end = str ? str + strLen : NULL;
+    const char * end = str ? str + str_len : NULL;
     while (str < end)
     {
-      if (*(end - 1) != c)
+      if (*(end - 1) != *c)
       {
         return std::string(str, end);
       }
@@ -253,20 +363,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // trimFromHead
+  // trim_from_head
   //
   static std::string
-  trimFromHead(char c, const char * str, std::size_t strLen)
+  trim_from_head(const char * c, const char * str, std::size_t str_len)
   {
-    if (!strLen && str)
+    if (!str_len && str)
     {
-      strLen = strlen(str);
+      str_len = strlen(str);
     }
 
-    const char * end = str ? str + strLen : NULL;
+    const char * end = str ? str + str_len : NULL;
     while (str < end)
     {
-      if (*str != c)
+      if (*str != *c)
       {
         return std::string(str, end);
       }
@@ -278,86 +388,91 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // joinPaths
+  // join_paths
   //
   std::string
-  joinPaths(const std::string & a, const std::string & b, char pathSeparator)
+  join_paths(const std::string & a,
+             const std::string & b,
+             const char * path_separator)
   {
-    std::size_t aLen = a.size();
-    std::size_t bLen = b.size();
+    std::size_t a_len = a.size();
+    std::size_t b_len = b.size();
 
-    std::string aTrimmed =
-      aLen ? trimFromTail(pathSeparator, data(a), aLen) : std::string("");
+    std::string a_trimmed =
+      a_len ? trim_from_tail(path_separator, data(a), a_len) : std::string("");
 
-    std::string bTrimmed =
-      bLen ? trimFromHead(pathSeparator, data(b), bLen) : std::string("");
+    std::string b_trimmed =
+      b_len ? trim_from_head(path_separator, data(b), b_len) : std::string("");
 
-    std::string ab = aTrimmed + pathSeparator + bTrimmed;
+    std::string ab = a_trimmed + path_separator + b_trimmed;
 
     return ab;
   }
 
   //----------------------------------------------------------------
-  // parseFilePath
+  // parse_file_path
   //
   bool
-  parseFilePath(const std::string & filePath,
-                std::string & folder,
-                std::string & name)
+  parse_file_path(const std::string & file_path,
+                  std::string & folder,
+                  std::string & name)
   {
-    std::size_t indexName = filePath.rfind(kDirSeparator);
+    std::size_t index_name = file_path.rfind(kDirSeparator);
 
-    std::size_t	indexNameUnix =
-      (kDirSeparator != '/') ?
-      filePath.rfind('/') :
-      indexName;
+    std::size_t	index_name_unix =
+#ifdef _WIN32
+      file_path.rfind('/')
+#else
+      index_name
+#endif
+      ;
 
-    if (indexNameUnix != std::string::npos &&
-        (indexName == std::string::npos ||
-         indexName < indexNameUnix))
+    if (index_name_unix != std::string::npos &&
+        (index_name == std::string::npos ||
+         index_name < index_name_unix))
     {
-      // Unix directory separator used before file name
-      indexName = indexNameUnix;
+      // _unix directory separator used before file name
+      index_name = index_name_unix;
     }
 
-    if (indexName != std::string::npos)
+    if (index_name != std::string::npos)
     {
-      name = filePath.substr(indexName + 1, filePath.size());
-      folder = filePath.substr(0, indexName);
+      name = file_path.substr(index_name + 1, file_path.size());
+      folder = file_path.substr(0, index_name);
       return true;
     }
 
-    name = filePath;
+    name = file_path;
     folder = std::string();
     return false;
   }
 
   //----------------------------------------------------------------
-  // parseFileName
+  // parse_file_name
   //
   bool
-  parseFileName(const std::string & fileName,
-                std::string & name,
-                std::string & ext)
+  parse_file_name(const std::string & file_name,
+                  std::string & name,
+                  std::string & ext)
   {
-    std::size_t indexExt = fileName.rfind('.');
+    std::size_t indexExt = file_name.rfind('.');
     if (indexExt != std::string::npos)
     {
-      ext = fileName.substr(indexExt + 1, fileName.size());
-      name = fileName.substr(0, indexExt);
+      ext = file_name.substr(indexExt + 1, file_name.size());
+      name = file_name.substr(0, indexExt);
       return true;
     }
 
-    name = fileName;
+    name = file_name;
     ext = std::string();
     return false;
   }
 
   //----------------------------------------------------------------
-  // getModuleFilename
+  // get_module_filename
   //
   bool
-  getModuleFilename(const void * symbol, std::string & filenameUtf8)
+  get_module_filename(const void * symbol, std::string & filename_utf8)
   {
 #if defined(_WIN32)
     DWORD flags =
@@ -380,7 +495,7 @@ namespace yae
       return false;
     }
 
-    filenameUtf8 = utf16_to_utf8(wpath);
+    filename_utf8 = utf16_to_utf8(wpath);
     return true;
 
 #elif defined(__APPLE__) || defined(__linux__)
@@ -392,7 +507,7 @@ namespace yae
       return false;
     }
 
-    filenameUtf8.assign(dlInfo.dli_fname);
+    filename_utf8.assign(dlInfo.dli_fname);
     return true;
 
 #endif
@@ -403,10 +518,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // getCurrentExecutablePath
+  // get_current_executable_path
   //
   bool
-  getCurrentExecutablePath(std::string & filepathUtf8)
+  get_current_executable_path(std::string & filepath_utf8)
   {
     bool ok = false;
 
@@ -416,7 +531,7 @@ namespace yae
 
     if (GetModuleFileNameW(0, path, pathLen) != 0)
     {
-      filepathUtf8 = utf16_to_utf8(path);
+      filepath_utf8 = utf16_to_utf8(path);
       ok = true;
     }
 
@@ -437,7 +552,7 @@ namespace yae
                                  sizeof(txt),
                                  kCFStringEncodingUTF8))
           {
-            filepathUtf8.assign(txt);
+            filepath_utf8.assign(txt);
             ok = true;
           }
 
@@ -453,75 +568,75 @@ namespace yae
 
     if (readlink("/proc/self/exe", path, sizeof(path)) > 0)
     {
-        filepathUtf8.assign(path);
-        ok = true;
+      filepath_utf8.assign(path);
+      ok = true;
     }
 
 #endif
 
-    YAE_ASSERT(!filepathUtf8.empty());
+    YAE_ASSERT(!filepath_utf8.empty());
     return ok;
   }
 
   //----------------------------------------------------------------
-  // getCurrentExecutableFolder
+  // get_current_executable_folder
   //
   bool
-  getCurrentExecutableFolder(std::string & folderpathUtf8)
+  get_current_executable_folder(std::string & folderpath_utf8)
   {
-    std::string filepathUtf8;
-    if (!getCurrentExecutablePath(filepathUtf8))
+    std::string filepath_utf8;
+    if (!get_current_executable_path(filepath_utf8))
     {
       return false;
     }
 
     std::string name;
-    return parseFilePath(filepathUtf8, folderpathUtf8, name);
+    return parse_file_path(filepath_utf8, folderpath_utf8, name);
   }
 
   //----------------------------------------------------------------
-  // getCurrentExecutablePluginsFolder
+  // get_current_executable_plugins_folder
   //
   bool
-  getCurrentExecutablePluginsFolder(std::string & pluginPathUtf8)
+  get_current_executable_plugins_folder(std::string & plugin_path_utf8)
   {
-    std::string exeFolderUtf8;
-    if (!getCurrentExecutableFolder(exeFolderUtf8))
+    std::string exe_folder_utf8;
+    if (!get_current_executable_folder(exe_folder_utf8))
     {
       return false;
     }
 
 #ifdef __APPLE__
     std::string macos;
-    if (!parseFilePath(exeFolderUtf8, pluginPathUtf8, macos) ||
+    if (!parse_file_path(exe_folder_utf8, plugin_path_utf8, macos) ||
         macos != "MacOS")
     {
       return false;
     }
 
-    pluginPathUtf8 += "/PlugIns";
+    plugin_path_utf8 += "/PlugIns";
 #else
-    pluginPathUtf8 = exeFolderUtf8;
+    plugin_path_utf8 = exe_folder_utf8;
 
     std::string parent;
     std::string bin;
-    if (parseFilePath(exeFolderUtf8, parent, bin) && bin == "bin")
+    if (parse_file_path(exe_folder_utf8, parent, bin) && bin == "bin")
     {
       std::string lib = (fs::path(parent) / "lib").string();
       if (fs::is_directory(lib))
       {
-        pluginPathUtf8 = lib;
+        plugin_path_utf8 = lib;
       }
     }
     else if (bin != "bin" && al::ends_with(parent, "bin"))
     {
-      std::string subFolder = bin;
-      if (parseFilePath(parent, parent, bin))
+      std::string subfolder = bin;
+      if (parse_file_path(parent, parent, bin))
       {
-        std::string lib = (fs::path(parent) / "lib" / subFolder).string();
+        std::string lib = (fs::path(parent) / "lib" / subfolder).string();
         if (fs::is_directory(lib))
         {
-          pluginPathUtf8 = lib;
+          plugin_path_utf8 = lib;
         }
       }
     }
@@ -531,20 +646,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // loadLibrary
+  // load_library
   //
   void *
-  loadLibrary(const char * filepathUtf8)
+  load_library(const char * filepath_utf8)
   {
 #if defined(_WIN32)
 
-    std::wstring wpath = utf8_to_utf16(filepathUtf8);
+    std::wstring wpath = utf8_to_utf16(filepath_utf8);
     HMODULE module = (HMODULE)LoadLibraryW(wpath.c_str());
     return (void *)module;
 
 #elif defined(__APPLE__) || defined(__linux__)
 
-    void * module = dlopen(filepathUtf8, RTLD_NOW);
+    void * module = dlopen(filepath_utf8, RTLD_NOW);
     return module;
 
 #endif
@@ -555,10 +670,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // getSymbol
+  // get_symbol
   //
   void *
-  getSymbol(void * module, const char * symbol)
+  get_symbol(void * module, const char * symbol)
   {
 #if defined(_WIN32)
     return ::GetProcAddress((HMODULE)module, symbol);
@@ -581,8 +696,8 @@ namespace yae
     //----------------------------------------------------------------
     // Private
     //
-    Private(const std::string & folderPathUtf8):
-      path_(fs::absolute(fs::path(folderPathUtf8))),
+    Private(const std::string & folder_path_utf8):
+      path_(fs::absolute(fs::path(folder_path_utf8))),
       iter_(path_)
     {
       if (iter_ == fs::directory_iterator())
@@ -593,31 +708,31 @@ namespace yae
       }
     }
 
-    bool parseNextItem()
+    bool parse_next_item()
     {
       ++iter_;
       bool ok = iter_ != fs::directory_iterator();
       return ok;
     }
 
-    inline std::string folderPath() const
+    inline std::string folder_path() const
     {
       return path_.string();
     }
 
-    inline bool itemIsFolder() const
+    inline bool item_is_folder() const
     {
       return
         (iter_ != fs::directory_iterator()) &&
         (fs::is_directory(iter_->path()));
     }
 
-    inline std::string itemName() const
+    inline std::string item_name() const
     {
       return iter_->path().filename().string();
     }
 
-    inline std::string itemPath() const
+    inline std::string item_path() const
     {
       return iter_->path().string();
     }
@@ -631,8 +746,8 @@ namespace yae
   //----------------------------------------------------------------
   // TOpenFolder::TOpenFolder
   //
-  TOpenFolder::TOpenFolder(const std::string & folderPath):
-    private_(new Private(folderPath))
+  TOpenFolder::TOpenFolder(const std::string & folder_path):
+    private_(new Private(folder_path))
   {}
 
   //----------------------------------------------------------------
@@ -644,48 +759,48 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TOpenFolder::folderPath
+  // TOpenFolder::folder_path
   //
   std::string
-  TOpenFolder::folderPath() const
+  TOpenFolder::folder_path() const
   {
-    return private_->folderPath();
+    return private_->folder_path();
   }
 
   //----------------------------------------------------------------
-  // TOpenFolder::parseNextItem
+  // TOpenFolder::parse_next_item
   //
   bool
-  TOpenFolder::parseNextItem()
+  TOpenFolder::parse_next_item()
   {
-    return private_->parseNextItem();
+    return private_->parse_next_item();
   }
 
   //----------------------------------------------------------------
-  // TOpenFolder::itemIsFolder
+  // TOpenFolder::item_is_folder
   //
   bool
-  TOpenFolder::itemIsFolder() const
+  TOpenFolder::item_is_folder() const
   {
-    return private_->itemIsFolder();
+    return private_->item_is_folder();
   }
 
   //----------------------------------------------------------------
-  // TOpenFolder::itemName
+  // TOpenFolder::item_name
   //
   std::string
-  TOpenFolder::itemName() const
+  TOpenFolder::item_name() const
   {
-    return private_->itemName();
+    return private_->item_name();
   }
 
   //----------------------------------------------------------------
-  // TOpenFolder::temPath
+  // TOpenFolder::tem_path
   //
   std::string
-  TOpenFolder::itemPath() const
+  TOpenFolder::item_path() const
   {
-    return private_->itemPath();
+    return private_->item_path();
   }
 
 
@@ -816,15 +931,10 @@ namespace yae
   //----------------------------------------------------------------
   // TOpenFile::TOpenFile
   //
-  TOpenFile::TOpenFile(const char * filenameUtf8, const char * mode):
-    file_(fopenUtf8(filenameUtf8, mode))
+  TOpenFile::TOpenFile(const char * filepath_utf8, const char * mode):
+    file_(NULL)
   {
-    if (!file_)
-    {
-      std::ostringstream oss;
-      oss << "fopenUtf8 failed for \"" << filenameUtf8 << "\"";
-      throw std::runtime_error(oss.str().c_str());
-    }
+    this->open(filepath_utf8, mode);
   }
 
   //----------------------------------------------------------------
@@ -832,18 +942,43 @@ namespace yae
   //
   TOpenFile::~TOpenFile()
   {
+    this->close();
+  }
+
+  //----------------------------------------------------------------
+  // TOpenFile::open
+  //
+  bool
+  TOpenFile::open(const char * filepath_utf8, const char * mode)
+  {
+    if (filepath_utf8 && *filepath_utf8)
+    {
+      this->close();
+      this->file_ = fopen_utf8(filepath_utf8, mode);
+      return this->file_ != NULL;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // TOpenFile::close
+  //
+  void
+  TOpenFile::close()
+  {
     if (file_)
     {
       ::fclose(file_);
+      file_ = NULL;
     }
   }
 
-
   //----------------------------------------------------------------
-  // stripHtmlTags
+  // strip_html_tags
   //
   std::string
-  stripHtmlTags(const std::string & in)
+  strip_html_tags(const std::string & in)
   {
     // count open/close angle brackets:
     int brackets[] = { 0, 0 };
@@ -910,7 +1045,7 @@ namespace yae
     std::string out;
     if (j > 0)
     {
-        out.assign(&(tmp[0]), &(tmp[0]) + j);
+      out.assign(&(tmp[0]), &(tmp[0]) + j);
     }
 
     return out;
@@ -1065,7 +1200,7 @@ namespace yae
     std::string out;
     if (j > 0)
     {
-        out.assign(&(tmp[0]), &(tmp[0]) + j);
+      out.assign(&(tmp[0]), &(tmp[0]) + j);
     }
 
     return out;
@@ -1169,28 +1304,28 @@ namespace yae
 
     if (idd < numTokens)
     {
-      t = toScalar<int64_t>(tokens[idd]);
+      t = to_scalar<int64_t>(tokens[idd]);
     }
 
     if (ihh < numTokens)
     {
-      t = t * 24 + toScalar<int64_t>(tokens[ihh]);
+      t = t * 24 + to_scalar<int64_t>(tokens[ihh]);
     }
 
     if (imm < numTokens)
     {
-      t = t * 60 + toScalar<int64_t>(tokens[imm]);
+      t = t * 60 + to_scalar<int64_t>(tokens[imm]);
     }
 
     if (iss < numTokens)
     {
-      t = t * 60 + toScalar<int64_t>(tokens[iss]);
+      t = t * 60 + to_scalar<int64_t>(tokens[iss]);
     }
 
     double seconds = double(t);
     if (ixxx < numTokens)
     {
-      double xxx = toScalar<double>(tokens[ixxx]);
+      double xxx = to_scalar<double>(tokens[ixxx]);
       std::size_t xxx_len = tokens[ixxx].size();
 
       if (frameRate > 0.0)

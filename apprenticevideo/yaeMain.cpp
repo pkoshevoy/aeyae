@@ -212,7 +212,7 @@ mainMayThrowException(int argc, char ** argv)
       {
         src++;
         argc--;
-        percentTempo = yae::toScalar<int, const char *>(*src);
+        percentTempo = yae::to_scalar<int, const char *>(*src);
         argc--;
       }
       else
@@ -295,7 +295,7 @@ mainMayThrowException(int argc, char ** argv)
 
   // load plugins:
   std::string pluginsFolderPath;
-  if (yae::getCurrentExecutablePluginsFolder(pluginsFolderPath) &&
+  if (yae::get_current_executable_plugins_folder(pluginsFolderPath) &&
       plugins.load(pluginsFolderPath.c_str()))
   {
     std::list<yae::IReaderPtr> readers;

@@ -251,8 +251,8 @@ namespace yae
         {
           strh++;
 
-          w_ = toScalar<int, std::string>(std::string(strw, strh - 1));
-          h_ = toScalar<int, std::string>(std::string(strh, lEnd));
+          w_ = to_scalar<int, std::string>(std::string(strw, strh - 1));
+          h_ = to_scalar<int, std::string>(std::string(strh, lEnd));
         }
       }
       else if ((found = strstr(line, "org:")) && found < lEnd)
@@ -263,8 +263,8 @@ namespace yae
         {
           stry++;
 
-          x_ = toScalar<int, std::string>(std::string(strx, stry - 1));
-          y_ = toScalar<int, std::string>(std::string(stry, lEnd));
+          x_ = to_scalar<int, std::string>(std::string(strx, stry - 1));
+          y_ = to_scalar<int, std::string>(std::string(stry, lEnd));
         }
       }
       else if ((found = strstr(line, "scale:")) && found < lEnd)
@@ -275,8 +275,8 @@ namespace yae
         {
           stry++;
 
-          int x = toScalar<int, std::string>(std::string(strx, stry - 2));
-          int y = toScalar<int, std::string>(std::string(stry, lEnd - 1));
+          int x = to_scalar<int, std::string>(std::string(strx, stry - 2));
+          int y = to_scalar<int, std::string>(std::string(stry, lEnd - 1));
 
           scalex_ = double(x) / 100.0;
           scaley_ = double(y) / 100.0;
@@ -285,7 +285,7 @@ namespace yae
       else if ((found = strstr(line, "alpha:")) && found < lEnd)
       {
         const char * str = found + 6;
-        int x = toScalar<int, std::string>(std::string(str, lEnd - 1));
+        int x = to_scalar<int, std::string>(std::string(str, lEnd - 1));
         alpha_ = double(x) / 100.0;
       }
       else if ((found = strstr(line, "palette:")) && found < lEnd)

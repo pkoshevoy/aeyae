@@ -787,24 +787,24 @@ namespace yae
 
       if (b.text_ == "h" && hh_ == -1)
       {
-        hh_ = toScalar<int64_t>(a.text_);
+        hh_ = to_scalar<int64_t>(a.text_);
       }
       else if (b.text_ == "m" && mm_ == -1)
       {
-        mm_ = toScalar<int64_t>(a.text_);
+        mm_ = to_scalar<int64_t>(a.text_);
       }
       else if (b.text_ == "s" && ss_ == -1)
       {
-        ss_ = toScalar<int64_t>(a.text_);
+        ss_ = to_scalar<int64_t>(a.text_);
       }
       else if (b.text_ == "ms" && xx_ == -1)
       {
-        xx_ = toScalar<int64_t>(a.text_);
+        xx_ = to_scalar<int64_t>(a.text_);
         xx_base_ = 1000;
       }
       else if (b.text_ == "us" && xx_ == -1)
       {
-        xx_ = toScalar<int64_t>(a.text_);
+        xx_ = to_scalar<int64_t>(a.text_);
         xx_base_ = 1000000;
       }
       else
@@ -842,7 +842,7 @@ namespace yae
         return false;
       }
 
-      xx_ = toScalar<int64_t>(b.text_);
+      xx_ = to_scalar<int64_t>(b.text_);
       xx_base_ = subsec_base_for(b.text_);
       return true;
     }
@@ -874,7 +874,7 @@ namespace yae
         return false;
       }
 
-      result = toScalar<int64_t>(b.text_);
+      result = to_scalar<int64_t>(b.text_);
       return true;
     }
 
@@ -885,7 +885,7 @@ namespace yae
         return false;
       }
 
-      result = toScalar<int64_t>(a.text_);
+      result = to_scalar<int64_t>(a.text_);
       return true;
     }
 
