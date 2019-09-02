@@ -9,7 +9,8 @@
 // aeyae:
 #include "yae_ffmpeg_utils.h"
 
-// standard C++ library:
+// standard:
+#include <stdarg.h>
 #include <string>
 #include <cstring>
 
@@ -406,6 +407,19 @@ namespace yae
     av_log(NULL, log_level, "%s: %s\n", source, message);
   }
 
+  //----------------------------------------------------------------
+  // av_log_callback
+  //
+  static void
+  av_log_callback(void * ctx, int level, const char * format, va_list args)
+  {
+    static boost::mutex * mutex = new boost::mutex();
+    boost::lock_guard<boost::mutex> lock(*mutex);
+    std::string message = yae::vstrfmt(format, args);
+    fprintf(stderr, "%s", message.c_str());
+    fflush(stderr);
+    // YAE_BREAKPOINT_IF(level < AV_LOG_WARNING);
+  }
 
   //----------------------------------------------------------------
   // AvLog
@@ -415,6 +429,7 @@ namespace yae
     AvLog()
     {
       assign(std::string("av_log"), new LogToFFmpeg());
+      // av_log_set_callback(&av_log_callback);
     }
   };
 

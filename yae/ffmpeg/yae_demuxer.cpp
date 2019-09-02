@@ -3287,6 +3287,8 @@ namespace yae
 
       AvPkt & pkt = *packet_ptr;
       AVPacket & packet = pkt.get();
+      bool keyframe = (al::starts_with(pkt.trackId_, "v:") &&
+                       (packet.flags & AV_PKT_FLAG_KEY));
 
       const Trim & trim = yae::at(trim_, pkt.trackId_);
       const TTime & origin = yae::at(origin_, pkt.program_);
@@ -3297,8 +3299,6 @@ namespace yae
 
       if (t1 <= trim.a_)
       {
-        bool keyframe = (al::starts_with(pkt.trackId_, "v:") &&
-                         (packet.flags & AV_PKT_FLAG_KEY));
         TTime pts(packet.pts * src->time_base.num, src->time_base.den);
         TTime end = pts + dt;
 
@@ -3344,9 +3344,9 @@ namespace yae
       packet.pts += shift;
       packet.dts += shift;
 #if 0
-      dts.reset(packet.dts * src->time_base.num, src->time_base.den);
-      pts.reset(packet.pts * src->time_base.num, src->time_base.den);
-      dur.reset(packet.duration * src->time_base.num, src->time_base.den);
+      TTime dts(packet.dts * src->time_base.num, src->time_base.den);
+      TTime pts(packet.pts * src->time_base.num, src->time_base.den);
+      TTime dur(packet.duration * src->time_base.num, src->time_base.den);
 
       std::cout
         << "TrimmedDemuxer::peek: out: " << pkt.trackId_

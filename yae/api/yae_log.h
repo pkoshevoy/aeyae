@@ -147,27 +147,71 @@ namespace yae
   //
   YAE_API TLog & logger();
 
+  //----------------------------------------------------------------
+  // log
+  //
+  YAE_API void
+  log(int priority, const char * source, const char * format, ...);
+
 }
+
+
+//----------------------------------------------------------------
+// yae_error
+//
+#define yae_error yae::logger().error(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_warn
+//
+#define yae_warn yae::logger().warn(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_info
+//
+#define yae_info yae::logger().info(__FILE__ ":" YAE_STR(__LINE__))
+
+//----------------------------------------------------------------
+// yae_debug
+//
+#define yae_debug yae::logger().debug(__FILE__ ":" YAE_STR(__LINE__))
+
 
 //----------------------------------------------------------------
 // yae_elog
 //
-#define yae_elog yae::logger().error(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_elog(format, ...)                                           \
+  yae::log(yae::TLog::kError,                                           \
+           __FILE__ ":" YAE_STR(__LINE__),                              \
+           (format),                                                    \
+           ##__VA_ARGS__ )
 
 //----------------------------------------------------------------
 // yae_wlog
 //
-#define yae_wlog yae::logger().warn(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_wlog(format, ...)                                           \
+  yae::log(yae::TLog::kWarning,                                         \
+           __FILE__ ":" YAE_STR(__LINE__),                              \
+           (format),                                                    \
+           ##__VA_ARGS__ )
 
 //----------------------------------------------------------------
-// yae_log
+// yae_ilog
 //
-#define yae_log yae::logger().info(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_ilog(format, ...)                                           \
+  yae::log(yae::TLog::kInfo,                                            \
+           __FILE__ ":" YAE_STR(__LINE__),                              \
+           (format),                                                    \
+           ##__VA_ARGS__ )
 
 //----------------------------------------------------------------
 // yae_dlog
 //
-#define yae_dlog yae::logger().debug(__FILE__ ":" YAE_STR(__LINE__))
+#define yae_dlog(format, ...)                                           \
+  yae::log(yae::TLog::kDebug,                                           \
+           __FILE__ ":" YAE_STR(__LINE__),                              \
+           (format),                                                    \
+           ##__VA_ARGS__ )
 
 
 #endif // YAE_LOG_H_

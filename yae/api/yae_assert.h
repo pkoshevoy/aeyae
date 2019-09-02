@@ -34,14 +34,24 @@
 #define YAE_BREAKPOINT_IF(expr) if (!(expr)) {} else YAE_BREAKPOINT()
 
 //----------------------------------------------------------------
+// YAE_BREAKPOINT_IF_DEBUG_BUILD
+//
+#ifndef NDEBUG
+#define YAE_BREAKPOINT_IF_DEBUG_BUILD() YAE_BREAKPOINT()
+#else
+#define YAE_BREAKPOINT_IF_DEBUG_BUILD()
+#endif
+
+//----------------------------------------------------------------
 // YAE_ASSERT
 //
-#if defined(NDEBUG)
-# define YAE_ASSERT(expr) if ((expr)) {} else   \
-    yae_elog << "assertion failed: (" << #expr << ")"
-#else
-#  define YAE_ASSERT(expr) YAE_BREAKPOINT_IF(!(expr))
-#endif
+#define YAE_ASSERT(expr) if (!(expr)) {          \
+    yae::log(yae::TLog::kError,                  \
+             __FILE__ ":" YAE_STR(__LINE__),     \
+             "assertion failed: %s",             \
+             YAE_STR(expr));                     \
+    YAE_BREAKPOINT_IF_DEBUG_BUILD();             \
+  } else {}
 
 
 #endif // YAE_ASSERT_H_

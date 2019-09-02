@@ -38,6 +38,7 @@
 #include <fcntl.h>
 #include <iostream>
 #include <sstream>
+#include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
 #include <vector>
@@ -1482,6 +1483,39 @@ namespace yae
 
       dst[key] = value;
     }
+  }
+
+  //----------------------------------------------------------------
+  // vstrfmt
+  //
+  std::string
+  vstrfmt(const char * format, va_list arglist)
+  {
+    // make a backup copy of arglist for the 2nd call to vsnprintf:
+    va_list args;
+    va_copy(args, arglist);
+
+    // Determine how big the buffer should be
+    int len = vsnprintf(NULL, 0, format, arglist) + 1;
+    std::string ret(len, '\0');
+    char * buffer = &ret[0];
+    vsnprintf(buffer, len, format, args);
+
+    va_end(args);
+    return std::string(ret.c_str());
+  }
+
+  //----------------------------------------------------------------
+  // strfmt
+  //
+  std::string
+  strfmt(const char * format, ...)
+  {
+    va_list arglist;
+    va_start(arglist, format);
+    std::string ret = yae::vstrfmt(format, arglist);
+    va_end(arglist);
+    return ret;
   }
 
 }

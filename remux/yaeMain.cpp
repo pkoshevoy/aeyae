@@ -308,6 +308,9 @@ mainMayThrowException(int argc, char ** argv)
   // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
 
+  // instantiate the logger:
+  yae::logger();
+
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 

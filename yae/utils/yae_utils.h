@@ -818,6 +818,18 @@ namespace yae
     unsigned int u24 = (b0 << 16) | (b1 << 8) | b2;
     return u24;
   }
+
+  //----------------------------------------------------------------
+  // vstrfmt
+  //
+  YAE_API std::string
+  vstrfmt(const char * format, va_list args);
+
+  //----------------------------------------------------------------
+  // strfmt
+  //
+  YAE_API std::string
+  strfmt(const char * format, ...);
 }
 
 

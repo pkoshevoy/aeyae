@@ -6,9 +6,13 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <stdarg.h>
+
 // aeyae:
 #include "../api/yae_log.h"
 #include "../api/yae_message_carrier_interface.h"
+#include "../utils/yae_utils.h"
 
 
 namespace yae
@@ -147,4 +151,17 @@ namespace yae
     logger_.deliver(priority_, source_, oss_.str().c_str());
   }
 
+  //----------------------------------------------------------------
+  // log
+  //
+  void
+  log(int priority, const char * source, const char * format, ...)
+  {
+    va_list args;
+    va_start(args, format);
+    std::string message = vstrfmt(format, args);
+    va_end(args);
+
+    yae::logger().deliver(priority, source, message.c_str());
+  }
 }
