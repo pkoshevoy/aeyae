@@ -175,7 +175,8 @@ namespace yae
       view_(view),
       attr_(attr),
       scale_(scale),
-      translate_(translate)
+      translate_(translate),
+      odd_round_up_(odd_round_up)
     {}
 
     // virtual:
