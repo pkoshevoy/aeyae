@@ -1202,10 +1202,9 @@ namespace yae
 
       avcodec_flush_buffers(ctx);
 #if 1
-      avcodec_close(ctx);
-      avcodec_parameters_to_context(ctx, stream_->codecpar);
-      err = avcodec_open2(ctx, codec, NULL);
-      YAE_ASSERT(err >= 0);
+      Track::close();
+      ctx = Track::open();
+      YAE_ASSERT(ctx);
 #endif
     }
 
