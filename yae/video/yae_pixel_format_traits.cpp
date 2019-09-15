@@ -30,6 +30,23 @@ namespace yae
       memset(this, 0, sizeof(TraitsInit));
     }
 
+    void calc_padding()
+    {
+      for (int i = 0; i < channels_; i++)
+      {
+        datatype_bits_[i] =
+          depth_[i] <= 8 ? 8 :
+          depth_[i] <= 16 ? 16 :
+          32;
+
+        datatype_rpad_[i] =
+          (stride_[i] - lshift_[i] - depth_[i]) % datatype_bits_[i];
+
+        datatype_lpad_[i] =
+          datatype_bits_[i] - datatype_rpad_[i] - depth_[i];
+      }
+    }
+
   protected:
     inline TraitsInit & name(const char * name)
     {
@@ -1295,6 +1312,13 @@ namespace yae
       .name( "NV42" )
       .chromaBoxW( 1 )
       .chromaBoxH( 1 );
+
+    for (TraitsInitVector::iterator i = TraitsInitVector::begin();
+         i != TraitsInitVector::end(); ++i)
+    {
+      TraitsInit & traits = *i;
+      traits.calc_padding();
+    }
   }
 
   //----------------------------------------------------------------

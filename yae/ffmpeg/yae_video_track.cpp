@@ -633,11 +633,15 @@ namespace yae
                              frameRate_,
                              stream_->time_base,
                              outSpecs,
-                             filterChain.c_str()) &&
-          !reconfigure())
+                             filterChain.c_str()))
       {
-        YAE_ASSERT(false);
-        return;
+        yae_dlog("VideoTrack filters: %s", filterGraph_.get_filters().c_str());
+
+        if (!reconfigure())
+        {
+          YAE_ASSERT(false);
+          return;
+        }
       }
 
       if (decoded.pts == AV_NOPTS_VALUE)

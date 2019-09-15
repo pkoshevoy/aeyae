@@ -75,8 +75,10 @@ yae_show_program_listing(std::ostream & ostr,
 //
 static const char * yae_gl_arb_passthrough_2d =
   "!!ARBfp1.0\n"
+  "PARAM rescale = program.local[4];\n"
   "TEMP rgba;\n"
   "TEX rgba, fragment.texcoord[0], texture[0], 2D;\n"
+  "MUL rgba, rgba, rescale;\n"
   "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
@@ -212,8 +214,10 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
 //
 static const char * yae_gl_arb_passthrough =
   "!!ARBfp1.0\n"
+  "PARAM rescale = program.local[4];\n"
   "TEMP rgba;\n"
   "TEX rgba, fragment.texcoord[0], texture[0], RECT;\n"
+  "MUL rgba, rgba, rescale;\n"
   "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
@@ -2347,6 +2351,15 @@ namespace yae
         YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
                                                  3, subsample_uv));
         yae_assert_gl_no_error();
+
+        YAE_OPENGL(glProgramLocalParameter4dARB
+                   (GL_FRAGMENT_PROGRAM_ARB,
+                    4,
+                    double(1 << ptts->datatype_lpad_[0]),
+                    double(1 << ptts->datatype_lpad_[1]),
+                    double(1 << ptts->datatype_lpad_[2]),
+                    double(1 << ptts->datatype_lpad_[3])));
+        yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
     }
@@ -3007,6 +3020,15 @@ namespace yae
 
         YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
                                                  2, &m34_to_rgb_[8]));
+        yae_assert_gl_no_error();
+
+        YAE_OPENGL(glProgramLocalParameter4dARB
+                   (GL_FRAGMENT_PROGRAM_ARB,
+                    4,
+                    double(1 << ptts->datatype_lpad_[0]),
+                    double(1 << ptts->datatype_lpad_[1]),
+                    double(1 << ptts->datatype_lpad_[2]),
+                    double(1 << ptts->datatype_lpad_[3])));
         yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));

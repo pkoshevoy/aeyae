@@ -113,6 +113,10 @@ namespace yae
       //
       unsigned char bayer_[4];
 
+      unsigned char datatype_bits_[4];
+      unsigned char datatype_rpad_[4];
+      unsigned char datatype_lpad_[4];
+
       // NOTE:
       // number of least significant bits to right-shift
       // to get the channel sample value is not stored
@@ -124,6 +128,12 @@ namespace yae
       // return number of contiguous sample planes, pass back
       // sample set stride (in bits) per sample plane:
       unsigned char getPlanes(unsigned char stride[4]) const;
+
+      inline bool is_packed() const
+      { return ((flags_ & kPacked) == kPacked); }
+
+      inline bool is_planar() const
+      { return ((flags_ & kPlanar) == kPlanar); }
     };
 
     //----------------------------------------------------------------
