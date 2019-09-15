@@ -44,6 +44,11 @@
 #include <vector>
 #include <math.h>
 
+// boost includes:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
+
 // aeyae:
 #include "yae_utils.h"
 
@@ -1518,6 +1523,32 @@ namespace yae
     return ret;
   }
 
+  //----------------------------------------------------------------
+  // get_open_file
+  //
+  boost::shared_ptr<TOpenFile>
+  get_open_file(const char * path, const char * mode)
+  {
+    std::string key(path);
+
+    typedef boost::shared_ptr<TOpenFile> TFilePtr;
+    static std::map<std::string, TFilePtr> files;
+    static boost::mutex mutex;
+
+    boost::lock_guard<boost::mutex> lock(mutex);
+    boost::shared_ptr<TOpenFile> & file = files[key];
+
+    if (!file)
+    {
+      file.reset(new TOpenFile(path, mode));
+      if (!file->is_open())
+      {
+        throw std::runtime_error(yae::strfmt("failed to open file: %s", path));
+      }
+    }
+
+    return file;
+  }
 }
 
 #if defined(_WIN32) && !defined(__MINGW32__)

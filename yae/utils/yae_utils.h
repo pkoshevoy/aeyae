@@ -15,6 +15,7 @@
 #include <map>
 #include <math.h>
 #include <set>
+#include <stdarg.h>
 #include <stdexcept>
 #include <string.h>
 #include <sstream>
@@ -348,8 +349,8 @@ namespace yae
   //
   struct YAE_API TOpenFile
   {
-    // NOTE: this will throw an exceptions if the file doesn't exist
-    // or can not be opened.
+    // NOTE: file open can silently fail, so the caller is responsible
+    // to check whether the file is_open:
     TOpenFile(const char * filename_utf8, const char * mode);
     TOpenFile(const std::string & filename_utf8, const char * mode);
     ~TOpenFile();
@@ -358,47 +359,39 @@ namespace yae
     void close();
 
     inline bool is_open() const
-    {
-      return file_ != NULL;
-    }
+    { return file_ != NULL; }
 
     inline bool is_eof() const
-    {
-      return !file_ || feof(file_);
-    }
+    { return !file_ || feof(file_); }
 
     inline bool write(const void * buffer, std::size_t buffer_size)
-    {
-      return yae::write(this->file_, buffer, buffer_size);
-    }
+    { return yae::write(this->file_, buffer, buffer_size); }
 
     inline std::size_t read(void * buffer, std::size_t buffer_size)
-    {
-      return yae::read(this->file_, buffer, buffer_size);
-    }
+    { return yae::read(this->file_, buffer, buffer_size); }
 
     inline std::string read()
-    {
-      return yae::read(this->file_);
-    }
+    { return yae::read(this->file_); }
 
     inline std::size_t load(std::vector<unsigned char> & out)
-    {
-      return yae::load(this->file_, out);
-    }
+    { return yae::load(this->file_, out); }
 
     inline bool write(const std::string & text)
-    {
-      return this->write(text.c_str(), text.size());
-    }
+    { return this->write(text.c_str(), text.size()); }
 
     inline bool write(const char * text)
-    {
-      return this->write(text, ::strlen(text));
-    }
+    { return text ? this->write(text, ::strlen(text)) : true; }
+
+    inline void flush()
+    { if (file_) fflush(file_); }
 
     // the file handle:
     FILE * file_;
+
+  private:
+    // intentionally disabled:
+    TOpenFile(const TOpenFile &);
+    TOpenFile & operator = (const TOpenFile &);
   };
 
   //----------------------------------------------------------------
@@ -830,6 +823,45 @@ namespace yae
   //
   YAE_API std::string
   strfmt(const char * format, ...);
+
+  //----------------------------------------------------------------
+  // get_open_file
+  //
+  // NOTE: if file open fails this will throw a std::runtime_error
+  //
+  boost::shared_ptr<TOpenFile>
+  get_open_file(const char * path, const char * mode);
+
+  //----------------------------------------------------------------
+  // dump
+  //
+  template <typename TString>
+  inline void
+  dump(const TString & path, const void * data, std::size_t size)
+  {
+    std::string p(path);
+    boost::shared_ptr<TOpenFile> file = yae::get_open_file(p.c_str(), "wb");
+    file->write(data, size);
+    file->flush();
+  }
+
+  //----------------------------------------------------------------
+  // jot
+  //
+  template <typename TString>
+  inline void
+  jot(const TString & path, const char * format, ...)
+  {
+    va_list arglist;
+    va_start(arglist, format);
+    std::string txt = yae::vstrfmt(format, arglist);
+    va_end(arglist);
+
+    std::string p(path);
+    boost::shared_ptr<TOpenFile> file = yae::get_open_file(p.c_str(), "wb");
+    file->write(txt);
+    file->flush();
+  }
 }
 
 
