@@ -271,7 +271,8 @@ namespace yae
     int err = 0;
     int hw_config_index = 0;
     yae::AvBufferRef hw_device_ctx;
-    while (true)
+
+    while (params.width > 640 && params.height > 360)
     {
       const AVCodecHWConfig * hw =
         avcodec_get_hw_config(codec, hw_config_index);
