@@ -27,6 +27,7 @@ extern "C"
 }
 
 // yae includes:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
 #include "yae/video/yae_video.h"
@@ -95,19 +96,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Rational
-  //
-  struct YAE_API Rational : public AVRational
-  {
-    Rational(int n = 0, int d = 1)
-    {
-      AVRational::num = n;
-      AVRational::den = d;
-    }
-  };
-
-
-  //----------------------------------------------------------------
   // AvPkt
   //
   struct YAE_API AvPkt
@@ -157,28 +145,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // AvFrm
-  //
-  struct YAE_API AvFrm
-  {
-    AvFrm(const AVFrame * frame = NULL);
-    AvFrm(const AvFrm & frame);
-    ~AvFrm();
-
-    AvFrm & operator = (const AvFrm & frame);
-
-    inline const AVFrame & get() const
-    { return *frame_; }
-
-    inline AVFrame & get()
-    { return *frame_; }
-
-  protected:
-    AVFrame * frame_;
-  };
-
-
-  //----------------------------------------------------------------
   // AvCodecContextPtr
   //
   struct YAE_API AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
@@ -208,18 +174,6 @@ namespace yae
                           const TTime & nextPTS,
                           const AVStream * stream,
                           const char * debugMessage = NULL);
-
-  //----------------------------------------------------------------
-  // find_best_decoder_for
-  //
-  // this will return an instance of Nvidia CUVID decoder when available
-  // or any decoder compatible with given codec parameters
-  // and capable of decoding a given packet.
-  //
-  YAE_API AvCodecContextPtr
-  find_best_decoder_for(const AVCodecParameters & params,
-                        std::list<AvCodecContextPtr> & candidates,
-                        bool preferSoftwareDecoder = false);
 
   //----------------------------------------------------------------
   // Track
@@ -318,8 +272,9 @@ namespace yae
     void flush();
 
   protected:
-    bool switchDecoder();
-    void tryToSwitchDecoder(const std::string & name);
+    int hw_config_index_;
+    yae::AvBufferRef hw_device_ctx_;
+    yae::AvBufferRef hw_frames_ctx_;
 
     // global track id:
     std::string id_;
@@ -333,11 +288,6 @@ namespace yae
     AVFormatContext * context_;
     AVStream * stream_;
     AvCodecContextPtr codecContext_;
-    bool preferSoftwareDecoder_;
-    bool switchDecoderToRecommended_;
-    std::list<AvCodecContextPtr> recommended_;
-    std::list<AvCodecContextPtr> candidates_;
-    std::list<TPacketPtr> packets_;
     uint64_t sent_;
     uint64_t received_;
     uint64_t errors_;

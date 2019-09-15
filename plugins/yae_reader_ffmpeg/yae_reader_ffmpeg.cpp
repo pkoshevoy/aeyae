@@ -709,7 +709,7 @@ extern "C"
   {
     if (i == 0)
     {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       av_log_set_level(AV_LOG_DEBUG);
 #endif
       return yae::ReaderFFMPEG::create();

@@ -459,6 +459,108 @@ namespace yae
 
       case AV_PIX_FMT_BAYER_GRBG16BE:
         return kPixelFormatBayerGRBG16BE;
+
+      case AV_PIX_FMT_YUV440P10LE:
+        return kPixelFormatYUV440P10LE;
+
+      case AV_PIX_FMT_YUV440P10BE:
+        return kPixelFormatYUV440P10BE;
+
+      case AV_PIX_FMT_YUV440P12LE:
+        return kPixelFormatYUV440P12LE;
+
+      case AV_PIX_FMT_YUV440P12BE:
+        return kPixelFormatYUV440P12BE;
+
+      case AV_PIX_FMT_AYUV64LE:
+        return kPixelFormatAYUV64LE;
+
+      case AV_PIX_FMT_AYUV64BE:
+        return kPixelFormatAYUV64BE;
+
+      case AV_PIX_FMT_P010LE:
+        return kPixelFormatP010LE;
+
+      case AV_PIX_FMT_P010BE:
+        return kPixelFormatP010BE;
+
+      case AV_PIX_FMT_GBRAP12BE:
+        return kPixelFormatGBRAP12BE;
+
+      case AV_PIX_FMT_GBRAP12LE:
+        return kPixelFormatGBRAP12LE;
+
+      case AV_PIX_FMT_GBRAP10BE:
+        return kPixelFormatGBRAP10BE;
+
+      case AV_PIX_FMT_GBRAP10LE:
+        return kPixelFormatGBRAP10LE;
+
+      case AV_PIX_FMT_GRAY12BE:
+        return kPixelFormatGRAY12BE;
+
+      case AV_PIX_FMT_GRAY12LE:
+        return kPixelFormatGRAY12LE;
+
+      case AV_PIX_FMT_GRAY10BE:
+        return kPixelFormatGRAY10BE;
+
+      case AV_PIX_FMT_GRAY10LE:
+        return kPixelFormatGRAY10LE;
+
+      case AV_PIX_FMT_P016LE:
+        return kPixelFormatP016LE;
+
+      case AV_PIX_FMT_P016BE:
+        return kPixelFormatP016BE;
+
+      case AV_PIX_FMT_GRAY9BE:
+        return kPixelFormatGRAY9BE;
+
+      case AV_PIX_FMT_GRAY9LE:
+        return kPixelFormatGRAY9LE;
+
+      case AV_PIX_FMT_GBRPF32BE:
+        return kPixelFormatGBRPF32BE;
+
+      case AV_PIX_FMT_GBRPF32LE:
+        return kPixelFormatGBRPF32LE;
+
+      case AV_PIX_FMT_GBRAPF32BE:
+        return kPixelFormatGBRAPF32BE;
+
+      case AV_PIX_FMT_GBRAPF32LE:
+        return kPixelFormatGBRAPF32LE;
+
+      case AV_PIX_FMT_GRAY14BE:
+        return kPixelFormatGRAY14BE;
+
+      case AV_PIX_FMT_GRAY14LE:
+        return kPixelFormatGRAY14LE;
+
+      case AV_PIX_FMT_GRAYF32BE:
+        return kPixelFormatGRAYF32BE;
+
+      case AV_PIX_FMT_GRAYF32LE:
+        return kPixelFormatGRAYF32LE;
+
+      case AV_PIX_FMT_YUVA422P12BE:
+        return kPixelFormatYUVA422P12BE;
+
+      case AV_PIX_FMT_YUVA422P12LE:
+        return kPixelFormatYUVA422P12LE;
+
+      case AV_PIX_FMT_YUVA444P12BE:
+        return kPixelFormatYUVA444P12BE;
+
+      case AV_PIX_FMT_YUVA444P12LE:
+        return kPixelFormatYUVA444P12LE;
+
+      case AV_PIX_FMT_NV24:
+        return kPixelFormatNV24;
+
+      case AV_PIX_FMT_NV42:
+        return kPixelFormatNV42;
 #endif
 
       default:
@@ -902,6 +1004,108 @@ namespace yae
 
       case kPixelFormatBayerGRBG16BE:
         return AV_PIX_FMT_BAYER_GRBG16BE;
+
+      case kPixelFormatYUV440P10LE:
+        return AV_PIX_FMT_YUV440P10LE;
+
+      case kPixelFormatYUV440P10BE:
+        return AV_PIX_FMT_YUV440P10BE;
+
+      case kPixelFormatYUV440P12LE:
+        return AV_PIX_FMT_YUV440P12LE;
+
+      case kPixelFormatYUV440P12BE:
+        return AV_PIX_FMT_YUV440P12BE;
+
+      case kPixelFormatAYUV64LE:
+        return AV_PIX_FMT_AYUV64LE;
+
+      case kPixelFormatAYUV64BE:
+        return AV_PIX_FMT_AYUV64BE;
+
+      case kPixelFormatP010LE:
+        return AV_PIX_FMT_P010LE;
+
+      case kPixelFormatP010BE:
+        return AV_PIX_FMT_P010BE;
+
+      case kPixelFormatGBRAP12BE:
+        return AV_PIX_FMT_GBRAP12BE;
+
+      case kPixelFormatGBRAP12LE:
+        return AV_PIX_FMT_GBRAP12LE;
+
+      case kPixelFormatGBRAP10BE:
+        return AV_PIX_FMT_GBRAP10BE;
+
+      case kPixelFormatGBRAP10LE:
+        return AV_PIX_FMT_GBRAP10LE;
+
+      case kPixelFormatGRAY12BE:
+        return AV_PIX_FMT_GRAY12BE;
+
+      case kPixelFormatGRAY12LE:
+        return AV_PIX_FMT_GRAY12LE;
+
+      case kPixelFormatGRAY10BE:
+        return AV_PIX_FMT_GRAY10BE;
+
+      case kPixelFormatGRAY10LE:
+        return AV_PIX_FMT_GRAY10LE;
+
+      case kPixelFormatP016LE:
+        return AV_PIX_FMT_P016LE;
+
+      case kPixelFormatP016BE:
+        return AV_PIX_FMT_P016BE;
+
+      case kPixelFormatGRAY9BE:
+        return AV_PIX_FMT_GRAY9BE;
+
+      case kPixelFormatGRAY9LE:
+        return AV_PIX_FMT_GRAY9LE;
+
+      case kPixelFormatGBRPF32BE:
+        return AV_PIX_FMT_GBRPF32BE;
+
+      case kPixelFormatGBRPF32LE:
+        return AV_PIX_FMT_GBRPF32LE;
+
+      case kPixelFormatGBRAPF32BE:
+        return AV_PIX_FMT_GBRAPF32BE;
+
+      case kPixelFormatGBRAPF32LE:
+        return AV_PIX_FMT_GBRAPF32LE;
+
+      case kPixelFormatGRAY14BE:
+        return AV_PIX_FMT_GRAY14BE;
+
+      case kPixelFormatGRAY14LE:
+        return AV_PIX_FMT_GRAY14LE;
+
+      case kPixelFormatGRAYF32BE:
+        return AV_PIX_FMT_GRAYF32BE;
+
+      case kPixelFormatGRAYF32LE:
+        return AV_PIX_FMT_GRAYF32LE;
+
+      case kPixelFormatYUVA422P12BE:
+        return AV_PIX_FMT_YUVA422P12BE;
+
+      case kPixelFormatYUVA422P12LE:
+        return AV_PIX_FMT_YUVA422P12LE;
+
+      case kPixelFormatYUVA444P12BE:
+        return AV_PIX_FMT_YUVA444P12BE;
+
+      case kPixelFormatYUVA444P12LE:
+        return AV_PIX_FMT_YUVA444P12LE;
+
+      case kPixelFormatNV24:
+        return AV_PIX_FMT_NV24;
+
+      case kPixelFormatNV42:
+        return AV_PIX_FMT_NV42;
 #endif
 
       default:

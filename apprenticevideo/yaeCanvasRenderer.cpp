@@ -101,6 +101,48 @@ static const char * yae_gl_arb_yuv_to_rgb_2d =
   "END\n";
 
 //----------------------------------------------------------------
+// yae_gl_arb_yuv_p9_to_rgb_2d
+//
+static const char * yae_gl_arb_yuv_p9_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "MUL yuv, yuv, 128.0;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_yuv_p10_to_rgb_2d
+//
+static const char * yae_gl_arb_yuv_p10_to_rgb_2d =
+  "!!ARBfp1.0\n"
+  "PARAM vr = program.local[0];\n"
+  "PARAM vg = program.local[1];\n"
+  "PARAM vb = program.local[2];\n"
+  "TEMP yuv;\n"
+  "TEX yuv.x, fragment.texcoord[0], texture[0], 2D;\n"
+  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
+  "TEX yuv.z, fragment.texcoord[0], texture[2], 2D;\n"
+  "MUL yuv, yuv, 64.0;\n"
+  "TEMP rgba;\n"
+  "DPH rgba.r, yuv, vr;\n"
+  "DPH rgba.g, yuv, vg;\n"
+  "DPH rgba.b, yuv, vb;\n"
+  "MOV rgba.a, 1.0;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
 // yae_gl_arb_nv12_to_rgb_2d
 //
 static const char * yae_gl_arb_nv12_to_rgb_2d =
@@ -698,10 +740,56 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
       //! planar YUV 4:4:4, 24bpp, (1 Cr & Cb sample per 1x1 Y samples), JPEG
     case yae::kPixelFormatYUVJ440P:
       //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples), JPEG
+    case yae::kPixelFormatNV24:
+      //! semi-planar YUV 4:4:4, 24bpp
+    case yae::kPixelFormatNV42:
+      //! semi-planar YVU 4:4:4, 24bpp
 
       internalFormat = GL_LUMINANCE;
       format = GL_LUMINANCE;
       dataType = GL_UNSIGNED_BYTE;
+      return 1;
+
+    case yae::kPixelFormatYUV420P9BE:
+    case yae::kPixelFormatYUV422P9BE:
+    case yae::kPixelFormatYUV444P9BE:
+      //! planar YUV, 9 bits per channel:
+    case yae::kPixelFormatYUV420P10BE:
+    case yae::kPixelFormatYUV422P10BE:
+    case yae::kPixelFormatYUV444P10BE:
+      //! planar YUV, 10 bits per channel:
+    case yae::kPixelFormatP010BE:
+      //! semi-planar YUV 4:2:0, 10bpp per component,
+      //! data in the high bits, zero padding in the bottom 6 bits
+    case yae::kPixelFormatP016BE:
+      //! semi-planar YUV 4:2:0, 16bpp per component
+#ifndef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_LUMINANCE;
+      format = GL_LUMINANCE;
+      dataType = GL_UNSIGNED_SHORT;
+      return 1;
+
+    case yae::kPixelFormatYUV420P9LE:
+    case yae::kPixelFormatYUV422P9LE:
+    case yae::kPixelFormatYUV444P9LE:
+      //! planar YUV, 9 bits per channel:
+    case yae::kPixelFormatYUV420P10LE:
+    case yae::kPixelFormatYUV422P10LE:
+    case yae::kPixelFormatYUV444P10LE:
+      //! planar YUV, 10 bits per channel:
+    case yae::kPixelFormatP010LE:
+      //! semi-planar YUV 4:2:0, 10bpp per component,
+      //! data in the high bits, zero padding in the bottom 6 bits
+    case yae::kPixelFormatP016LE:
+      //! semi-planar YUV 4:2:0, 16bpp per component
+#ifdef __BIG_ENDIAN__
+      shouldSwapBytes = GL_TRUE;
+#endif
+      internalFormat = GL_LUMINANCE;
+      format = GL_LUMINANCE;
+      dataType = GL_UNSIGNED_SHORT;
       return 1;
 
     case yae::kPixelFormatRGB24:
@@ -1363,6 +1451,13 @@ namespace yae
           dataTypeGL_      [numPlanes_] = (GLenum)GL_UNSIGNED_SHORT;
           shouldSwapBytes_ [numPlanes_] = (GLint)(nativeEndian ? 0 : 1);
         }
+        else if (stride_bytes == 4 && ptts->depth_[0] > 8)
+        {
+          internalFormatGL_[numPlanes_] = (GLint)GL_LUMINANCE16_ALPHA16;
+          pixelFormatGL_   [numPlanes_] = (GLenum)GL_LUMINANCE_ALPHA;
+          dataTypeGL_      [numPlanes_] = (GLenum)GL_UNSIGNED_SHORT;
+          shouldSwapBytes_ [numPlanes_] = (GLint)(nativeEndian ? 0 : 1);
+        }
         else if (program)
         {
           unsigned int supportedChannels =
@@ -1925,7 +2020,7 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // TModernCanvas::createShaderPrograms
+  // TModernCanvas::shaders
   //
   const ShaderPrograms &
   TModernCanvas::shaders()
@@ -2012,7 +2107,9 @@ namespace yae
 
     // for NV12 formats:
     static const TPixelFormatId nv12[] = {
-      kPixelFormatNV12
+      kPixelFormatNV12,
+      kPixelFormatP010,
+      kPixelFormatP016
     };
 
     s.createShaderProgramsFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
@@ -2020,7 +2117,8 @@ namespace yae
 
     // for NV21 formats:
     static const TPixelFormatId nv21[] = {
-      kPixelFormatNV21
+      kPixelFormatNV21,
+      kPixelFormatNV42
     };
 
     s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
@@ -2412,11 +2510,34 @@ namespace yae
       kPixelFormatYUVJ420P,
       kPixelFormatYUVJ422P,
       kPixelFormatYUVJ444P,
-      kPixelFormatYUVJ440P
+      kPixelFormatYUVJ440P,
+      kPixelFormatYUV420P16,
+      kPixelFormatYUV422P16,
+      kPixelFormatYUV444P16,
     };
 
     s.createShaderProgramsFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
                               yae_gl_arb_yuv_to_rgb_2d);
+
+    // for YUV formats:
+    static const TPixelFormatId yuv_p9[] = {
+      kPixelFormatYUV420P9,
+      kPixelFormatYUV422P9,
+      kPixelFormatYUV444P9,
+    };
+
+    s.createShaderProgramsFor(yuv_p9, sizeof(yuv_p9) / sizeof(yuv_p9[0]),
+                              yae_gl_arb_yuv_p9_to_rgb_2d);
+
+    // for YUV formats:
+    static const TPixelFormatId yuv_p10[] = {
+      kPixelFormatYUV420P10,
+      kPixelFormatYUV422P10,
+      kPixelFormatYUV444P10,
+    };
+
+    s.createShaderProgramsFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
+                              yae_gl_arb_yuv_p10_to_rgb_2d);
 
     // for YUVA formats:
     static const TPixelFormatId yuva[] = {
@@ -2428,7 +2549,9 @@ namespace yae
 
     // for NV12 formats:
     static const TPixelFormatId nv12[] = {
-      kPixelFormatNV12
+      kPixelFormatNV12,
+      kPixelFormatP010,
+      kPixelFormatP016
     };
 
     s.createShaderProgramsFor(nv12, sizeof(nv12) / sizeof(nv12[0]),
@@ -2436,7 +2559,8 @@ namespace yae
 
     // for NV21 formats:
     static const TPixelFormatId nv21[] = {
-      kPixelFormatNV21
+      kPixelFormatNV21,
+      kPixelFormatNV24
     };
 
     s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),

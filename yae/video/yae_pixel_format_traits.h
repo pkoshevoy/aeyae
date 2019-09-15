@@ -34,6 +34,7 @@ namespace yae
       kPacked = 1 << 7,    // has a plane with interleaved channel samples
       kPlanar = 1 << 8,    // has a contiguous plane per channel samples
       kPaletted = 1 << 9,  // requires a color palette
+      kFloat = 1 << 10,    // IEEE-754 single precision float samples
     };
 
     enum { kColor = (kYUV | kRGB | kXYZ | kBayer) };

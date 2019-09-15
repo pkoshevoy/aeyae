@@ -95,6 +95,7 @@ namespace yae
 
     if (!ffmpeg_initialized)
     {
+      av_log_set_level(AV_LOG_WARNING);
       av_log_set_flags(AV_LOG_SKIP_REPEATED);
       avcodec_register_all();
       avfilter_register_all();
@@ -441,6 +442,282 @@ namespace yae
   {
     static AvLog * singleton = new AvLog();
     return *singleton;
+  }
+
+
+  //----------------------------------------------------------------
+  // assign_frame
+  //
+  static void
+  assign_frame(::AVFrame & dst, const ::AVFrame & src)
+  {
+    if (&dst != &src)
+    {
+      av_frame_unref(&dst);
+
+      if (src.data[0] || src.hw_frames_ctx)
+      {
+        av_frame_ref(&dst, &src);
+      }
+      else
+      {
+        dst.format = src.format;
+        dst.width = src.width;
+        dst.height = src.height;
+        dst.channels = src.channels;
+        dst.channel_layout = src.channel_layout;
+        dst.nb_samples = src.nb_samples;
+        av_frame_copy_props(&dst, &src);
+      }
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // AvFrm::AvFrm
+  //
+  AvFrm::AvFrm(const AVFrame * frame):
+    frame_(av_frame_alloc())
+  {
+    if (frame)
+    {
+      assign_frame(*frame_, *frame);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::AvFrm
+  //
+  AvFrm::AvFrm(const AvFrm & frame):
+    frame_(av_frame_alloc())
+  {
+    assign_frame(*frame_, *(frame.frame_));
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::~AvFrm
+  //
+  AvFrm::~AvFrm()
+  {
+    av_frame_free(&frame_);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::operator =
+  //
+  AvFrm &
+  AvFrm::operator = (const AvFrm & frame)
+  {
+    if (this != &frame)
+    {
+      assign_frame(*frame_, *(frame.frame_));
+    }
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // sw_pix_fmt
+  //
+  AVPixelFormat
+  sw_pix_fmt(const ::AVFrame & frame)
+  {
+    if (frame.hw_frames_ctx)
+    {
+      const AVHWFramesContext * hw_frames_ctx =
+        (const AVHWFramesContext *)(frame.hw_frames_ctx->data);
+      YAE_ASSERT(hw_frames_ctx);
+
+      if (hw_frames_ctx)
+      {
+        return hw_frames_ctx->sw_format;
+      }
+    }
+
+    return (AVPixelFormat)(frame.format);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::sw_pix_fmt
+  //
+  AVPixelFormat
+  AvFrm::sw_pix_fmt() const
+  {
+    return yae::sw_pix_fmt(*frame_);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::AvFrmSpecs
+  //
+  AvFrmSpecs::AvFrmSpecs()
+  {
+    clear();
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::AvFrmSpecs
+  //
+  AvFrmSpecs::AvFrmSpecs(const AVFrame & src)
+  {
+    assign(src);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::AvFrmSpecs
+  //
+  AvFrmSpecs::AvFrmSpecs(const AvFrm & src)
+  {
+    assign(src.get());
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::clear
+  //
+  void
+  AvFrmSpecs::clear()
+  {
+    yae::clear_specs(*this);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::assign
+  //
+  void
+  AvFrmSpecs::assign(const AVFrame & src)
+  {
+    width = src.width;
+    height = src.height;
+    format = yae::sw_pix_fmt(src);
+    colorspace = src.colorspace;
+    color_range = src.color_range;
+    color_primaries = src.color_primaries;
+    color_trc = src.color_trc;
+    chroma_location = src.chroma_location;
+    sample_aspect_ratio = src.sample_aspect_ratio;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::override_with
+  //
+  AvFrmSpecs &
+  AvFrmSpecs::override_with(const AvFrmSpecs & specs)
+  {
+    yae::override_specs(*this, specs);
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::add_missing_specs
+  //
+  AvFrmSpecs &
+  AvFrmSpecs::add_missing_specs(const AvFrmSpecs & specs)
+  {
+    yae::add_missing_specs(*this, specs);
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrmSpecs::guess_missing_specs
+  //
+  AvFrmSpecs &
+  AvFrmSpecs::guess_missing_specs()
+  {
+    *this = yae::guess_specs(*this);
+    return *this;
+  }
+
+
+  //----------------------------------------------------------------
+  // guess_specs
+  //
+  AvFrmSpecs
+  guess_specs(const AvFrmSpecs & src)
+  {
+    AvFrmSpecs specs = copy_specs(src);
+    AVPixelFormat pix_fmt = src.get_pix_fmt();
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    const AVComponentDescriptor & luma = desc->comp[0];
+
+    specs.color_range =
+      (src.color_range != AVCOL_RANGE_UNSPECIFIED) ? src.color_range :
+      AVCOL_RANGE_MPEG;
+
+    specs.colorspace =
+      (src.colorspace != AVCOL_SPC_UNSPECIFIED &&
+       src.colorspace != AVCOL_SPC_RESERVED) ? src.colorspace :
+      (luma.depth == 8) ? AVCOL_SPC_BT709 :
+      AVCOL_SPC_BT2020_NCL; // AVCOL_SPC_BT2020_CL?
+
+    specs.color_primaries =
+      (src.color_primaries != AVCOL_PRI_UNSPECIFIED &&
+       src.color_primaries != AVCOL_PRI_RESERVED0 &&
+       src.color_primaries != AVCOL_PRI_RESERVED) ? src.color_primaries :
+      (specs.colorspace == AVCOL_SPC_BT709 ||
+       luma.depth == 8) ? AVCOL_PRI_BT709 :
+      AVCOL_PRI_BT2020;
+
+    specs.color_trc =
+      (src.color_trc != AVCOL_TRC_UNSPECIFIED &&
+       src.color_trc != AVCOL_TRC_RESERVED0 &&
+       src.color_trc != AVCOL_TRC_RESERVED) ? src.color_trc :
+
+      (specs.colorspace == AVCOL_SPC_BT709 ||
+       luma.depth == 8) ? AVCOL_TRC_BT709 :
+
+      (luma.depth == 10) ? AVCOL_TRC_BT2020_10 :
+      (luma.depth == 12) ? AVCOL_TRC_BT2020_12 :
+      AVCOL_TRC_SMPTE2084;
+
+    specs.chroma_location =
+      (src.chroma_location != AVCHROMA_LOC_UNSPECIFIED) ? src.chroma_location :
+      AVCHROMA_LOC_UNSPECIFIED;
+
+    return specs;
+  }
+
+  //----------------------------------------------------------------
+  // change_specs
+  //
+  AvFrmSpecs
+  change_specs(const AvFrmSpecs & src_specs,
+               AVPixelFormat dst_pix_fmt,
+               int dst_width,
+               int dst_height)
+  {
+    if ((src_specs.get_pix_fmt() == dst_pix_fmt) &&
+        (src_specs.width == dst_width || dst_width <= 0) &&
+        (src_specs.height == dst_height || dst_height <= 0))
+    {
+      return src_specs;
+    }
+
+    AvFrmSpecs dst_specs = src_specs;
+    dst_specs.format = dst_pix_fmt;
+    dst_specs.width = (dst_width <= 0) ? src_specs.width : dst_width;
+    dst_specs.height = (dst_height <= 0) ? src_specs.height : dst_height;
+
+    const AVPixFmtDescriptor * dst_desc =
+      av_pix_fmt_desc_get(dst_specs.get_pix_fmt());
+    const AVComponentDescriptor & luma = dst_desc->comp[0];
+
+    if (luma.depth > 8)
+    {
+      // pass through HDR as-is:
+      dst_specs.color_range = src_specs.color_range;
+      dst_specs.colorspace = src_specs.colorspace;
+      dst_specs.color_primaries = src_specs.color_primaries;
+      dst_specs.color_trc = src_specs.color_trc;
+    }
+    else
+    {
+      // we want SDR:
+      dst_specs.color_range = AVCOL_RANGE_MPEG;
+      dst_specs.colorspace = AVCOL_SPC_BT709;
+      dst_specs.color_primaries = AVCOL_PRI_BT709;
+      dst_specs.color_trc = AVCOL_TRC_BT709;
+    }
+
+    return dst_specs;
   }
 
 }

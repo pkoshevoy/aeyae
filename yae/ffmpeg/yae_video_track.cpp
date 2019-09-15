@@ -482,8 +482,11 @@ namespace yae
       double overridePixelAspectRatio =
         override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
 
-      enum AVPixelFormat ffmpegPixelFormat =
-        yae_to_ffmpeg(output_.pixelFormat_);
+      AvFrmSpecs outSpecs(decoded);
+      if (!decoded.hw_frames_ctx)
+      {
+        outSpecs.format = yae_to_ffmpeg(output_.pixelFormat_);
+      }
 
       // configure the filter chain:
       std::ostringstream filters;
@@ -588,11 +591,21 @@ namespace yae
         add_to(filters) << ((transposeAngle < 0) ?
                             "transpose=dir=clock" :
                             "transpose=dir=cclock");
+
+        outSpecs.width = output_.visibleHeight_;
+        outSpecs.height = output_.visibleWidth_;
+      }
+      else
+      {
+        outSpecs.width = output_.visibleWidth_;
+        outSpecs.height = output_.visibleHeight_;
       }
 
       if (overridePixelAspectRatio)
       {
         add_to(filters) << "setsar=sar=" << output_.pixelAspectRatio_;
+        outSpecs.sample_aspect_ratio.num = 216000 * output_.pixelAspectRatio_;
+        outSpecs.sample_aspect_ratio.den = 216000;
       }
 
 #if 0
@@ -615,22 +628,13 @@ namespace yae
 #endif
 
       std::string filterChain(filters.str().c_str());
-      bool frameTraitsChanged = false;
-      if (!filterGraph_.setup(decoded.width,
-                              decoded.height,
-                              frameRate_,
-                              stream_->time_base,
-                              decoded.sample_aspect_ratio,
-                              (AVPixelFormat)decoded.format,
-                              ffmpegPixelFormat,
-                              filterChain.c_str(),
-                              &frameTraitsChanged))
-      {
-        YAE_ASSERT(false);
-        return;
-      }
 
-      if (frameTraitsChanged && !reconfigure())
+      if (filterGraph_.setup(decoded,
+                             frameRate_,
+                             stream_->time_base,
+                             outSpecs,
+                             filterChain.c_str()) &&
+          !reconfigure())
       {
         YAE_ASSERT(false);
         return;
@@ -716,11 +720,7 @@ namespace yae
       // decode CEA-608 packets, if there are any:
       cc_.decode(stream_->time_base, decoded, &terminator_);
 
-      if (!filterGraph_.push(&decoded))
-      {
-        YAE_ASSERT(false);
-        return;
-      }
+      filterGraph_.push(&decoded);
 
       while (true)
       {
@@ -765,6 +765,7 @@ namespace yae
 
         YAE_ASSERT(output_.initAbcToRgbMatrix_);
         vf.traits_ = output_;
+        vf.traits_.pixelFormat_ = ffmpeg_to_yae(yae::pix_fmt(output));
 
         if (output.linesize[0] < 0)
         {
@@ -1222,7 +1223,6 @@ namespace yae
   bool
   VideoTrack::setDeinterlacing(bool deint)
   {
-    candidates_.clear();
     return setTraitsOverride(override_, deint);
   }
 
@@ -1232,38 +1232,6 @@ namespace yae
   void
   VideoTrack::enableClosedCaptions(unsigned int cc)
   {
-    AvCodecContextPtr keepAlive(codecContext_);
-    AVCodecContext * ctx = keepAlive.get();
-
-    candidates_.clear();
-    preferSoftwareDecoder_ = cc > 0;
-
-    if (ctx && cc && !cc_.enabled())
-    {
-      // switch to a decoder that produces side-data:
-      std::size_t n = strlen(ctx->codec->name);
-      std::string name;
-
-      if (al::ends_with(ctx->codec->name, "_qsv"))
-      {
-        name = std::string(ctx->codec->name, ctx->codec->name + (n - 4));
-      }
-      else if (al::ends_with(ctx->codec->name, "_cuvid"))
-      {
-        name = std::string(ctx->codec->name, ctx->codec->name + (n - 6));
-      }
-
-      if (name == "mpeg2")
-      {
-        name = "mpeg2video";
-      }
-
-      if (name.size())
-      {
-        tryToSwitchDecoder(name);
-      }
-    }
-
     cc_.enableClosedCaptions(cc);
   }
 }

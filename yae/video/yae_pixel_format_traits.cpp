@@ -436,7 +436,8 @@ namespace yae
     //! planar YUV 4:4:0, 16bpp, (1 Cr & Cb sample per 1x2 Y samples)
     set(kPixelFormatYUV440P) = copy(kPixelFormatYUV420P)
       .name( "YUV440P" )
-      .chromaBoxW( 1 );
+      .chromaBoxW( 1 )
+      .chromaBoxH( 2 );
 
     //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
     //! samples)
@@ -1081,6 +1082,219 @@ namespace yae
       .reverseEndian()
       .name("BayerGRBG16BE");
 
+
+    set(kPixelFormatYUV440P10LE) = copy(kPixelFormatYUV440P)
+      .name( "YUV440P10LE" )
+      .depth( 10, 10, 10 )
+      .lshift( 6, 6, 6 )
+      .addFlags( kLE );
+
+    set(kPixelFormatYUV440P10BE) = copy(kPixelFormatYUV440P10LE)
+      .name( "YUV440P10BE" )
+      .reverseEndian();
+
+    set(kPixelFormatYUV440P12LE) = copy(kPixelFormatYUV440P)
+      .name( "YUV440P12LE" )
+      .depth( 12, 12, 12 )
+      .lshift( 4, 4, 4 )
+      .addFlags( kLE );
+
+    set(kPixelFormatYUV440P12BE) = copy(kPixelFormatYUV440P12LE)
+      .name( "YUV440P12BE" )
+      .reverseEndian();
+
+    //! packed AYUV 4:4:4, 64bpp (1 Cr & Cb sample per 1x1 Y & A samples)
+    set(kPixelFormatAYUV64LE) = TraitsInit()
+      .name( "AYUV64LE" )
+      .flags( kAlpha | kYUV | kPacked | kLE)
+      .channels( 4 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 0, 0, 0, 0 )
+      .depth( 16, 16, 16, 16 )
+      .lshift( 16, 32, 48, 0 )
+      .stride( 64, 64, 64, 64 )
+      .samples( 1, 1, 1, 1 );
+
+    set(kPixelFormatAYUV64BE) = copy(kPixelFormatAYUV64LE)
+      .name("AYUV64BE")
+      .reverseEndian();
+
+    //! semi-planar YUV 4:2:0, 10bpp per component,
+    //! data in the high bits, zero padding in the bottom 6 bits
+    set(kPixelFormatP010LE) = copy(kPixelFormatNV12)
+      .name( "P010LE" )
+      .depth( 10, 10, 10 )
+      .lshift( 0, 0, 16 )
+      .stride( 16, 32, 32 )
+      .addFlags( kLE );
+
+    set(kPixelFormatP010BE) = copy(kPixelFormatP010LE)
+      .name( "P010BE" )
+      .reverseEndian();
+
+    //! planar GBR 4:4:4:4 48bpp
+    set(kPixelFormatGBRAP12BE) = copy(kPixelFormatGBRAP)
+      .name( "GBRAP12BE" )
+      .depth( 12, 12, 12, 12 )
+      .lshift( 4, 4, 4, 4 )
+      .stride( 16, 16, 16, 16 )
+      .addFlags( kBE );
+
+    set(kPixelFormatGBRAP12LE) = copy(kPixelFormatGBRAP12BE)
+      .name( "GBRAP12LE" )
+      .reverseEndian();
+
+    //! planar GBR 4:4:4:4 40bpp
+    set(kPixelFormatGBRAP10BE) = copy(kPixelFormatGBRAP)
+      .name( "GBRAP10BE" )
+      .depth( 10, 10, 10, 10 )
+      .lshift( 6, 6, 6, 6 )
+      .stride( 16, 16, 16, 16 )
+      .addFlags( kBE );
+
+    set(kPixelFormatGBRAP10LE) = copy(kPixelFormatGBRAP10BE)
+      .name( "GBRAP10LE" )
+      .reverseEndian();
+
+    //! Y, 12bpp
+    set(kPixelFormatGRAY12BE) = copy(kPixelFormatGRAY16BE)
+      .name( "GRAY12BE" )
+      .depth( 12 )
+      .lshift( 4 )
+      .stride( 16 );
+
+    set(kPixelFormatGRAY12LE) = copy(kPixelFormatGRAY12BE)
+      .name( " GRAY12LE" )
+      .reverseEndian();
+
+    //! Y, 10bpp
+    set(kPixelFormatGRAY10BE) = copy(kPixelFormatGRAY16BE)
+      .name( "GRAY10BE" )
+      .depth( 10 )
+      .lshift( 6 )
+      .stride( 16 );
+
+    set(kPixelFormatGRAY10LE) = copy(kPixelFormatGRAY10BE)
+      .name( "GRAY10LE" )
+      .reverseEndian();
+
+    //! semi-planar YUV 4:2:0, 16bpp per component
+    set(kPixelFormatP016LE) = copy(kPixelFormatNV12)
+      .name( "P016LE" )
+      .depth( 16, 16, 16 )
+      .lshift( 0, 0, 16 )
+      .stride( 16, 32, 32 )
+      .addFlags( kLE );
+
+    set(kPixelFormatP016BE) = copy(kPixelFormatP016LE)
+      .name( "P016BE" )
+      .reverseEndian();
+
+    //! Y, 9bpp
+    set(kPixelFormatGRAY9BE) = copy(kPixelFormatGRAY16BE)
+      .name( "GRAY9BE" )
+      .depth( 9 )
+      .lshift( 7 )
+      .stride( 16 );
+
+    set(kPixelFormatGRAY9LE) = copy(kPixelFormatGRAY9BE)
+      .name( "GRAY9LE" )
+      .reverseEndian();
+
+    //! IEEE-754 single precision planar GBR 4:4:4, 96bpp
+    set(kPixelFormatGBRPF32BE) = TraitsInit()
+      .name( "GBRPF32BE" )
+      .flags( kRGB | kPlanar | kBE | kFloat )
+      .channels( 3 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 2, 0, 1 )
+      .depth( 32, 32, 32 )
+      .lshift( 0, 0, 0 )
+      .stride( 32, 32, 32 )
+      .samples( 1, 1, 1 );
+
+    set(kPixelFormatGBRPF32LE) = copy(kPixelFormatGBRPF32BE)
+      .name( "GBRPF32LE" )
+      .reverseEndian();
+
+    //! IEEE-754 single precision planar GBRA 4:4:4:4, 128bpp
+    set(kPixelFormatGBRAPF32BE) = TraitsInit()
+      .name( "GBRAPF32BE" )
+      .flags( kRGB | kAlpha | kPlanar | kBE | kFloat )
+      .channels( 4 )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 )
+      .plane( 2, 0, 1, 3 )
+      .depth( 32, 32, 32, 32 )
+      .lshift( 0, 0, 0, 0 )
+      .stride( 32, 32, 32, 32 )
+      .samples( 1, 1, 1, 1 );
+
+    set(kPixelFormatGBRAPF32LE) = copy(kPixelFormatGBRAPF32BE)
+      .name( "GBRAPF32LE" )
+      .reverseEndian();
+
+    //! Y, 14bpp
+    set(kPixelFormatGRAY14BE) = copy(kPixelFormatGRAY16BE)
+      .name( "GRAY14BE" )
+      .depth( 14 )
+      .lshift( 2 )
+      .stride( 16 );
+
+    set(kPixelFormatGRAY14LE) = copy(kPixelFormatGRAY14BE)
+      .name( "GRAY14LE" )
+      .reverseEndian();
+
+    //! IEEE-754 single precision Y, 32bpp
+    set(kPixelFormatGRAYF32BE) = TraitsInit()
+      .name( "GRAYF32BE" )
+      .flags( kPlanar | kFloat )
+      .channels( 1 )
+      .chromaBoxW( 0 )
+      .chromaBoxH( 0 )
+      .plane( 0 )
+      .depth( 32 )
+      .lshift( 0 )
+      .stride( 32 )
+      .samples( 1 );
+
+    set(kPixelFormatGRAYF32LE) = copy(kPixelFormatGRAYF32BE)
+      .name( "GRAYF32LE" )
+      .reverseEndian();
+
+    //! planar YUV 4:2:2, 24bpp, 12b alpha
+    set(kPixelFormatYUVA422P12BE) = copy(kPixelFormatYUVA422P16BE)
+      .name( "YUVA422P12BE" )
+      .depth( 12, 12, 12, 12 )
+      .lshift( 4, 4, 4, 4 );
+
+    set(kPixelFormatYUVA422P12LE) = copy(kPixelFormatYUVA422P12BE)
+      .name( "YUVA422P12LE" )
+      .reverseEndian();
+
+    //! planar YUV 4:4:4, 36bpp, 12b alpha
+    set(kPixelFormatYUVA444P12BE) = copy(kPixelFormatYUVA444P16BE)
+      .name( "YUVA444P12BE" )
+      .depth( 12, 12, 12, 12 )
+      .lshift( 4, 4, 4, 4 );
+
+    set(kPixelFormatYUVA444P12LE) = copy(kPixelFormatYUVA444P12BE)
+      .name( "YUVA444P12LE" )
+      .reverseEndian();
+
+    //! semi-planar YUV 4:4:4, 24bpp
+    set(kPixelFormatNV24) = copy(kPixelFormatNV12)
+      .name( "NV24" )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 );
+
+    //! semi-planar YVU 4:4:4, 24bpp
+    set(kPixelFormatNV42) = copy(kPixelFormatNV21)
+      .name( "NV42" )
+      .chromaBoxW( 1 )
+      .chromaBoxH( 1 );
   }
 
   //----------------------------------------------------------------

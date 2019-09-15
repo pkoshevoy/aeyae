@@ -367,6 +367,77 @@ namespace yae
     kPixelFormatBayerGRBG16LE = 140,
     kPixelFormatBayerGRBG16BE = 141,
 
+    //! planar YUV 4:4:0, 20bpp, (1 Cr & Cb sample per 1x2 Y samples)
+    kPixelFormatYUV440P10LE = 142,
+    kPixelFormatYUV440P10BE = 143,
+
+    //! planar YUV 4:4:0, 24bpp, (1 Cr & Cb sample per 1x2 Y samples)
+    kPixelFormatYUV440P12LE = 144,
+    kPixelFormatYUV440P12BE = 145,
+
+    //! packed AYUV 4:4:4, 64bpp (1 Cr & Cb sample per 1x1 Y & A samples)
+    kPixelFormatAYUV64LE = 146,
+    kPixelFormatAYUV64BE = 147,
+
+    //! semi-planar YUV 4:2:0, 10bpp per component,
+    //! data in the high bits, zero padding in the bottom 6 bits
+    kPixelFormatP010LE = 148,
+    kPixelFormatP010BE = 149,
+
+    //! planar GBR 4:4:4:4 48bpp
+    kPixelFormatGBRAP12BE = 150,
+    kPixelFormatGBRAP12LE = 151,
+
+    //! planar GBR 4:4:4:4 40bpp
+    kPixelFormatGBRAP10BE = 152,
+    kPixelFormatGBRAP10LE = 153,
+
+    //! Y, 12bpp
+    kPixelFormatGRAY12BE = 154,
+    kPixelFormatGRAY12LE = 155,
+
+    //! Y, 10bpp
+    kPixelFormatGRAY10BE = 156,
+    kPixelFormatGRAY10LE = 157,
+
+    //! semi-planar YUV 4:2:0, 16bpp per component
+    kPixelFormatP016LE = 158,
+    kPixelFormatP016BE = 159,
+
+    //! Y, 9bpp
+    kPixelFormatGRAY9BE = 160,
+    kPixelFormatGRAY9LE = 161,
+
+    //! IEEE-754 single precision planar GBR 4:4:4, 96bpp
+    kPixelFormatGBRPF32BE = 162,
+    kPixelFormatGBRPF32LE = 163,
+
+    //! IEEE-754 single precision planar GBRA 4:4:4:4, 128bpp
+    kPixelFormatGBRAPF32BE = 164,
+    kPixelFormatGBRAPF32LE = 165,
+
+    //! Y, 14bpp
+    kPixelFormatGRAY14BE = 166,
+    kPixelFormatGRAY14LE = 167,
+
+    //! IEEE-754 single precision Y, 32bpp
+    kPixelFormatGRAYF32BE = 168,
+    kPixelFormatGRAYF32LE = 169,
+
+    //! planar YUV 4:2:2, 24bpp, 12b alpha
+    kPixelFormatYUVA422P12BE = 170,
+    kPixelFormatYUVA422P12LE = 171,
+
+    //! planar YUV 4:4:4, 36bpp, 12b alpha
+    kPixelFormatYUVA444P12BE = 172,
+    kPixelFormatYUVA444P12LE = 173,
+
+    //! semi-planar YUV 4:4:4, 24bpp
+    kPixelFormatNV24 = 174,
+
+    //! semi-planar YVU 4:4:4, 24bpp
+    kPixelFormatNV42 = 175,
+
   //----------------------------------------------------------------
   // YAE_NATIVE_ENDIAN
   //
@@ -424,6 +495,22 @@ namespace yae
     YAE_NATIVE_ENDIAN (kPixelFormatBayerRGGB16),
     YAE_NATIVE_ENDIAN (kPixelFormatBayerGBRG16),
     YAE_NATIVE_ENDIAN (kPixelFormatBayerGRBG16),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV440P10),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUV440P12),
+    YAE_NATIVE_ENDIAN (kPixelFormatAYUV64),
+    YAE_NATIVE_ENDIAN (kPixelFormatP010),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRAP12),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRAP10),
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAY12),
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAY10),
+    YAE_NATIVE_ENDIAN (kPixelFormatP016),
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAY9),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRPF32),
+    YAE_NATIVE_ENDIAN (kPixelFormatGBRAPF32),
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAY14),
+    YAE_NATIVE_ENDIAN (kPixelFormatGRAYF32),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA422P12),
+    YAE_NATIVE_ENDIAN (kPixelFormatYUVA444P12),
 #undef YAE_NATIVE_ENDIAN
   };
 }

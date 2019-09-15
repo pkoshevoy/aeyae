@@ -94,50 +94,6 @@ namespace yae
     return packet_ptr ? TPacketPtr(new AvPkt(*packet_ptr)) : TPacketPtr();
   }
 
-  //----------------------------------------------------------------
-  // AvFrm::AvFrm
-  //
-  AvFrm::AvFrm(const AVFrame * frame):
-    frame_(av_frame_alloc())
-  {
-    if (frame)
-    {
-      av_frame_ref(frame_, frame);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // AvFrm::AvFrm
-  //
-  AvFrm::AvFrm(const AvFrm & frame):
-    frame_(av_frame_alloc())
-  {
-    av_frame_ref(frame_, frame.frame_);
-  }
-
-  //----------------------------------------------------------------
-  // AvFrm::~AvFrm
-  //
-  AvFrm::~AvFrm()
-  {
-    av_frame_free(&frame_);
-  }
-
-  //----------------------------------------------------------------
-  // AvFrm::operator =
-  //
-  AvFrm &
-  AvFrm::operator = (const AvFrm & frame)
-  {
-    if (this != &frame)
-    {
-      av_frame_unref(frame_);
-      av_frame_ref(frame_, frame.frame_);
-    }
-
-    return *this;
-  }
-
 
   //----------------------------------------------------------------
   // AvCodecContextPtr::destroy
@@ -224,11 +180,10 @@ namespace yae
   // Track::Track
   //
   Track::Track(AVFormatContext * context, AVStream * stream):
+    hw_config_index_(0),
     thread_(this),
     context_(context),
     stream_(stream),
-    preferSoftwareDecoder_(false),
-    switchDecoderToRecommended_(false),
     sent_(0),
     received_(0),
     errors_(0),
@@ -250,11 +205,13 @@ namespace yae
   // Track::Track
   //
   Track::Track(Track & track):
+    hw_config_index_(0),
     thread_(this),
     context_(NULL),
     stream_(NULL),
-    preferSoftwareDecoder_(track.preferSoftwareDecoder_),
-    switchDecoderToRecommended_(track.switchDecoderToRecommended_),
+    sent_(0),
+    received_(0),
+    errors_(0),
     timeIn_(0.0),
     timeOut_(kMaxDouble),
     playbackEnabled_(false),
@@ -263,6 +220,9 @@ namespace yae
     discarded_(0),
     packetQueue_(kQueueSizeLarge)
   {
+    std::swap(hw_config_index_, track.hw_config_index_);
+    std::swap(hw_device_ctx_, track.hw_device_ctx_);
+    std::swap(hw_frames_ctx_, track.hw_frames_ctx_);
     std::swap(context_, track.context_);
     std::swap(stream_, track.stream_);
     std::swap(codecContext_, track.codecContext_);
@@ -276,177 +236,6 @@ namespace yae
     threadStop();
     close();
   }
-
-  //----------------------------------------------------------------
-  // TDecoderMap
-  //
-  typedef std::map<AVCodecID, std::set<const AVCodec *> > TDecoderMap;
-
-  //----------------------------------------------------------------
-  // TDecoders
-  //
-  struct TDecoders : public TDecoderMap
-  {
-
-    //----------------------------------------------------------------
-    // TDecoders
-    //
-    TDecoders()
-    {
-      ensure_ffmpeg_initialized();
-
-      void * opaque = NULL;
-      for (const AVCodec * c = av_codec_iterate(&opaque); c; c = av_codec_iterate(&opaque))
-      {
-        if (av_codec_is_decoder(c))
-        {
-          TDecoderMap::operator[](c->id).insert(c);
-        }
-      }
-    }
-
-    //----------------------------------------------------------------
-    // find
-    //
-    // FIXME: perhaps should also include a list of acceptable
-    // output pixel formats (or sample formats)
-    //
-    void
-    find(const AVCodecParameters & params,
-         std::list<AvCodecContextPtr> & decoders,
-         bool preferSoftwareDecoder) const
-    {
-      decoders.clear();
-
-      TDecoderMap::const_iterator found = TDecoderMap::find(params.codec_id);
-      if (found == TDecoderMap::end())
-      {
-        return;
-      }
-
-      std::list<AvCodecContextPtr> hardware;
-      std::list<AvCodecContextPtr> software;
-      std::list<AvCodecContextPtr> experimental;
-
-      typedef std::set<const AVCodec *> TCodecs;
-      const TCodecs & codecs = found->second;
-      for (TCodecs::const_iterator i = codecs.begin(); i != codecs.end(); ++i)
-      {
-        const AVCodec * c = *i;
-        if (c->capabilities & AV_CODEC_CAP_EXPERIMENTAL)
-        {
-          AvCodecContextPtr ctx = tryToOpen(c, &params);
-          if (ctx)
-          {
-            experimental.push_back(ctx);
-          }
-        }
-        else if (al::ends_with(c->name, "_cuvid"))
-        {
-          if (params.format != AV_PIX_FMT_YUV420P &&
-              params.codec_id != AV_CODEC_ID_MJPEG)
-          {
-            // 4:2:0 is the only one that works with h264_cuvud and mpeg2_cuvid
-            // however, 4:2:2 and 4:4:4 work with mjpeg_cuvid
-            continue;
-          }
-
-          // verify that the GPU can handle this stream:
-          AvCodecContextPtr ctx = tryToOpen(c, &params);
-          if (ctx)
-          {
-            hardware.push_front(ctx);
-          }
-        }
-        else if (al::ends_with(c->name, "_qsv") ||
-                 al::ends_with(c->name, "_v4l2m2m") ||
-                 al::ends_with(c->name, "_vda") ||
-                 al::ends_with(c->name, "_vdpau"))
-        {
-          if (al::ends_with(c->name, "_vda"))
-          {
-            // h264_vda decoder output is corrupted on 2010 macmini,
-            // even though there are no decoder errors reported,
-            // therefore it cannot be trusted and is explicitly disbaled:
-            continue;
-          }
-
-          // verify that the GPU can handle this stream:
-          AvCodecContextPtr ctx = tryToOpen(c, &params);
-          if (ctx)
-          {
-            hardware.push_back(ctx);
-          }
-        }
-        else
-        {
-          AvCodecContextPtr ctx = tryToOpen(c, &params);
-          if (ctx)
-          {
-            software.push_back(ctx);
-          }
-        }
-      }
-
-      if (preferSoftwareDecoder)
-      {
-        decoders.splice(decoders.end(), software);
-        decoders.splice(decoders.end(), hardware);
-      }
-      else
-      {
-        decoders.splice(decoders.end(), hardware);
-        decoders.splice(decoders.end(), software);
-      }
-
-      decoders.splice(decoders.end(), experimental);
-    }
-  };
-
-  //----------------------------------------------------------------
-  // get_decoders
-  //
-  static const TDecoders & get_decoders()
-  {
-    static const TDecoders decoders;
-    return decoders;
-  }
-
-  //----------------------------------------------------------------
-  // find_best_decoder_for
-  //
-  AvCodecContextPtr
-  find_best_decoder_for(const AVCodecParameters & params,
-                        std::list<AvCodecContextPtr> & untried,
-                        bool preferSoftwareDecoder)
-  {
-    const TDecoders & decoders = get_decoders();
-
-    if (untried.empty())
-    {
-      decoders.find(params, untried, preferSoftwareDecoder);
-    }
-
-    if (untried.empty())
-    {
-      return AvCodecContextPtr();
-    }
-
-    AvCodecContextPtr ctx = untried.front();
-    untried.pop_front();
-
-#if 0 // ndef NDEBUG
-    if (ctx)
-    {
-      av_log(NULL, AV_LOG_INFO,
-             "\n\nUSING DECODER: %s\n\n\n",
-             ctx->codec->name);
-    }
-#endif
-
-    return ctx;
-  }
-
 
   //----------------------------------------------------------------
   // Track::initTraits
@@ -474,24 +263,82 @@ namespace yae
       return NULL;
     }
 
-    const AVCodecParameters & codecParams = *(stream_->codecpar);
-
-    codecContext_ = find_best_decoder_for(codecParams,
-                                          candidates_,
-                                          preferSoftwareDecoder_);
-
-    AVCodecContext * ctx = codecContext_.get();
-    if (!ctx && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
+    const AVCodecParameters & params = *(stream_->codecpar);
+    const AVCodec * codec = avcodec_find_decoder(params.codec_id);
+    if (!codec && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
       return NULL;
     }
 
-    if (ctx)
+    int err = 0;
+
+    yae::AvBufferRef hw_device_ctx;
+    while (true)
     {
-      ctx->pkt_timebase = stream_->time_base;
+      const AVCodecHWConfig * hw =
+        avcodec_get_hw_config(codec, hw_config_index_);
+
+      if (!hw)
+      {
+        break;
+      }
+
+      hw_config_index_++;
+
+      int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
+                              AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
+      if ((hw->methods & hw_device_frames) == hw_device_frames)
+      {
+        err = av_hwdevice_ctx_create(&hw_device_ctx.ref_,
+                                     hw->device_type,
+                                     NULL, // const char *, device to open
+                                     NULL, // AVDictionary *, device options
+                                     0); // flags
+        if (err >= 0)
+        {
+          break;
+        }
+
+        yae_wlog("av_hwdevice_ctx_create failed for %s: %s",
+                 av_hwdevice_get_type_name(hw->device_type),
+                 yae::av_strerr(err).c_str());
+        YAE_ASSERT(!hw_device_ctx.ref_);
+      }
     }
 
+    AvCodecContextPtr ctx_ptr(avcodec_alloc_context3(codec));
+    AVCodecContext * ctx = ctx_ptr.get();
+    avcodec_parameters_to_context(ctx, &params);
+    ctx->opaque = this;
+
+    if (hw_device_ctx.ref_)
+    {
+      ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
+    }
+
+    ctx->skip_frame = AVDISCARD_DEFAULT;
+    ctx->error_concealment = 3;
+    ctx->err_recognition = AV_EF_CAREFUL;
+    ctx->skip_loop_filter = AVDISCARD_DEFAULT;
+    ctx->workaround_bugs = 1;
+    ctx->pkt_timebase = stream_->time_base;
+
+    int nthreads = boost::thread::hardware_concurrency();
+    nthreads = ctx->hw_device_ctx ? std::min(8, nthreads) : nthreads;
+
+    AVDictionary * opts = NULL;
+    av_dict_set_int(&opts, "threads", nthreads, 0);
+
+    err = avcodec_open2(ctx, codec, &opts);
+    if (err < 0)
+    {
+      yae_elog("avcodec_open2 failed: %s", yae::av_strerr(err).c_str());
+      return NULL;
+    }
+
+    std::swap(hw_device_ctx_, hw_device_ctx);
+    std::swap(codecContext_, ctx_ptr);
     sent_ = 0;
     received_ = 0;
     errors_ = 0;
@@ -620,13 +467,13 @@ namespace yae
       return true;
     }
 
-    const AVCodecParameters & codecParams = *(stream_->codecpar);
-    if (context_->nb_streams == 1 && codecParams.bit_rate)
+    const AVCodecParameters & params = *(stream_->codecpar);
+    if (context_->nb_streams == 1 && params.bit_rate)
     {
       double t =
-        double(fileBits / codecParams.bit_rate) +
-        double(fileBits % codecParams.bit_rate) /
-        double(codecParams.bit_rate);
+        double(fileBits / params.bit_rate) +
+        double(fileBits % params.bit_rate) /
+        double(params.bit_rate);
 
       duration.time_ = int64_t(0.5 + t * double(AV_TIME_BASE));
       duration.base_ = AV_TIME_BASE;
@@ -756,22 +603,6 @@ namespace yae
       return;
     }
 
-    const AvPkt & pkt = *packetPtr;
-    const AVPacket & packet = pkt.get();
-
-    if (switchDecoderToRecommended_ && packet.flags & AV_PKT_FLAG_KEY)
-    {
-      candidates_.clear();
-      candidates_.splice(candidates_.end(), recommended_);
-      switchDecoderToRecommended_ = false;
-
-      // flush any buffered frames:
-      this->flush();
-
-      // close the codec:
-      codecContext_.reset();
-    }
-
     AVCodecContext * ctx = this->open();
     if (!ctx)
     {
@@ -779,26 +610,8 @@ namespace yae
       return;
     }
 
-    if (sent_ > 60)
-    {
-      packets_.pop_front();
-    }
-    packets_.push_back(packetPtr);
-
-    uint64_t receivedPrior = received_;
-    int err = decode(ctx, pkt);
-
-    if (received_ > receivedPrior)
-    {
-      packets_.clear();
-      sent_ = 0;
-      errors_ = 0;
-    }
-    else if (err < 0 && err != AVERROR(EAGAIN) &&
-             (!received_ || errors_ >= 6))
-    {
-      this->switchDecoder();
-    }
+    const AvPkt & pkt = *packetPtr;
+    decode(ctx, pkt);
   }
 
   //----------------------------------------------------------------
@@ -813,80 +626,6 @@ namespace yae
       // flush out buffered frames with an empty packet:
       this->decode(ctx, AvPkt());
     }
-  }
-
-  //----------------------------------------------------------------
-  // Track::switchDecoder
-  //
-  bool
-  Track::switchDecoder()
-  {
-    // while (!candidates_.empty())
-    {
-      codecContext_.reset();
-      AVCodecContext * ctx = open();
-
-      int err = AVERROR(EAGAIN);
-      for (std::list<TPacketPtr>::const_iterator
-             i = packets_.begin(), end = packets_.end(); i != end; ++i)
-      {
-        const AvPkt & pkt = *(*i);
-        int err = decode(ctx, pkt);
-        if (err < 0 && err != AVERROR(EAGAIN))
-        {
-          break;
-        }
-      }
-
-      if (err == 0)
-      {
-        return true;
-      }
-
-      if (err == AVERROR(EAGAIN))
-      {
-        return false;
-      }
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // Track::tryToSwitchDecoder
-  //
-  void
-  Track::tryToSwitchDecoder(const std::string & name)
-  {
-    const TDecoders & decoders = get_decoders();
-    const AVCodecParameters & params = *(stream_->codecpar);
-
-    std::list<AvCodecContextPtr> candidates;
-    decoders.find(params, candidates, preferSoftwareDecoder_);
-
-    std::list<AvCodecContextPtr> a;
-    std::list<AvCodecContextPtr> b;
-
-    for (std::list<AvCodecContextPtr>::const_iterator i = candidates.begin();
-         i != candidates.end(); ++i)
-    {
-      const AvCodecContextPtr & c = *i;
-      const AVCodecContext * ctx = c.get();
-
-      if (name == ctx->codec->name)
-      {
-        a.push_back(c);
-      }
-      else
-      {
-        b.push_back(c);
-      }
-    }
-
-    a.splice(a.end(), b);
-
-    recommended_ = a;
-    switchDecoderToRecommended_ = true;
   }
 
   //----------------------------------------------------------------
