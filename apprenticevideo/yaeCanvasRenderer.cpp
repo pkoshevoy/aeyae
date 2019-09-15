@@ -770,7 +770,7 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 #ifndef __BIG_ENDIAN__
       shouldSwapBytes = GL_TRUE;
 #endif
-      internalFormat = GL_LUMINANCE;
+      internalFormat = GL_LUMINANCE16;
       format = GL_LUMINANCE;
       dataType = GL_UNSIGNED_SHORT;
       return 1;
@@ -791,7 +791,7 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 #ifdef __BIG_ENDIAN__
       shouldSwapBytes = GL_TRUE;
 #endif
-      internalFormat = GL_LUMINANCE;
+      internalFormat = GL_LUMINANCE16;
       format = GL_LUMINANCE;
       dataType = GL_UNSIGNED_SHORT;
       return 1;
