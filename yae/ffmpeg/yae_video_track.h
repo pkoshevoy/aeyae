@@ -75,7 +75,7 @@ namespace yae
     // helpers: these are used to re-configure output buffers
     // when frame traits change:
     void refreshTraits();
-    bool reconfigure();
+    bool reconfigure(const AvFrmSpecs & specs);
 
     // virtual:
     bool decoderStartup();

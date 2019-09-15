@@ -317,15 +317,12 @@ namespace yae
   // VideoTrack::reconfigure
   //
   bool
-  VideoTrack::reconfigure()
+  VideoTrack::reconfigure(const AvFrmSpecs & specs)
   {
     refreshTraits();
 
     // pixel format shortcut:
-    TPixelFormatId out_fmt =
-      output_.pixelFormat_ == kInvalidPixelFormat ? native_.pixelFormat_ :
-      output_.pixelFormat_;
-
+    TPixelFormatId out_fmt = ffmpeg_to_yae(yae::pix_fmt(specs));
     const pixelFormat::Traits * ptts = pixelFormat::getTraits(out_fmt);
 
     if (!ptts)
@@ -641,7 +638,7 @@ namespace yae
       {
         yae_dlog("VideoTrack filters: %s", filterGraph_.get_filters().c_str());
 
-        if (!reconfigure())
+        if (!reconfigure(outSpecs))
         {
           YAE_ASSERT(false);
           return;
@@ -779,7 +776,7 @@ namespace yae
         {
           // upside-down frame, actually flip it around (unlike vflip):
           const pixelFormat::Traits * ptts =
-            pixelFormat::getTraits(output_.pixelFormat_);
+            pixelFormat::getTraits(vf.traits_.pixelFormat_);
 
           unsigned char stride[4] = { 0 };
           std::size_t numSamplePlanes = ptts->getPlanes(stride);
