@@ -34,8 +34,13 @@ namespace yae
     {
       for (int i = 0; i < channels_; i++)
       {
+        if (depth_[i] < 8)
+        {
+          continue;
+        }
+
         datatype_bits_[i] =
-          depth_[i] <= 8 ? 8 :
+          depth_[i] == 8 ? 8 :
           depth_[i] <= 16 ? 16 :
           32;
 
