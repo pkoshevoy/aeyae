@@ -4419,7 +4419,9 @@ namespace yae
       bool skipColorConverter = actionSkipColorConverter->isChecked();
       canvas_->skipColorConverter(skipColorConverter);
 
+      TPixelFormatId nativeFormat = vtts.pixelFormat_;
       TPixelFormatId outputFormat = kInvalidPixelFormat;
+
       if (canvas_->
           canvasRenderer()->
           adjustPixelFormatForOpenGL(skipColorConverter, vtts, outputFormat))
@@ -4432,50 +4434,16 @@ namespace yae
         vtts.encodedWidth_ = 0;
         vtts.encodedHeight_ = 0;
         vtts.pixelAspectRatio_ = 0.0;
-
-        reader->setVideoTraitsOverride(vtts);
       }
-#elif 0
-      vtts.pixelFormat_ = kPixelFormatYUV420P9;
+
+      if (nativeFormat == outputFormat)
+      {
+        // do not force output format, let the decoder do what's best:
+        vtts.pixelFormat_ = kInvalidPixelFormat;
+      }
+
       reader->setVideoTraitsOverride(vtts);
-      canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
 #endif
-    }
-
-    if (reader->getVideoTraitsOverride(vtts))
-    {
-      const pixelFormat::Traits * ptts =
-        pixelFormat::getTraits(vtts.pixelFormat_);
-
-      if (ptts)
-      {
-#if 0
-        std::cerr << "yae: output format: " << ptts->name_
-                  << ", par: " << vtts.pixelAspectRatio_
-                  << ", " << vtts.visibleWidth_
-                  << " x " << vtts.visibleHeight_;
-
-        if (vtts.pixelAspectRatio_ != 0.0)
-        {
-          std::cerr << ", dar: "
-                    << (double(vtts.visibleWidth_) *
-                        vtts.pixelAspectRatio_ /
-                        double(vtts.visibleHeight_))
-                    << ", " << int(vtts.visibleWidth_ *
-                                   vtts.pixelAspectRatio_ +
-                                   0.5)
-                    << " x " << vtts.visibleHeight_;
-        }
-
-        std::cerr << ", fps: " << vtts.frameRate_
-                  << std::endl;
-#endif
-      }
-      else
-      {
-        // unsupported pixel format:
-        reader->selectVideoTrack(numVideoTracks);
-      }
     }
 
     adjustMenus(reader);

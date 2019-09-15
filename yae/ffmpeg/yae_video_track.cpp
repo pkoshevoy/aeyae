@@ -322,8 +322,11 @@ namespace yae
     refreshTraits();
 
     // pixel format shortcut:
-    const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(output_.pixelFormat_);
+    TPixelFormatId out_fmt =
+      output_.pixelFormat_ == kInvalidPixelFormat ? native_.pixelFormat_ :
+      output_.pixelFormat_;
+
+    const pixelFormat::Traits * ptts = pixelFormat::getTraits(out_fmt);
 
     if (!ptts)
     {
@@ -483,8 +486,9 @@ namespace yae
         override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
 
       AvFrmSpecs outSpecs(decoded);
-      if (!decoded.hw_frames_ctx)
+      if (output_.pixelFormat_ != kInvalidPixelFormat)
       {
+        // convert to the specified pixel format:
         outSpecs.format = yae_to_ffmpeg(output_.pixelFormat_);
       }
 
