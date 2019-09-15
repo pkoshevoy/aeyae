@@ -348,6 +348,9 @@ namespace yae
   void
   Track::close()
   {
+    hw_frames_ctx_.reset();
+    hw_device_ctx_.reset();
+
     if (stream_ && codecContext_)
     {
       codecContext_.reset();
