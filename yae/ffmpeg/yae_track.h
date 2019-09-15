@@ -272,7 +272,6 @@ namespace yae
     void flush();
 
   protected:
-    int hw_config_index_;
     yae::AvBufferRef hw_device_ctx_;
     yae::AvBufferRef hw_frames_ctx_;
 

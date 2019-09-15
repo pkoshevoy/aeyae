@@ -180,7 +180,6 @@ namespace yae
   // Track::Track
   //
   Track::Track(AVFormatContext * context, AVStream * stream):
-    hw_config_index_(0),
     thread_(this),
     context_(context),
     stream_(stream),
@@ -205,7 +204,6 @@ namespace yae
   // Track::Track
   //
   Track::Track(Track & track):
-    hw_config_index_(0),
     thread_(this),
     context_(NULL),
     stream_(NULL),
@@ -220,7 +218,6 @@ namespace yae
     discarded_(0),
     packetQueue_(kQueueSizeLarge)
   {
-    std::swap(hw_config_index_, track.hw_config_index_);
     std::swap(hw_device_ctx_, track.hw_device_ctx_);
     std::swap(hw_frames_ctx_, track.hw_frames_ctx_);
     std::swap(context_, track.context_);
@@ -272,20 +269,20 @@ namespace yae
     }
 
     int err = 0;
-
+    int hw_config_index = 0;
     yae::AvBufferRef hw_device_ctx;
     while (true)
     {
       const AVCodecHWConfig * hw =
-        avcodec_get_hw_config(codec, hw_config_index_);
+        avcodec_get_hw_config(codec, hw_config_index);
 
       if (!hw)
       {
         break;
       }
 
-      hw_config_index_++;
 
+      hw_config_index++;
       int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
                               AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
       if ((hw->methods & hw_device_frames) == hw_device_frames)
