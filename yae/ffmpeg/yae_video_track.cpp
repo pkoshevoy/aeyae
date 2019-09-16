@@ -14,6 +14,7 @@
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "yae/ffmpeg/yae_video_track.h"
+#include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_pixel_format_traits.h"
 
@@ -451,6 +452,8 @@ namespace yae
   void
   VideoTrack::handle(const AvFrm & decodedFrame)
   {
+    YAE_BENCHMARK(benchmark, "VideoTrack::handle");
+
     try
     {
       AvFrm decodedFrameCopy(decodedFrame);

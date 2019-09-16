@@ -18,6 +18,9 @@
 // boost includes:
 #include <boost/thread.hpp>
 
+// yae includes:
+#include "yae/utils/yae_benchmark.h"
+
 // local includes:
 #include "yaeCanvasRenderer.h"
 
@@ -2190,6 +2193,8 @@ namespace yae
   TModernCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
+    YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
 
@@ -2718,6 +2723,8 @@ namespace yae
   TLegacyCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
+    YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
 
@@ -3256,6 +3263,8 @@ namespace yae
   CanvasRenderer::loadFrame(IOpenGLContext & context,
                             const TVideoFramePtr & frame)
   {
+    YAE_BENCHMARK(benchmark, "CanvasRenderer::loadFrame");
+
     if (modern_)
     {
       TBaseCanvas * renderer = rendererFor(frame->traits_);

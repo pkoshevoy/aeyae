@@ -17,6 +17,7 @@
 // yae includes:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_track.h"
+#include "yae/utils/yae_benchmark.h"
 
 // namespace shortcuts:
 namespace al = boost::algorithm;
@@ -282,7 +283,6 @@ namespace yae
         break;
       }
 
-
       hw_config_index++;
       int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
                               AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
@@ -537,6 +537,8 @@ namespace yae
   int
   Track::decode(AVCodecContext * ctx, const AvPkt & pkt)
   {
+    YAE_BENCHMARK(benchmark, "Track::decode");
+
     int errSend = AVERROR(EAGAIN);
     int errRecv = AVERROR(EAGAIN);
 

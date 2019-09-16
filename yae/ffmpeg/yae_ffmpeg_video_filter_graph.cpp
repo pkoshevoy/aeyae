@@ -11,8 +11,9 @@
 #include <cstring>
 
 // aeyae:
-#include "yae_ffmpeg_utils.h"
-#include "yae_ffmpeg_video_filter_graph.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_ffmpeg_video_filter_graph.h"
+#include "yae/utils/yae_benchmark.h"
 
 
 namespace yae
@@ -301,6 +302,8 @@ namespace yae
                           const char * filter_chain,
                           unsigned int setup_hints)
   {
+    YAE_BENCHMARK(benchmark, "VideoFilterGraph::setup");
+
     filter_chain = filter_chain ? filter_chain : "";
 
     bool same = same_traits(src, dst_specs, filter_chain);
@@ -420,6 +423,8 @@ namespace yae
   void
   VideoFilterGraph::push(AVFrame * frame)
   {
+    YAE_BENCHMARK(benchmark, "VideoFilterGraph::push");
+
     if (!frame)
     {
       if (flushing_)
@@ -447,6 +452,8 @@ namespace yae
   bool
   VideoFilterGraph::pull(AVFrame * frame, AVRational & out_timebase)
   {
+    YAE_BENCHMARK(benchmark, "VideoFilterGraph::pull");
+
     // avoid leaking unintentionally:
     av_frame_unref(frame);
 
