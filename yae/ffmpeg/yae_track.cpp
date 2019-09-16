@@ -330,7 +330,7 @@ namespace yae
     nthreads =
       ctx->hw_device_ctx ?
       std::min(8, nthreads) :
-      std::min(16, nthreads);
+      std::max(1, nthreads);
 
     AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);
@@ -516,7 +516,11 @@ namespace yae
     {
       AvFrm frm;
       AVFrame & decodedFrame = frm.get();
-      err = avcodec_receive_frame(ctx, &decodedFrame);
+      {
+        YAE_BENCHMARK(benchmark, "avcodec_receive_frame");
+        err = avcodec_receive_frame(ctx, &decodedFrame);
+      }
+
       if (err < 0)
       {
         if (err != AVERROR(EAGAIN) && err != AVERROR_EOF)
@@ -554,7 +558,10 @@ namespace yae
       boost::this_thread::interruption_point();
 
       const AVPacket & packet = pkt.get();
-      errSend = avcodec_send_packet(ctx, &packet);
+      {
+        YAE_BENCHMARK(benchmark, "avcodec_send_packet");
+        errSend = avcodec_send_packet(ctx, &packet);
+      }
 
       if (errSend == AVERROR_EOF)
       {

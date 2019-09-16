@@ -891,9 +891,12 @@ namespace yae
 #endif
 
         // put the output frame into frame queue:
-        if (!frameQueue_.push(vfPtr, &terminator_))
         {
-          return;
+          YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
+          if (!frameQueue_.push(vfPtr, &terminator_))
+          {
+            return;
+          }
         }
 
         // std::cerr << "V: " << vf.time_.sec() << std::endl;
@@ -1105,6 +1108,8 @@ namespace yae
   bool
   VideoTrack::getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
+    YAE_BENCHMARK(benchmark, "VideoTrack::getNextFrame");
+
     bool ok = true;
     while (ok)
     {

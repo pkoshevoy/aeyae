@@ -2360,10 +2360,10 @@ namespace yae
         YAE_OPENGL(glProgramLocalParameter4dARB
                    (GL_FRAGMENT_PROGRAM_ARB,
                     4,
-                    double(1 << ptts->datatype_lpad_[0]),
-                    double(1 << ptts->datatype_lpad_[1]),
-                    double(1 << ptts->datatype_lpad_[2]),
-                    double(1 << ptts->datatype_lpad_[3])));
+                    double(1u << ptts->datatype_lpad_[0]),
+                    double(1u << ptts->datatype_lpad_[1]),
+                    double(1u << ptts->datatype_lpad_[2]),
+                    double(1u << ptts->datatype_lpad_[3])));
         yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
@@ -3032,10 +3032,10 @@ namespace yae
         YAE_OPENGL(glProgramLocalParameter4dARB
                    (GL_FRAGMENT_PROGRAM_ARB,
                     4,
-                    double(1 << ptts->datatype_lpad_[0]),
-                    double(1 << ptts->datatype_lpad_[1]),
-                    double(1 << ptts->datatype_lpad_[2]),
-                    double(1 << ptts->datatype_lpad_[3])));
+                    double(1u << ptts->datatype_lpad_[0]),
+                    double(1u << ptts->datatype_lpad_[1]),
+                    double(1u << ptts->datatype_lpad_[2]),
+                    double(1u << ptts->datatype_lpad_[3])));
         yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));

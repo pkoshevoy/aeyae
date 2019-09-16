@@ -13,8 +13,11 @@
 #include <math.h>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/algorithm/string.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/interprocess/smart_ptr/unique_ptr.hpp>
+#endif
 
 // Qt includes:
 #include <QActionGroup>
@@ -60,6 +63,9 @@
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 #include "yaeVersion.h"
+
+// namespace shortcut:
+namespace fs = boost::filesystem;
 
 
 namespace yae
@@ -2438,10 +2444,18 @@ namespace yae
     playerItem->setState(QString::fromUtf8(state));
 #else
 
-    YAE_LIFETIME_SHOW(std::cerr);
-    YAE_BENCHMARK_SHOW(std::cerr);
+    std::ostringstream oss;
+    YAE_LIFETIME_SHOW(oss);
+    YAE_BENCHMARK_SHOW(oss);
     YAE_BENCHMARK_CLEAR();
     YAE_LIFETIME_CLEAR();
+
+#ifndef NDEBUG
+    std::string desktop =
+      YAE_STANDARD_LOCATION(DesktopLocation).toUtf8().constData();
+    std::string timesheet = (fs::path(desktop) / "aeyae.timesheet").string();
+    yae::dump(timesheet, oss.str().c_str(), oss.str().size());
+#endif
 
     playlistView_.setEnabled(showPlaylist);
 #endif
