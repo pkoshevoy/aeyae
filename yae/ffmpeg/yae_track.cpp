@@ -273,6 +273,7 @@ namespace yae
     int hw_config_index = 0;
     yae::AvBufferRef hw_device_ctx;
 
+#ifndef __APPLE__
     while (params.width > 640 && params.height > 360)
     {
       const AVCodecHWConfig * hw =
@@ -304,6 +305,7 @@ namespace yae
         YAE_ASSERT(!hw_device_ctx.ref_);
       }
     }
+#endif
 
     AvCodecContextPtr ctx_ptr(avcodec_alloc_context3(codec));
     AVCodecContext * ctx = ctx_ptr.get();
@@ -315,15 +317,20 @@ namespace yae
       ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
     }
 
+#if 0
     ctx->skip_frame = AVDISCARD_DEFAULT;
     ctx->error_concealment = 3;
     ctx->err_recognition = AV_EF_CAREFUL;
     ctx->skip_loop_filter = AVDISCARD_DEFAULT;
     ctx->workaround_bugs = 1;
+#endif
     ctx->pkt_timebase = stream_->time_base;
 
     int nthreads = boost::thread::hardware_concurrency();
-    nthreads = ctx->hw_device_ctx ? std::min(8, nthreads) : nthreads;
+    nthreads =
+      ctx->hw_device_ctx ?
+      std::min(8, nthreads) :
+      std::min(16, nthreads);
 
     AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);

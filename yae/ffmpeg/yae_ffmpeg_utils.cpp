@@ -95,7 +95,7 @@ namespace yae
 
     if (!ffmpeg_initialized)
     {
-      av_log_set_level(AV_LOG_WARNING);
+      av_log_set_level(AV_LOG_INFO);
       av_log_set_flags(AV_LOG_SKIP_REPEATED);
       avcodec_register_all();
       avfilter_register_all();

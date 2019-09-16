@@ -410,7 +410,8 @@ namespace yae
     err = avfilter_graph_config(graph_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
-    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL, "buffer");
+    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
+                      "buffer");
     sink_ = lookup_sink(src_, "buffersink");
     YAE_ASSERT_OR_RETURN(src_ && sink_, false);
 

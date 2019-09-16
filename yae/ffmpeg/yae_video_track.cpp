@@ -639,7 +639,7 @@ namespace yae
                              outSpecs,
                              filterChain.c_str()))
       {
-        yae_dlog("VideoTrack filters: %s", filterGraph_.get_filters().c_str());
+        yae_ilog("VideoTrack filters: %s", filterGraph_.get_filters().c_str());
 
         if (!reconfigure(outSpecs))
         {
