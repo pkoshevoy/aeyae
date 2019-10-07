@@ -14,6 +14,7 @@
 #include <math.h>
 #include <numeric>
 #include <sstream>
+#include <sys/time.h>
 
 // yae includes:
 #include "yae/utils/yae_time.h"
@@ -159,6 +160,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::now
+  //
+  TTime
+  TTime::now()
+  {
+    struct timeval now;
+    gettimeofday(&now, NULL);
+
+    TTime t(int64_t(now.tv_sec) * 1000000 + int64_t(now.tv_usec), 1000000);
+    return t;
+  }
+
+  //----------------------------------------------------------------
   // TTime::TTime
   //
   TTime::TTime():
@@ -169,7 +183,7 @@ namespace yae
   //----------------------------------------------------------------
   // TTime::TTime
   //
-  TTime::TTime(int64 time, uint64 base):
+  TTime::TTime(int64_t time, uint64_t base):
     time_(time),
     base_(base)
   {}
@@ -178,7 +192,7 @@ namespace yae
   // TTime::TTime
   //
   TTime::TTime(double seconds):
-    time_((int64)(1000000.0 * seconds)),
+    time_((int64_t)(1000000.0 * seconds)),
     base_(1000000)
   {}
 
@@ -186,7 +200,7 @@ namespace yae
   // TTime::rebased
   //
   TTime
-  TTime::rebased(uint64 base) const
+  TTime::rebased(uint64_t base) const
   {
     subsec_t ss(*this);
     int64_t t = (ss.tsub_ * base) / ss.base_;
@@ -330,7 +344,7 @@ namespace yae
   // TTime::reset
   //
   void
-  TTime::reset(int64 time, uint64 base)
+  TTime::reset(int64_t time, uint64_t base)
   {
     time_ = time;
     base_ = base;
@@ -339,8 +353,8 @@ namespace yae
   //----------------------------------------------------------------
   // TTime::get
   //
-  int64
-  TTime::get(uint64 base) const
+  int64_t
+  TTime::get(uint64_t base) const
   {
     if (base_ == base ||
         time_ == std::numeric_limits<int64_t>::min() ||
@@ -349,31 +363,31 @@ namespace yae
       return time_;
     }
 
-    TTime t(0, base);
-    t += *this;
-    return t.time_;
+    subsec_t ss(*this);
+    int64_t t = ss.tsec_ * base + (ss.tsub_ * base) / ss.base_;
+    return t;
   }
 
   //----------------------------------------------------------------
   // to_hhmmss
   //
   static bool
-  to_hhmmss(int64 time,
-            uint64 base,
+  to_hhmmss(int64_t time,
+            uint64_t base,
             std::string & ts,
             const char * separator,
             bool includeNegativeSign = false)
   {
     bool negative = (time < 0);
 
-    int64 t = negative ? -time : time;
+    int64_t t = negative ? -time : time;
     t /= base;
 
-    int64 seconds = t % 60;
+    int64_t seconds = t % 60;
     t /= 60;
 
-    int64 minutes = t % 60;
-    int64 hours = t / 60;
+    int64_t minutes = t % 60;
+    int64_t hours = t / 60;
 
     std::ostringstream os;
 
@@ -382,7 +396,7 @@ namespace yae
       os << '-';
     }
 
-    os << std::setw(2) << std::setfill('0') << (int64)(hours) << separator
+    os << std::setw(2) << std::setfill('0') << (int64_t)(hours) << separator
        << std::setw(2) << std::setfill('0') << (int)(minutes) << separator
        << std::setw(2) << std::setfill('0') << (int)(seconds);
 
@@ -411,12 +425,12 @@ namespace yae
   {
     bool negative = yae::to_hhmmss(time_, base_, ts, separator);
 
-    uint64 t = negative ? -time_ : time_;
-    uint64 remainder = t % base_;
-    uint64 frac = (precision * remainder) / base_;
+    uint64_t t = negative ? -time_ : time_;
+    uint64_t remainder = t % base_;
+    uint64_t frac = (precision * remainder) / base_;
 
     // count number of digits required for given precision:
-    uint64 digits = 0;
+    uint64_t digits = 0;
     for (unsigned int i = precision - 1; precision && i; i /= 10, digits++) ;
 
     std::ostringstream os;
@@ -449,14 +463,14 @@ namespace yae
     const double ceil_fps = ::ceil(frame_rate);
     const bool negative = (time_ < 0);
 
-    uint64 t = negative ? -time_ : time_;
-    uint64 ff = uint64(ceil_fps * double(t % base_) / double(base_));
+    uint64_t t = negative ? -time_ : time_;
+    uint64_t ff = uint64_t(ceil_fps * double(t % base_) / double(base_));
     t /= base_;
 
-    uint64 ss = t % 60;
+    uint64_t ss = t % 60;
     t /= 60;
 
-    uint64 mm = t % 60;
+    uint64_t mm = t % 60;
     t /= 60;
 
     std::ostringstream os;
@@ -1695,7 +1709,7 @@ namespace yae
       }
     }
 
-    return TTime(int64(frameDuration), uint64(frameDuration * fps));
+    return TTime(int64_t(frameDuration), uint64_t(frameDuration * fps));
   }
 
   //----------------------------------------------------------------
@@ -1787,11 +1801,11 @@ namespace yae
       }
     }
 
-    for (std::map<TTime, uint64>::const_iterator
+    for (std::map<TTime, uint64_t>::const_iterator
            i = src.dur_.begin(); i != src.dur_.end(); ++i)
     {
       const TTime & msec = i->first;
-      const uint64 & num = i->second;
+      const uint64_t & num = i->second;
       dur_[msec] += num;
 
       const TTime & src_sum = yae::get(src.sum_, msec);
@@ -1817,7 +1831,7 @@ namespace yae
       TTime dt = monotonically_increasing ? dts - prev : prev - dts;
       TTime msec(dt.get(1000), 1000);
 
-      uint64 & num = dur_[msec];
+      uint64_t & num = dur_[msec];
       num++;
 
       TTime & sum = sum_[msec];
@@ -1886,14 +1900,14 @@ namespace yae
       return 0.0;
     }
 
-    std::map<uint64, TTime> occurrences;
-    uint64 num = 0;
+    std::map<uint64_t, TTime> occurrences;
+    uint64_t num = 0;
     TTime sum;
 
-    for (std::map<TTime, uint64>::const_iterator
+    for (std::map<TTime, uint64_t>::const_iterator
            i = dur_.begin(); i != dur_.end(); ++i)
     {
-      const uint64 & n = i->second;
+      const uint64_t & n = i->second;
       const TTime & dt = i->first;
       occurrences[i->second] = dt;
 
@@ -1909,18 +1923,18 @@ namespace yae
     // calculate a inlier average by excluding occurrences
     // that happen less than 25% of the most frequent occurrence:
     TTime inlier_sum;
-    uint64 inlier_num = 0;
+    uint64_t inlier_num = 0;
 
     // calculate an inlier average by including occurrences
     // that happen less than 25% of the most frequent occurrence:
     TTime outlier_sum;
-    uint64 outlier_num = 0;
+    uint64_t outlier_num = 0;
     {
-      uint64 max_occurrences = occurrences.rbegin()->first;
-      for (std::map<TTime, uint64>::const_iterator
+      uint64_t max_occurrences = occurrences.rbegin()->first;
+      for (std::map<TTime, uint64_t>::const_iterator
              i = dur_.begin(); i != dur_.end(); ++i)
       {
-        const uint64 & n = i->second;
+        const uint64_t & n = i->second;
         const TTime & dt = i->first;
         TTime dur = yae::get(sum_, dt);
         double r = double(n) / double(max_occurrences);
@@ -2001,21 +2015,21 @@ namespace yae
   std::ostream &
   operator << (std::ostream & oss, const FramerateEstimator & estimator)
   {
-    const std::map<TTime, uint64> & durations = estimator.durations();
+    const std::map<TTime, uint64_t> & durations = estimator.durations();
 
-    uint64 total_occurrences = 0;
-    for (std::map<TTime, uint64>::const_iterator
+    uint64_t total_occurrences = 0;
+    for (std::map<TTime, uint64_t>::const_iterator
            i = durations.begin(); i != durations.end(); ++i)
     {
-      const uint64 & occurrences = i->second;
+      const uint64_t & occurrences = i->second;
       total_occurrences += occurrences;
     }
 
-    for (std::map<TTime, uint64>::const_iterator
+    for (std::map<TTime, uint64_t>::const_iterator
            i = durations.begin(); i != durations.end(); ++i)
     {
       const TTime & dt = i->first;
-      const uint64 & occurrences = i->second;
+      const uint64_t & occurrences = i->second;
 
       oss << std::setw(6) << dt.time_ << " msec: " << occurrences
           << (occurrences == 1 ? " occurrence" : " occurrences")

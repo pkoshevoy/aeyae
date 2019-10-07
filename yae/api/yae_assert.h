@@ -9,6 +9,9 @@
 #ifndef YAE_ASSERT_H_
 #define YAE_ASSERT_H_
 
+// standard:
+#include <stdexcept>
+
 // aeyae:
 #include "../api/yae_log.h"
 
@@ -52,6 +55,26 @@
              YAE_STR(expr));                     \
     YAE_BREAKPOINT_IF_DEBUG_BUILD();             \
   } else {}
+
+//----------------------------------------------------------------
+// YAE_FAIL_IF
+//
+#define YAE_FAIL_IF(expr) if (!(expr)) {} else { \
+  yae::log(yae::TLog::kError,                    \
+           __FILE__ ":" YAE_STR(__LINE__),       \
+           "%s",                                 \
+           YAE_STR(expr));                       \
+  throw std::runtime_error(YAE_STR(expr))
+
+//----------------------------------------------------------------
+// YAE_THROW
+//
+#define YAE_THROW(fmt, ...) do {                                        \
+    std::string msg = yae::strfmt((fmt), ##__VA_ARGS__);                \
+    msg = yae::strfmt("%s:%i, %s", __FILE__, __LINE__, msg.c_str());    \
+    throw std::runtime_error(msg);                                      \
+  } while (false)
+
 
 
 #endif // YAE_ASSERT_H_

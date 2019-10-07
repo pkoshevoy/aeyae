@@ -40,9 +40,10 @@ namespace yae
 
     static const TTime & max_flicks();
     static const TTime & min_flicks();
+    static TTime now();
 
     TTime();
-    TTime(int64 time, uint64 base);
+    TTime(int64_t time, uint64_t base);
     TTime(double seconds);
 
     inline bool valid() const
@@ -52,7 +53,7 @@ namespace yae
     { return !valid(); }
 
     // return time expressed in a given time base:
-    TTime rebased(uint64 base) const;
+    TTime rebased(uint64_t base) const;
 
     // NOTE: these round to seconds and drop sub-seconds:
     TTime ceil() const;
@@ -83,9 +84,9 @@ namespace yae
     inline bool operator >= (const TTime & t) const
     { return !(*this < t); }
 
-    void reset(int64 time = 0, uint64 base = 1001);
+    void reset(int64_t time = 0, uint64_t base = 1001);
 
-    int64 get(uint64 base) const;
+    int64_t get(uint64_t base) const;
 
     inline double sec() const
     {
@@ -154,8 +155,8 @@ namespace yae
       return to_hhmmss_frac(1000000, mm_separator, us_separator);
     }
 
-    int64 time_;
-    uint64 base_;
+    int64_t time_;
+    uint64_t base_;
   };
 
   //----------------------------------------------------------------
@@ -544,7 +545,7 @@ namespace yae
     // summarize framerate statistics, return best guess of the framerate:
     double get(Framerate & stats) const;
 
-    inline const std::map<TTime, uint64> & durations() const
+    inline const std::map<TTime, uint64_t> & durations() const
     { return dur_; }
 
     inline const std::list<TTime> & dts() const
@@ -557,7 +558,7 @@ namespace yae
     std::size_t num_;
 
     // keep count of occurrences of various frame durations, msec:
-    std::map<TTime, uint64> dur_;
+    std::map<TTime, uint64_t> dur_;
 
     // keep an accurate sum of frame durations, per frame duration:
     std::map<TTime, TTime> sum_;
