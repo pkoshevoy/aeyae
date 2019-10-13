@@ -155,6 +155,10 @@ namespace yae
       return to_hhmmss_frac(1000000, mm_separator, us_separator);
     }
 
+    // return the shortest form of hh:mm:ss.msec
+    // omitting leading zeros and trailing factional zeros
+    std::string to_short_txt() const;
+
     int64_t time_;
     uint64_t base_;
   };
@@ -182,6 +186,12 @@ namespace yae
              const char * mm_separator = NULL,
              const char * xx_separator = NULL,
              const double frame_rate = 0.0);
+
+  //----------------------------------------------------------------
+  // to_short_txt
+  //
+  YAE_API std::string
+  to_short_txt(double seconds);
 
 
   //----------------------------------------------------------------

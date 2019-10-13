@@ -1017,6 +1017,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TOpenFile::TOpenFile
+  //
+  TOpenFile::TOpenFile(const std::string & filepath_utf8, const char * mode):
+    file_(NULL)
+  {
+    this->open(filepath_utf8.c_str(), mode);
+  }
+
+  //----------------------------------------------------------------
   // TOpenFile::~TOpenFile
   //
   TOpenFile::~TOpenFile()

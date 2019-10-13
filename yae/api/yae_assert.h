@@ -57,14 +57,15 @@
   } else {}
 
 //----------------------------------------------------------------
-// YAE_FAIL_IF
+// YAE_THROW_IF
 //
-#define YAE_FAIL_IF(expr) if (!(expr)) {} else { \
+#define YAE_THROW_IF(expr) if ((expr)) {         \
   yae::log(yae::TLog::kError,                    \
            __FILE__ ":" YAE_STR(__LINE__),       \
            "%s",                                 \
            YAE_STR(expr));                       \
-  throw std::runtime_error(YAE_STR(expr))
+  throw std::runtime_error(YAE_STR(expr));       \
+  } else {}
 
 //----------------------------------------------------------------
 // YAE_THROW

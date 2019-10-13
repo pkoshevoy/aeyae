@@ -3382,49 +3382,7 @@ namespace yae
     // virtual:
     std::string get(double seconds) const
     {
-      std::ostringstream oss;
-
-      bool negative = (seconds < 0);
-      int64_t t = int64_t(1000 * (negative ? -seconds : seconds));
-
-      int64_t ms = t % 1000;
-      t /= 1000;
-
-      int64_t ss = t % 60;
-      t /= 60;
-
-      int64_t mm = t % 60;
-      t /= 60;
-
-      int64_t hh = t % 24;
-
-      if (negative)
-      {
-        oss << '-';
-      }
-
-      if (hh)
-      {
-        oss << hh << ':'
-            << std::setw(2) << std::setfill('0') << mm << ':'
-            << std::setw(2) << std::setfill('0') << ss;
-      }
-      else if (mm)
-      {
-        oss << mm << ':'
-            << std::setw(2) << std::setfill('0') << ss;
-      }
-      else
-      {
-        oss << ss;
-      }
-
-      if (ms)
-      {
-        oss << '.' << std::setw(3) << std::setfill('0') << ms;
-      }
-
-      std::string txt = oss.str();
+      std::string txt = yae::to_short_txt(seconds);
       return txt;
     }
   };

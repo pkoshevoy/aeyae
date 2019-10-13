@@ -276,6 +276,8 @@ namespace yae
   {
     HDHomeRun();
 
+    void capture_all();
+
     std::vector<struct hdhomerun_discover_device_t> devices_;
     std::map<std::string, hdhomerun_devptr_t> tuners_;
     Json::Value tuner_cache_;
@@ -560,6 +562,121 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // HDHomeRun::capture_all
+  //
+  void
+  HDHomeRun::capture_all()
+  {
+    int err = 0;
+
+    for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
+           i = tuners_.rbegin(); i != tuners_.rend(); ++i)
+    {
+      const std::string & name = i->first;
+      hdhomerun_devptr_t hd_ptr = i->second;
+      try
+      {
+        LockTuner lock_tuner(hd_ptr);
+        hdhomerun_device_t * hd = hd_ptr.get();
+        unsigned int tuner = hdhomerun_device_get_tuner(hd);
+
+        Json::Value frequencies = tuner_cache_[name]["frequencies"];
+
+        for (Json::Value::iterator j = frequencies.begin();
+             j != frequencies.end(); ++j)
+        {
+          std::string frequency = j.key().asString();
+          Json::Value programs = (*j)["programs"];
+          Json::Value status = (*j)["status"];
+          std::string channel = status["channel"].asString();
+
+          std::string param = yae::strfmt("/tuner%i/channel", tuner);
+          char * error = NULL;
+          if (hdhomerun_device_set_var(hd,
+                                       param.c_str(),
+                                       channel.c_str(),
+                                       NULL,
+                                       &error) <= 0)
+          {
+            YAE_THROW("failed to set channel, error: %s", error);
+          }
+
+          // FIXME:
+          std::string capture_path =
+            (fs::path("/tmp") / (frequency + ".ts")).string();
+
+          yae::TOpenFile capture(capture_path, "wb");
+          YAE_THROW_IF(!capture.is_open());
+
+          if (hdhomerun_device_stream_start(hd) <= 0)
+          {
+            YAE_THROW("failed to start stream for %s", channel.c_str());
+          }
+
+          yae::TTime sample_duration(30, 1);
+          std::string channels_txt;
+          {
+            std::ostringstream oss;
+            const char * separator = "";
+            for (Json::Value::iterator k = programs.begin();
+                 k != programs.end(); ++k)
+            {
+              Json::Value prog = *k;
+              std::string prog_name = prog["name"].asString();
+              uint32_t major = prog["virtual_major"].asUInt();
+              uint32_t minor = prog["virtual_minor"].asUInt();
+              oss << separator << major << '.' << minor << ' ' << prog_name;
+              separator = ", ";
+            }
+            channels_txt = oss.str().c_str();
+          }
+          yae_wlog("%sHz, capturing %ss sample: %s",
+                   frequency.c_str(),
+                   sample_duration.to_short_txt().c_str(),
+                   channels_txt.c_str());
+
+          yae::TTime t_stop = yae::TTime::now() + sample_duration;
+          while (!signal_handler_received_sigpipe() &&
+                 !signal_handler_received_sigint())
+          {
+            size_t buffer_size = 0;
+            uint8_t * buffer =
+              hdhomerun_device_stream_recv(hd,
+                                           VIDEO_DATA_BUFFER_SIZE_1S,
+                                           &buffer_size);
+            if (!buffer)
+            {
+              msleep_approx(64);
+              continue;
+            }
+
+            capture.write(buffer, buffer_size);
+
+            yae::TTime t = yae::TTime::now();
+            if (t >= t_stop)
+            {
+              break;
+            }
+          }
+        }
+
+        break;
+      }
+      catch (const std::exception & e)
+      {
+        yae_wlog("failed to configure tuner %s: %s", name.c_str(), e.what());
+        continue;
+      }
+      catch (...)
+      {
+        yae_wlog("failed to configure tuner %s: unexpected exception",
+                 name.c_str());
+        continue;
+      }
+    }
+  }
+
 }
 
 //----------------------------------------------------------------
@@ -572,6 +689,7 @@ main_may_throw(int argc, char ** argv)
   yae::signal_handler();
 
   yae::HDHomeRun hdhr;
+  hdhr.capture_all();
 
   return 0;
 }
