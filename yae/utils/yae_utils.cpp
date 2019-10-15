@@ -302,6 +302,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // remove_utf8
+  //
+  bool
+  remove_utf8(const char * fn_utf8)
+  {
+#ifdef _WIN32
+    std::wstring path_utf16 = utf8_to_utf16(fn_utf8);
+    int err = _wremove(wname.c_str());
+#else
+    int err = ::remove(fn_utf8);
+#endif
+
+    return err == 0;
+  }
+
+  //----------------------------------------------------------------
+  // remove_utf8
+  //
+  bool
+  remove_utf8(const std::string & fn_utf8)
+  {
+    return remove_utf8(fn_utf8.c_str());
+  }
+
+  //----------------------------------------------------------------
   // fopen_utf8
   //
   std::FILE *
@@ -1010,6 +1035,13 @@ namespace yae
   //----------------------------------------------------------------
   // TOpenFile::TOpenFile
   //
+  TOpenFile::TOpenFile():
+    file_(NULL)
+  {}
+
+  //----------------------------------------------------------------
+  // TOpenFile::TOpenFile
+  //
   TOpenFile::TOpenFile(const char * filepath_utf8, const char * mode):
     file_(NULL)
   {
@@ -1047,6 +1079,15 @@ namespace yae
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // TOpenFile::open
+  //
+  bool
+  TOpenFile::open(const std::string & filepath_utf8, const char * mode)
+  {
+    return this->open(filepath_utf8.c_str(), mode);
   }
 
   //----------------------------------------------------------------

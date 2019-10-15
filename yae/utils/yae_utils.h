@@ -30,6 +30,9 @@
 #include <boost/regex.hpp>
 #endif
 
+// jsoncpp:
+#include "json/json.h"
+
 // yae includes:
 #include "../api/yae_api.h"
 
@@ -105,6 +108,18 @@ namespace yae
   //
   YAE_API int
   rename_utf8(const char * fn_old_utf8, const char * fn_new_utf8);
+
+  //----------------------------------------------------------------
+  // remove_utf8
+  //
+  YAE_API bool
+  remove_utf8(const char * fn_utf8);
+
+  //----------------------------------------------------------------
+  // remove_utf8
+  //
+  YAE_API bool
+  remove_utf8(const std::string & fn_utf8);
 
   //----------------------------------------------------------------
   // fopen_utf8
@@ -351,11 +366,13 @@ namespace yae
   {
     // NOTE: file open can silently fail, so the caller is responsible
     // to check whether the file is_open:
+    TOpenFile();
     TOpenFile(const char * filename_utf8, const char * mode);
     TOpenFile(const std::string & filename_utf8, const char * mode);
     ~TOpenFile();
 
     bool open(const char * filename_utf8, const char * mode);
+    bool open(const std::string & filename_utf8, const char * mode);
     void close();
 
     inline bool is_open() const
@@ -376,11 +393,31 @@ namespace yae
     inline std::size_t load(std::vector<unsigned char> & out)
     { return yae::load(this->file_, out); }
 
+    inline std::size_t load(std::string & out)
+    {
+      out.clear();
+      out = yae::read(this->file_);
+      return out.size();
+    }
+
     inline bool write(const std::string & text)
     { return this->write(text.c_str(), text.size()); }
 
     inline bool write(const char * text)
     { return text ? this->write(text, ::strlen(text)) : true; }
+
+    inline bool load(Json::Value & v)
+    {
+      std::string document;
+      return this->load(document) > 0 && Json::Reader().parse(document, v);
+    }
+
+    inline bool save(const Json::Value & v)
+    {
+      std::ostringstream oss;
+      Json::StyledStreamWriter().write(oss, v);
+      return this->write(oss.str());
+    }
 
     inline void flush()
     { if (file_) fflush(file_); }

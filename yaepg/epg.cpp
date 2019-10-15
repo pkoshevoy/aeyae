@@ -225,35 +225,20 @@ typedef yae::shared_ptr<hdhomerun_device_t,
 
 namespace yae
 {
-
   //----------------------------------------------------------------
   // LockTuner
   //
   struct LockTuner
   {
     hdhomerun_devptr_t hd_ptr_;
-    std::string name_;
+    std::string lockkey_path_;
 
     //----------------------------------------------------------------
     // LockTuner
     //
     LockTuner(hdhomerun_devptr_t hd_ptr)
     {
-      if (hd_ptr)
-      {
-        hdhomerun_device_t & hd = *hd_ptr;
-        name_ = hdhomerun_device_get_name(&hd);
-
-        char * ret_error = NULL;
-        if (hdhomerun_device_tuner_lockkey_request(&hd, &ret_error) <= 0)
-        {
-          YAE_THROW("failed to lock tuner: %s%s",
-                    name_.c_str(),
-                    ret_error ? ret_error : "");
-        }
-
-        hd_ptr_ = hd_ptr;
-      }
+      lock(hd_ptr);
     }
 
     //----------------------------------------------------------------
@@ -261,10 +246,57 @@ namespace yae
     //
     ~LockTuner()
     {
+      unlock();
+    }
+
+    //----------------------------------------------------------------
+    // lock
+    //
+    void lock(hdhomerun_devptr_t hd_ptr)
+    {
+      if (hd_ptr == hd_ptr_)
+      {
+        return;
+      }
+
+      unlock();
+
+      hdhomerun_device_t & hd = *hd_ptr;
+      std::string name = hdhomerun_device_get_name(&hd);
+
+      std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+      lockkey_path_ = (fs::path(yaepg_dir) / (name + ".lockkey")).string();
+
+      yae::TOpenFile lock_file;
+      if (lock_file.open(lockkey_path_, "rb"))
+      {
+        lock_file.close();
+        hdhomerun_device_tuner_lockkey_force(&hd);
+        yae::remove_utf8(lockkey_path_);
+      }
+
+      char * ret_error = NULL;
+      if (hdhomerun_device_tuner_lockkey_request(&hd, &ret_error) <= 0)
+      {
+        YAE_THROW("failed to lock tuner: %s%s",
+                  name.c_str(),
+                  ret_error ? ret_error : "");
+      }
+
+      lock_file.open(lockkey_path_, "wb");
+      hd_ptr_ = hd_ptr;
+    }
+
+    //----------------------------------------------------------------
+    // unlock
+    //
+    void unlock()
+    {
       if (hd_ptr_)
       {
         hdhomerun_device_t & hd = *hd_ptr_;
         hdhomerun_device_tuner_lockkey_release(&hd);
+        yae::remove_utf8(lockkey_path_);
       }
     }
   };
@@ -333,6 +365,9 @@ namespace yae
                  (unsigned int)(target_addr >> 8) & 0x0FF,
                  (unsigned int)(target_addr >> 0) & 0x0FF);
 
+        // clear stale lock:
+        try { LockTuner lock(hd_ptr); } catch (...) {}
+
         char * owner_str = NULL;
         if (hdhomerun_device_get_tuner_lockkey_owner(&hd, &owner_str) != 1)
         {
@@ -357,10 +392,10 @@ namespace yae
           yae_dlog("\tstatus: %s", status_str);
         }
 
-        std::string cache_dir = yae::get_user_folder_path(".yaepg");
-        YAE_ASSERT(yae::mkdir_p(cache_dir));
+        std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+        YAE_ASSERT(yae::mkdir_p(yaepg_dir));
 
-        std::string cache_path = (fs::path(cache_dir) / name).string();
+        std::string cache_path = (fs::path(yaepg_dir) / name).string();
         Json::Value & tuner_cache = tuner_cache_[name];
 
         // load from cache
