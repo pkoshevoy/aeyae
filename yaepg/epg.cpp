@@ -666,7 +666,8 @@ namespace yae
             }
             channels_txt = oss.str().c_str();
           }
-          yae_wlog("%sHz, capturing %ss sample: %s",
+          yae_wlog("%s %sHz, capturing %ss sample: %s",
+                   name.c_str(),
                    frequency.c_str(),
                    sample_duration.to_short_txt().c_str(),
                    channels_txt.c_str());
