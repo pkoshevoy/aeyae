@@ -3401,9 +3401,12 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
+      double top = std::min(tracks_.top(), tags_.top());
       double bottom = std::max(tracks_.bottom(), tags_.bottom());
-      double height = plot_.height();
-      result = bottom + height;
+      double tags_h = bottom - top;
+      double plot_h = plot_.height();
+      double height = std::max(plot_h, tags_h + plot_h * 0.78);
+      result = top + height;
     }
 
     Item & tracks_;
@@ -3465,19 +3468,21 @@ namespace yae
       int prog_id = i->first;
       const Timeline & timeline = i->second;
 
-      prev_row = layout_source_item_prog(view,
-                                         src_item,
-                                         prev_row,
-                                         name,
-                                         summary,
-                                         prog_id,
-                                         timeline,
-                                         rows_per_plot);
+      layout_source_item_prog(view,
+                              src_item,
+                              prev_row,
+                              name,
+                              summary,
+                              prog_id,
+                              timeline,
+                              rows_per_plot);
 
       std::string prog_str = str("prog_", prog_id);
       Item & tracks = src_item[prog_str.c_str()];
 
       Item & prog = plots.addNew<Item>(prog_str.c_str());
+      prev_row = &prog;
+
       Item & tags = plots.addNew<Item>(str("tags_", prog_id).c_str());
       tags.anchors_.top_ = ItemRef::reference(tracks, kPropertyTop);
       tags.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
