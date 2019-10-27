@@ -36,6 +36,7 @@ extern "C" {
 // yae:
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_data.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 
