@@ -685,6 +685,41 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // bitmask_width<64>
+  //
+  template <unsigned int width>
+  inline unsigned int
+  bitmask_width(uint64_t m)
+  {
+    unsigned int w_hi = bitmask_width<(width >> 1)>(m >> (width >> 1));
+    return w_hi ? (w_hi + (width >> 1)) : bitmask_width<(width >> 1)>(m);
+  }
+
+  //----------------------------------------------------------------
+  // bitmask_width<4>
+  //
+  template <>
+  inline unsigned int
+  bitmask_width<4>(uint64_t m)
+  {
+    static const unsigned char w[16] = {
+      0, 1, 2, 2, 3, 3, 3, 3,
+      4, 4, 4, 4, 4, 4, 4, 4
+    };
+
+    return w[m & 0xF];
+  }
+
+  //----------------------------------------------------------------
+  // bitmask_width
+  //
+  inline unsigned int
+  bitmask_width(uint64_t m)
+  {
+    return bitmask_width<64>(m);
+  }
+
+  //----------------------------------------------------------------
   // str
   //
   template <typename TData>

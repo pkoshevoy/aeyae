@@ -57,6 +57,16 @@
   } else {}
 
 //----------------------------------------------------------------
+// YAE_EXPECT
+//
+#define YAE_EXPECT(expr) if (!(expr)) {          \
+    yae::log(yae::TLog::kError,                  \
+             __FILE__ ":" YAE_STR(__LINE__),     \
+             "unexpected condition: %s",         \
+             YAE_STR(expr));                     \
+  } else {}
+
+//----------------------------------------------------------------
 // YAE_THROW_IF
 //
 #define YAE_THROW_IF(expr) if ((expr)) {         \

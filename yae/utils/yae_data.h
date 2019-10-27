@@ -10,6 +10,7 @@
 #define YAE_DATA_H_
 
 // system includes:
+#include <inttypes.h>
 #include <string>
 #include <string.h>
 #include <vector>
@@ -369,7 +370,7 @@ namespace yae
     Bitstream(const TBufferPtr & data):
       data_(data),
       position_(0),
-      end_(data ? (data->size() * 8) : 0)
+      end_(data ? (data->size() << 3) : 0)
     {}
 
     // set current bitstream position:
@@ -384,7 +385,7 @@ namespace yae
     { seek(position_ + num_bits); }
 
     inline void skip_bytes(std::size_t bytes)
-    { seek(position_ + bytes * 8); }
+    { seek(position_ + (bytes << 3)); }
 
     inline bool has_enough_bits(std::size_t num_bits) const
     {
@@ -394,8 +395,7 @@ namespace yae
 
     inline bool has_enough_bytes(std::size_t num_bytes) const
     {
-      // YAE_ASSERT(position_ % 8 == 0);
-      std::size_t need = position_ / 8 + num_bytes;
+      std::size_t need = num_bytes + (position_ >> 3);
       return data_ ? need <= data_->size() : !num_bytes;
     }
 
@@ -442,19 +442,26 @@ namespace yae
     inline TData read(int num_bits)
     { return TData(read_bits(num_bits)); }
 
+    TBufferPtr read_bytes(std::size_t bytes);
+
+    void write_bits(std::size_t num_bits, uint64_t bits);
+    void write_bytes(const void * data, std::size_t size);
+
+    template <typename TData>
+    inline void write(std::size_t num_bits, TData data)
+    { write_bits(num_bits, uint64_t(data)); }
+
     // https://en.wikipedia.org/wiki/Exponential-Golomb_coding
     uint64_t read_bits_ue();
     int64_t read_bits_se();
 
-    TBufferPtr read_bytes(std::size_t bytes);
-
-    void write(std::size_t num_bits, uint64_t bits);
-    void write_bytes(const void * data, std::size_t size);
+    void write_bits_ue(uint64_t v);
+    void write_bits_se(int64_t v);
 
     // helpers:
     inline void skip_until_byte_aligned()
     {
-      std::size_t misaligned = position_ % 8;
+      std::size_t misaligned = position_ & 0x7;
       if (misaligned)
       {
         skip(8 - misaligned);
@@ -463,7 +470,7 @@ namespace yae
 
     inline void pad_until_byte_aligned()
     {
-      std::size_t misaligned = position_ % 8;
+      std::size_t misaligned = position_ & 0x7;
       if (misaligned)
       {
         write(0, 8 - misaligned);

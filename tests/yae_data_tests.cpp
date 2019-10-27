@@ -166,3 +166,25 @@ BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_bytes)
   std::string world = Data(bits.read_bytes(5)).to_str();
   BOOST_CHECK_EQUAL("World", world);
 }
+
+BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_exp_golomb)
+{
+  unsigned char b[17] = { 0 };
+
+  TBufferPtr data(new ExtBuffer(b, sizeof(b)));
+  Bitstream bits(data);
+
+  std::size_t p0 = bits.position();
+  bits.write_bits_ue(123);
+
+  std::size_t p1 = bits.position();
+  bits.write_bits_se(-456);
+
+  std::size_t p2 = bits.position();
+  bits.seek(p0);
+  BOOST_CHECK_EQUAL(123, bits.read_bits_ue());
+  BOOST_CHECK_EQUAL(p1, bits.position());
+
+  BOOST_CHECK_EQUAL(-456, bits.read_bits_se());
+  BOOST_CHECK_EQUAL(p2, bits.position());
+}

@@ -8,6 +8,7 @@
 
 // yae:
 #include "yae/utils/yae_data.h"
+#include "yae/utils/yae_utils.h"
 
 
 namespace yae
@@ -84,52 +85,13 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Bitstream::read_bits_ue
-  //
-  // ISO/IEC 14496-10, section 9.1, Parsing process for Exp-Golomb codes
-  //
-  uint64_t
-  Bitstream::read_bits_ue()
-  {
-    std::size_t starting_bit_position = position_;
-
-    // skip the leading zero bits:
-    while (!read_bits(1))
-    {}
-
-    // count the number of leading zero bits:
-    std::size_t leading_zero_bits = position_ - starting_bit_position;
-
-    uint64_t ue = (1 << leading_zero_bits) - 1;
-    if (leading_zero_bits)
-    {
-      ue += read_bits(leading_zero_bits);
-    }
-
-    return ue;
-  }
-
-  //----------------------------------------------------------------
-  // Bitstream::read_bits_se
-  //
-  // ISO/IEC 14496-10, section 9.1.1, Parsing process for Exp-Golomb codes
-  //
-  int64_t
-  Bitstream::read_bits_se()
-  {
-    uint64_t ue = read_bits_ue();
-    int64_t se = (ue & 0x1) ? int64_t((ue + 1) >> 1) : -int64_t(ue >> 1);
-    return se;
-  }
-
-  //----------------------------------------------------------------
   // Bitstream::read_bytes
   //
   TBufferPtr
   Bitstream::read_bytes(std::size_t num_bytes)
   {
     YAE_THROW_IF(!has_enough_bytes(num_bytes));
-    // YAE_ASSERT(!(position_ & 0x7));
+    YAE_EXPECT(!(position_ & 0x7));
 
     TBufferPtr data;
 
@@ -155,10 +117,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Bitstream::write
+  // Bitstream::write_bits
   //
   void
-  Bitstream::write(std::size_t num_bits, uint64_t v)
+  Bitstream::write_bits(std::size_t num_bits, uint64_t v)
   {
     YAE_THROW_IF(64 < num_bits);
     YAE_THROW_IF(!has_enough_bits(num_bits));
@@ -214,7 +176,7 @@ namespace yae
   Bitstream::write_bytes(const void * data, std::size_t num_bytes)
   {
     YAE_THROW_IF(!has_enough_bytes(num_bytes));
-    // YAE_ASSERT(!(position_ & 0x7));
+    YAE_EXPECT(!(position_ & 0x7));
 
     if (!(position_ & 0x7))
     {
@@ -230,10 +192,77 @@ namespace yae
       const unsigned char * end = b + num_bytes;
       while (b < end)
       {
-        write(8, *b);
+        write_bits(8, *b);
         ++b;
       }
     }
+  }
+
+
+  //----------------------------------------------------------------
+  // Bitstream::read_bits_ue
+  //
+  // ISO/IEC 14496-10, section 9.1, Parsing process for Exp-Golomb codes
+  //
+  uint64_t
+  Bitstream::read_bits_ue()
+  {
+    std::size_t starting_bit_position = position_;
+
+    // skip the leading zero bits:
+    while (!read_bits(1))
+    {}
+
+    // count the number of leading zero bits:
+    std::size_t leading_zero_bits = position_ - starting_bit_position - 1;
+
+    uint64_t ue = (1 << leading_zero_bits) - 1;
+    if (leading_zero_bits)
+    {
+      ue += read_bits(leading_zero_bits);
+    }
+
+    return ue;
+  }
+
+  //----------------------------------------------------------------
+  // Bitstream::read_bits_se
+  //
+  // ISO/IEC 14496-10, section 9.1.1, Parsing process for Exp-Golomb codes
+  //
+  int64_t
+  Bitstream::read_bits_se()
+  {
+    uint64_t ue = read_bits_ue();
+    int64_t se = (ue & 0x1) ? int64_t((ue + 1) >> 1) : -int64_t(ue >> 1);
+    return se;
+  }
+
+  //----------------------------------------------------------------
+  // Bitstream::write_bits_ue
+  //
+  // ISO/IEC 14496-10, section 9.1, Parsing process for Exp-Golomb codes
+  //
+  void
+  Bitstream::write_bits_ue(uint64_t v)
+  {
+    // https://en.wikipedia.org/wiki/Exponential-Golomb_coding
+    uint64_t v1 = v + 1;
+    unsigned int w = yae::bitmask_width(v1);
+    write_bits(w - 1, 0);
+    write_bits(w, v1);
+  }
+
+  //----------------------------------------------------------------
+  // Bitstream::write_bits_se
+  //
+  // ISO/IEC 14496-10, section 9.1.1, Parsing process for Exp-Golomb codes
+  //
+  void
+  Bitstream::write_bits_se(int64_t v)
+  {
+    uint64_t u = (v > 0) ? ((v - 1) << 1) : ((-v) << 1);
+    write_bits_ue(u);
   }
 
 }
