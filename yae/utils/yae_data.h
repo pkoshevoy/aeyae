@@ -28,7 +28,8 @@ namespace yae
   //
   struct YAE_API IBuffer
   {
-    virtual ~IBuffer() {}
+    virtual ~IBuffer();
+
     virtual unsigned char * get() const = 0;
     virtual std::size_t size() const = 0;
     virtual void truncate(std::size_t new_size) = 0;
@@ -45,24 +46,16 @@ namespace yae
   //
   struct YAE_API Buffer : IBuffer
   {
-    Buffer(std::size_t size):
-      data_(size)
-    {}
+    Buffer(std::size_t size);
 
     // virtual:
-    unsigned char * get() const
-    { return data_.empty() ? NULL : &(data_[0]); }
+    unsigned char * get() const;
 
     // virtual:
-    std::size_t size() const
-    { return data_.size(); }
+    std::size_t size() const;
 
     // virtual:
-    void truncate(std::size_t size)
-    {
-      YAE_THROW_IF(data_.size() < size);
-      data_.resize(size);
-    }
+    void truncate(std::size_t size);
 
   protected:
     mutable std::vector<unsigned char> data_;
@@ -74,25 +67,16 @@ namespace yae
   //
   struct YAE_API ExtBuffer : IBuffer
   {
-    ExtBuffer(unsigned char * data, std::size_t size):
-      data_(data),
-      size_(size)
-    {}
+    ExtBuffer(void * data, std::size_t size);
 
     // virtual:
-    unsigned char * get() const
-    { return data_; }
+    unsigned char * get() const;
 
     // virtual:
-    std::size_t size() const
-    { return size_; }
+    std::size_t size() const;
 
     // virtual:
-    void truncate(std::size_t size)
-    {
-      YAE_THROW_IF(size_ < size);
-      size_ = size;
-    }
+    void truncate(std::size_t size);
 
   protected:
     unsigned char * data_;
@@ -105,26 +89,16 @@ namespace yae
   //
   struct YAE_API SubBuffer : IBuffer
   {
-    SubBuffer(const TBufferPtr & data, std::size_t addr, std::size_t size):
-      data_(data),
-      addr_(addr),
-      size_(size)
-    {}
+    SubBuffer(const TBufferPtr & data, std::size_t addr, std::size_t size);
 
     // virtual:
-    unsigned char * get() const
-    { return data_->get() + addr_; }
+    unsigned char * get() const;
 
     // virtual:
-    std::size_t size() const
-    { return size_; }
+    std::size_t size() const;
 
     // virtual:
-    void truncate(std::size_t size)
-    {
-      YAE_THROW_IF(size_ < size);
-      size_ = size;
-    }
+    void truncate(std::size_t size);
 
   protected:
     TBufferPtr data_;
@@ -197,7 +171,7 @@ namespace yae
       {
         std::size_t size = n * sizeof(TData);
         data_.reset(new Buffer(size));
-        return (TData *)(data_->get());
+        return static_cast<TData *>(data_->get());
       }
 
       data_.reset();
@@ -215,7 +189,7 @@ namespace yae
         TBufferPtr buf(new Buffer(size));
         memcpy(buf->get(), data, size);
         data_ = buf;
-        return (TData *)(data_->get());
+        return reinterpret_cast<TData *>(data_->get());
       }
 
       data_.reset();
@@ -230,7 +204,7 @@ namespace yae
 
       if (data && size)
       {
-        buf.reset(new ExtBuffer((unsigned char *)data, size));
+        buf.reset(new ExtBuffer(data, size));
       }
 
       data_ = buf;
@@ -244,7 +218,10 @@ namespace yae
     { return assign<char>(data.empty() ? NULL : data.c_str(), data.size()); }
 
     inline void * assign(const void * data, std::size_t size)
-    { return (void *)assign<uint8_t>((const uint8_t *)data, size); }
+    {
+      const unsigned char * v = reinterpret_cast<const unsigned char *>(data);
+      return assign<unsigned char>(v, size);
+    }
 
     inline void truncate(std::size_t z)
     {
@@ -270,11 +247,11 @@ namespace yae
 
     template <typename TData>
     inline TData * get() const
-    { return data_ ? (TData *)(data_->get()) : NULL; }
+    { return data_ ? reinterpret_cast<TData *>(data_->get()) : NULL; }
 
     template <typename TData>
     inline TData * end() const
-    { return data_ ? (TData *)(data_->get()) + num<TData>() : NULL; }
+    { return data_ ? get<TData>() + num<TData>() : NULL; }
 
     template <typename TData>
     inline TData & get(std::size_t i) const
@@ -282,7 +259,7 @@ namespace yae
       std::size_t z = size();
       std::size_t j = i * sizeof(TData);
       YAE_THROW_IF(z <= j);
-      return *(TData *)(data_->get() + j);
+      return *reinterpret_cast<TData *>(data_->get() + j);
     }
 
     template <typename TData>
@@ -308,7 +285,7 @@ namespace yae
     {
       if (!empty())
       {
-        const char * str = (const char *)(data_->get());
+        const char * str = reinterpret_cast<const char *>(data_->get());
         const char * end = str + data_->size();
         return std::string(str, end);
       }
@@ -352,26 +329,28 @@ namespace yae
 
     template <typename TData>
     inline operator TData * ()
-    { return data_ ? (TData *)(data_->get()) : NULL; }
+    { return data_ ? static_cast<TData *>(data_->get()) : NULL; }
 
     template <typename TData>
     inline operator const TData * () const
-    { return data_ ? (const TData *)(data_->get()) : NULL; }
+    { return data_ ? static_cast<const TData *>(data_->get()) : NULL; }
 
   protected:
     TBufferPtr data_;
   };
 
+
   //----------------------------------------------------------------
-  // Bitstream
+  // IBitstream
   //
-  struct YAE_API Bitstream
+  struct YAE_API IBitstream
   {
-    Bitstream(const TBufferPtr & data):
-      data_(data),
+    IBitstream(std::size_t end):
       position_(0),
-      end_(data ? (data->size() << 3) : 0)
+      end_(end)
     {}
+
+    virtual ~IBitstream() {}
 
     // set current bitstream position:
     inline void seek(std::size_t bit_position)
@@ -381,7 +360,7 @@ namespace yae
       position_ = bit_position;
     }
 
-    inline void skip(int num_bits)
+    inline void skip(std::size_t num_bits)
     { seek(position_ + num_bits); }
 
     inline void skip_bytes(std::size_t bytes)
@@ -394,10 +373,7 @@ namespace yae
     }
 
     inline bool has_enough_bytes(std::size_t num_bytes) const
-    {
-      std::size_t need = num_bytes + (position_ >> 3);
-      return data_ ? need <= data_->size() : !num_bytes;
-    }
+    { return has_enough_bits(num_bytes << 3); }
 
     // read a given number of bits and advance current bitstream
     // position accordingly.
@@ -410,49 +386,55 @@ namespace yae
     // Use skip(bits), or seek(pos), or skip_bytes(n),
     // instead to skip past bits without reading them.
     //
-    uint64_t read_bits(int num_bits);
+    virtual uint64_t read_bits(std::size_t num_bits) = 0;
 
     // same as above, but preserves current bitstream position:
-    uint64_t peek_bits(int num_bits);
+    inline uint64_t peek_bits(std::size_t num_bits)
+    {
+      std::size_t pos = position_;
+      uint64_t b = read_bits(num_bits);
+      position_ = pos;
+      return b;
+    }
 
     //----------------------------------------------------------------
     // Bits
     //
     struct Bits
     {
-      inline explicit Bits(const int64_t & data):
+      inline explicit Bits(const uint64_t & data):
         data_(data)
       {}
 
       template <typename TData>
       inline operator TData() const
-      { return TData(data_); }
+      { return static_cast<TData>(data_); }
 
       template <typename TData>
       inline TData operator & (const TData & mask) const
-      { return TData(data_ & mask); }
+      { return static_cast<TData>(data_ & mask); }
 
       uint64_t data_;
     };
 
-    inline Bits read(int num_bits)
+    inline Bits read(std::size_t num_bits)
     { return Bits(read_bits(num_bits)); }
 
     template <typename TData>
-    inline TData read(int num_bits)
+    inline TData read(std::size_t num_bits)
     { return TData(read_bits(num_bits)); }
 
-    TBufferPtr read_bytes(std::size_t bytes);
+    virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
 
-    void write_bits(std::size_t num_bits, uint64_t bits);
-    void write_bytes(const void * data, std::size_t size);
+    virtual void write_bits(std::size_t num_bits, uint64_t bits) = 0;
+    virtual void write_bytes(const void * data, std::size_t num_bytes) = 0;
 
     template <typename TData>
     inline void write(std::size_t num_bits, TData data)
     { write_bits(num_bits, uint64_t(data)); }
 
     // https://en.wikipedia.org/wiki/Exponential-Golomb_coding
-    uint64_t read_bits_ue();
+    virtual uint64_t read_bits_ue();
     int64_t read_bits_se();
 
     void write_bits_ue(uint64_t v);
@@ -481,9 +463,147 @@ namespace yae
     { return position_; }
 
   protected:
-    TBufferPtr data_;
     std::size_t position_;
     std::size_t end_;
+  };
+
+
+  //----------------------------------------------------------------
+  // NullBitstream
+  //
+  // /dev/null bitstream
+  //
+  struct YAE_API NullBitstream : IBitstream
+  {
+    NullBitstream(std::size_t end = std::numeric_limits<std::size_t>::max());
+
+    // virtual:
+    uint64_t read_bits(std::size_t num_bits);
+
+    // virtual:
+    TBufferPtr read_bytes(std::size_t num_bytes);
+
+    // virtual:
+    void write_bits(std::size_t num_bits, uint64_t bits);
+
+    // virtual:
+    void write_bytes(const void * data, std::size_t num_bytes);
+
+    // virtual: not supported for null bitstream, will throw an exception:
+    uint64_t read_bits_ue();
+  };
+
+
+  //----------------------------------------------------------------
+  // Bitstream
+  //
+  struct YAE_API Bitstream : IBitstream
+  {
+    Bitstream(const TBufferPtr & data);
+
+    // virtual:
+    uint64_t read_bits(std::size_t num_bits);
+
+    // virtual:
+    TBufferPtr read_bytes(std::size_t bytes);
+
+    // virtual:
+    void write_bits(std::size_t num_bits, uint64_t bits);
+
+    // virtual:
+    void write_bytes(const void * data, std::size_t num_bytes);
+
+  protected:
+    TBufferPtr data_;
+  };
+
+
+  namespace bitstream
+  {
+    //----------------------------------------------------------------
+    // IPayload
+    //
+    struct YAE_API IPayload
+    {
+      virtual ~IPayload() {}
+
+      // payload bitstream size, expressed in bits
+      // calculated atomatically using NullBitstream
+      virtual std::size_t size() const;
+
+      virtual void save(IBitstream & bs) const = 0;
+      virtual bool load(IBitstream & bs) = 0;
+    };
+  }
+
+
+  //----------------------------------------------------------------
+  // Bit
+  //
+  template <std::size_t nbits, uint64_t default_value = 0>
+  struct YAE_API Bit : bitstream::IPayload
+  {
+    Bit(uint64_t value = default_value):
+      data_(value)
+    {}
+
+    // virtual:
+    std::size_t size() const
+    { return nbits; }
+
+    // virtual:
+    void save(IBitstream & bs) const
+    { bs.write_bits(nbits, data_); }
+
+    // virtual:
+    bool load(IBitstream & bs)
+    {
+      if (!bs.has_enough_bits(nbits))
+      {
+        return false;
+      }
+
+      data_ = bs.read_bits(nbits);
+      return true;
+    }
+
+    inline Bit & operator = (uint64_t value)
+    {
+      data_ = value;
+      return *this;
+    }
+
+    uint64_t data_;
+  };
+
+
+  //----------------------------------------------------------------
+  // NBit
+  //
+  struct YAE_API NBit : bitstream::IPayload
+  {
+    NBit(std::size_t nbits, uint64_t data = 0):
+      nbits_(nbits),
+      data_(data)
+    {}
+
+    // virtual:
+    std::size_t size() const;
+
+    // virtual:
+    void save(IBitstream & bs) const;
+
+    // virtual:
+    bool load(IBitstream & bs);
+
+    inline NBit & operator = (uint64_t value)
+    {
+      data_ = value;
+      return *this;
+    }
+
+    std::size_t nbits_;
+    uint64_t data_;
   };
 
 }

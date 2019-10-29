@@ -16,6 +16,28 @@
 // shortcut:
 using namespace yae;
 
+
+struct FooFoo
+{
+  double param_;
+  bool flag_;
+  int one_;
+  int two_;
+};
+
+BOOST_AUTO_TEST_CASE(yae_data)
+{
+  FooFoo foo[3] = { 0 };
+
+  TBufferPtr ext_buffer(new ExtBuffer(&foo[0], sizeof(foo)));
+  Data data(ext_buffer);
+
+  BOOST_CHECK_EQUAL(3, data.num<FooFoo>());
+  BOOST_CHECK_EQUAL(&foo[0], &data.get<FooFoo>(0));
+  BOOST_CHECK_EQUAL(&foo[1], &data.get<FooFoo>(1));
+  BOOST_CHECK_EQUAL(&foo[2], &data.get<FooFoo>(2));
+}
+
 BOOST_AUTO_TEST_CASE(yae_bitstream_read)
 {
   unsigned char buffer[8] = {
@@ -181,10 +203,35 @@ BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_exp_golomb)
   bits.write_bits_se(-456);
 
   std::size_t p2 = bits.position();
+  bits.write_bits_se(789);
+
+  std::size_t p3 = bits.position();
   bits.seek(p0);
   BOOST_CHECK_EQUAL(123, bits.read_bits_ue());
   BOOST_CHECK_EQUAL(p1, bits.position());
 
   BOOST_CHECK_EQUAL(-456, bits.read_bits_se());
   BOOST_CHECK_EQUAL(p2, bits.position());
+
+  BOOST_CHECK_EQUAL(789, bits.read_bits_se());
+  BOOST_CHECK_EQUAL(p3, bits.position());
+}
+
+
+BOOST_AUTO_TEST_CASE(yae_bitstream_payload)
+{
+  NullBitstream null_bitstream;
+
+  Bit<5> b5;
+  b5 = 31;
+  BOOST_CHECK_EQUAL(5, b5.size());
+
+  NBit bv(3, 7);
+  BOOST_CHECK_EQUAL(3, bv.size());
+
+  b5.save(null_bitstream);
+  BOOST_CHECK_EQUAL(5, null_bitstream.position());
+
+  bv.save(null_bitstream);
+  BOOST_CHECK_EQUAL(8, null_bitstream.position());
 }
