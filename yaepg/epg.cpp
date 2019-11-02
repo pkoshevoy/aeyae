@@ -39,6 +39,7 @@ extern "C" {
 #include "yae/utils/yae_data.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
+#include "yae/video/yae_mpeg_ts.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
@@ -722,11 +723,78 @@ namespace yae
 int
 main_may_throw(int argc, char ** argv)
 {
+#if 0
   // install signal handler:
   yae::signal_handler();
 
   yae::HDHomeRun hdhr;
   hdhr.capture_all();
+#else
+  yae::TOpenFile src("/tmp/557000000.ts", "rb");
+  YAE_THROW_IF(!src.is_open());
+
+  yae::mpeg_ts::Context ts_ctx;
+  while (!src.is_eof())
+  {
+    yae::Data data(12 + 7 * 188);
+    uint64_t pos = yae::ftell64(src.file_);
+
+    std::size_t n = src.read(data.get(), data.size());
+    if (n < 188)
+    {
+      break;
+    }
+
+    data.truncate(n);
+
+    std::size_t offset = 0;
+    while (offset + 188 <= n)
+    {
+      // find to the the sync byte:
+      if (data[offset] == 0x47 &&
+          (n - offset == 188 || data[offset + 188] == 0x47))
+      {
+        try
+        {
+          // attempt to parse the packet:
+          yae::Bitstream bs(data.get(offset, 188));
+
+          yae::mpeg_ts::TSPacket pkt;
+          ts_ctx.load(bs, pkt);
+        }
+        catch (const std::exception & e)
+        {
+          yae_wlog("failed to parse TS packet at %" PRIu64 ", %s",
+                   pos + offset, e.what());
+        }
+        catch (...)
+        {
+          yae_wlog("failed to parse TS packet at %" PRIu64
+                   ", unexpected exception",
+                   pos + offset);
+        }
+
+        // skip to next packet:
+        offset += 188;
+      }
+      else
+      {
+        offset++;
+      }
+    }
+
+    yae::fseek64(src.file_, pos + offset, SEEK_SET);
+  }
+
+  // FIXME: pkoshevoy:
+  for (std::map<uint16_t, std::list<yae::mpeg_ts::TSPacket> >::iterator
+         i = ts_ctx.pes_.begin(); i != ts_ctx.pes_.end(); ++i)
+  {
+    uint16_t pid = i->first;
+    std::list<yae::mpeg_ts::TSPacket> & pes = i->second;
+    yae::mpeg_ts::consume(pid, pes);
+  }
+#endif
 
   return 0;
 }

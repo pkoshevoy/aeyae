@@ -387,6 +387,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // LogToFFmpeg::setPriorityThreshold
+  //
+  void
+  LogToFFmpeg::setPriorityThreshold(int priority)
+  {
+    threshold_ = priority;
+
+    int level =
+      priority < TLog::kInfo ? AV_LOG_DEBUG :
+      priority < TLog::kWarning ? AV_LOG_INFO :
+      priority < TLog::kError ? AV_LOG_WARNING :
+      AV_LOG_ERROR;
+
+    av_log_set_level(level);
+  }
+
+  //----------------------------------------------------------------
   // LogToFFmpeg::deliver
   //
   void
@@ -429,7 +446,13 @@ namespace yae
   {
     AvLog()
     {
-      assign(std::string("av_log"), new LogToFFmpeg());
+      LogToFFmpeg * log_to_ffmpeg = new LogToFFmpeg();
+#ifdef NDEBUG
+      log_to_ffmpeg->setPriorityThreshold(yae::TLog::kWarning);
+#else
+      log_to_ffmpeg->setPriorityThreshold(yae::TLog::kDebug);
+#endif
+      assign(std::string("av_log"), log_to_ffmpeg);
       // av_log_set_callback(&av_log_callback);
     }
   };

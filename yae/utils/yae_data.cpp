@@ -227,7 +227,7 @@ namespace yae
   NullBitstream::read_bytes(std::size_t num_bytes)
   {
     YAE_THROW_IF(!has_enough_bytes(num_bytes));
-    YAE_EXPECT(!(IBitstream::position_ & 0x7));
+    YAE_EXPECT(IBitstream::is_byte_aligned());
 
     Data data;
     data.allocz(num_bytes);
@@ -256,7 +256,7 @@ namespace yae
   NullBitstream::write_bytes(const void * data, std::size_t num_bytes)
   {
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
-    YAE_EXPECT(!(IBitstream::position_ & 0x7));
+    YAE_EXPECT(IBitstream::is_byte_aligned());
 
     (void)data;
     IBitstream::position_ += (num_bytes << 3);
@@ -346,11 +346,11 @@ namespace yae
   Bitstream::read_bytes(std::size_t num_bytes)
   {
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
-    YAE_EXPECT(!(IBitstream::position_ & 0x7));
+    YAE_EXPECT(IBitstream::is_byte_aligned());
 
     TBufferPtr data;
 
-    if (!(IBitstream::position_ & 0x7))
+    if (IBitstream::is_byte_aligned())
     {
       std::size_t addr = IBitstream::position_ >> 3;
       data.reset(new SubBuffer(data_, addr, num_bytes));
@@ -431,9 +431,9 @@ namespace yae
   Bitstream::write_bytes(const void * data, std::size_t num_bytes)
   {
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
-    YAE_EXPECT(!(IBitstream::position_ & 0x7));
+    YAE_EXPECT(IBitstream::is_byte_aligned());
 
-    if (!(IBitstream::position_ & 0x7))
+    if (IBitstream::is_byte_aligned())
     {
       std::size_t addr = IBitstream::position_ >> 3;
       unsigned char * b = data_->get() + addr;

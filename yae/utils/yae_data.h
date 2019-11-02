@@ -239,6 +239,9 @@ namespace yae
     inline std::size_t size() const
     { return data_ ? data_->size() : 0; }
 
+    inline TBufferPtr get(std::size_t addr, std::size_t size) const
+    { return TBufferPtr(new SubBuffer(data_, addr, size)); }
+
     inline unsigned char * get() const
     { return data_ ? data_->get() : NULL; }
 
@@ -352,6 +355,9 @@ namespace yae
 
     virtual ~IBitstream() {}
 
+    inline bool at_end() const
+    { return position_ == end_; }
+
     // set current bitstream position:
     inline void seek(std::size_t bit_position)
     {
@@ -418,11 +424,11 @@ namespace yae
     };
 
     inline Bits read(std::size_t num_bits)
-    { return Bits(read_bits(num_bits)); }
+    { return Bits(this->read_bits(num_bits)); }
 
     template <typename TData>
     inline TData read(std::size_t num_bits)
-    { return TData(read_bits(num_bits)); }
+    { return TData(this->read_bits(num_bits)); }
 
     virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
 
@@ -431,7 +437,7 @@ namespace yae
 
     template <typename TData>
     inline void write(std::size_t num_bits, TData data)
-    { write_bits(num_bits, uint64_t(data)); }
+    { this->write_bits(num_bits, uint64_t(data)); }
 
     // https://en.wikipedia.org/wiki/Exponential-Golomb_coding
     virtual uint64_t read_bits_ue();
@@ -441,12 +447,18 @@ namespace yae
     void write_bits_se(int64_t v);
 
     // helpers:
+    inline bool is_byte_aligned()
+    {
+      std::size_t misaligned = position_ & 0x7;
+      return !misaligned;
+    }
+
     inline void skip_until_byte_aligned()
     {
       std::size_t misaligned = position_ & 0x7;
       if (misaligned)
       {
-        skip(8 - misaligned);
+        this->skip(8 - misaligned);
       }
     }
 
@@ -455,12 +467,19 @@ namespace yae
       std::size_t misaligned = position_ & 0x7;
       if (misaligned)
       {
-        write(0, 8 - misaligned);
+        this->write(0, 8 - misaligned);
       }
     }
 
     inline std::size_t position() const
     { return position_; }
+
+    inline TBufferPtr read_remaining_bytes()
+    {
+      std::size_t remaining_bits = end_ - position_;
+      YAE_ASSERT((remaining_bits & 0x7) == 0)
+      return this->read_bytes(remaining_bits >> 3);
+    }
 
   protected:
     std::size_t position_;

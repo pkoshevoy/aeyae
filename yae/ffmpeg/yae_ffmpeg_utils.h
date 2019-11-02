@@ -161,8 +161,7 @@ namespace yae
     { return threshold_; }
 
     // virtual:
-    void setPriorityThreshold(int priority)
-    { threshold_ = priority; }
+    void setPriorityThreshold(int priority);
 
     // virtual:
     void deliver(int priority, const char * src, const char * msg);

@@ -350,6 +350,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ftell64
+  //
+  uint64_t
+  ftell64(const FILE * file)
+  {
+#ifdef _WIN32
+    uint64_t pos = _ftelli64(const_cast<FILE *>(file));
+#else
+    uint64_t pos = ftello(const_cast<FILE *>(file));
+#endif
+
+    return pos;
+  }
+
+  //----------------------------------------------------------------
+  // fseek64
+  //
+  int
+  fseek64(FILE * file, int64_t offset, int whence)
+  {
+#ifdef _WIN32
+    int ret = _fseeki64(file, offset, whence);
+#else
+    int ret = fseeko(file, offset, whence);
+#endif
+
+    return ret;
+  }
+
+  //----------------------------------------------------------------
   // open_utf8
   //
   int
@@ -1537,6 +1567,43 @@ namespace yae
       }
 
       dst[key] = value;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // to_hex
+  //
+  std::string
+  to_hex(const unsigned char * src, std::size_t src_size, std::size_t word_size)
+  {
+    static const char * alphabet = "0123456789abcdef";
+
+    std::ostringstream oss;
+    for (const unsigned char * i = src, * end = src + src_size; i < end; ++i)
+    {
+      if (word_size && (i > src) && ((i - src) % word_size == 0))
+      {
+        oss << ' ';
+      }
+
+      unsigned char hi = (*i) >> 4;
+      unsigned char lo = (*i) & 0xF;
+      oss << alphabet[hi] << alphabet[lo];
+    }
+
+    return std::string(oss.str().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // from_hex
+  //
+  void
+  from_hex(unsigned char * dst, std::size_t dst_size, const char * hex_str)
+  {
+    const char * src = hex_str;
+    for (std::size_t i = 0, n = std::min(dst_size, strlen(hex_str) / 2); i < n; i++, src += 2)
+    {
+      dst[i] = (unhex(src[0]) << 4) | unhex(src[1]);
     }
   }
 

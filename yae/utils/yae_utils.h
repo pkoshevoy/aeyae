@@ -128,6 +128,18 @@ namespace yae
   fopen_utf8(const char * filename_utf8, const char * mode);
 
   //----------------------------------------------------------------
+  // ftell64
+  //
+  YAE_API uint64_t
+  ftell64(const FILE * file);
+
+  //----------------------------------------------------------------
+  // fseek64
+  //
+  YAE_API int
+  fseek64(FILE * file, int64_t offset, int whence);
+
+  //----------------------------------------------------------------
   // open_utf8
   //
   YAE_API int
@@ -822,6 +834,18 @@ namespace yae
   //
   YAE_API void
   extend(TDictionary & dst, const TDictionary & src);
+
+  //----------------------------------------------------------------
+  // to_hex
+  //
+  YAE_API std::string
+  to_hex(const unsigned char * src, std::size_t src_size, std::size_t word_size = 0);
+
+  //----------------------------------------------------------------
+  // load_from_hex
+  //
+  YAE_API void
+  from_hex(unsigned char * dst, std::size_t dst_size, const char * hex_str);
 
   //----------------------------------------------------------------
   // unhex
