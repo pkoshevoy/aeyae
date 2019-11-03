@@ -130,6 +130,10 @@ namespace yae
         carrier->deliver(messagePriority, source, message);
       }
     }
+
+#if 0 // ndef NDEBUG
+    YAE_BREAKPOINT_IF(messagePriority == kError);
+#endif
   }
 
   //----------------------------------------------------------------

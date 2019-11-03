@@ -71,10 +71,15 @@ namespace yae
         splice_type_ = bin.read(4);
         dts_next_au_32_30_ = bin.read(3);
         marker1_ = bin.read(1);
+        YAE_THROW_IF(marker1_ != 1);
+
         dts_next_au_29_15_ = bin.read(15);
         marker2_ = bin.read(1);
+        YAE_THROW_IF(marker2_ != 1);
+
         dts_next_au_14_00_ = bin.read(15);
         marker3_ = bin.read(1);
+        YAE_THROW_IF(marker3_ != 1);
       }
 
       std::size_t end_pos = bin.position();
@@ -249,10 +254,12 @@ namespace yae
       YAE_THROW_IF(system_header_start_code_ != 0x000001BB);
 
       header_length_ = bin.read(16);
-
       marker1_ = bin.read(1);
+      YAE_THROW_IF(marker1_ != 1);
+
       rate_bound_ = bin.read(22);
       marker2_ = bin.read(1);
+      YAE_THROW_IF(marker2_ != 1);
 
       audio_bound_ = bin.read(6);
       fixed_flag_ = bin.read(1);
@@ -261,6 +268,8 @@ namespace yae
       system_audio_lock_flag_ = bin.read(1);
       system_video_lock_flag_ = bin.read(1);
       marker3_ = bin.read(1);
+      YAE_THROW_IF(marker3_ != 1);
+
       video_bound_ = bin.read(5);
 
       packet_rate_restriction_flag_ = bin.read(1);
@@ -351,16 +360,25 @@ namespace yae
 
       system_clock_reference_base_32_30_ = bin.read(3);
       system_clock_reference_marker1_ = bin.read(1);
+      YAE_THROW_IF(system_clock_reference_marker1_ != 1);
+
       system_clock_reference_base_29_15_ = bin.read(15);
       system_clock_reference_marker2_ = bin.read(1);
+      YAE_THROW_IF(system_clock_reference_marker2_ != 1);
+
       system_clock_reference_base_14_00_ = bin.read(15);
       system_clock_reference_marker3_ = bin.read(1);
+      YAE_THROW_IF(system_clock_reference_marker3_ != 1);
+
       system_clock_reference_extension_ = bin.read(9);
       system_clock_reference_marker4_ = bin.read(1);
+      YAE_THROW_IF(system_clock_reference_marker4_ != 1);
 
       program_mux_rate_ = bin.read(22);
       marker1_ = bin.read(1);
+      YAE_THROW_IF(marker1_ != 1);
       marker2_ = bin.read(1);
+      YAE_THROW_IF(marker2_ != 1);
 
       reserved_ = bin.read(5);
       pack_stuffing_length_ = bin.read(3);
@@ -502,7 +520,7 @@ namespace yae
     PESPacket::PES::load(IBitstream & bin)
     {
       pes_const_10_ = bin.read(2);
-      YAE_THROW_IF(pes_const_10_ != 3);
+      YAE_THROW_IF(pes_const_10_ != 2);
 
       pes_scrambling_control_ = bin.read(2);
       pes_priority_ = bin.read(1);
@@ -527,10 +545,15 @@ namespace yae
 
         pts_32_30_ = bin.read(3);
         pts_marker1_ = bin.read(1);
+        YAE_THROW_IF(pts_marker1_ != 1);
+
         pts_29_15_ = bin.read(15);
         pts_marker2_ = bin.read(1);
+        YAE_THROW_IF(pts_marker2_ != 1);
+
         pts_14_00_ = bin.read(15);
         pts_marker3_ = bin.read(1);
+        YAE_THROW_IF(pts_marker3_ != 1);
       }
 
       if (pts_dts_flags_ == 0x3)
@@ -540,10 +563,15 @@ namespace yae
 
         dts_32_30_ = bin.read(3);
         dts_marker1_ = bin.read(1);
+        YAE_THROW_IF(dts_marker1_ != 1);
+
         dts_29_15_ = bin.read(15);
         dts_marker2_ = bin.read(1);
+        YAE_THROW_IF(dts_marker2_ != 1);
+
         dts_14_00_ = bin.read(15);
         dts_marker3_ = bin.read(1);
+        YAE_THROW_IF(dts_marker3_ != 1);
       }
 
       if (escr_flag_)
@@ -551,19 +579,29 @@ namespace yae
         escr_reserved_ = bin.read(2);
         escr_base_32_30_ = bin.read(3);
         escr_marker1_ = bin.read(1);
+        YAE_THROW_IF(escr_marker1_ != 1);
+
         escr_base_29_15_ = bin.read(15);
         escr_marker2_ = bin.read(1);
+        YAE_THROW_IF(escr_marker2_ != 1);
+
         escr_base_14_00_ = bin.read(15);
         escr_marker3_ = bin.read(1);
+        YAE_THROW_IF(escr_marker3_ != 1);
+
         escr_extension_ = bin.read(9);
         escr_marker4_ = bin.read(1);
+        YAE_THROW_IF(escr_marker4_ != 1);
       }
 
       if (es_rate_flag_)
       {
         es_rate_marker1_ = bin.read(1);
+        YAE_THROW_IF(es_rate_marker1_ != 1);
+
         es_rate_ = bin.read(22);
         es_rate_marker2_ = bin.read(1);
+        YAE_THROW_IF(es_rate_marker2_ != 1);
       }
 
       if (dsm_trick_mode_flag_)
@@ -595,6 +633,8 @@ namespace yae
       if (additional_copy_info_flag_)
       {
         additional_copy_marker_ = bin.read(1);
+        YAE_THROW_IF(additional_copy_marker_ != 1);
+
         additional_copy_info_ = bin.read(7);
       }
 
@@ -672,8 +712,12 @@ namespace yae
       if (program_packet_sequence_counter_flag_)
       {
         program_packet_sequence_counter_marker_ = bin.read(1);
+        YAE_THROW_IF(program_packet_sequence_counter_marker_ != 1);
+
         program_packet_sequence_counter_ = bin.read(7);
         mpeg1_mpeg2_identifier_marker_ = bin.read(1);
+        YAE_THROW_IF(mpeg1_mpeg2_identifier_marker_ != 1);
+
         mpeg1_mpeg2_identifier_ = bin.read(1);
         original_stuff_length_ = bin.read(6);
       }
@@ -681,6 +725,8 @@ namespace yae
       if (pstd_buffer_flag_)
       {
         pstd_const_01_ = bin.read(2);
+        YAE_THROW_IF(pstd_const_01_ != 1);
+
         pstd_buffer_scale_ = bin.read(1);
         pstd_buffer_size_ = bin.read(13);
       }
@@ -719,6 +765,7 @@ namespace yae
     PESPacket::PES::Extension::Ext2::load(IBitstream & bin)
     {
       marker_ = bin.read(1);
+      YAE_THROW_IF(marker_ != 1);
       pes_extension_field_length_ = bin.read(7);
 
       std::size_t start_pos = bin.position();
@@ -738,10 +785,15 @@ namespace yae
           tref_reserved_ = bin.read(4);
           tref_32_30_ = bin.read(3);
           tref_marker1_ = bin.read(1);
+          YAE_THROW_IF(tref_marker1_ != 1);
+
           tref_29_15_ = bin.read(15);
           tref_marker2_ = bin.read(1);
+          YAE_THROW_IF(tref_marker2_ != 1);
+
           tref_14_00_ = bin.read(15);
           tref_marker3_ = bin.read(1);
+          YAE_THROW_IF(tref_marker3_ != 1);
         }
       }
 
