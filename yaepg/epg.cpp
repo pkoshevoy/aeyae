@@ -787,6 +787,7 @@ main_may_throw(int argc, char ** argv)
   }
 
   // FIXME: pkoshevoy:
+  yae_dlog("-------------- remaining incomplete packets below --------------");
   for (std::map<uint16_t, std::list<yae::mpeg_ts::TSPacket> >::iterator
          i = ts_ctx.pes_.begin(); i != ts_ctx.pes_.end(); ++i)
   {

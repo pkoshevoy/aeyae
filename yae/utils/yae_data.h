@@ -403,6 +403,17 @@ namespace yae
       return b;
     }
 
+    inline bool next_bits(std::size_t num_bits, uint64_t expected)
+    {
+      if (has_enough_bits(num_bits))
+      {
+        uint64_t actual = peek_bits(num_bits);
+        return expected == actual;
+      }
+
+      return false;
+    }
+
     //----------------------------------------------------------------
     // Bits
     //

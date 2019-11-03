@@ -159,6 +159,349 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SystemHeader
+    //
+    struct YAE_API SystemHeader
+    {
+      SystemHeader();
+
+      void load(IBitstream & bin);
+
+      uint32_t system_header_start_code_; // 0x000001BB
+      uint16_t header_length_;
+
+      // 24:
+      uint64_t marker1_ : 1;
+      uint64_t rate_bound_ : 22;
+      uint64_t marker2_ : 1;
+
+      // 8:
+      uint64_t audio_bound_ : 6;
+      uint64_t fixed_flag_ : 1;
+      uint64_t csps_flag_ : 1;
+
+      // 8:
+      uint64_t system_audio_lock_flag_ : 1;
+      uint64_t system_video_lock_flag_ : 1;
+      uint64_t marker3_ : 1;
+      uint64_t video_bound_ : 5;
+
+      // 8:
+      uint64_t packet_rate_restriction_flag_ : 1;
+      uint64_t reserved_ : 7;
+
+      struct YAE_API Ext
+      {
+        Ext();
+
+        void load(IBitstream & bin);
+
+        uint8_t stream_id_;
+        uint16_t const1_11_ : 2;
+        uint16_t const_0000000_ : 7;
+        uint16_t stream_id_extension_ : 7;
+        uint8_t const_10110110_;
+        uint16_t const_11_ : 2;
+        uint16_t pstd_buffer_bound_scale_ : 1;
+        uint16_t pstd_buffer_size_bound_ : 13;
+      };
+
+      std::list<Ext> ext_;
+    };
+
+
+    //----------------------------------------------------------------
+    // PackHeader
+    //
+    struct YAE_API PackHeader
+    {
+      PackHeader();
+
+      void load(IBitstream & bin);
+
+      // 32:
+      uint32_t pack_start_code_; // 0x000001BA
+
+      // 48:
+      uint64_t pack_const_01_ : 2;
+      uint64_t system_clock_reference_base_32_30_ : 3;
+      uint64_t system_clock_reference_marker1_ : 1;
+      uint64_t system_clock_reference_base_29_15_ : 15;
+      uint64_t system_clock_reference_marker2_ : 1;
+      uint64_t system_clock_reference_base_14_00_ : 15;
+      uint64_t system_clock_reference_marker3_ : 1;
+      uint64_t system_clock_reference_extension_ : 9;
+      uint64_t system_clock_reference_marker4_ : 1;
+
+      // 24:
+      uint64_t program_mux_rate_ : 22;
+      uint64_t marker1_ : 1;
+      uint64_t marker2_ : 1;
+
+      // 8:
+      uint64_t reserved_ : 5;
+      uint64_t pack_stuffing_length_ : 3;
+
+      // ptr:
+      TBufferPtr stuffing_;
+
+      // ptr:
+      yae::optional<SystemHeader> system_header_;
+    };
+
+    enum StreamId
+    {
+      // 101111xx
+      STREAM_ID_PROGRAM_STREAM_MAP = 0xBC,
+      STREAM_ID_PRIVATE_STREAM_1 = 0xBD,
+      STREAM_ID_PADDING_STREAM = 0xBE,
+      STREAM_ID_PRIVATE_STREAM_2 = 0xBF,
+
+      // 110xxxxx
+      STREAM_ID_AUDIO_STREAM_NUMBER_XXXXX = 0xC0,
+
+      // 1110xxxx
+      STREAM_ID_VIDEO_STREAM_NUMBER_XXXX = 0xE0,
+
+      // 1111xxxx
+      STREAM_ID_ECM = 0xF0,
+      STREAM_ID_EMM = 0xF1,
+      STREAM_ID_ISO13818_1A_DSMCC = 0xF2,
+      STREAM_ID_ISO13522 = 0xF3,
+      STREAM_ID_ITUT_H222_1A = 0xF4,
+      STREAM_ID_ITUT_H222_1B = 0xF5,
+      STREAM_ID_ITUT_H222_1C = 0xF6,
+      STREAM_ID_ITUT_H222_1D = 0xF7,
+      STREAM_ID_ITUT_H222_1E = 0xF8,
+      STREAM_ID_ANCILLARY_STREAM = 0xF9,
+      STREAM_ID_ISO_14496_1_SL = 0xFA,
+      STREAM_ID_ISO_14496_1_FLEXMUX = 0xFB,
+      STREAM_ID_METADATA_STREAM = 0xFC,
+      STREAM_ID_EXTENDED_STREAM_ID = 0xFD,
+      STREAM_ID_RESERVED_DATA_STREAM = 0xFE,
+      STREAM_ID_PROGRAM_STREAM_DIRECTORY = 0xFF
+    };
+
+    enum TrickMode
+    {
+      TRICK_MODE_FAST_FORWARD = 0,
+      TRICK_MODE_SLOW_MOTION = 1,
+      TRICK_MODE_FREEZE_FRAME = 2,
+      TRICK_MODE_FAST_REVERSE = 3,
+      TRICK_MODE_SLOW_REVERSE = 4
+    };
+
+    //----------------------------------------------------------------
+    // PESPacket
+    //
+    struct YAE_API PESPacket
+    {
+      PESPacket();
+
+      void load(IBitstream & bin);
+
+      uint32_t packet_start_code_prefix_ : 24;
+      uint32_t stream_id_ : 8;
+      uint16_t pes_packet_length_;
+
+      struct PES
+      {
+        PES();
+
+        void load(IBitstream & bin);
+
+        // 8:
+        uint64_t pes_const_10_ : 2;
+        uint64_t pes_scrambling_control_ : 2;
+        uint64_t pes_priority_ : 1;
+        uint64_t data_alignment_indicator_ : 1;
+        uint64_t copyright_ : 1;
+        uint64_t original_or_copy_ : 1;
+
+        // 8:
+        uint64_t pts_dts_flags_ : 2;
+        uint64_t escr_flag_ : 1;
+        uint64_t es_rate_flag_ : 1;
+        uint64_t dsm_trick_mode_flag_ : 1;
+        uint64_t additional_copy_info_flag_ : 1;
+        uint64_t pes_crc_flag_ : 1;
+        uint64_t pes_extension_flag_ : 1;
+
+        // 8:
+        uint64_t pes_header_data_length_ : 8;
+
+        // 40:
+        uint64_t pts_prefix_ : 4;
+        uint64_t pts_32_30_ : 3;
+        uint64_t pts_marker1_ : 1;
+        uint64_t pts_29_15_ : 15;
+        uint64_t pts_marker2_ : 1;
+        uint64_t pts_14_00_ : 15;
+        uint64_t pts_marker3_ : 1;
+
+        // 40:
+        uint64_t dts_prefix_ : 4;
+        uint64_t dts_32_30_ : 3;
+        uint64_t dts_marker1_ : 1;
+        uint64_t dts_29_15_ : 15;
+        uint64_t dts_marker2_ : 1;
+        uint64_t dts_14_00_ : 15;
+        uint64_t dts_marker3_ : 1;
+
+        // 48:
+        uint64_t escr_reserved_ : 2;
+        uint64_t escr_base_32_30_ : 3;
+        uint64_t escr_marker1_ : 1;
+        uint64_t escr_base_29_15_ : 15;
+        uint64_t escr_marker2_ : 1;
+        uint64_t escr_base_14_00_ : 15;
+        uint64_t escr_marker3_ : 1;
+        uint64_t escr_extension_ : 9;
+        uint64_t escr_marker4_ : 1;
+
+        // 24:
+        uint64_t es_rate_marker1_ : 1;
+        uint64_t es_rate_ : 22;
+        uint64_t es_rate_marker2_ : 1;
+
+        // 8:
+        union
+        {
+          uint8_t trick_mode_;
+
+          struct
+          {
+            uint8_t trick_mode_control_ : 3;
+            uint8_t field_id_ : 2;
+            uint8_t intra_slice_refresh_ : 1;
+            uint8_t frequency_truncation_ : 2;
+          } fast_;
+
+          struct
+          {
+            uint8_t trick_mode_control_ : 3;
+            uint8_t rep_cntrl_ : 5;
+          } slow_;
+
+          struct
+          {
+            uint8_t trick_mode_control_ : 3;
+            uint8_t field_id_ : 2;
+            uint8_t reserved_ : 3;
+          } freeze_;
+
+          struct
+          {
+            uint8_t trick_mode_control_ : 3;
+            uint8_t reserved_ : 5;
+          } mode_;
+        };
+
+        // 8:
+        uint8_t additional_copy_marker_ : 1;
+        uint8_t additional_copy_info_ : 7;
+
+        // 16:
+        uint16_t previous_pes_packet_crc_;
+
+        struct YAE_API Extension
+        {
+          Extension();
+
+          void load(IBitstream & bin);
+
+          // 8:
+          uint8_t pes_private_data_flag_ : 1;
+          uint8_t pack_header_field_flag_ : 1;
+          uint8_t program_packet_sequence_counter_flag_ : 1;
+          uint8_t pstd_buffer_flag_ : 1;
+          uint8_t reserved_ : 3;
+          uint8_t pes_extension_flag_2_ : 1;
+
+          // ptr:
+          TBufferPtr pes_private_data_;
+
+          // 8:
+          uint8_t pack_field_length_;
+
+          // ptr:
+          yae::optional<PackHeader> pack_header_;
+
+          // 16:
+          uint16_t program_packet_sequence_counter_marker_ : 1;
+          uint16_t program_packet_sequence_counter_ : 7;
+          uint16_t mpeg1_mpeg2_identifier_marker_ : 1;
+          uint16_t mpeg1_mpeg2_identifier_ : 1;
+          uint16_t original_stuff_length_ : 6;
+
+          // 16:
+          uint16_t pstd_const_01_ : 2;
+          uint16_t pstd_buffer_scale_ : 1;
+          uint16_t pstd_buffer_size_ : 13;
+
+          struct YAE_API Ext2
+          {
+            Ext2();
+
+            void load(IBitstream & bin);
+
+            // 8:
+            uint8_t marker_ : 1;
+            uint8_t pes_extension_field_length_ : 7;
+
+            // 8:
+            union
+            {
+              struct
+              {
+                uint8_t extension_flag_ : 1;
+                uint8_t extension_ : 7;
+              } stream_id_;
+
+              struct
+              {
+                uint8_t stream_id_extension_flag_ : 1;
+                uint8_t stream_id_extension_reserved_ : 6;
+                uint8_t extension_flag_ : 1;
+              } tref_;
+            };
+
+            // 40:
+            uint64_t tref_reserved_ : 4;
+            uint64_t tref_32_30_ : 3;
+            uint64_t tref_marker1_ : 1;
+            uint64_t tref_29_15_ : 15;
+            uint64_t tref_marker2_ : 1;
+            uint64_t tref_14_00_ : 15;
+            uint64_t tref_marker3_ : 1;
+
+            // ptr:
+            TBufferPtr reserved_;
+          };
+
+          // ptr:
+          yae::optional<Ext2> ext2_;
+        };
+
+        // ptr:
+        yae::optional<Extension> extension_;
+
+        // ptr:
+        TBufferPtr stuffing_;
+      };
+
+      // ptr:
+      yae::optional<PES> pes_;
+
+      // ptr:
+      TBufferPtr data_;
+
+      // ptr:
+      TBufferPtr padding_;
+    };
+
+
+    //----------------------------------------------------------------
     // assemble_payload
     //
     YAE_API yae::Data assemble_payload(std::list<TSPacket> & packets);
