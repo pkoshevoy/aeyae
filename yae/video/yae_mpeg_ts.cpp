@@ -806,6 +806,21 @@ namespace yae
                int(packets.size()),
                int(payload.size()),
                tmp.c_str());
+
+      try
+      {
+        yae::Bitstream bin(payload);
+        PESPacket pes_pkt;
+        pes_pkt.load(bin);
+      }
+      catch (const std::exception & e)
+      {
+        yae_elog("failed to load PESPacket: %s", e.what());
+      }
+      catch (...)
+      {
+        yae_elog("failed to load PESPacket: unexpected exception");
+      }
     }
 
     //----------------------------------------------------------------
