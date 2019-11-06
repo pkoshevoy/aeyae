@@ -925,7 +925,7 @@ namespace yae
   //
   // NOTE: if file open fails this will throw a std::runtime_error
   //
-  boost::shared_ptr<TOpenFile>
+  YAE_API boost::shared_ptr<TOpenFile>
   get_open_file(const char * path, const char * mode);
 
   //----------------------------------------------------------------
