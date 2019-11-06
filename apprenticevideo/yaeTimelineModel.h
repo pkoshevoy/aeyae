@@ -286,7 +286,7 @@ namespace yae
   //----------------------------------------------------------------
   // TIgnoreClockStop
   //
-  struct YAE_API TIgnoreClockStop
+  struct YAEUI_API TIgnoreClockStop
   {
     TIgnoreClockStop(TimelineModel & timeline);
     ~TIgnoreClockStop();

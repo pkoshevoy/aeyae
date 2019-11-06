@@ -27,7 +27,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineView
   //
-  class YAE_API TimelineView : public ItemView
+  class YAEUI_API TimelineView : public ItemView
   {
     Q_OBJECT;
 

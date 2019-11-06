@@ -14,7 +14,12 @@
 #include <math.h>
 #include <numeric>
 #include <sstream>
+
+#ifdef _WIN32
+#include <windows.h>
+#else
 #include <sys/time.h>
+#endif
 
 // yae includes:
 #include "yae/utils/yae_time.h"
@@ -165,10 +170,30 @@ namespace yae
   TTime
   TTime::now()
   {
+#ifdef _WIN32
+    // Windows epoch starts 1601-01-01T00:00:00Z
+    // UNIX/Linux epoch starts 1970-01-01T00:00:00Z
+    // elapsed time from windows epoch to UNIX epoch is 11644473600 sec
+
+    // get 100-nanosecond intervals that have elapsed since
+    // 12:00 A.M. January 1, 1601 Coordinated Universal Time (UTC).
+    FILETIME ft;
+    GetSystemTimeAsFileTime(&ft);
+
+    ULARGE_INTEGER tmp;
+    tmp.HighPart = ft.dwHighDateTime;
+    tmp.LowPart = ft.dwLowDateTime;
+
+    static const int64_t unix_epoch_offset_usec = 11644473600000000LL;
+    int64_t usec = tmp.QuadPart / 10;
+    TTime t(usec - unix_epoch_offset_usec, 1000000);
+#else
     struct timeval now;
     gettimeofday(&now, NULL);
 
     TTime t(int64_t(now.tv_sec) * 1000000 + int64_t(now.tv_usec), 1000000);
+#endif
+
     return t;
   }
 

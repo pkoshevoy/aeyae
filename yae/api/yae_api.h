@@ -34,11 +34,17 @@
 //
 #if defined _WIN32
 #  define YAE_API_EXPORT __declspec(dllexport)
-#  define YAE_API_IMPORT __declspec(dllexport)
+#  define YAE_API_IMPORT __declspec(dllimport)
 #  ifdef YAE_DLL_EXPORTS
 #    define YAE_API YAE_API_EXPORT
+#    ifndef JSON_DLL_BUILD
+#      error must add JSON_DLL_BUILD to libaeyae definitions
+#    endif
 #  elif !defined(YAE_STATIC)
 #    define YAE_API YAE_API_IMPORT
+#    ifndef JSON_DLL
+#      error must add JSON_DLL to project definitions
+#    endif
 #  else
 #    define YAE_API
 #  endif
@@ -50,6 +56,13 @@
 #  else
 #    define YAE_API
 #  endif
+#endif
+
+//----------------------------------------------------------------
+// YAEUI_API
+//
+#ifndef YAEUI_API
+#define YAEUI_API
 #endif
 
 

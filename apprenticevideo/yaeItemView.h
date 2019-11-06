@@ -201,8 +201,8 @@ namespace yae
   //----------------------------------------------------------------
   // ItemView
   //
-  class YAE_API ItemView : public QObject,
-                           public Canvas::ILayer
+  class YAEUI_API ItemView : public QObject,
+                             public Canvas::ILayer
   {
     Q_OBJECT;
 
@@ -363,7 +363,7 @@ namespace yae
   //----------------------------------------------------------------
   // ViewDpi
   //
-  struct YAE_API ViewDpi : TDoubleExpr
+  struct YAEUI_API ViewDpi : TDoubleExpr
   {
     ViewDpi(const ItemView & view):
       view_(view),
@@ -393,7 +393,7 @@ namespace yae
   //----------------------------------------------------------------
   // ViewDevicePixelRatio
   //
-  struct YAE_API ViewDevicePixelRatio : TDoubleExpr
+  struct YAEUI_API ViewDevicePixelRatio : TDoubleExpr
   {
     ViewDevicePixelRatio(const ItemView & view):
       view_(view),
@@ -423,21 +423,21 @@ namespace yae
   //----------------------------------------------------------------
   // get_row_height
   //
-  YAE_API double
+  YAEUI_API double
   get_row_height(const ItemView & view);
 
 
   //----------------------------------------------------------------
   // calc_items_per_row
   //
-  YAE_API unsigned int
+  YAEUI_API unsigned int
   calc_items_per_row(double row_width, double cell_width);
 
 
   //----------------------------------------------------------------
   // GetRowHeight
   //
-  struct YAE_API GetRowHeight : TDoubleExpr
+  struct YAEUI_API GetRowHeight : TDoubleExpr
   {
     GetRowHeight(const ItemView & view):
       view_(view)
@@ -455,7 +455,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcTitleHeight
   //
-  struct YAE_API CalcTitleHeight : public TDoubleExpr
+  struct YAEUI_API CalcTitleHeight : public TDoubleExpr
   {
     CalcTitleHeight(const ItemView & itemView, double minHeight):
       itemView_(itemView),
@@ -478,7 +478,7 @@ namespace yae
   //----------------------------------------------------------------
   // GetFontSize
   //
-  struct YAE_API GetFontSize : public TDoubleExpr
+  struct YAEUI_API GetFontSize : public TDoubleExpr
   {
     GetFontSize(const ItemRef & titleHeight, double titleHeightScale,
                 const ItemRef & cellHeight, double cellHeightScale):
@@ -510,7 +510,7 @@ namespace yae
   //----------------------------------------------------------------
   // GridCellWidth
   //
-  struct YAE_API GridCellWidth : public TDoubleExpr
+  struct YAEUI_API GridCellWidth : public TDoubleExpr
   {
     GridCellWidth(const ItemView & view,
                   const char * path_to_grid_container = "/",
@@ -545,7 +545,7 @@ namespace yae
   //----------------------------------------------------------------
   // OddRoundUp
   //
-  struct YAE_API OddRoundUp : public TDoubleExpr
+  struct YAEUI_API OddRoundUp : public TDoubleExpr
   {
     OddRoundUp(const Item & item,
                Property property,
@@ -577,7 +577,7 @@ namespace yae
   //----------------------------------------------------------------
   // Repaint
   //
-  struct YAE_API Repaint : public Item::Observer
+  struct YAEUI_API Repaint : public Item::Observer
   {
     Repaint(ItemView & itemView, bool requestUncache = false):
       itemView_(itemView),
@@ -605,7 +605,7 @@ namespace yae
   //----------------------------------------------------------------
   // Uncache
   //
-  struct YAE_API Uncache : public Item::Observer
+  struct YAEUI_API Uncache : public Item::Observer
   {
     Uncache(Item & item):
       item_(item)
@@ -624,7 +624,7 @@ namespace yae
   //----------------------------------------------------------------
   // IsFullscreen
   //
-  struct YAE_API IsFullscreen : public TBoolExpr
+  struct YAEUI_API IsFullscreen : public TBoolExpr
   {
     IsFullscreen(const ItemView & view):
       view_(view)

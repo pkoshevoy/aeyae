@@ -26,7 +26,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderTop
   //
-  struct YAE_API CalcSliderTop : public TDoubleExpr
+  struct YAEUI_API CalcSliderTop : public TDoubleExpr
   {
     CalcSliderTop(const Scrollview & view,
                   const Item & scrollbar,
@@ -44,7 +44,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderHeight
   //
-  struct YAE_API CalcSliderHeight : public TDoubleExpr
+  struct YAEUI_API CalcSliderHeight : public TDoubleExpr
   {
     CalcSliderHeight(const Scrollview & view,
                      const Item & scrollbar,
@@ -62,7 +62,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderLeft
   //
-  struct YAE_API CalcSliderLeft : public TDoubleExpr
+  struct YAEUI_API CalcSliderLeft : public TDoubleExpr
   {
     CalcSliderLeft(const Scrollview & view,
                    const Item & scrollbar,
@@ -80,7 +80,7 @@ namespace yae
   //----------------------------------------------------------------
   // CalcSliderWidth
   //
-  struct YAE_API CalcSliderWidth : public TDoubleExpr
+  struct YAEUI_API CalcSliderWidth : public TDoubleExpr
   {
     CalcSliderWidth(const Scrollview & view,
                     const Item & scrollbar,
@@ -98,7 +98,7 @@ namespace yae
   //----------------------------------------------------------------
   // Scrollview
   //
-  struct YAE_API Scrollview : public Item
+  struct YAEUI_API Scrollview : public Item
   {
     Scrollview(const char * id,
                bool clipContent = false,
@@ -171,7 +171,7 @@ namespace yae
   //----------------------------------------------------------------
   // SliderDrag
   //
-  struct YAE_API SliderDrag : public InputArea
+  struct YAEUI_API SliderDrag : public InputArea
   {
     SliderDrag(const char * id,
                const Canvas::ILayer & canvasLayer,
@@ -218,7 +218,7 @@ namespace yae
   //----------------------------------------------------------------
   // ScrollbarRequired
   //
-  struct YAE_API ScrollbarRequired : public TBoolExpr
+  struct YAEUI_API ScrollbarRequired : public TBoolExpr
   {
     ScrollbarRequired(const Scrollview & scrollview,
                       const ScrollbarId scrollbarId,
@@ -265,7 +265,7 @@ namespace yae
   //----------------------------------------------------------------
   // layout_scrollview
   //
-  YAE_API Scrollview &
+  YAEUI_API Scrollview &
   layout_scrollview(ScrollbarId scrollbars,
                     ItemView & view,
                     const ItemViewStyle & style,
@@ -276,7 +276,7 @@ namespace yae
   //----------------------------------------------------------------
   // layout_scrollview
   //
-  YAE_API Scrollview &
+  YAEUI_API Scrollview &
   layout_scrollview(ItemView & view,
                     Item & root,
                     ScrollbarId scroll = kScrollbarBoth,

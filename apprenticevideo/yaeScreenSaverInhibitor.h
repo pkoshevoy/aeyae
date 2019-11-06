@@ -23,7 +23,7 @@ namespace yae
   //----------------------------------------------------------------
   // ScreenSaverInhibitor
   //
-  class YAE_API ScreenSaverInhibitor : public QObject
+  class YAEUI_API ScreenSaverInhibitor : public QObject
   {
     Q_OBJECT;
 

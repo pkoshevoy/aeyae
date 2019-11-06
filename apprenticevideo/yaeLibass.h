@@ -47,7 +47,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFontAttachment
   //
-  struct YAE_API TFontAttachment
+  struct YAEUI_API TFontAttachment
   {
     TFontAttachment(const char * filename = NULL,
                     const unsigned char * data = NULL,

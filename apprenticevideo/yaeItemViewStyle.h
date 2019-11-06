@@ -28,7 +28,7 @@ namespace yae
   //----------------------------------------------------------------
   // xbuttonImage
   //
-  YAE_API QImage
+  YAEUI_API QImage
   xbuttonImage(unsigned int w,
                const Color & color,
                const Color & background = Color(0x000000, 0.0),
@@ -42,7 +42,7 @@ namespace yae
   // an invisible circle of diameter w, and rotated about the center
   // of the circle by a given rotation angle (expressed in degrees):
   //
-  YAE_API QImage
+  YAEUI_API QImage
   triangleImage(unsigned int w,
                 const Color & color,
                 const Color & background = Color(0x0000000, 0.0),
@@ -51,7 +51,7 @@ namespace yae
   //----------------------------------------------------------------
   // barsImage
   //
-  YAE_API QImage
+  YAEUI_API QImage
   barsImage(unsigned int w,
             const Color & color,
             const Color & background = Color(0x0000000, 0.0),
@@ -63,7 +63,7 @@ namespace yae
   //----------------------------------------------------------------
   // ItemViewStyle
   //
-  struct YAE_API ItemViewStyle : public Item
+  struct YAEUI_API ItemViewStyle : public Item
   {
     ItemViewStyle(const char * id, const ItemView & view);
 
@@ -134,7 +134,7 @@ namespace yae
   // StyleAttr
   //
   template <typename TStyle, typename TDataRef>
-  struct YAE_API StyleAttr : public Expression<typename TDataRef::value_type>
+  struct YAEUI_API StyleAttr : public Expression<typename TDataRef::value_type>
   {
     typedef typename TDataRef::value_type TData;
 
@@ -165,7 +165,7 @@ namespace yae
   // StyleAttr<TStyle, ItemRef>
   //
   template <typename TStyle>
-  struct YAE_API StyleAttr<TStyle, ItemRef> : public TDoubleExpr
+  struct YAEUI_API StyleAttr<TStyle, ItemRef> : public TDoubleExpr
   {
     StyleAttr(const ItemView & view,
               ItemRef TStyle::* const attr,
@@ -225,7 +225,7 @@ namespace yae
   // StyleAttr<TStyle, ColorRef>
   //
   template <typename TStyle>
-  struct YAE_API StyleAttr<TStyle, ColorRef> : public TColorExpr
+  struct YAEUI_API StyleAttr<TStyle, ColorRef> : public TColorExpr
   {
     StyleAttr(const ItemView & view,
               ColorRef TStyle::* const attr,

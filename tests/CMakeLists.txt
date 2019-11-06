@@ -39,7 +39,9 @@ add_executable(aeyae-tests
 set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 98)
 # set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
 
-target_compile_definitions(aeyae-tests PRIVATE -DBOOST_TEST_DYN_LINK)
+target_compile_definitions(aeyae-tests PRIVATE
+  -DJSON_DLL
+  -DBOOST_TEST_DYN_LINK)
 
 target_link_libraries(aeyae-tests
   ${Boost_LIBRARIES}

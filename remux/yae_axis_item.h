@@ -21,7 +21,7 @@ namespace yae
   //----------------------------------------------------------------
   // IDataFormatter
   //
-  struct YAE_API IDataFormatter
+  struct YAEUI_API IDataFormatter
   {
     virtual ~IDataFormatter() {}
     virtual std::string get(double i) const = 0;
@@ -36,7 +36,7 @@ namespace yae
   //----------------------------------------------------------------
   // AxisItem
   //
-  class YAE_API AxisItem : public Item
+  class YAEUI_API AxisItem : public Item
   {
   public:
     AxisItem(const char * name);

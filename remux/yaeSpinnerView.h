@@ -24,7 +24,7 @@ namespace yae
   //----------------------------------------------------------------
   // SpinnerView
   //
-  class YAE_API SpinnerView : public ItemView
+  class YAEUI_API SpinnerView : public ItemView
   {
     Q_OBJECT;
 

@@ -23,7 +23,7 @@ namespace yae
   //----------------------------------------------------------------
   // AudioRenderer
   //
-  struct YAE_API PortaudioRenderer : public IAudioRenderer
+  struct YAEUI_API PortaudioRenderer : public IAudioRenderer
   {
   private:
     //! intentionally disabled:

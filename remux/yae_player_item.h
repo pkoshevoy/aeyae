@@ -35,7 +35,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerItem
   //
-  class YAE_API PlayerItem : public QObject, public Item
+  class YAEUI_API PlayerItem : public QObject, public Item
   {
     Q_OBJECT;
 

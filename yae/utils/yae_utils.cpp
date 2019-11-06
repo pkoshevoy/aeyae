@@ -131,7 +131,7 @@ namespace yae
     wchar_t ** wargv = CommandLineToArgvW(cmd, &argc);
     for (int i = 0; i < argc; i++)
     {
-      argv[i] = utf16_to_utf8(wargv[i]);
+      argv[i] = utf16_to_cstr(wargv[i], CP_UTF8);
     }
     LocalFree(wargv);
 #else
@@ -169,7 +169,7 @@ namespace yae
     }
 
     std::vector<wchar_t> ret(size);
-    err = _wgetenv_s(&size, &(ref[0]), ret.size(), var.c_str());
+    err = _wgetenv_s(&size, &(ret[0]), ret.size(), var.c_str());
     if (err)
     {
       assert(false);
@@ -309,7 +309,7 @@ namespace yae
   {
 #ifdef _WIN32
     std::wstring path_utf16 = utf8_to_utf16(fn_utf8);
-    int err = _wremove(wname.c_str());
+    int err = _wremove(path_utf16.c_str());
 #else
     int err = ::remove(fn_utf8);
 #endif
@@ -386,11 +386,11 @@ namespace yae
   open_utf8(const char * filename_utf8, int access_mode, int permissions)
   {
 #if defined(_WIN32) && !defined(__MINGW32__)
-    accessMode |= O_BINARY;
+    access_mode |= O_BINARY;
 
     wchar_t * wname = cstr_to_utf16(filename_utf8);
     int fd = -1;
-    int sh = accessMode & (_O_RDWR | _O_WRONLY) ? _SH_DENYWR : _SH_DENYNO;
+    int sh = access_mode & (_O_RDWR | _O_WRONLY) ? _SH_DENYWR : _SH_DENYNO;
 
     errno_t err = _wsopen_s(&fd, wname, access_mode, sh, permissions);
     free(wname);

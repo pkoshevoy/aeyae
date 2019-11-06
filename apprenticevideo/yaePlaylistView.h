@@ -52,7 +52,7 @@ namespace yae
   // ILayoutDelegate
   //
   template <typename TView, typename Model>
-  struct YAE_API ILayoutDelegate
+  struct YAEUI_API ILayoutDelegate
   {
     virtual ~ILayoutDelegate() {}
 
@@ -141,7 +141,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistView
   //
-  class YAE_API PlaylistView : public ItemView
+  class YAEUI_API PlaylistView : public ItemView
   {
     Q_OBJECT;
 

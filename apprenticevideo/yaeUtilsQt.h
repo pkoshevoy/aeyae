@@ -65,40 +65,40 @@ namespace yae
   //----------------------------------------------------------------
   // kExtEyetv
   //
-  extern YAE_API const QString kExtEyetv;
+  extern YAEUI_API const QString kExtEyetv;
 
   //----------------------------------------------------------------
   // toQString
   //
-  YAE_API QString
+  YAEUI_API QString
   toQString(const std::list<QString> & keys, bool trimWhiteSpace = false);
 
   //----------------------------------------------------------------
   // splitIntoWords
   //
-  YAE_API void
+  YAEUI_API void
   splitIntoWords(const QString & key, std::list<QString> & tokens);
 
   //----------------------------------------------------------------
   // toWords
   //
-  YAE_API QString toWords(const QString & key);
+  YAEUI_API QString toWords(const QString & key);
 
   //----------------------------------------------------------------
   // prepareForSorting
   //
-  YAE_API QString prepareForSorting(const QString & key);
+  YAEUI_API QString prepareForSorting(const QString & key);
 
   //----------------------------------------------------------------
   // overlapExists
   //
-  YAE_API bool
+  YAEUI_API bool
   overlapExists(const QRect & a, const QRect & b);
 
   //----------------------------------------------------------------
   // overlapExists
   //
-  YAE_API bool
+  YAEUI_API bool
   overlapExists(const QRect & a, const QPoint & b);
 
   //----------------------------------------------------------------
@@ -109,13 +109,13 @@ namespace yae
   //  b if a is empty
   //  (a + separator + b) otherwise
   //
-  YAE_API QString
+  YAEUI_API QString
   join(const QString & a, const QString & separator, const QString & b);
 
   //----------------------------------------------------------------
   // parseEyetvInfo
   //
-  YAE_API bool
+  YAEUI_API bool
   parseEyetvInfo(const QString & eyetvPath,
                  QString & channelNumber,
                  QString & channelName,
@@ -128,49 +128,49 @@ namespace yae
   //
   // this properly handles special characters &, <, >, ", etc...
   //
-  YAE_API QString
+  YAEUI_API QString
   xmlEncode(const QString & text);
 
   //----------------------------------------------------------------
   // saveSetting
   //
-  YAE_API bool
+  YAEUI_API bool
   saveSetting(const QString & key, const QString & value);
 
   //----------------------------------------------------------------
   // saveBooleanSetting
   //
-  YAE_API bool
+  YAEUI_API bool
   saveBooleanSetting(const QString & key, bool value);
 
   //----------------------------------------------------------------
   // loadSetting
   //
-  YAE_API bool
+  YAEUI_API bool
   loadSetting(const QString & key, QString & value);
 
   //----------------------------------------------------------------
   // loadSettingOrDefault
   //
-  YAE_API QString
+  YAEUI_API QString
   loadSettingOrDefault(const QString & key, const QString & defaultValue);
 
   //----------------------------------------------------------------
   // loadBooleanSettingOrDefault
   //
-  YAE_API bool
+  YAEUI_API bool
   loadBooleanSettingOrDefault(const QString & key, bool defaultValue);
 
   //----------------------------------------------------------------
   // removeSetting
   //
-  YAE_API bool
+  YAEUI_API bool
   removeSetting(const QString & key);
 
   //----------------------------------------------------------------
   // findFiles
   //
-  YAE_API bool
+  YAEUI_API bool
   findFiles(std::list<QString> & files,
             const QString & startHere,
             bool recursive = true);
@@ -178,39 +178,39 @@ namespace yae
   //----------------------------------------------------------------
   // addFolderToPlaylist
   //
-  YAE_API bool
+  YAEUI_API bool
   addFolderToPlaylist(std::list<QString> & playlist, const QString & folder);
 
   //----------------------------------------------------------------
   // addToPlaylist
   //
-  YAE_API bool
+  YAEUI_API bool
   addToPlaylist(std::list<QString> & playlist, const QString & path);
 
   //----------------------------------------------------------------
   // convert_path_to_utf8
   //
-  YAE_API bool
+  YAEUI_API bool
   convert_path_to_utf8(const QString & path, std::string & path_utf8);
 
   //----------------------------------------------------------------
   // openFile
   //
-  YAE_API IReaderPtr
+  YAEUI_API IReaderPtr
   openFile(const yae::IReaderPtr & readerPrototype,
            const QString & fn);
 
   //----------------------------------------------------------------
   // testEachFile
   //
-  YAE_API bool
+  YAEUI_API bool
   testEachFile(const yae::IReaderPtr & readerPrototype,
                const std::list<QString> & playlist);
 
   //----------------------------------------------------------------
   // to_str
   //
-  YAE_API const char * to_str(QEvent::Type et);
+  YAEUI_API const char * to_str(QEvent::Type et);
 
   //----------------------------------------------------------------
   // SignalBlocker

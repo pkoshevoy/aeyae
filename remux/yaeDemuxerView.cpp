@@ -303,7 +303,7 @@ namespace yae
   //----------------------------------------------------------------
   // DecodeGop
   //
-  struct YAE_API DecodeGop : public AsyncTaskQueue::Task
+  struct DecodeGop : public AsyncTaskQueue::Task
   {
     DecodeGop(const yae::weak_ptr<Item> & item, const Gop & gop):
       item_(item),
@@ -2981,7 +2981,7 @@ namespace yae
   //----------------------------------------------------------------
   // GetPlotItemWidth
   //
-  struct YAE_API GetPlotItemWidth : TDoubleExpr
+  struct GetPlotItemWidth : TDoubleExpr
   {
     GetPlotItemWidth(const ItemView & view, double timespan_sec):
       view_(view),
@@ -3390,7 +3390,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlotBottomPos
   //
-  struct YAE_API PlotBottomPos : TDoubleExpr
+  struct PlotBottomPos : TDoubleExpr
   {
     PlotBottomPos(Item & tracks, Item & tags, Item & plot):
       tracks_(tracks),

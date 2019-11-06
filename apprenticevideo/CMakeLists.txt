@@ -583,6 +583,8 @@ endif ()
 set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
 # set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
 
+target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
+
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}
   )
@@ -652,11 +654,12 @@ if (WIN32)
     wixWrapper.cpp
     yaeVersion.cpp
     "${PROJECT_BINARY_DIR}/yaeVersion.h"
-    ../yae/utils/yae_utils.cpp
-    ../yae/utils/yae_utils.h
     )
 
+  target_compile_definitions(wixWrapper PRIVATE -DJSON_DLL)
+
   target_link_libraries(wixWrapper
+    aeyae
     ${Boost_LIBRARIES}
     )
 

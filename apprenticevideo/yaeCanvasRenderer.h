@@ -41,7 +41,7 @@
 //----------------------------------------------------------------
 // yae_is_opengl_extension_supported
 //
-YAE_API bool
+YAEUI_API bool
 yae_is_opengl_extension_supported(const char * extension);
 
 //----------------------------------------------------------------
@@ -50,7 +50,7 @@ yae_is_opengl_extension_supported(const char * extension);
 // returns number of sample planes supported by OpenGL,
 // passes back parameters to use with glTexImage2D
 //
-YAE_API unsigned int
+YAEUI_API unsigned int
 yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
               GLint & internalFormat,
               GLenum & format,
@@ -60,13 +60,13 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
 //----------------------------------------------------------------
 // yae_reset_opengl_to_initial_state
 //
-YAE_API void
+YAEUI_API void
 yae_reset_opengl_to_initial_state();
 
 //----------------------------------------------------------------
 // yae_assert_gl_no_error
 //
-YAE_API bool
+YAEUI_API bool
 yae_assert_gl_no_error();
 
 namespace yae
@@ -121,7 +121,7 @@ namespace yae
   //----------------------------------------------------------------
   // YAE_GL_FRAGMENT_PROGRAM_ARB
   //
-  struct YAE_API OpenGLFunctionPointers : public QOpenGLFunctions
+  struct YAEUI_API OpenGLFunctionPointers : public QOpenGLFunctions
   {
     TProgramStringARB glProgramStringARB;
     TGetProgramivARB glGetProgramivARB;
@@ -202,7 +202,7 @@ namespace yae
   //----------------------------------------------------------------
   // IOpenGLContext
   //
-  struct YAE_API IOpenGLContext
+  struct YAEUI_API IOpenGLContext
   {
     IOpenGLContext(): n_(0) {}
     virtual ~IOpenGLContext() {}
@@ -342,7 +342,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFragmentShaderProgram
   //
-  struct YAE_API TFragmentShaderProgram
+  struct YAEUI_API TFragmentShaderProgram
   {
     TFragmentShaderProgram(const char * code = NULL);
 
@@ -363,7 +363,7 @@ namespace yae
   //----------------------------------------------------------------
   // ShaderPrograms
   //
-  struct YAE_API ShaderPrograms
+  struct YAEUI_API ShaderPrograms
   {
     ~ShaderPrograms();
 
@@ -381,7 +381,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFragmentShader
   //
-  struct YAE_API TFragmentShader
+  struct YAEUI_API TFragmentShader
   {
     TFragmentShader(const TFragmentShaderProgram * program = NULL,
                     TPixelFormatId format = kInvalidPixelFormat);

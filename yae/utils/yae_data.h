@@ -571,7 +571,7 @@ namespace yae
   // Bit
   //
   template <std::size_t nbits, uint64_t default_value = 0>
-  struct YAE_API Bit : bitstream::IPayload
+  struct Bit : bitstream::IPayload
   {
     Bit(uint64_t value = default_value):
       data_(value)

@@ -30,7 +30,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineHeight
   //
-  struct YAE_API TimelineHeight : public TDoubleExpr
+  struct YAEUI_API TimelineHeight : public TDoubleExpr
   {
     TimelineHeight(ItemView & view, Item & container, Item & timeline):
       view_(view),
@@ -61,7 +61,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineIn
   //
-  struct YAE_API TimelineIn : public TDoubleExpr
+  struct YAEUI_API TimelineIn : public TDoubleExpr
   {
     TimelineIn(TimelineModel & model, Item & timeline):
       model_(model),
@@ -85,7 +85,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelinePlayhead
   //
-  struct YAE_API TimelinePlayhead : public TDoubleExpr
+  struct YAEUI_API TimelinePlayhead : public TDoubleExpr
   {
     TimelinePlayhead(TimelineModel & model, Item & timeline):
       model_(model),
@@ -109,7 +109,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineOut
   //
-  struct YAE_API TimelineOut : public TDoubleExpr
+  struct YAEUI_API TimelineOut : public TDoubleExpr
   {
     TimelineOut(TimelineModel & model, Item & timeline):
       model_(model),
@@ -133,7 +133,7 @@ namespace yae
   //----------------------------------------------------------------
   // MarkerVisible
   //
-  struct YAE_API MarkerVisible : public TBoolExpr
+  struct YAEUI_API MarkerVisible : public TBoolExpr
   {
     MarkerVisible(ItemView & view, Item & timeline):
       view_(view),
@@ -155,7 +155,7 @@ namespace yae
   //----------------------------------------------------------------
   // GetPlayheadAux
   //
-  struct YAE_API GetPlayheadAux : public TVarExpr
+  struct YAEUI_API GetPlayheadAux : public TVarExpr
   {
     GetPlayheadAux(TimelineModel & model):
       model_(model)
@@ -174,7 +174,7 @@ namespace yae
   //----------------------------------------------------------------
   // GetDurationAux
   //
-  struct YAE_API GetDurationAux : public TVarExpr
+  struct YAEUI_API GetDurationAux : public TVarExpr
   {
     GetDurationAux(TimelineModel & model):
       model_(model)
@@ -193,7 +193,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineSeek
   //
-  struct YAE_API TimelineSeek : public InputArea
+  struct YAEUI_API TimelineSeek : public InputArea
   {
     TimelineSeek(TimelineModel & model):
       InputArea("timeline_seek"),
@@ -224,7 +224,7 @@ namespace yae
   //----------------------------------------------------------------
   // SliderInPoint
   //
-  struct YAE_API SliderInPoint : public InputArea
+  struct YAEUI_API SliderInPoint : public InputArea
   {
     SliderInPoint(TimelineModel & model, Item & timeline):
       InputArea("slider_in_point"),
@@ -262,7 +262,7 @@ namespace yae
   //----------------------------------------------------------------
   // SliderPlayhead
   //
-  struct YAE_API SliderPlayhead : public InputArea
+  struct YAEUI_API SliderPlayhead : public InputArea
   {
     SliderPlayhead(TimelineModel & model, Item & timeline):
       InputArea("slider_playhead"),
@@ -300,7 +300,7 @@ namespace yae
   //----------------------------------------------------------------
   // SliderOutPoint
   //
-  struct YAE_API SliderOutPoint : public InputArea
+  struct YAEUI_API SliderOutPoint : public InputArea
   {
     SliderOutPoint(TimelineModel & model, Item & timeline):
       InputArea("slider_out_point"),
@@ -338,7 +338,7 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineConfig
   //
-  class YAE_API TimelineItem : public QObject,
+  class YAEUI_API TimelineItem : public QObject,
                                public Item
   {
     Q_OBJECT;
@@ -383,7 +383,7 @@ namespace yae
   //----------------------------------------------------------------
   // AnimateOpacity
   //
-  struct YAE_API AnimateOpacity : public Item::Observer
+  struct YAEUI_API AnimateOpacity : public Item::Observer
   {
     AnimateOpacity(TimelineItem & timeline):
       timeline_(timeline)

@@ -31,7 +31,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistViewStyle
   //
-  struct YAE_API PlaylistViewStyle : public ItemViewStyle
+  struct YAEUI_API PlaylistViewStyle : public ItemViewStyle
   {
     PlaylistViewStyle(const char * id, PlaylistView & playlist);
 

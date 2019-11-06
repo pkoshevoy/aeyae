@@ -49,7 +49,7 @@ namespace yae
   // ILayout
   //
   template <typename TModel, typename TView, typename TViewStyle>
-  struct YAE_API ILayout
+  struct YAEUI_API ILayout
   {
     typedef TModel model_type;
     typedef TView view_type;
@@ -87,7 +87,7 @@ namespace yae
   //----------------------------------------------------------------
   // RemuxViewStyle
   //
-  struct YAE_API RemuxViewStyle : public ItemViewStyle
+  struct YAEUI_API RemuxViewStyle : public ItemViewStyle
   {
     RemuxViewStyle(const char * id, const RemuxView & view);
 
@@ -97,7 +97,7 @@ namespace yae
   //----------------------------------------------------------------
   // Gop
   //
-  struct YAE_API Gop
+  struct YAEUI_API Gop
   {
     Gop(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
         const std::string & track_id = std::string(),
@@ -150,7 +150,7 @@ namespace yae
   //----------------------------------------------------------------
   // VideoFrameItem
   //
-  struct YAE_API VideoFrameItem : public Item
+  struct YAEUI_API VideoFrameItem : public Item
   {
     VideoFrameItem(const char * id, std::size_t frame);
 
@@ -182,7 +182,7 @@ namespace yae
   //----------------------------------------------------------------
   // GopItem
   //
-  struct YAE_API GopItem : public Item
+  struct YAEUI_API GopItem : public Item
   {
     GopItem(const char * id,
             const Gop & gop,
@@ -259,7 +259,7 @@ namespace yae
   //----------------------------------------------------------------
   // RemuxView
   //
-  class YAE_API RemuxView : public ItemView
+  class YAEUI_API RemuxView : public ItemView
   {
     Q_OBJECT;
 

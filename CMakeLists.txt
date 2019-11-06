@@ -463,8 +463,6 @@ if (APPLE)
   endif (SECURITY_FRAMEWORK)
 endif (APPLE)
 
-ADD_DEFINITIONS(-DJSON_DLL_BUILD -DJSON_NO_AUTOLINK)
-
 include_directories(AFTER
   .
   ${PROJECT_BINARY_DIR}
@@ -576,7 +574,10 @@ add_library(aeyae SHARED
 set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
 # set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
 
-target_compile_definitions(aeyae PRIVATE -DYAE_DLL_EXPORTS)
+target_compile_definitions(aeyae PRIVATE
+  -DYAE_DLL_EXPORTS
+  -DJSON_DLL_BUILD
+  )
 
 target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
 

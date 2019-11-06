@@ -48,7 +48,7 @@ namespace yae
   //----------------------------------------------------------------
   // Clip
   //
-  struct YAE_API Clip
+  struct Clip
   {
     Clip(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
          const std::string & track = std::string(),
@@ -80,7 +80,7 @@ namespace yae
   //----------------------------------------------------------------
   // RemuxModel
   //
-  struct YAE_API RemuxModel
+  struct RemuxModel
   {
     TSerialDemuxerPtr make_serial_demuxer() const;
 

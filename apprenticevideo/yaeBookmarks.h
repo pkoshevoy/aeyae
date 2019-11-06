@@ -22,7 +22,7 @@ namespace yae
   //----------------------------------------------------------------
   // TBookmark
   //
-  struct YAE_API TBookmark
+  struct YAEUI_API TBookmark
   {
     TBookmark();
 
@@ -38,26 +38,29 @@ namespace yae
   //----------------------------------------------------------------
   // saveBookmark
   //
-  YAE_API bool saveBookmark(const std::string & groupHash,
-                            const std::string & itemHash,
-                            const IReader * reader,
-                            const double & positionInSeconds);
+  YAEUI_API bool
+  saveBookmark(const std::string & groupHash,
+               const std::string & itemHash,
+               const IReader * reader,
+               const double & positionInSeconds);
 
   //----------------------------------------------------------------
   // loadBookmark
   //
-  YAE_API bool loadBookmark(const std::string & groupHash,
-                            TBookmark & bookmark);
+  YAEUI_API bool
+  loadBookmark(const std::string & groupHash,
+               TBookmark & bookmark);
 
   //----------------------------------------------------------------
   // removeBookmark
   //
-  YAE_API bool removeBookmark(const std::string & groupHash);
+  YAEUI_API bool
+  removeBookmark(const std::string & groupHash);
 
   //----------------------------------------------------------------
   // BookmarkHashInfo
   //
-  struct YAE_API BookmarkHashInfo
+  struct YAEUI_API BookmarkHashInfo
   {
     std::string groupHash_;
     std::list<std::string> itemHash_;

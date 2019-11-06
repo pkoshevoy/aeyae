@@ -24,6 +24,8 @@ target_link_libraries(yae_reader_ffmpeg PRIVATE
   ${TARGET_LIBS}
   )
 
+target_compile_definitions(yae_reader_ffmpeg PRIVATE -DJSON_DLL)
+
 set_target_properties(yae_reader_ffmpeg PROPERTIES
   PREFIX "aeyae-plugin-"
   OUTPUT_NAME "reader-ffmpeg"

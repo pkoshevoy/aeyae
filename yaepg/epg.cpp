@@ -22,13 +22,10 @@
 // ffmpeg:
 extern "C" {
 #include <libavformat/avio.h>
-#include <libavcodec/get_bits.h>
 }
 
 // hdhomerun:
-extern "C" {
 #include <hdhomerun.h>
-}
 
 // jsoncpp:
 #include "json/json.h"
@@ -166,7 +163,7 @@ namespace yae
   //----------------------------------------------------------------
   // signal_handler_signal
   //
-  YAE_API boost::condition_variable &
+  boost::condition_variable &
   signal_handler_signal()
   {
     return signal_handler().signal_;
@@ -175,7 +172,7 @@ namespace yae
   //----------------------------------------------------------------
   // signal_handler_received_siginfo
   //
-  YAE_API bool
+  bool
   signal_handler_received_siginfo()
   {
     return signal_handler().received_siginfo();
@@ -184,7 +181,7 @@ namespace yae
   //----------------------------------------------------------------
   // signal_handler_received_sigpipe
   //
-  YAE_API bool
+  bool
   signal_handler_received_sigpipe()
   {
     return signal_handler().received_sigpipe();
@@ -193,7 +190,7 @@ namespace yae
   //----------------------------------------------------------------
   // signal_handler_received_sigint
   //
-  YAE_API bool
+  bool
   signal_handler_received_sigint()
   {
     return signal_handler().received_sigint();

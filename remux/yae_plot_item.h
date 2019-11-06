@@ -59,7 +59,7 @@ namespace yae
   //----------------------------------------------------------------
   // MockDataSource
   //
-  struct YAE_API MockDataSource : public TDataSource
+  struct YAEUI_API MockDataSource : public TDataSource
   {
     MockDataSource(std::size_t n = 4096, double v_min = 0, double v_max = 1);
 
@@ -89,7 +89,7 @@ namespace yae
   //
   // see https://github.com/d3/d3-scale
   //
-  struct YAE_API ScaleLinear
+  struct YAEUI_API ScaleLinear
   {
     ScaleLinear(double d0 = 0, double d1 = 1,
                 double r0 = 0, double r1 = 1):
@@ -135,7 +135,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlotItem
   //
-  class YAE_API PlotItem : public Item
+  class YAEUI_API PlotItem : public Item
   {
   public:
     PlotItem(const char * name);

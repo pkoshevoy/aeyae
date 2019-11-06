@@ -11,6 +11,7 @@ find_package(Boost
   system
   filesystem
   locale
+  regex
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
@@ -169,6 +170,9 @@ set(project_sources
 add_executable(${PROGNAME}
   ${project_sources}
   )
+
+#target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL -DJSON_NO_AUTOLINK)
+target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
 
 target_link_libraries(${PROGNAME}
   ${TARGET_LIBS}

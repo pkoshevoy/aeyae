@@ -24,7 +24,7 @@ namespace yae
   //----------------------------------------------------------------
   // LetterBoxExpr
   //
-  struct YAE_API LetterBoxExpr : public TBBoxExpr
+  struct YAEUI_API LetterBoxExpr : public TBBoxExpr
   {
     LetterBoxExpr(const Item & container, const CanvasRenderer & renderer);
 
@@ -38,7 +38,7 @@ namespace yae
   //----------------------------------------------------------------
   // LetterBoxItem
   //
-  struct YAE_API LetterBoxItem : public ExprItem<BBoxRef>
+  struct YAEUI_API LetterBoxItem : public ExprItem<BBoxRef>
   {
     LetterBoxItem(const char * id, TBBoxExpr * expression);
 
@@ -51,7 +51,7 @@ namespace yae
   //----------------------------------------------------------------
   // CanvasRendererItem
   //
-  struct YAE_API CanvasRendererItem : public Item
+  struct YAEUI_API CanvasRendererItem : public Item
   {
     CanvasRendererItem(const char * id, Canvas::ILayer & layer);
 
@@ -70,7 +70,7 @@ namespace yae
   //----------------------------------------------------------------
   // FrameCropView
   //
-  class YAE_API FrameCropView : public ItemView
+  class YAEUI_API FrameCropView : public ItemView
   {
     Q_OBJECT;
 

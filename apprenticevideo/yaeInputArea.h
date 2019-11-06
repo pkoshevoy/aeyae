@@ -347,7 +347,7 @@ namespace yae
   //----------------------------------------------------------------
   // InvokeMethod
   //
-  struct YAE_API InvokeMethodOnClick : public InputArea
+  struct YAEUI_API InvokeMethodOnClick : public InputArea
   {
     InvokeMethodOnClick(const char * id,
                         QObject & object,

@@ -115,12 +115,12 @@ namespace yae
   //----------------------------------------------------------------
   // Canvas
   //
-  struct YAE_API Canvas : public IVideoCanvas
+  struct YAEUI_API Canvas : public IVideoCanvas
   {
     //----------------------------------------------------------------
     // IDelegate
     //
-    struct YAE_API IDelegate
+    struct YAEUI_API IDelegate
     {
       virtual ~IDelegate() {}
 
@@ -146,7 +146,7 @@ namespace yae
     //----------------------------------------------------------------
     // ILayer
     //
-    struct YAE_API ILayer
+    struct YAEUI_API ILayer
     {
       ILayer(): enabled_(true) {}
       virtual ~ILayer() {}
@@ -270,7 +270,7 @@ namespace yae
     //----------------------------------------------------------------
     // ILoadFrameObserver
     //
-    struct YAE_API ILoadFrameObserver
+    struct YAEUI_API ILoadFrameObserver
     {
       virtual ~ILoadFrameObserver() {}
       virtual void frameLoaded(Canvas * c, const TVideoFramePtr & f) = 0;
@@ -524,7 +524,7 @@ namespace yae
   //----------------------------------------------------------------
   // SetupModelview
   //
-  struct YAE_API SetupModelview
+  struct YAEUI_API SetupModelview
   {
     SetupModelview(double canvas_x,
                    double canvas_y,

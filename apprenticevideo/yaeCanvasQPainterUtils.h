@@ -23,13 +23,13 @@ namespace yae
   //----------------------------------------------------------------
   // pixelFormatIdFor
   //
-  YAE_API TPixelFormatId
+  YAEUI_API TPixelFormatId
   pixelFormatIdFor(QImage::Format imgFormat);
 
   //----------------------------------------------------------------
   // shortenTextToFit
   //
-  YAE_API bool
+  YAEUI_API bool
   shortenTextToFit(QPainter & painter,
                    const QRect & bbox,
                    int textAlignment,
@@ -40,7 +40,7 @@ namespace yae
   //----------------------------------------------------------------
   // drawTextToFit
   //
-  YAE_API void
+  YAEUI_API void
   drawTextToFit(QPainter & painter,
                 const QRect & bbox,
                 int textAlignment,
@@ -50,7 +50,7 @@ namespace yae
   //----------------------------------------------------------------
   // drawTextWithShadowToFit
   //
-  YAE_API void
+  YAEUI_API void
   drawTextWithShadowToFit(QPainter & painter,
                           const QRect & bboxBig,
                           int textAlignment,
