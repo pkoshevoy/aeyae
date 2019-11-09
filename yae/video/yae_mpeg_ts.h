@@ -500,20 +500,29 @@ namespace yae
       TBufferPtr padding_;
     };
 
+    //----------------------------------------------------------------
+    // ITable
+    //
+    struct YAE_API ITable
+    {
+      virtual ~ITable() {}
+
+      virtual void load(IBitstream & bin, std::size_t n_bytes) = 0;
+    };
 
     //----------------------------------------------------------------
-    // ProgramAssociationTable
+    // Section
     //
-    struct YAE_API ProgramAssociationTable
+    struct YAE_API Section
     {
-      ProgramAssociationTable();
+      Section();
 
       void load(IBitstream & bin);
 
       uint8_t pointer_field_;
       uint64_t table_id_ : 8;
       uint64_t section_syntax_indicator_ : 1;
-      uint64_t zero_ : 1;
+      uint64_t private_indicator_ : 1;
       uint64_t reserved1_ : 2;
       uint64_t section_length_ : 12;
       uint64_t transport_stream_id_ : 16;
@@ -522,6 +531,19 @@ namespace yae
       uint64_t current_next_indicator_ : 1;
       uint64_t section_number_ : 8;
       uint64_t last_section_number_ : 8;
+
+      yae::shared_ptr<ITable> table_;
+
+      uint32_t crc32_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable
+    //
+    struct YAE_API ProgramAssociationTable : ITable
+    {
+      void load(IBitstream & bin, std::size_t n_bytes);
 
       struct YAE_API Program
       {
@@ -535,20 +557,32 @@ namespace yae
       };
 
       std::vector<Program> programs_;
-
-      uint32_t crc32_;
     };
-
 
     //----------------------------------------------------------------
     // ProgramMapTable
     //
-    struct YAE_API ProgramMapTable
+    struct YAE_API ProgramMapTable : ITable
     {
       ProgramMapTable();
 
       void load(IBitstream & bin);
     };
+
+
+    //----------------------------------------------------------------
+    // MasterGuideTable
+    //
+    struct YAE_API MasterGuideTable : ITable
+    {
+      MasterGuideTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      TBufferPtr psip_table_data_;
+    };
+
 
     //----------------------------------------------------------------
     // assemble_payload

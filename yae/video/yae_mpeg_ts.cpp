@@ -807,15 +807,14 @@ namespace yae
     }
 
 
-
     //----------------------------------------------------------------
-    // ProgramAssociationTable::ProgramAssociationTable
+    // Section::Section
     //
-    ProgramAssociationTable::ProgramAssociationTable():
+    Section::Section():
       pointer_field_(0),
       table_id_(0),
       section_syntax_indicator_(0),
-      zero_(0),
+      private_indicator_(0),
       reserved1_(0),
       section_length_(0),
       transport_stream_id_(0),
@@ -828,23 +827,20 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // ProgramAssociationTable::load
+    // Section::load
     //
     void
-    ProgramAssociationTable::load(IBitstream & bin)
+    Section::load(IBitstream & bin)
     {
       pointer_field_ = bin.read(8);
       bin.skip_bytes(pointer_field_);
 
       table_id_ = bin.read(8);
-      YAE_THROW_IF(table_id_ != 0);
 
       section_syntax_indicator_ = bin.read(1);
       YAE_THROW_IF(section_syntax_indicator_ != 1);
 
-      zero_ = bin.read(1);
-      YAE_THROW_IF(zero_ != 0);
-
+      private_indicator_ = bin.read(1);
       reserved1_ = bin.read(2);
       section_length_ = bin.read(12);
       YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
@@ -857,6 +853,69 @@ namespace yae
       last_section_number_ = bin.read(8);
 
       std::size_t n_bytes = (section_length_ - 9);
+      if (table_id_ == 0x00)
+      {
+        // PAT
+        table_.reset(new ProgramAssociationTable());
+      }
+      else if (table_id_ == 0x01)
+      {
+        // CAT
+      }
+      else if (table_id_ == 0x02)
+      {
+        // PMT
+      }
+      else if (table_id_ == 0xC7)
+      {
+        // MGT
+        table_.reset(new MasterGuideTable());
+      }
+#if 0
+      else if (table_id_ == 0xC8)
+      {
+        // TVCT
+        table_.reset(new TerrestrialVirtualChannelTable());
+      }
+      else if (table_id_ == 0xC9)
+      {
+        // CVCT
+        table_.reset(new CableVirtualChannelTable());
+      }
+      else if (table_id_ == 0xCA)
+      {
+        // RRT
+        table_.reset(new RatingRegionTable());
+      }
+      else if (table_id_ == 0xCB)
+      {
+        // EIT
+        table_.reset(new EventInformationTable());
+      }
+      else if (table_id_ == 0xCC)
+      {
+        // ETT
+        table_.reset(new ExtendedTextTable());
+      }
+      else if (table_id_ == 0xCD)
+      {
+        // STT
+        table_.reset(new SystemTimeTable());
+      }
+#endif
+
+      YAE_THROW_IF(!table_);
+      table_->load(bin, n_bytes);
+
+      crc32_ = bin.read(32);
+    }
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable::load
+    //
+    void
+    ProgramAssociationTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
       YAE_THROW_IF(n_bytes & 0x3 != 0);
 
       std::size_t n = n_bytes >> 2;
@@ -866,8 +925,6 @@ namespace yae
         Program & p = programs_[i];
         p.load(bin);
       }
-
-      crc32_ = bin.read(32);
     }
 
 
@@ -889,6 +946,24 @@ namespace yae
       program_number_ = bin.read(16);
       reserved_ = bin.read(3);
       pid_ = bin.read(13);
+    }
+
+
+    //----------------------------------------------------------------
+    // MasterGuideTable::MasterGuideTable
+    //
+    MasterGuideTable::MasterGuideTable():
+      protocol_version_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MasterGuideTable::load
+    //
+    void
+    MasterGuideTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      protocol_version_ = bin.read(8);
+      psip_table_data_ = bin.read_bytes(n_bytes - 1);
     }
 
 
@@ -947,10 +1022,20 @@ namespace yae
       try
       {
         yae::Bitstream bin(payload);
-        if (pid == 0x00)
+        if (pid == 0x0000)
         {
-          ProgramAssociationTable pat;
+          Section pat;
           pat.load(bin);
+          YAE_THROW_IF(pat.table_id_ != 0x00);
+          YAE_THROW_IF(pat.private_indicator_ != 0);
+        }
+        else if (pid == 0x1FFB)
+        {
+          Section psip;
+          psip.load(bin);
+          YAE_THROW_IF(psip.table_id_ < 0xC7 ||
+                       psip.table_id_ > 0xCD);
+          YAE_THROW_IF(psip.private_indicator_ != 1);
         }
         else
         {
