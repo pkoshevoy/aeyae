@@ -807,6 +807,91 @@ namespace yae
     }
 
 
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable::ProgramAssociationTable
+    //
+    ProgramAssociationTable::ProgramAssociationTable():
+      pointer_field_(0),
+      table_id_(0),
+      section_syntax_indicator_(0),
+      zero_(0),
+      reserved1_(0),
+      section_length_(0),
+      transport_stream_id_(0),
+      reserved2_(0),
+      version_number_(0),
+      current_next_indicator_(0),
+      section_number_(0),
+      last_section_number_(0),
+      crc32_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable::load
+    //
+    void
+    ProgramAssociationTable::load(IBitstream & bin)
+    {
+      pointer_field_ = bin.read(8);
+      bin.skip_bytes(pointer_field_);
+
+      table_id_ = bin.read(8);
+      YAE_THROW_IF(table_id_ != 0);
+
+      section_syntax_indicator_ = bin.read(1);
+      YAE_THROW_IF(section_syntax_indicator_ != 1);
+
+      zero_ = bin.read(1);
+      YAE_THROW_IF(zero_ != 0);
+
+      reserved1_ = bin.read(2);
+      section_length_ = bin.read(12);
+      YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
+
+      transport_stream_id_ = bin.read(16);
+      reserved2_ = bin.read(2);
+      version_number_ = bin.read(5);
+      current_next_indicator_ = bin.read(1);
+      section_number_ = bin.read(8);
+      last_section_number_ = bin.read(8);
+
+      std::size_t n_bytes = (section_length_ - 9);
+      YAE_THROW_IF(n_bytes & 0x3 != 0);
+
+      std::size_t n = n_bytes >> 2;
+      programs_.resize(n);
+      for (std::size_t i = 0; i < n; i++)
+      {
+        Program & p = programs_[i];
+        p.load(bin);
+      }
+
+      crc32_ = bin.read(32);
+    }
+
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable::Program::Program
+    //
+    ProgramAssociationTable::Program::Program():
+      program_number_(0),
+      reserved_(0),
+      pid_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ProgramAssociationTable::Program::load
+    //
+    void
+    ProgramAssociationTable::Program::load(IBitstream & bin)
+    {
+      program_number_ = bin.read(16);
+      reserved_ = bin.read(3);
+      pid_ = bin.read(13);
+    }
+
+
     //----------------------------------------------------------------
     // assemble_payload
     //
@@ -862,8 +947,16 @@ namespace yae
       try
       {
         yae::Bitstream bin(payload);
-        PESPacket pes_pkt;
-        pes_pkt.load(bin);
+        if (pid == 0x00)
+        {
+          ProgramAssociationTable pat;
+          pat.load(bin);
+        }
+        else
+        {
+          PESPacket pes_pkt;
+          pes_pkt.load(bin);
+        }
       }
       catch (const std::exception & e)
       {

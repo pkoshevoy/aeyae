@@ -502,6 +502,55 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // ProgramAssociationTable
+    //
+    struct YAE_API ProgramAssociationTable
+    {
+      ProgramAssociationTable();
+
+      void load(IBitstream & bin);
+
+      uint8_t pointer_field_;
+      uint64_t table_id_ : 8;
+      uint64_t section_syntax_indicator_ : 1;
+      uint64_t zero_ : 1;
+      uint64_t reserved1_ : 2;
+      uint64_t section_length_ : 12;
+      uint64_t transport_stream_id_ : 16;
+      uint64_t reserved2_ : 2;
+      uint64_t version_number_ : 5;
+      uint64_t current_next_indicator_ : 1;
+      uint64_t section_number_ : 8;
+      uint64_t last_section_number_ : 8;
+
+      struct YAE_API Program
+      {
+        Program();
+
+        void load(IBitstream & bin);
+
+        uint32_t program_number_ : 16;
+        uint32_t reserved_ : 3;
+        uint32_t pid_ : 13;
+      };
+
+      std::vector<Program> programs_;
+
+      uint32_t crc32_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ProgramMapTable
+    //
+    struct YAE_API ProgramMapTable
+    {
+      ProgramMapTable();
+
+      void load(IBitstream & bin);
+    };
+
+    //----------------------------------------------------------------
     // assemble_payload
     //
     YAE_API yae::Data assemble_payload(std::list<TSPacket> & packets);
