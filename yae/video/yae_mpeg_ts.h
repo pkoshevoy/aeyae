@@ -873,23 +873,18 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // ITable
-    //
-    struct YAE_API ITable
-    {
-      virtual ~ITable() {}
-
-      virtual void load(IBitstream & bin, std::size_t n_bytes) = 0;
-    };
-
-
-    //----------------------------------------------------------------
     // Section
     //
     struct YAE_API Section
     {
       Section();
+      virtual ~Section() {}
 
+    protected:
+      void load_header(IBitstream & bin);
+      virtual void load_body(IBitstream & bin, std::size_t n_bytes) = 0;
+
+    public:
       void load(IBitstream & bin);
 
       uint8_t pointer_field_;
@@ -920,18 +915,21 @@ namespace yae
       uint64_t section_number_ : 8;
       uint64_t last_section_number_ : 8;
 
-      yae::shared_ptr<ITable> table_;
-
       uint32_t crc32_;
     };
+
+    //----------------------------------------------------------------
+    // TSectionPtr
+    //
+    typedef yae::shared_ptr<Section> TSectionPtr;
 
 
     //----------------------------------------------------------------
     // ProgramAssociationTable
     //
-    struct YAE_API ProgramAssociationTable : ITable
+    struct YAE_API ProgramAssociationTable : Section
     {
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       struct YAE_API Program
       {
@@ -950,22 +948,22 @@ namespace yae
     //----------------------------------------------------------------
     // ProgramMapTable
     //
-    struct YAE_API ProgramMapTable : ITable
+    struct YAE_API ProgramMapTable : Section
     {
       ProgramMapTable();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
     };
 
 
     //----------------------------------------------------------------
     // SystemTimeTable
     //
-    struct YAE_API SystemTimeTable : ITable
+    struct YAE_API SystemTimeTable : Section
     {
       SystemTimeTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint32_t system_time_;
@@ -979,11 +977,11 @@ namespace yae
     //----------------------------------------------------------------
     // MasterGuideTable
     //
-    struct YAE_API MasterGuideTable : ITable
+    struct YAE_API MasterGuideTable : Section
     {
       MasterGuideTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint16_t tables_defined_;
@@ -1017,11 +1015,11 @@ namespace yae
     //----------------------------------------------------------------
     // VirtualChannelTable
     //
-    struct YAE_API VirtualChannelTable : ITable
+    struct YAE_API VirtualChannelTable : Section
     {
       VirtualChannelTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint8_t num_channels_in_section_;
@@ -1067,11 +1065,11 @@ namespace yae
     //----------------------------------------------------------------
     // RatingRegionTable
     //
-    struct YAE_API RatingRegionTable : ITable
+    struct YAE_API RatingRegionTable : Section
     {
       RatingRegionTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint8_t rating_region_name_length_;
@@ -1116,11 +1114,11 @@ namespace yae
     //----------------------------------------------------------------
     // EventInformationTable
     //
-    struct YAE_API EventInformationTable : ITable
+    struct YAE_API EventInformationTable : Section
     {
       EventInformationTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint8_t num_events_in_section_;
@@ -1154,17 +1152,24 @@ namespace yae
     //----------------------------------------------------------------
     // ExtendedTextTable
     //
-    struct YAE_API ExtendedTextTable : ITable
+    struct YAE_API ExtendedTextTable : Section
     {
       ExtendedTextTable();
 
-      void load(IBitstream & bin, std::size_t n_bytes);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
       uint32_t etm_id_;
       MultipleStringStructure extended_text_message_;
     };
 
+
+
+    //----------------------------------------------------------------
+    // load_section
+    //
+    YAE_API TSectionPtr
+    load_section(IBitstream & bin);
 
     //----------------------------------------------------------------
     // assemble_payload

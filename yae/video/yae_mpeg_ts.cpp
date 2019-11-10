@@ -1541,10 +1541,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // Section::load
+    // Section::load_header
     //
     void
-    Section::load(IBitstream & bin)
+    Section::load_header(IBitstream & bin)
     {
       pointer_field_ = bin.read(8);
       bin.skip_bytes(pointer_field_);
@@ -1565,68 +1565,28 @@ namespace yae
       current_next_indicator_ = bin.read(1);
       section_number_ = bin.read(8);
       last_section_number_ = bin.read(8);
+    }
 
-      std::size_t n_bytes = (section_length_ - 9);
-      if (table_id_ == 0x00)
-      {
-        // PAT
-        table_.reset(new ProgramAssociationTable());
-      }
-      else if (table_id_ == 0x01)
-      {
-        // CAT
-      }
-      else if (table_id_ == 0x02)
-      {
-        // PMT
-      }
-      else if (table_id_ == 0xC7)
-      {
-        // MGT
-        table_.reset(new MasterGuideTable());
-      }
-      else if (table_id_ == 0xC8)
-      {
-        // TVCT
-        table_.reset(new VirtualChannelTable());
-      }
-      else if (table_id_ == 0xC9)
-      {
-        // CVCT
-        table_.reset(new VirtualChannelTable());
-      }
-      else if (table_id_ == 0xCA)
-      {
-        // RRT
-        table_.reset(new RatingRegionTable());
-      }
-      else if (table_id_ == 0xCB)
-      {
-        // EIT
-        table_.reset(new EventInformationTable());
-      }
-      else if (table_id_ == 0xCC)
-      {
-        // ETT
-        table_.reset(new ExtendedTextTable());
-      }
-      else if (table_id_ == 0xCD)
-      {
-        // STT
-        table_.reset(new SystemTimeTable());
-      }
+    //----------------------------------------------------------------
+    // Section::load
+    //
+    void
+    Section::load(IBitstream & bin)
+    {
+      this->load_header(bin);
 
-      YAE_THROW_IF(!table_);
-      table_->load(bin, n_bytes);
+      std::size_t n_bytes = section_length_ - 9;
+      this->load_body(bin, n_bytes);
 
       crc32_ = bin.read(32);
     }
 
+
     //----------------------------------------------------------------
-    // ProgramAssociationTable::load
+    // ProgramAssociationTable::load_body
     //
     void
-    ProgramAssociationTable::load(IBitstream & bin, std::size_t n_bytes)
+    ProgramAssociationTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       YAE_THROW_IF(n_bytes & 0x3 != 0);
 
@@ -1672,10 +1632,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // SystemTimeTable::load
+    // SystemTimeTable::load_body
     //
     void
-    SystemTimeTable::load(IBitstream & bin, std::size_t n_bytes)
+    SystemTimeTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       std::size_t stop_pos = bin.position() + (n_bytes << 3);
 
@@ -1702,10 +1662,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // MasterGuideTable::load
+    // MasterGuideTable::load_body
     //
     void
-    MasterGuideTable::load(IBitstream & bin, std::size_t n_bytes)
+    MasterGuideTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
       tables_defined_ = bin.read(16);
@@ -1793,10 +1753,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // VirtualChannelTable::load
+    // VirtualChannelTable::load_body
     //
     void
-    VirtualChannelTable::load(IBitstream & bin, std::size_t n_bytes)
+    VirtualChannelTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
       num_channels_in_section_ = bin.read(8);
@@ -1806,6 +1766,15 @@ namespace yae
       {
         Channel & channel = channel_[i];
         channel.load(bin);
+
+        if (table_id_ == 0xC8)
+        {
+          uint8_t reserved =
+            (channel.path_selected_ << 1) |
+            channel.out_of_band_;
+
+          YAE_THROW_IF(reserved != 0x3);
+        }
       }
 
       reserved_ = bin.read(6);
@@ -1907,10 +1876,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // RatingRegionTable::load
+    // RatingRegionTable::load_body
     //
     void
-    RatingRegionTable::load(IBitstream & bin, std::size_t n_bytes)
+    RatingRegionTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
       rating_region_name_length_ = bin.read(8);
@@ -2019,10 +1988,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // EventInformationTable::load
+    // EventInformationTable::load_body
     //
     void
-    EventInformationTable::load(IBitstream & bin, std::size_t n_bytes)
+    EventInformationTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
       num_events_in_section_ = bin.read(8);
@@ -2098,14 +2067,82 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // ExtendedTextTable::load
+    // ExtendedTextTable::load_body
     //
     void
-    ExtendedTextTable::load(IBitstream & bin, std::size_t n_bytes)
+    ExtendedTextTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
       etm_id_ = bin.read(32);
       extended_text_message_.load(bin);
+    }
+
+
+    //----------------------------------------------------------------
+    // load_section
+    //
+    TSectionPtr
+    load_section(IBitstream & bin)
+    {
+      std::size_t start_pos = bin.position();
+      uint8_t pointer_field = bin.read(8);
+      bin.skip_bytes(pointer_field);
+      uint8_t table_id = bin.read(8);
+      bin.seek(start_pos);
+
+      TSectionPtr section;
+      if (table_id == 0x00)
+      {
+        // PAT
+        section.reset(new ProgramAssociationTable());
+      }
+      else if (table_id == 0x01)
+      {
+        // CAT
+      }
+      else if (table_id == 0x02)
+      {
+        // PMT
+      }
+      else if (table_id == 0xC7)
+      {
+        // MGT
+        section.reset(new MasterGuideTable());
+      }
+      else if (table_id == 0xC8)
+      {
+        // TVCT
+        section.reset(new VirtualChannelTable());
+      }
+      else if (table_id == 0xC9)
+      {
+        // CVCT
+        section.reset(new VirtualChannelTable());
+      }
+      else if (table_id == 0xCA)
+      {
+        // RRT
+        section.reset(new RatingRegionTable());
+      }
+      else if (table_id == 0xCB)
+      {
+        // EIT
+        section.reset(new EventInformationTable());
+      }
+      else if (table_id == 0xCC)
+      {
+        // ETT
+        section.reset(new ExtendedTextTable());
+      }
+      else if (table_id == 0xCD)
+      {
+        // STT
+        section.reset(new SystemTimeTable());
+      }
+
+      YAE_THROW_IF(!section);
+      section->load(bin);
+      return section;
     }
 
 
@@ -2166,18 +2203,16 @@ namespace yae
         yae::Bitstream bin(payload);
         if (pid == 0x0000)
         {
-          Section pat;
-          pat.load(bin);
-          YAE_THROW_IF(pat.table_id_ != 0x00);
-          YAE_THROW_IF(pat.private_indicator_ != 0);
+          TSectionPtr pat = load_section(bin);
+          YAE_THROW_IF(pat->table_id_ != 0x00);
+          YAE_THROW_IF(pat->private_indicator_ != 0);
         }
         else if (pid == 0x1FFB)
         {
-          Section psip;
-          psip.load(bin);
-          YAE_THROW_IF(psip.table_id_ < 0xC7 ||
-                       psip.table_id_ > 0xCD);
-          YAE_THROW_IF(psip.private_indicator_ != 1);
+          TSectionPtr psip = load_section(bin);
+          YAE_THROW_IF(psip->table_id_ < 0xC7 ||
+                       psip->table_id_ > 0xCD);
+          YAE_THROW_IF(psip->private_indicator_ != 1);
         }
         else
         {
