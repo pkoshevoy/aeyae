@@ -33,6 +33,13 @@ namespace yae
     virtual unsigned char * get() const = 0;
     virtual std::size_t size() const = 0;
     virtual void truncate(std::size_t new_size) = 0;
+
+    inline std::string str() const
+    {
+      const char * text = reinterpret_cast<const char *>(this->get());
+      std::size_t size = this->size();
+      return std::string(text, text + size);
+    }
   };
 
   //----------------------------------------------------------------
@@ -434,6 +441,13 @@ namespace yae
       uint64_t data_;
     };
 
+    inline Bits peek(std::size_t num_bits)
+    { return Bits(this->peek_bits(num_bits)); }
+
+    template <typename TData>
+    inline TData peek(std::size_t num_bits)
+    { return TData(this->peek_bits(num_bits)); }
+
     inline Bits read(std::size_t num_bits)
     { return Bits(this->read_bits(num_bits)); }
 
@@ -442,6 +456,12 @@ namespace yae
     { return TData(this->read_bits(num_bits)); }
 
     virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
+
+    inline void read_bytes(void * dst, std::size_t dst_size)
+    {
+      TBufferPtr src = this->read_bytes(dst_size);
+      memcpy(dst, src->get(), src->size());
+    }
 
     virtual void write_bits(std::size_t num_bits, uint64_t bits) = 0;
     virtual void write_bytes(const void * data, std::size_t num_bytes) = 0;

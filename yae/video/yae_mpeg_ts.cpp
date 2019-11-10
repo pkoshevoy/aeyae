@@ -808,6 +808,720 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // MultipleStringStructure::MultipleStringStructure
+    //
+    MultipleStringStructure::MultipleStringStructure():
+      number_strings_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::load
+    //
+    void
+    MultipleStringStructure::load(IBitstream & bin)
+    {
+      number_strings_ = bin.read(8);
+
+      strings_.resize(number_strings_);
+      for (std::size_t i = 0; i < number_strings_; i++)
+      {
+        Message & message = strings_[i];
+        message.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::Message
+    //
+    MultipleStringStructure::Message::Message():
+      iso_639_language_code_(0),
+      number_segments_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::load
+    //
+    void
+    MultipleStringStructure::Message::load(IBitstream & bin)
+    {
+      iso_639_language_code_ = bin.read(24);
+      number_segments_ = bin.read(8);
+
+      segment_.resize(number_segments_);
+      for (std::size_t i = 0; i < number_segments_; i++)
+      {
+        Segment & segment = segment_[i];
+        segment.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::Segment::Segment
+    //
+    MultipleStringStructure::Message::Segment::Segment():
+      compression_type_(0),
+      mode_(0),
+      number_bytes_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::Segment::load
+    //
+    void
+    MultipleStringStructure::Message::Segment::load(IBitstream & bin)
+    {
+      compression_type_ = bin.read(8);
+      mode_ = bin.read(8);
+      number_bytes_ = bin.read(8);
+      compressed_string_ = bin.read_bytes(number_bytes_);
+    }
+
+
+    //----------------------------------------------------------------
+    // Descriptor::Descriptor
+    //
+    Descriptor::Descriptor():
+      descriptor_tag_(0),
+      descriptor_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // Descriptor::~Descriptor
+    //
+    Descriptor::~Descriptor()
+    {}
+
+    //----------------------------------------------------------------
+    // Descriptor::load
+    //
+    void
+    Descriptor::load_header(IBitstream & bin)
+    {
+      descriptor_tag_ = bin.read(8);
+      descriptor_length_ = bin.read(8);
+    }
+
+    //----------------------------------------------------------------
+    // Descriptor::load
+    //
+    void
+    Descriptor::load(IBitstream & bin)
+    {
+      bin.skip_bytes(descriptor_length_);
+    }
+
+
+    //----------------------------------------------------------------
+    // AC3AudioDescriptor::AC3AudioDescriptor
+    //
+    AC3AudioDescriptor::AC3AudioDescriptor():
+      sample_rate_code_(0),
+      bsid_(0),
+      bit_rate_code_(0),
+      surround_mode_(0),
+      bsmod_(0),
+      num_channels_(0),
+      full_svc_(0),
+      langcod_(0),
+      langcod2_(0),
+      asvcflags_(0),
+      textlen_(0),
+      text_code_(0),
+      language_flag_(0),
+      language2_flag_(0),
+      reserved2_(0)
+    {
+      memset(language_, 0, sizeof(language_));
+      memset(language2_, 0, sizeof(language2_));
+    }
+
+    //----------------------------------------------------------------
+    // AC3AudioDescriptor::load
+    //
+    void
+    AC3AudioDescriptor::load(IBitstream & bin)
+    {
+      std::size_t start_pos = bin.position();
+
+      sample_rate_code_ = bin.read(3);
+      bsid_ = bin.read(5);
+      bit_rate_code_ = bin.read(6);
+      surround_mode_ = bin.read(2);
+      bsmod_ = bin.read(3);
+      num_channels_ = bin.read(4);
+      full_svc_ = bin.read(1);
+
+      langcod_ = bin.read(8);
+      if (!num_channels_)
+      {
+        langcod2_ = bin.read(8);
+      }
+
+      asvcflags_ = bin.read(8);
+
+      textlen_ = bin.read(7);
+      text_code_ = bin.read(1);
+      text_ = bin.read_bytes(textlen_);
+
+      language_flag_  = bin.read(1);
+      language2_flag_ = bin.read(1);
+      reserved2_ = bin.read(6);
+      YAE_THROW_IF(reserved2_ != 0x3F);
+
+      if (language_flag_)
+      {
+        bin.read_bytes(language_, 3);
+      }
+
+      if (language2_flag_)
+      {
+        bin.read_bytes(language2_, 3);
+      }
+
+      std::size_t end_pos = bin.position();
+      std::size_t consumed = end_pos - start_pos;
+      YAE_THROW_IF((consumed & 0x7) != 0);
+
+      std::size_t consumed_bytes = consumed >> 3;
+      additional_info_ = bin.read_bytes(descriptor_length_ - consumed_bytes);
+    }
+
+
+    //----------------------------------------------------------------
+    // CaptionServiceDescriptor::CaptionServiceDescriptor
+    //
+    CaptionServiceDescriptor::CaptionServiceDescriptor():
+      reserved_(0),
+      number_of_services_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // CaptionServiceDescriptor::load
+    //
+    void
+    CaptionServiceDescriptor::load(IBitstream & bin)
+    {
+      reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
+      number_of_services_ = bin.read(5);
+      service_.resize(number_of_services_);
+
+      for (std::size_t i = 0; i < number_of_services_; i++)
+      {
+        Service & service = service_[i];
+        service.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // CaptionServiceDescriptor::Service::Service
+    //
+    CaptionServiceDescriptor::Service::Service():
+      digital_cc_(0),
+      reserved1_(0),
+      caption_service_number_(0),
+      easy_reader_(0),
+      wide_aspect_ratio_(0),
+      reserved3_(0)
+    {
+      memset(language_, 0, sizeof(language_));
+    }
+
+    //----------------------------------------------------------------
+    // CaptionServiceDescriptor::Service::load
+    //
+    void
+    CaptionServiceDescriptor::Service::load(IBitstream & bin)
+    {
+      bin.read_bytes(language_, 3);
+      digital_cc_ = bin.read(1);
+      reserved1_ = bin.read(1);
+      YAE_THROW_IF(reserved1_ != 1);
+
+      if (digital_cc_)
+      {
+        caption_service_number_ = bin.read(6);
+      }
+      else
+      {
+        reserved2_ = bin.read(5);
+        YAE_THROW_IF(reserved2_ != 0x1F);
+        line21_field_ = bin.read(1);
+      }
+
+      easy_reader_ = bin.read(1);
+      wide_aspect_ratio_ = bin.read(1);
+      reserved3_ = bin.read(14);
+      YAE_THROW_IF(reserved3_ != 0x3FFF);
+    }
+
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::ContentAdvisoryDescriptor
+    //
+    ContentAdvisoryDescriptor::ContentAdvisoryDescriptor():
+      reserved_(0),
+      rating_region_count_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::load
+    //
+    void
+    ContentAdvisoryDescriptor::load(IBitstream & bin)
+    {
+      reserved_ = bin.read(2);
+      rating_region_count_ = bin.read(6);
+
+      region_.resize(rating_region_count_);
+      for (std::size_t i = 0; i < rating_region_count_; i++)
+      {
+        Region & region = region_[i];
+        region.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::Region::Region
+    //
+    ContentAdvisoryDescriptor::Region::Region():
+      rating_region_(0),
+      rated_dimensions_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::Region::load
+    //
+    void
+    ContentAdvisoryDescriptor::Region::load(IBitstream & bin)
+    {
+      rating_region_ = bin.read(8);
+      rated_dimensions_ = bin.read(8);
+
+      dimension_.resize(rated_dimensions_);
+      for (std::size_t i = 0; i < rated_dimensions_; i++)
+      {
+        Dimension & dimension = dimension_[i];
+        dimension.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::Region::Dimension::Dimension
+    //
+    ContentAdvisoryDescriptor::Region::Dimension::Dimension():
+      rating_dimension_(0),
+      reserved_(0),
+      rating_value_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::Region::Dimension::load
+    //
+    void
+    ContentAdvisoryDescriptor::Region::Dimension::load(IBitstream & bin)
+    {
+      rating_dimension_ = bin.read(8);
+      reserved_ = bin.read(4);
+      YAE_THROW_IF(reserved_ != 0xF);
+      rating_value_ = bin.read(4);
+    };
+
+
+    //----------------------------------------------------------------
+    // ExtendedChannelNameDescriptor::load
+    //
+    void
+    ExtendedChannelNameDescriptor::load(IBitstream & bin)
+    {
+      long_channel_name_text_.load(bin);
+    }
+
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptor::ServiceLocationDescriptor
+    //
+    ServiceLocationDescriptor::ServiceLocationDescriptor():
+      reserved_(0),
+      pcr_pid_(0),
+      number_elements_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptor::load
+    //
+    void
+    ServiceLocationDescriptor::load(IBitstream & bin)
+    {
+      reserved_ = bin.read(3);
+      pcr_pid_ = bin.read(13);
+      number_elements_ = bin.read(8);
+
+      element_.resize(number_elements_);
+      for (std::size_t i = 0; i < number_elements_; i++)
+      {
+        Element & element = element_[i];
+        element.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptor::Element::Element
+    //
+    ServiceLocationDescriptor::Element::Element():
+      stream_type_(0),
+      reserved_(0),
+      elementary_pid_(0)
+    {
+      memset(iso_639_languace_code_, 0, sizeof(iso_639_languace_code_));
+    }
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptor::Element::load
+    //
+    void
+    ServiceLocationDescriptor::Element::load(IBitstream & bin)
+    {
+      stream_type_ = bin.read(8);
+      reserved_ = bin.read(3);
+      elementary_pid_ = bin.read(13);
+      bin.read_bytes(iso_639_languace_code_, 3);
+    }
+
+
+    //----------------------------------------------------------------
+    // TimeShiftedServiceDescriptor::TimeShiftedServiceDescriptor
+    //
+    TimeShiftedServiceDescriptor::TimeShiftedServiceDescriptor():
+      reserved_(0),
+      number_of_services_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // TimeShiftedServiceDescriptor::load
+    //
+    void
+    TimeShiftedServiceDescriptor::load(IBitstream & bin)
+    {
+      reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
+      number_of_services_ = bin.read(5);
+      service_.resize(number_of_services_);
+
+      for (std::size_t i = 0; i < number_of_services_; i++)
+      {
+        Service & service = service_[i];
+        service.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // TimeShiftedServiceDescriptor::Service::Service
+    //
+    TimeShiftedServiceDescriptor::Service::Service():
+      reserved1_(0),
+      time_shift_(0),
+      reserved2_(0),
+      major_channel_number_(0),
+      minor_channel_number_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // TimeShiftedServiceDescriptor::Service::load
+    //
+    void
+    TimeShiftedServiceDescriptor::Service::load(IBitstream & bin)
+    {
+      reserved1_ = bin.read(6);
+      YAE_THROW_IF(reserved1_ != 0x3F);
+
+      time_shift_ = bin.read(10);
+      reserved2_ = bin.read(4);
+      YAE_THROW_IF(reserved2_ != 0xF);
+
+      major_channel_number_ = bin.read(10);
+      minor_channel_number_ = bin.read(10);
+    }
+
+
+    //----------------------------------------------------------------
+    // ComponentNameDescriptor::load
+    //
+    void
+    ComponentNameDescriptor::load(IBitstream & bin)
+    {
+      component_name_string_.load(bin);
+    }
+
+
+    //----------------------------------------------------------------
+    // DCCRequestDescriptor::DCCRequestDescriptor
+    //
+    DCCRequestDescriptor::DCCRequestDescriptor():
+      dcc_request_type_(0),
+      dcc_request_text_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // DCCRequestDescriptor::load
+    //
+    void
+    DCCRequestDescriptor::load(IBitstream & bin)
+    {
+      dcc_request_type_ = bin.read(8);
+      dcc_request_text_length_ = bin.read(8);
+
+      std::size_t start_pos = bin.position();
+      dcc_request_text_.load(bin);
+
+      std::size_t end_pos = bin.position();
+      std::size_t consumed = end_pos - start_pos;
+      YAE_THROW_IF((consumed & 0x7) != 0);
+
+      std::size_t consumed_bytes = consumed >> 3;
+      bin.skip_bytes(dcc_request_text_length_ - consumed_bytes);
+    }
+
+
+    //----------------------------------------------------------------
+    // RedistributionControlDescriptor::load
+    //
+    void
+    RedistributionControlDescriptor::load(IBitstream & bin)
+    {
+      rc_information_ = bin.read_bytes(descriptor_length_);
+    }
+
+
+    //----------------------------------------------------------------
+    // GenreDescriptor::GenreDescriptor
+    //
+    GenreDescriptor::GenreDescriptor():
+      reserved_(0),
+      attribute_count_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // GenreDescriptor::load
+    //
+    void
+    GenreDescriptor::load(IBitstream & bin)
+    {
+      reserved_ = bin.read(3);
+      attribute_count_  = bin.read(5);
+      attribute_ = bin.read_bytes(attribute_count_);
+    }
+
+
+    //----------------------------------------------------------------
+    // EAC3AudioStreamDescriptor::EAC3AudioStreamDescriptor
+    //
+    EAC3AudioStreamDescriptor::EAC3AudioStreamDescriptor():
+      reserved1_(0),
+      bsid_flag_(0),
+      mainid_flag_(0),
+      asvc_flag_(0),
+      mixinfoexists_(0),
+      substream1_flag_(0),
+      substream2_flag_(0),
+      substream3_flag_(0),
+      reserved2_(0),
+      full_service_flag_(0),
+      audio_service_type_(0),
+      number_of_channels_(0),
+
+      language_flag_(0),
+      language2_flag_(0),
+      reserved3_(0),
+      bsid_(0),
+
+      reserved4_(0),
+      priority_(0),
+      mainid_(0),
+
+      asvc_(0),
+      substream1_(0),
+      substream2_(0),
+      substream3_(0)
+    {
+      memcpy(language_, 0, sizeof(language_));
+      memcpy(language2_, 0, sizeof(language2_));
+
+      memcpy(substream1_lang_, 0, sizeof(substream1_lang_));
+      memcpy(substream2_lang_, 0, sizeof(substream2_lang_));
+      memcpy(substream3_lang_, 0, sizeof(substream3_lang_));
+    }
+
+    //----------------------------------------------------------------
+    // EAC3AudioStreamDescriptor::load
+    //
+    void
+    EAC3AudioStreamDescriptor::load(IBitstream & bin)
+    {
+      std::size_t start_pos = bin.position();
+      reserved1_ = bin.read(1);
+      YAE_THROW_IF(reserved1_ != 1);
+
+      bsid_flag_ = bin.read(1);
+      mainid_flag_ = bin.read(1);
+      asvc_flag_ = bin.read(1);
+      mixinfoexists_ = bin.read(1);
+      substream1_flag_ = bin.read(1);
+      substream2_flag_ = bin.read(1);
+      substream3_flag_ = bin.read(1);
+      reserved2_ = bin.read(1);
+      YAE_THROW_IF(reserved2_ != 1);
+
+      full_service_flag_ = bin.read(1);
+      audio_service_type_ = bin.read(3);
+      number_of_channels_ = bin.read(3);
+
+      language_flag_ = bin.read(1);
+      language2_flag_ = bin.read(1);
+      reserved3_ = bin.read(1);
+      bsid_ = bin.read(5);
+
+      if (mainid_flag_)
+      {
+        reserved4_ = bin.read(3);
+        priority_ = bin.read(2);
+        mainid_ = bin.read(3);
+      }
+
+      if (asvc_flag_)
+      {
+        asvc_ = bin.read(8);
+      }
+
+      if (substream1_flag_)
+      {
+        substream1_ = bin.read(8);
+      }
+
+      if (substream2_flag_)
+      {
+        substream2_ = bin.read(8);
+      }
+
+      if (substream3_flag_)
+      {
+        substream3_ = bin.read(8);
+      }
+
+      if (language_flag_)
+      {
+        bin.read_bytes(language_, 3);
+      }
+
+      if (language2_flag_)
+      {
+        bin.read_bytes(language2_, 3);
+      }
+
+      if (substream1_flag_)
+      {
+        bin.read_bytes(substream1_lang_, 3);
+      }
+
+      if (substream2_flag_)
+      {
+        bin.read_bytes(substream2_lang_, 3);
+      }
+
+      if (substream3_flag_)
+      {
+        bin.read_bytes(substream3_lang_, 3);
+      }
+
+      std::size_t end_pos = bin.position();
+      std::size_t consumed = end_pos - start_pos;
+      YAE_THROW_IF((consumed & 0x7) != 0);
+
+      std::size_t consumed_bytes = consumed >> 3;
+      additional_info_ = bin.read_bytes(descriptor_length_ - consumed_bytes);
+    }
+
+
+    //----------------------------------------------------------------
+    // load_descriptor
+    //
+    TDescriptorPtr
+    load_descriptor(IBitstream & bin)
+    {
+      TDescriptorPtr descriptor;
+      uint8_t descriptor_tag = bin.peek(8);
+
+      if (descriptor_tag == 0x80)
+      {
+        // stuffing descriptor:
+        descriptor.reset(new Descriptor());
+      }
+      else if (descriptor_tag == 0x81)
+      {
+        descriptor.reset(new AC3AudioDescriptor());
+      }
+      else if (descriptor_tag == 0x86)
+      {
+        descriptor.reset(new CaptionServiceDescriptor());
+      }
+      else if (descriptor_tag == 0x87)
+      {
+        descriptor.reset(new ContentAdvisoryDescriptor());
+      }
+      else if (descriptor_tag == 0xA0)
+      {
+        descriptor.reset(new ExtendedChannelNameDescriptor());
+      }
+      else if (descriptor_tag == 0xA1)
+      {
+        descriptor.reset(new ServiceLocationDescriptor());
+      }
+      else if (descriptor_tag == 0xA2)
+      {
+        descriptor.reset(new TimeShiftedServiceDescriptor());
+      }
+      else if (descriptor_tag == 0xA3)
+      {
+        descriptor.reset(new ComponentNameDescriptor());
+      }
+      else if (descriptor_tag == 0xA8)
+      {
+        // DCC departing request descriptor:
+        descriptor.reset(new DCCRequestDescriptor());
+      }
+      else if (descriptor_tag == 0xA9)
+      {
+        // DCC arriving request descriptor:
+        descriptor.reset(new DCCRequestDescriptor());
+      }
+      else if (descriptor_tag == 0xAA)
+      {
+        descriptor.reset(new RedistributionControlDescriptor());
+      }
+      else if (descriptor_tag == 0xAB)
+      {
+        descriptor.reset(new GenreDescriptor());
+      }
+      else if (descriptor_tag == 0xAD)
+      {
+        // ATSC private information descriptor:
+        descriptor.reset(new Descriptor());
+      }
+      else if (descriptor_tag == 0xCC)
+      {
+        descriptor.reset(new EAC3AudioStreamDescriptor());
+      }
+
+      YAE_THROW_IF(!descriptor);
+      descriptor->load_header(bin);
+      descriptor->load(bin);
+      return descriptor;
+    }
+
+
+    //----------------------------------------------------------------
     // Section::Section
     //
     Section::Section():
@@ -871,16 +1585,15 @@ namespace yae
         // MGT
         table_.reset(new MasterGuideTable());
       }
-#if 0
       else if (table_id_ == 0xC8)
       {
         // TVCT
-        table_.reset(new TerrestrialVirtualChannelTable());
+        table_.reset(new VirtualChannelTable());
       }
       else if (table_id_ == 0xC9)
       {
         // CVCT
-        table_.reset(new CableVirtualChannelTable());
+        table_.reset(new VirtualChannelTable());
       }
       else if (table_id_ == 0xCA)
       {
@@ -902,7 +1615,6 @@ namespace yae
         // STT
         table_.reset(new SystemTimeTable());
       }
-#endif
 
       YAE_THROW_IF(!table_);
       table_->load(bin, n_bytes);
@@ -919,10 +1631,10 @@ namespace yae
       YAE_THROW_IF(n_bytes & 0x3 != 0);
 
       std::size_t n = n_bytes >> 2;
-      programs_.resize(n);
+      program_.resize(n);
       for (std::size_t i = 0; i < n; i++)
       {
-        Program & p = programs_[i];
+        Program & p = program_[i];
         p.load(bin);
       }
     }
@@ -950,6 +1662,39 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SystemTimeTable::SystemTimeTable
+    //
+    SystemTimeTable::SystemTimeTable():
+      protocol_version_(0),
+      system_time_(0),
+      gps_utc_offset_(0),
+      daylight_saving_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SystemTimeTable::load
+    //
+    void
+    SystemTimeTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      std::size_t stop_pos = bin.position() + (n_bytes << 3);
+
+      protocol_version_ = bin.read(8);
+      system_time_ = bin.read(32);
+      gps_utc_offset_ = bin.read(8);
+      daylight_saving_ = bin.read(16);
+
+      descriptor_.clear();
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+
+    //----------------------------------------------------------------
     // MasterGuideTable::MasterGuideTable
     //
     MasterGuideTable::MasterGuideTable():
@@ -963,7 +1708,404 @@ namespace yae
     MasterGuideTable::load(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
-      psip_table_data_ = bin.read_bytes(n_bytes - 1);
+      tables_defined_ = bin.read(16);
+
+      table_.resize(tables_defined_);
+      for (std::size_t i = 0; i < tables_defined_; i++)
+      {
+        Table & table = table_[i];
+        table.load(bin);
+      }
+
+      reserved_ = bin.read(4);
+      YAE_THROW_IF(reserved_ != 0xF);
+
+      descriptors_length_ = bin.read(12);
+      descriptor_.clear();
+
+      std::size_t stop_pos = bin.position() + (descriptors_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+    //----------------------------------------------------------------
+    // MasterGuideTable::Table::Table
+    //
+    MasterGuideTable::Table::Table():
+      table_type_(0),
+      reserved1_(0),
+      table_type_pid_(0),
+      reserved2_(0),
+      table_type_version_number_(0),
+      number_bytes_(0),
+      reserved3_(0),
+      table_type_descriptors_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MasterGuideTable::Table::load
+    //
+    void
+    MasterGuideTable::Table::load(IBitstream & bin)
+    {
+      table_type_ = bin.read(16);
+      reserved1_ = bin.read(3);
+      YAE_THROW_IF(reserved1_ != 0x7);
+
+      table_type_pid_ = bin.read(13);
+      reserved2_ = bin.read(3);
+      YAE_THROW_IF(reserved2_ != 0x7);
+
+      table_type_version_number_ = bin.read(5);
+      number_bytes_ = bin.read(32);
+      reserved3_ = bin.read(4);
+      YAE_THROW_IF(reserved3_ != 0xF);
+
+      table_type_descriptors_length_ = bin.read(12);
+      descriptor_.clear();
+
+      std::size_t stop_pos =
+        bin.position() + (table_type_descriptors_length_ << 3);
+
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+
+
+    //----------------------------------------------------------------
+    // VirtualChannelTable::VirtualChannelTable
+    //
+    VirtualChannelTable::VirtualChannelTable():
+      protocol_version_(0),
+      num_channels_in_section_(0),
+      reserved_(0),
+      additional_descriptors_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // VirtualChannelTable::load
+    //
+    void
+    VirtualChannelTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      protocol_version_ = bin.read(8);
+      num_channels_in_section_ = bin.read(8);
+
+      channel_.resize(num_channels_in_section_);
+      for (std::size_t i = 0; i < num_channels_in_section_; i++)
+      {
+        Channel & channel = channel_[i];
+        channel.load(bin);
+      }
+
+      reserved_ = bin.read(6);
+      additional_descriptors_length_ = bin.read(10);
+      additional_descriptor_.clear();
+
+      std::size_t stop_pos =
+        bin.position() + (additional_descriptors_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        additional_descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+    //----------------------------------------------------------------
+    // VirtualChannelTable::Channel::Channel
+    //
+    VirtualChannelTable::Channel::Channel():
+      reserved1_(0),
+      major_channel_number_(0),
+      minor_channel_number_(0),
+      modulation_mode_(0),
+      carrier_frequency_(0),
+      channel_tsid_(0),
+      program_number_(0),
+      etm_location_(0),
+      access_controlled_(0),
+      hidden_(0),
+      path_selected_(0),
+      out_of_band_(0),
+      hide_guide_(0),
+      reserved3_(0),
+      service_type_(0),
+      source_id_(0),
+      reserved4_(0),
+      descriptors_length_(0)
+    {
+      memset(short_name_, 0, sizeof(short_name_));
+    }
+
+    //----------------------------------------------------------------
+    // VirtualChannelTable::Channel::load
+    //
+    void
+    VirtualChannelTable::Channel::load(IBitstream & bin)
+    {
+      bin.read_bytes(short_name_, 7);
+      reserved1_ = bin.read(4);
+      YAE_THROW_IF(reserved1_ != 0xF);
+
+      major_channel_number_ = bin.read(10);
+      minor_channel_number_ = bin.read(10);
+      modulation_mode_ = bin.read(8);
+      carrier_frequency_ = bin.read(32);
+      channel_tsid_ = bin.read(16);
+      program_number_ = bin.read(16);
+      etm_location_ = bin.read(2);
+      access_controlled_ = bin.read(1);
+      hidden_ = bin.read(1);
+
+      // this is a 2-bit reserved field in TVCT with expected value '11',
+      // and 2 separate 1-bit fields in CVCT:
+      path_selected_ = bin.read(1);
+      out_of_band_ = bin.read(1);
+
+      hide_guide_ = bin.read(1);
+      reserved3_ = bin.read(3);
+      YAE_THROW_IF(reserved3_ != 0x7);
+
+      service_type_ = bin.read(6);
+      source_id_ = bin.read(16);
+      reserved4_ = bin.read(6);
+      YAE_THROW_IF(reserved4_ != 0x3F);
+
+      descriptors_length_ = bin.read(10);
+      descriptor_.clear();
+
+      std::size_t stop_pos = bin.position() + (descriptors_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::RatingRegionTable
+    //
+    RatingRegionTable::RatingRegionTable():
+      protocol_version_(0),
+      rating_region_name_length_(0),
+      dimensions_defined_(0),
+      reserved_(0),
+      descriptors_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::load
+    //
+    void
+    RatingRegionTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      protocol_version_ = bin.read(8);
+      rating_region_name_length_ = bin.read(8);
+
+      std::size_t stop_pos = bin.position() + (rating_region_name_length_ << 3);
+      rating_region_name_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
+
+      dimensions_defined_ = bin.read(8);
+      dimension_.resize(dimensions_defined_);
+      for (std::size_t i = 0; i < dimensions_defined_; ++i)
+      {
+        Dimension & dimension = dimension_[i];
+        dimension.load(bin);
+      }
+
+      reserved_ = bin.read(6);
+      YAE_THROW_IF(reserved_ != 0x3F);
+
+      descriptors_length_ = bin.read(10);
+      descriptor_.clear();
+
+      stop_pos = bin.position() + (descriptors_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::Dimension::Dimension
+    //
+    RatingRegionTable::Dimension::Dimension():
+      dimension_name_length_(0),
+      reserved_(0),
+      graduated_scale_(0),
+      values_defined_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::Dimension::load
+    //
+    void
+    RatingRegionTable::Dimension::load(IBitstream & bin)
+    {
+      dimension_name_length_ = bin.read(8);
+      std::size_t stop_pos = bin.position() + (dimension_name_length_ << 3);
+      dimension_name_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
+
+      reserved_ = bin.read(3);
+      graduated_scale_ = bin.read(1);
+      values_defined_ = bin.read(4);
+
+      rating_.resize(values_defined_);
+      for (std::size_t i = 0; i < values_defined_; i++)
+      {
+        Rating & rating = rating_[i];
+        rating.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::Dimension::Rating::Rating
+    //
+    RatingRegionTable::Dimension::Rating::Rating():
+      abbrev_rating_value_length_(0),
+      rating_value_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // RatingRegionTable::Dimension::Rating::load
+    //
+    void
+    RatingRegionTable::Dimension::Rating::load(IBitstream & bin)
+    {
+      abbrev_rating_value_length_ = bin.read(8);
+      std::size_t stop_pos =
+        bin.position() + (abbrev_rating_value_length_ << 3);
+      abbrev_rating_value_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
+
+      rating_value_length_ = bin.read(8);
+      stop_pos = bin.position() + (rating_value_length_ << 3);
+      rating_value_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
+    }
+
+
+    //----------------------------------------------------------------
+    // EventInformationTable::EventInformationTable
+    //
+    EventInformationTable::EventInformationTable():
+      protocol_version_(0),
+      num_events_in_section_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // EventInformationTable::load
+    //
+    void
+    EventInformationTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      protocol_version_ = bin.read(8);
+      num_events_in_section_ = bin.read(8);
+
+      event_.resize(num_events_in_section_);
+      for (std::size_t i = 0; i < num_events_in_section_; i++)
+      {
+        Event & event = event_[i];
+        event.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // EventInformationTable::Event::Event
+    //
+    EventInformationTable::Event::Event():
+      reserved1_(0),
+      event_id_(0),
+      start_time_(0),
+      reserved2_(0),
+      etm_location_(0),
+      length_in_seconds_(0),
+      title_length_(0),
+      reserved3_(0),
+      descriptors_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // EventInformationTable::Event::load
+    //
+    void
+    EventInformationTable::Event::load(IBitstream & bin)
+    {
+      reserved1_ = bin.read(2);
+      YAE_THROW_IF(reserved1_ != 0x3);
+
+      event_id_ = bin.read(14);
+      start_time_ = bin.read(32);
+      reserved2_ = bin.read(2);
+      YAE_THROW_IF(reserved2_ != 0x3);
+
+      etm_location_ = bin.read(2);
+      length_in_seconds_ = bin.read(20);
+      title_length_ = bin.read(8);
+      std::size_t stop_pos = bin.position() + (title_length_ << 3);
+      title_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
+
+      reserved3_ = bin.read(4);
+      YAE_THROW_IF(reserved3_ != 0xF);
+
+      descriptors_length_ = bin.read(12);
+      descriptor_.clear();
+
+      stop_pos = bin.position() + (descriptors_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+
+    //----------------------------------------------------------------
+    // ExtendedTextTable::ExtendedTextTable
+    //
+    ExtendedTextTable::ExtendedTextTable():
+      protocol_version_(0),
+      etm_id_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ExtendedTextTable::load
+    //
+    void
+    ExtendedTextTable::load(IBitstream & bin, std::size_t n_bytes)
+    {
+      protocol_version_ = bin.read(8);
+      etm_id_ = bin.read(32);
+      extended_text_message_.load(bin);
     }
 
 

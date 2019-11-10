@@ -500,6 +500,378 @@ namespace yae
       TBufferPtr padding_;
     };
 
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure
+    //
+    struct YAE_API MultipleStringStructure
+    {
+      MultipleStringStructure();
+
+      void load(IBitstream & bin);
+
+      uint8_t number_strings_;
+
+      struct YAE_API Message
+      {
+        Message();
+
+        void load(IBitstream & bin);
+
+        uint32_t iso_639_language_code_ : 24;
+        uint32_t number_segments_ : 8;
+
+        struct YAE_API Segment
+        {
+          Segment();
+
+          void load(IBitstream & bin);
+
+          enum CompresionType
+          {
+            NO_COMPRESSION = 0x00,
+            COMPRESSION_ANNEXC_C4_C5 = 0x01,
+            COMPRESSION_ANNEXC_C6_C7 = 0x02,
+          };
+
+          uint8_t compression_type_;
+          uint8_t mode_;
+          uint8_t number_bytes_;
+          TBufferPtr compressed_string_;
+        };
+
+        std::vector<Segment> segment_;
+      };
+
+      std::vector<Message> strings_;
+    };
+
+
+    //----------------------------------------------------------------
+    // IDescriptor
+    //
+    struct YAE_API Descriptor
+    {
+      Descriptor();
+      virtual ~Descriptor();
+
+      void load_header(IBitstream & bin);
+
+      virtual void load(IBitstream & bin);
+
+      uint8_t descriptor_tag_;
+      uint8_t descriptor_length_;
+    };
+
+    //----------------------------------------------------------------
+    // TDescriptorPtr
+    //
+    typedef yae::shared_ptr<Descriptor> TDescriptorPtr;
+
+
+    //----------------------------------------------------------------
+    // AC3AudioDescriptor
+    //
+    struct YAE_API AC3AudioDescriptor : Descriptor
+    {
+      AC3AudioDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint8_t sample_rate_code_ : 3;
+      uint8_t bsid_ : 5;
+      uint8_t bit_rate_code_ : 6;
+      uint8_t surround_mode_ : 2;
+      uint8_t bsmod_ : 3;
+      uint8_t num_channels_ : 4;
+      uint8_t full_svc_ : 1;
+
+      uint8_t langcod_;
+      uint8_t langcod2_;
+
+      union
+      {
+        uint8_t asvcflags_;
+
+        struct
+        {
+          uint8_t mainid_ : 3;
+          uint8_t priority_ : 2;
+          uint8_t reserved_ : 3;
+        };
+      };
+
+      uint8_t textlen_ : 7;
+      uint8_t text_code_ : 1;
+      TBufferPtr text_;
+
+      uint8_t language_flag_ : 1;
+      uint8_t language2_flag_ : 1;
+      uint8_t reserved2_ : 6;
+      uint8_t language_[3];
+      uint8_t language2_[3];
+      TBufferPtr additional_info_;
+    };
+
+
+    //----------------------------------------------------------------
+    // CaptionServiceDescriptor
+    //
+    struct YAE_API CaptionServiceDescriptor : Descriptor
+    {
+      CaptionServiceDescriptor();
+
+      virtual void load(IBitstream & bin);
+
+      uint8_t reserved_ : 3;
+      uint8_t number_of_services_ : 5;
+
+      struct YAE_API Service
+      {
+        Service();
+
+        void load(IBitstream & bin);
+
+        uint8_t language_[3];
+        uint8_t digital_cc_ : 1;
+        uint8_t reserved1_ : 1;
+        union
+        {
+          uint8_t caption_service_number_ : 6;
+
+          struct
+          {
+            uint8_t reserved2_ : 5;
+            uint8_t line21_field_ : 1;
+          };
+        };
+
+        uint16_t easy_reader_ : 1;
+        uint16_t wide_aspect_ratio_ : 1;
+        uint16_t reserved3_ : 14;
+      };
+
+      std::vector<Service> service_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor
+    //
+    struct YAE_API ContentAdvisoryDescriptor : Descriptor
+    {
+      ContentAdvisoryDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint8_t reserved_ : 2;
+      uint8_t rating_region_count_ : 6;
+
+      struct YAE_API Region
+      {
+        Region();
+
+        void load(IBitstream & bin);
+
+        uint8_t rating_region_;
+        uint8_t rated_dimensions_;
+
+        struct YAE_API Dimension
+        {
+          Dimension();
+
+          void load(IBitstream & bin);
+
+          uint8_t rating_dimension_;
+          uint8_t reserved_ : 4;
+          uint8_t rating_value_ : 4;
+        };
+
+        std::vector<Dimension> dimension_;
+      };
+
+      std::vector<Region> region_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ExtendedChannelNameDescriptor
+    //
+    struct YAE_API ExtendedChannelNameDescriptor : Descriptor
+    {
+      void load(IBitstream & bin);
+
+      MultipleStringStructure long_channel_name_text_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptor
+    //
+    struct YAE_API ServiceLocationDescriptor : Descriptor
+    {
+      ServiceLocationDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint16_t reserved_ : 3;
+      uint16_t pcr_pid_ : 13;
+      uint8_t number_elements_;
+
+      struct YAE_API Element
+      {
+        Element();
+
+        void load(IBitstream & bin);
+
+        uint8_t stream_type_;
+        uint16_t reserved_ : 3;
+        uint16_t elementary_pid_ : 13;
+        uint8_t iso_639_languace_code_[3];
+      };
+
+      std::vector<Element> element_;
+    };
+
+
+    //----------------------------------------------------------------
+    // TimeShiftedServiceDescriptor
+    //
+    struct YAE_API TimeShiftedServiceDescriptor : Descriptor
+    {
+      TimeShiftedServiceDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint8_t reserved_ : 3;
+      uint8_t number_of_services_ : 5;
+
+      struct YAE_API Service
+      {
+        Service();
+
+        void load(IBitstream & bin);
+
+        uint16_t reserved1_ : 6;
+        uint16_t time_shift_ : 10;
+        uint32_t reserved2_ : 4;
+        uint32_t major_channel_number_ : 10;
+        uint32_t minor_channel_number_ : 10;
+      };
+
+      std::vector<Service> service_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ComponentNameDescriptor
+    //
+    struct YAE_API ComponentNameDescriptor : Descriptor
+    {
+      void load(IBitstream & bin);
+
+      MultipleStringStructure component_name_string_;
+    };
+
+
+    //----------------------------------------------------------------
+    // DCCRequestDescriptor
+    //
+    // dcc_departing_request_descriptor and
+    // dcc_arriving_request_descriptor use the same structure
+    //
+    struct YAE_API DCCRequestDescriptor : Descriptor
+    {
+      DCCRequestDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint8_t dcc_request_type_;
+      uint8_t dcc_request_text_length_;
+      MultipleStringStructure dcc_request_text_;
+    };
+
+
+    //----------------------------------------------------------------
+    // RedistributionControlDescriptor
+    //
+    struct YAE_API RedistributionControlDescriptor : Descriptor
+    {
+      void load(IBitstream & bin);
+
+      TBufferPtr rc_information_;
+    };
+
+
+    //----------------------------------------------------------------
+    // GenreDescriptor
+    //
+    struct YAE_API GenreDescriptor : Descriptor
+    {
+      GenreDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint8_t reserved_ : 3;
+      uint8_t attribute_count_ : 5;
+      TBufferPtr attribute_;
+    };
+
+
+    //----------------------------------------------------------------
+    // EAC3AudioStreamDescriptor
+    //
+    struct YAE_API EAC3AudioStreamDescriptor : Descriptor
+    {
+      EAC3AudioStreamDescriptor();
+
+      void load(IBitstream & bin);
+
+      uint16_t reserved1_ : 1;
+      uint16_t bsid_flag_ : 1;
+      uint16_t mainid_flag_ : 1;
+      uint16_t asvc_flag_ : 1;
+      uint16_t mixinfoexists_ : 1;
+      uint16_t substream1_flag_ : 1;
+      uint16_t substream2_flag_ : 1;
+      uint16_t substream3_flag_ : 1;
+      uint16_t reserved2_ : 1;
+      uint16_t full_service_flag_ : 1;
+      uint16_t audio_service_type_ : 3;
+      uint16_t number_of_channels_ : 3;
+
+      uint8_t language_flag_ : 1;
+      uint8_t language2_flag_ : 1;
+      uint8_t reserved3_ : 1;
+      uint8_t bsid_ : 5;
+
+      uint8_t reserved4_ : 3;
+      uint8_t priority_ : 2;
+      uint8_t mainid_ : 3;
+
+      uint8_t asvc_;
+      uint8_t substream1_;
+      uint8_t substream2_;
+      uint8_t substream3_;
+
+      uint8_t language_[3];
+      uint8_t language2_[3];
+
+      uint8_t substream1_lang_[3];
+      uint8_t substream2_lang_[3];
+      uint8_t substream3_lang_[3];
+
+      TBufferPtr additional_info_;
+    };
+
+
+    //----------------------------------------------------------------
+    // load_descriptor
+    //
+    YAE_API TDescriptorPtr
+    load_descriptor(IBitstream & bin);
+
+
     //----------------------------------------------------------------
     // ITable
     //
@@ -509,6 +881,7 @@ namespace yae
 
       virtual void load(IBitstream & bin, std::size_t n_bytes) = 0;
     };
+
 
     //----------------------------------------------------------------
     // Section
@@ -520,15 +893,30 @@ namespace yae
       void load(IBitstream & bin);
 
       uint8_t pointer_field_;
-      uint64_t table_id_ : 8;
-      uint64_t section_syntax_indicator_ : 1;
-      uint64_t private_indicator_ : 1;
-      uint64_t reserved1_ : 2;
-      uint64_t section_length_ : 12;
-      uint64_t transport_stream_id_ : 16;
+      uint8_t table_id_;
+      uint16_t section_syntax_indicator_ : 1;
+      uint16_t private_indicator_ : 1;
+      uint16_t reserved1_ : 2;
+      uint16_t section_length_ : 12;
+
+      union
+      {
+        uint16_t table_id_extension_;
+        uint16_t transport_stream_id_;
+        uint16_t source_id_;
+        uint16_t ett_table_id_extension_;
+
+        struct
+        {
+          uint16_t reserved_ : 8;
+          uint16_t rating_region_ : 8;
+        };
+      };
+
       uint64_t reserved2_ : 2;
       uint64_t version_number_ : 5;
       uint64_t current_next_indicator_ : 1;
+
       uint64_t section_number_ : 8;
       uint64_t last_section_number_ : 8;
 
@@ -556,7 +944,7 @@ namespace yae
         uint32_t pid_ : 13;
       };
 
-      std::vector<Program> programs_;
+      std::vector<Program> program_;
     };
 
     //----------------------------------------------------------------
@@ -571,6 +959,24 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SystemTimeTable
+    //
+    struct YAE_API SystemTimeTable : ITable
+    {
+      SystemTimeTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      uint32_t system_time_;
+      uint8_t gps_utc_offset_;
+      uint16_t daylight_saving_;
+
+      std::vector<TDescriptorPtr> descriptor_;
+    };
+
+
+    //----------------------------------------------------------------
     // MasterGuideTable
     //
     struct YAE_API MasterGuideTable : ITable
@@ -580,7 +986,183 @@ namespace yae
       void load(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
-      TBufferPtr psip_table_data_;
+      uint16_t tables_defined_;
+
+      struct YAE_API Table
+      {
+        Table();
+
+        void load(IBitstream & bin);
+
+        uint16_t table_type_;
+        uint16_t reserved1_ : 3;
+        uint16_t table_type_pid_ : 13;
+        uint8_t reserved2_ : 3;
+        uint8_t table_type_version_number_ : 5;
+        uint32_t number_bytes_;
+        uint16_t reserved3_ : 4;
+        uint16_t table_type_descriptors_length_ : 12;
+
+        std::vector<TDescriptorPtr> descriptor_;
+      };
+
+      std::vector<Table> table_;
+
+      uint16_t reserved_ : 4;
+      uint16_t descriptors_length_ : 12;
+      std::vector<TDescriptorPtr> descriptor_;
+    };
+
+
+    //----------------------------------------------------------------
+    // VirtualChannelTable
+    //
+    struct YAE_API VirtualChannelTable : ITable
+    {
+      VirtualChannelTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      uint8_t num_channels_in_section_;
+
+      struct YAE_API Channel
+      {
+        Channel();
+
+        void load(IBitstream & bin);
+
+        uint16_t short_name_[7];
+        uint32_t reserved1_ : 4;
+        uint32_t major_channel_number_ : 10;
+        uint32_t minor_channel_number_ : 10;
+        uint32_t modulation_mode_ : 8;
+        uint32_t carrier_frequency_;
+        uint16_t channel_tsid_;
+        uint16_t program_number_;
+        uint16_t etm_location_ : 2;
+        uint16_t access_controlled_ : 1;
+        uint16_t hidden_ : 1;
+        uint16_t path_selected_ : 1;
+        uint16_t out_of_band_ : 1;
+        uint16_t hide_guide_ : 1;
+        uint16_t reserved3_ : 3;
+        uint16_t service_type_ : 6;
+        uint16_t source_id_;
+        uint16_t reserved4_ : 6;
+        uint16_t descriptors_length_ : 10;
+
+        std::vector<TDescriptorPtr> descriptor_;
+      };
+
+      std::vector<Channel> channel_;
+
+      uint16_t reserved_ : 6;
+      uint16_t additional_descriptors_length_ : 10;
+
+      std::vector<TDescriptorPtr> additional_descriptor_;
+    };
+
+
+    //----------------------------------------------------------------
+    // RatingRegionTable
+    //
+    struct YAE_API RatingRegionTable : ITable
+    {
+      RatingRegionTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      uint8_t rating_region_name_length_;
+      MultipleStringStructure rating_region_name_text_;
+      uint8_t dimensions_defined_;
+
+      struct YAE_API Dimension
+      {
+        Dimension();
+
+        void load(IBitstream & bin);
+
+        uint8_t dimension_name_length_;
+        MultipleStringStructure dimension_name_text_;
+        uint8_t reserved_ : 3;
+        uint8_t graduated_scale_ : 1;
+        uint8_t values_defined_ : 4;
+
+        struct YAE_API Rating
+        {
+          Rating();
+
+          void load(IBitstream & bin);
+
+          uint8_t abbrev_rating_value_length_;
+          MultipleStringStructure abbrev_rating_value_text_;
+          uint8_t rating_value_length_;
+          MultipleStringStructure rating_value_text_;
+        };
+
+        std::vector<Rating> rating_;
+      };
+
+      std::vector<Dimension> dimension_;
+
+      uint16_t reserved_ : 6;
+      uint16_t descriptors_length_ : 10;
+      std::vector<TDescriptorPtr> descriptor_;
+    };
+
+
+    //----------------------------------------------------------------
+    // EventInformationTable
+    //
+    struct YAE_API EventInformationTable : ITable
+    {
+      EventInformationTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      uint8_t num_events_in_section_;
+
+      struct YAE_API Event
+      {
+        Event();
+
+        void load(IBitstream & bin);
+
+        uint16_t reserved1_ : 2;
+        uint16_t event_id_ : 14;
+        uint32_t start_time_;
+        uint32_t reserved2_ : 2;
+        uint32_t etm_location_ : 2;
+        uint32_t length_in_seconds_ : 20;
+        uint32_t title_length_ : 8;
+
+        MultipleStringStructure title_text_;
+
+        uint16_t reserved3_ : 4;
+        uint16_t descriptors_length_ : 12;
+
+        std::vector<TDescriptorPtr> descriptor_;
+      };
+
+      std::vector<Event> event_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ExtendedTextTable
+    //
+    struct YAE_API ExtendedTextTable : ITable
+    {
+      ExtendedTextTable();
+
+      void load(IBitstream & bin, std::size_t n_bytes);
+
+      uint8_t protocol_version_;
+      uint32_t etm_id_;
+      MultipleStringStructure extended_text_message_;
     };
 
 
