@@ -555,9 +555,12 @@ namespace yae
       Descriptor();
       virtual ~Descriptor();
 
+    protected:
       void load_header(IBitstream & bin);
+      virtual void load_body(IBitstream & bin);
 
-      virtual void load(IBitstream & bin);
+    public:
+      void load(IBitstream & bin);
 
       uint8_t descriptor_tag_;
       uint8_t descriptor_length_;
@@ -570,13 +573,34 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // VideoStreamDescriptor
+    //
+    struct YAE_API VideoStreamDescriptor : Descriptor
+    {
+      VideoStreamDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t multiple_frame_rate_flag_ : 1;
+      uint8_t frame_rate_code_ : 4;
+      uint8_t mpeg1_only_flag_ : 1;
+      uint8_t constrained_parameter_flag_ : 1;
+      uint8_t still_picture_flag_ : 1;
+      uint8_t profile_and_level_indication_;
+      uint8_t chroma_format_ : 2;
+      uint8_t frame_rate_extension_flag_ : 1;
+      uint8_t reserved_ : 5;
+    };
+
+
+    //----------------------------------------------------------------
     // AC3AudioDescriptor
     //
     struct YAE_API AC3AudioDescriptor : Descriptor
     {
       AC3AudioDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint8_t sample_rate_code_ : 3;
       uint8_t bsid_ : 5;
@@ -621,7 +645,7 @@ namespace yae
     {
       CaptionServiceDescriptor();
 
-      virtual void load(IBitstream & bin);
+      virtual void load_body(IBitstream & bin);
 
       uint8_t reserved_ : 3;
       uint8_t number_of_services_ : 5;
@@ -662,7 +686,7 @@ namespace yae
     {
       ContentAdvisoryDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint8_t reserved_ : 2;
       uint8_t rating_region_count_ : 6;
@@ -688,6 +712,8 @@ namespace yae
         };
 
         std::vector<Dimension> dimension_;
+        uint8_t rating_description_length_;
+        MultipleStringStructure rating_description_text_;
       };
 
       std::vector<Region> region_;
@@ -699,7 +725,7 @@ namespace yae
     //
     struct YAE_API ExtendedChannelNameDescriptor : Descriptor
     {
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       MultipleStringStructure long_channel_name_text_;
     };
@@ -712,7 +738,7 @@ namespace yae
     {
       ServiceLocationDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint16_t reserved_ : 3;
       uint16_t pcr_pid_ : 13;
@@ -741,7 +767,7 @@ namespace yae
     {
       TimeShiftedServiceDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint8_t reserved_ : 3;
       uint8_t number_of_services_ : 5;
@@ -768,7 +794,7 @@ namespace yae
     //
     struct YAE_API ComponentNameDescriptor : Descriptor
     {
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       MultipleStringStructure component_name_string_;
     };
@@ -784,7 +810,7 @@ namespace yae
     {
       DCCRequestDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint8_t dcc_request_type_;
       uint8_t dcc_request_text_length_;
@@ -797,7 +823,7 @@ namespace yae
     //
     struct YAE_API RedistributionControlDescriptor : Descriptor
     {
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       TBufferPtr rc_information_;
     };
@@ -810,7 +836,7 @@ namespace yae
     {
       GenreDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint8_t reserved_ : 3;
       uint8_t attribute_count_ : 5;
@@ -825,7 +851,7 @@ namespace yae
     {
       EAC3AudioStreamDescriptor();
 
-      void load(IBitstream & bin);
+      void load_body(IBitstream & bin);
 
       uint16_t reserved1_ : 1;
       uint16_t bsid_flag_ : 1;
@@ -896,6 +922,7 @@ namespace yae
 
       union
       {
+        uint16_t program_number_;
         uint16_t table_id_extension_;
         uint16_t transport_stream_id_;
         uint16_t source_id_;
@@ -946,14 +973,63 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // PATSectionPtr
+    //
+    typedef yae::shared_ptr<ProgramAssociationTable, Section> PATSectionPtr;
+
+
+    //----------------------------------------------------------------
+    // ConditionalAccessTable
+    //
+    struct YAE_API ConditionalAccessTable : Section
+    {
+      void load_body(IBitstream & bin, std::size_t n_bytes);
+
+      std::vector<TDescriptorPtr> descriptor_;
+    };
+
+    //----------------------------------------------------------------
+    // CATSectionPtr
+    //
+    typedef yae::shared_ptr<ConditionalAccessTable, Section> CATSectionPtr;
+
+
+    //----------------------------------------------------------------
     // ProgramMapTable
     //
     struct YAE_API ProgramMapTable : Section
     {
       ProgramMapTable();
 
-      void load_body(IBitstream & bin);
+      void load_body(IBitstream & bin, std::size_t n_bytes);
+
+      uint16_t reserved1_ : 3;
+      uint16_t pcr_pid_ : 13;
+      uint16_t reserved2_ : 4;
+      uint16_t program_info_length_ : 12;
+      std::vector<TDescriptorPtr> descriptor_;
+
+      struct YAE_API ElementaryStream
+      {
+        ElementaryStream();
+
+        void load(IBitstream & bin);
+
+        uint8_t stream_type_;
+        uint16_t reserved1_ : 3;
+        uint16_t elementary_pid_ : 13;
+        uint16_t reserved2_ : 4;
+        uint16_t es_info_length_ : 12;
+        std::vector<TDescriptorPtr> descriptor_;
+      };
+
+      std::vector<ElementaryStream> es_;
     };
+
+    //----------------------------------------------------------------
+    // PMTSectionPtr
+    //
+    typedef yae::shared_ptr<ProgramMapTable, Section> PMTSectionPtr;
 
 
     //----------------------------------------------------------------
@@ -972,6 +1048,11 @@ namespace yae
 
       std::vector<TDescriptorPtr> descriptor_;
     };
+
+    //----------------------------------------------------------------
+    // STTSectionPtr
+    //
+    typedef yae::shared_ptr<SystemTimeTable, Section> STTSectionPtr;
 
 
     //----------------------------------------------------------------
@@ -1011,6 +1092,11 @@ namespace yae
       std::vector<TDescriptorPtr> descriptor_;
     };
 
+    //----------------------------------------------------------------
+    // MGTSectionPtr
+    //
+    typedef yae::shared_ptr<MasterGuideTable, Section> MGTSectionPtr;
+
 
     //----------------------------------------------------------------
     // VirtualChannelTable
@@ -1030,7 +1116,7 @@ namespace yae
 
         void load(IBitstream & bin);
 
-        uint16_t short_name_[7];
+        uint16_t short_name_[7]; // UTF-16
         uint32_t reserved1_ : 4;
         uint32_t major_channel_number_ : 10;
         uint32_t minor_channel_number_ : 10;
@@ -1060,6 +1146,11 @@ namespace yae
 
       std::vector<TDescriptorPtr> additional_descriptor_;
     };
+
+    //----------------------------------------------------------------
+    // VCTSectionPtr
+    //
+    typedef yae::shared_ptr<VirtualChannelTable, Section> VCTSectionPtr;
 
 
     //----------------------------------------------------------------
@@ -1110,6 +1201,11 @@ namespace yae
       std::vector<TDescriptorPtr> descriptor_;
     };
 
+    //----------------------------------------------------------------
+    // RRTSectionPtr
+    //
+    typedef yae::shared_ptr<RatingRegionTable, Section> RRTSectionPtr;
+
 
     //----------------------------------------------------------------
     // EventInformationTable
@@ -1148,6 +1244,11 @@ namespace yae
       std::vector<Event> event_;
     };
 
+    //----------------------------------------------------------------
+    // EITSectionPtr
+    //
+    typedef yae::shared_ptr<EventInformationTable, Section> EITSectionPtr;
+
 
     //----------------------------------------------------------------
     // ExtendedTextTable
@@ -1163,6 +1264,10 @@ namespace yae
       MultipleStringStructure extended_text_message_;
     };
 
+    //----------------------------------------------------------------
+    // ETTSectionPtr
+    //
+    typedef yae::shared_ptr<ExtendedTextTable, Section> ETTSectionPtr;
 
 
     //----------------------------------------------------------------
@@ -1171,24 +1276,41 @@ namespace yae
     YAE_API TSectionPtr
     load_section(IBitstream & bin);
 
+
     //----------------------------------------------------------------
     // assemble_payload
     //
-    YAE_API yae::Data assemble_payload(std::list<TSPacket> & packets);
+    YAE_API yae::Data
+    assemble_payload(std::list<TSPacket> & packets);
 
-    //----------------------------------------------------------------
-    // consume
-    //
-    YAE_API void consume(uint16_t pid, std::list<TSPacket> & packets);
 
     //----------------------------------------------------------------
     // Context
     //
     struct YAE_API Context
     {
+      void consume(uint16_t pid, std::list<TSPacket> & packets);
+
       void load(IBitstream & bin, TSPacket & pkt);
 
+      // packets, indexed by pid:
       std::map<uint16_t, std::list<TSPacket> > pes_;
+
+      // program numbers, indexed by program map pid:
+      std::map<uint16_t, uint16_t> pid_pmt_;
+      std::map<uint16_t, uint16_t> pid_es_;
+
+      // pid sets for various PSIP sections:
+      std::set<uint16_t> pid_tvct_curr_;
+      std::set<uint16_t> pid_tvct_next_;
+      std::set<uint16_t> pid_cvct_curr_;
+      std::set<uint16_t> pid_cvct_next_;
+      std::set<uint16_t> pid_channel_ett_;
+      std::set<uint16_t> pid_dccsct_;
+      std::map<uint16_t, uint8_t> pid_eit_;
+      std::map<uint16_t, uint8_t> pid_event_ett_;
+      std::map<uint16_t, uint8_t> pid_rrt_;
+      std::map<uint16_t, uint8_t> pid_dcct_;
     };
 
   }

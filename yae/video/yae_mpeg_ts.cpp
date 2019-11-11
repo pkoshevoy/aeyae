@@ -53,6 +53,7 @@ namespace yae
       piecewise_rate_flag_ = bin.read(1);
       seamless_splice_flag_ = bin.read(1);
       reserved1_ = bin.read(5);
+      YAE_THROW_IF(reserved1_ != 0x1F);
 
       if (ltw_flag_)
       {
@@ -63,6 +64,8 @@ namespace yae
       if (piecewise_rate_flag_)
       {
         reserved2_ = bin.read(2);
+        YAE_THROW_IF(reserved2_ != 0x3);
+
         piecewise_rate_ = bin.read(22);
       }
 
@@ -139,6 +142,7 @@ namespace yae
         {
           program_clock_reference_base_ = bin.read(33);
           program_clock_reference_reserved_ = bin.read(6);
+          YAE_THROW_IF(program_clock_reference_reserved_ != 0x3F);
           program_clock_reference_extension_ = bin.read(9);
         }
 
@@ -146,6 +150,7 @@ namespace yae
         {
           original_program_clock_reference_base_ = bin.read(33);
           original_program_clock_reference_reserved_ = bin.read(6);
+          YAE_THROW_IF(original_program_clock_reference_reserved_ != 0x3F);
           original_program_clock_reference_extension_ = bin.read(9);
         }
 
@@ -274,6 +279,7 @@ namespace yae
 
       packet_rate_restriction_flag_ = bin.read(1);
       reserved_ = bin.read(7);
+      YAE_THROW_IF(reserved_ != 0x7F);
 
       while (bin.next_bits(1, 1))
       {
@@ -381,6 +387,8 @@ namespace yae
       YAE_THROW_IF(marker2_ != 1);
 
       reserved_ = bin.read(5);
+      YAE_THROW_IF(reserved_ != 0x1F);
+
       pack_stuffing_length_ = bin.read(3);
       stuffing_ = bin.read_bytes(pack_stuffing_length_);
 
@@ -577,6 +585,8 @@ namespace yae
       if (escr_flag_)
       {
         escr_reserved_ = bin.read(2);
+        YAE_THROW_IF(escr_reserved_ != 0x3);
+
         escr_base_32_30_ = bin.read(3);
         escr_marker1_ = bin.read(1);
         YAE_THROW_IF(escr_marker1_ != 1);
@@ -623,10 +633,12 @@ namespace yae
         {
           freeze_.field_id_ = bin.read(2);
           freeze_.reserved_ = bin.read(3);
+          YAE_THROW_IF(freeze_.reserved_ != 0x7);
         }
         else
         {
           mode_.reserved_ = bin.read(5);
+          YAE_THROW_IF(mode_.reserved_ != 0x1F);
         }
       }
 
@@ -693,6 +705,8 @@ namespace yae
       program_packet_sequence_counter_flag_ = bin.read(1);
       pstd_buffer_flag_ = bin.read(1);
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
       pes_extension_flag_2_ = bin.read(1);
 
       if (pes_private_data_flag_)
@@ -778,11 +792,14 @@ namespace yae
       else
       {
         tref_.stream_id_extension_reserved_ = bin.read(6);
-        tref_.extension_flag_ = bin.read(1);
+        YAE_THROW_IF(tref_.stream_id_extension_reserved_ != 0x3F);
 
+        tref_.extension_flag_ = bin.read(1);
         if (tref_.extension_flag_)
         {
           tref_reserved_ = bin.read(4);
+          YAE_THROW_IF(tref_reserved_ != 0xF);
+
           tref_32_30_ = bin.read(3);
           tref_marker1_ = bin.read(1);
           YAE_THROW_IF(tref_marker1_ != 1);
@@ -892,7 +909,7 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // Descriptor::load
+    // Descriptor::load_header
     //
     void
     Descriptor::load_header(IBitstream & bin)
@@ -902,12 +919,59 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // Descriptor::load_body
+    //
+    void
+    Descriptor::load_body(IBitstream & bin)
+    {
+      bin.skip_bytes(descriptor_length_);
+    }
+
+    //----------------------------------------------------------------
     // Descriptor::load
     //
     void
     Descriptor::load(IBitstream & bin)
     {
-      bin.skip_bytes(descriptor_length_);
+      this->load_header(bin);
+      this->load_body(bin);
+    }
+
+
+    //----------------------------------------------------------------
+    // VideoStreamDescriptor::VideoStreamDescriptor
+    //
+    VideoStreamDescriptor::VideoStreamDescriptor():
+      multiple_frame_rate_flag_(0),
+      frame_rate_code_(0),
+      mpeg1_only_flag_(0),
+      constrained_parameter_flag_(0),
+      still_picture_flag_(0),
+      profile_and_level_indication_(0),
+      chroma_format_(0),
+      frame_rate_extension_flag_(0),
+      reserved_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // VideoStreamDescriptor::load_body
+    //
+    void
+    VideoStreamDescriptor::load_body(IBitstream & bin)
+    {
+      multiple_frame_rate_flag_ = bin.read(1);
+      frame_rate_code_ = bin.read(4);
+      mpeg1_only_flag_ = bin.read(1);
+      constrained_parameter_flag_ = bin.read(1);
+      still_picture_flag_ = bin.read(1);
+      if (!mpeg1_only_flag_)
+      {
+        profile_and_level_indication_ = bin.read(8);
+        chroma_format_ = bin.read(2);
+        frame_rate_extension_flag_ = bin.read(1);
+        reserved_ = bin.read(5);
+        YAE_THROW_IF(reserved_ != 0x1F);
+      }
     }
 
 
@@ -936,10 +1000,10 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // AC3AudioDescriptor::load
+    // AC3AudioDescriptor::load_body
     //
     void
-    AC3AudioDescriptor::load(IBitstream & bin)
+    AC3AudioDescriptor::load_body(IBitstream & bin)
     {
       std::size_t start_pos = bin.position();
 
@@ -996,10 +1060,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // CaptionServiceDescriptor::load
+    // CaptionServiceDescriptor::load_body
     //
     void
-    CaptionServiceDescriptor::load(IBitstream & bin)
+    CaptionServiceDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
       YAE_THROW_IF(reserved_ != 0x7);
@@ -1066,10 +1130,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // ContentAdvisoryDescriptor::load
+    // ContentAdvisoryDescriptor::load_body
     //
     void
-    ContentAdvisoryDescriptor::load(IBitstream & bin)
+    ContentAdvisoryDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(2);
       rating_region_count_ = bin.read(6);
@@ -1087,7 +1151,8 @@ namespace yae
     //
     ContentAdvisoryDescriptor::Region::Region():
       rating_region_(0),
-      rated_dimensions_(0)
+      rated_dimensions_(0),
+      rating_description_length_(0)
     {}
 
     //----------------------------------------------------------------
@@ -1105,6 +1170,13 @@ namespace yae
         Dimension & dimension = dimension_[i];
         dimension.load(bin);
       }
+
+      rating_description_length_ = bin.read(8);
+      std::size_t stop_pos = bin.position() + (rating_description_length_ << 3);
+      rating_description_text_.load(bin);
+      YAE_THROW_IF(bin.position() > stop_pos);
+      YAE_ASSERT(bin.position() == stop_pos);
+      bin.seek(stop_pos);
     }
 
     //----------------------------------------------------------------
@@ -1130,10 +1202,10 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // ExtendedChannelNameDescriptor::load
+    // ExtendedChannelNameDescriptor::load_body
     //
     void
-    ExtendedChannelNameDescriptor::load(IBitstream & bin)
+    ExtendedChannelNameDescriptor::load_body(IBitstream & bin)
     {
       long_channel_name_text_.load(bin);
     }
@@ -1149,12 +1221,14 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // ServiceLocationDescriptor::load
+    // ServiceLocationDescriptor::load_body
     //
     void
-    ServiceLocationDescriptor::load(IBitstream & bin)
+    ServiceLocationDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
       pcr_pid_ = bin.read(13);
       number_elements_ = bin.read(8);
 
@@ -1185,6 +1259,8 @@ namespace yae
     {
       stream_type_ = bin.read(8);
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
       elementary_pid_ = bin.read(13);
       bin.read_bytes(iso_639_languace_code_, 3);
     }
@@ -1199,10 +1275,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // TimeShiftedServiceDescriptor::load
+    // TimeShiftedServiceDescriptor::load_body
     //
     void
-    TimeShiftedServiceDescriptor::load(IBitstream & bin)
+    TimeShiftedServiceDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
       YAE_THROW_IF(reserved_ != 0x7);
@@ -1247,10 +1323,10 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // ComponentNameDescriptor::load
+    // ComponentNameDescriptor::load_body
     //
     void
-    ComponentNameDescriptor::load(IBitstream & bin)
+    ComponentNameDescriptor::load_body(IBitstream & bin)
     {
       component_name_string_.load(bin);
     }
@@ -1265,10 +1341,10 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // DCCRequestDescriptor::load
+    // DCCRequestDescriptor::load_body
     //
     void
-    DCCRequestDescriptor::load(IBitstream & bin)
+    DCCRequestDescriptor::load_body(IBitstream & bin)
     {
       dcc_request_type_ = bin.read(8);
       dcc_request_text_length_ = bin.read(8);
@@ -1286,10 +1362,10 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // RedistributionControlDescriptor::load
+    // RedistributionControlDescriptor::load_body
     //
     void
-    RedistributionControlDescriptor::load(IBitstream & bin)
+    RedistributionControlDescriptor::load_body(IBitstream & bin)
     {
       rc_information_ = bin.read_bytes(descriptor_length_);
     }
@@ -1304,12 +1380,14 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // GenreDescriptor::load
+    // GenreDescriptor::load_body
     //
     void
-    GenreDescriptor::load(IBitstream & bin)
+    GenreDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
       attribute_count_  = bin.read(5);
       attribute_ = bin.read_bytes(attribute_count_);
     }
@@ -1355,14 +1433,14 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // EAC3AudioStreamDescriptor::load
+    // EAC3AudioStreamDescriptor::load_body
     //
     void
-    EAC3AudioStreamDescriptor::load(IBitstream & bin)
+    EAC3AudioStreamDescriptor::load_body(IBitstream & bin)
     {
       std::size_t start_pos = bin.position();
       reserved1_ = bin.read(1);
-      YAE_THROW_IF(reserved1_ != 1);
+      YAE_THROW_IF(reserved1_ != 0x1);
 
       bsid_flag_ = bin.read(1);
       mainid_flag_ = bin.read(1);
@@ -1372,7 +1450,7 @@ namespace yae
       substream2_flag_ = bin.read(1);
       substream3_flag_ = bin.read(1);
       reserved2_ = bin.read(1);
-      YAE_THROW_IF(reserved2_ != 1);
+      YAE_THROW_IF(reserved2_ != 0x1);
 
       full_service_flag_ = bin.read(1);
       audio_service_type_ = bin.read(3);
@@ -1381,11 +1459,14 @@ namespace yae
       language_flag_ = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved3_ = bin.read(1);
+      YAE_THROW_IF(reserved3_ != 0x1);
       bsid_ = bin.read(5);
 
       if (mainid_flag_)
       {
         reserved4_ = bin.read(3);
+        YAE_THROW_IF(reserved4_ != 0x7);
+
         priority_ = bin.read(2);
         mainid_ = bin.read(3);
       }
@@ -1453,7 +1534,11 @@ namespace yae
       TDescriptorPtr descriptor;
       uint8_t descriptor_tag = bin.peek(8);
 
-      if (descriptor_tag == 0x80)
+      if (descriptor_tag == 0x02)
+      {
+        descriptor.reset(new VideoStreamDescriptor());
+      }
+      else if (descriptor_tag == 0x80)
       {
         // stuffing descriptor:
         descriptor.reset(new Descriptor());
@@ -1515,7 +1600,6 @@ namespace yae
       }
 
       YAE_THROW_IF(!descriptor);
-      descriptor->load_header(bin);
       descriptor->load(bin);
       return descriptor;
     }
@@ -1552,15 +1636,19 @@ namespace yae
       table_id_ = bin.read(8);
 
       section_syntax_indicator_ = bin.read(1);
-      YAE_THROW_IF(section_syntax_indicator_ != 1);
+      YAE_THROW_IF(section_syntax_indicator_ != 0x1);
 
       private_indicator_ = bin.read(1);
       reserved1_ = bin.read(2);
+      YAE_THROW_IF(reserved1_ != 0x3);
+
       section_length_ = bin.read(12);
       YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
 
       transport_stream_id_ = bin.read(16);
       reserved2_ = bin.read(2);
+      YAE_THROW_IF(reserved2_ != 0x3);
+
       version_number_ = bin.read(5);
       current_next_indicator_ = bin.read(1);
       section_number_ = bin.read(8);
@@ -1617,7 +1705,107 @@ namespace yae
     {
       program_number_ = bin.read(16);
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
       pid_ = bin.read(13);
+    }
+
+
+    //----------------------------------------------------------------
+    // ConditionalAccessTable::load_body
+    //
+    void
+    ConditionalAccessTable::load_body(IBitstream & bin, std::size_t n_bytes)
+    {
+      std::size_t body_end = bin.position() + (n_bytes << 3);
+      while (bin.position() < body_end)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != body_end);
+    }
+
+
+    //----------------------------------------------------------------
+    // ProgramMapTable::ProgramMapTable
+    //
+    ProgramMapTable::ProgramMapTable():
+      reserved1_(0),
+      pcr_pid_(0),
+      reserved2_(0),
+      program_info_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ProgramMapTable::load_body
+    //
+    void
+    ProgramMapTable::load_body(IBitstream & bin, std::size_t n_bytes)
+    {
+      std::size_t body_end = bin.position() + (n_bytes << 3);
+
+      reserved1_ = bin.read(3);
+      YAE_THROW_IF(reserved1_ != 0x7);
+
+      pcr_pid_ = bin.read(13);
+      reserved2_ = bin.read(4);
+      YAE_THROW_IF(reserved2_ != 0xF);
+
+      program_info_length_ = bin.read(12);
+      descriptor_.clear();
+
+      std::size_t stop_pos = bin.position() + (program_info_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+
+      while (bin.position() < body_end)
+      {
+        es_.push_back(ElementaryStream());
+        ElementaryStream & es = es_.back();
+        es.load(bin);
+      }
+      YAE_THROW_IF(bin.position() != body_end);
+    }
+
+    //----------------------------------------------------------------
+    // ProgramMapTable::ElementaryStream::ElementaryStream
+    //
+    ProgramMapTable::ElementaryStream::ElementaryStream():
+      stream_type_(0),
+      reserved1_(0),
+      elementary_pid_(0),
+      reserved2_(0),
+      es_info_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ProgramMapTable::ElementaryStream::load
+    //
+    void
+    ProgramMapTable::ElementaryStream::load(IBitstream & bin)
+    {
+      stream_type_ = bin.read(8);
+      reserved1_ = bin.read(3);
+      YAE_THROW_IF(reserved1_ != 0x7);
+
+      elementary_pid_ = bin.read(13);
+      reserved2_ = bin.read(4);
+      YAE_THROW_IF(reserved2_ != 0xF);
+
+      es_info_length_ = bin.read(12);
+      descriptor_.clear();
+
+      std::size_t stop_pos = bin.position() + (es_info_length_ << 3);
+      while (bin.position() < stop_pos)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -1778,6 +1966,8 @@ namespace yae
       }
 
       reserved_ = bin.read(6);
+      YAE_THROW_IF(reserved_ != 0x3F);
+
       additional_descriptors_length_ = bin.read(10);
       additional_descriptor_.clear();
 
@@ -1823,12 +2013,16 @@ namespace yae
     void
     VirtualChannelTable::Channel::load(IBitstream & bin)
     {
-      bin.read_bytes(short_name_, 7);
+      bin.read<uint16_t>(short_name_, 7);
       reserved1_ = bin.read(4);
       YAE_THROW_IF(reserved1_ != 0xF);
 
       major_channel_number_ = bin.read(10);
+      YAE_THROW_IF(major_channel_number_ < 1 || major_channel_number_ > 99);
+
       minor_channel_number_ = bin.read(10);
+      YAE_THROW_IF(minor_channel_number_ > 999);
+
       modulation_mode_ = bin.read(8);
       carrier_frequency_ = bin.read(32);
       channel_tsid_ = bin.read(16);
@@ -1937,6 +2131,8 @@ namespace yae
       bin.seek(stop_pos);
 
       reserved_ = bin.read(3);
+      YAE_THROW_IF(reserved_ != 0x7);
+
       graduated_scale_ = bin.read(1);
       values_defined_ = bin.read(4);
 
@@ -2099,10 +2295,12 @@ namespace yae
       else if (table_id == 0x01)
       {
         // CAT
+        section.reset(new ConditionalAccessTable());
       }
       else if (table_id == 0x02)
       {
         // PMT
+        section.reset(new ProgramMapTable());
       }
       else if (table_id == 0xC7)
       {
@@ -2183,10 +2381,10 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // consume
+    // Context::consume
     //
     void
-    consume(uint16_t pid, std::list<TSPacket> & packets)
+    Context::consume(uint16_t pid, std::list<TSPacket> & packets)
     {
       yae::Data payload = assemble_payload(packets);
       std::string tmp = yae::to_hex(payload.get(),
@@ -2203,18 +2401,154 @@ namespace yae
         yae::Bitstream bin(payload);
         if (pid == 0x0000)
         {
-          TSectionPtr pat = load_section(bin);
-          YAE_THROW_IF(pat->table_id_ != 0x00);
-          YAE_THROW_IF(pat->private_indicator_ != 0);
+          PATSectionPtr section = load_section(bin);
+          const ProgramAssociationTable & pat = *section;
+          YAE_THROW_IF(pat.table_id_ != 0x00);
+          YAE_THROW_IF(pat.private_indicator_ != 0);
+
+          for (std::size_t i = 0, n = pat.program_.size(); i < n; i++)
+          {
+            const ProgramAssociationTable::Program & p = pat.program_[i];
+            pid_pmt_[p.pid_] = p.program_number_;
+          }
+        }
+        else if (pid == 0x0001)
+        {
+          CATSectionPtr section = load_section(bin);
+          const ConditionalAccessTable & cat = *section;
+          YAE_THROW_IF(cat.table_id_ != 0x01);
+          YAE_THROW_IF(cat.private_indicator_ != 0);
+        }
+        else if (yae::has(pid_pmt_, pid))
+        {
+          PMTSectionPtr section = load_section(bin);
+          const ProgramMapTable & pmt = *section;
+          YAE_THROW_IF(pmt.table_id_ != 0x02);
+          YAE_THROW_IF(pmt.private_indicator_ != 0);
+
+          for (std::size_t i = 0, n = pmt.es_.size(); i < n; i++)
+          {
+            const ProgramMapTable::ElementaryStream & es = pmt.es_[i];
+            pid_es_[es.elementary_pid_] = pmt.program_number_;
+          }
         }
         else if (pid == 0x1FFB)
         {
-          TSectionPtr psip = load_section(bin);
-          YAE_THROW_IF(psip->table_id_ < 0xC7 ||
-                       psip->table_id_ > 0xCD);
-          YAE_THROW_IF(psip->private_indicator_ != 1);
+          TSectionPtr section = load_section(bin);
+          MGTSectionPtr mgt_section = section;
+          STTSectionPtr stt_section = section;
+          VCTSectionPtr vct_section = section;
+          YAE_EXPECT(mgt_section || stt_section || vct_section);
+
+          if (mgt_section)
+          {
+            const MasterGuideTable & mgt = *mgt_section;
+            YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
+                         mgt.table_id_ > 0xCD);
+            YAE_THROW_IF(mgt.private_indicator_ != 1);
+
+            for (std::size_t i = 0; i < mgt.tables_defined_; i++)
+            {
+              const MasterGuideTable::Table & table = mgt.table_[i];
+              if (table.table_type_ == 0x0000)
+              {
+                pid_tvct_curr_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ == 0x0001)
+              {
+                pid_tvct_next_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ == 0x0002)
+              {
+                pid_cvct_curr_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ == 0x0003)
+              {
+                pid_cvct_next_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ == 0x0004)
+              {
+                pid_channel_ett_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ == 0x0005)
+              {
+                pid_dccsct_.insert(table.table_type_pid_);
+              }
+              else if (table.table_type_ >= 0x0100 &&
+                       table.table_type_ <= 0x017F)
+              {
+                pid_eit_[table.table_type_pid_] = table.table_type_ & 0x7F;
+              }
+              else if (table.table_type_ >= 0x0200 &&
+                       table.table_type_ <= 0x027F)
+              {
+                pid_event_ett_[table.table_type_pid_] =
+                  table.table_type_ & 0x7F;
+              }
+              else if (table.table_type_ >= 0x0300 &&
+                       table.table_type_ <= 0x03FF)
+              {
+                pid_rrt_[table.table_type_pid_] = table.table_type_ & 0xFF;
+              }
+              else if (table.table_type_ >= 0x1400 &&
+                       table.table_type_ <= 0x14FF)
+              {
+                pid_dcct_[table.table_type_pid_] = table.table_type_ & 0xFF;
+              }
+            }
+          }
         }
-        else
+        else if (yae::has(pid_tvct_curr_, pid))
+        {
+          VCTSectionPtr section = load_section(bin);
+          VirtualChannelTable & vct = *section;
+        }
+        else if (yae::has(pid_tvct_next_, pid))
+        {
+          VCTSectionPtr section = load_section(bin);
+          VirtualChannelTable & vct = *section;
+        }
+        else if (yae::has(pid_cvct_curr_, pid))
+        {
+          VCTSectionPtr section = load_section(bin);
+          VirtualChannelTable & vct = *section;
+        }
+        else if (yae::has(pid_cvct_next_, pid))
+        {
+          VCTSectionPtr section = load_section(bin);
+          VirtualChannelTable & vct = *section;
+        }
+        else if (yae::has(pid_channel_ett_, pid))
+        {
+          ETTSectionPtr section = load_section(bin);
+          ExtendedTextTable & ett = *section;
+        }
+        else if (yae::has(pid_dccsct_, pid))
+        {
+          // FIXME: DCC is not implemented
+          TSectionPtr section = load_section(bin);
+        }
+        else if (yae::has(pid_eit_, pid))
+        {
+          EITSectionPtr section = load_section(bin);
+          EventInformationTable & eit = *section;
+        }
+        else if (yae::has(pid_event_ett_, pid))
+        {
+          ETTSectionPtr section = load_section(bin);
+          ExtendedTextTable & ett = *section;
+        }
+        else if (yae::has(pid_rrt_, pid))
+        {
+          RRTSectionPtr section = load_section(bin);
+          RatingRegionTable & rrt = *section;
+        }
+        else if (yae::has(pid_dcct_, pid))
+        {
+          // FIXME: DCC is not implemented
+          TSectionPtr section = load_section(bin);
+        }
+        else // if (bin.peek_bits(24) == 0x000001)
         {
           PESPacket pes_pkt;
           pes_pkt.load(bin);

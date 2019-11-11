@@ -131,7 +131,7 @@ namespace yae
       }
     }
 
-#if 0 // ndef NDEBUG
+#if 1 // ndef NDEBUG
     YAE_BREAKPOINT_IF(messagePriority == kError);
 #endif
   }

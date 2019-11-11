@@ -463,6 +463,17 @@ namespace yae
       memcpy(dst, src->get(), src->size());
     }
 
+    template <typename TData>
+    inline void read(TData * data, std::size_t num_data)
+    {
+      std::size_t nbits = sizeof(TData) << 3;
+      for (TData * end = data + num_data; data < end; ++data)
+      {
+        TData & dst = *data;
+        dst = this->read(nbits);
+      }
+    }
+
     virtual void write_bits(std::size_t num_bits, uint64_t bits) = 0;
     virtual void write_bytes(const void * data, std::size_t num_bytes) = 0;
 
@@ -504,6 +515,9 @@ namespace yae
 
     inline std::size_t position() const
     { return position_; }
+
+    inline std::size_t end() const
+    { return end_; }
 
     inline TBufferPtr read_remaining_bytes()
     {
