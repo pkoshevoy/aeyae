@@ -1057,6 +1057,25 @@ namespace yae
       audio_type_ = bin.read(8);
     }
 
+    //----------------------------------------------------------------
+    // MPEG2StereoscopicVideoFormatDescriptor::
+    //
+    MPEG2StereoscopicVideoFormatDescriptor::
+    MPEG2StereoscopicVideoFormatDescriptor():
+      stereoscopic_video_arrangement_type_present_(0),
+      stereoscopic_video_arrangement_type_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MPEG2StereoscopicVideoFormatDescriptor::load_body
+    //
+    void
+    MPEG2StereoscopicVideoFormatDescriptor::load_body(IBitstream & bin)
+    {
+      stereoscopic_video_arrangement_type_present_ = bin.read(1);
+      stereoscopic_video_arrangement_type_ = bin.read(7);
+    }
+
 
     //----------------------------------------------------------------
     // AC3AudioDescriptor::AC3AudioDescriptor
@@ -1633,6 +1652,10 @@ namespace yae
       {
         descriptor.reset(new ISO639LanguageDescriptor());
       }
+      else if (descriptor_tag == 0x34)
+      {
+        descriptor.reset(new MPEG2StereoscopicVideoFormatDescriptor());
+      }
       else if (descriptor_tag == 0x80)
       {
         // stuffing descriptor:
@@ -1692,6 +1715,18 @@ namespace yae
       else if (descriptor_tag == 0xCC)
       {
         descriptor.reset(new EAC3AudioStreamDescriptor());
+      }
+      else if (descriptor_tag >= 0x37 &&
+               descriptor_tag <= 0x3F)
+      {
+        // Rec. ITU-T H.222.0 | ISO/IEC 13818-1 Reserved
+        descriptor.reset(new RawDescriptor());
+      }
+      else if (descriptor_tag >= 0x40 &&
+               descriptor_tag <= 0xFF)
+      {
+        // user private:
+        descriptor.reset(new RawDescriptor());
       }
       else
       {
@@ -2654,10 +2689,16 @@ namespace yae
           // FIXME: DCC is not implemented
           TSectionPtr section = load_section(bin);
         }
-        else // if (bin.peek_bits(24) == 0x000001)
+        else if (bin.peek_bits(24) == 0x000001)
         {
           PESPacket pes_pkt;
           pes_pkt.load(bin);
+        }
+        else
+        {
+          TSectionPtr section = load_section(bin);
+          yae_elog("FIXME: unimplemented table, 0x%s",
+                   yae::to_hex(&(section->table_id_), 2).c_str());
         }
       }
       catch (const std::exception & e)

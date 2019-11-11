@@ -653,6 +653,20 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // MPEG2StereoscopicVideoFormatDescriptor
+    //
+    struct YAE_API MPEG2StereoscopicVideoFormatDescriptor : Descriptor
+    {
+      MPEG2StereoscopicVideoFormatDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t stereoscopic_video_arrangement_type_present_ : 1;
+      uint8_t stereoscopic_video_arrangement_type_ : 7;
+    };
+
+
+    //----------------------------------------------------------------
     // AC3AudioDescriptor
     //
     struct YAE_API AC3AudioDescriptor : Descriptor
