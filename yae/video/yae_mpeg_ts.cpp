@@ -851,9 +851,10 @@ namespace yae
     // MultipleStringStructure::Message::Message
     //
     MultipleStringStructure::Message::Message():
-      iso_639_language_code_(0),
       number_segments_(0)
-    {}
+    {
+      memset(iso_639_language_code_, 0, sizeof(iso_639_language_code_));
+    }
 
     //----------------------------------------------------------------
     // MultipleStringStructure::Message::load
@@ -861,7 +862,7 @@ namespace yae
     void
     MultipleStringStructure::Message::load(IBitstream & bin)
     {
-      iso_639_language_code_ = bin.read(24);
+      bin.read_bytes(iso_639_language_code_, 3);
       number_segments_ = bin.read(8);
 
       segment_.resize(number_segments_);
@@ -939,6 +940,16 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // RawDescriptor::load_body
+    //
+    void
+    RawDescriptor::load_body(IBitstream & bin)
+    {
+      payload_ = bin.read_bytes(descriptor_length_);
+    }
+
+
+    //----------------------------------------------------------------
     // VideoStreamDescriptor::VideoStreamDescriptor
     //
     VideoStreamDescriptor::VideoStreamDescriptor():
@@ -972,6 +983,78 @@ namespace yae
         reserved_ = bin.read(5);
         YAE_THROW_IF(reserved_ != 0x1F);
       }
+    }
+
+
+    //----------------------------------------------------------------
+    // RegistrationDescriptor::RegistrationDescriptor
+    //
+    RegistrationDescriptor::RegistrationDescriptor():
+      format_identifier_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // RegistrationDescriptor::load_body
+    //
+    void
+    RegistrationDescriptor::load_body(IBitstream & bin)
+    {
+      format_identifier_ = bin.read(32);
+      additional_identification_info_ = bin.read_bytes(descriptor_length_ - 4);
+    }
+
+
+    //----------------------------------------------------------------
+    // DataStreamAlignmentDescriptor::DataStreamAlignmentDescriptor
+    //
+    DataStreamAlignmentDescriptor::DataStreamAlignmentDescriptor():
+      alignment_type_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // DataStreamAlignmentDescriptor::load_body
+    //
+    void
+    DataStreamAlignmentDescriptor::load_body(IBitstream & bin)
+    {
+      alignment_type_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // ISO639LanguageDescriptor::load_body
+    //
+    void
+    ISO639LanguageDescriptor::load_body(IBitstream & bin)
+    {
+      std::size_t n = descriptor_length_ / 4;
+      YAE_THROW_IF((descriptor_length_ & 0x3) != 0x0);
+
+      lang_.resize(n);
+      for (std::size_t i = 0; i < n; i++)
+      {
+        Lang & lang = lang_[i];
+        lang.load(bin);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ISO639LanguageDescriptor::Lang::Lang
+    //
+    ISO639LanguageDescriptor::Lang::Lang():
+      audio_type_(0)
+    {
+      memset(iso_639_language_code_, 0, sizeof(iso_639_language_code_));
+    }
+
+    //----------------------------------------------------------------
+    // ISO639LanguageDescriptor::Lang::load
+    //
+    void
+    ISO639LanguageDescriptor::Lang::load(IBitstream & bin)
+    {
+      bin.read_bytes(iso_639_language_code_, 3);
+      audio_type_ = bin.read(8);
     }
 
 
@@ -1538,6 +1621,18 @@ namespace yae
       {
         descriptor.reset(new VideoStreamDescriptor());
       }
+      else if (descriptor_tag == 0x05)
+      {
+        descriptor.reset(new RegistrationDescriptor());
+      }
+      else if (descriptor_tag == 0x06)
+      {
+        descriptor.reset(new DataStreamAlignmentDescriptor());
+      }
+      else if (descriptor_tag == 0x0A)
+      {
+        descriptor.reset(new ISO639LanguageDescriptor());
+      }
       else if (descriptor_tag == 0x80)
       {
         // stuffing descriptor:
@@ -1597,6 +1692,12 @@ namespace yae
       else if (descriptor_tag == 0xCC)
       {
         descriptor.reset(new EAC3AudioStreamDescriptor());
+      }
+      else
+      {
+        yae_elog("FIXME: unimplemented descriptor: 0x%s",
+                 yae::to_hex(&descriptor_tag, 1).c_str());
+        descriptor.reset(new RawDescriptor());
       }
 
       YAE_THROW_IF(!descriptor);
@@ -2384,7 +2485,7 @@ namespace yae
     // Context::consume
     //
     void
-    Context::consume(uint16_t pid, std::list<TSPacket> & packets)
+    Context::consume(uint16_t pid, std::list<TSPacket> & packets, bool parse)
     {
       yae::Data payload = assemble_payload(packets);
       std::string tmp = yae::to_hex(payload.get(),
@@ -2395,6 +2496,11 @@ namespace yae
                int(packets.size()),
                int(payload.size()),
                tmp.c_str());
+
+      if (!parse)
+      {
+        return;
+      }
 
       try
       {

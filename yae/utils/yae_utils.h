@@ -839,7 +839,9 @@ namespace yae
   // to_hex
   //
   YAE_API std::string
-  to_hex(const unsigned char * src, std::size_t src_size, std::size_t word_size = 0);
+  to_hex(const unsigned char * src,
+         std::size_t src_size,
+         std::size_t word_size = 0);
 
   //----------------------------------------------------------------
   // load_from_hex

@@ -518,8 +518,8 @@ namespace yae
 
         void load(IBitstream & bin);
 
-        uint32_t iso_639_language_code_ : 24;
-        uint32_t number_segments_ : 8;
+        uint8_t iso_639_language_code_[3];
+        uint8_t number_segments_;
 
         struct YAE_API Segment
         {
@@ -573,6 +573,17 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // RawDescriptor
+    //
+    struct YAE_API RawDescriptor : Descriptor
+    {
+      void load_body(IBitstream & bin);
+
+      TBufferPtr payload_;
+    };
+
+
+    //----------------------------------------------------------------
     // VideoStreamDescriptor
     //
     struct YAE_API VideoStreamDescriptor : Descriptor
@@ -590,6 +601,54 @@ namespace yae
       uint8_t chroma_format_ : 2;
       uint8_t frame_rate_extension_flag_ : 1;
       uint8_t reserved_ : 5;
+    };
+
+
+    //----------------------------------------------------------------
+    // RegistrationDescriptor
+    //
+    struct YAE_API RegistrationDescriptor : Descriptor
+    {
+      RegistrationDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t format_identifier_;
+      TBufferPtr additional_identification_info_;
+    };
+
+
+    //----------------------------------------------------------------
+    // DataStreamAlignmentDescriptor
+    //
+    struct YAE_API DataStreamAlignmentDescriptor : Descriptor
+    {
+      DataStreamAlignmentDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t alignment_type_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ISO639LanguageDescriptor
+    //
+    struct YAE_API ISO639LanguageDescriptor : Descriptor
+    {
+      void load_body(IBitstream & bin);
+
+      struct YAE_API Lang
+      {
+        Lang();
+
+        void load(IBitstream & bin);
+
+        uint8_t iso_639_language_code_[3];
+        uint8_t audio_type_;
+      };
+
+      std::vector<Lang> lang_;
     };
 
 
@@ -1289,7 +1348,9 @@ namespace yae
     //
     struct YAE_API Context
     {
-      void consume(uint16_t pid, std::list<TSPacket> & packets);
+      void consume(uint16_t pid,
+                   std::list<TSPacket> & packets,
+                   bool parse = true);
 
       void load(IBitstream & bin, TSPacket & pkt);
 

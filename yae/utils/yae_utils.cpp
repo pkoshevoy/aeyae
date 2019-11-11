@@ -1574,9 +1574,11 @@ namespace yae
   // to_hex
   //
   std::string
-  to_hex(const unsigned char * src, std::size_t src_size, std::size_t word_size)
+  to_hex(const unsigned char * src,
+         std::size_t src_size,
+         std::size_t word_size)
   {
-    static const char * alphabet = "0123456789abcdef";
+    static const char * alphabet = "0123456789ABCDEF";
 
     std::ostringstream oss;
     for (const unsigned char * i = src, * end = src + src_size; i < end; ++i)

@@ -790,7 +790,7 @@ main_may_throw(int argc, char ** argv)
   {
     uint16_t pid = i->first;
     std::list<yae::mpeg_ts::TSPacket> & pes = i->second;
-    ts_ctx.consume(pid, pes);
+    ts_ctx.consume(pid, pes, false);
   }
 #endif
 
