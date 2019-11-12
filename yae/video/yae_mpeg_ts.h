@@ -980,11 +980,11 @@ namespace yae
       virtual ~Section() {}
 
     protected:
-      void load_header(IBitstream & bin);
+      virtual void load_header(IBitstream & bin);
       virtual void load_body(IBitstream & bin, std::size_t n_bytes) = 0;
 
     public:
-      void load(IBitstream & bin);
+      virtual void load(IBitstream & bin);
 
       uint8_t pointer_field_;
       uint8_t table_id_;
@@ -1022,6 +1022,43 @@ namespace yae
     // TSectionPtr
     //
     typedef yae::shared_ptr<Section> TSectionPtr;
+
+
+    //----------------------------------------------------------------
+    // PrivateSection
+    //
+    struct YAE_API PrivateSection : Section
+    {
+    protected:
+      virtual void load_header(IBitstream & bin) {}
+      virtual void load_body(IBitstream & bin, std::size_t n_bytes) {}
+
+    public:
+      virtual void load(IBitstream & bin);
+
+      TBufferPtr private_data_;
+    };
+
+    //----------------------------------------------------------------
+    // TPrivateSectionPtr
+    //
+    typedef yae::shared_ptr<PrivateSection, Section> TPrivateSectionPtr;
+
+
+    //----------------------------------------------------------------
+    // TSDescriptionSection
+    //
+    struct YAE_API TSDescriptionSection : Section
+    {
+      void load_body(IBitstream & bin, std::size_t n_bytes);
+
+      std::vector<TDescriptorPtr> descriptor_;
+    };
+
+    //----------------------------------------------------------------
+    // TSDescSectionPtr
+    //
+    typedef yae::shared_ptr<TSDescriptionSection, Section> TSDescSectionPtr;
 
 
     //----------------------------------------------------------------
@@ -1362,6 +1399,8 @@ namespace yae
     //
     struct YAE_API Context
     {
+      Context();
+
       void consume(uint16_t pid,
                    std::list<TSPacket> & packets,
                    bool parse = true);
@@ -1386,6 +1425,8 @@ namespace yae
       std::map<uint16_t, uint8_t> pid_event_ett_;
       std::map<uint16_t, uint8_t> pid_rrt_;
       std::map<uint16_t, uint8_t> pid_dcct_;
+
+      uint16_t network_pid_;
     };
 
   }

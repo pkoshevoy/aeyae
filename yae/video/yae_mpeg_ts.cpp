@@ -1807,6 +1807,64 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // PrivateSection::load
+    //
+    void
+    PrivateSection::load(IBitstream & bin)
+    {
+      pointer_field_ = bin.read(8);
+      bin.skip_bytes(pointer_field_);
+
+      table_id_ = bin.read(8);
+      section_syntax_indicator_ = bin.read(1);
+      private_indicator_ = bin.read(1);
+      reserved1_ = bin.read(2);
+      YAE_THROW_IF(reserved1_ != 0x3);
+
+      section_length_ = bin.read(12);
+      YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
+
+      if (section_syntax_indicator_)
+      {
+        table_id_extension_ = bin.read(16);
+        reserved2_ = bin.read(2);
+        YAE_THROW_IF(reserved2_ != 0x3);
+
+        version_number_ = bin.read(5);
+        current_next_indicator_ = bin.read(1);
+        section_number_ = bin.read(8);
+        last_section_number_ = bin.read(8);
+
+        private_data_ = bin.read_bytes(section_length_ - 9);
+
+        crc32_ = bin.read(32);
+      }
+      else
+      {
+        private_data_ = bin.read_bytes(section_length_);
+      }
+    }
+
+
+    //----------------------------------------------------------------
+    // TSDescriptionSection::load_body
+    //
+    void
+    TSDescriptionSection::load_body(IBitstream & bin, std::size_t n_bytes)
+    {
+      std::size_t body_end = bin.position() + (n_bytes << 3);
+
+      descriptor_.clear();
+      while (bin.position() < body_end)
+      {
+        TDescriptorPtr descriptor = load_descriptor(bin);
+        descriptor_.push_back(descriptor);
+      }
+      YAE_THROW_IF(bin.position() != body_end);
+    }
+
+
+    //----------------------------------------------------------------
     // ProgramAssociationTable::load_body
     //
     void
@@ -1853,6 +1911,8 @@ namespace yae
     ConditionalAccessTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       std::size_t body_end = bin.position() + (n_bytes << 3);
+
+      descriptor_.clear();
       while (bin.position() < body_end)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2473,6 +2533,11 @@ namespace yae
         // STT
         section.reset(new SystemTimeTable());
       }
+      else if (table_id >= 0x40 && table_id <= 0xFE)
+      {
+        // User Private:
+        section.reset(new PrivateSection());
+      }
 
       YAE_THROW_IF(!section);
       section->load(bin);
@@ -2550,7 +2615,14 @@ namespace yae
           for (std::size_t i = 0, n = pat.program_.size(); i < n; i++)
           {
             const ProgramAssociationTable::Program & p = pat.program_[i];
-            pid_pmt_[p.pid_] = p.program_number_;
+            if (p.program_number_)
+            {
+              pid_pmt_[p.pid_] = p.program_number_;
+            }
+            else
+            {
+              network_pid_ = p.pid_;
+            }
           }
         }
         else if (pid == 0x0001)
@@ -2560,17 +2632,29 @@ namespace yae
           YAE_THROW_IF(cat.table_id_ != 0x01);
           YAE_THROW_IF(cat.private_indicator_ != 0);
         }
+        else if (pid == 0x0002)
+        {
+          TSDescSectionPtr section = load_section(bin);
+          const TSDescriptionSection & tsd = *section;
+          YAE_THROW_IF(tsd.table_id_ != 0x02);
+          YAE_THROW_IF(tsd.private_indicator_ != 0);
+        }
         else if (yae::has(pid_pmt_, pid))
         {
-          PMTSectionPtr section = load_section(bin);
-          const ProgramMapTable & pmt = *section;
-          YAE_THROW_IF(pmt.table_id_ != 0x02);
-          YAE_THROW_IF(pmt.private_indicator_ != 0);
-
-          for (std::size_t i = 0, n = pmt.es_.size(); i < n; i++)
+          TSectionPtr section = load_section(bin);
+          PMTSectionPtr pmt_section = section;
+          YAE_EXPECT(pmt_section);
+          if (pmt_section)
           {
-            const ProgramMapTable::ElementaryStream & es = pmt.es_[i];
-            pid_es_[es.elementary_pid_] = pmt.program_number_;
+            const ProgramMapTable & pmt = *pmt_section;
+            YAE_THROW_IF(pmt.table_id_ != 0x02);
+            YAE_THROW_IF(pmt.private_indicator_ != 0);
+
+            for (std::size_t i = 0, n = pmt.es_.size(); i < n; i++)
+            {
+              const ProgramMapTable::ElementaryStream & es = pmt.es_[i];
+              pid_es_[es.elementary_pid_] = pmt.program_number_;
+            }
           }
         }
         else if (pid == 0x1FFB)
@@ -2697,8 +2781,13 @@ namespace yae
         else
         {
           TSectionPtr section = load_section(bin);
-          yae_elog("FIXME: unimplemented table, 0x%s",
-                   yae::to_hex(&(section->table_id_), 2).c_str());
+          TPrivateSectionPtr priv_section = section;
+
+          if (!priv_section)
+          {
+            yae_elog("FIXME: unimplemented table, 0x%s",
+                     yae::to_hex(&(section->table_id_), 1).c_str());
+          }
         }
       }
       catch (const std::exception & e)
@@ -2710,6 +2799,14 @@ namespace yae
         yae_elog("failed to load PESPacket: unexpected exception");
       }
     }
+
+
+    //----------------------------------------------------------------
+    // Context::Context
+    //
+    Context::Context():
+      network_pid_(0)
+    {}
 
     //----------------------------------------------------------------
     // Context::load
