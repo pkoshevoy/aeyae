@@ -784,24 +784,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // strip_html_tags
-  //
-  YAE_API std::string
-  strip_html_tags(const std::string & in);
-
-  //----------------------------------------------------------------
-  // assa_to_plain_text
-  //
-  YAE_API std::string
-  assa_to_plain_text(const std::string & in);
-
-  //----------------------------------------------------------------
-  // convert_escape_codes
-  //
-  YAE_API std::string
-  convert_escape_codes(const std::string & in);
-
-  //----------------------------------------------------------------
   // parse_hhmmss_xxx
   //
   // parse hh mm ss xxx timecode string, return time expressed in seconds
@@ -908,6 +890,298 @@ namespace yae
     unsigned char b2 = hex_to_byte(h + 4);
     unsigned int u24 = (b0 << 16) | (b1 << 8) | b2;
     return u24;
+  }
+
+  //----------------------------------------------------------------
+  // unicode_to_utf8
+  //
+  template <typename TContainer>
+  static bool
+  unicode_to_utf8(unsigned int codepoint, TContainer & out)
+  {
+    typedef typename TContainer::value_type TByte;
+
+    assert(codepoint < 0x110000);
+
+    if (codepoint < 0x0080)
+    {
+      out.push_back((unsigned char)codepoint);
+    }
+    else if (codepoint < 0x0800)
+    {
+      unsigned char b1 = (0x3 << 6) | ((codepoint >> 6) & 0x1F);
+      unsigned char b2 = (0x1 << 7) | (codepoint & 0x3F);
+      out.push_back(TByte(b1));
+      out.push_back(TByte(b2));
+    }
+    else if (codepoint < 0x10000)
+    {
+      unsigned char b1 = (0x7 << 5) | ((codepoint >> 12) & 0xF);
+      unsigned char b2 = (0x1 << 7) | ((codepoint >> 6) & 0x3F);
+      unsigned char b3 = (0x1 << 7) | (codepoint & 0x3F);
+      out.push_back(TByte(b1));
+      out.push_back(TByte(b2));
+      out.push_back(TByte(b3));
+    }
+    else if (codepoint < 0x110000)
+    {
+      unsigned char b1 = (0xF << 4) | ((codepoint >> 18) & 0x7);
+      unsigned char b2 = (0x1 << 7) | ((codepoint >> 12) & 0x3F);
+      unsigned char b3 = (0x1 << 7) | ((codepoint >> 6) & 0x3F);
+      unsigned char b4 = (0x1 << 7) | (codepoint & 0x3F);
+      out.push_back(TByte(b1));
+      out.push_back(TByte(b2));
+      out.push_back(TByte(b3));
+      out.push_back(TByte(b4));
+    }
+    else
+    {
+      return false;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // utf16_to_unicode
+  //
+  YAE_API bool
+  utf16_to_unicode(const uint16_t *& src, const uint16_t * end, uint32_t & out);
+
+  //----------------------------------------------------------------
+  // utf16_to_unicode
+  //
+  template <std::size_t i0, std::size_t i1>
+  bool
+  utf16_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & uc)
+  {
+    std::size_t n_bytes = end - src;
+    std::size_t i2 = i0 + 2;
+    std::size_t i3 = i1 + 2;
+
+    if ((n_bytes > 3) &&
+        (0xD8 <= src[i0]) && (src[i0] <= 0xDB) &&
+        (0xDC <= src[i2]) && (src[i2] <= 0xDF))
+    {
+      // decode surrogate pair:
+      uint16_t hi = (src[i0] << 8) | src[i1];
+      uint16_t lo = (src[i2] << 8) | src[i3];
+      uc = 0x10000;
+      uc += (hi & 0x03FF) << 10;
+      uc += (lo & 0x03FF);
+      src += 4;
+      return true;
+    }
+
+    if ((n_bytes > 1) && (src[i0] < 0xD8 || 0xE0 <= src[i0]))
+    {
+      uc = (src[i0] << 8) | src[i1];
+      src += 2;
+      return true;
+    }
+
+    uc = 0;
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // utf16_to_utf8
+  //
+  template <typename TContainer>
+  bool
+  utf16_to_utf8(const uint16_t * src, const uint16_t * end, TContainer & out)
+  {
+    unsigned int uc = 0;
+
+    while (src < end)
+    {
+      if (!utf16_to_unicode(src, end, uc))
+      {
+        return false;
+      }
+
+      if (!unicode_to_utf8<TContainer>(uc, out))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // utf16be_to_unicode
+  //
+  YAE_API bool
+  utf16be_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & out);
+
+  //----------------------------------------------------------------
+  // utf16le_to_unicode
+  //
+  YAE_API bool
+  utf16le_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & out);
+
+  //----------------------------------------------------------------
+  // utf16_to_utf8
+  //
+  template <std::size_t i0, std::size_t i1, typename TContainer>
+  bool
+  utf16_to_utf8(const uint8_t * src, const uint8_t * end, TContainer & out)
+  {
+    unsigned int uc = 0;
+
+    while (src < end)
+    {
+      if (!utf16_to_unicode<i0, i1>(src, end, uc))
+      {
+        return false;
+      }
+
+      if (!unicode_to_utf8<TContainer>(uc, out))
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // utf16be_to_utf8
+  //
+  template <typename TContainer>
+  bool
+  utf16be_to_utf8(const uint8_t * src, const uint8_t * end, TContainer & out)
+  {
+    return utf16_to_utf8<0, 1, TContainer>(src, end, out);
+  }
+
+  //----------------------------------------------------------------
+  // utf16le_to_utf8
+  //
+  template <typename TContainer>
+  bool
+  utf16le_to_utf8(const uint8_t * src, const uint8_t * end, TContainer & out)
+  {
+    return utf16_to_utf8<1, 0, TContainer>(src, end, out);
+  }
+
+  //----------------------------------------------------------------
+  // unescape
+  //
+  // convert \t \n \r \xHH \unnnn \Unnnnnnnn to UTF-8 byte sequence
+  //
+  template <typename TContainer>
+  void
+  unescape(const std::string & str, TContainer & out)
+  {
+    typedef typename TContainer::value_type TByte;
+
+    const char * src = str.empty() ? NULL : &str[0];
+    const char * end = src + str.size();
+
+    while (src < end)
+    {
+      char c = *src++;
+
+      if (c == '\\' && src < end)
+      {
+        c = *src++;
+
+        if (c == 'a')
+        {
+          c = '\a';
+        }
+        else if (c == 'b')
+        {
+          c = '\b';
+        }
+        else if (c == 'f')
+        {
+          c = '\f';
+        }
+        else if (c == 'n')
+        {
+          c = '\n';
+        }
+        else if (c == 'r')
+        {
+          c = '\r';
+        }
+        else if (c == 't')
+        {
+          c = '\t';
+        }
+        else if (c == 'v')
+        {
+          c = '\v';
+        }
+        else if (c >= '0' && c <= '9' && (end - src) > 1)
+        {
+          // octal byte code:
+          unsigned int o[3] = { 0 };
+          o[0] = c - '0';
+          o[1] = (*src++) - '0';
+          o[2] = (*src++) - '0';
+
+          assert(o[0] < 4 && o[1] < 8 && o[2] < 8);
+          c = char((o[0] << 6) |
+                   (o[1] << 3) |
+                   (o[2]));
+        }
+        else if (c == 'x' && (end - src) > 1)
+        {
+          // hex byte code:
+          unsigned int h[2] = { 0 };
+          h[0] = unhex(*src++);
+          h[1] = unhex(*src++);
+
+          c = char((h[0] << 4) | h[1]);
+        }
+        else if (c == 'u' && (end - src) > 3)
+        {
+          // unicode:
+          unsigned int h[4] = { 0 };
+          h[0] = unhex(*src++);
+          h[1] = unhex(*src++);
+          h[2] = unhex(*src++);
+          h[3] = unhex(*src++);
+
+          unsigned int codepoint = ((h[0] << 12) |
+                                    (h[1] << 8) |
+                                    (h[2] << 4) |
+                                    (h[3]));
+          unicode_to_utf8(codepoint, out);
+          continue;
+        }
+        else if (c == 'U' && (end - src) > 7)
+        {
+          // unicode:
+          unsigned int h[8] = { 0 };
+          h[0] = unhex(*src++);
+          h[1] = unhex(*src++);
+          h[2] = unhex(*src++);
+          h[3] = unhex(*src++);
+          h[4] = unhex(*src++);
+          h[5] = unhex(*src++);
+          h[6] = unhex(*src++);
+          h[7] = unhex(*src++);
+
+          unsigned int codepoint = ((h[0] << 28) |
+                                    (h[1] << 24) |
+                                    (h[2] << 20) |
+                                    (h[3] << 16) |
+                                    (h[4] << 12) |
+                                    (h[5] << 8) |
+                                    (h[6] << 4) |
+                                    (h[7]));
+          unicode_to_utf8(codepoint, out);
+          continue;
+        }
+      }
+
+      out.push_back((TByte)c);
+    }
   }
 
   //----------------------------------------------------------------

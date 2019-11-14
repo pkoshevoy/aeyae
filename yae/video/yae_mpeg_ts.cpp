@@ -848,6 +848,22 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // MultipleStringStructure::to_str
+    //
+    std::string
+    MultipleStringStructure::to_str() const
+    {
+      std::ostringstream oss;
+      for (std::size_t i = 0, n = strings_.size(); i < n; i++)
+      {
+        const Message & msg = strings_[i];
+        oss << msg.to_str() << std::endl;
+      }
+
+      return oss.str();
+    }
+
+    //----------------------------------------------------------------
     // MultipleStringStructure::Message::Message
     //
     MultipleStringStructure::Message::Message():
@@ -874,6 +890,31 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // MultipleStringStructure::Message::to_str
+    //
+    std::string
+    MultipleStringStructure::Message::to_str() const
+    {
+      std::ostringstream oss;
+      oss << char(iso_639_language_code_[0])
+          << char(iso_639_language_code_[1])
+          << char(iso_639_language_code_[2]);
+
+      for (std::size_t i = 0, n = segment_.size(); i < n; i++)
+      {
+        const MultipleStringStructure::Message::Segment & s = segment_[i];
+
+        std::string text;
+        if (s.to_str(text))
+        {
+          oss << ": " << text;
+        }
+      }
+
+      return oss.str();
+   }
+
+    //----------------------------------------------------------------
     // MultipleStringStructure::Message::Segment::Segment
     //
     MultipleStringStructure::Message::Segment::Segment():
@@ -892,6 +933,63 @@ namespace yae
       mode_ = bin.read(8);
       number_bytes_ = bin.read(8);
       compressed_string_ = bin.read_bytes(number_bytes_);
+    }
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::Segment::to_str
+    //
+    bool
+    MultipleStringStructure::Message::Segment::to_str(std::string & text) const
+    {
+      YAE_EXPECT(compression_type_ == 0x00);
+      YAE_EXPECT(mode_ != 0x3E);
+
+      if (compression_type_ != NO_COMPRESSION)
+      {
+        // not supported it at this time: compression
+        return false;
+      }
+
+      const IBuffer & data = *(compressed_string_);
+      const uint8_t * src = data.get();
+      const uint8_t * end = data.end();
+
+      if ((0x00 <= mode_ && mode_ < 0x07) ||
+          (0x09 <= mode_ && mode_ < 0x11) ||
+          (0x20 <= mode_ && mode_ < 0x28) ||
+          (0x30 <= mode_ && mode_ < 0x34))
+      {
+        for (; src < end; ++src)
+        {
+          uint32_t uc = (mode_ << 8) | *src;
+          yae::unicode_to_utf8(uc, text);
+        }
+
+        return true;
+      }
+      else if (mode_ == 0x3E)
+      {
+        // not supported at this time:
+        // Standard Compression Scheme for Unicode (SCSU)
+        return false;
+      }
+      else if (mode_ == 0x3F)
+      {
+        // UTF-16
+        yae::utf16be_to_utf8(src, end, text);
+        return true;
+      }
+
+      return false;
+    }
+
+    //----------------------------------------------------------------
+    // to_str
+    //
+    std::string
+    to_str(const MultipleStringStructure & mss)
+    {
+      return mss.to_str();
     }
 
 
@@ -1279,6 +1377,12 @@ namespace yae
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "ContentAdvisoryDescriptor::Region, rating: "
+        << rating_description_text_.to_str()
+        << std::endl;
     }
 
     //----------------------------------------------------------------
@@ -1310,6 +1414,12 @@ namespace yae
     ExtendedChannelNameDescriptor::load_body(IBitstream & bin)
     {
       long_channel_name_text_.load(bin);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "ExtendedChannelNameDescriptor: "
+        << long_channel_name_text_.to_str()
+        << std::endl;
     }
 
 
@@ -1431,6 +1541,12 @@ namespace yae
     ComponentNameDescriptor::load_body(IBitstream & bin)
     {
       component_name_string_.load(bin);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "ComponentNameDescriptor: "
+        << component_name_string_.to_str()
+        << std::endl;
     }
 
 
@@ -1460,6 +1576,12 @@ namespace yae
 
       std::size_t consumed_bytes = consumed >> 3;
       bin.skip_bytes(dcc_request_text_length_ - consumed_bytes);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "DCCRequestDescriptor: "
+        << dcc_request_text_.to_str()
+        << std::endl;
     }
 
 
@@ -2280,6 +2402,12 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "RatingRegionTable, rating region name: "
+        << rating_region_name_text_.to_str()
+        << std::endl;
+
       dimensions_defined_ = bin.read(8);
       dimension_.resize(dimensions_defined_);
       for (std::size_t i = 0; i < dimensions_defined_; ++i)
@@ -2326,6 +2454,12 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "RatingRegionTable::Dimension, dimension name: "
+        << dimension_name_text_.to_str()
+        << std::endl;
+
       reserved_ = bin.read(3);
       YAE_THROW_IF(reserved_ != 0x7);
 
@@ -2362,12 +2496,24 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "RatingRegionTable::Dimension::Rating, abbrev value: "
+        << abbrev_rating_value_text_.to_str()
+        << std::endl;
+
       rating_value_length_ = bin.read(8);
       stop_pos = bin.position() + (rating_value_length_ << 3);
       rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "RatingRegionTable::Dimension::Rating, rating value: "
+        << rating_value_text_.to_str()
+        << std::endl;
     }
 
 
@@ -2434,6 +2580,12 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "EventInformationTable::Event, title text: "
+        << title_text_.to_str()
+        << std::endl;
+
       reserved3_ = bin.read(4);
       YAE_THROW_IF(reserved3_ != 0xF);
 
@@ -2467,6 +2619,12 @@ namespace yae
       protocol_version_ = bin.read(8);
       etm_id_ = bin.read(32);
       extended_text_message_.load(bin);
+
+      // FIXME: pkoshevoy:
+      std::cerr
+        << "ExtendedTextTable, extended text message: "
+        << extended_text_message_.to_str()
+        << std::endl;
     }
 
 

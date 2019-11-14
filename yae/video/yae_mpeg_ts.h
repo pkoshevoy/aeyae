@@ -509,6 +509,7 @@ namespace yae
       MultipleStringStructure();
 
       void load(IBitstream & bin);
+      std::string to_str() const;
 
       uint8_t number_strings_;
 
@@ -517,6 +518,7 @@ namespace yae
         Message();
 
         void load(IBitstream & bin);
+        std::string to_str() const;
 
         uint8_t iso_639_language_code_[3];
         uint8_t number_segments_;
@@ -526,6 +528,7 @@ namespace yae
           Segment();
 
           void load(IBitstream & bin);
+          bool to_str(std::string & text) const;
 
           enum CompresionType
           {
@@ -545,6 +548,12 @@ namespace yae
 
       std::vector<Message> strings_;
     };
+
+    //----------------------------------------------------------------
+    // to_str
+    //
+    YAE_API std::string
+    to_str(const MultipleStringStructure & mss);
 
 
     //----------------------------------------------------------------

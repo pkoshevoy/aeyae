@@ -1134,238 +1134,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // strip_html_tags
-  //
-  std::string
-  strip_html_tags(const std::string & in)
-  {
-    // count open/close angle brackets:
-    int brackets[] = { 0, 0 };
-
-    std::size_t inLen = in.size();
-    for (std::size_t i = 0; i < inLen; i++)
-    {
-      if (in[i] == '<')
-      {
-        brackets[0]++;
-      }
-      else if (in[i] == '>')
-      {
-        brackets[1]++;
-      }
-
-      if (brackets[0] >= 2 && brackets[1] >= 2)
-      {
-        break;
-      }
-    }
-
-    if (brackets[0] < 2 || brackets[1] < 2)
-    {
-      // insufficient number of brackets, probably not an html string:
-      return std::string(in);
-    }
-
-    std::vector<char> tmp(inLen, 0);
-    std::size_t j = 0;
-
-    enum TState
-    {
-      kInText,
-      kInTag
-    };
-    TState s = kInText;
-
-    for (std::size_t i = 0; i < inLen; i++)
-    {
-      char c = in[i];
-
-      if (s == kInText)
-      {
-        if (c == '<')
-        {
-          s = kInTag;
-        }
-        else
-        {
-          tmp[j++] = c;
-        }
-      }
-      else if (s == kInTag)
-      {
-        if (c == '>')
-        {
-          s = kInText;
-          tmp[j++] = ' ';
-        }
-      }
-    }
-
-    std::string out;
-    if (j > 0)
-    {
-      out.assign(&(tmp[0]), &(tmp[0]) + j);
-    }
-
-    return out;
-  }
-
-  //----------------------------------------------------------------
-  // assaToPlainText
-  //
-  std::string
-  assaToPlainText(const std::string & in)
-  {
-    std::string out;
-
-    std::size_t inLen = in.size();
-    const char * ssa = inLen ? in.c_str() : NULL;
-    const char * end = ssa + inLen;
-
-    while (ssa && ssa < end)
-    {
-      ssa = strstr(ssa, "Dialogue:");
-      if (!ssa)
-      {
-        break;
-      }
-
-      const char * lEnd = strstr(ssa, "\n");
-      if (!lEnd)
-      {
-        lEnd = end;
-      }
-
-      ssa += 9;
-      for (int i = 0; i < 9; i++)
-      {
-        ssa = strstr(ssa, ",");
-        if (!ssa)
-        {
-          break;
-        }
-
-        ssa++;
-      }
-
-      if (!ssa)
-      {
-        break;
-      }
-
-      // skip override:
-      std::string tmp;
-
-      while (true)
-      {
-        const char * override = strstr(ssa, "{");
-        if (!override || override >= lEnd)
-        {
-          break;
-        }
-
-        if (ssa < override)
-        {
-          tmp += std::string(ssa, override);
-        }
-
-        override = strstr(override, "}");
-        if (!override || override >= lEnd)
-        {
-          break;
-        }
-
-        ssa = override + 1;
-      }
-
-      if (!tmp.empty() || (ssa < lEnd))
-      {
-        if (!out.empty())
-        {
-          out += "\n";
-        }
-
-        if (!tmp.empty())
-        {
-          out += tmp;
-        }
-
-        if (ssa < lEnd)
-        {
-          out += std::string(ssa, lEnd);
-        }
-      }
-    }
-
-    return out;
-  }
-
-  //----------------------------------------------------------------
-  // convertEscapeCodes
-  //
-  std::string
-  convertEscapeCodes(const std::string & in)
-  {
-    std::size_t inLen = in.size();
-    std::vector<char> tmp(inLen, 0);
-    std::size_t j = 0;
-
-    enum TState
-    {
-      kInText,
-      kInEsc
-    };
-    TState s = kInText;
-
-    for (std::size_t i = 0; i < inLen; i++)
-    {
-      char c = in[i];
-
-      if (s == kInText)
-      {
-        if (c == '\\')
-        {
-          s = kInEsc;
-        }
-        else
-        {
-          tmp[j++] = c;
-        }
-      }
-      else if (s == kInEsc)
-      {
-        if (c == 'n' || c == 'N')
-        {
-          tmp[j++] = '\n';
-        }
-        else if (c == 'r' || c == 'R')
-        {
-          tmp[j++] = '\r';
-        }
-        else if (c == 't' || c == 'T')
-        {
-          tmp[j++] = '\t';
-        }
-        else
-        {
-          tmp[j++] = '\\';
-          tmp[j++] = c;
-        }
-
-        s = kInText;
-      }
-    }
-
-    std::string out;
-    if (j > 0)
-    {
-      out.assign(&(tmp[0]), &(tmp[0]) + j);
-    }
-
-    return out;
-  }
-
-  //----------------------------------------------------------------
   // parse_hhmmss_xxx
   //
   double
@@ -1603,10 +1371,57 @@ namespace yae
   from_hex(unsigned char * dst, std::size_t dst_size, const char * hex_str)
   {
     const char * src = hex_str;
-    for (std::size_t i = 0, n = std::min(dst_size, strlen(hex_str) / 2); i < n; i++, src += 2)
+    for (std::size_t i = 0, n = std::min(dst_size, strlen(hex_str) / 2);
+         i < n; i++, src += 2)
     {
       dst[i] = (unhex(src[0]) << 4) | unhex(src[1]);
     }
+  }
+
+  //----------------------------------------------------------------
+  // utf16_to_unicode
+  //
+  bool
+  utf16_to_unicode(const uint16_t *& src, const uint16_t * end, uint32_t & uc)
+  {
+    if ((0xD800 <= src[0] && src[0] <= 0xDBFF) && (end - src > 1) &&
+        (0xDC00 <= src[1] && src[1] <= 0xDFFF))
+    {
+      // decode surrogate pair:
+      uc = 0x10000;
+      uc += (src[0] & 0x03FF) << 10;
+      uc += (src[1] & 0x03FF);
+      src += 2;
+      return true;
+    }
+
+    if (src[0] < 0xD800 || 0xE000 <= src[0])
+    {
+      uc = src[0];
+      src++;
+      return true;
+    }
+
+    uc = 0;
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // utf16be_to_unicode
+  //
+  bool
+  utf16be_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & uc)
+  {
+    return utf16_to_unicode<0, 1>(src, end, uc);
+  }
+
+  //----------------------------------------------------------------
+  // utf16le_to_unicode
+  //
+  bool
+  utf16le_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & uc)
+  {
+    return utf16_to_unicode<1, 0>(src, end, uc);
   }
 
   //----------------------------------------------------------------

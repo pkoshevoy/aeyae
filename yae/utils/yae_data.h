@@ -34,6 +34,13 @@ namespace yae
     virtual std::size_t size() const = 0;
     virtual void truncate(std::size_t new_size) = 0;
 
+    inline unsigned char * end() const
+    {
+      unsigned char * data = this->get();
+      std::size_t size = this->size();
+      return data + size;
+    }
+
     inline std::string str() const
     {
       const char * text = reinterpret_cast<const char *>(this->get());
