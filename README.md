@@ -8,10 +8,17 @@ Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aey
     git clone https://github.com/pkoshevoy/aeyae.git
     cd aeyae
     git submodule update --init --recursive
+    git clone https://github.com/pkoshevoy/libhdhomerun.git
+    cd libhdhomerun
+    git checkout add-cmake
+    mkdir -p ../libhdhomerun-build
+    cd ../libhdhomerun-build
+    cmake-gui ../libhdhomerun # Configure (adjust paths as desired), Generate
+    nice make -j8 && make install
     mkdir -p ../aeyae-build
     cd ../aeyae-build
     cmake-gui ../aeyae # Configure (adjust paths as desired), Generate
-    make -j8 && make install
+    nice make -j8 && make install
 
 ##### All Platforms:
 ###### OpenGL 1.2 or later
