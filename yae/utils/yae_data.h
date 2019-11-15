@@ -523,13 +523,16 @@ namespace yae
     inline std::size_t position() const
     { return position_; }
 
+    inline std::size_t position_plus_nbytes(std::size_t bytes) const
+    { return position_ + (bytes << 3); }
+
     inline std::size_t end() const
     { return end_; }
 
     inline TBufferPtr read_remaining_bytes()
     {
       std::size_t remaining_bits = end_ - position_;
-      YAE_ASSERT((remaining_bits & 0x7) == 0)
+      YAE_ASSERT((remaining_bits & 0x7) == 0);
       return this->read_bytes(remaining_bits >> 3);
     }
 

@@ -48,34 +48,34 @@
 //----------------------------------------------------------------
 // YAE_ASSERT
 //
-#define YAE_ASSERT(expr) if (!(expr)) {          \
-    yae::log(yae::TLog::kError,                  \
-             __FILE__ ":" YAE_STR(__LINE__),     \
-             "assertion failed: %s",             \
-             YAE_STR(expr));                     \
-    YAE_BREAKPOINT_IF_DEBUG_BUILD();             \
-  } else {}
+#define YAE_ASSERT(expr) if (!(expr)) do {       \
+      yae::log(yae::TLog::kError,                \
+               __FILE__ ":" YAE_STR(__LINE__),   \
+               "assertion failed: %s",           \
+               YAE_STR(expr));                   \
+      YAE_BREAKPOINT_IF_DEBUG_BUILD();           \
+    } while (false)
 
 //----------------------------------------------------------------
 // YAE_EXPECT
 //
-#define YAE_EXPECT(expr) if (!(expr)) {          \
-    yae::log(yae::TLog::kError,                  \
-             __FILE__ ":" YAE_STR(__LINE__),     \
-             "unexpected condition: %s",         \
-             YAE_STR(expr));                     \
-  } else {}
+#define YAE_EXPECT(expr) if (!(expr)) do {       \
+      yae::log(yae::TLog::kError,                \
+               __FILE__ ":" YAE_STR(__LINE__),   \
+               "unexpected condition: %s",       \
+               YAE_STR(expr));                   \
+    } while (false)
 
 //----------------------------------------------------------------
 // YAE_THROW_IF
 //
-#define YAE_THROW_IF(expr) if ((expr)) {         \
-  yae::log(yae::TLog::kError,                    \
-           __FILE__ ":" YAE_STR(__LINE__),       \
-           "%s",                                 \
-           YAE_STR(expr));                       \
-  throw std::runtime_error(YAE_STR(expr));       \
-  } else {}
+#define YAE_THROW_IF(expr) if ((expr)) do {      \
+      yae::log(yae::TLog::kError,                \
+               __FILE__ ":" YAE_STR(__LINE__),   \
+               "%s",                             \
+               YAE_STR(expr));                   \
+      throw std::runtime_error(YAE_STR(expr));   \
+    } while (false)
 
 //----------------------------------------------------------------
 // YAE_THROW

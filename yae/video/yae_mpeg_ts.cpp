@@ -954,14 +954,14 @@ namespace yae
       const uint8_t * src = data.get();
       const uint8_t * end = data.end();
 
-      if ((0x00 <= mode_ && mode_ < 0x07) ||
+      if ((mode_ < 0x07) ||
           (0x09 <= mode_ && mode_ < 0x11) ||
           (0x20 <= mode_ && mode_ < 0x28) ||
           (0x30 <= mode_ && mode_ < 0x34))
       {
         for (; src < end; ++src)
         {
-          uint32_t uc = (mode_ << 8) | *src;
+          uint32_t uc = (uint32_t(mode_) << 8) | uint32_t(*src);
           yae::unicode_to_utf8(uc, text);
         }
 
@@ -1372,7 +1372,8 @@ namespace yae
       }
 
       rating_description_length_ = bin.read(8);
-      std::size_t stop_pos = bin.position() + (rating_description_length_ << 3);
+      std::size_t stop_pos =
+        bin.position_plus_nbytes(rating_description_length_);
       rating_description_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -1404,7 +1405,7 @@ namespace yae
       reserved_ = bin.read(4);
       YAE_THROW_IF(reserved_ != 0xF);
       rating_value_ = bin.read(4);
-    };
+    }
 
 
     //----------------------------------------------------------------
@@ -1844,8 +1845,7 @@ namespace yae
         // Rec. ITU-T H.222.0 | ISO/IEC 13818-1 Reserved
         descriptor.reset(new RawDescriptor());
       }
-      else if (descriptor_tag >= 0x40 &&
-               descriptor_tag <= 0xFF)
+      else if (descriptor_tag >= 0x40)
       {
         // user private:
         descriptor.reset(new RawDescriptor());
@@ -1974,7 +1974,7 @@ namespace yae
     void
     TSDescriptionSection::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      std::size_t body_end = bin.position() + (n_bytes << 3);
+      std::size_t body_end = bin.position_plus_nbytes(n_bytes);
 
       descriptor_.clear();
       while (bin.position() < body_end)
@@ -2032,7 +2032,7 @@ namespace yae
     void
     ConditionalAccessTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      std::size_t body_end = bin.position() + (n_bytes << 3);
+      std::size_t body_end = bin.position_plus_nbytes(n_bytes);
 
       descriptor_.clear();
       while (bin.position() < body_end)
@@ -2060,7 +2060,7 @@ namespace yae
     void
     ProgramMapTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      std::size_t body_end = bin.position() + (n_bytes << 3);
+      std::size_t body_end = bin.position_plus_nbytes(n_bytes);
 
       reserved1_ = bin.read(3);
       YAE_THROW_IF(reserved1_ != 0x7);
@@ -2072,7 +2072,7 @@ namespace yae
       program_info_length_ = bin.read(12);
       descriptor_.clear();
 
-      std::size_t stop_pos = bin.position() + (program_info_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(program_info_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2117,7 +2117,7 @@ namespace yae
       es_info_length_ = bin.read(12);
       descriptor_.clear();
 
-      std::size_t stop_pos = bin.position() + (es_info_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(es_info_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2143,7 +2143,7 @@ namespace yae
     void
     SystemTimeTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      std::size_t stop_pos = bin.position() + (n_bytes << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(n_bytes);
 
       protocol_version_ = bin.read(8);
       system_time_ = bin.read(32);
@@ -2189,7 +2189,7 @@ namespace yae
       descriptors_length_ = bin.read(12);
       descriptor_.clear();
 
-      std::size_t stop_pos = bin.position() + (descriptors_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2235,7 +2235,7 @@ namespace yae
       descriptor_.clear();
 
       std::size_t stop_pos =
-        bin.position() + (table_type_descriptors_length_ << 3);
+        bin.position_plus_nbytes(table_type_descriptors_length_);
 
       while (bin.position() < stop_pos)
       {
@@ -2275,9 +2275,9 @@ namespace yae
 
         if (table_id_ == 0xC8)
         {
-          uint8_t reserved =
+          int reserved =
             (channel.path_selected_ << 1) |
-            channel.out_of_band_;
+            (channel.out_of_band_);
 
           YAE_THROW_IF(reserved != 0x3);
         }
@@ -2290,7 +2290,7 @@ namespace yae
       additional_descriptor_.clear();
 
       std::size_t stop_pos =
-        bin.position() + (additional_descriptors_length_ << 3);
+        bin.position_plus_nbytes(additional_descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2366,7 +2366,7 @@ namespace yae
       descriptors_length_ = bin.read(10);
       descriptor_.clear();
 
-      std::size_t stop_pos = bin.position() + (descriptors_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2396,7 +2396,8 @@ namespace yae
       protocol_version_ = bin.read(8);
       rating_region_name_length_ = bin.read(8);
 
-      std::size_t stop_pos = bin.position() + (rating_region_name_length_ << 3);
+      std::size_t stop_pos =
+        bin.position_plus_nbytes(rating_region_name_length_);
       rating_region_name_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -2422,7 +2423,7 @@ namespace yae
       descriptors_length_ = bin.read(10);
       descriptor_.clear();
 
-      stop_pos = bin.position() + (descriptors_length_ << 3);
+      stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -2448,7 +2449,7 @@ namespace yae
     RatingRegionTable::Dimension::load(IBitstream & bin)
     {
       dimension_name_length_ = bin.read(8);
-      std::size_t stop_pos = bin.position() + (dimension_name_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(dimension_name_length_);
       dimension_name_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -2490,7 +2491,7 @@ namespace yae
     {
       abbrev_rating_value_length_ = bin.read(8);
       std::size_t stop_pos =
-        bin.position() + (abbrev_rating_value_length_ << 3);
+        bin.position_plus_nbytes(abbrev_rating_value_length_);
       abbrev_rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -2503,7 +2504,7 @@ namespace yae
         << std::endl;
 
       rating_value_length_ = bin.read(8);
-      stop_pos = bin.position() + (rating_value_length_ << 3);
+      stop_pos = bin.position_plus_nbytes(rating_value_length_);
       rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -2574,7 +2575,7 @@ namespace yae
       etm_location_ = bin.read(2);
       length_in_seconds_ = bin.read(20);
       title_length_ = bin.read(8);
-      std::size_t stop_pos = bin.position() + (title_length_ << 3);
+      std::size_t stop_pos = bin.position_plus_nbytes(title_length_);
       title_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
@@ -2592,7 +2593,7 @@ namespace yae
       descriptors_length_ = bin.read(12);
       descriptor_.clear();
 
-      stop_pos = bin.position() + (descriptors_length_ << 3);
+      stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
