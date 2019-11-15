@@ -1992,7 +1992,7 @@ namespace yae
     void
     ProgramAssociationTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      YAE_THROW_IF(n_bytes & 0x3 != 0);
+      YAE_THROW_IF((n_bytes & 0x3) != 0);
 
       std::size_t n = n_bytes >> 2;
       program_.resize(n);
