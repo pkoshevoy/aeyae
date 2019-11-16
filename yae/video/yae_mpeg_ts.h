@@ -614,6 +614,47 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AudioStreamDescriptor
+    //
+    struct YAE_API AudioStreamDescriptor : Descriptor
+    {
+      AudioStreamDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t free_format_flag_ : 1;
+      uint8_t id_ : 1;
+      uint8_t layer_ : 2;
+      uint8_t variable_rate_audio_indicator_ : 1;
+      uint8_t reserved_ : 3;
+    };
+
+
+    //----------------------------------------------------------------
+    // HierarchyDescriptor
+    //
+    struct YAE_API HierarchyDescriptor : Descriptor
+    {
+      HierarchyDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t reserved1_ : 1;
+      uint32_t temporal_scalability_flag_ : 1;
+      uint32_t spatial_scalability_flag_ : 1;
+      uint32_t quality_scalability_flag_ : 1;
+      uint32_t hierarchy_type_ : 4;
+      uint32_t reserved2_ : 2;
+      uint32_t hierarchy_layer_index_ : 6;
+      uint32_t tref_present_flag_ : 1;
+      uint32_t reserved3_ : 1;
+      uint32_t hierarchy_embedded_layer_index_ : 6;
+      uint32_t reserved4_ : 2;
+      uint32_t hierarchy_channel_ : 6;
+    };
+
+
+    //----------------------------------------------------------------
     // RegistrationDescriptor
     //
     struct YAE_API RegistrationDescriptor : Descriptor
@@ -641,6 +682,52 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // TargetBackgroundGridDescriptor
+    //
+    struct YAE_API TargetBackgroundGridDescriptor : Descriptor
+    {
+      TargetBackgroundGridDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t horizontal_size_ : 14;
+      uint32_t vertical_size_ : 14;
+      uint32_t aspect_ratio_information_ : 4;
+    };
+
+
+    //----------------------------------------------------------------
+    // VideoWindowDescriptor
+    //
+    struct YAE_API VideoWindowDescriptor : Descriptor
+    {
+      VideoWindowDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t horizontal_offset_ : 14;
+      uint32_t vertical_offset_ : 14;
+      uint32_t window_priority_ : 4;
+    };
+
+
+    //----------------------------------------------------------------
+    // CADescriptor
+    //
+    struct YAE_API CADescriptor : Descriptor
+    {
+      CADescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t ca_system_id_;
+      uint16_t reserved_ : 3;
+      uint16_t ca_pid_ : 13;
+      TBufferPtr private_data_;
+    };
+
+
+    //----------------------------------------------------------------
     // ISO639LanguageDescriptor
     //
     struct YAE_API ISO639LanguageDescriptor : Descriptor
@@ -658,6 +745,257 @@ namespace yae
       };
 
       std::vector<Lang> lang_;
+    };
+
+
+    //----------------------------------------------------------------
+    // SystemClockDescriptor
+    //
+    struct YAE_API SystemClockDescriptor : Descriptor
+    {
+      SystemClockDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t external_clock_reference_indicator_ : 1;
+      uint16_t reserved1_ : 1;
+      uint16_t clock_accuracy_integer_ : 6;
+      uint16_t clock_accuracy_exponent_ : 3;
+      uint16_t reserved2_ : 5;
+    };
+
+
+    //----------------------------------------------------------------
+    // MultiplexBufferUtilizationDescriptor
+    //
+    struct YAE_API MultiplexBufferUtilizationDescriptor : Descriptor
+    {
+      MultiplexBufferUtilizationDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t bound_valid_flag_ : 1;
+      uint16_t ltw_offset_lower_bound_ : 15;
+      uint16_t reserved_ : 1;
+      uint16_t ltw_offset_upper_bound_ : 15;
+    };
+
+
+    //----------------------------------------------------------------
+    // CopyrightDescriptor
+    //
+    struct YAE_API CopyrightDescriptor : Descriptor
+    {
+      CopyrightDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t copyright_identifier_;
+      TBufferPtr additional_copyright_info_;
+    };
+
+
+    //----------------------------------------------------------------
+    // MaximumBitrateDescriptor
+    //
+    struct YAE_API MaximumBitrateDescriptor : Descriptor
+    {
+      MaximumBitrateDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t reserved_ : 2;
+      uint32_t maximum_bitrate_ : 22;
+    };
+
+
+    //----------------------------------------------------------------
+    // PrivateDataIndicatorDescriptor
+    //
+    struct YAE_API PrivateDataIndicatorDescriptor : Descriptor
+    {
+      PrivateDataIndicatorDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t private_data_indicator_;
+    };
+
+
+    //----------------------------------------------------------------
+    // SmoothingBufferDescriptor
+    //
+    struct YAE_API SmoothingBufferDescriptor : Descriptor
+    {
+      SmoothingBufferDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint32_t reserved1_ : 2;
+      uint32_t sb_leak_rate_ : 22;
+      uint32_t reserved2_ : 2;
+      uint32_t sb_size_ : 22;
+    };
+
+
+    //----------------------------------------------------------------
+    // STDDescriptor
+    //
+    struct YAE_API STDDescriptor : Descriptor
+    {
+      STDDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t reserved_ : 7;
+      uint8_t leak_valid_flag_ : 1;
+    };
+
+
+    //----------------------------------------------------------------
+    // IBPDescriptor
+    //
+    struct YAE_API IBPDescriptor : Descriptor
+    {
+      IBPDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t closed_gop_flag_ : 1;
+      uint16_t identical_gop_flag_ : 1;
+      uint16_t max_gop_length_ : 14;
+    };
+
+
+    //----------------------------------------------------------------
+    // MPEG4VideoDescriptor
+    //
+    struct YAE_API MPEG4VideoDescriptor : Descriptor
+    {
+      MPEG4VideoDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t mpeg4_visual_profile_and_level_;
+    };
+
+
+    //----------------------------------------------------------------
+    // MPEG4AudioDescriptor
+    //
+    struct YAE_API MPEG4AudioDescriptor : Descriptor
+    {
+      MPEG4AudioDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t mpeg4_audio_profile_and_level_;
+    };
+
+
+    //----------------------------------------------------------------
+    // IODDescriptor
+    //
+    struct YAE_API IODDescriptor : Descriptor
+    {
+      IODDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t scope_of_iod_label_ : 8;
+      uint16_t iod_label_ : 8;
+
+      // IOD is defined in 8.6.3.1 of ISO/IEC 14496-1:
+      TBufferPtr initial_object_descriptor_;
+    };
+
+
+    //----------------------------------------------------------------
+    // SLDescriptor
+    //
+    struct YAE_API SLDescriptor : Descriptor
+    {
+      SLDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t es_id_;
+    };
+
+
+    //----------------------------------------------------------------
+    // FMCDescriptor
+    //
+    struct YAE_API FMCDescriptor : Descriptor
+    {
+      void load_body(IBitstream & bin);
+
+      struct YAE_API FlexMux
+      {
+        FlexMux();
+
+        void load(IBitstream & bin);
+
+        uint16_t es_id_;
+        uint8_t flex_mux_channel_;
+      };
+
+      std::vector<FlexMux> flex_mux_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ExternalESIDDescriptor
+    //
+    struct YAE_API ExternalESIDDescriptor : Descriptor
+    {
+      ExternalESIDDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint16_t external_es_id_;
+    };
+
+
+    //----------------------------------------------------------------
+    // MuxcodeDescriptor
+    //
+    struct YAE_API MuxcodeDescriptor : Descriptor
+    {
+      void load_body(IBitstream & bin);
+
+      // defined in 11.2.4.3 of ISO/IEC 14496-1
+      TBufferPtr mux_code_table_entries_;
+    };
+
+
+    //----------------------------------------------------------------
+    // MultiplexBufferDescriptor
+    //
+    struct YAE_API MultiplexBufferDescriptor : Descriptor
+    {
+      MultiplexBufferDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint64_t mb_buffer_size_ : 24;
+      uint64_t tb_leak_rate_ : 24;
+    };
+
+
+    //----------------------------------------------------------------
+    // FlexMuxTimingDescriptor
+    //
+    struct YAE_API FlexMuxTimingDescriptor : Descriptor
+    {
+      FlexMuxTimingDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint64_t fcr_es_id_ : 16;
+      uint64_t fcr_resolution_ : 32;
+      uint64_t fcr_length_ : 8;
+      uint64_t fmx_rate_length_ : 8;
     };
 
 

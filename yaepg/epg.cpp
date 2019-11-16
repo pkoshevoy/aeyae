@@ -727,7 +727,10 @@ main_may_throw(int argc, char ** argv)
   yae::HDHomeRun hdhr;
   hdhr.capture_all();
 #else
-  yae::TOpenFile src("/tmp/557000000.ts", "rb");
+  // const char * fn = "/tmp/557000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/503000000.ts";
+
+  yae::TOpenFile src(fn, "rb");
   YAE_THROW_IF(!src.is_open());
 
   yae::mpeg_ts::Context ts_ctx;

@@ -142,7 +142,7 @@ namespace yae
         {
           program_clock_reference_base_ = bin.read(33);
           program_clock_reference_reserved_ = bin.read(6);
-          YAE_THROW_IF(program_clock_reference_reserved_ != 0x3F);
+          // YAE_THROW_IF(program_clock_reference_reserved_ != 0x3F);
           program_clock_reference_extension_ = bin.read(9);
         }
 
@@ -1085,6 +1085,70 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AudioStreamDescriptor::AudioStreamDescriptor
+    //
+    AudioStreamDescriptor::AudioStreamDescriptor():
+      free_format_flag_(0),
+      id_(0),
+      layer_(0),
+      variable_rate_audio_indicator_(0),
+      reserved_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // AudioStreamDescriptor::load_body
+    //
+    void
+    AudioStreamDescriptor::load_body(IBitstream & bin)
+    {
+      free_format_flag_ = bin.read(1);
+      id_ = bin.read(1);
+      layer_ = bin.read(2);
+      variable_rate_audio_indicator_ = bin.read(1);
+      reserved_ = bin.read(3);
+    }
+
+
+    //----------------------------------------------------------------
+    // HierarchyDescriptor::HierarchyDescriptor
+    //
+    HierarchyDescriptor::HierarchyDescriptor():
+      reserved1_(0),
+      temporal_scalability_flag_(0),
+      spatial_scalability_flag_(0),
+      quality_scalability_flag_(0),
+      hierarchy_type_(0),
+      reserved2_(0),
+      hierarchy_layer_index_(0),
+      tref_present_flag_(0),
+      reserved3_(0),
+      hierarchy_embedded_layer_index_(0),
+      reserved4_(0),
+      hierarchy_channel_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // HierarchyDescriptor::load_body
+    //
+    void
+    HierarchyDescriptor::load_body(IBitstream & bin)
+    {
+      reserved1_ = bin.read(1);
+      temporal_scalability_flag_ = bin.read(1);
+      spatial_scalability_flag_ = bin.read(1);
+      quality_scalability_flag_ = bin.read(1);
+      hierarchy_type_ = bin.read(4);
+      reserved2_ = bin.read(2);
+      hierarchy_layer_index_ = bin.read(6);
+      tref_present_flag_ = bin.read(1);
+      reserved3_ = bin.read(1);
+      hierarchy_embedded_layer_index_ = bin.read(6);
+      reserved4_ = bin.read(2);
+      hierarchy_channel_ = bin.read(6);
+    }
+
+
+    //----------------------------------------------------------------
     // RegistrationDescriptor::RegistrationDescriptor
     //
     RegistrationDescriptor::RegistrationDescriptor():
@@ -1116,6 +1180,70 @@ namespace yae
     DataStreamAlignmentDescriptor::load_body(IBitstream & bin)
     {
       alignment_type_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // TargetBackgroundGridDescriptor::TargetBackgroundGridDescriptor
+    //
+    TargetBackgroundGridDescriptor::TargetBackgroundGridDescriptor():
+      horizontal_size_(0),
+      vertical_size_(0),
+      aspect_ratio_information_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // TargetBackgroundGridDescriptor::load_body
+    //
+    void
+    TargetBackgroundGridDescriptor::load_body(IBitstream & bin)
+    {
+      horizontal_size_ = bin.read(14);
+      vertical_size_ = bin.read(14);
+      aspect_ratio_information_ = bin.read(4);
+    }
+
+
+    //----------------------------------------------------------------
+    // VideoWindowDescriptor::VideoWindowDescriptor
+    //
+    VideoWindowDescriptor::VideoWindowDescriptor():
+      horizontal_offset_(0),
+      vertical_offset_(0),
+      window_priority_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // VideoWindowDescriptor::load_body
+    //
+    void
+    VideoWindowDescriptor::load_body(IBitstream & bin)
+    {
+      horizontal_offset_ = bin.read(14);
+      vertical_offset_ = bin.read(14);
+      window_priority_ = bin.read(4);
+    }
+
+
+    //----------------------------------------------------------------
+    // CADescriptor::CADescriptor
+    //
+    CADescriptor::CADescriptor():
+      ca_system_id_(0),
+      reserved_(0),
+      ca_pid_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // CADescriptor::load_body
+    //
+    void
+    CADescriptor::load_body(IBitstream & bin)
+    {
+      ca_system_id_ = bin.read(16);
+      reserved_ = bin.read(3);
+      ca_pid_ = bin.read(13);
+      private_data_ = bin.read_bytes(descriptor_length_ - 4);
     }
 
 
@@ -1154,6 +1282,348 @@ namespace yae
       bin.read_bytes(iso_639_language_code_, 3);
       audio_type_ = bin.read(8);
     }
+
+
+    //----------------------------------------------------------------
+    // SystemClockDescriptor::SystemClockDescriptor
+    //
+    SystemClockDescriptor::SystemClockDescriptor():
+      external_clock_reference_indicator_(0),
+      reserved1_(0),
+      clock_accuracy_integer_(0),
+      clock_accuracy_exponent_(0),
+      reserved2_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SystemClockDescriptor::load_body
+    //
+    void
+    SystemClockDescriptor::load_body(IBitstream & bin)
+    {
+      external_clock_reference_indicator_ = bin.read(1);
+      reserved1_ = bin.read(1);
+      clock_accuracy_integer_ = bin.read(6);
+      clock_accuracy_exponent_ = bin.read(3);
+      reserved2_ = bin.read(5);
+    }
+
+
+    //----------------------------------------------------------------
+    // MultiplexBufferUtilizationDescriptor::
+    // MultiplexBufferUtilizationDescriptor
+    //
+    MultiplexBufferUtilizationDescriptor::
+    MultiplexBufferUtilizationDescriptor():
+      bound_valid_flag_(0),
+      ltw_offset_lower_bound_(0),
+      reserved_(0),
+      ltw_offset_upper_bound_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MultiplexBufferUtilizationDescriptor::load_body
+    //
+    void
+    MultiplexBufferUtilizationDescriptor::load_body(IBitstream & bin)
+    {
+      bound_valid_flag_ = bin.read(1);
+      ltw_offset_lower_bound_ = bin.read(15);
+      reserved_ = bin.read(1);
+      ltw_offset_upper_bound_ = bin.read(15);
+    }
+
+
+    //----------------------------------------------------------------
+    // CopyrightDescriptor::CopyrightDescriptor
+    //
+    CopyrightDescriptor::CopyrightDescriptor():
+      copyright_identifier_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // CopyrightDescriptor::load_body
+    //
+    void
+    CopyrightDescriptor::load_body(IBitstream & bin)
+    {
+      copyright_identifier_ = bin.read(32);
+      additional_copyright_info_ = bin.read_bytes(descriptor_length_ - 4);
+    }
+
+
+    //----------------------------------------------------------------
+    // MaximumBitrateDescriptor::MaximumBitrateDescriptor
+    //
+    MaximumBitrateDescriptor::MaximumBitrateDescriptor():
+      reserved_(0),
+      maximum_bitrate_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MaximumBitrateDescriptor::load_body
+    //
+    void
+    MaximumBitrateDescriptor::load_body(IBitstream & bin)
+    {
+      reserved_ = bin.read(2);
+      maximum_bitrate_ = bin.read(22);
+    }
+
+
+    //----------------------------------------------------------------
+    // PrivateDataIndicatorDescriptor::PrivateDataIndicatorDescriptor
+    //
+    PrivateDataIndicatorDescriptor::PrivateDataIndicatorDescriptor():
+      private_data_indicator_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // PrivateDataIndicatorDescriptor::load_body
+    //
+    void
+    PrivateDataIndicatorDescriptor::load_body(IBitstream & bin)
+    {
+      private_data_indicator_ = bin.read(32);
+    }
+
+
+    //----------------------------------------------------------------
+    // SmoothingBufferDescriptor::SmoothingBufferDescriptor
+    //
+    SmoothingBufferDescriptor::SmoothingBufferDescriptor():
+      reserved1_(0),
+      sb_leak_rate_(0),
+      reserved2_(0),
+      sb_size_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SmoothingBufferDescriptor::load_body
+    //
+    void
+    SmoothingBufferDescriptor::load_body(IBitstream & bin)
+    {
+      reserved1_ = bin.read(2);
+      sb_leak_rate_ = bin.read(22);
+      reserved2_ = bin.read(2);
+      sb_size_ = bin.read(22);
+    }
+
+
+    //----------------------------------------------------------------
+    // STDDescriptor::STDDescriptor
+    //
+    STDDescriptor::STDDescriptor():
+      reserved_(0),
+      leak_valid_flag_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // STDDescriptor::load_body
+    //
+    void
+    STDDescriptor::load_body(IBitstream & bin)
+    {
+      reserved_ = bin.read(7);
+      leak_valid_flag_ = bin.read(1);
+    }
+
+
+    //----------------------------------------------------------------
+    // IBPDescriptor::IBPDescriptor
+    //
+    IBPDescriptor::IBPDescriptor():
+      closed_gop_flag_(0),
+      identical_gop_flag_(0),
+      max_gop_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // IBPDescriptor::load_body
+    //
+    void
+    IBPDescriptor::load_body(IBitstream & bin)
+    {
+      closed_gop_flag_ = bin.read(1);
+      identical_gop_flag_ = bin.read(1);
+      max_gop_length_ = bin.read(14);
+    }
+
+
+    //----------------------------------------------------------------
+    // MPEG4VideoDescriptor::MPEG4VideoDescriptor
+    //
+    MPEG4VideoDescriptor::MPEG4VideoDescriptor():
+      mpeg4_visual_profile_and_level_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MPEG4VideoDescriptor::load_body
+    //
+    void
+    MPEG4VideoDescriptor::load_body(IBitstream & bin)
+    {
+      mpeg4_visual_profile_and_level_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // MPEG4AudioDescriptor::MPEG4AudioDescriptor
+    //
+    MPEG4AudioDescriptor::MPEG4AudioDescriptor():
+      mpeg4_audio_profile_and_level_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MPEG4AudioDescriptor::load_body
+    //
+    void
+    MPEG4AudioDescriptor::load_body(IBitstream & bin)
+    {
+      mpeg4_audio_profile_and_level_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // IODDescriptor::IODDescriptor
+    //
+    IODDescriptor::IODDescriptor():
+      scope_of_iod_label_(0),
+      iod_label_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // IODDescriptor::load_body
+    //
+    void
+    IODDescriptor::load_body(IBitstream & bin)
+    {
+      scope_of_iod_label_ = bin.read(8);
+      iod_label_ = bin.read(8);
+      initial_object_descriptor_ = bin.read_bytes(descriptor_length_ - 2);
+    }
+
+
+    //----------------------------------------------------------------
+    // SLDescriptor::SLDescriptor
+    //
+    SLDescriptor::SLDescriptor():
+      es_id_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SLDescriptor::load_body
+    //
+    void
+    SLDescriptor::load_body(IBitstream & bin)
+    {
+      es_id_ = bin.read(16);
+    }
+
+
+    //----------------------------------------------------------------
+    // FMCDescriptor::load_body
+    //
+    void FMCDescriptor::load_body(IBitstream & bin)
+    {
+      std::size_t stop_pos = bin.position_plus_nbytes(descriptor_length_);
+      while (bin.position() < stop_pos)
+      {
+        flex_mux_.push_back(FlexMux());
+        FlexMux & flex_mux = flex_mux_.back();
+        flex_mux.load(bin);
+      }
+      YAE_THROW_IF(bin.position() != stop_pos);
+    }
+
+    //----------------------------------------------------------------
+    // FMCDescriptor::FlexMux::FlexMux
+    //
+    FMCDescriptor::FlexMux::FlexMux():
+      es_id_(0),
+      flex_mux_channel_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // FMCDescriptor::FlexMux::load
+    //
+    void
+    FMCDescriptor::FlexMux::load(IBitstream & bin)
+    {
+      es_id_ = bin.read(16);
+      flex_mux_channel_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // ExternalESIDDescriptor::ExternalESIDDescriptor
+    //
+    ExternalESIDDescriptor::ExternalESIDDescriptor():
+      external_es_id_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ExternalESIDDescriptor::load_body
+    //
+    void
+    ExternalESIDDescriptor::load_body(IBitstream & bin)
+    {
+      external_es_id_ = bin.read(16);
+    }
+
+
+    //----------------------------------------------------------------
+    // MuxcodeDescriptor::load_body
+    //
+    void
+    MuxcodeDescriptor::load_body(IBitstream & bin)
+    {
+      mux_code_table_entries_ = bin.read_bytes(descriptor_length_);
+    }
+
+
+    //----------------------------------------------------------------
+    // MultiplexBufferDescriptor::MultiplexBufferDescriptor
+    //
+    MultiplexBufferDescriptor::MultiplexBufferDescriptor():
+      mb_buffer_size_(0),
+      tb_leak_rate_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // MultiplexBufferDescriptor::load_body
+    //
+    void
+    MultiplexBufferDescriptor::load_body(IBitstream & bin)
+    {
+      mb_buffer_size_ = bin.read(24);
+      tb_leak_rate_ = bin.read(24);
+    }
+
+
+    //----------------------------------------------------------------
+    // FlexMuxTimingDescriptor::FlexMuxTimingDescriptor
+    //
+    FlexMuxTimingDescriptor::FlexMuxTimingDescriptor():
+      fcr_es_id_(0),
+      fcr_resolution_(0),
+      fcr_length_(0),
+      fmx_rate_length_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // FlexMuxTimingDescriptor::load_body
+    //
+    void
+    FlexMuxTimingDescriptor::load_body(IBitstream & bin)
+    {
+      fcr_es_id_ = bin.read(16);
+      fcr_resolution_ = bin.read(32);
+      fcr_length_ = bin.read(8);
+      fmx_rate_length_ = bin.read(8);
+    }
+
 
     //----------------------------------------------------------------
     // MPEG2StereoscopicVideoFormatDescriptor::
@@ -1763,6 +2233,14 @@ namespace yae
       {
         descriptor.reset(new VideoStreamDescriptor());
       }
+      else if (descriptor_tag == 0x03)
+      {
+        descriptor.reset(new AudioStreamDescriptor());
+      }
+      else if (descriptor_tag == 0x04)
+      {
+        descriptor.reset(new HierarchyDescriptor());
+      }
       else if (descriptor_tag == 0x05)
       {
         descriptor.reset(new RegistrationDescriptor());
@@ -1771,9 +2249,90 @@ namespace yae
       {
         descriptor.reset(new DataStreamAlignmentDescriptor());
       }
+      else if (descriptor_tag == 0x07)
+      {
+        descriptor.reset(new TargetBackgroundGridDescriptor());
+      }
+      else if (descriptor_tag == 0x08)
+      {
+        descriptor.reset(new VideoWindowDescriptor());
+      }
+      else if (descriptor_tag == 0x09)
+      {
+        descriptor.reset(new CADescriptor());
+      }
       else if (descriptor_tag == 0x0A)
       {
         descriptor.reset(new ISO639LanguageDescriptor());
+      }
+      else if (descriptor_tag == 0x0B)
+      {
+        descriptor.reset(new SystemClockDescriptor());
+      }
+      else if (descriptor_tag == 0x0C)
+      {
+        descriptor.reset(new MultiplexBufferUtilizationDescriptor());
+      }
+      else if (descriptor_tag == 0x0D)
+      {
+        descriptor.reset(new CopyrightDescriptor());
+      }
+      else if (descriptor_tag == 0x0E)
+      {
+        descriptor.reset(new MaximumBitrateDescriptor());
+      }
+      else if (descriptor_tag == 0x0F)
+      {
+        descriptor.reset(new PrivateDataIndicatorDescriptor());
+      }
+      else if (descriptor_tag == 0x10)
+      {
+        descriptor.reset(new SmoothingBufferDescriptor());
+      }
+      else if (descriptor_tag == 0x11)
+      {
+        descriptor.reset(new STDDescriptor());
+      }
+      else if (descriptor_tag == 0x12)
+      {
+        descriptor.reset(new IBPDescriptor());
+      }
+      // 0x13 - 0x1A defined in ISO/IEC 13818-6
+      else if (descriptor_tag == 0x1B)
+      {
+        descriptor.reset(new MPEG4VideoDescriptor());
+      }
+      else if (descriptor_tag == 0x1C)
+      {
+        descriptor.reset(new MPEG4AudioDescriptor());
+      }
+      else if (descriptor_tag == 0x1D)
+      {
+        descriptor.reset(new IODDescriptor());
+      }
+      else if (descriptor_tag == 0x1E)
+      {
+        descriptor.reset(new SLDescriptor());
+      }
+      else if (descriptor_tag == 0x1F)
+      {
+        descriptor.reset(new FMCDescriptor());
+      }
+      else if (descriptor_tag == 0x20)
+      {
+        descriptor.reset(new ExternalESIDDescriptor());
+      }
+      else if (descriptor_tag == 0x21)
+      {
+        descriptor.reset(new MuxcodeDescriptor());
+      }
+      else if (descriptor_tag == 0x23)
+      {
+        descriptor.reset(new MultiplexBufferDescriptor());
+      }
+      else if (descriptor_tag == 0x2C)
+      {
+        descriptor.reset(new FlexMuxTimingDescriptor());
       }
       else if (descriptor_tag == 0x34)
       {
@@ -2944,7 +3503,7 @@ namespace yae
 
           if (!priv_section)
           {
-            yae_elog("FIXME: unimplemented table, 0x%s",
+            yae_wlog("unexpected section, 0x%s",
                      yae::to_hex(&(section->table_id_), 1).c_str());
           }
         }
