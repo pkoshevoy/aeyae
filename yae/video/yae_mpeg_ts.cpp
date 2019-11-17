@@ -421,6 +421,8 @@ namespace yae
 
       stream_id_ = bin.read(8);
       pes_packet_length_ = bin.read(16);
+      YAE_THROW_IF(!bin.has_enough_bytes(pes_packet_length_));
+
       std::size_t start_pos = bin.position();
 
       if (stream_id_ != STREAM_ID_PROGRAM_STREAM_MAP &&
@@ -1079,7 +1081,7 @@ namespace yae
         chroma_format_ = bin.read(2);
         frame_rate_extension_flag_ = bin.read(1);
         reserved_ = bin.read(5);
-        YAE_THROW_IF(reserved_ != 0x1F);
+        // YAE_THROW_IF(reserved_ != 0x1F);
       }
     }
 
@@ -1700,7 +1702,7 @@ namespace yae
       language_flag_  = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved2_ = bin.read(6);
-      YAE_THROW_IF(reserved2_ != 0x3F);
+      // YAE_THROW_IF(reserved2_ != 0x3F);
 
       if (language_flag_)
       {
@@ -2743,7 +2745,7 @@ namespace yae
       }
 
       reserved_ = bin.read(4);
-      YAE_THROW_IF(reserved_ != 0xF);
+      // YAE_THROW_IF(reserved_ != 0xF);
 
       descriptors_length_ = bin.read(12);
       descriptor_.clear();
@@ -2843,7 +2845,7 @@ namespace yae
       }
 
       reserved_ = bin.read(6);
-      YAE_THROW_IF(reserved_ != 0x3F);
+      // YAE_THROW_IF(reserved_ != 0x3F);
 
       additional_descriptors_length_ = bin.read(10);
       additional_descriptor_.clear();
@@ -3189,6 +3191,411 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceInfoSection
+    //
+    SpliceInfoSection::SpliceInfoSection():
+      protocol_version_(0),
+      encrypted_packet_(0),
+      encryption_algorithm_(0),
+      pts_adjustment_(0),
+      cw_index_(0),
+      tier_(0),
+      splice_command_length_(0),
+      splice_command_type_(0),
+      descriptor_loop_length_(0),
+      ecrc32_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // decrypt
+    //
+    static TBufferPtr
+    decrypt(const TBufferPtr & payload, uint64_t encryption_algorithm)
+    {
+      throw std::runtime_error("decryption not implemented");
+      return payload;
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::load
+    //
+    void
+    SpliceInfoSection::load(IBitstream & bin)
+    {
+      pointer_field_ = bin.read(8);
+      bin.skip_bytes(pointer_field_);
+
+      table_id_ = bin.read(8);
+
+      section_syntax_indicator_ = bin.read(1);
+      YAE_THROW_IF(section_syntax_indicator_ != 0x0);
+
+      private_indicator_ = bin.read(1);
+      YAE_THROW_IF(section_syntax_indicator_ != 0x0);
+
+      reserved1_ = bin.read(2);
+      YAE_THROW_IF(reserved1_ != 0x3);
+
+      section_length_ = bin.read(12);
+      YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
+      std::size_t start_pos = bin.position();
+
+      protocol_version_ = bin.read(8);
+      encrypted_packet_ = bin.read(1);
+      encryption_algorithm_ = bin.read(6);
+      pts_adjustment_ = bin.read(33);
+      cw_index_ = bin.read(8);
+      tier_ = bin.read(12);
+      splice_command_length_ = bin.read(12);
+
+      std::size_t consumed_bytes = (bin.position() - start_pos) >> 3;
+      std::size_t payload_size = section_length_ - consumed_bytes - 4;
+      TBufferPtr payload = bin.read_bytes(payload_size);
+      if (encrypted_packet_)
+      {
+        payload = decrypt(payload, encryption_algorithm_);
+      }
+
+      yae::Bitstream decrypted(payload);
+      splice_command_type_ = decrypted.read(8);
+
+      if (splice_command_type_ == 0x00)
+      {
+        command_.reset(new SpliceNull());
+      }
+      else if (splice_command_type_ == 0x04)
+      {
+        command_.reset(new SpliceSchedule());
+      }
+      else if (splice_command_type_ == 0x05)
+      {
+        command_.reset(new SpliceInsert());
+      }
+      else if (splice_command_type_ == 0x06)
+      {
+        command_.reset(new TimeSignal());
+      }
+      else if (splice_command_type_ == 0x07)
+      {
+        command_.reset(new BandwidthReservation());
+      }
+      else if (splice_command_type_ == 0xFF)
+      {
+        command_.reset(new PrivateCommand());
+      }
+
+      std::size_t cmd_bytes =
+        (splice_command_length_ == 0xFFF) ?
+        (payload_size - (encrypted_packet_ ? 5 : 1)) :
+        splice_command_length_;
+
+      std::size_t cmd_end = decrypted.position_plus_nbytes(cmd_bytes);
+      if (command_)
+      {
+        command_->load(decrypted, cmd_bytes);
+      }
+
+      YAE_THROW_IF(cmd_end < decrypted.position());
+
+      if (splice_command_length_ != 0xFFF)
+      {
+        decrypted.seek(cmd_end);
+      }
+
+      descriptor_loop_length_ = decrypted.read(16);
+      descriptor_.resize(descriptor_loop_length_);
+
+      for (std::size_t i = 0, n = descriptor_.size(); i < n; i++)
+      {
+        SpliceDescriptor & descriptor = descriptor_[i];
+        descriptor.load(decrypted);
+      }
+
+      consumed_bytes = decrypted.position() >> 3;
+      std::size_t stuffing_bytes = payload_size - consumed_bytes;
+      if (stuffing_bytes)
+      {
+        if (encrypted_packet_)
+        {
+          // ecrc32:
+          YAE_THROW_IF(stuffing_bytes < 4);
+          stuffing_bytes -= 4;
+        }
+
+        alignment_stuffing_ = decrypted.read_bytes(stuffing_bytes);
+
+        if (encrypted_packet_)
+        {
+          ecrc32_ = decrypted.read(32);
+        }
+      }
+
+      crc32_ = bin.read(32);
+    }
+
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::BreakDuration::BreakDuration
+    //
+    SpliceInfoSection::BreakDuration::BreakDuration():
+      auto_return_(0),
+      reserved_(0),
+      duration_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::BreakDuration::load
+    //
+    void
+    SpliceInfoSection::BreakDuration::load(IBitstream & bin)
+    {
+      auto_return_ = bin.read(1);
+      reserved_ = bin.read(6);
+      duration_ = bin.read(33);
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceTime::SpliceTime
+    //
+    SpliceInfoSection::SpliceTime::SpliceTime():
+      time_specified_flag_(0),
+      reserved_(0),
+      pts_time_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceTime::load
+    //
+    void
+    SpliceInfoSection::SpliceTime::load(IBitstream & bin)
+    {
+      time_specified_flag_ = bin.read(1);
+      reserved_ = bin.read(6);
+      if (time_specified_flag_)
+      {
+        pts_time_ = bin.read(33);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::Splice::Splice
+    //
+    SpliceInfoSection::Splice::Splice():
+      splice_event_id_(0),
+      splice_event_cancel_indicator_(0),
+      reserved1_(0),
+      out_of_network_indicator_(0),
+      program_splice_flag_(0),
+      duration_flag_(0),
+      reserved2_(0),
+      utc_splice_time_(0),
+      component_count_(0),
+      unique_program_id_(0),
+      avail_num_(0),
+      avails_expected_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::Splice::load
+    //
+    void
+    SpliceInfoSection::Splice::load(IBitstream & bin)
+    {
+      splice_event_id_ = bin.read(32);
+      splice_event_cancel_indicator_ = bin.read(1);
+      reserved1_ = bin.read(7);
+
+      if (!splice_event_cancel_indicator_)
+      {
+        out_of_network_indicator_ = bin.read(1);
+        program_splice_flag_ = bin.read(1);
+        duration_flag_ = bin.read(1);
+        reserved2_ = bin.read(5);
+
+        if (program_splice_flag_)
+        {
+          utc_splice_time_ = bin.read(32);
+        }
+        else
+        {
+          component_count_ = bin.read(8);
+          component_.resize(component_count_);
+          for (std::size_t i = 0, n = component_.size(); i < n; i++)
+          {
+            Component & component = component_[i];
+            component.component_tag_ = bin.read(8);
+            component.utc_splice_time_ = bin.read(32);
+          }
+        }
+
+        if (duration_flag_)
+        {
+          break_duration_ = BreakDuration();
+          break_duration_->load(bin);
+        }
+
+        unique_program_id_ = bin.read(16);
+        avail_num_ = bin.read(8);
+        avails_expected_ = bin.read(8);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceSchedule::SpliceSchedule
+    //
+    SpliceInfoSection::SpliceSchedule::SpliceSchedule():
+      splice_count_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceSchedule::load
+    //
+    void
+    SpliceInfoSection::SpliceSchedule::load(IBitstream & bin,
+                                            std::size_t nbytes)
+    {
+      splice_count_ = bin.read(8);
+      splice_.resize(splice_count_);
+      for (std::size_t i = 0, n = splice_.size(); i < n; i++)
+      {
+        Splice & splice = splice_[i];
+        splice.load(bin);
+      }
+
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceInsert::SpliceInsert
+    //
+    SpliceInfoSection::SpliceInsert::SpliceInsert():
+      splice_event_id_(0),
+      splice_event_cancel_indicator_(0),
+      reserved1_(0),
+      out_of_network_indicator_(0),
+      program_splice_flag_(0),
+      duration_flag_(0),
+      splice_immediate_flag_(0),
+      reserved2_(0),
+      component_count_(0),
+      unique_program_id_(0),
+      avail_num_(0),
+      avails_expected_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceInsert::load
+    //
+    void
+    SpliceInfoSection::SpliceInsert::load(IBitstream & bin,
+                                          std::size_t nbytes)
+    {
+      splice_event_id_ = bin.read(32);
+      splice_event_cancel_indicator_ = bin.read(1);
+      reserved1_ = bin.read(7);
+
+      if (!splice_event_cancel_indicator_)
+      {
+        out_of_network_indicator_ = bin.read(1);
+        program_splice_flag_ = bin.read(1);
+        duration_flag_ = bin.read(1);
+        splice_immediate_flag_ = bin.read(1);
+        reserved2_ = bin.read(4);
+
+        if (program_splice_flag_ && !splice_immediate_flag_)
+        {
+          splice_time_ = SpliceTime();
+          splice_time_->load(bin);
+        }
+
+        if (!program_splice_flag_)
+        {
+          component_count_ = bin.read(8);
+          component_.resize(component_count_);
+
+          for (std::size_t i = 0, n = component_.size(); i < n; i++)
+          {
+            Component & component = component_[i];
+            component.component_tag_ = bin.read(8);
+            if (!splice_immediate_flag_)
+            {
+              component.splice_time_ = SpliceTime();
+              component.splice_time_->load(bin);
+            }
+          }
+        }
+
+        if (duration_flag_)
+        {
+          break_duration_ = BreakDuration();
+          break_duration_->load(bin);
+        }
+
+        unique_program_id_ = bin.read(16);
+        avail_num_ = bin.read(8);
+        avails_expected_ = bin.read(8);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::TimeSignal::load
+    //
+    void
+    SpliceInfoSection::TimeSignal::load(IBitstream & bin,
+                                        std::size_t nbytes)
+    {
+      splice_time_.load(bin);
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::PrivateCommand::PrivateCommand
+    //
+    SpliceInfoSection::PrivateCommand::PrivateCommand():
+      identifier_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::PrivateCommand::load
+    //
+    void
+    SpliceInfoSection::PrivateCommand::load(IBitstream & bin,
+                                            std::size_t nbytes)
+    {
+      identifier_ = bin.read(32);
+      private_ = bin.read_bytes(nbytes - 4);
+    }
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceDescriptor::SpliceDescriptor
+    //
+    SpliceInfoSection::SpliceDescriptor::SpliceDescriptor():
+      splice_descriptor_tag_(0),
+      descriptor_length_(0),
+      identified_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // SpliceInfoSection::SpliceDescriptor::load
+    //
+    void
+    SpliceInfoSection::SpliceDescriptor::load(IBitstream & bin)
+    {
+      splice_descriptor_tag_ = bin.read(8);
+      descriptor_length_ = bin.read(8);
+      identified_ = bin.read(32);
+      private_ = bin.read_bytes(descriptor_length_ - 4);
+    }
+
+    //----------------------------------------------------------------
+    // DSMCCSection::load_body
+    //
+    void
+    DSMCCSection::load_body(IBitstream & bin, std::size_t n_bytes)
+    {
+      body_ = bin.read_bytes(n_bytes);
+    }
+
+
+    //----------------------------------------------------------------
     // load_section
     //
     TSectionPtr
@@ -3251,6 +3658,23 @@ namespace yae
         // STT
         section.reset(new SystemTimeTable());
       }
+      else if (table_id == 0xFC)
+      {
+        // SCTE-35
+        section.reset(new SpliceInfoSection());
+      }
+      else if (table_id >= 0x3A && table_id <= 0x3F)
+      {
+        // DSM-CC:
+        // 0x3A ISO/IEC 13818-6 DSM CC multiprotocol encapsulated.
+        // 0x3B ISO/IEC 13818-6 DSM CC U-N messages.
+        // 0x3C ISO/IEC 13818-6 DSM CC Download Data Messages.
+        // 0x3D ISO/IEC 13818-6 DSM CC stream descriptor list.
+        // 0x3E ISO/IEC 13818-6 DSM CC privately defined
+        //      (DVB MAC addressed datagram).
+        // 0x3F	ISO/IEC 13818-6 DSM CC addressable.
+        section.reset(new DSMCCSection());
+      }
       else if (table_id >= 0x40 && table_id <= 0xFE)
       {
         // User Private:
@@ -3309,7 +3733,8 @@ namespace yae
       std::string tmp = yae::to_hex(payload.get(),
                                     std::min<std::size_t>(payload.size(), 32),
                                     4);
-      yae_dlog("%5i pid   %8i pkts   %8i bytes   %s ...",
+      yae_dlog("%5i (0x%04X) pid   %8i pkts   %8i bytes   %s ...",
+               int(pid),
                int(pid),
                int(packets.size()),
                int(payload.size()),
@@ -3496,16 +3921,17 @@ namespace yae
           PESPacket pes_pkt;
           pes_pkt.load(bin);
         }
-        else
+        else if (yae::has(pid_es_, pid))
         {
           TSectionPtr section = load_section(bin);
-          TPrivateSectionPtr priv_section = section;
-
-          if (!priv_section)
-          {
-            yae_wlog("unexpected section, 0x%s",
-                     yae::to_hex(&(section->table_id_), 1).c_str());
-          }
+        }
+        else
+        {
+          // not a PES packet, not a PID we recognize -- skip it:
+#if 0
+          std::string fn = yae::strfmt("/tmp/0x%04X.bin", pid);
+          yae::dump(fn, payload.get(), payload.size());
+#endif
         }
       }
       catch (const std::exception & e)

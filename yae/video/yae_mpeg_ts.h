@@ -1728,6 +1728,236 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SpliceInfoSection
+    //
+    struct YAE_API SpliceInfoSection : Section
+    {
+      SpliceInfoSection();
+
+    protected:
+      // vrtual:
+      void load_header(IBitstream & bin) {}
+      void load_body(IBitstream & bin, std::size_t n_bytes) {}
+
+    public:
+      // virtual:
+      void load(IBitstream & bin);
+
+      uint64_t protocol_version_ : 8;
+      uint64_t encrypted_packet_ : 1;
+      uint64_t encryption_algorithm_ : 6;
+      uint64_t pts_adjustment_ : 33;
+      uint64_t cw_index_ : 8;
+      uint32_t tier_ : 12;
+      uint32_t splice_command_length_ : 12;
+      uint32_t splice_command_type_ : 8;
+
+      //----------------------------------------------------------------
+      // BreakDuration
+      //
+      struct YAE_API BreakDuration
+      {
+        BreakDuration();
+
+        void load(IBitstream & bin);
+
+        uint64_t auto_return_ : 1;
+        uint64_t reserved_ : 6;
+        uint64_t duration_ : 33;
+      };
+
+      //----------------------------------------------------------------
+      // SpliceTime
+      //
+      struct YAE_API SpliceTime
+      {
+        SpliceTime();
+
+        void load(IBitstream & bin);
+
+        uint64_t time_specified_flag_ : 1;
+        uint64_t reserved_ : 6;
+        uint64_t pts_time_ : 33;
+      };
+
+      //----------------------------------------------------------------
+      // Splice
+      //
+      struct YAE_API Splice
+      {
+        Splice();
+
+        void load(IBitstream & bin);
+
+        uint32_t splice_event_id_;
+        uint8_t splice_event_cancel_indicator_ : 1;
+        uint8_t reserved1_ : 7;
+
+        uint8_t out_of_network_indicator_ : 1;
+        uint8_t program_splice_flag_ : 1;
+        uint8_t duration_flag_ : 1;
+        uint8_t reserved2_ : 5;
+
+        uint32_t utc_splice_time_;
+
+        uint8_t component_count_;
+
+        struct YAE_API Component
+        {
+          uint8_t component_tag_;
+          uint32_t utc_splice_time_;
+        };
+
+        std::vector<Component> component_;
+
+        yae::optional<BreakDuration> break_duration_;
+        uint32_t unique_program_id_ : 16;
+        uint32_t avail_num_ : 8;
+        uint32_t avails_expected_ : 8;
+      };
+
+      //----------------------------------------------------------------
+      // Command
+      //
+      struct YAE_API Command
+      {
+        virtual ~Command() {}
+        virtual void load(IBitstream & bin, std::size_t nbytes) {}
+     };
+
+      //----------------------------------------------------------------
+      // SpliceNull
+      //
+      struct YAE_API SpliceNull : Command {};
+
+      //----------------------------------------------------------------
+      // SpliceSchedule
+      //
+      struct YAE_API SpliceSchedule : Command
+      {
+        SpliceSchedule();
+
+        void load(IBitstream & bin, std::size_t nbytes);
+
+        uint8_t splice_count_;
+        std::vector<Splice> splice_;
+      };
+
+      //----------------------------------------------------------------
+      // SpliceInsert
+      //
+      struct YAE_API SpliceInsert : Command
+      {
+        SpliceInsert();
+
+        void load(IBitstream & bin, std::size_t nbytes);
+
+        uint32_t splice_event_id_;
+        uint8_t splice_event_cancel_indicator_ : 1;
+        uint8_t reserved1_ : 7;
+
+        uint8_t out_of_network_indicator_ : 1;
+        uint8_t program_splice_flag_ : 1;
+        uint8_t duration_flag_ : 1;
+        uint8_t splice_immediate_flag_ : 1;
+        uint8_t reserved2_ : 4;
+
+        yae::optional<SpliceTime> splice_time_;
+
+        uint8_t component_count_;
+
+        struct YAE_API Component
+        {
+          uint8_t component_tag_;
+          yae::optional<SpliceTime> splice_time_;
+        };
+
+        std::vector<Component> component_;
+
+        yae::optional<BreakDuration> break_duration_;
+        uint32_t unique_program_id_ : 16;
+        uint32_t avail_num_ : 8;
+        uint32_t avails_expected_ : 8;
+      };
+
+      //----------------------------------------------------------------
+      // TimeSignal
+      //
+      struct YAE_API TimeSignal : Command
+      {
+        void load(IBitstream & bin, std::size_t nbytes);
+
+        SpliceTime splice_time_;
+      };
+
+      //----------------------------------------------------------------
+      // BandwidthReservation
+      //
+      struct YAE_API BandwidthReservation : Command {};
+
+      //----------------------------------------------------------------
+      // PrivateCommand
+      //
+      struct YAE_API PrivateCommand : Command
+      {
+        PrivateCommand();
+
+        void load(IBitstream & bin, std::size_t nbytes);
+
+        uint32_t identifier_;
+        TBufferPtr private_;
+      };
+
+      yae::shared_ptr<Command> command_;
+
+      uint16_t descriptor_loop_length_;
+
+      //----------------------------------------------------------------
+      // SpliceDescriptor
+      //
+      struct YAE_API SpliceDescriptor
+      {
+        SpliceDescriptor();
+
+        void load(IBitstream & bin);
+
+        uint16_t splice_descriptor_tag_ : 8;
+        uint16_t descriptor_length_ : 8;
+        uint32_t identified_;
+        TBufferPtr private_;
+      };
+
+      std::vector<SpliceDescriptor> descriptor_;
+
+      TBufferPtr alignment_stuffing_;
+
+      uint32_t ecrc32_;
+    };
+
+    //----------------------------------------------------------------
+    // SpliceInfoSectionPtr
+    //
+    typedef yae::shared_ptr<SpliceInfoSection, Section> SpliceInfoSectionPtr;
+
+
+    //----------------------------------------------------------------
+    // DSMCCSection
+    //
+    struct YAE_API DSMCCSection : Section
+    {
+      void load_body(IBitstream & bin, std::size_t n_bytes);
+
+      TBufferPtr body_;
+    };
+
+
+    //----------------------------------------------------------------
+    // DSMCCSectionPtr
+    //
+    typedef yae::shared_ptr<DSMCCSection, Section> DSMCCSectionPtr;
+
+
+    //----------------------------------------------------------------
     // load_section
     //
     YAE_API TSectionPtr

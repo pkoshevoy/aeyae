@@ -728,7 +728,26 @@ main_may_throw(int argc, char ** argv)
   hdhr.capture_all();
 #else
   // const char * fn = "/tmp/557000000.ts";
+#if 0
+  const char * fn = "/scratch/DataSets/Video/epg/473000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/479000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/491000000.ts";
   const char * fn = "/scratch/DataSets/Video/epg/503000000.ts";
+#endif
+  const char * fn = "/scratch/DataSets/Video/epg/509000000.ts";
+#if 0
+  const char * fn = "/scratch/DataSets/Video/epg/515000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/527000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/533000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/539000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/551000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/557000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/563000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/569000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/593000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/599000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/605000000.ts";
+#endif
 
   yae::TOpenFile src(fn, "rb");
   YAE_THROW_IF(!src.is_open());
