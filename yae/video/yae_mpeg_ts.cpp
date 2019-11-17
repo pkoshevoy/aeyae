@@ -2695,7 +2695,10 @@ namespace yae
       protocol_version_(0),
       system_time_(0),
       gps_utc_offset_(0),
-      daylight_saving_(0)
+      daylight_saving_status_(0),
+      daylight_saving_reserved_(0),
+      daylight_saving_day_of_month_(0),
+      daylight_saving_hour_(0)
     {}
 
     //----------------------------------------------------------------
@@ -2709,7 +2712,13 @@ namespace yae
       protocol_version_ = bin.read(8);
       system_time_ = bin.read(32);
       gps_utc_offset_ = bin.read(8);
-      daylight_saving_ = bin.read(16);
+
+      daylight_saving_status_ = bin.read(1);
+      daylight_saving_reserved_ = bin.read(2);
+      YAE_THROW_IF(daylight_saving_reserved_ != 0x3);
+
+      daylight_saving_day_of_month_ = bin.read(5);
+      daylight_saving_hour_ = bin.read(8);
 
       descriptor_.clear();
       while (bin.position() < stop_pos)
@@ -3806,7 +3815,8 @@ namespace yae
           MGTSectionPtr mgt_section = section;
           STTSectionPtr stt_section = section;
           VCTSectionPtr vct_section = section;
-          YAE_EXPECT(mgt_section || stt_section || vct_section);
+          RRTSectionPtr rrt_section = section;
+          YAE_EXPECT(mgt_section || stt_section || vct_section || rrt_section);
 
           if (mgt_section)
           {

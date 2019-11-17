@@ -1498,10 +1498,25 @@ namespace yae
 
       void load_body(IBitstream & bin, std::size_t n_bytes);
 
-      uint8_t protocol_version_;
-      uint32_t system_time_;
-      uint8_t gps_utc_offset_;
-      uint16_t daylight_saving_;
+      uint8_t protocol_version_ : 8;
+
+      // elapsed GPS seconds since UTC 00:00:00 January 6th 1980
+      uint32_t system_time_ : 32;
+
+      // to convert to UTC time subtract gps_utc_offset from GPS seconds
+      uint8_t gps_utc_offset_ : 8;
+
+      uint16_t daylight_saving_status_ : 1;
+      uint16_t daylight_saving_reserved_ : 2;
+
+      // local day of the month on which the transition into or out of
+      // daylight saving time is to occur (1 - 31):
+      uint16_t daylight_saving_day_of_month_ : 5;
+
+      // local hour at which the transition into or out of
+      // daylight saving time to is to occur (0 - 18).
+      // This usually occurs at 2am in the US:
+      uint16_t daylight_saving_hour_ : 8;
 
       std::vector<TDescriptorPtr> descriptor_;
     };
