@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <time.h>
 #include <vector>
 
 // yae includes:
@@ -24,6 +25,14 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_at_utc_date
+  //
+  YAE_API time_t
+  unix_epoch_time_at_utc_time(int year, int mon, int day,
+                              int hour, int min, int sec);
+
 
   //----------------------------------------------------------------
   // TTime

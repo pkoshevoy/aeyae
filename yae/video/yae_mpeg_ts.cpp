@@ -6,8 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <time.h>
+
 // yae includes:
 #include "yae/api/yae_log.h"
+#include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_mpeg_ts.h"
 
@@ -2727,6 +2731,25 @@ namespace yae
         descriptor_.push_back(descriptor);
       }
       YAE_THROW_IF(bin.position() != stop_pos);
+
+      // FIXME: pkoshevoy:
+      static const int64_t unix_epoch_gps_offset = // 315964800;
+        yae::unix_epoch_time_at_utc_time(1980, 1, 6, 0, 0, 0);
+      time_t t_epoch = unix_epoch_gps_offset + system_time_ - gps_utc_offset_;
+
+      struct tm t = { 0 };
+      localtime_r(&t_epoch, &t);
+
+      std::cerr
+        << "\nSystemTimeTable, utc time: "
+        << yae::strfmt("%04i/%02i/%02i %02i:%02i:%02i\n",
+                       t.tm_year + 1900,
+                       t.tm_mon + 1,
+                       t.tm_mday,
+                       t.tm_hour,
+                       t.tm_min,
+                       t.tm_sec)
+        << std::endl;
     }
 
 

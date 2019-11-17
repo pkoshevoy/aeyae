@@ -14,6 +14,7 @@
 #include <math.h>
 #include <numeric>
 #include <sstream>
+#include <time.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -28,6 +29,25 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_at_utc_time
+  //
+  time_t
+  unix_epoch_time_at_utc_time(int year, int mon, int day,
+                              int hour, int min, int sec)
+  {
+    struct tm t = { 0 };
+    t.tm_year = year - 1900;
+    t.tm_mon  = mon - 1;
+    t.tm_mday = day;
+    t.tm_hour = hour;
+    t.tm_min  = min;
+    t.tm_sec  = sec;
+
+    time_t t_epoch = timegm(&t);
+    return t_epoch;
+  }
 
   //----------------------------------------------------------------
   // subsec_t
