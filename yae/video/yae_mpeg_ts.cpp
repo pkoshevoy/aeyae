@@ -1039,7 +1039,12 @@ namespace yae
     Descriptor::load(IBitstream & bin)
     {
       this->load_header(bin);
-      this->load_body(bin);
+
+      // extract descriptor payload into a separate bitstream
+      // to help protect the main bitstream reader against
+      // descriptor parsing errors/bugs:
+      yae::Bitstream body(bin.read_bytes(descriptor_length_));
+      this->load_body(body);
     }
 
 
