@@ -831,6 +831,23 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // lang_str
+    //
+    template <typename TByte>
+    static std::string
+    lang_str(const TByte language[3])
+    {
+      if (language[0])
+      {
+        const char * lang = reinterpret_cast<const char *>(&(language[0]));
+        return std::string(lang, lang + 3);
+      }
+
+      return std::string("");
+    }
+
+
+    //----------------------------------------------------------------
     // MultipleStringStructure::MultipleStringStructure
     //
     MultipleStringStructure::MultipleStringStructure():
@@ -863,7 +880,7 @@ namespace yae
       for (std::size_t i = 0, n = strings_.size(); i < n; i++)
       {
         const Message & msg = strings_[i];
-        oss << msg.to_str() << std::endl;
+        oss << msg.to_str();
       }
 
       return oss.str();
@@ -902,9 +919,7 @@ namespace yae
     MultipleStringStructure::Message::to_str() const
     {
       std::ostringstream oss;
-      oss << char(iso_639_language_code_[0])
-          << char(iso_639_language_code_[1])
-          << char(iso_639_language_code_[2]);
+      oss << lang_str(iso_639_language_code_);
 
       for (std::size_t i = 0, n = segment_.size(); i < n; i++)
       {
@@ -1045,6 +1060,16 @@ namespace yae
       // descriptor parsing errors/bugs:
       yae::Bitstream body(bin.read_bytes(descriptor_length_));
       this->load_body(body);
+    }
+
+    //----------------------------------------------------------------
+    // Descriptor::dump
+    //
+    void
+    Descriptor::dump(std::ostream & oss) const
+    {
+      oss << "0x" << yae::to_hex(descriptor_tag_)
+          << " (" << int(descriptor_length_) << " bytes)";
     }
 
 
@@ -1760,6 +1785,38 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // CaptionServiceDescriptor::dump
+    //
+    void
+    CaptionServiceDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      for (std::size_t i = 0; i < number_of_services_; i++)
+      {
+        const CaptionServiceDescriptor::Service & s = service_[i];
+        oss << "; " << lang_str(s.language_);
+        if (s.digital_cc_)
+        {
+          oss << " dtvcc " << int(s.caption_service_number_);
+        }
+        else
+        {
+          oss << (s.line21_field_ ? " CC1|CC3" : " CC2|CC4");
+        }
+
+        if (s.easy_reader_)
+        {
+          oss << ", easy reader";
+        }
+
+        if (s.wide_aspect_ratio_)
+        {
+          oss << ", wide aspect ratio";
+        }
+      }
+    }
+
+    //----------------------------------------------------------------
     // CaptionServiceDescriptor::Service::Service
     //
     CaptionServiceDescriptor::Service::Service():
@@ -1828,6 +1885,29 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // ContentAdvisoryDescriptor::dump
+    //
+    void
+    ContentAdvisoryDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+
+      for (std::size_t i = 0, z = region_.size(); i < z; i++)
+      {
+        const Region & r = region_[i];
+        oss << ", region " << int(r.rating_region_)
+            << ", " << r.rating_description_text_.to_str();
+
+        for (std::size_t j = 0, n = r.dimension_.size(); j < n; j++)
+        {
+          const Region::Dimension & d = r.dimension_[j];
+          oss << ", dimension " << int(d.rating_dimension_)
+              << ", value " << int(d.rating_value_);
+        }
+      }
+    }
+
+    //----------------------------------------------------------------
     // ContentAdvisoryDescriptor::Region::Region
     //
     ContentAdvisoryDescriptor::Region::Region():
@@ -1859,12 +1939,6 @@ namespace yae
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
-
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "ContentAdvisoryDescriptor::Region, rating: "
-        << rating_description_text_.to_str()
-        << std::endl;
     }
 
     //----------------------------------------------------------------
@@ -1896,12 +1970,16 @@ namespace yae
     ExtendedChannelNameDescriptor::load_body(IBitstream & bin)
     {
       long_channel_name_text_.load(bin);
+    }
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "ExtendedChannelNameDescriptor: "
-        << long_channel_name_text_.to_str()
-        << std::endl;
+    //----------------------------------------------------------------
+    // ExtendedChannelNameDescriptor::dump
+    //
+    void
+    ExtendedChannelNameDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      oss << ", " << long_channel_name_text_.to_str();
     }
 
 
@@ -1935,6 +2013,25 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // ServiceLocationDescriptor::dump
+    //
+    void
+    ServiceLocationDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      oss << ": PCR PID " << int(pcr_pid_);
+      for (std::size_t i = 0; i < number_elements_; i++)
+      {
+        const ServiceLocationDescriptor::Element & e = element_[i];
+        oss << ", "
+            << lang_str(e.iso_639_language_code_)
+            << " stream type 0x" << yae::to_hex(e.stream_type_)
+            << " ES PID " << int(e.elementary_pid_)
+            << " (0x" << yae::to_hex<uint16_t>(e.elementary_pid_) << ")";
+      }
+    }
+
+    //----------------------------------------------------------------
     // ServiceLocationDescriptor::Element::Element
     //
     ServiceLocationDescriptor::Element::Element():
@@ -1942,7 +2039,7 @@ namespace yae
       reserved_(0),
       elementary_pid_(0)
     {
-      memset(iso_639_languace_code_, 0, sizeof(iso_639_languace_code_));
+      memset(iso_639_language_code_, 0, sizeof(iso_639_language_code_));
     }
 
     //----------------------------------------------------------------
@@ -1956,7 +2053,7 @@ namespace yae
       YAE_THROW_IF(reserved_ != 0x7);
 
       elementary_pid_ = bin.read(13);
-      bin.read_bytes(iso_639_languace_code_, 3);
+      bin.read_bytes(iso_639_language_code_, 3);
     }
 
 
@@ -2023,12 +2120,16 @@ namespace yae
     ComponentNameDescriptor::load_body(IBitstream & bin)
     {
       component_name_string_.load(bin);
+    }
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "ComponentNameDescriptor: "
-        << component_name_string_.to_str()
-        << std::endl;
+    //----------------------------------------------------------------
+    // ComponentNameDescriptor::dump
+    //
+    void
+    ComponentNameDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      oss << ", " << component_name_string_.to_str();
     }
 
 
@@ -2058,12 +2159,17 @@ namespace yae
 
       std::size_t consumed_bytes = consumed >> 3;
       bin.skip_bytes(dcc_request_text_length_ - consumed_bytes);
+    }
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "DCCRequestDescriptor: "
-        << dcc_request_text_.to_str()
-        << std::endl;
+    //----------------------------------------------------------------
+    // DCCRequestDescriptor::dump
+    //
+    void
+    DCCRequestDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      oss << ": DCC request type" << int(dcc_request_type_)
+          << ", " << dcc_request_text_.to_str();
     }
 
 
@@ -2736,25 +2842,6 @@ namespace yae
         descriptor_.push_back(descriptor);
       }
       YAE_THROW_IF(bin.position() != stop_pos);
-
-      // FIXME: pkoshevoy:
-      static const int64_t unix_epoch_gps_offset = // 315964800;
-        yae::unix_epoch_time_at_utc_time(1980, 1, 6, 0, 0, 0);
-      time_t t_epoch = unix_epoch_gps_offset + system_time_ - gps_utc_offset_;
-
-      struct tm t = { 0 };
-      localtime_r(&t_epoch, &t);
-
-      std::cerr
-        << "\nSystemTimeTable, utc time: "
-        << yae::strfmt("%04i/%02i/%02i %02i:%02i:%02i\n",
-                       t.tm_year + 1900,
-                       t.tm_mon + 1,
-                       t.tm_mday,
-                       t.tm_hour,
-                       t.tm_min,
-                       t.tm_sec)
-        << std::endl;
     }
 
 
@@ -3001,12 +3088,6 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "RatingRegionTable, rating region name: "
-        << rating_region_name_text_.to_str()
-        << std::endl;
-
       dimensions_defined_ = bin.read(8);
       dimension_.resize(dimensions_defined_);
       for (std::size_t i = 0; i < dimensions_defined_; ++i)
@@ -3053,12 +3134,6 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "RatingRegionTable::Dimension, dimension name: "
-        << dimension_name_text_.to_str()
-        << std::endl;
-
       reserved_ = bin.read(3);
       YAE_THROW_IF(reserved_ != 0x7);
 
@@ -3095,24 +3170,12 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "RatingRegionTable::Dimension::Rating, abbrev value: "
-        << abbrev_rating_value_text_.to_str()
-        << std::endl;
-
       rating_value_length_ = bin.read(8);
       stop_pos = bin.position_plus_nbytes(rating_value_length_);
       rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
-
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "RatingRegionTable::Dimension::Rating, rating value: "
-        << rating_value_text_.to_str()
-        << std::endl;
     }
 
 
@@ -3179,12 +3242,6 @@ namespace yae
       YAE_ASSERT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "EventInformationTable::Event, title text: "
-        << title_text_.to_str()
-        << std::endl;
-
       reserved3_ = bin.read(4);
       YAE_THROW_IF(reserved3_ != 0xF);
 
@@ -3206,7 +3263,9 @@ namespace yae
     //
     ExtendedTextTable::ExtendedTextTable():
       protocol_version_(0),
-      etm_id_(0)
+      etm_id_source_id_(0),
+      etm_id_event_id_(0),
+      etm_id_event_flag_(0)
     {}
 
     //----------------------------------------------------------------
@@ -3216,14 +3275,10 @@ namespace yae
     ExtendedTextTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
       protocol_version_ = bin.read(8);
-      etm_id_ = bin.read(32);
+      etm_id_source_id_ = bin.read(16);
+      etm_id_event_id_ = bin.read(15);
+      etm_id_event_flag_ = bin.read(1);
       extended_text_message_.load(bin);
-
-      // FIXME: pkoshevoy:
-      std::cerr
-        << "ExtendedTextTable, extended text message: "
-        << extended_text_message_.to_str()
-        << std::endl;
     }
 
 
@@ -3846,7 +3901,26 @@ namespace yae
           RRTSectionPtr rrt_section = section;
           YAE_EXPECT(mgt_section || stt_section || vct_section || rrt_section);
 
-          if (mgt_section)
+          if (stt_section)
+          {
+            stt_ = stt_section;
+
+            SystemTimeTable & stt = *stt_;
+
+            // FIXME: pkoshevoy:
+            dump_stt(stt);
+          }
+          else if (vct_section)
+          {
+            // FIXME: pkoshevoy:
+            dump_vct(*vct_section);
+          }
+          else if (rrt_section)
+          {
+            // FIXME: pkoshevoy:
+            dump_rrt(*rrt_section);
+          }
+          else if (mgt_section)
           {
             const MasterGuideTable & mgt = *mgt_section;
             YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
@@ -3917,17 +3991,26 @@ namespace yae
         else if (yae::has(pid_cvct_curr_, pid))
         {
           VCTSectionPtr section = load_section(bin);
-          VirtualChannelTable & vct = *section;
+          const VirtualChannelTable & vct = *section;
+
+          // FIXME: pkoshevoy:
+          dump_vct(vct);
         }
         else if (yae::has(pid_cvct_next_, pid))
         {
           VCTSectionPtr section = load_section(bin);
-          VirtualChannelTable & vct = *section;
+          const VirtualChannelTable & vct = *section;
+
+          // FIXME: pkoshevoy:
+          dump_vct(vct);
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
           ETTSectionPtr section = load_section(bin);
           ExtendedTextTable & ett = *section;
+
+          // FIXME: pkoshevoy:
+          dump_ett(ett);
         }
         else if (yae::has(pid_dccsct_, pid))
         {
@@ -3937,7 +4020,10 @@ namespace yae
         else if (yae::has(pid_eit_, pid))
         {
           EITSectionPtr section = load_section(bin);
-          EventInformationTable & eit = *section;
+          const EventInformationTable & eit = *section;
+
+          // FIXME: pkoshevoy:
+          dump_eit(eit);
         }
         else if (yae::has(pid_event_ett_, pid))
         {
@@ -3947,7 +4033,10 @@ namespace yae
         else if (yae::has(pid_rrt_, pid))
         {
           RRTSectionPtr section = load_section(bin);
-          RatingRegionTable & rrt = *section;
+          const RatingRegionTable & rrt = *section;
+
+          // FIXME: pkoshevoy:
+          dump_rrt(rrt);
         }
         else if (yae::has(pid_dcct_, pid))
         {
@@ -4059,6 +4148,191 @@ namespace yae
           pes.push_back(pkt);
         }
       }
+    }
+
+    //----------------------------------------------------------------
+    // Context::gps_time_to_unix_time
+    //
+    time_t
+    Context::gps_time_to_unix_time(uint32_t gps_time) const
+    {
+      static const time_t unix_epoch_gps_offset =
+        yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
+
+      time_t t = unix_epoch_gps_offset + gps_time;
+      if (stt_)
+      {
+        t -= stt_->gps_utc_offset_;
+      }
+
+      return t;
+    }
+
+    //----------------------------------------------------------------
+    // Context::gps_time_to_str
+    //
+    std::string
+    Context::gps_time_to_str(uint32_t gps_time) const
+    {
+      time_t t = gps_time_to_unix_time(gps_time);
+      return yae::unix_epoch_time_to_localtime_str(t);
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump_stt
+    //
+    void
+    Context::dump_stt(const SystemTimeTable & stt) const
+    {
+      std::ostringstream oss;
+      oss << "STT: " << gps_time_to_str(stt.system_time_) << ", ";
+      dump(stt.descriptor_, oss);
+      oss << "\n\n";
+      yae_debug << oss.str();
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump_vct
+    //
+    void
+    Context::dump_vct(const VirtualChannelTable & vct) const
+    {
+      std::ostringstream oss;
+      oss << "VCT: channels: [";
+
+      const char * isep = "\n  ";
+      for (std::size_t i = 0; i < vct.num_channels_in_section_; i++)
+      {
+        const VirtualChannelTable::Channel & c = vct.channel_[i];
+        std::string name;
+        yae::utf16_to_utf8(c.short_name_, c.short_name_ + 7, name);
+
+        oss << isep
+            << int(c.major_channel_number_) << "."
+            << int(c.minor_channel_number_) << " " << name.c_str()
+            << ", freq: " << c.carrier_frequency_
+            << ", tsid: " << c.channel_tsid_
+            << ", etm location: " << int(c.etm_location_)
+            << ", access ctrl: " << int(c.access_controlled_)
+            << ", hidden: " << int(c.hidden_)
+            << ", hide guide: " << int(c.hide_guide_)
+            << ", service type: " << int(c.service_type_)
+            << ", source_id: " << c.source_id_;
+        isep = ",\n  ";
+
+        oss << ", ";
+        dump(c.descriptor_, oss);
+      }
+      oss << "\n]\nadditional_";
+      dump(vct.additional_descriptor_, oss);
+      oss << "\n\n";
+      yae_debug << oss.str();
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump_rrt
+    //
+    void
+    Context::dump_rrt(const RatingRegionTable & rrt) const
+    {
+      std::ostringstream oss;
+      oss << "RRT: rating region: " << int(rrt.rating_region_)
+          << ", name: " << rrt.rating_region_name_text_.to_str()
+          << ", dimensions: [";
+
+      const char * isep = "\n  ";
+      for (std::size_t i = 0; i < rrt.dimensions_defined_; i++)
+      {
+        const RatingRegionTable::Dimension & d = rrt.dimension_[i];
+        oss << isep
+            << "{ name: " << d.dimension_name_text_.to_str()
+            << ", values: [";
+        isep = ",\n  ";
+
+        const char * jsep = "\n    ";
+        for (std::size_t j = 0; j < d.values_defined_; j++)
+        {
+          const RatingRegionTable::Dimension::Rating & r = d.rating_[j];
+          oss << jsep
+              << "{ " << r.abbrev_rating_value_text_.to_str() << ": \""
+              << r.rating_value_text_.to_str() << "\" }";
+          jsep = ",\n    ";
+        }
+
+        oss << "] }\n";
+      }
+
+      oss << "]\n";
+      dump(rrt.descriptor_, oss);
+      oss << "\n\n";
+      yae_debug << oss.str();
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump_eit
+    //
+    void
+    Context::dump_eit(const EventInformationTable & eit) const
+    {
+      std::ostringstream oss;
+      oss << "EIT: [";
+
+      const char * isep = "\n  ";
+      for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
+      {
+        const EventInformationTable::Event & e = eit.event_[i];
+        oss
+          << isep
+          << "event " << e.event_id_
+          << ": start " << gps_time_to_str(e.start_time_)
+          << ", duration "
+          << yae::TTime(e.length_in_seconds_, 1).to_hhmmss()
+          << ", " << e.title_text_.to_str();
+        isep = ",\n  ";
+
+        oss << ", ";
+        dump(e.descriptor_, oss);
+      }
+      oss << "\n]\n\n";
+      yae_debug << oss.str();
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump_ett
+    //
+    void
+    Context::dump_ett(const ExtendedTextTable & ett) const
+    {
+      std::ostringstream oss;
+      oss << "ETT: source " << ett.etm_id_source_id_;
+      if (ett.etm_id_event_flag_)
+      {
+        oss << ", event " << ett.etm_id_event_id_;
+      }
+      oss << ": " << ett.extended_text_message_.to_str()
+          << "\n\n";
+      yae_debug << oss.str();
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump
+    //
+    void
+    Context::dump(const std::vector<TDescriptorPtr> & descriptors,
+                  std::ostream & oss) const
+    {
+      oss << "descriptors: [ ";
+      const char * isep = "";
+      for (std::vector<TDescriptorPtr>::const_iterator
+             i = descriptors.begin(); i != descriptors.end(); ++i)
+      {
+        const TDescriptorPtr & d = *i;
+        oss << isep << "{ ";
+        d->dump(oss);
+        oss << " }";
+        isep = ", ";
+      }
+      oss << " ]";
     }
   }
 }

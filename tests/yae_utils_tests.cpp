@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(yae_bitmask_width)
   BOOST_CHECK_EQUAL(2, bitmask_width(3));
   BOOST_CHECK_EQUAL(12, bitmask_width(3 << 10));
   BOOST_CHECK_EQUAL(14, bitmask_width(0xFF << 6));
-  BOOST_CHECK_EQUAL(64, bitmask_width(255ull + 255ull << 56));
+  BOOST_CHECK_EQUAL(64, bitmask_width(255ull + (255ull << 56)));
   BOOST_CHECK_EQUAL(57, bitmask_width(1ull << 56));
   BOOST_CHECK_EQUAL(32, bitmask_width(0xFFFFFFFF));
   BOOST_CHECK_EQUAL(64, bitmask_width(std::numeric_limits<uint64_t>::max()));

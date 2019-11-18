@@ -571,6 +571,8 @@ namespace yae
     public:
       void load(IBitstream & bin);
 
+      virtual void dump(std::ostream & oss) const;
+
       uint8_t descriptor_tag_;
       uint8_t descriptor_length_;
     };
@@ -1065,7 +1067,9 @@ namespace yae
     {
       CaptionServiceDescriptor();
 
-      virtual void load_body(IBitstream & bin);
+      // virtual:
+      void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       uint8_t reserved_ : 3;
       uint8_t number_of_services_ : 5;
@@ -1106,7 +1110,9 @@ namespace yae
     {
       ContentAdvisoryDescriptor();
 
+      // virtual:
       void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       uint8_t reserved_ : 2;
       uint8_t rating_region_count_ : 6;
@@ -1146,6 +1152,7 @@ namespace yae
     struct YAE_API ExtendedChannelNameDescriptor : Descriptor
     {
       void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       MultipleStringStructure long_channel_name_text_;
     };
@@ -1159,6 +1166,7 @@ namespace yae
       ServiceLocationDescriptor();
 
       void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       uint16_t reserved_ : 3;
       uint16_t pcr_pid_ : 13;
@@ -1173,7 +1181,7 @@ namespace yae
         uint8_t stream_type_;
         uint16_t reserved_ : 3;
         uint16_t elementary_pid_ : 13;
-        uint8_t iso_639_languace_code_[3];
+        uint8_t iso_639_language_code_[3];
       };
 
       std::vector<Element> element_;
@@ -1215,6 +1223,7 @@ namespace yae
     struct YAE_API ComponentNameDescriptor : Descriptor
     {
       void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       MultipleStringStructure component_name_string_;
     };
@@ -1231,6 +1240,7 @@ namespace yae
       DCCRequestDescriptor();
 
       void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
 
       uint8_t dcc_request_type_;
       uint8_t dcc_request_text_length_;
@@ -1732,7 +1742,9 @@ namespace yae
       void load_body(IBitstream & bin, std::size_t n_bytes);
 
       uint8_t protocol_version_;
-      uint32_t etm_id_;
+      uint32_t etm_id_source_id_ : 16;
+      uint32_t etm_id_event_id_ : 15;
+      uint32_t etm_id_event_flag_ : 1;
       MultipleStringStructure extended_text_message_;
     };
 
@@ -1999,6 +2011,19 @@ namespace yae
 
       void load(IBitstream & bin, TSPacket & pkt);
 
+      // helpers:
+      time_t gps_time_to_unix_time(uint32_t gps_time) const;
+      std::string gps_time_to_str(uint32_t gps_time) const;
+
+      void dump_stt(const SystemTimeTable & stt) const;
+      void dump_vct(const VirtualChannelTable & vct) const;
+      void dump_rrt(const RatingRegionTable & rrt) const;
+      void dump_eit(const EventInformationTable & eit) const;
+      void dump_ett(const ExtendedTextTable & ett) const;
+
+      void dump(const std::vector<TDescriptorPtr> & descs,
+                std::ostream & oss) const;
+
       // packets, indexed by pid:
       std::map<uint16_t, std::list<TSPacket> > pes_;
 
@@ -2017,6 +2042,8 @@ namespace yae
       std::map<uint16_t, uint8_t> pid_event_ett_;
       std::map<uint16_t, uint8_t> pid_rrt_;
       std::map<uint16_t, uint8_t> pid_dcct_;
+
+      STTSectionPtr stt_;
 
       uint16_t network_pid_;
     };

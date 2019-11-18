@@ -826,6 +826,28 @@ namespace yae
          std::size_t word_size = 0);
 
   //----------------------------------------------------------------
+  // to_hex
+  //
+  template <typename TData>
+  std::string
+  to_hex(TData data)
+  {
+    static const char * alphabet = "0123456789ABCDEF";
+    static const std::size_t max = sizeof(TData) * 2;
+    char tmp[sizeof(TData) * 2] = { '0' };
+    std::size_t i = 0;
+    while (data)
+    {
+      unsigned char h = data & 0xF;
+      data >>= 4;
+      tmp[max - i - 1] = alphabet[h];
+      i++;
+    }
+
+    return std::string(tmp + (max - i), tmp + max);
+  }
+
+  //----------------------------------------------------------------
   // load_from_hex
   //
   YAE_API void

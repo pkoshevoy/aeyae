@@ -49,6 +49,41 @@ namespace yae
     return t_epoch;
   }
 
+  static std::string
+  tm_to_str(const struct tm & t)
+  {
+    std::string txt = yae::strfmt("%04i/%02i/%02i %02i:%02i:%02i",
+                                  t.tm_year + 1900,
+                                  t.tm_mon + 1,
+                                  t.tm_mday,
+                                  t.tm_hour,
+                                  t.tm_min,
+                                  t.tm_sec);
+    return txt;
+  }
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_localtime_str
+  //
+  std::string
+  unix_epoch_time_to_localtime_str(time_t ts)
+  {
+    struct tm t = { 0 };
+    localtime_r(&ts, &t);
+    return tm_to_str(t);
+  }
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_utc_str
+  //
+  std::string
+  unix_epoch_time_to_utc_str(time_t ts)
+  {
+    struct tm t = { 0 };
+    gmtime_r(&ts, &t);
+    return tm_to_str(t);
+  }
+
   //----------------------------------------------------------------
   // subsec_t
   //
