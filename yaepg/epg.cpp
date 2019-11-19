@@ -729,24 +729,24 @@ main_may_throw(int argc, char ** argv)
 #else
   // const char * fn = "/tmp/557000000.ts";
 #if 0
-  const char * fn = "/scratch/DataSets/Video/epg/473000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/479000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/491000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/503000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/473000000.ts"; // 10.1
+  const char * fn = "/scratch/DataSets/Video/epg/479000000.ts"; // 23.1 KBTU
+  const char * fn = "/scratch/DataSets/Video/epg/491000000.ts"; // 11.1 KBYU
+  const char * fn = "/scratch/DataSets/Video/epg/503000000.ts"; // 14.1 KJZZ
+  const char * fn = "/scratch/DataSets/Video/epg/509000000.ts"; // 20.1 KTMW
+  const char * fn = "/scratch/DataSets/Video/epg/515000000.ts"; // 50.1 KEJT
+  const char * fn = "/scratch/DataSets/Video/epg/527000000.ts"; // 5.1 KSL
+  const char * fn = "/scratch/DataSets/Video/epg/533000000.ts"; // 24.1 KPNZ
 #endif
-  const char * fn = "/scratch/DataSets/Video/epg/509000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/539000000.ts"; // 25.1 KSVN
 #if 0
-  const char * fn = "/scratch/DataSets/Video/epg/515000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/527000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/533000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/539000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/551000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/557000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/563000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/569000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/593000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/599000000.ts";
-  const char * fn = "/scratch/DataSets/Video/epg/605000000.ts";
+  const char * fn = "/scratch/DataSets/Video/epg/551000000.ts"; // 7.1 KUED
+  const char * fn = "/scratch/DataSets/Video/epg/557000000.ts"; // 13.1 KSTU
+  const char * fn = "/scratch/DataSets/Video/epg/563000000.ts"; // 16.1 ION
+  const char * fn = "/scratch/DataSets/Video/epg/569000000.ts"; // 4.1 KTVX
+  const char * fn = "/scratch/DataSets/Video/epg/593000000.ts"; // 2.1 KUTV
+  const char * fn = "/scratch/DataSets/Video/epg/599000000.ts"; // 30.1 KUCW
+  const char * fn = "/scratch/DataSets/Video/epg/605000000.ts"; // 9.1 KUEN
 #endif
 
   yae::TOpenFile src(fn, "rb");

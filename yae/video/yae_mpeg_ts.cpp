@@ -1720,32 +1720,65 @@ namespace yae
       bsmod_ = bin.read(3);
       num_channels_ = bin.read(4);
       full_svc_ = bin.read(1);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       langcod_ = bin.read(8);
+      if (bin.at_end())
+      {
+        return;
+      }
+
       if (!num_channels_)
       {
         langcod2_ = bin.read(8);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       asvcflags_ = bin.read(8);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       textlen_ = bin.read(7);
       text_code_ = bin.read(1);
       text_ = bin.read_bytes(textlen_);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       language_flag_  = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved2_ = bin.read(6);
       // YAE_THROW_IF(reserved2_ != 0x3F);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       if (language_flag_)
       {
         bin.read_bytes(language_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (language2_flag_)
       {
         bin.read_bytes(language2_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       std::size_t end_pos = bin.position();
@@ -1848,7 +1881,7 @@ namespace yae
       else
       {
         reserved2_ = bin.read(5);
-        YAE_THROW_IF(reserved2_ != 0x1F);
+        // YAE_THROW_IF(reserved2_ != 0x1F);
         line21_field_ = bin.read(1);
       }
 
@@ -2267,12 +2300,20 @@ namespace yae
       full_service_flag_ = bin.read(1);
       audio_service_type_ = bin.read(3);
       number_of_channels_ = bin.read(3);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       language_flag_ = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved3_ = bin.read(1);
       YAE_THROW_IF(reserved3_ != 0x1);
       bsid_ = bin.read(5);
+      if (bin.at_end())
+      {
+        return;
+      }
 
       if (mainid_flag_)
       {
@@ -2281,51 +2322,91 @@ namespace yae
 
         priority_ = bin.read(2);
         mainid_ = bin.read(3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (asvc_flag_)
       {
         asvc_ = bin.read(8);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream1_flag_)
       {
         substream1_ = bin.read(8);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream2_flag_)
       {
         substream2_ = bin.read(8);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream3_flag_)
       {
         substream3_ = bin.read(8);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (language_flag_)
       {
         bin.read_bytes(language_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (language2_flag_)
       {
         bin.read_bytes(language2_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream1_flag_)
       {
         bin.read_bytes(substream1_lang_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream2_flag_)
       {
         bin.read_bytes(substream2_lang_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       if (substream3_flag_)
       {
         bin.read_bytes(substream3_lang_, 3);
+        if (bin.at_end())
+        {
+          return;
+        }
       }
 
       std::size_t end_pos = bin.position();
@@ -2830,7 +2911,7 @@ namespace yae
 
       daylight_saving_status_ = bin.read(1);
       daylight_saving_reserved_ = bin.read(2);
-      YAE_THROW_IF(daylight_saving_reserved_ != 0x3);
+      // YAE_THROW_IF(daylight_saving_reserved_ != 0x3);
 
       daylight_saving_day_of_month_ = bin.read(5);
       daylight_saving_hour_ = bin.read(8);
@@ -4088,7 +4169,13 @@ namespace yae
       std::size_t start_pos = bin.position();
       pkt.load(bin, *this);
       std::size_t end_pos = bin.position();
-      YAE_THROW_IF(((end_pos - start_pos) >> 3) != 188);
+      std::size_t bytes_consumed = (end_pos - start_pos) >> 3;
+      if (bytes_consumed != 188)
+      {
+        yae_wlog("TSPacket too short (%i bytes)", bytes_consumed);
+        bin.seek(end_pos);
+        return;
+      }
 
       if (pkt.payload_unit_start_indicator_)
       {
