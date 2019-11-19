@@ -1720,65 +1720,41 @@ namespace yae
       bsmod_ = bin.read(3);
       num_channels_ = bin.read(4);
       full_svc_ = bin.read(1);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       langcod_ = bin.read(8);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       if (!num_channels_)
       {
         langcod2_ = bin.read(8);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       asvcflags_ = bin.read(8);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       textlen_ = bin.read(7);
       text_code_ = bin.read(1);
       text_ = bin.read_bytes(textlen_);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       language_flag_  = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved2_ = bin.read(6);
       // YAE_THROW_IF(reserved2_ != 0x3F);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       if (language_flag_)
       {
         bin.read_bytes(language_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (language2_flag_)
       {
         bin.read_bytes(language2_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       std::size_t end_pos = bin.position();
@@ -2300,20 +2276,14 @@ namespace yae
       full_service_flag_ = bin.read(1);
       audio_service_type_ = bin.read(3);
       number_of_channels_ = bin.read(3);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       language_flag_ = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved3_ = bin.read(1);
       YAE_THROW_IF(reserved3_ != 0x1);
       bsid_ = bin.read(5);
-      if (bin.at_end())
-      {
-        return;
-      }
+      YAE_RETURN_IF(bin.exhausted());
 
       if (mainid_flag_)
       {
@@ -2322,91 +2292,61 @@ namespace yae
 
         priority_ = bin.read(2);
         mainid_ = bin.read(3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (asvc_flag_)
       {
         asvc_ = bin.read(8);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream1_flag_)
       {
         substream1_ = bin.read(8);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream2_flag_)
       {
         substream2_ = bin.read(8);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream3_flag_)
       {
         substream3_ = bin.read(8);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (language_flag_)
       {
         bin.read_bytes(language_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (language2_flag_)
       {
         bin.read_bytes(language2_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream1_flag_)
       {
         bin.read_bytes(substream1_lang_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream2_flag_)
       {
         bin.read_bytes(substream2_lang_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       if (substream3_flag_)
       {
         bin.read_bytes(substream3_lang_, 3);
-        if (bin.at_end())
-        {
-          return;
-        }
+        YAE_RETURN_IF(bin.exhausted());
       }
 
       std::size_t end_pos = bin.position();

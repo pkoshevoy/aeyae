@@ -369,7 +369,7 @@ namespace yae
 
     virtual ~IBitstream() {}
 
-    inline bool at_end() const
+    inline bool exhausted() const
     { return position_ == end_; }
 
     // set current bitstream position:

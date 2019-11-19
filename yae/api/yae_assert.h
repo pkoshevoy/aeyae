@@ -86,6 +86,11 @@
     throw std::runtime_error(msg);                                      \
   } while (false)
 
+//----------------------------------------------------------------
+// YAE_RETURN_IF
+//
+#define YAE_RETURN_IF(expr) if ((expr)) do { return; } while (false)
+
 
 
 #endif // YAE_ASSERT_H_
