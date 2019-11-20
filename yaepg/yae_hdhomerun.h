@@ -9,6 +9,9 @@
 #ifndef YAE_HDHOMERUN_H_
 #define YAE_HDHOMERUN_H_
 
+// yae includes:
+#include "yae/utils/yae_time.h"
+
 
 namespace yae
 {
@@ -21,7 +24,15 @@ namespace yae
     HDHomeRun();
     ~HDHomeRun();
 
-    void capture_all();
+    typedef void(*TCallback)(void * context,
+                             const std::string & name,
+                             const std::string & frequency,
+                             const void * data,
+                             std::size_t size);
+
+    void capture_all(const yae::TTime & duration,
+                     TCallback callback,
+                     void * context);
 
   protected:
     // intentionally disabled:

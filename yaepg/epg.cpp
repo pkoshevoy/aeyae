@@ -18,6 +18,7 @@
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
+#include <boost/filesystem.hpp>
 #endif
 
 // yae:
@@ -31,6 +32,34 @@
 #include "yae_signal_handler.h"
 
 
+// namespace shortcut:
+namespace fs = boost::filesystem;
+
+
+//----------------------------------------------------------------
+// capture_all_cb
+//
+void
+capture_all_cb(void * context,
+               const std::string & name,
+               const std::string & frequency,
+               const void * data,
+               std::size_t size)
+{
+  std::string capture_path =
+    (fs::path("/tmp") / (frequency + ".ts")).string();
+
+  boost::shared_ptr<yae::TOpenFile> file_ptr =
+    yae::get_open_file(capture_path.c_str(), "wb");
+  YAE_THROW_IF(!file_ptr);
+
+  yae::TOpenFile & capture = *file_ptr;
+  YAE_THROW_IF(!capture.is_open());
+
+  capture.write(data, size);
+}
+
+
 //----------------------------------------------------------------
 // main_may_throw
 //
@@ -40,10 +69,13 @@ main_may_throw(int argc, char ** argv)
   // install signal handler:
   yae::signal_handler();
 
+#if 1
+  yae::TTime sample_duration(30, 1);
   yae::HDHomeRun hdhr;
+  {
+    hdhr.capture_all(sample_duration, &capture_all_cb, NULL);
+  }
 
-#if 0
-  hdhr.capture_all();
 #else
 #if 0
   const char * fn = "/tmp/473000000.ts"; // 10.1

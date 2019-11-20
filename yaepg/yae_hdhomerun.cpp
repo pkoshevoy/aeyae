@@ -157,7 +157,9 @@ namespace yae
   {
     Private();
 
-    void capture_all();
+    void capture_all(const yae::TTime & sample_duration,
+                     HDHomeRun::TCallback callback,
+                     void * context);
 
     std::vector<struct hdhomerun_discover_device_t> devices_;
     std::map<std::string, hdhomerun_devptr_t> tuners_;
@@ -451,7 +453,9 @@ namespace yae
   // HDHomeRun::Private::capture_all
   //
   void
-  HDHomeRun::Private::capture_all()
+  HDHomeRun::Private::capture_all(const yae::TTime & sample_duration,
+                                  HDHomeRun::TCallback callback,
+                                  void * context)
   {
     int err = 0;
 
@@ -487,19 +491,11 @@ namespace yae
             YAE_THROW("failed to set channel, error: %s", error);
           }
 
-          // FIXME:
-          std::string capture_path =
-            (fs::path("/tmp") / (frequency + ".ts")).string();
-
-          yae::TOpenFile capture(capture_path, "wb");
-          YAE_THROW_IF(!capture.is_open());
-
           if (hdhomerun_device_stream_start(hd) <= 0)
           {
             YAE_THROW("failed to start stream for %s", channel.c_str());
           }
 
-          yae::TTime sample_duration(30, 1);
           std::string channels_txt;
           {
             std::ostringstream oss;
@@ -526,7 +522,7 @@ namespace yae
           while (!signal_handler_received_sigpipe() &&
                  !signal_handler_received_sigint())
           {
-            size_t buffer_size = 0;
+            std::size_t buffer_size = 0;
             uint8_t * buffer =
               hdhomerun_device_stream_recv(hd,
                                            VIDEO_DATA_BUFFER_SIZE_1S,
@@ -537,7 +533,7 @@ namespace yae
               continue;
             }
 
-            capture.write(buffer, buffer_size);
+            callback(context, name, frequency, buffer, buffer_size);
 
             yae::TTime t = yae::TTime::now();
             if (t >= t_stop)
@@ -583,9 +579,11 @@ namespace yae
   // HDHomeRun::capture_all
   //
   void
-  HDHomeRun::capture_all()
+  HDHomeRun::capture_all(const yae::TTime & sample_duration,
+                         HDHomeRun::TCallback callback,
+                         void * context)
   {
-    private_->capture_all();
+    private_->capture_all(sample_duration, callback, context);
   }
 
 }
