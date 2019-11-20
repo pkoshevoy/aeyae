@@ -165,6 +165,10 @@ set(TARGET_LIBS
 
 set(project_sources
   epg.cpp
+  yae_hdhomerun.h
+  yae_hdhomerun.cpp
+  yae_signal_handler.h
+  yae_signal_handler.cpp
   )
 
 add_executable(${PROGNAME}
