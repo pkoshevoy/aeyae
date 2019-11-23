@@ -13,10 +13,12 @@
 #include <inttypes.h>
 #include <list>
 #include <map>
+#include <string>
 
 // yae includes:
 #include "yae/api/yae_api.h"
 #include "yae/utils/yae_data.h"
+#include "yae/utils/yae_time.h"
 
 
 namespace yae
@@ -517,6 +519,9 @@ namespace yae
       void load(IBitstream & bin);
       std::string to_str() const;
 
+      // map text by language:
+      void get(std::map<std::string, std::string> & lang_text) const;
+
       uint8_t number_strings_;
 
       struct YAE_API Message
@@ -525,6 +530,9 @@ namespace yae
 
         void load(IBitstream & bin);
         std::string to_str() const;
+
+        // map text by language code:
+        void get(std::map<std::string, std::string> & lang_text) const;
 
         uint8_t iso_639_language_code_[3];
         uint8_t number_segments_;
@@ -1151,6 +1159,12 @@ namespace yae
       std::vector<Region> region_;
     };
 
+    //----------------------------------------------------------------
+    // TContentAdvisoryDescriptorPtr
+    //
+    typedef yae::shared_ptr<ContentAdvisoryDescriptor, Descriptor>
+    TContentAdvisoryDescriptorPtr;
+
 
     //----------------------------------------------------------------
     // ExtendedChannelNameDescriptor
@@ -1192,6 +1206,12 @@ namespace yae
 
       std::vector<Element> element_;
     };
+
+    //----------------------------------------------------------------
+    // ServiceLocationDescriptorPtr
+    //
+    typedef yae::shared_ptr<ServiceLocationDescriptor, Descriptor>
+    TServiceLocationDescriptorPtr;
 
 
     //----------------------------------------------------------------
@@ -2003,6 +2023,76 @@ namespace yae
     YAE_API yae::Data
     assemble_payload(std::list<TSPacket> & packets);
 
+    //----------------------------------------------------------------
+    // ChannelNumber
+    //
+    typedef std::pair<uint16_t, uint16_t> ChannelNumber;
+
+    //----------------------------------------------------------------
+    // ChannelGuide
+    //
+    struct YAE_API ChannelGuide
+    {
+
+      //----------------------------------------------------------------
+      // Item
+      //
+      struct YAE_API Item
+      {
+        inline uint32_t t1() const
+        { return t0_ + dt_; }
+
+        // check whether t is contained in [t0, t1):
+        inline bool contains(const uint32_t & t) const
+        { return t0_ <= t && t < t1(); }
+
+        inline bool contains(const Item & item) const
+        { return t0_ <= item.t0_ && item.t1() <= t1(); }
+
+        inline bool disjoint(const Item & item) const
+        { return t0_ > item.t1() || item.t0_ > t1(); }
+
+        inline bool overlaps(const Item & item) const
+        { return !disjoint(item); }
+
+        uint16_t source_id_;
+        uint16_t event_id_;
+        uint32_t t0_; // seconds, GPS time
+        uint32_t dt_; // seconds
+
+        // title and description, indexed by language:
+        std::map<std::string, std::string> title_;
+        std::map<std::string, std::string> description_;
+
+        // this provides a set of indecies into the RRT:
+        TContentAdvisoryDescriptorPtr ca_desc_;
+      };
+
+      //----------------------------------------------------------------
+      // Track
+      //
+      struct YAE_API Track
+      {
+        std::string lang_;
+        uint8_t stream_type_;
+      };
+
+      std::string name_;
+      uint16_t source_id_;
+      uint16_t program_number_;
+      bool access_controlled_;
+      bool hidden_;
+      bool hide_guide_;
+      uint16_t pcr_pid_;
+      std::map<uint16_t, Track> es_;
+      std::list<Item> items_;
+
+      // per-event per-language event descriptions:
+      std::map<uint16_t, std::map<std::string, std::string> > event_ett_;
+
+      // per-language channel description:
+      std::map<std::string, std::string> channel_ett_;
+    };
 
     //----------------------------------------------------------------
     // Context
@@ -2021,11 +2111,11 @@ namespace yae
       time_t gps_time_to_unix_time(uint32_t gps_time) const;
       std::string gps_time_to_str(uint32_t gps_time) const;
 
-      void dump_stt(const SystemTimeTable & stt) const;
-      void dump_vct(const VirtualChannelTable & vct) const;
-      void dump_rrt(const RatingRegionTable & rrt) const;
-      void dump_eit(const EventInformationTable & eit) const;
-      void dump_ett(const ExtendedTextTable & ett) const;
+      void consume_stt(const SystemTimeTable & stt);
+      void consume_vct(const VirtualChannelTable & vct);
+      void consume_rrt(const RatingRegionTable & rrt);
+      void consume_eit(const EventInformationTable & eit);
+      void consume_ett(const ExtendedTextTable & ett);
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
@@ -2054,9 +2144,15 @@ namespace yae
       std::map<uint16_t, uint8_t> pid_rrt_;
       std::map<uint16_t, uint8_t> pid_dcct_;
 
+      uint16_t network_pid_;
+      TTime stt_walltime_;
       STTSectionPtr stt_;
 
-      uint16_t network_pid_;
+      // map major.minor channel number to ChannelGuide:
+      std::map<ChannelNumber, ChannelGuide> guide_;
+
+      // map source_id to major.minor channel number:
+      std::map<uint16_t, ChannelNumber> source_id_to_ch_num_;
     };
 
   }

@@ -1013,6 +1013,19 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // MultipleStringStructure::get
+    //
+    void
+    MultipleStringStructure::get(std::map<std::string, std::string> & m) const
+    {
+      for (std::size_t i = 0, n = strings_.size(); i < n; i++)
+      {
+        const Message & msg = strings_[i];
+        msg.get(m);
+      }
+    }
+
+    //----------------------------------------------------------------
     // MultipleStringStructure::Message::Message
     //
     MultipleStringStructure::Message::Message():
@@ -1059,7 +1072,31 @@ namespace yae
       }
 
       return oss.str();
-   }
+    }
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::Message::get
+    //
+    void
+    MultipleStringStructure::
+    Message::get(std::map<std::string, std::string> & lang_text) const
+    {
+      std::ostringstream oss;
+      for (std::size_t i = 0, n = segment_.size(); i < n; i++)
+      {
+        const MultipleStringStructure::Message::Segment & s = segment_[i];
+
+        std::string text;
+        if (s.to_str(text))
+        {
+          oss << text;
+        }
+      }
+
+      std::string lang = lang_str(iso_639_language_code_);
+      std::string text = oss.str().c_str();
+      lang_text[lang] = text;
+    }
 
     //----------------------------------------------------------------
     // MultipleStringStructure::Message::Segment::Segment
@@ -2675,7 +2712,7 @@ namespace yae
       }
       else
       {
-        yae_elog("FIXME: unimplemented descriptor: 0x%s",
+        yae_elog("unimplemented descriptor: 0x%s",
                  yae::to_hex(&descriptor_tag, 1).c_str());
         descriptor.reset(new RawDescriptor());
       }
@@ -4056,21 +4093,20 @@ namespace yae
           if (stt_section)
           {
             stt_ = stt_section;
+            stt_walltime_ = TTime::now();
 
-            SystemTimeTable & stt = *stt_;
-
-            // FIXME: pkoshevoy:
-            dump_stt(stt);
+            const SystemTimeTable & stt = *stt_;
+            consume_stt(stt);
           }
           else if (vct_section)
           {
-            // FIXME: pkoshevoy:
-            dump_vct(*vct_section);
+            const VirtualChannelTable & vct = *vct_section;
+            consume_vct(vct);
           }
           else if (rrt_section)
           {
-            // FIXME: pkoshevoy:
-            dump_rrt(*rrt_section);
+            const RatingRegionTable & rrt = *rrt_section;
+            consume_rrt(rrt);
           }
           else if (mgt_section)
           {
@@ -4133,70 +4169,62 @@ namespace yae
         else if (yae::has(pid_tvct_curr_, pid))
         {
           VCTSectionPtr section = load_section(bin);
-          VirtualChannelTable & vct = *section;
+          const VirtualChannelTable & vct = *section;
+          consume_vct(vct);
         }
         else if (yae::has(pid_tvct_next_, pid))
         {
           VCTSectionPtr section = load_section(bin);
-          VirtualChannelTable & vct = *section;
+          const VirtualChannelTable & vct = *section;
+          consume_vct(vct);
         }
         else if (yae::has(pid_cvct_curr_, pid))
         {
           VCTSectionPtr section = load_section(bin);
           const VirtualChannelTable & vct = *section;
-
-          // FIXME: pkoshevoy:
-          dump_vct(vct);
+          consume_vct(vct);
         }
         else if (yae::has(pid_cvct_next_, pid))
         {
           VCTSectionPtr section = load_section(bin);
           const VirtualChannelTable & vct = *section;
-
-          // FIXME: pkoshevoy:
-          dump_vct(vct);
+          consume_vct(vct);
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
           ETTSectionPtr section = load_section(bin);
-          ExtendedTextTable & ett = *section;
-
-          // FIXME: pkoshevoy:
-          dump_ett(ett);
+          const ExtendedTextTable & ett = *section;
+          consume_ett(ett);
         }
         else if (yae::has(pid_dccsct_, pid))
         {
-          // FIXME: DCC is not implemented
+          // NOTE: DCC is not implemented
           TSectionPtr section = load_section(bin);
+          (void)section;
         }
         else if (yae::has(pid_eit_, pid))
         {
           EITSectionPtr section = load_section(bin);
           const EventInformationTable & eit = *section;
-
-          // FIXME: pkoshevoy:
-          dump_eit(eit);
+          consume_eit(eit);
         }
         else if (yae::has(pid_event_ett_, pid))
         {
           ETTSectionPtr section = load_section(bin);
-          ExtendedTextTable & ett = *section;
-
-          // FIXME: pkoshevoy:
-          dump_ett(ett);
+          const ExtendedTextTable & ett = *section;
+          consume_ett(ett);
         }
         else if (yae::has(pid_rrt_, pid))
         {
           RRTSectionPtr section = load_section(bin);
           const RatingRegionTable & rrt = *section;
-
-          // FIXME: pkoshevoy:
-          dump_rrt(rrt);
+          consume_rrt(rrt);
         }
         else if (yae::has(pid_dcct_, pid))
         {
-          // FIXME: DCC is not implemented
+          // NOTE: DCC is not implemented
           TSectionPtr section = load_section(bin);
+          (void)section;
         }
         else if (bin.peek_bits(24) == 0x000001)
         {
@@ -4206,6 +4234,7 @@ namespace yae
         else if (yae::has(pid_es_, pid))
         {
           TSectionPtr section = load_section(bin);
+          (void)section;
         }
         else
         {
@@ -4392,10 +4421,10 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::dump_stt
+    // Context::consume_stt
     //
     void
-    Context::dump_stt(const SystemTimeTable & stt) const
+    Context::consume_stt(const SystemTimeTable & stt)
     {
       std::ostringstream oss;
       oss << "STT: " << gps_time_to_str(stt.system_time_) << ", ";
@@ -4405,10 +4434,10 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::dump_vct
+    // Context::consume_vct
     //
     void
-    Context::dump_vct(const VirtualChannelTable & vct) const
+    Context::consume_vct(const VirtualChannelTable & vct)
     {
       std::ostringstream oss;
       oss << "VCT: channels: [";
@@ -4435,6 +4464,38 @@ namespace yae
 
         oss << ", ";
         dump(c.descriptor_, oss);
+
+
+        ChannelNumber ch_num(c.major_channel_number_,
+                             c.minor_channel_number_);
+        source_id_to_ch_num_[c.source_id_] = ch_num;
+
+        ChannelGuide & chan = guide_[ch_num];
+        chan.name_ = name.c_str();
+        chan.source_id_ = c.source_id_;
+        chan.program_number_ = c.program_number_;
+        chan.access_controlled_ = c.access_controlled_;
+        chan.hidden_ = c.hidden_;
+        chan.hide_guide_ = c.hide_guide_;
+
+        for (std::size_t j = 0, n = c.descriptor_.size(); j < n; j++)
+        {
+          const TDescriptorPtr & desc = c.descriptor_[j];
+          TServiceLocationDescriptorPtr svc_desc = desc;
+          if (svc_desc)
+          {
+            const ServiceLocationDescriptor & d = *svc_desc;
+            chan.pcr_pid_ = d.pcr_pid_;
+
+            for (std::size_t k = 0; k < d.number_elements_; k++)
+            {
+              const ServiceLocationDescriptor::Element & e = d.element_[k];
+              ChannelGuide::Track & es = chan.es_[e.elementary_pid_];
+              es.lang_ = lang_str(e.iso_639_language_code_);
+              es.stream_type_ = e.stream_type_;
+            }
+          }
+        }
       }
       oss << "\n]\nadditional_";
       dump(vct.additional_descriptor_, oss);
@@ -4443,23 +4504,23 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::dump_rrt
+    // Context::consume_rrt
     //
     void
-    Context::dump_rrt(const RatingRegionTable & rrt) const
+    Context::consume_rrt(const RatingRegionTable & rrt)
     {
       std::ostringstream oss;
       oss << "RRT: rating region: " << int(rrt.rating_region_)
-          << ", name: " << rrt.rating_region_name_text_.to_str()
-          << ", dimensions: [";
+          << ", name: \"" << rrt.rating_region_name_text_.to_str()
+          << "\", dimensions: [";
 
       const char * isep = "\n  ";
       for (std::size_t i = 0; i < rrt.dimensions_defined_; i++)
       {
         const RatingRegionTable::Dimension & d = rrt.dimension_[i];
         oss << isep
-            << "{ name: " << d.dimension_name_text_.to_str()
-            << ", values: [";
+            << "{ name: \"" << d.dimension_name_text_.to_str()
+            << "\", values: [";
         isep = ",\n  ";
 
         const char * jsep = "\n    ";
@@ -4467,12 +4528,12 @@ namespace yae
         {
           const RatingRegionTable::Dimension::Rating & r = d.rating_[j];
           oss << jsep
-              << "{ " << r.abbrev_rating_value_text_.to_str() << ": \""
+              << "{ \"" << r.abbrev_rating_value_text_.to_str() << "\": \""
               << r.rating_value_text_.to_str() << "\" }";
           jsep = ",\n    ";
         }
 
-        oss << "] }\n";
+        oss << "] }";
       }
 
       oss << "]\n";
@@ -4482,13 +4543,20 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::dump_eit
+    // ch_invalid
+    //
+    static const ChannelNumber ch_invalid(0xFFFF, 0xFFFF);
+
+    //----------------------------------------------------------------
+    // Context::consume_eit
     //
     void
-    Context::dump_eit(const EventInformationTable & eit) const
+    Context::consume_eit(const EventInformationTable & eit)
     {
+      std::list<ChannelGuide::Item> new_items;
+
       std::ostringstream oss;
-      oss << "EIT: [";
+      oss << "EIT: source_id " << eit.source_id_ << ", [";
 
       const char * isep = "\n  ";
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
@@ -4505,16 +4573,78 @@ namespace yae
 
         oss << ", ";
         dump(e.descriptor_, oss);
+
+        new_items.push_back(ChannelGuide::Item());
+        ChannelGuide::Item & item = new_items.back();
+        item.source_id_ = eit.source_id_;
+        item.event_id_ = e.event_id_;
+        item.t0_ = e.start_time_;
+        item.dt_ = e.length_in_seconds_;
+        e.title_text_.get(item.title_);
+
+        for (std::size_t j = 0, n = e.descriptor_.size(); j < n; j++)
+        {
+          const TDescriptorPtr & desc = e.descriptor_[j];
+          TContentAdvisoryDescriptorPtr ca_desc = desc;
+          if (ca_desc)
+          {
+            item.ca_desc_ = ca_desc;
+          }
+        }
       }
       oss << "\n]\n\n";
       yae_debug << oss.str();
+
+      if (new_items.empty())
+      {
+        return;
+      }
+
+      const ChannelNumber & ch_num = yae::get(source_id_to_ch_num_,
+                                              eit.source_id_,
+                                              ch_invalid);
+      if (ch_num == ch_invalid)
+      {
+        return;
+      }
+
+      ChannelGuide & chan = guide_[ch_num];
+      std::list<ChannelGuide::Item> old_items = chan.items_;
+      if (old_items.empty())
+      {
+        chan.items_.swap(new_items);
+        return;
+      }
+
+      // get the bounding box of the new EIT:
+      uint32_t eit_t0 = new_items.front().t0_;
+      uint32_t eit_t1 = new_items.back().t0_ + new_items.back().dt_;
+
+      std::list<ChannelGuide::Item>::iterator it = old_items.begin();
+      while (it != old_items.end() && it->t0_ < eit_t0) ++it;
+
+      // copy previousely defined items:
+      std::list<ChannelGuide::Item> items;
+      items.splice(items.end(), old_items, old_items.begin(), it);
+
+      // drop previousely defined items covered by current EIT time span:
+      while (it != old_items.end() && it->t0_ < eit_t1) ++it;
+      old_items.erase(old_items.begin(), it);
+
+      // add newly defined items:
+      items.splice(items.end(), new_items);
+
+      // add remaining previousely defined items:
+      items.splice(items.end(), old_items);
+
+      chan.items_.swap(items);
     }
 
     //----------------------------------------------------------------
-    // Context::dump_ett
+    // Context::consume_ett
     //
     void
-    Context::dump_ett(const ExtendedTextTable & ett) const
+    Context::consume_ett(const ExtendedTextTable & ett)
     {
       std::ostringstream oss;
       oss << "ETT: source " << ett.etm_id_source_id_;
@@ -4525,6 +4655,26 @@ namespace yae
       oss << ": " << ett.extended_text_message_.to_str()
           << "\n\n";
       yae_debug << oss.str();
+
+      const ChannelNumber & ch_num = yae::get(source_id_to_ch_num_,
+                                              uint16_t(ett.etm_id_source_id_),
+                                              ch_invalid);
+      if (ch_num == ch_invalid)
+      {
+        return;
+      }
+
+      ChannelGuide & chan = guide_[ch_num];
+      if (ett.etm_id_event_flag_)
+      {
+        std::map<std::string, std::string> &
+          lang_text = chan.event_ett_[ett.etm_id_event_id_];
+        ett.extended_text_message_.get(lang_text);
+      }
+      else
+      {
+        ett.extended_text_message_.get(chan.channel_ett_);
+      }
     }
 
     //----------------------------------------------------------------
