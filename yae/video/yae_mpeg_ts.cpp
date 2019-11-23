@@ -98,6 +98,47 @@ namespace yae
                                  consumed_bytes);
     }
 
+    //----------------------------------------------------------------
+    // AdaptationField::Extension::is_duplicate_of
+    //
+    bool
+    AdaptationField::Extension::is_duplicate_of(const Extension & ext) const
+    {
+      if (adaptation_field_extension_length_ !=
+          ext.adaptation_field_extension_length_ ||
+
+          ltw_flag_ != ext.ltw_flag_ ||
+          piecewise_rate_flag_ != ext.piecewise_rate_flag_ ||
+          seamless_splice_flag_ != ext.seamless_splice_flag_ ||
+          reserved1_ != ext.reserved1_ ||
+
+          ltw_valid_flag_ != ext.ltw_valid_flag_ ||
+          ltw_offset_ != ext.ltw_offset_ ||
+
+          reserved2_ != ext.reserved2_ ||
+          piecewise_rate_ != ext.piecewise_rate_ ||
+
+          splice_type_ != ext.splice_type_ ||
+          dts_next_au_32_30_ != ext.dts_next_au_32_30_ ||
+          marker1_ != ext.marker1_ ||
+          dts_next_au_29_15_ != ext.dts_next_au_29_15_ ||
+          marker2_ != ext.marker2_ ||
+          dts_next_au_14_00_ != ext.dts_next_au_14_00_ ||
+          marker3_ != ext.marker3_)
+      {
+        return false;
+      }
+
+      if (!(!(reserved_ || ext.reserved_) ||
+            (reserved_ && ext.reserved_ &&
+             reserved_->same_as(*(ext.reserved_)))))
+      {
+        return false;
+      }
+
+      return true;
+    }
+
 
     //----------------------------------------------------------------
     // AdaptationField::AdaptationField
@@ -186,6 +227,57 @@ namespace yae
       }
     }
 
+    //----------------------------------------------------------------
+    // AdaptationField::is_duplicate_of
+    //
+    bool
+    AdaptationField::is_duplicate_of(const AdaptationField & af) const
+    {
+      if (adaptation_field_length_ != af.adaptation_field_length_ ||
+          discontinuity_indicator_ != af.discontinuity_indicator_ ||
+          random_access_indicator_ != af.random_access_indicator_ ||
+
+          elementary_stream_priority_indicator_ !=
+          af.elementary_stream_priority_indicator_ ||
+
+          pcr_flag_ != af.pcr_flag_ ||
+          opcr_flag_ != af.opcr_flag_ ||
+          splicing_point_flag_ != af.splicing_point_flag_ ||
+          transport_private_data_flag_ != af.transport_private_data_flag_ ||
+
+          adaptation_field_extension_flag_ !=
+          af.adaptation_field_extension_flag_ ||
+
+          splice_countdown_ != af.splice_countdown_ ||
+          transport_private_data_length_ != af.transport_private_data_length_)
+      {
+        return false;
+      }
+
+      if (!(!(transport_private_data_ || af.transport_private_data_) ||
+            (transport_private_data_ && af.transport_private_data_ &&
+             transport_private_data_->same_as(*(af.transport_private_data_)))))
+      {
+        return false;
+      }
+
+      if (!(!(extension_ || af.extension_) ||
+            (extension_ && af.extension_ &&
+             extension_->is_duplicate_of(*(af.extension_)))))
+      {
+        return false;
+      }
+
+      if (!(!(stuffing_ || af.stuffing_) ||
+            (stuffing_ && af.stuffing_ &&
+             stuffing_->same_as(*(af.stuffing_)))))
+      {
+        return false;
+      }
+
+      return true;
+    }
+
 
     //----------------------------------------------------------------
     // TSPacket::TSPacket
@@ -230,6 +322,40 @@ namespace yae
       {
         payload_ = bin.read_remaining_bytes();
       }
+    }
+
+    //----------------------------------------------------------------
+    // TSPacket::is_duplicate_of
+    //
+    bool
+    TSPacket::is_duplicate_of(const TSPacket & pkt) const
+    {
+      if (sync_byte_ != pkt.sync_byte_ ||
+          transport_error_indicator_ != pkt.transport_error_indicator_ ||
+          payload_unit_start_indicator_ != pkt.payload_unit_start_indicator_ ||
+          transport_priority_ != pkt.transport_priority_ ||
+          pid_ != pkt.pid_ ||
+          transport_scrambling_control_ != pkt.transport_scrambling_control_ ||
+          adaptation_field_control_ != pkt.adaptation_field_control_ ||
+          continuity_counter_ != pkt.continuity_counter_)
+      {
+        return false;
+      }
+
+      if (!(!(adaptation_field_ || pkt.adaptation_field_) ||
+            (adaptation_field_ && pkt.adaptation_field_ &&
+             adaptation_field_->is_duplicate_of(*pkt.adaptation_field_))))
+      {
+        return false;
+      }
+
+      if (!(!(payload_ || pkt.payload_) ||
+            (payload_ && pkt.payload_ && payload_->same_as(*(pkt.payload_)))))
+      {
+        return false;
+      }
+
+      return true;
     }
 
 
@@ -3297,8 +3423,10 @@ namespace yae
     {
       protocol_version_ = bin.read(8);
       etm_id_source_id_ = bin.read(16);
-      etm_id_event_id_ = bin.read(15);
+      etm_id_event_id_ = bin.read(14);
       etm_id_event_flag_ = bin.read(1);
+      uint16_t etm_id_lsb = bin.read(1);
+      YAE_EXPECT(etm_id_lsb == 0);
       extended_text_message_.load(bin);
     }
 
@@ -3920,7 +4048,10 @@ namespace yae
           STTSectionPtr stt_section = section;
           VCTSectionPtr vct_section = section;
           RRTSectionPtr rrt_section = section;
-          YAE_EXPECT(mgt_section || stt_section || vct_section || rrt_section);
+          YAE_EXPECT(mgt_section ||
+                     stt_section ||
+                     vct_section ||
+                     rrt_section);
 
           if (stt_section)
           {
@@ -4050,6 +4181,9 @@ namespace yae
         {
           ETTSectionPtr section = load_section(bin);
           ExtendedTextTable & ett = *section;
+
+          // FIXME: pkoshevoy:
+          dump_ett(ett);
         }
         else if (yae::has(pid_rrt_, pid))
         {
@@ -4116,6 +4250,58 @@ namespace yae
         bin.seek(end_pos);
         return;
       }
+
+      YAE_EXPECT(!pkt.transport_error_indicator_);
+
+      // In transport streams, duplicate packets may be sent as two,
+      // and only two, consecutive transport stream packets of the
+      // same PID.
+      //
+      // The duplicate packets shall have the same continuity_counter value
+      // as the original packet and the adaptation_field_control field
+      // shall be equal to '01' or '11'.
+      //
+      // In duplicate packets each byte of the original packet shall be
+      // duplicated, with the exception that in the program clock reference
+      // fields, if present, a valid value shall be encoded.
+      //
+      // The continuity_counter in a particular transport stream packet
+      /// is continuous when it differs by a positive value of one
+      // from the continuity_counter value in the previous transport stream
+      // packet of the same PID, or when either of the non-incrementing
+      // conditions (adaptation_field_control set to '00' or '10',
+      // or duplicate packets as described above) are met.
+      //
+      // The continuity counter may be discontinuous when the
+      // discontinuity_indicator is set to '1'.
+      //
+      // In the case of a null packet the value of the continuity_counter
+      // is undefined.
+
+      if (pkt.is_null_packet())
+      {
+        return;
+      }
+
+      // Hmm, two consecutive transport stream packets of the same PID
+      // ... does that mean consecutive overall, or consecutive per PID?
+      TSPacket & prev = prev_[pkt.pid_];
+
+      if (!pkt.is_duplicate_of(prev) &&
+          (pkt.adaptation_field_control_ & 0x01) == 0x01 &&
+          !prev.is_null_packet())
+      {
+        // check for continuity counter discontinuity:
+        uint32_t expected = (prev.continuity_counter_ + 1) & 0xF;
+        if (pkt.continuity_counter_ != expected)
+        {
+          // discontinuity detected, dump the payload:
+          yae_wlog("detected TSPacket discontinuity");
+          pes_[pkt.pid_].clear();
+        }
+      }
+
+      prev = pkt;
 
       if (pkt.payload_unit_start_indicator_)
       {

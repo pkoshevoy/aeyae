@@ -69,7 +69,7 @@ main_may_throw(int argc, char ** argv)
   // install signal handler:
   yae::signal_handler();
 
-#if 1
+#if 0
   yae::TTime sample_duration(30, 1);
   yae::HDHomeRun hdhr;
   {
@@ -81,15 +81,15 @@ main_may_throw(int argc, char ** argv)
   const char * fn = "/tmp/473000000.ts"; // 10.1
   const char * fn = "/tmp/479000000.ts"; // 23.1 KBTU
   const char * fn = "/tmp/491000000.ts"; // 11.1 KBYU
-#endif
   const char * fn = "/tmp/503000000.ts"; // 14.1 KJZZ
-#if 0
   const char * fn = "/tmp/509000000.ts"; // 20.1 KTMW
   const char * fn = "/tmp/515000000.ts"; // 50.1 KEJT
   const char * fn = "/tmp/527000000.ts"; // 5.1 KSL
   const char * fn = "/tmp/533000000.ts"; // 24.1 KPNZ
   const char * fn = "/tmp/539000000.ts"; // 25.1 KSVN
+#endif
   const char * fn = "/tmp/551000000.ts"; // 7.1 KUED
+#if 0
   const char * fn = "/tmp/557000000.ts"; // 13.1 KSTU
   const char * fn = "/tmp/563000000.ts"; // 16.1 ION
   const char * fn = "/tmp/569000000.ts"; // 4.1 KTVX

@@ -36,6 +36,7 @@ namespace yae
       AdaptationField();
 
       void load(IBitstream & bin);
+      bool is_duplicate_of(const AdaptationField & af) const;
 
       // 8:
       uint64_t adaptation_field_length_ : 8;
@@ -72,6 +73,7 @@ namespace yae
         Extension();
 
         void load(IBitstream & bin);
+        bool is_duplicate_of(const Extension & ext) const;
 
         // 8:
         uint8_t adaptation_field_extension_length_ : 8;
@@ -119,6 +121,10 @@ namespace yae
       TSPacket();
 
       void load(IBitstream & bin, Context & ctx);
+      bool is_duplicate_of(const TSPacket & pkt) const;
+
+      inline bool is_null_packet() const
+      { return pid_ == 0x1FFF; }
 
       uint32_t sync_byte_ : 8; // 0x47
 
@@ -2023,6 +2029,11 @@ namespace yae
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
+
+      // keep track of previous packet per PID
+      // so we can properly handle duplicate packets
+      // and detect continuity counter discontinuities:
+      std::map<uint16_t, TSPacket> prev_;
 
       // packets, indexed by pid:
       std::map<uint16_t, std::list<TSPacket> > pes_;

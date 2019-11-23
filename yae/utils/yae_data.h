@@ -47,6 +47,26 @@ namespace yae
       std::size_t size = this->size();
       return std::string(text, text + size);
     }
+
+    inline bool same_as(const IBuffer & other) const
+    {
+      std::size_t za = this->size();
+      std::size_t zb = other.size();
+      if (za != zb)
+      {
+        return false;
+      }
+
+      const unsigned char * a = this->get();
+      const unsigned char * b = other.get();
+      if (a == b)
+      {
+        return true;
+      }
+
+      int c = memcmp(a, b, za);
+      return c == 0;
+    }
   };
 
   //----------------------------------------------------------------
