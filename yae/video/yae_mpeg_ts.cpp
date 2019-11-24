@@ -4059,12 +4059,15 @@ namespace yae
       std::string tmp = yae::to_hex(payload.get(),
                                     std::min<std::size_t>(payload.size(), 32),
                                     4);
+
+#if 0
       yae_dlog("%5i (0x%04X) pid   %8i pkts   %8i bytes   %s ...",
                int(pid),
                int(pid),
                int(packets.size()),
                int(payload.size()),
                tmp.c_str());
+#endif
 
       if (!parse)
       {

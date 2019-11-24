@@ -36,27 +36,78 @@
 namespace fs = boost::filesystem;
 
 
-//----------------------------------------------------------------
-// capture_all_cb
-//
-void
-capture_all_cb(void * context,
-               const std::string & name,
-               const std::string & frequency,
-               const void * data,
-               std::size_t size)
+namespace yae
 {
-  std::string capture_path =
-    (fs::path("/tmp") / (frequency + ".ts")).string();
+  //----------------------------------------------------------------
+  // capture_all_cb
+  //
+  struct Capture : ICapture
+  {
+    ~Capture()
+    {
+      for (std::map<std::string, yae::mpeg_ts::Context>::const_iterator
+             i = ctx_.begin(); i != ctx_.end(); ++i)
+      {
+        const std::string & frequency = i->first;
+        const yae::mpeg_ts::Context & ts_ctx = i->second;
+        ts_ctx.dump();
+      }
+    }
 
-  boost::shared_ptr<yae::TOpenFile> file_ptr =
-    yae::get_open_file(capture_path.c_str(), "wb");
-  YAE_THROW_IF(!file_ptr);
+    TResponse
+    push(const std::string & tuner_name,
+         const std::string & frequency,
+         const void * data,
+         std::size_t size)
+    {
+      std::string capture_path =
+        (fs::path("/tmp") / (frequency + ".ts")).string();
 
-  yae::TOpenFile & capture = *file_ptr;
-  YAE_THROW_IF(!capture.is_open());
+      boost::shared_ptr<TOpenFile> file_ptr =
+        get_open_file(capture_path.c_str(), "wb");
+      YAE_THROW_IF(!file_ptr);
 
-  capture.write(data, size);
+      TOpenFile & capture = *file_ptr;
+      YAE_THROW_IF(!capture.is_open());
+
+      capture.write(data, size);
+
+      // parse on-the-fly
+      try
+      {
+        yae::Bitstream bitstream(yae::Data(data, size));
+        yae::mpeg_ts::Context & ts_ctx = ctx_[frequency];
+        yae::mpeg_ts::TSPacket pkt;
+        ts_ctx.load(bitstream, pkt);
+      }
+      catch (const std::exception & e)
+      {
+        std::string data_hex =
+          yae::to_hex(data, std::min<std::size_t>(size, 32), 4);
+
+        yae_wlog("failed to parse %s, tuner %s, %sHz: %s",
+                 data_hex.c_str(),
+                 tuner_name.c_str(),
+                 frequency.c_str(),
+                 e.what());
+      }
+      catch (...)
+      {
+        std::string data_hex =
+          yae::to_hex(data, std::min<std::size_t>(size, 32), 4);
+
+        yae_wlog("failed to parse %s..., tuner %s, %sHz %s: "
+                 "unexpected exception",
+                 data_hex.c_str(),
+                 tuner_name.c_str(),
+                 frequency.c_str());
+      }
+
+      return MORE_E;
+    }
+
+    std::map<std::string, yae::mpeg_ts::Context> ctx_;
+  };
 }
 
 
@@ -69,12 +120,11 @@ main_may_throw(int argc, char ** argv)
   // install signal handler:
   yae::signal_handler();
 
-#if 0
-  yae::TTime sample_duration(30, 1);
+#if 1
+  static const yae::TTime sample_duration(30, 1);
   yae::HDHomeRun hdhr;
-  {
-    hdhr.capture_all(sample_duration, &capture_all_cb, NULL);
-  }
+  yae::TCapturePtr callback(new yae::Capture());
+  hdhr.capture_all(sample_duration, callback);
 
 #else
 #if 0
