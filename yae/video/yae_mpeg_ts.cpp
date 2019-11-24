@@ -1161,7 +1161,7 @@ namespace yae
       else if (mode_ == 0x3F)
       {
         // UTF-16
-        yae::utf16be_to_utf8(src, end, text);
+        yae::utf16le_to_utf8(src, end, text);
         return true;
       }
 
