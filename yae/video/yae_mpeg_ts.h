@@ -2076,7 +2076,7 @@ namespace yae
         uint32_t t0_; // seconds, GPS time
         uint32_t dt_; // seconds
 
-        // title and description, indexed by language:
+        // title, indexed by language:
         TLangText title_;
 
         // this provides a set of indecies into the RRT:
