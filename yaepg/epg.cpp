@@ -184,6 +184,9 @@ main_may_throw(int argc, char ** argv)
     std::list<yae::mpeg_ts::TSPacket> & pes = i->second;
     ts_ctx.consume(pid, pes, false);
   }
+
+  // FIXME: pkoshevoy:
+  ts_ctx.dump();
 #endif
 
   return 0;

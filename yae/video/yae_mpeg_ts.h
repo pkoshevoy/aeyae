@@ -510,6 +510,12 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // TLangText
+    //
+    typedef std::map<std::string, std::string> TLangText;
+
+
+    //----------------------------------------------------------------
     // MultipleStringStructure
     //
     struct YAE_API MultipleStringStructure
@@ -520,7 +526,7 @@ namespace yae
       std::string to_str() const;
 
       // map text by language:
-      void get(std::map<std::string, std::string> & lang_text) const;
+      void get(TLangText & lang_text) const;
 
       uint8_t number_strings_;
 
@@ -532,7 +538,7 @@ namespace yae
         std::string to_str() const;
 
         // map text by language code:
-        void get(std::map<std::string, std::string> & lang_text) const;
+        void get(TLangText & lang_text) const;
 
         uint8_t iso_639_language_code_[3];
         uint8_t number_segments_;
@@ -568,6 +574,13 @@ namespace yae
     //
     YAE_API std::string
     to_str(const MultipleStringStructure & mss);
+
+
+    //----------------------------------------------------------------
+    // get_text
+    //
+    YAE_API std::string
+    get_text(const TLangText & lang_text, const std::string & lang = "eng");
 
 
     //----------------------------------------------------------------
@@ -2033,12 +2046,15 @@ namespace yae
     //
     struct YAE_API ChannelGuide
     {
+      ChannelGuide();
 
       //----------------------------------------------------------------
       // Item
       //
       struct YAE_API Item
       {
+        Item();
+
         inline uint32_t t1() const
         { return t0_ + dt_; }
 
@@ -2061,8 +2077,7 @@ namespace yae
         uint32_t dt_; // seconds
 
         // title and description, indexed by language:
-        std::map<std::string, std::string> title_;
-        std::map<std::string, std::string> description_;
+        TLangText title_;
 
         // this provides a set of indecies into the RRT:
         TContentAdvisoryDescriptorPtr ca_desc_;
@@ -2073,6 +2088,10 @@ namespace yae
       //
       struct YAE_API Track
       {
+        Track():
+          stream_type_(0)
+        {}
+
         std::string lang_;
         uint8_t stream_type_;
       };
@@ -2088,11 +2107,12 @@ namespace yae
       std::list<Item> items_;
 
       // per-event per-language event descriptions:
-      std::map<uint16_t, std::map<std::string, std::string> > event_ett_;
+      std::map<uint16_t, TLangText > event_etm_;
 
       // per-language channel description:
-      std::map<std::string, std::string> channel_ett_;
+      TLangText channel_etm_;
     };
+
 
     //----------------------------------------------------------------
     // Context
@@ -2119,6 +2139,8 @@ namespace yae
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
+
+      void dump() const;
 
       // keep track of previous packet per PID
       // so we can properly handle duplicate packets

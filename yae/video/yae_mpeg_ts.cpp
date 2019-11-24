@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard:
+#include <limits>
 #include <time.h>
 
 // yae includes:
@@ -1016,7 +1017,7 @@ namespace yae
     // MultipleStringStructure::get
     //
     void
-    MultipleStringStructure::get(std::map<std::string, std::string> & m) const
+    MultipleStringStructure::get(TLangText & m) const
     {
       for (std::size_t i = 0, n = strings_.size(); i < n; i++)
       {
@@ -1079,7 +1080,7 @@ namespace yae
     //
     void
     MultipleStringStructure::
-    Message::get(std::map<std::string, std::string> & lang_text) const
+    Message::get(TLangText & lang_text) const
     {
       std::ostringstream oss;
       for (std::size_t i = 0, n = segment_.size(); i < n; i++)
@@ -1174,6 +1175,29 @@ namespace yae
     to_str(const MultipleStringStructure & mss)
     {
       return mss.to_str();
+    }
+
+
+    //----------------------------------------------------------------
+    // get_text
+    //
+    std::string
+    get_text(const TLangText & lang_text, const std::string & lang)
+    {
+      if (lang_text.empty())
+      {
+        return std::string();
+      }
+
+      TLangText::const_iterator found = lang_text.find(lang);
+      if (found == lang_text.end())
+      {
+        // no text for specified language, return the text
+        // for the 1st available language:
+        found = lang_text.begin();
+      }
+
+      return found->second;
     }
 
 
@@ -4001,6 +4025,30 @@ namespace yae
       return payload;
     }
 
+
+    //----------------------------------------------------------------
+    // ChannelGuide::ChannelGuide
+    //
+    ChannelGuide::ChannelGuide():
+      source_id_(std::numeric_limits<uint16_t>::max()),
+      program_number_(std::numeric_limits<uint16_t>::max()),
+      access_controlled_(true),
+      hidden_(true),
+      hide_guide_(true),
+      pcr_pid_(std::numeric_limits<uint16_t>::max())
+    {}
+
+    //----------------------------------------------------------------
+    // ChannelGuide::Item::Item
+    //
+    ChannelGuide::Item::Item():
+      source_id_(std::numeric_limits<uint16_t>::max()),
+      event_id_(std::numeric_limits<uint16_t>::max()),
+      t0_(std::numeric_limits<uint32_t>::max()),
+      dt_(0)
+    {}
+
+
     //----------------------------------------------------------------
     // Context::consume
     //
@@ -4439,6 +4487,7 @@ namespace yae
     void
     Context::consume_vct(const VirtualChannelTable & vct)
     {
+#if 0
       std::ostringstream oss;
       oss << "VCT: channels: [";
 
@@ -4464,8 +4513,18 @@ namespace yae
 
         oss << ", ";
         dump(c.descriptor_, oss);
+      }
+      oss << "\n]\nadditional_";
+      dump(vct.additional_descriptor_, oss);
+      oss << "\n\n";
+      yae_debug << oss.str();
+#endif
 
-
+      for (std::size_t i = 0; i < vct.num_channels_in_section_; i++)
+      {
+        const VirtualChannelTable::Channel & c = vct.channel_[i];
+        std::string name;
+        yae::utf16_to_utf8(c.short_name_, c.short_name_ + 7, name);
         ChannelNumber ch_num(c.major_channel_number_,
                              c.minor_channel_number_);
         source_id_to_ch_num_[c.source_id_] = ch_num;
@@ -4497,10 +4556,6 @@ namespace yae
           }
         }
       }
-      oss << "\n]\nadditional_";
-      dump(vct.additional_descriptor_, oss);
-      oss << "\n\n";
-      yae_debug << oss.str();
     }
 
     //----------------------------------------------------------------
@@ -4553,8 +4608,7 @@ namespace yae
     void
     Context::consume_eit(const EventInformationTable & eit)
     {
-      std::list<ChannelGuide::Item> new_items;
-
+#if 0
       std::ostringstream oss;
       oss << "EIT: source_id " << eit.source_id_ << ", [";
 
@@ -4573,6 +4627,15 @@ namespace yae
 
         oss << ", ";
         dump(e.descriptor_, oss);
+      }
+      oss << "\n]\n\n";
+      yae_debug << oss.str();
+#endif
+
+      std::list<ChannelGuide::Item> new_items;
+      for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
+      {
+        const EventInformationTable::Event & e = eit.event_[i];
 
         new_items.push_back(ChannelGuide::Item());
         ChannelGuide::Item & item = new_items.back();
@@ -4592,8 +4655,6 @@ namespace yae
           }
         }
       }
-      oss << "\n]\n\n";
-      yae_debug << oss.str();
 
       if (new_items.empty())
       {
@@ -4646,6 +4707,7 @@ namespace yae
     void
     Context::consume_ett(const ExtendedTextTable & ett)
     {
+#if 0
       std::ostringstream oss;
       oss << "ETT: source " << ett.etm_id_source_id_;
       if (ett.etm_id_event_flag_)
@@ -4655,6 +4717,7 @@ namespace yae
       oss << ": " << ett.extended_text_message_.to_str()
           << "\n\n";
       yae_debug << oss.str();
+#endif
 
       const ChannelNumber & ch_num = yae::get(source_id_to_ch_num_,
                                               uint16_t(ett.etm_id_source_id_),
@@ -4667,13 +4730,12 @@ namespace yae
       ChannelGuide & chan = guide_[ch_num];
       if (ett.etm_id_event_flag_)
       {
-        std::map<std::string, std::string> &
-          lang_text = chan.event_ett_[ett.etm_id_event_id_];
+        TLangText & lang_text = chan.event_etm_[ett.etm_id_event_id_];
         ett.extended_text_message_.get(lang_text);
       }
       else
       {
-        ett.extended_text_message_.get(chan.channel_ett_);
+        ett.extended_text_message_.get(chan.channel_etm_);
       }
     }
 
@@ -4696,6 +4758,53 @@ namespace yae
         isep = ", ";
       }
       oss << " ]";
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump
+    //
+    void
+    Context::dump() const
+    {
+      std::ostringstream oss;
+
+      for (std::map<ChannelNumber, ChannelGuide>::const_iterator
+             i = guide_.begin(); i != guide_.end(); ++i)
+      {
+        const ChannelNumber & ch_num = i->first;
+        const ChannelGuide & chan = i->second;
+        oss << '\n'
+            << ch_num.first << '.' << ch_num.second << ' ' << chan.name_;
+        if (!chan.channel_etm_.empty())
+        {
+          oss << ", " << get_text(chan.channel_etm_);
+        }
+        oss << ":\n";
+
+        for (std::list<ChannelGuide::Item>::const_iterator
+               j = chan.items_.begin(); j != chan.items_.end(); ++j)
+        {
+          const ChannelGuide::Item & item = *j;
+          std::string t = gps_time_to_str(item.t0_);
+          oss << "  " << t << ' ' << get_text(item.title_) << '\n';
+
+          std::map<uint16_t, TLangText>::const_iterator
+            found_etm = chan.event_etm_.find(item.event_id_);
+          if (found_etm != chan.event_etm_.end())
+          {
+            const TLangText & lang_text = found_etm->second;
+            std::string description = get_text(lang_text);
+            if (!description.empty())
+            {
+              oss << "    " << description << '\n';
+            }
+          }
+
+          oss << '\n';
+        }
+      }
+
+      yae_debug << oss.str();
     }
   }
 }
