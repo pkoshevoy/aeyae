@@ -579,6 +579,13 @@ namespace yae
       return this->read_bytes(remaining_bits >> 3);
     }
 
+    inline void skip_remaining_bytes()
+    {
+      std::size_t remaining_bits = end_ - position_;
+      YAE_ASSERT((remaining_bits & 0x7) == 0);
+      return this->skip_bytes(remaining_bits >> 3);
+    }
+
   protected:
     std::size_t position_;
     std::size_t end_;

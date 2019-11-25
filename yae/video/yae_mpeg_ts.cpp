@@ -323,6 +323,11 @@ namespace yae
       {
         payload_ = bin.read_remaining_bytes();
       }
+
+      if (pid_ == 0x1FFF)
+      {
+        bin.skip_remaining_bytes();
+      }
     }
 
     //----------------------------------------------------------------
