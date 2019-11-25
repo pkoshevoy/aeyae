@@ -482,10 +482,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::threadLoop
+  // Movie::thread_loop
   //
   void
-  Movie::threadLoop()
+  Movie::thread_loop()
   {
     VideoTrackPtr videoTrack;
     if (selectedVideoTrack_ < videoTracks_.size())
@@ -845,7 +845,7 @@ namespace yae
     {
 #ifndef NDEBUG
       std::cerr
-        << "\nMovie::threadLoop caught exception: " << e.what()
+        << "\nMovie::thread_loop caught exception: " << e.what()
         << std::endl;
 #endif
     }
@@ -853,14 +853,14 @@ namespace yae
     {
 #ifndef NDEBUG
       std::cerr
-        << "\nMovie::threadLoop caught unexpected exception"
+        << "\nMovie::thread_loop caught unexpected exception"
         << std::endl;
 #endif
     }
 
 #if 0 // ndef NDEBUG
     std::cerr
-      << "\nMovie::threadLoop terminated"
+      << "\nMovie::thread_loop terminated"
       << std::endl;
 #endif
   }

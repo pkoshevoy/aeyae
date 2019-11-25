@@ -41,7 +41,7 @@ namespace yae
     bool isPaused() const;
     bool skipToNextFrame();
 
-    void threadLoop();
+    void thread_loop();
     bool readOneFrame(QueueWaitMgr & terminator,
                       double & frameDuration,
                       double & f0,
@@ -77,7 +77,7 @@ namespace yae
     stop_(false),
     pause_(true)
   {
-    thread_.setContext(this);
+    thread_.set_context(this);
   }
 
   //----------------------------------------------------------------
@@ -184,10 +184,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoRenderer::TPrivate::threadLoop
+  // VideoRenderer::TPrivate::thread_loop
   //
   void
-  VideoRenderer::TPrivate::threadLoop()
+  VideoRenderer::TPrivate::thread_loop()
   {
     TTime t0;
 

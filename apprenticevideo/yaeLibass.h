@@ -160,7 +160,7 @@ namespace yae
 
   protected:
     void init();
-    void threadLoop();
+    void thread_loop();
     void addCustomFonts();
 
     // libass initialization worker thread:

@@ -490,6 +490,29 @@ namespace yae
       memcpy(dst, src->get(), src->size());
     }
 
+    inline std::size_t bits_left() const
+    { return end_ - position_; }
+
+    inline std::size_t bytes_left() const
+    {
+      std::size_t num_bits = bits_left();
+      YAE_ASSERT((num_bits & 0x7) == 0x0);
+      std::size_t num_bytes = num_bits >> 3;
+      return num_bytes;
+    }
+
+    inline TBufferPtr peek_bytes_at(std::size_t pos, std::size_t num_bytes)
+    {
+      std::size_t curr_pos = position_;
+      seek(pos);
+
+      num_bytes = std::min(num_bytes, bytes_left());
+      TBufferPtr data = read_bytes(num_bytes);
+
+      seek(curr_pos);
+      return data;
+    }
+
     template <typename TData>
     inline void read(TData * data, std::size_t num_data)
     {

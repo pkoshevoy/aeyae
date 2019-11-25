@@ -14,6 +14,7 @@
 #include <boost/thread.hpp>
 
 // aeyae:
+#include "yae/api/yae_log.h"
 #include "yae_threading.h"
 #include "yae_task_runner.h"
 
@@ -40,7 +41,7 @@ namespace yae
     ~TPrivate();
 
     void add(const TTimePoint & t, const TaskRunner::TaskPtr & task);
-    void threadLoop();
+    void thread_loop();
 
     Thread<TaskRunner::TPrivate> thread_;
     boost::mutex mutex_;
@@ -54,7 +55,7 @@ namespace yae
   //
   TaskRunner::TPrivate::TPrivate()
   {
-    thread_.setContext(this);
+    thread_.set_context(this);
     thread_.run();
   }
 
@@ -108,10 +109,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TaskRunner::TPrivate::threadLoop
+  // TaskRunner::TPrivate::thread_loop
   //
   void
-  TaskRunner::TPrivate::threadLoop()
+  TaskRunner::TPrivate::thread_loop()
   {
     TTaskRunnerTasks next;
     TTimePoint next_time_point;
@@ -212,7 +213,7 @@ namespace yae
       pause_(false),
       paused_(false)
     {
-      thread_.setContext(this);
+      thread_.set_context(this);
       thread_.run();
     }
 
@@ -262,7 +263,7 @@ namespace yae
       signal_.notify_all();
     }
 
-    void threadLoop()
+    void thread_loop()
     {
       while (!stop_)
       {
@@ -313,17 +314,11 @@ namespace yae
             }
             catch (const std::exception & e)
             {
-              std::cerr
-                << "AsyncTaskQueue task exception: " << e.what()
-                << std::endl;
-              YAE_ASSERT(false);
+              yae_error << "AsyncTaskQueue task exception: " << e.what();
             }
             catch (...)
             {
-              std::cerr
-                << "AsyncTaskQueue, unknown task exception"
-                << std::endl;
-              YAE_ASSERT(false);
+              yae_error << "AsyncTaskQueue unexpected task exception";
             }
 
             lock.lock();

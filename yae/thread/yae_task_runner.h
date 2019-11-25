@@ -162,6 +162,11 @@ namespace yae
     Private * private_;
   };
 
+  //----------------------------------------------------------------
+  // TAsyncTaskPtr
+  //
+  typedef yae::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
+
 }
 
 

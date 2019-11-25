@@ -81,7 +81,7 @@ namespace yae
     bool selectAudioTrack(std::size_t i);
 
     // this will read the file and push packets to decoding queues:
-    void threadLoop();
+    void thread_loop();
     bool threadStart();
     bool threadStop();
 

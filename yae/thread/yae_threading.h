@@ -40,7 +40,7 @@ namespace yae
     {
       try
       {
-        context_->threadLoop();
+        context_->thread_loop();
       }
       catch (const std::exception & e)
       {
@@ -78,7 +78,7 @@ namespace yae
       return context_;
     }
 
-    void setContext(TContext * context)
+    void set_context(TContext * context)
     {
       YAE_ASSERT(!context || !context_);
       context_ = context;

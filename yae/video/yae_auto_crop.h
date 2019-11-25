@@ -72,7 +72,7 @@ namespace yae
 
     void reset(void * callbackContext, TAutoCropCallback callback);
     void setFrame(const TVideoFramePtr & frame);
-    void threadLoop();
+    void thread_loop();
     void stop();
 
   private:

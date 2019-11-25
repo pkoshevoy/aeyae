@@ -444,6 +444,12 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // TOpenFilePtr
+  //
+  typedef boost::shared_ptr<TOpenFile> TOpenFilePtr;
+
+
+  //----------------------------------------------------------------
   // TOpenHere
   //
   // open an instance of TOpenable in the constructor,
@@ -1223,7 +1229,7 @@ namespace yae
   //
   // NOTE: if file open fails this will throw a std::runtime_error
   //
-  YAE_API boost::shared_ptr<TOpenFile>
+  YAE_API TOpenFilePtr
   get_open_file(const char * path, const char * mode);
 
   //----------------------------------------------------------------

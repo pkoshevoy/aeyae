@@ -1484,7 +1484,7 @@ namespace yae
     if (!autoCropThread_.isRunning())
     {
       autoCrop_.reset(callbackContext, callback);
-      autoCropThread_.setContext(&autoCrop_);
+      autoCropThread_.set_context(&autoCrop_);
       autoCropThread_.run();
     }
   }
@@ -1498,7 +1498,7 @@ namespace yae
     autoCrop_.stop();
     autoCropThread_.stop();
     autoCropThread_.wait();
-    autoCropThread_.setContext(NULL);
+    autoCropThread_.set_context(NULL);
   }
 
   //----------------------------------------------------------------

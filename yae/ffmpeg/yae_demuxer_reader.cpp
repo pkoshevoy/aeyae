@@ -1264,10 +1264,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DemuxerReader::threadLoop
+  // DemuxerReader::thread_loop
   //
   void
-  DemuxerReader::threadLoop()
+  DemuxerReader::thread_loop()
   {
     const DemuxerSummary & summary = demuxer_->summary();
     VideoTrackPtr videoTrack = selectedVideoTrack();
@@ -1348,7 +1348,7 @@ namespace yae
           else
           {
             av_log(NULL, AV_LOG_DEBUG,
-                   "DemuxerReader::threadLoop, %s (%i)",
+                   "DemuxerReader::thread_loop, %s (%i)",
                    av_strerr(err).c_str(), err);
           }
 #endif
@@ -1606,7 +1606,7 @@ namespace yae
     {
 #ifndef NDEBUG
       av_log(NULL, AV_LOG_DEBUG,
-             "DemuxerReader::threadLoop caught exception: %s",
+             "DemuxerReader::thread_loop caught exception: %s",
              e.what());
 #endif
     }
@@ -1614,12 +1614,12 @@ namespace yae
     {
 #ifndef NDEBUG
       av_log(NULL, AV_LOG_DEBUG,
-             "DemuxerReader::threadLoop caught unexpected exception");
+             "DemuxerReader::thread_loop caught unexpected exception");
 #endif
     }
 
 #if 0 // ndef NDEBUG
-    av_log(NULL, AV_LOG_DEBUG, "DemuxerReader::threadLoop terminated");
+    av_log(NULL, AV_LOG_DEBUG, "DemuxerReader::thread_loop terminated");
 #endif
   }
 

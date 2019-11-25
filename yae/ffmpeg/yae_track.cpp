@@ -646,10 +646,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::threadLoop
+  // VideoTrack::thread_loop
   //
   void
-  Track::threadLoop()
+  Track::thread_loop()
   {
     decoderStartup();
 

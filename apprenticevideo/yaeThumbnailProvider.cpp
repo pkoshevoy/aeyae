@@ -361,7 +361,7 @@ namespace yae
 
     void cancelRequest(const QString & id);
 
-    void threadLoop();
+    void thread_loop();
 
     //----------------------------------------------------------------
     // Request
@@ -598,10 +598,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ThumbnailProvider::TPrivate::threadLoop
+  // ThumbnailProvider::TPrivate::thread_loop
   //
   void
-  ThumbnailProvider::TPrivate::threadLoop()
+  ThumbnailProvider::TPrivate::thread_loop()
   {
     while (true)
     {

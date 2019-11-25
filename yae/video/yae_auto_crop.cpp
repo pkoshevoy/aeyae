@@ -615,7 +615,7 @@ namespace yae
 
     void reset(void * callbackContext, TAutoCropCallback callback);
     void setFrame(const TVideoFramePtr & frame);
-    void threadLoop();
+    void thread_loop();
     void stop();
 
     mutable boost::mutex mutex_;
@@ -663,10 +663,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::TPrivate::threadLoop
+  // TAutoCropDetect::TPrivate::thread_loop
   //
   void
-  TAutoCropDetect::TPrivate::threadLoop()
+  TAutoCropDetect::TPrivate::thread_loop()
   {
     TCropFrame crop[3];
     int found = 0;
@@ -783,12 +783,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TAutoCropDetect::threadLoop
+  // TAutoCropDetect::thread_loop
   //
   void
-  TAutoCropDetect::threadLoop()
+  TAutoCropDetect::thread_loop()
   {
-    private_->threadLoop();
+    private_->thread_loop();
   }
 
   //----------------------------------------------------------------

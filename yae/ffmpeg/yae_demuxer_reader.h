@@ -162,7 +162,7 @@ namespace yae
                bool seekToTimeIn = true);
 
     // this will demux and push packets to decoding queues:
-    void threadLoop();
+    void thread_loop();
 
     // accessors:
     inline VideoTrackPtr selectedVideoTrack() const

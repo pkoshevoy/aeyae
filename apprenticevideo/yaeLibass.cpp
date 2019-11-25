@@ -293,7 +293,7 @@ namespace yae
     callbackContext_ = context;
     callback_ = callback;
 
-    thread_.setContext(this);
+    thread_.set_context(this);
     thread_.run();
   }
 
@@ -305,7 +305,7 @@ namespace yae
   {
     thread_.stop();
     thread_.wait();
-    thread_.setContext(NULL);
+    thread_.set_context(NULL);
   }
 
   //----------------------------------------------------------------
@@ -388,10 +388,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TLibass::threadLoop
+  // TLibass::thread_loop
   //
   void
-  TLibass::threadLoop()
+  TLibass::thread_loop()
   {
     // begin:
     {

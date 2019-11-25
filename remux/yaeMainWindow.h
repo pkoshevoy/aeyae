@@ -143,7 +143,6 @@ namespace yae
     SpinnerView spinner_;
 
     // load files on a background thread, etc...
-    typedef yae::shared_ptr<AsyncTaskQueue::Task> TAsyncTaskPtr;
     std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
 

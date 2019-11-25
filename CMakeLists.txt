@@ -530,9 +530,13 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_video_track.h
 
   yae/thread/yae_queue.h
+  yae/thread/yae_ring_buffer.cpp
+  yae/thread/yae_ring_buffer.h
   yae/thread/yae_threading.h
   yae/thread/yae_task_runner.cpp
   yae/thread/yae_task_runner.h
+  yae/thread/yae_worker.cpp
+  yae/thread/yae_worker.h
 
   yae/utils/yae_benchmark.cpp
   yae/utils/yae_benchmark.h

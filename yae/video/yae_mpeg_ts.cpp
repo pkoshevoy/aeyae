@@ -4318,16 +4318,22 @@ namespace yae
     // Context::load
     //
     void
-    Context::load(IBitstream & bin, TSPacket & pkt)
+    Context::load(IBitstream & bitstream, TSPacket & pkt)
     {
-      std::size_t start_pos = bin.position();
+      TBufferPtr packet = bitstream.read_bytes(188);
+      yae::Bitstream bin(packet);
       pkt.load(bin, *this);
+
       std::size_t end_pos = bin.position();
-      std::size_t bytes_consumed = (end_pos - start_pos) >> 3;
+      std::size_t bytes_consumed = end_pos >> 3;
       if (bytes_consumed != 188)
       {
-        yae_wlog("TSPacket too short (%i bytes)", bytes_consumed);
-        bin.seek(end_pos);
+        std::string data_hex = yae::to_hex(packet->get(),
+                                           std::min<int>(32, packet->size()),
+                                           4);
+        yae_wlog("TSPacket too short (%i bytes), %s ...",
+                 bytes_consumed,
+                 data_hex.c_str());
         return;
       }
 
@@ -4366,7 +4372,7 @@ namespace yae
       // Hmm, two consecutive transport stream packets of the same PID
       // ... does that mean consecutive overall, or consecutive per PID?
       TSPacket & prev = prev_[pkt.pid_];
-
+#if 1
       if (!pkt.is_duplicate_of(prev) &&
           (pkt.adaptation_field_control_ & 0x01) == 0x01 &&
           !prev.is_null_packet())
@@ -4380,7 +4386,7 @@ namespace yae
           pes_[pkt.pid_].clear();
         }
       }
-
+#endif
       prev = pkt;
 
       if (pkt.payload_unit_start_indicator_)

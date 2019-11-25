@@ -243,7 +243,7 @@ namespace yae
     {}
 
     // packet decoding thread:
-    virtual void threadLoop();
+    virtual void thread_loop();
     virtual bool threadStart();
     virtual bool threadStop();
 
