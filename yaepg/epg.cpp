@@ -296,7 +296,7 @@ main_may_throw(int argc, char ** argv)
   yae::HDHomeRun hdhr;
   yae::TCapturePtr callback(new yae::Capture());
   hdhr.capture_all(sample_duration, callback);
-
+  // hdhr.capture(std::string("539000000"), callback, sample_duration);
 #else
 #if 0
   const char * fn = "/tmp/473000000.ts"; // 10.1

@@ -170,7 +170,8 @@ namespace yae
                      const TCapturePtr & callback);
 
     bool capture(const std::string & frequency,
-                 const TCapturePtr & callback);
+                 const TCapturePtr & callback,
+                 const yae::TTime & duration);
 
     std::vector<struct hdhomerun_discover_device_t> devices_;
     std::map<std::string, hdhomerun_devptr_t> tuners_;
@@ -550,10 +551,10 @@ namespace yae
       }
       channels_txt = oss.str().c_str();
     }
-    yae_wlog("%s %sHz, capturing %ss sample: %s",
+    yae_wlog("%s %sHz, capturing %s sample: %s",
              tuner_name.c_str(),
              frequency.c_str(),
-             duration.to_short_txt().c_str(),
+             duration.valid() ? duration.to_hhmmss().c_str() : "a",
              channels_txt.c_str());
 
     yae::TTime t_stop =
@@ -642,9 +643,9 @@ namespace yae
   //
   bool
   HDHomeRun::Private::capture(const std::string & frequency,
-                              const TCapturePtr & callback)
+                              const TCapturePtr & callback,
+                              const yae::TTime & duration)
   {
-    static const yae::TTime invalid_duration(0, 0);
     for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
            i = tuners_.rbegin(); i != tuners_.rend(); ++i)
     {
@@ -659,7 +660,7 @@ namespace yae
           tuner_cache_[tuner_name]["frequencies"];
 
         const Json::Value & info = frequencies[frequency];
-        capture(tuner_name, hd, frequency, info, invalid_duration, callback);
+        capture(tuner_name, hd, frequency, info, duration, callback);
         return true;
       }
       catch (const std::exception & e)
@@ -711,9 +712,10 @@ namespace yae
   //
   bool
   HDHomeRun::capture(const std::string & frequency,
-                     const TCapturePtr & callback)
+                     const TCapturePtr & callback,
+                     const yae::TTime & duration)
   {
-    return private_->capture(frequency, callback);
+    return private_->capture(frequency, callback, duration);
   }
 
 }

@@ -2131,7 +2131,7 @@ namespace yae
       time_t gps_time_to_unix_time(uint32_t gps_time) const;
       std::string gps_time_to_str(uint32_t gps_time) const;
 
-      void consume_stt(const SystemTimeTable & stt);
+      void consume_stt(const STTSectionPtr & stt_ptr);
       void consume_vct(const VirtualChannelTable & vct);
       void consume_rrt(const RatingRegionTable & rrt);
       void consume_eit(const EventInformationTable & eit);
@@ -2169,6 +2169,7 @@ namespace yae
       uint16_t network_pid_;
       TTime stt_walltime_;
       STTSectionPtr stt_;
+      int64_t stt_error_;
 
       // map major.minor channel number to ChannelGuide:
       std::map<ChannelNumber, ChannelGuide> guide_;

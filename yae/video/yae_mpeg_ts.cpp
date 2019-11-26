@@ -4148,11 +4148,7 @@ namespace yae
 
           if (stt_section)
           {
-            stt_ = stt_section;
-            stt_walltime_ = TTime::now();
-
-            const SystemTimeTable & stt = *stt_;
-            consume_stt(stt);
+            consume_stt(stt_section);
           }
           else if (vct_section)
           {
@@ -4316,7 +4312,8 @@ namespace yae
     // Context::Context
     //
     Context::Context():
-      network_pid_(0)
+      network_pid_(0),
+      stt_error_(0)
     {}
 
     //----------------------------------------------------------------
@@ -4455,15 +4452,18 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // unix_epoch_gps_offset
+    //
+    static const time_t unix_epoch_gps_offset =
+      yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
+
+    //----------------------------------------------------------------
     // Context::gps_time_to_unix_time
     //
     time_t
     Context::gps_time_to_unix_time(uint32_t gps_time) const
     {
-      static const time_t unix_epoch_gps_offset =
-        yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
-
-      time_t t = unix_epoch_gps_offset + gps_time;
+      time_t t = unix_epoch_gps_offset + gps_time - stt_error_;
       if (stt_)
       {
         t -= stt_->gps_utc_offset_;
@@ -4486,10 +4486,30 @@ namespace yae
     // Context::consume_stt
     //
     void
-    Context::consume_stt(const SystemTimeTable & stt)
+    Context::consume_stt(const STTSectionPtr & stt_ptr)
     {
+      stt_walltime_ = TTime::now();
+      stt_ = stt_ptr;
+
+      const SystemTimeTable & stt = *(stt_ptr);
+      int64_t wall_gps_time =
+        (stt_walltime_.get(1) - unix_epoch_gps_offset) + stt.gps_utc_offset_;
+
+      int64_t err = stt.system_time_ - wall_gps_time;
+      int64_t abs_err = (err < 0) ? -err : err;
+      static const int64_t err_threshold = 60 * 60 * 24 * 30; // 30 days
+      if (abs_err > err_threshold)
+      {
+        stt_error_ = err;
+      }
+
       std::ostringstream oss;
-      oss << "STT: " << gps_time_to_str(stt.system_time_) << ", ";
+      oss << "STT: " << gps_time_to_str(stt.system_time_);
+      if (stt_error_)
+      {
+        oss << " (error correction: " << -stt_error_ << " sec)";
+      }
+      oss << ", ";
       dump(stt.descriptor_, oss);
       oss << "\n\n";
       yae_debug << oss.str();

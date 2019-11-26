@@ -64,7 +64,8 @@ namespace yae
                      const TCapturePtr & callback);
 
     bool capture(const std::string & frequency,
-                 const TCapturePtr & callback);
+                 const TCapturePtr & callback,
+                 const yae::TTime & duration = yae::TTime(0, 0));
 
   protected:
     // intentionally disabled:
