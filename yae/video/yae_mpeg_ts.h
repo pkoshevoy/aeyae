@@ -2127,20 +2127,58 @@ namespace yae
 
       void load(IBitstream & bin, TSPacket & pkt);
 
+      void dump() const;
+
+    protected:
+
+      struct Bucket
+      {
+        // map major.minor channel number to ChannelGuide:
+        std::map<ChannelNumber, ChannelGuide> guide_;
+
+        // map source_id to major.minor channel number:
+        std::map<uint16_t, ChannelNumber> source_id_to_ch_num_;
+
+        // region rating table:
+        RRTSectionPtr rrt_;
+      };
+
+      inline std::size_t bucket_index_at(uint32_t gps_time) const
+      { return (gps_time / 10800) & 0xFF; }
+
+      inline Bucket & get_current_bucket()
+      {
+        uint32_t gps_time = this->gps_time_now();
+        std::size_t ix = this->bucket_index_at(gps_time);
+        return bucket_[ix];
+      }
+
       // helpers:
+      uint32_t gps_time_now() const;
       time_t gps_time_to_unix_time(uint32_t gps_time) const;
       std::string gps_time_to_str(uint32_t gps_time) const;
 
-      void consume_stt(const STTSectionPtr & stt_ptr);
+      void consume_stt(const STTSectionPtr & stt_section);
       void consume_vct(const VirtualChannelTable & vct);
-      void consume_rrt(const RatingRegionTable & rrt);
+      void consume_rrt(const RRTSectionPtr & rrt_section);
       void consume_eit(const EventInformationTable & eit);
       void consume_ett(const ExtendedTextTable & ett);
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
 
-      void dump() const;
+      // 32 days worth of channel guide data in 3 hour long chunks,
+      // indexed by an index derived from STT system time:
+      //
+      Bucket bucket_[256]; // 32 * 8
+
+      // unused:
+      uint16_t network_pid_;
+
+      // in-stream clock:
+      TTime stt_walltime_;
+      STTSectionPtr stt_;
+      int64_t stt_error_;
 
       // keep track of previous packet per PID
       // so we can properly handle duplicate packets
@@ -2165,17 +2203,6 @@ namespace yae
       std::map<uint16_t, uint8_t> pid_event_ett_;
       std::map<uint16_t, uint8_t> pid_rrt_;
       std::map<uint16_t, uint8_t> pid_dcct_;
-
-      uint16_t network_pid_;
-      TTime stt_walltime_;
-      STTSectionPtr stt_;
-      int64_t stt_error_;
-
-      // map major.minor channel number to ChannelGuide:
-      std::map<ChannelNumber, ChannelGuide> guide_;
-
-      // map source_id to major.minor channel number:
-      std::map<uint16_t, ChannelNumber> source_id_to_ch_num_;
     };
 
   }

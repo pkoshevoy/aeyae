@@ -4157,8 +4157,7 @@ namespace yae
           }
           else if (rrt_section)
           {
-            const RatingRegionTable & rrt = *rrt_section;
-            consume_rrt(rrt);
+            consume_rrt(rrt_section);
           }
           else if (mgt_section)
           {
@@ -4268,9 +4267,8 @@ namespace yae
         }
         else if (yae::has(pid_rrt_, pid))
         {
-          RRTSectionPtr section = load_section(bin);
-          const RatingRegionTable & rrt = *section;
-          consume_rrt(rrt);
+          RRTSectionPtr rrt_section = load_section(bin);
+          consume_rrt(rrt_section);
         }
         else if (yae::has(pid_dcct_, pid))
         {
@@ -4458,6 +4456,23 @@ namespace yae
       yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
 
     //----------------------------------------------------------------
+    // Context::gps_time_now
+    //
+    uint32_t
+    Context::gps_time_now() const
+    {
+      if (stt_)
+      {
+        uint32_t t = stt_->system_time_ - stt_error_;
+        return t;
+      }
+
+      TTime now = TTime::now();
+      uint64_t t = now.get(1) - unix_epoch_gps_offset;
+      return uint32_t(t);
+    }
+
+    //----------------------------------------------------------------
     // Context::gps_time_to_unix_time
     //
     time_t
@@ -4486,12 +4501,12 @@ namespace yae
     // Context::consume_stt
     //
     void
-    Context::consume_stt(const STTSectionPtr & stt_ptr)
+    Context::consume_stt(const STTSectionPtr & stt_section)
     {
       stt_walltime_ = TTime::now();
-      stt_ = stt_ptr;
+      stt_ = stt_section;
 
-      const SystemTimeTable & stt = *(stt_ptr);
+      const SystemTimeTable & stt = *(stt_section);
       int64_t wall_gps_time =
         (stt_walltime_.get(1) - unix_epoch_gps_offset) + stt.gps_utc_offset_;
 
@@ -4503,6 +4518,7 @@ namespace yae
         stt_error_ = err;
       }
 
+#if 0
       std::ostringstream oss;
       oss << "STT: " << gps_time_to_str(stt.system_time_);
       if (stt_error_)
@@ -4513,6 +4529,7 @@ namespace yae
       dump(stt.descriptor_, oss);
       oss << "\n\n";
       yae_debug << oss.str();
+#endif
     }
 
     //----------------------------------------------------------------
@@ -4554,6 +4571,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      Bucket & bucket = get_current_bucket();
       for (std::size_t i = 0; i < vct.num_channels_in_section_; i++)
       {
         const VirtualChannelTable::Channel & c = vct.channel_[i];
@@ -4561,9 +4579,9 @@ namespace yae
         yae::utf16_to_utf8(c.short_name_, c.short_name_ + 7, name);
         ChannelNumber ch_num(c.major_channel_number_,
                              c.minor_channel_number_);
-        source_id_to_ch_num_[c.source_id_] = ch_num;
+        bucket.source_id_to_ch_num_[c.source_id_] = ch_num;
 
-        ChannelGuide & chan = guide_[ch_num];
+        ChannelGuide & chan = bucket.guide_[ch_num];
         chan.name_ = name.c_str();
         chan.source_id_ = c.source_id_;
         chan.program_number_ = c.program_number_;
@@ -4596,8 +4614,14 @@ namespace yae
     // Context::consume_rrt
     //
     void
-    Context::consume_rrt(const RatingRegionTable & rrt)
+    Context::consume_rrt(const RRTSectionPtr & rrt_section)
     {
+      Bucket & bucket = get_current_bucket();
+      bucket.rrt_ = rrt_section;
+
+#if 0
+      const RatingRegionTable & rrt = *(bucket.rrt_);
+
       std::ostringstream oss;
       oss << "RRT: rating region: " << int(rrt.rating_region_)
           << ", name: \"" << rrt.rating_region_name_text_.to_str()
@@ -4629,6 +4653,7 @@ namespace yae
       dump(rrt.descriptor_, oss);
       oss << "\n\n";
       yae_debug << oss.str();
+#endif
     }
 
     //----------------------------------------------------------------
@@ -4666,6 +4691,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      Bucket & bucket = get_current_bucket();
       std::list<ChannelGuide::Item> new_items;
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
       {
@@ -4695,7 +4721,7 @@ namespace yae
         return;
       }
 
-      const ChannelNumber & ch_num = yae::get(source_id_to_ch_num_,
+      const ChannelNumber & ch_num = yae::get(bucket.source_id_to_ch_num_,
                                               eit.source_id_,
                                               ch_invalid);
       if (ch_num == ch_invalid)
@@ -4703,7 +4729,7 @@ namespace yae
         return;
       }
 
-      ChannelGuide & chan = guide_[ch_num];
+      ChannelGuide & chan = bucket.guide_[ch_num];
       std::list<ChannelGuide::Item> old_items = chan.items_;
       if (old_items.empty())
       {
@@ -4753,7 +4779,8 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
-      const ChannelNumber & ch_num = yae::get(source_id_to_ch_num_,
+      Bucket & bucket = get_current_bucket();
+      const ChannelNumber & ch_num = yae::get(bucket.source_id_to_ch_num_,
                                               uint16_t(ett.etm_id_source_id_),
                                               ch_invalid);
       if (ch_num == ch_invalid)
@@ -4761,7 +4788,7 @@ namespace yae
         return;
       }
 
-      ChannelGuide & chan = guide_[ch_num];
+      ChannelGuide & chan = bucket.guide_[ch_num];
       if (ett.etm_id_event_flag_)
       {
         TLangText & lang_text = chan.event_etm_[ett.etm_id_event_id_];
@@ -4802,8 +4829,20 @@ namespace yae
     {
       std::ostringstream oss;
 
+      std::size_t bx = bucket_index_at(gps_time_now());
+      for (std::size_t i = 0; i < 256; i++)
+      {
+        if (!bucket_[bx].guide_.empty())
+        {
+          break;
+        }
+
+        bx = (bx + 0xFF) & 0xFF;
+      }
+
+      const Bucket & bucket = bucket_[bx];
       for (std::map<ChannelNumber, ChannelGuide>::const_iterator
-             i = guide_.begin(); i != guide_.end(); ++i)
+             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
         const ChannelNumber & ch_num = i->first;
         const ChannelGuide & chan = i->second;
