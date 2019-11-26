@@ -698,6 +698,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // HDHomeRun::get_channels
+  //
+  bool
+  HDHomeRun::get_channels(std::map<ChannelNumber, std::string> & ch_freq) const
+  {
+    return private_->get_channels(ch_freq);
+  }
+
+  //----------------------------------------------------------------
   // HDHomeRun::capture_all
   //
   bool

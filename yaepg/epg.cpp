@@ -38,6 +38,9 @@
 // namespace shortcut:
 namespace fs = boost::filesystem;
 
+// namespace access:
+using yae::mpeg_ts::ChannelNumber;
+
 
 namespace yae
 {
@@ -47,7 +50,7 @@ namespace yae
   //
   struct Capture : ICapture
   {
-    Capture();
+    Capture(bool epg_only = false);
     ~Capture();
 
     //----------------------------------------------------------------
@@ -55,7 +58,8 @@ namespace yae
     //
     struct Work
     {
-      Work():
+      Work(Capture & capture):
+        capture_(capture),
         rb_(188 * 4096)
       {}
 
@@ -66,10 +70,12 @@ namespace yae
         worker_.wait_until_finished();
       }
 
+      Capture & capture_;
       yae::Worker worker_;
-      yae::TOpenFilePtr capture_;
+      yae::TOpenFilePtr file_;
       yae::mpeg_ts::Context ctx_;
       yae::RingBuffer rb_;
+      yae::TTime start_;
     };
 
     //----------------------------------------------------------------
@@ -106,13 +112,15 @@ namespace yae
          std::size_t size);
 
     std::map<std::string, TWorkPtr> work_;
+    bool epg_only_;
   };
 
 
   //----------------------------------------------------------------
   // Capture::Capture
   //
-  Capture::Capture()
+  Capture::Capture(bool epg_only):
+    epg_only_(epg_only)
   {}
 
   //----------------------------------------------------------------
@@ -120,6 +128,7 @@ namespace yae
   //
   Capture::~Capture()
   {
+#if 0
     for (std::map<std::string, TWorkPtr>::const_iterator
            i = work_.begin(); i != work_.end(); ++i)
     {
@@ -128,6 +137,7 @@ namespace yae
       const yae::mpeg_ts::Context & ctx = work.ctx_;
       ctx.dump();
     }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -152,9 +162,10 @@ namespace yae
     (void)worker;
 
     yae::RingBuffer & rb = work_.rb_;
-    TOpenFile & file = *(work_.capture_);
+    TOpenFile & file = *(work_.file_);
     yae::mpeg_ts::Context & ctx = work_.ctx_;
 
+    yae::TTime start = TTime::now();
     std::size_t done = 0;
     while (true)
     {
@@ -167,9 +178,18 @@ namespace yae
 
       yae::Data data(todo);
       std::size_t size = rb.pull(data.get(), data.size());
-      YAE_EXPECT(size == todo);
-      done += size;
 
+      if (!size)
+      {
+        if (!rb.is_open())
+        {
+          break;
+        }
+
+        continue;
+      }
+
+      done += size;
       data.truncate(size);
       file.write(data.get(), size);
 #if 1
@@ -218,7 +238,7 @@ namespace yae
                 const void * data,
                 std::size_t size)
   {
-#if 1
+#if 0
     std::string capture_path =
       (fs::path("/tmp") / (frequency + "-v1.ts")).string();
 
@@ -235,19 +255,42 @@ namespace yae
     TWorkPtr & work_ptr = work_[frequency];
     if (!work_ptr)
     {
-      work_ptr.reset(new Work());
+      work_ptr.reset(new Work(*this));
       Work & work = *work_ptr;
+      work.start_ = TTime::now();
 
       std::string capture_path =
         (fs::path("/tmp") / (frequency + ".ts")).string();
 
       TOpenFilePtr file = get_open_file(capture_path.c_str(), "wb");
       YAE_THROW_IF(!(file && file->is_open()));
-      work.capture_ = file;
+      work.file_ = file;
     }
 
     Work & work = *work_ptr;
     yae::RingBuffer & rb = work.rb_;
+    yae::mpeg_ts::Context & ctx = work.ctx_;
+
+    if (epg_only_)
+    {
+      // stop once Channel Guide extends to 9 hours from now
+      static const TTime nine_hours(9 * 60 * 60, 1);
+      TTime now = TTime::now();
+      time_t t = (now + nine_hours).get(1);
+
+      if (ctx.channel_guide_overlaps(t) && rb.is_open())
+      {
+        TTime elapsed_time = now - work.start_;
+        yae_dlog("%s %sHz EPG ready, elapsed time: %s",
+                 tuner_name.c_str(),
+                 frequency.c_str(),
+                 elapsed_time.to_hhmmss_ms().c_str());
+
+        // done:
+        rb.close();
+        return STOP_E;
+      }
+    }
 
     if (!size)
     {
@@ -292,11 +335,50 @@ main_may_throw(int argc, char ** argv)
   yae::signal_handler();
 
 #if 1
-  static const yae::TTime sample_duration(30, 1);
+  static const yae::TTime max_duration(30, 1);
   yae::HDHomeRun hdhr;
-  yae::TCapturePtr callback(new yae::Capture());
-  hdhr.capture_all(sample_duration, callback);
-  // hdhr.capture(std::string("539000000"), callback, sample_duration);
+
+  std::map<ChannelNumber, std::string> channels;
+  hdhr.get_channels(channels);
+
+  std::list<std::string> frequencies;
+  for (std::map<ChannelNumber, std::string>::const_iterator
+         i = channels.begin(); i != channels.end(); ++i)
+  {
+    const ChannelNumber & ch_num = i->first;
+    const std::string & frequency = i->second;
+    if (frequencies.empty() || frequencies.back() != frequency)
+    {
+      frequencies.push_back(frequency);
+    }
+  }
+
+  bool epg_only = true;
+  yae::shared_ptr<yae::Capture, yae::ICapture>
+    callback(new yae::Capture(epg_only));
+
+  // hdhr.capture_all(max_duration, callback);
+  // hdhr.capture(std::string("539000000"), callback, max_duration);
+
+  for (std::list<std::string>::const_iterator
+         i = frequencies.begin(); i != frequencies.end(); ++i)
+  {
+    const std::string & frequency = *i;
+    hdhr.capture(frequency, callback, max_duration);
+
+    yae::Capture::TWorkPtr work_ptr;
+    work_ptr = yae::get(callback->work_, frequency, work_ptr);
+
+    if (!work_ptr)
+    {
+      continue;
+    }
+
+    const yae::Capture::Work & work = *work_ptr;
+    const yae::mpeg_ts::Context & ctx = work.ctx_;
+    ctx.dump();
+  }
+
 #else
 #if 0
   const char * fn = "/tmp/473000000.ts"; // 10.1

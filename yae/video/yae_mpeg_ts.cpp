@@ -4320,6 +4320,8 @@ namespace yae
     void
     Context::load(IBitstream & bitstream, TSPacket & pkt)
     {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+
       TBufferPtr packet = bitstream.read_bytes(188);
       yae::Bitstream bin(packet);
       pkt.load(bin, *this);
@@ -4485,6 +4487,22 @@ namespace yae
       }
 
       return t;
+    }
+
+    //----------------------------------------------------------------
+    // Context::unix_time_to_gps_time
+    //
+    uint32_t
+    Context::unix_time_to_gps_time(time_t t) const
+    {
+      uint32_t gps_time = (t - unix_epoch_gps_offset) + stt_error_;
+
+      if (stt_)
+      {
+        gps_time += stt_->gps_utc_offset_;
+      }
+
+      return gps_time;
     }
 
     //----------------------------------------------------------------
@@ -4827,6 +4845,7 @@ namespace yae
     void
     Context::dump() const
     {
+      boost::unique_lock<boost::mutex> lock(mutex_);
       std::ostringstream oss;
 
       std::size_t bx = bucket_index_at(gps_time_now());
@@ -4879,5 +4898,71 @@ namespace yae
 
       yae_debug << oss.str();
     }
+
+    //----------------------------------------------------------------
+    // Context::channel_guide_overlaps
+    //
+    bool
+    Context::channel_guide_overlaps(time_t t) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      uint32_t gps_time = unix_time_to_gps_time(t);
+
+      // find a bucket with events, walking backwards
+      // from the bucket that corresponds to the given timepoint:
+      std::size_t bx = bucket_index_at(gps_time);
+      for (std::size_t i = 0; i < 256; i++)
+      {
+        if (!bucket_[bx].guide_.empty())
+        {
+          break;
+        }
+
+        bx = (bx + 0xFF) & 0xFF;
+      }
+
+      const Bucket & bucket = bucket_[bx];
+      if (bucket.guide_.empty())
+      {
+        return false;
+      }
+
+      for (std::map<ChannelNumber, ChannelGuide>::const_iterator
+             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
+      {
+        const ChannelGuide & chan = i->second;
+        if (chan.items_.empty())
+        {
+          return false;
+        }
+
+        // check that events overlap the requested timepoint:
+        const ChannelGuide::Item & head = chan.items_.front();
+        const ChannelGuide::Item & tail = chan.items_.back();
+
+        uint32_t t0 = head.t0_;
+        uint32_t t1 = tail.t0_ + tail.dt_;
+        if (gps_time < t0 || t1 <= gps_time)
+        {
+          return false;
+        }
+
+        // check that we have descriptions for each event:
+        for (std::list<ChannelGuide::Item>::const_iterator
+               j = chan.items_.begin(); j != chan.items_.end(); ++j)
+        {
+          const ChannelGuide::Item & item = *j;
+          std::map<uint16_t, TLangText>::const_iterator
+            found_etm = chan.event_etm_.find(item.event_id_);
+          if (found_etm == chan.event_etm_.end())
+          {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
   }
 }

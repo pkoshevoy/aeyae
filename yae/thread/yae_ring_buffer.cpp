@@ -63,6 +63,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // RingBuffer::is_open
+  //
+  bool
+  RingBuffer::is_open() const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    return open_;
+  }
+
+  //----------------------------------------------------------------
   // RingBuffer::push
   //
   std::size_t

@@ -15,6 +15,11 @@
 #include <map>
 #include <string>
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
+
 // yae includes:
 #include "yae/api/yae_api.h"
 #include "yae/utils/yae_data.h"
@@ -2121,15 +2126,16 @@ namespace yae
     {
       Context();
 
-      void consume(uint16_t pid,
-                   std::list<TSPacket> & packets,
-                   bool parse = true);
-
       void load(IBitstream & bin, TSPacket & pkt);
 
       void dump() const;
 
+      bool channel_guide_overlaps(time_t t) const;
+
     protected:
+      void consume(uint16_t pid,
+                   std::list<TSPacket> & packets,
+                   bool parse = true);
 
       struct Bucket
       {
@@ -2153,9 +2159,13 @@ namespace yae
         return bucket_[ix];
       }
 
+      // protect against concurrent access:
+      mutable boost::mutex mutex_;
+
       // helpers:
       uint32_t gps_time_now() const;
       time_t gps_time_to_unix_time(uint32_t gps_time) const;
+      uint32_t unix_time_to_gps_time(time_t t) const;
       std::string gps_time_to_str(uint32_t gps_time) const;
 
       void consume_stt(const STTSectionPtr & stt_section);
