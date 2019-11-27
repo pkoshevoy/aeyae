@@ -2437,12 +2437,12 @@ namespace yae
       substream2_(0),
       substream3_(0)
     {
-      memcpy(language_, 0, sizeof(language_));
-      memcpy(language2_, 0, sizeof(language2_));
+      memset(language_, 0, sizeof(language_));
+      memset(language2_, 0, sizeof(language2_));
 
-      memcpy(substream1_lang_, 0, sizeof(substream1_lang_));
-      memcpy(substream2_lang_, 0, sizeof(substream2_lang_));
-      memcpy(substream3_lang_, 0, sizeof(substream3_lang_));
+      memset(substream1_lang_, 0, sizeof(substream1_lang_));
+      memset(substream2_lang_, 0, sizeof(substream2_lang_));
+      memset(substream3_lang_, 0, sizeof(substream3_lang_));
     }
 
     //----------------------------------------------------------------
@@ -4798,8 +4798,9 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
+      unsigned short int source_id = ett.etm_id_source_id_;
       const ChannelNumber & ch_num = yae::get(bucket.source_id_to_ch_num_,
-                                              uint16_t(ett.etm_id_source_id_),
+                                              source_id,
                                               ch_invalid);
       if (ch_num == ch_invalid)
       {
