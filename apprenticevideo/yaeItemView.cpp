@@ -908,7 +908,7 @@ namespace yae
   get_row_height(const ItemView & view)
   {
     double dpi = view.style()->dpi_.get();
-    double rh = dpi / 3.5;
+    double rh = dpi / 2.5;
     double fh = QFontMetricsF(view.style()->font_).height();
     fh = std::max(fh, 13.0);
     rh = std::max(rh, fh * 2.0);
