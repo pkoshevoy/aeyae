@@ -570,25 +570,27 @@ namespace yae
         hdhomerun_device_stream_recv(hd,
                                      VIDEO_DATA_BUFFER_SIZE_1S,
                                      &buffer_size);
-      if (!buffer)
+      if (buffer)
       {
-        msleep_approx(64);
-        continue;
-      }
-
-      ICapture::TResponse r = callback->push(tuner_name,
-                                             frequency,
-                                             buffer,
-                                             buffer_size);
-      if (r == ICapture::STOP_E)
-      {
-        return;
+        ICapture::TResponse r = callback->push(tuner_name,
+                                               frequency,
+                                               buffer,
+                                               buffer_size);
+        if (r == ICapture::STOP_E)
+        {
+          return;
+        }
       }
 
       yae::TTime t = yae::TTime::now();
       if (t >= t_stop)
       {
         return;
+      }
+
+      if (!buffer)
+      {
+        msleep_approx(64);
       }
     }
   }
