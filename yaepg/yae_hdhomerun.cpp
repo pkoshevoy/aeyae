@@ -157,7 +157,7 @@ namespace yae
   {
     Private();
 
-    bool get_channels(std::map<ChannelNumber, std::string> & chan_freq) const;
+    bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
 
     void capture(const std::string & tuner_name,
                  hdhomerun_device_t * hd,
@@ -466,7 +466,7 @@ namespace yae
   //
   bool
   HDHomeRun::Private::
-  get_channels(std::map<ChannelNumber, std::string> & chan_freq) const
+  get_channels(std::map<uint32_t, std::string> & chan_freq) const
   {
     for (Json::Value::const_iterator i = tuner_cache_.begin();
          i != tuner_cache_.end(); ++i)
@@ -488,8 +488,9 @@ namespace yae
                k != programs.end(); ++k)
           {
             const Json::Value & program = *k;
-            yae::ChannelNumber ch_num(program["virtual_major"].asUInt(),
-                                      program["virtual_minor"].asUInt());
+            const uint32_t ch_num =
+              yae::mpeg_ts::channel_number(program["virtual_major"].asUInt(),
+                                           program["virtual_minor"].asUInt());
             chan_freq[ch_num] = frequency;
           }
         }
@@ -703,7 +704,7 @@ namespace yae
   // HDHomeRun::get_channels
   //
   bool
-  HDHomeRun::get_channels(std::map<ChannelNumber, std::string> & ch_freq) const
+  HDHomeRun::get_channels(std::map<uint32_t, std::string> & ch_freq) const
   {
     return private_->get_channels(ch_freq);
   }

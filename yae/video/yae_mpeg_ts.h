@@ -17,12 +17,17 @@
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #endif
+
+// jsoncpp:
+#include "json/json.h"
 
 // yae includes:
 #include "yae/api/yae_api.h"
 #include "yae/utils/yae_data.h"
+#include "yae/utils/yae_json.h"
 #include "yae/utils/yae_time.h"
 
 
@@ -2041,10 +2046,34 @@ namespace yae
     YAE_API yae::Data
     assemble_payload(std::list<TSPacket> & packets);
 
+
     //----------------------------------------------------------------
-    // ChannelNumber
+    // channel_number
     //
-    typedef std::pair<uint16_t, uint16_t> ChannelNumber;
+    inline uint32_t
+    channel_number(uint16_t major, uint16_t minor)
+    {
+      return (uint32_t(major) << 16) | uint32_t(minor);
+    }
+
+    //----------------------------------------------------------------
+    // channel_major
+    //
+    inline uint16_t
+    channel_major(uint32_t channel_number)
+    {
+      return uint16_t(channel_number >> 16);
+    }
+
+    //----------------------------------------------------------------
+    // channel_minor
+    //
+    inline uint16_t
+    channel_minor(uint32_t channel_number)
+    {
+      return uint16_t(channel_number & 0xFFFF);
+    }
+
 
     //----------------------------------------------------------------
     // ChannelGuide
@@ -2112,11 +2141,40 @@ namespace yae
       std::list<Item> items_;
 
       // per-event per-language event descriptions:
-      std::map<uint16_t, TLangText > event_etm_;
+      std::map<uint16_t, TLangText> event_etm_;
 
       // per-language channel description:
       TLangText channel_etm_;
     };
+
+
+    //----------------------------------------------------------------
+    // Bucket
+    //
+    struct YAE_API Bucket
+    {
+      // map major.minor channel number to ChannelGuide:
+      std::map<uint32_t, ChannelGuide> guide_;
+
+      // map source_id to major.minor channel number:
+      std::map<uint16_t, uint32_t> source_id_to_ch_num_;
+
+      // region rating table:
+      RRTSectionPtr rrt_;
+    };
+
+
+    YAE_API void save(Json::Value & json, const ChannelGuide::Item & item);
+    YAE_API void load(const Json::Value & json, ChannelGuide::Item & item);
+
+    YAE_API void save(Json::Value & json, const ChannelGuide::Track & trk);
+    YAE_API void load(const Json::Value & json, ChannelGuide::Track & trk);
+
+    YAE_API void save(Json::Value & json, const ChannelGuide & guide);
+    YAE_API void load(const Json::Value & json, ChannelGuide & guide);
+
+    YAE_API void save(Json::Value & json, const Bucket & bucket);
+    YAE_API void load(const Json::Value & json, Bucket & bucket);
 
 
     //----------------------------------------------------------------
@@ -2132,22 +2190,13 @@ namespace yae
 
       bool channel_guide_overlaps(time_t t) const;
 
+      void save(Json::Value & json) const;
+      void load(const Json::Value & json);
+
     protected:
       void consume(uint16_t pid,
                    std::list<TSPacket> & packets,
                    bool parse = true);
-
-      struct Bucket
-      {
-        // map major.minor channel number to ChannelGuide:
-        std::map<ChannelNumber, ChannelGuide> guide_;
-
-        // map source_id to major.minor channel number:
-        std::map<uint16_t, ChannelNumber> source_id_to_ch_num_;
-
-        // region rating table:
-        RRTSectionPtr rrt_;
-      };
 
       inline std::size_t bucket_index_at(uint32_t gps_time) const
       { return (gps_time / 10800) & 0xFF; }
@@ -2180,7 +2229,7 @@ namespace yae
       // 32 days worth of channel guide data in 3 hour long chunks,
       // indexed by an index derived from STT system time:
       //
-      Bucket bucket_[256]; // 32 * 8
+      std::vector<Bucket> bucket_; // 32 * 8
 
       // unused:
       uint16_t network_pid_;

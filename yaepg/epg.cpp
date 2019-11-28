@@ -38,9 +38,6 @@
 // namespace shortcut:
 namespace fs = boost::filesystem;
 
-// namespace access:
-using yae::mpeg_ts::ChannelNumber;
-
 
 namespace yae
 {
@@ -338,14 +335,14 @@ main_may_throw(int argc, char ** argv)
   static const yae::TTime max_duration(30, 1);
   yae::HDHomeRun hdhr;
 
-  std::map<ChannelNumber, std::string> channels;
+  std::map<uint32_t, std::string> channels;
   hdhr.get_channels(channels);
 
   std::list<std::string> frequencies;
-  for (std::map<ChannelNumber, std::string>::const_iterator
+  for (std::map<uint32_t, std::string>::const_iterator
          i = channels.begin(); i != channels.end(); ++i)
   {
-    const ChannelNumber & ch_num = i->first;
+    const uint32_t ch_num = i->first;
     const std::string & frequency = i->second;
     if (frequencies.empty() || frequencies.back() != frequency)
     {
@@ -360,6 +357,8 @@ main_may_throw(int argc, char ** argv)
   // hdhr.capture_all(max_duration, callback);
   // hdhr.capture(std::string("539000000"), callback, max_duration);
 
+  Json::Value document;
+  Json::Value & json = document["frequencies"];
   for (std::list<std::string>::const_iterator
          i = frequencies.begin(); i != frequencies.end(); ++i)
   {
@@ -377,6 +376,18 @@ main_may_throw(int argc, char ** argv)
     const yae::Capture::Work & work = *work_ptr;
     const yae::mpeg_ts::Context & ctx = work.ctx_;
     ctx.dump();
+    ctx.save(json[frequency]);
+
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+
+    std::string epg_path = (fs::path(yaepg_dir) / "epg.json").string();
+    yae::TOpenFile epg_file;
+    if (epg_file.open(epg_path, "wb"))
+    {
+      document["timestamp"] = Json::Int64(yae::TTime::now().get(1));
+      epg_file.save(document);
+    }
   }
 
 #else

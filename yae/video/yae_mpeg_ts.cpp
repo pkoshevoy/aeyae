@@ -22,6 +22,9 @@ namespace yae
 
   namespace mpeg_ts
   {
+    // namespace access:
+    using yae::load;
+    using yae::save;
 
     //----------------------------------------------------------------
     // AdaptationField::Extension::Extension
@@ -4055,6 +4058,114 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const ChannelGuide::Item & item)
+    {
+      save(json["source_id"], item.source_id_);
+      save(json["event_id"], item.event_id_);
+      save(json["t0"], item.t0_);
+      save(json["dt"], item.dt_);
+      save(json["title"], item.title_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, ChannelGuide::Item & item)
+    {
+      load(json["source_id"], item.source_id_);
+      load(json["source_id"], item.event_id_);
+      load(json["t0"], item.t0_);
+      load(json["dt"], item.dt_);
+      load(json["title"], item.title_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const ChannelGuide::Track & track)
+    {
+      save(json["lang"], track.lang_);
+      save(json["stream_type"], track.stream_type_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, ChannelGuide::Track & track)
+    {
+      load(json["lang"], track.lang_);
+      load(json["stream_type"], track.stream_type_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const ChannelGuide & chan)
+    {
+      save(json["name"], chan.name_);
+      save(json["source_id"], chan.source_id_);
+      save(json["program_number"], chan.program_number_);
+      save(json["access_controlled"], chan.access_controlled_);
+      save(json["hidden"], chan.hidden_);
+      save(json["hide_guide"], chan.hide_guide_);
+      save(json["pcr_pid"], chan.pcr_pid_);
+      save(json["es"], chan.es_);
+      save(json["items"], chan.items_);
+      save(json["event_etm"], chan.event_etm_);
+      save(json["channel_etm"], chan.channel_etm_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, ChannelGuide & chan)
+    {
+      load(json["name"], chan.name_);
+      load(json["source_id"], chan.source_id_);
+      load(json["program_number"], chan.program_number_);
+      load(json["access_controlled"], chan.access_controlled_);
+      load(json["hidden"], chan.hidden_);
+      load(json["hide_guide"], chan.hide_guide_);
+      load(json["pcr_pid"], chan.pcr_pid_);
+      load(json["es"], chan.es_);
+      load(json["items"], chan.items_);
+      load(json["event_etm"], chan.event_etm_);
+      load(json["channel_etm"], chan.channel_etm_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const Bucket & bucket)
+    {
+      save(json["guide"], bucket.guide_);
+      save(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, Bucket & bucket)
+    {
+      load(json["guide"], bucket.guide_);
+      load(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
+    }
+
+
+    //----------------------------------------------------------------
     // Context::consume
     //
     void
@@ -4310,6 +4421,7 @@ namespace yae
     // Context::Context
     //
     Context::Context():
+      bucket_(256),
       network_pid_(0),
       stt_error_(0)
     {}
@@ -4595,8 +4707,8 @@ namespace yae
         const VirtualChannelTable::Channel & c = vct.channel_[i];
         std::string name;
         yae::utf16_to_utf8(c.short_name_, c.short_name_ + 7, name);
-        ChannelNumber ch_num(c.major_channel_number_,
-                             c.minor_channel_number_);
+        const uint32_t ch_num = channel_number(c.major_channel_number_,
+                                               c.minor_channel_number_);
         bucket.source_id_to_ch_num_[c.source_id_] = ch_num;
 
         ChannelGuide & chan = bucket.guide_[ch_num];
@@ -4677,7 +4789,7 @@ namespace yae
     //----------------------------------------------------------------
     // ch_invalid
     //
-    static const ChannelNumber ch_invalid(0xFFFF, 0xFFFF);
+    static const uint32_t ch_invalid = std::numeric_limits<uint32_t>::max();
 
     //----------------------------------------------------------------
     // Context::consume_eit
@@ -4739,9 +4851,9 @@ namespace yae
         return;
       }
 
-      const ChannelNumber & ch_num = yae::get(bucket.source_id_to_ch_num_,
-                                              eit.source_id_,
-                                              ch_invalid);
+      const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
+                                       eit.source_id_,
+                                       ch_invalid);
       if (ch_num == ch_invalid)
       {
         return;
@@ -4799,9 +4911,9 @@ namespace yae
 
       Bucket & bucket = get_current_bucket();
       unsigned short int source_id = ett.etm_id_source_id_;
-      const ChannelNumber & ch_num = yae::get(bucket.source_id_to_ch_num_,
-                                              source_id,
-                                              ch_invalid);
+      const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
+                                       source_id,
+                                       ch_invalid);
       if (ch_num == ch_invalid)
       {
         return;
@@ -4861,13 +4973,14 @@ namespace yae
       }
 
       const Bucket & bucket = bucket_[bx];
-      for (std::map<ChannelNumber, ChannelGuide>::const_iterator
+      for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
-        const ChannelNumber & ch_num = i->first;
+        const uint32_t ch_num = i->first;
         const ChannelGuide & chan = i->second;
         oss << '\n'
-            << ch_num.first << '.' << ch_num.second << ' ' << chan.name_;
+            << channel_major(ch_num) << '.'
+            << channel_minor(ch_num) << ' ' << chan.name_;
         if (!chan.channel_etm_.empty())
         {
           oss << ", " << get_text(chan.channel_etm_);
@@ -4928,7 +5041,7 @@ namespace yae
         return false;
       }
 
-      for (std::map<ChannelNumber, ChannelGuide>::const_iterator
+      for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
         const ChannelGuide & chan = i->second;
@@ -4963,6 +5076,26 @@ namespace yae
       }
 
       return true;
+    }
+
+    //----------------------------------------------------------------
+    // Context::save
+    //
+    void
+    Context::save(Json::Value & json) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      yae::save(json["bucket"], bucket_);
+    }
+
+    //----------------------------------------------------------------
+    // Context::load
+    //
+    void
+    Context::load(const Json::Value & json)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      yae::load(json["bucket"], bucket_);
     }
 
   }

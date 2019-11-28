@@ -16,9 +16,6 @@
 
 namespace yae
 {
-  // namespace access:
-  using yae::mpeg_ts::ChannelNumber;
-
 
   //----------------------------------------------------------------
   // ICapture
@@ -58,7 +55,7 @@ namespace yae
     ~HDHomeRun();
 
     // fill in the major.minor -> frequency lookup table:
-    bool get_channels(std::map<ChannelNumber, std::string> & chan_freq) const;
+    bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
 
     bool capture_all(const yae::TTime & duration,
                      const TCapturePtr & callback);

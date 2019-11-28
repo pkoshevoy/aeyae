@@ -652,7 +652,7 @@ namespace yae
       virtual ~IPayload() {}
 
       // payload bitstream size, expressed in bits
-      // calculated atomatically using NullBitstream
+      // calculated automatically using NullBitstream
       virtual std::size_t size() const;
 
       virtual void save(IBitstream & bs) const = 0;
