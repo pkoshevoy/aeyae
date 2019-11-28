@@ -594,7 +594,7 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // IDescriptor
+    // Descriptor
     //
     struct YAE_API Descriptor
     {
@@ -612,6 +612,9 @@ namespace yae
 
       uint8_t descriptor_tag_;
       uint8_t descriptor_length_;
+
+      // a copy of the bytestream corresponding to the loaded descriptor:
+      // yae::Data bin_;
     };
 
     //----------------------------------------------------------------
@@ -2076,6 +2079,61 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // RatingValue
+    //
+    struct YAE_API RatingValue
+    {
+      TLangText abbrev_;
+      TLangText rating_;
+    };
+
+    //----------------------------------------------------------------
+    // RatingDimension
+    //
+    struct YAE_API RatingDimension
+    {
+      TLangText name_;
+      std::vector<RatingValue> values_;
+    };
+
+    //----------------------------------------------------------------
+    // RatingRegion
+    //
+    struct YAE_API RatingRegion
+    {
+      TLangText name_;
+      std::vector<RatingDimension> dimensions_;
+    };
+
+    //----------------------------------------------------------------
+    // ContentAdvisory
+    //
+    struct YAE_API ContentAdvisory
+    {
+      TLangText description_;
+      std::map<uint16_t, uint8_t> values_; // dimension:value
+    };
+
+
+    //----------------------------------------------------------------
+    // get_rating
+    //
+    std::string
+    get_rating(const std::map<uint16_t, RatingRegion> & rrt,
+               const uint8_t region,
+               const ContentAdvisory & ca,
+               const std::string & lang = std::string("eng"));
+
+    //----------------------------------------------------------------
+    // get_rating
+    //
+    YAE_API std::string
+    get_rating(const std::map<uint16_t, RatingRegion> & rrt,
+               const std::map<uint16_t, ContentAdvisory> & rating,
+               const std::string & lang = std::string("eng"));
+
+
+    //----------------------------------------------------------------
     // ChannelGuide
     //
     struct YAE_API ChannelGuide
@@ -2088,6 +2146,12 @@ namespace yae
       struct YAE_API Item
       {
         Item();
+
+        void set_rating(const ContentAdvisoryDescriptor & ca);
+
+        inline std::string
+        get_title(const std::string & lang = std::string("eng")) const
+        { return get_text(title_, lang); }
 
         inline uint32_t t1() const
         { return t0_ + dt_; }
@@ -2113,9 +2177,15 @@ namespace yae
         // title, indexed by language:
         TLangText title_;
 
-        // this provides a set of indecies into the RRT:
-        TContentAdvisoryDescriptorPtr ca_desc_;
+        // this provides a set of indecies into the RRT,
+        // indexed by rating region:
+        std::map<uint16_t, ContentAdvisory> rating_;
       };
+
+      std::string
+      get_description(const Item & item,
+                      const std::string & lang = std::string("eng")) const;
+
 
       //----------------------------------------------------------------
       // Track
@@ -2159,10 +2229,21 @@ namespace yae
       // map source_id to major.minor channel number:
       std::map<uint16_t, uint32_t> source_id_to_ch_num_;
 
-      // region rating table:
-      RRTSectionPtr rrt_;
+      // region rating table, indexed by ration region id:
+      std::map<uint16_t, RatingRegion> rrt_;
     };
 
+    YAE_API void save(Json::Value & json, const RatingValue & rv);
+    YAE_API void load(const Json::Value & json, RatingValue & rv);
+
+    YAE_API void save(Json::Value & json, const RatingDimension & rd);
+    YAE_API void load(const Json::Value & json, RatingDimension & rd);
+
+    YAE_API void save(Json::Value & json, const RatingRegion & rr);
+    YAE_API void load(const Json::Value & json, RatingRegion & rr);
+
+    YAE_API void save(Json::Value & json, const ContentAdvisory & ca);
+    YAE_API void load(const Json::Value & json, ContentAdvisory & ca);
 
     YAE_API void save(Json::Value & json, const ChannelGuide::Item & item);
     YAE_API void load(const Json::Value & json, ChannelGuide::Item & item);
@@ -2186,7 +2267,7 @@ namespace yae
 
       void load(IBitstream & bin, TSPacket & pkt);
 
-      void dump() const;
+      void dump(const std::string & lang = std::string("eng")) const;
 
       bool channel_guide_overlaps(time_t t) const;
 

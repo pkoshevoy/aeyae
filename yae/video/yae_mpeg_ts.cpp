@@ -2559,6 +2559,7 @@ namespace yae
     TDescriptorPtr
     load_descriptor(IBitstream & bin)
     {
+      // std::size_t start_pos = bin.position();
       TDescriptorPtr descriptor;
       uint8_t descriptor_tag = bin.peek(8);
 
@@ -2750,7 +2751,11 @@ namespace yae
       }
 
       YAE_THROW_IF(!descriptor);
+
       descriptor->load(bin);
+      // std::size_t consumed_bytes = (bin.position() - start_pos) >> 3;
+      // descriptor->bin_ = bin.peek_bytes_at(start_pos, consumed_bytes);
+
       return descriptor;
     }
 
@@ -2795,7 +2800,16 @@ namespace yae
       section_length_ = bin.read(12);
       YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
 
-      transport_stream_id_ = bin.read(16);
+      if (table_id_ == 0xCA)
+      {
+        reserved_ = bin.read(8);
+        rating_region_ = bin.read(8);
+      }
+      else
+      {
+        transport_stream_id_ = bin.read(16);
+      }
+
       reserved2_ = bin.read(2);
       YAE_THROW_IF(reserved2_ != 0x3);
 
@@ -4033,6 +4047,87 @@ namespace yae
       return payload;
     }
 
+    //----------------------------------------------------------------
+    // get_rating
+    //
+    std::string
+    get_rating(const std::map<uint16_t, RatingRegion> & rrt,
+               const uint8_t region,
+               const ContentAdvisory & ca,
+               const std::string & lang)
+    {
+      std::ostringstream oss;
+
+      const char * sep = "";
+      std::string ca_description = get_text(ca.description_, lang);
+      if (!ca_description.empty())
+      {
+        oss << ca_description;
+        sep = ", ";
+      }
+
+      std::map<uint16_t, RatingRegion>::const_iterator found = rrt.find(region);
+      if (found != rrt.end())
+      {
+        const RatingRegion & rr = found->second;
+        for (std::map<uint16_t, uint8_t>::const_iterator
+               l = ca.values_.begin(); l != ca.values_.end(); ++l)
+        {
+          uint8_t di = uint8_t(l->first);
+          if (di < rr.dimensions_.size())
+          {
+            const RatingDimension & rd = rr.dimensions_[di];
+            uint8_t vi = l->second;
+            if (vi < rd.values_.size())
+            {
+              const RatingValue & rv = rd.values_[vi];
+              std::string abbrev = get_text(rv.abbrev_, lang);
+              std::string rating = get_text(rv.rating_, lang);
+
+              if (!abbrev.empty() && abbrev != ca_description)
+              {
+                oss << sep << abbrev;
+                sep = ", ";
+
+                if (abbrev != rating)
+                {
+                  oss << " (" << rating << ")";
+                }
+              }
+            }
+          }
+        }
+      }
+
+      return std::string(oss.str().c_str());
+    }
+
+    //----------------------------------------------------------------
+    // get_rating
+    //
+    std::string
+    get_rating(const std::map<uint16_t, RatingRegion> & rrt,
+               const std::map<uint16_t, ContentAdvisory> & region_ratings,
+               const std::string & lang)
+    {
+      std::ostringstream oss;
+
+      const char * sep = "";
+      for (std::map<uint16_t, ContentAdvisory>::const_iterator
+             k = region_ratings.begin(); k != region_ratings.end(); ++k)
+      {
+        uint8_t rating_region = uint8_t(k->first);
+        const ContentAdvisory & ca = k->second;
+        std::string rating = get_rating(rrt, rating_region, ca);
+        if (!rating.empty())
+        {
+          oss << sep << rating;
+          sep = ", ";
+        }
+      }
+
+      return std::string(oss.str().c_str());
+    }
 
     //----------------------------------------------------------------
     // ChannelGuide::ChannelGuide
@@ -4056,6 +4151,132 @@ namespace yae
       dt_(0)
     {}
 
+    //----------------------------------------------------------------
+    // ChannelGuide::Item::set_rating
+    //
+    void
+    ChannelGuide::Item::set_rating(const ContentAdvisoryDescriptor & rating)
+    {
+      for (std::size_t i = 0, z = rating.region_.size(); i < z; i++)
+      {
+        const ContentAdvisoryDescriptor::Region & r = rating.region_[i];
+        ContentAdvisory & ca = rating_[r.rating_region_];
+        r.rating_description_text_.get(ca.description_);
+
+        for (std::size_t j = 0, n = r.dimension_.size(); j < n; j++)
+        {
+          const ContentAdvisoryDescriptor::Region::Dimension & d =
+            r.dimension_[j];
+          ca.values_[d.rating_dimension_] = d.rating_value_;
+        }
+      }
+    }
+
+    //----------------------------------------------------------------
+    // ChannelGuide::get_description
+    //
+    std::string
+    ChannelGuide::get_description(const Item & item,
+                                  const std::string & lang) const
+    {
+      std::string description;
+
+      std::map<uint16_t, TLangText>::const_iterator found_etm =
+        event_etm_.find(item.event_id_);
+
+      if (found_etm != event_etm_.end())
+      {
+        const TLangText & lang_text = found_etm->second;
+        description = get_text(lang_text, lang);
+      }
+
+      return description;
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const RatingValue & rv)
+    {
+      save(json["abbrev"], rv.abbrev_);
+      save(json["rating"], rv.rating_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, RatingValue & rv)
+    {
+      load(json["abbrev"], rv.abbrev_);
+      load(json["rating"], rv.rating_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const RatingDimension & rd)
+    {
+      save(json["name"], rd.name_);
+      save(json["values"], rd.values_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, RatingDimension & rd)
+    {
+      load(json["name"], rd.name_);
+      load(json["values"], rd.values_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const RatingRegion & rr)
+    {
+      save(json["name"], rr.name_);
+      save(json["dimensions"], rr.dimensions_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, RatingRegion & rr)
+    {
+      load(json["name"], rr.name_);
+      load(json["dimensions"], rr.dimensions_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const ContentAdvisory & ca)
+    {
+      save(json["description"], ca.description_);
+      save(json["values"], ca.values_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, ContentAdvisory & ca)
+    {
+      load(json["description"], ca.description_);
+      load(json["values"], ca.values_);
+    }
+
 
     //----------------------------------------------------------------
     // save
@@ -4068,6 +4289,7 @@ namespace yae
       save(json["t0"], item.t0_);
       save(json["dt"], item.dt_);
       save(json["title"], item.title_);
+      save(json["rating"], item.rating_);
     }
 
     //----------------------------------------------------------------
@@ -4081,6 +4303,7 @@ namespace yae
       load(json["t0"], item.t0_);
       load(json["dt"], item.dt_);
       load(json["title"], item.title_);
+      load(json["rating"], item.rating_);
     }
 
 
@@ -4152,6 +4375,7 @@ namespace yae
     {
       save(json["guide"], bucket.guide_);
       save(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
+      save(json["rrt"], bucket.rrt_);
     }
 
     //----------------------------------------------------------------
@@ -4162,6 +4386,7 @@ namespace yae
     {
       load(json["guide"], bucket.guide_);
       load(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
+      load(json["rrt"], bucket.rrt_);
     }
 
 
@@ -4442,9 +4667,10 @@ namespace yae
       std::size_t bytes_consumed = end_pos >> 3;
       if (bytes_consumed != 188)
       {
-        std::string data_hex = yae::to_hex(packet->get(),
-                                           std::min<int>(32, packet->size()),
-                                           4);
+        std::string data_hex =
+          yae::to_hex(packet->get(),
+                      std::min<std::size_t>(32, packet->size()),
+                      4);
         yae_wlog("TSPacket too short (%i bytes), %s ...",
                  bytes_consumed,
                  data_hex.c_str());
@@ -4577,12 +4803,12 @@ namespace yae
     {
       if (stt_)
       {
-        uint32_t t = stt_->system_time_ - stt_error_;
+        uint32_t t = uint32_t(stt_->system_time_ - stt_error_);
         return t;
       }
 
       TTime now = TTime::now();
-      uint64_t t = now.get(1) - unix_epoch_gps_offset;
+      int64_t t = now.get(1) - unix_epoch_gps_offset;
       return uint32_t(t);
     }
 
@@ -4607,7 +4833,7 @@ namespace yae
     uint32_t
     Context::unix_time_to_gps_time(time_t t) const
     {
-      uint32_t gps_time = (t - unix_epoch_gps_offset) + stt_error_;
+      uint32_t gps_time = uint32_t((t - unix_epoch_gps_offset) + stt_error_);
 
       if (stt_)
       {
@@ -4746,12 +4972,9 @@ namespace yae
     void
     Context::consume_rrt(const RRTSectionPtr & rrt_section)
     {
-      Bucket & bucket = get_current_bucket();
-      bucket.rrt_ = rrt_section;
+      const RatingRegionTable & rrt = *(rrt_section);
 
 #if 0
-      const RatingRegionTable & rrt = *(bucket.rrt_);
-
       std::ostringstream oss;
       oss << "RRT: rating region: " << int(rrt.rating_region_)
           << ", name: \"" << rrt.rating_region_name_text_.to_str()
@@ -4784,7 +5007,31 @@ namespace yae
       oss << "\n\n";
       yae_debug << oss.str();
 #endif
-    }
+
+      Bucket & bucket = get_current_bucket();
+      RatingRegion & rr = bucket.rrt_[rrt.rating_region_];
+      rrt.rating_region_name_text_.get(rr.name_);
+
+      std::vector<RatingDimension> dimensions(rrt.dimensions_defined_);
+      for (std::size_t i = 0; i < rrt.dimensions_defined_; i++)
+      {
+        const RatingRegionTable::Dimension & d = rrt.dimension_[i];
+        RatingDimension & rrd = dimensions[i];
+        d.dimension_name_text_.get(rrd.name_);
+
+        rrd.values_.resize(d.values_defined_);
+        for (std::size_t j = 0; j < d.values_defined_; j++)
+        {
+          const RatingRegionTable::Dimension::Rating & r = d.rating_[j];
+          RatingValue & value = rrd.values_[j];
+
+          r.abbrev_rating_value_text_.get(value.abbrev_);
+          r.rating_value_text_.get(value.rating_);
+        }
+      }
+
+      rr.dimensions_.swap(dimensions);
+   }
 
     //----------------------------------------------------------------
     // ch_invalid
@@ -4841,7 +5088,7 @@ namespace yae
           TContentAdvisoryDescriptorPtr ca_desc = desc;
           if (ca_desc)
           {
-            item.ca_desc_ = ca_desc;
+            item.set_rating(*ca_desc);
           }
         }
       }
@@ -4956,7 +5203,7 @@ namespace yae
     // Context::dump
     //
     void
-    Context::dump() const
+    Context::dump(const std::string & lang) const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       std::ostringstream oss;
@@ -4983,7 +5230,7 @@ namespace yae
             << channel_minor(ch_num) << ' ' << chan.name_;
         if (!chan.channel_etm_.empty())
         {
-          oss << ", " << get_text(chan.channel_etm_);
+          oss << ", " << get_text(chan.channel_etm_, lang);
         }
         oss << ":\n";
 
@@ -4992,18 +5239,20 @@ namespace yae
         {
           const ChannelGuide::Item & item = *j;
           std::string t = gps_time_to_str(item.t0_);
-          oss << "  " << t << ' ' << get_text(item.title_) << '\n';
+          oss << "  " << t << ' ' << item.get_title();
 
-          std::map<uint16_t, TLangText>::const_iterator
-            found_etm = chan.event_etm_.find(item.event_id_);
-          if (found_etm != chan.event_etm_.end())
+          std::string rating = get_rating(bucket.rrt_, item.rating_, lang);
+          if (!rating.empty())
           {
-            const TLangText & lang_text = found_etm->second;
-            std::string description = get_text(lang_text);
-            if (!description.empty())
-            {
-              oss << "    " << description << '\n';
-            }
+            oss << " [" << rating << "]";
+          }
+
+          oss << '\n';
+
+          std::string description = chan.get_description(item, lang);
+          if (!description.empty())
+          {
+            oss << "    " << description << '\n';
           }
 
           oss << '\n';
@@ -5011,6 +5260,7 @@ namespace yae
       }
 
       yae_debug << oss.str();
+      // yae::dump("/tmp/yaepg.log", oss.str().c_str(), oss.str().size());
     }
 
     //----------------------------------------------------------------

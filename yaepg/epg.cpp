@@ -488,18 +488,6 @@ main_may_throw(int argc, char ** argv)
 
     yae::fseek64(src.file_, pos + offset, SEEK_SET);
   }
-
-  // FIXME: pkoshevoy:
-  yae_dlog("-------------- remaining incomplete packets below --------------");
-  for (std::map<uint16_t, std::list<yae::mpeg_ts::TSPacket> >::iterator
-         i = ts_ctx.pes_.begin(); i != ts_ctx.pes_.end(); ++i)
-  {
-    uint16_t pid = i->first;
-    std::list<yae::mpeg_ts::TSPacket> & pes = i->second;
-    ts_ctx.consume(pid, pes, false);
-  }
-
-  // FIXME: pkoshevoy:
   ts_ctx.dump();
 #endif
 
