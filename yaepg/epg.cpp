@@ -50,17 +50,20 @@ namespace yae
     Capture(bool epg_only = false);
     ~Capture();
 
+    void save() const;
+
     //----------------------------------------------------------------
-    // Work
+    // Stream
     //
-    struct Work
+    struct Stream
     {
-      Work(Capture & capture):
+      Stream(Capture & capture):
         capture_(capture),
-        rb_(188 * 4096)
+        rb_(188 * 4096),
+        start_(0, 0)
       {}
 
-      ~Work()
+      ~Stream()
       {
         rb_.close();
         worker_.stop();
@@ -76,9 +79,9 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // TWorkPtr
+    // TStreamPtr
     //
-    typedef boost::shared_ptr<Work> TWorkPtr;
+    typedef boost::shared_ptr<Stream> TStreamPtr;
 
     //----------------------------------------------------------------
     // Task
@@ -88,7 +91,7 @@ namespace yae
       Task(const std::string & tuner_name,
            const std::string & frequency,
            std::size_t size,
-           Work & work);
+           Stream & stream);
 
       // virtual:
       void execute(const yae::Worker & worker);
@@ -96,7 +99,7 @@ namespace yae
       std::string tuner_name_;
       std::string frequency_;
       std::size_t size_;
-      Work & work_;
+      Stream & stream_;
     };
 
     //----------------------------------------------------------------
@@ -108,7 +111,7 @@ namespace yae
          const void * data,
          std::size_t size);
 
-    std::map<std::string, TWorkPtr> work_;
+    std::map<std::string, TStreamPtr> stream_;
     bool epg_only_;
   };
 
@@ -118,23 +121,87 @@ namespace yae
   //
   Capture::Capture(bool epg_only):
     epg_only_(epg_only)
-  {}
+  {
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+
+    std::string freq_path =
+      (fs::path(yaepg_dir) / "frequencies.json").string();
+
+    Json::Value json;
+    yae::TOpenFile(freq_path, "rb").load(json);
+
+    std::list<std::string> frequencies;
+    yae::load(json, frequencies);
+
+    for (std::list<std::string>::const_iterator
+           i = frequencies.begin(); i != frequencies.end(); ++i)
+    {
+      const std::string & frequency = *i;
+      std::string epg_path =
+        (fs::path(yaepg_dir) / ("epg-" + frequency + ".json")).string();
+
+      Json::Value epg;
+      if (yae::TOpenFile(epg_path, "rb").load(epg))
+      {
+        TStreamPtr & stream_ptr = stream_[frequency];
+        stream_ptr.reset(new Stream(*this));
+
+        Stream & stream = *stream_ptr;
+        stream.ctx_.load(epg[frequency]);
+      }
+    }
+  }
 
   //----------------------------------------------------------------
   // Capture::~Capture
   //
   Capture::~Capture()
   {
-#if 0
-    for (std::map<std::string, TWorkPtr>::const_iterator
-           i = work_.begin(); i != work_.end(); ++i)
+    save();
+  }
+
+  //----------------------------------------------------------------
+  // Capture::save
+  //
+  void
+  Capture::save() const
+  {
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+
+    std::list<std::string> frequencies;
+    for (std::map<std::string, TStreamPtr>::const_iterator
+           i = stream_.begin(); i != stream_.end(); ++i)
     {
       const std::string & frequency = i->first;
-      const Work & work = *(i->second);
-      const yae::mpeg_ts::Context & ctx = work.ctx_;
-      ctx.dump();
+      const Stream & stream = *(i->second);
+      frequencies.push_back(frequency);
+
+      Json::Value json;
+      stream.ctx_.save(json[frequency]);
+      json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
+
+      std::string epg_path =
+        (fs::path(yaepg_dir) / ("epg-" + frequency + ".json")).string();
+
+      yae::TOpenFile epg_file;
+      if (epg_file.open(epg_path, "wb"))
+      {
+        epg_file.save(json);
+      }
     }
-#endif
+
+    Json::Value json;
+    yae::save(json, frequencies);
+
+    std::string freq_path =
+      (fs::path(yaepg_dir) / "frequencies.json").string();
+
+    yae::TOpenFile freq_file;
+    if (freq_file.open(freq_path, "wb"))
+    {
+      freq_file.save(json);
+    }
   }
 
   //----------------------------------------------------------------
@@ -143,11 +210,11 @@ namespace yae
   Capture::Task::Task(const std::string & tuner_name,
                       const std::string & frequency,
                       std::size_t size,
-                      Work & work):
+                      Stream & stream):
     tuner_name_(tuner_name),
     frequency_(frequency),
     size_(size),
-    work_(work)
+    stream_(stream)
   {}
 
   //----------------------------------------------------------------
@@ -158,9 +225,9 @@ namespace yae
   {
     (void)worker;
 
-    yae::RingBuffer & rb = work_.rb_;
-    TOpenFile & file = *(work_.file_);
-    yae::mpeg_ts::Context & ctx = work_.ctx_;
+    yae::RingBuffer & rb = stream_.rb_;
+    TOpenFile & file = *(stream_.file_);
+    yae::mpeg_ts::Context & ctx = stream_.ctx_;
 
     yae::TTime start = TTime::now();
     std::size_t done = 0;
@@ -249,24 +316,30 @@ namespace yae
     capture.write(data, size);
 #endif
 
-    TWorkPtr & work_ptr = work_[frequency];
-    if (!work_ptr)
+    TStreamPtr & stream_ptr = stream_[frequency];
+    if (!stream_ptr)
     {
-      work_ptr.reset(new Work(*this));
-      Work & work = *work_ptr;
-      work.start_ = TTime::now();
+      stream_ptr.reset(new Stream(*this));
+    }
 
+    Stream & stream = *stream_ptr;
+    yae::RingBuffer & rb = stream.rb_;
+    yae::mpeg_ts::Context & ctx = stream.ctx_;
+
+    if (!stream.start_.valid())
+    {
+      stream.start_ = TTime::now();
+    }
+
+    if (!stream.file_)
+    {
       std::string capture_path =
         (fs::path("/tmp") / (frequency + ".ts")).string();
 
       TOpenFilePtr file = get_open_file(capture_path.c_str(), "wb");
       YAE_THROW_IF(!(file && file->is_open()));
-      work.file_ = file;
+      stream.file_ = file;
     }
-
-    Work & work = *work_ptr;
-    yae::RingBuffer & rb = work.rb_;
-    yae::mpeg_ts::Context & ctx = work.ctx_;
 
     if (epg_only_)
     {
@@ -277,7 +350,7 @@ namespace yae
 
       if (ctx.channel_guide_overlaps(t) && rb.is_open())
       {
-        TTime elapsed_time = now - work.start_;
+        TTime elapsed_time = now - stream.start_;
         yae_dlog("%s %sHz EPG ready, elapsed time: %s",
                  tuner_name.c_str(),
                  frequency.c_str(),
@@ -307,8 +380,8 @@ namespace yae
 #endif
 
     yae::shared_ptr<Task, yae::Worker::Task> task;
-    task.reset(new Task(tuner_name, frequency, size, work));
-    work.worker_.add(task);
+    task.reset(new Task(tuner_name, frequency, size, stream));
+    stream.worker_.add(task);
 
     TResponse response = MORE_E;
     if (rb.push(data, size) != size)
@@ -319,179 +392,164 @@ namespace yae
     return response;
   }
 
-}
 
-
-//----------------------------------------------------------------
-// main_may_throw
-//
-int
-main_may_throw(int argc, char ** argv)
-{
-  // install signal handler:
-  yae::signal_handler();
+  //----------------------------------------------------------------
+  // main_may_throw
+  //
+  int
+  main_may_throw(int argc, char ** argv)
+  {
+    // install signal handler:
+    yae::signal_handler();
 
 #if 1
-  static const yae::TTime max_duration(30, 1);
-  yae::HDHomeRun hdhr;
+    static const yae::TTime max_duration(30, 1);
+    yae::HDHomeRun hdhr;
 
-  std::map<uint32_t, std::string> channels;
-  hdhr.get_channels(channels);
+    std::map<uint32_t, std::string> channels;
+    hdhr.get_channels(channels);
 
-  std::list<std::string> frequencies;
-  for (std::map<uint32_t, std::string>::const_iterator
-         i = channels.begin(); i != channels.end(); ++i)
-  {
-    const uint32_t ch_num = i->first;
-    const std::string & frequency = i->second;
-    if (frequencies.empty() || frequencies.back() != frequency)
+    std::list<std::string> frequencies;
+    for (std::map<uint32_t, std::string>::const_iterator
+           i = channels.begin(); i != channels.end(); ++i)
     {
-      frequencies.push_back(frequency);
-    }
-  }
-
-  bool epg_only = true;
-  yae::shared_ptr<yae::Capture, yae::ICapture>
-    callback(new yae::Capture(epg_only));
-
-  // hdhr.capture_all(max_duration, callback);
-  // hdhr.capture(std::string("539000000"), callback, max_duration);
-
-  Json::Value document;
-  Json::Value & json = document["frequencies"];
-  for (std::list<std::string>::const_iterator
-         i = frequencies.begin(); i != frequencies.end(); ++i)
-  {
-    const std::string & frequency = *i;
-    hdhr.capture(frequency, callback, max_duration);
-
-    yae::Capture::TWorkPtr work_ptr;
-    work_ptr = yae::get(callback->work_, frequency, work_ptr);
-
-    if (!work_ptr)
-    {
-      continue;
+      const std::string & frequency = i->second;
+      if (frequencies.empty() || frequencies.back() != frequency)
+      {
+        frequencies.push_back(frequency);
+      }
     }
 
-    const yae::Capture::Work & work = *work_ptr;
-    const yae::mpeg_ts::Context & ctx = work.ctx_;
-    ctx.dump();
-    ctx.save(json[frequency]);
+    bool epg_only = true;
+    yae::shared_ptr<Capture, ICapture> dvr_ptr(new Capture(epg_only));
+    Capture & dvr = *dvr_ptr;
 
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+    // hdhr.capture_all(max_duration, dvr_ptr);
+    // hdhr.capture(std::string("539000000"), dvr_ptr, max_duration);
 
-    std::string epg_path = (fs::path(yaepg_dir) / "epg.json").string();
-    yae::TOpenFile epg_file;
-    if (epg_file.open(epg_path, "wb"))
+    for (std::list<std::string>::const_iterator
+           i = frequencies.begin(); i != frequencies.end(); ++i)
     {
-      document["timestamp"] = Json::Int64(yae::TTime::now().get(1));
-      epg_file.save(document);
+      const std::string & frequency = *i;
+      hdhr.capture(frequency, dvr_ptr, max_duration);
+
+      yae::Capture::TStreamPtr stream_ptr;
+      stream_ptr = yae::get(dvr.stream_, frequency, stream_ptr);
+
+      if (!stream_ptr)
+      {
+        continue;
+      }
+
+      const yae::Capture::Stream & stream = *stream_ptr;
+      const yae::mpeg_ts::Context & ctx = stream.ctx_;
+      ctx.dump();
+      dvr.save();
     }
-  }
 
 #else
 #if 0
-  const char * fn = "/tmp/473000000.ts"; // 10.1
-  const char * fn = "/tmp/479000000.ts"; // 23.1 KBTU
-  const char * fn = "/tmp/491000000.ts"; // 11.1 KBYU
-  const char * fn = "/tmp/503000000.ts"; // 14.1 KJZZ
-  const char * fn = "/tmp/509000000.ts"; // 20.1 KTMW
-  const char * fn = "/tmp/515000000.ts"; // 50.1 KEJT
-  const char * fn = "/tmp/527000000.ts"; // 5.1 KSL
-  const char * fn = "/tmp/533000000.ts"; // 24.1 KPNZ
-  const char * fn = "/tmp/539000000.ts"; // 25.1 KSVN
-  const char * fn = "/tmp/551000000.ts"; // 7.1 KUED
-  const char * fn = "/tmp/557000000.ts"; // 13.1 KSTU
-  const char * fn = "/tmp/563000000.ts"; // 16.1 ION
-  const char * fn = "/tmp/569000000.ts"; // 4.1 KTVX
-  const char * fn = "/tmp/593000000.ts"; // 2.1 KUTV
-  const char * fn = "/tmp/599000000.ts"; // 30.1 KUCW
+    const char * fn = "/tmp/473000000.ts"; // 10.1
+    const char * fn = "/tmp/479000000.ts"; // 23.1 KBTU
+    const char * fn = "/tmp/491000000.ts"; // 11.1 KBYU
+    const char * fn = "/tmp/503000000.ts"; // 14.1 KJZZ
+    const char * fn = "/tmp/509000000.ts"; // 20.1 KTMW
+    const char * fn = "/tmp/515000000.ts"; // 50.1 KEJT
+    const char * fn = "/tmp/527000000.ts"; // 5.1 KSL
+    const char * fn = "/tmp/533000000.ts"; // 24.1 KPNZ
+    const char * fn = "/tmp/539000000.ts"; // 25.1 KSVN
+    const char * fn = "/tmp/551000000.ts"; // 7.1 KUED
+    const char * fn = "/tmp/557000000.ts"; // 13.1 KSTU
+    const char * fn = "/tmp/563000000.ts"; // 16.1 ION
+    const char * fn = "/tmp/569000000.ts"; // 4.1 KTVX
+    const char * fn = "/tmp/593000000.ts"; // 2.1 KUTV
+    const char * fn = "/tmp/599000000.ts"; // 30.1 KUCW
 #endif
-  const char * fn = "/tmp/605000000.ts"; // 9.1 KUEN
+    const char * fn = "/tmp/605000000.ts"; // 9.1 KUEN
 #if 0
 #endif
 
 #if 0
-  const char * fn = "/scratch/DataSets/Video/epg/473000000.ts"; // 10.1
-  const char * fn = "/scratch/DataSets/Video/epg/479000000.ts"; // 23.1 KBTU
-  const char * fn = "/scratch/DataSets/Video/epg/491000000.ts"; // 11.1 KBYU
-  const char * fn = "/scratch/DataSets/Video/epg/503000000.ts"; // 14.1 KJZZ
-  const char * fn = "/scratch/DataSets/Video/epg/509000000.ts"; // 20.1 KTMW
-  const char * fn = "/scratch/DataSets/Video/epg/515000000.ts"; // 50.1 KEJT
-  const char * fn = "/scratch/DataSets/Video/epg/527000000.ts"; // 5.1 KSL
-  const char * fn = "/scratch/DataSets/Video/epg/533000000.ts"; // 24.1 KPNZ
-  const char * fn = "/scratch/DataSets/Video/epg/539000000.ts"; // 25.1 KSVN
+    const char * fn = "/scratch/DataSets/Video/epg/473000000.ts"; // 10.1
+    const char * fn = "/scratch/DataSets/Video/epg/479000000.ts"; // 23.1 KBTU
+    const char * fn = "/scratch/DataSets/Video/epg/491000000.ts"; // 11.1 KBYU
+    const char * fn = "/scratch/DataSets/Video/epg/503000000.ts"; // 14.1 KJZZ
+    const char * fn = "/scratch/DataSets/Video/epg/509000000.ts"; // 20.1 KTMW
+    const char * fn = "/scratch/DataSets/Video/epg/515000000.ts"; // 50.1 KEJT
+    const char * fn = "/scratch/DataSets/Video/epg/527000000.ts"; // 5.1 KSL
+    const char * fn = "/scratch/DataSets/Video/epg/533000000.ts"; // 24.1 KPNZ
+    const char * fn = "/scratch/DataSets/Video/epg/539000000.ts"; // 25.1 KSVN
 #endif
 #if 0
-  const char * fn = "/scratch/DataSets/Video/epg/551000000.ts"; // 7.1 KUED
-  const char * fn = "/scratch/DataSets/Video/epg/557000000.ts"; // 13.1 KSTU
-  const char * fn = "/scratch/DataSets/Video/epg/563000000.ts"; // 16.1 ION
-  const char * fn = "/scratch/DataSets/Video/epg/569000000.ts"; // 4.1 KTVX
-  const char * fn = "/scratch/DataSets/Video/epg/593000000.ts"; // 2.1 KUTV
-  const char * fn = "/scratch/DataSets/Video/epg/599000000.ts"; // 30.1 KUCW
-  const char * fn = "/scratch/DataSets/Video/epg/605000000.ts"; // 9.1 KUEN
+    const char * fn = "/scratch/DataSets/Video/epg/551000000.ts"; // 7.1 KUED
+    const char * fn = "/scratch/DataSets/Video/epg/557000000.ts"; // 13.1 KSTU
+    const char * fn = "/scratch/DataSets/Video/epg/563000000.ts"; // 16.1 ION
+    const char * fn = "/scratch/DataSets/Video/epg/569000000.ts"; // 4.1 KTVX
+    const char * fn = "/scratch/DataSets/Video/epg/593000000.ts"; // 2.1 KUTV
+    const char * fn = "/scratch/DataSets/Video/epg/599000000.ts"; // 30.1 KUCW
+    const char * fn = "/scratch/DataSets/Video/epg/605000000.ts"; // 9.1 KUEN
 #endif
 
-  yae::TOpenFile src(fn, "rb");
-  YAE_THROW_IF(!src.is_open());
+    yae::TOpenFile src(fn, "rb");
+    YAE_THROW_IF(!src.is_open());
 
-  yae::mpeg_ts::Context ts_ctx;
-  while (!src.is_eof())
-  {
-    yae::Data data(12 + 7 * 188);
-    uint64_t pos = yae::ftell64(src.file_);
-
-    std::size_t n = src.read(data.get(), data.size());
-    if (n < 188)
+    yae::mpeg_ts::Context ts_ctx;
+    while (!src.is_eof())
     {
-      break;
-    }
+      yae::Data data(12 + 7 * 188);
+      uint64_t pos = yae::ftell64(src.file_);
 
-    data.truncate(n);
-
-    std::size_t offset = 0;
-    while (offset + 188 <= n)
-    {
-      // find to the the sync byte:
-      if (data[offset] == 0x47 &&
-          (n - offset == 188 || data[offset + 188] == 0x47))
+      std::size_t n = src.read(data.get(), data.size());
+      if (n < 188)
       {
-        try
-        {
-          // attempt to parse the packet:
-          yae::Bitstream bs(data.get(offset, 188));
-
-          yae::mpeg_ts::TSPacket pkt;
-          ts_ctx.load(bs, pkt);
-        }
-        catch (const std::exception & e)
-        {
-          yae_wlog("failed to parse TS packet at %" PRIu64 ", %s",
-                   pos + offset, e.what());
-        }
-        catch (...)
-        {
-          yae_wlog("failed to parse TS packet at %" PRIu64
-                   ", unexpected exception",
-                   pos + offset);
-        }
-
-        // skip to next packet:
-        offset += 188;
+        break;
       }
-      else
+
+      data.truncate(n);
+
+      std::size_t offset = 0;
+      while (offset + 188 <= n)
       {
-        offset++;
-      }
-    }
+        // find to the the sync byte:
+        if (data[offset] == 0x47 &&
+            (n - offset == 188 || data[offset + 188] == 0x47))
+        {
+          try
+          {
+            // attempt to parse the packet:
+            yae::Bitstream bs(data.get(offset, 188));
 
-    yae::fseek64(src.file_, pos + offset, SEEK_SET);
+            yae::mpeg_ts::TSPacket pkt;
+            ts_ctx.load(bs, pkt);
+          }
+          catch (const std::exception & e)
+          {
+            yae_wlog("failed to parse TS packet at %" PRIu64 ", %s",
+                     pos + offset, e.what());
+          }
+          catch (...)
+          {
+            yae_wlog("failed to parse TS packet at %" PRIu64
+                     ", unexpected exception",
+                     pos + offset);
+          }
+
+          // skip to next packet:
+          offset += 188;
+        }
+        else
+        {
+          offset++;
+        }
+      }
+
+      yae::fseek64(src.file_, pos + offset, SEEK_SET);
+    }
+    ts_ctx.dump();
+#endif
+
+    return 0;
   }
-  ts_ctx.dump();
-#endif
-
-  return 0;
 }
 
 //----------------------------------------------------------------
@@ -527,7 +585,7 @@ main(int argc, char ** argv)
     yae::set_console_output_utf8();
     yae::get_main_args_utf8(argc, argv);
 
-    r = main_may_throw(argc, argv);
+    r = yae::main_may_throw(argc, argv);
     std::cout << std::flush;
   }
   catch (const std::exception & e)
