@@ -6,6 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// system:
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 // standard:
 #include <iomanip>
 #include <iostream>
@@ -584,7 +589,15 @@ main(int argc, char ** argv)
   {
     // Create and install global locale (UTF-8)
     {
-#ifndef _WIN32
+#ifdef _WIN32
+      // configure console for UTF-8 output:
+      SetConsoleOutputCP(CP_UTF8);
+
+      // initialize network socket support:
+      WORD version_requested = MAKEWORD(2, 0);
+      WSADATA wsa_data;
+      WSAStartup(version_requested, &wsa_data);
+#else
       const char * lc_type = getenv("LC_TYPE");
       const char * lc_all = getenv("LC_ALL");
       const char * lang = getenv("LANG");

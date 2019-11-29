@@ -155,6 +155,13 @@ if (HDHOMERUN_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${HDHOMERUN_LIBRARY})
 endif (HDHOMERUN_LIBRARY)
 
+if (WIN32)
+  set(TARGET_LIBS
+    ${TARGET_LIBS}
+    iphlpapi ws2_32
+    )
+endif ()
+
 
 set(TARGET_LIBS
   aeyae

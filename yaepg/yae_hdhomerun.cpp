@@ -566,6 +566,11 @@ namespace yae
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
+#ifdef _WIN32
+      // indicate activity to suppress auto sleep mode:
+      SetThreadExecutionState(ES_SYSTEM_REQUIRED);
+#endif
+
       std::size_t buffer_size = 0;
       uint8_t * buffer =
         hdhomerun_device_stream_recv(hd,
