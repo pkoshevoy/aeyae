@@ -4421,6 +4421,8 @@ namespace yae
         if (pid == 0x0000)
         {
           PATSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const ProgramAssociationTable & pat = *section;
           YAE_THROW_IF(pat.table_id_ != 0x00);
           YAE_THROW_IF(pat.private_indicator_ != 0);
@@ -4441,6 +4443,8 @@ namespace yae
         else if (pid == 0x0001)
         {
           CATSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const ConditionalAccessTable & cat = *section;
           YAE_THROW_IF(cat.table_id_ != 0x01);
           YAE_THROW_IF(cat.private_indicator_ != 0);
@@ -4448,6 +4452,8 @@ namespace yae
         else if (pid == 0x0002)
         {
           TSDescSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const TSDescriptionSection & tsd = *section;
           YAE_THROW_IF(tsd.table_id_ != 0x02);
           YAE_THROW_IF(tsd.private_indicator_ != 0);
@@ -4556,30 +4562,40 @@ namespace yae
         else if (yae::has(pid_tvct_curr_, pid))
         {
           VCTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const VirtualChannelTable & vct = *section;
           consume_vct(vct);
         }
         else if (yae::has(pid_tvct_next_, pid))
         {
           VCTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const VirtualChannelTable & vct = *section;
           consume_vct(vct);
         }
         else if (yae::has(pid_cvct_curr_, pid))
         {
           VCTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const VirtualChannelTable & vct = *section;
           consume_vct(vct);
         }
         else if (yae::has(pid_cvct_next_, pid))
         {
           VCTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const VirtualChannelTable & vct = *section;
           consume_vct(vct);
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
           ETTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const ExtendedTextTable & ett = *section;
           consume_ett(ett);
         }
@@ -4592,18 +4608,24 @@ namespace yae
         else if (yae::has(pid_eit_, pid))
         {
           EITSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const EventInformationTable & eit = *section;
           consume_eit(eit);
         }
         else if (yae::has(pid_event_ett_, pid))
         {
           ETTSectionPtr section = load_section(bin);
+          YAE_THROW_IF(!section);
+
           const ExtendedTextTable & ett = *section;
           consume_ett(ett);
         }
         else if (yae::has(pid_rrt_, pid))
         {
           RRTSectionPtr rrt_section = load_section(bin);
+          YAE_THROW_IF(!rrt_section);
+
           consume_rrt(rrt_section);
         }
         else if (yae::has(pid_dcct_, pid))
