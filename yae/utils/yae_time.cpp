@@ -33,7 +33,7 @@ namespace yae
   //----------------------------------------------------------------
   // unix_epoch_time_at_utc_time
   //
-  time_t
+  int64_t
   unix_epoch_time_at_utc_time(int year, int mon, int day,
                               int hour, int min, int sec)
   {
@@ -44,11 +44,17 @@ namespace yae
     t.tm_hour = hour;
     t.tm_min  = min;
     t.tm_sec  = sec;
-
-    time_t t_epoch = timegm(&t);
+#ifdef _WIN32
+    int64_t t_epoch = _mktime64(&t);
+#else
+    int64_t t_epoch = timegm(&t);
+#endif
     return t_epoch;
   }
 
+  //----------------------------------------------------------------
+  // tm_to_str
+  //
   static std::string
   tm_to_str(const struct tm & t)
   {
@@ -66,10 +72,14 @@ namespace yae
   // unix_epoch_time_to_localtime_str
   //
   std::string
-  unix_epoch_time_to_localtime_str(time_t ts)
+  unix_epoch_time_to_localtime_str(int64_t ts)
   {
     struct tm t = { 0 };
+#ifdef _WIN32
+    _localtime64_s(&t, &ts);
+#else
     localtime_r(&ts, &t);
+#endif
     return tm_to_str(t);
   }
 
@@ -77,10 +87,14 @@ namespace yae
   // unix_epoch_time_to_utc_str
   //
   std::string
-  unix_epoch_time_to_utc_str(time_t ts)
+  unix_epoch_time_to_utc_str(int64_t ts)
   {
     struct tm t = { 0 };
+#ifdef _WIN32
+    _gmtime64_s(&t, &ts);
+#else
     gmtime_r(&ts, &t);
+#endif
     return tm_to_str(t);
   }
 

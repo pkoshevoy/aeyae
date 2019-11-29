@@ -365,7 +365,7 @@ namespace yae
       // stop once Channel Guide extends to 9 hours from now
       static const TTime nine_hours(9 * 60 * 60, 1);
       TTime now = TTime::now();
-      time_t t = (now + nine_hours).get(1);
+      int64_t t = (now + nine_hours).get(1);
 
       if (ctx.channel_guide_overlaps(t) && rb.is_open())
       {

@@ -29,7 +29,7 @@ namespace yae
   //----------------------------------------------------------------
   // unix_epoch_time_at_utc_date
   //
-  YAE_API time_t
+  YAE_API int64_t
   unix_epoch_time_at_utc_time(int year, int mon, int day,
                               int hour, int min, int sec);
 
@@ -37,13 +37,13 @@ namespace yae
   // unix_epoch_time_to_localtime_str
   //
   YAE_API std::string
-  unix_epoch_time_to_localtime_str(time_t ts);
+  unix_epoch_time_to_localtime_str(int64_t ts);
 
   //----------------------------------------------------------------
   // unix_epoch_time_to_utc_str
   //
   YAE_API std::string
-  unix_epoch_time_to_utc_str(time_t ts);
+  unix_epoch_time_to_utc_str(int64_t ts);
 
   //----------------------------------------------------------------
   // TTime

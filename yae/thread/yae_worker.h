@@ -28,12 +28,12 @@ namespace yae
   //----------------------------------------------------------------
   // Worker
   //
-  struct Worker
+  struct YAE_API Worker
   {
     //----------------------------------------------------------------
     // Task
     //
-    struct Task
+    struct YAE_API Task
     {
       virtual ~Task() {}
       virtual void execute(const Worker & worker) = 0;

@@ -2269,7 +2269,7 @@ namespace yae
 
       void dump(const std::string & lang = std::string("eng")) const;
 
-      bool channel_guide_overlaps(time_t t) const;
+      bool channel_guide_overlaps(int64_t t) const;
 
       void save(Json::Value & json) const;
       void load(const Json::Value & json);
@@ -2294,8 +2294,8 @@ namespace yae
 
       // helpers:
       uint32_t gps_time_now() const;
-      time_t gps_time_to_unix_time(uint32_t gps_time) const;
-      uint32_t unix_time_to_gps_time(time_t t) const;
+      int64_t gps_time_to_unix_time(uint32_t gps_time) const;
+      uint32_t unix_time_to_gps_time(int64_t t) const;
       std::string gps_time_to_str(uint32_t gps_time) const;
 
       void consume_stt(const STTSectionPtr & stt_section);

@@ -4792,7 +4792,7 @@ namespace yae
     //----------------------------------------------------------------
     // unix_epoch_gps_offset
     //
-    static const time_t unix_epoch_gps_offset =
+    static const int64_t unix_epoch_gps_offset =
       yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
 
     //----------------------------------------------------------------
@@ -4815,10 +4815,10 @@ namespace yae
     //----------------------------------------------------------------
     // Context::gps_time_to_unix_time
     //
-    time_t
+    int64_t
     Context::gps_time_to_unix_time(uint32_t gps_time) const
     {
-      time_t t = unix_epoch_gps_offset + gps_time - stt_error_;
+      int64_t t = unix_epoch_gps_offset + gps_time - stt_error_;
       if (stt_)
       {
         t -= stt_->gps_utc_offset_;
@@ -4831,7 +4831,7 @@ namespace yae
     // Context::unix_time_to_gps_time
     //
     uint32_t
-    Context::unix_time_to_gps_time(time_t t) const
+    Context::unix_time_to_gps_time(int64_t t) const
     {
       uint32_t gps_time = uint32_t((t - unix_epoch_gps_offset) + stt_error_);
 
@@ -4849,7 +4849,7 @@ namespace yae
     std::string
     Context::gps_time_to_str(uint32_t gps_time) const
     {
-      time_t t = gps_time_to_unix_time(gps_time);
+      int64_t t = gps_time_to_unix_time(gps_time);
       return yae::unix_epoch_time_to_localtime_str(t);
     }
 
@@ -5267,7 +5267,7 @@ namespace yae
     // Context::channel_guide_overlaps
     //
     bool
-    Context::channel_guide_overlaps(time_t t) const
+    Context::channel_guide_overlaps(int64_t t) const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = unix_time_to_gps_time(t);
