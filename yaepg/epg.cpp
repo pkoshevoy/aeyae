@@ -328,7 +328,7 @@ namespace yae
   {
 #if 0
     std::string capture_path =
-      (fs::path("/tmp") / (frequency + "-v1.ts")).string();
+      (fs::path(yae::get_temp_dir_utf8()) / (frequency + "-v1.ts")).string();
 
     boost::shared_ptr<TOpenFile> file_ptr =
       get_open_file(capture_path.c_str(), "wb");
@@ -358,12 +358,14 @@ namespace yae
     if (!stream.file_)
     {
       std::string capture_path =
-        (fs::path("/tmp") / (frequency + ".ts")).string();
+        (fs::path(yae::get_temp_dir_utf8()) / (frequency + ".ts")).string();
 
       TOpenFilePtr file = get_open_file(capture_path.c_str(), "wb");
       YAE_THROW_IF(!(file && file->is_open()));
       stream.file_ = file;
     }
+
+    yae::TOpenFile & file = *(stream.file_);
 
     if (epg_only_)
     {
@@ -382,6 +384,7 @@ namespace yae
 
         // done:
         rb.close();
+        file.close();
         return STOP_E;
       }
     }
@@ -389,6 +392,7 @@ namespace yae
     if (!size)
     {
       rb.close();
+      file.close();
       return STOP_E;
     }
 

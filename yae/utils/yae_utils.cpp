@@ -230,6 +230,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_temp_dir_utf8
+  //
+  std::string
+  get_temp_dir_utf8()
+  {
+#ifdef _WIN32
+    WCHAR wstr[MAX_PATH];
+    DWORD wlen = GetTempPathW(MAX_PATH, wstr);
+    YAE_THROW_IF(!wlen || wlen > MAX_PATH);
+
+    int len = WideCharToMultiByte(CP_UTF8, 0, wstr, -1, NULL, 0, NULL, NULL);
+    YAE_THROW_IF(!len);
+
+    std::string str(len, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr, -1, &str[0], len, NULL, NULL);
+
+    if (len > 1 && str[len - 2] == '\\')
+    {
+      // truncate the trailing separator:
+      str[len - 2] = 0;
+      str = str.c_str();
+    }
+
+    return str;
+#else
+    return std::string("/tmp");
+#endif
+  }
+
+  //----------------------------------------------------------------
   // mkdir_utf8
   //
   bool

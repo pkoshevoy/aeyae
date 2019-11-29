@@ -85,6 +85,14 @@ namespace yae
   get_user_folder_path(const char * folder_utf8);
 
   //----------------------------------------------------------------
+  // get_temp_dir_utf8
+  //
+  // NOTE: this may throw a runtime exception:
+  //
+  YAE_API std::string
+  get_temp_dir_utf8();
+
+  //----------------------------------------------------------------
   // mkdir_utf8
   //
   YAE_API bool
