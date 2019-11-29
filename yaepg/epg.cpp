@@ -50,7 +50,9 @@ namespace yae
     Capture(bool epg_only = false);
     ~Capture();
 
-    void save() const;
+    void save_epg() const;
+    void save_epg(const std::string & frequency) const;
+    void save_frequencies() const;
 
     //----------------------------------------------------------------
     // Stream
@@ -111,6 +113,7 @@ namespace yae
          const void * data,
          std::size_t size);
 
+    fs::path yaepg_;
     std::map<std::string, TStreamPtr> stream_;
     bool epg_only_;
   };
@@ -120,13 +123,12 @@ namespace yae
   // Capture::Capture
   //
   Capture::Capture(bool epg_only):
+    yaepg_(yae::get_user_folder_path(".yaepg")),
     epg_only_(epg_only)
   {
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
 
-    std::string freq_path =
-      (fs::path(yaepg_dir) / "frequencies.json").string();
-
+    std::string freq_path = (yaepg_ / "frequencies.json").string();
     Json::Value json;
     yae::TOpenFile(freq_path, "rb").load(json);
 
@@ -138,7 +140,7 @@ namespace yae
     {
       const std::string & frequency = *i;
       std::string epg_path =
-        (fs::path(yaepg_dir) / ("epg-" + frequency + ".json")).string();
+        (yaepg_ / ("epg-" + frequency + ".json")).string();
 
       Json::Value epg;
       if (yae::TOpenFile(epg_path, "rb").load(epg))
@@ -157,46 +159,63 @@ namespace yae
   //
   Capture::~Capture()
   {
-    save();
+    save_epg();
+  }
+
+  //----------------------------------------------------------------
+  // Capture::save_epg
+  //
+  void
+  Capture::save_epg() const
+  {
+    for (std::map<std::string, TStreamPtr>::const_iterator
+           i = stream_.begin(); i != stream_.end(); ++i)
+    {
+      const std::string & frequency = i->first;
+      save_epg(frequency);
+    }
+
+    save_frequencies();
   }
 
   //----------------------------------------------------------------
   // Capture::save
   //
   void
-  Capture::save() const
+  Capture::save_epg(const std::string & frequency) const
   {
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+    const Stream & stream = *(yae::at(stream_, frequency));
 
+    Json::Value json;
+    stream.ctx_.save(json[frequency]);
+    json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
+
+    std::string epg_path = (yaepg_ / ("epg-" + frequency + ".json")).string();
+    yae::TOpenFile epg_file;
+    if (epg_file.open(epg_path, "wb"))
+    {
+      epg_file.save(json);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Capture::save_frequencies
+  //
+  void
+  Capture::save_frequencies() const
+  {
     std::list<std::string> frequencies;
     for (std::map<std::string, TStreamPtr>::const_iterator
            i = stream_.begin(); i != stream_.end(); ++i)
     {
       const std::string & frequency = i->first;
-      const Stream & stream = *(i->second);
       frequencies.push_back(frequency);
-
-      Json::Value json;
-      stream.ctx_.save(json[frequency]);
-      json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
-
-      std::string epg_path =
-        (fs::path(yaepg_dir) / ("epg-" + frequency + ".json")).string();
-
-      yae::TOpenFile epg_file;
-      if (epg_file.open(epg_path, "wb"))
-      {
-        epg_file.save(json);
-      }
     }
 
     Json::Value json;
     yae::save(json, frequencies);
 
-    std::string freq_path =
-      (fs::path(yaepg_dir) / "frequencies.json").string();
-
+    std::string freq_path = (yaepg_ / "frequencies.json").string();
     yae::TOpenFile freq_file;
     if (freq_file.open(freq_path, "wb"))
     {
@@ -444,7 +463,8 @@ namespace yae
       const yae::Capture::Stream & stream = *stream_ptr;
       const yae::mpeg_ts::Context & ctx = stream.ctx_;
       ctx.dump();
-      dvr.save();
+      dvr.save_epg(frequency);
+      dvr.save_frequencies();
     }
 
 #else
