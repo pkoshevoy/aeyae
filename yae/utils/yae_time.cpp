@@ -78,7 +78,8 @@ namespace yae
 #ifdef _WIN32
     _localtime64_s(&t, &ts);
 #else
-    localtime_r(&ts, &t);
+    time_t tt = time_t(ts);
+    localtime_r(&tt, &t);
 #endif
     return tm_to_str(t);
   }
@@ -93,7 +94,8 @@ namespace yae
 #ifdef _WIN32
     _gmtime64_s(&t, &ts);
 #else
-    gmtime_r(&ts, &t);
+    time_t tt = time_t(ts);
+    gmtime_r(&tt, &t);
 #endif
     return tm_to_str(t);
   }
