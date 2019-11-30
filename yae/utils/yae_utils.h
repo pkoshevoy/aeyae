@@ -816,6 +816,61 @@ namespace yae
   to_lower(const std::string & in);
 
   //----------------------------------------------------------------
+  // not_whitespace
+  //
+  YAE_API bool
+  not_whitespace(char c);
+
+  //----------------------------------------------------------------
+  // strip_head_ws
+  //
+  YAE_API void
+  strip_head_ws(std::string & str);
+
+  //----------------------------------------------------------------
+  // strip_tail_ws
+  //
+  YAE_API void
+  strip_tail_ws(std::string & str);
+
+  //----------------------------------------------------------------
+  // strip_ws
+  //
+  YAE_API void
+  strip_ws(std::string & str);
+
+  //----------------------------------------------------------------
+  // trim_head_ws
+  //
+  YAE_API std::string
+  trim_head_ws(const std::string & str);
+
+  //----------------------------------------------------------------
+  // trim_tail_ws
+  //
+  YAE_API std::string
+  trim_tail_ws(const std::string & str);
+
+  //----------------------------------------------------------------
+  // trim_ws
+  //
+  YAE_API std::string
+  trim_ws(const std::string & str);
+
+  //----------------------------------------------------------------
+  // trim_from_head
+  //
+  YAE_API std::string
+  trim_from_head(const char * c, const char * str, std::size_t str_len);
+
+  //----------------------------------------------------------------
+  // trim_from_tail
+  //
+  YAE_API std::string
+  trim_from_tail(const char * c, const char * str, std::size_t str_len);
+
+
+  //----------------------------------------------------------------
   // TDictionary
   //
   typedef std::map<std::string, std::string> TDictionary;

@@ -5012,7 +5012,7 @@ namespace yae
         bucket.source_id_to_ch_num_[c.source_id_] = ch_num;
 
         ChannelGuide & chan = bucket.guide_[ch_num];
-        chan.name_ = name.c_str();
+        chan.name_ = yae::trim_ws(name).c_str();
         chan.source_id_ = c.source_id_;
         chan.program_number_ = c.program_number_;
         chan.access_controlled_ = c.access_controlled_;

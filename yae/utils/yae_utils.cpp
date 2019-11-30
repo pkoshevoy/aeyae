@@ -470,19 +470,110 @@ namespace yae
     return st.st_size;
   }
 
+
   //----------------------------------------------------------------
-  // data
+  // not_whitespace
   //
-  static const char *
-  data(const std::string & str)
+  bool
+  not_whitespace(char c)
   {
-    return str.size() ? &str[0] : NULL;
+    return isspace(c) == 0;
+  }
+
+  //----------------------------------------------------------------
+  // strip_head_ws
+  //
+  void
+  strip_head_ws(std::string & str)
+  {
+    std::string::iterator found =
+      std::find_if(str.begin(), str.end(), &not_whitespace);
+    str.erase(str.begin(), found);
+  }
+
+  //----------------------------------------------------------------
+  // strip_tail_ws
+  //
+  void
+  strip_tail_ws(std::string & str)
+  {
+    std::string::reverse_iterator found =
+      std::find_if(str.rbegin(), str.rend(), &not_whitespace);
+    str.erase(found.base(), str.end());
+  }
+
+  //----------------------------------------------------------------
+  // strip_ws
+  //
+  void
+  strip_ws(std::string & str)
+  {
+    strip_tail_ws(str);
+    strip_tail_ws(str);
+  }
+
+  //----------------------------------------------------------------
+  // trim_head
+  //
+  std::string
+  trim_head_ws(const std::string & str)
+  {
+    std::string out = str;
+    strip_head_ws(out);
+    return out;
+  }
+
+  //----------------------------------------------------------------
+  // trim_tail_ws
+  //
+  std::string
+  trim_tail_ws(const std::string & str)
+  {
+    std::string out = str;
+    strip_tail_ws(out);
+    return out;
+  }
+
+  //----------------------------------------------------------------
+  // trim_ws
+  //
+  std::string
+  trim_ws(const std::string & str)
+  {
+    std::string out = str;
+    strip_ws(out);
+    return out;
+  }
+
+  //----------------------------------------------------------------
+  // trim_from_head
+  //
+  std::string
+  trim_from_head(const char * c, const char * str, std::size_t str_len)
+  {
+    if (!str_len && str)
+    {
+      str_len = strlen(str);
+    }
+
+    const char * end = str ? str + str_len : NULL;
+    while (str < end)
+    {
+      if (*str != *c)
+      {
+        return std::string(str, end);
+      }
+
+      str++;
+    }
+
+    return std::string();
   }
 
   //----------------------------------------------------------------
   // trim_from_tail
   //
-  static std::string
+  std::string
   trim_from_tail(const char * c, const char * str, std::size_t str_len)
   {
     if (!str_len && str)
@@ -505,28 +596,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // trim_from_head
+  // data
   //
-  static std::string
-  trim_from_head(const char * c, const char * str, std::size_t str_len)
+  static const char *
+  data(const std::string & str)
   {
-    if (!str_len && str)
-    {
-      str_len = strlen(str);
-    }
-
-    const char * end = str ? str + str_len : NULL;
-    while (str < end)
-    {
-      if (*str != *c)
-      {
-        return std::string(str, end);
-      }
-
-      str++;
-    }
-
-    return std::string();
+    return str.size() ? &str[0] : NULL;
   }
 
   //----------------------------------------------------------------
