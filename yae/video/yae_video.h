@@ -598,6 +598,7 @@ namespace yae
     void setLang(const char * lang);
     void setName(const char * name);
 
+    std::size_t nprograms_;
     std::size_t program_;
     std::size_t ntracks_;
     std::size_t index_;

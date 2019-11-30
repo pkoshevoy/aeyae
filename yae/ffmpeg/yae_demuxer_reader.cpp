@@ -369,7 +369,8 @@ namespace yae
   void
   DemuxerReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
-    info.program_ = programs_.size();
+    info.nprograms_ = programs_.size();
+    info.program_ = info.nprograms_;
     info.ntracks_ = video_.size();
     info.index_ = selectedVideoTrack_;
     info.lang_.clear();
@@ -392,7 +393,8 @@ namespace yae
   void
   DemuxerReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
-    info.program_ = programs_.size();
+    info.nprograms_ = programs_.size();
+    info.program_ = info.nprograms_;
     info.ntracks_ = audio_.size();
     info.index_ = selectedAudioTrack_;
     info.lang_.clear();
@@ -1020,7 +1022,8 @@ namespace yae
   TSubsFormat
   DemuxerReader::subsInfo(std::size_t i, TTrackInfo & info) const
   {
-    info.program_ = programs_.size();
+    info.nprograms_ = programs_.size();
+    info.program_ = info.nprograms_;
     info.ntracks_ = subtt_.size();
     info.index_ = i;
     info.lang_.clear();

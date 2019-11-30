@@ -411,7 +411,8 @@ namespace yae
   void
   Demuxer::getVideoTrackInfo(std::size_t i, TTrackInfo & info) const
   {
-    info.program_ = context_ ? context_->nb_programs : 0;
+    info.nprograms_ = context_ ? context_->nb_programs : 0;
+    info.program_ = info.nprograms_;
     info.ntracks_ = videoTracks_.size();
     info.index_ = i;
     info.lang_.clear();
@@ -432,7 +433,8 @@ namespace yae
   void
   Demuxer::getAudioTrackInfo(std::size_t i, TTrackInfo & info) const
   {
-    info.program_ = context_ ? context_->nb_programs : 0;
+    info.nprograms_ = context_ ? context_->nb_programs : 0;
+    info.program_ = info.nprograms_;
     info.ntracks_ = audioTracks_.size();
     info.index_ = i;
     info.lang_.clear();
@@ -453,7 +455,8 @@ namespace yae
   TSubsFormat
   Demuxer::getSubttTrackInfo(std::size_t i, TTrackInfo & info) const
   {
-    info.program_ = context_ ? context_->nb_programs : 0;
+    info.nprograms_ = context_ ? context_->nb_programs : 0;
+    info.program_ = info.nprograms_;
     info.ntracks_ = subttTracks_.size();
     info.index_ = i;
     info.lang_.clear();
