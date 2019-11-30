@@ -4195,13 +4195,42 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // Bucket::channel_guide_overlaps_gps_time
+    // Bucket::Bucket
+    //
+    Bucket::Bucket():
+      expected_vct_sections_(0xFF),
+      expected_eit_sections_(0xFF),
+      expected_ett_sections_(0x00),
+      expected_rrt_sections_(0x00)
+    {}
+
+    //----------------------------------------------------------------
+    // Bucket::has_epg_for
     //
     bool
-    Bucket::channel_guide_overlaps_gps_time(uint32_t gps_time,
-                                            bool check_etm) const
+    Bucket::has_epg_for(uint32_t gps_time) const
     {
       if (guide_.empty())
+      {
+        return false;
+      }
+
+      if (vct_sections_.size() < expected_vct_sections_)
+      {
+        return false;
+      }
+
+      if (eit_sections_.size() < expected_eit_sections_)
+      {
+        return false;
+      }
+
+      if (ett_sections_.size() < expected_ett_sections_)
+      {
+        return false;
+      }
+
+      if (rrt_sections_.size() < expected_rrt_sections_)
       {
         return false;
       }
@@ -4226,6 +4255,7 @@ namespace yae
           return false;
         }
 
+#if 0
         if (!check_etm)
         {
           continue;
@@ -4243,6 +4273,7 @@ namespace yae
             return false;
           }
         }
+#endif
       }
 
       return true;
@@ -4431,6 +4462,15 @@ namespace yae
       save(json["guide"], bucket.guide_);
       save(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       save(json["rrt"], bucket.rrt_);
+      save(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
+      save(json["vct_sections"], bucket.vct_sections_);
+      save(json["expected_vct_sections"], bucket.expected_vct_sections_);
+      save(json["eit_sections"], bucket.eit_sections_);
+      save(json["expected_eit_sections"], bucket.expected_eit_sections_);
+      save(json["ett_sections"], bucket.ett_sections_);
+      save(json["expected_ett_sections"], bucket.expected_ett_sections_);
+      save(json["rrt_sections"], bucket.rrt_sections_);
+      save(json["expected_rrt_sections"], bucket.expected_rrt_sections_);
     }
 
     //----------------------------------------------------------------
@@ -4442,6 +4482,15 @@ namespace yae
       load(json["guide"], bucket.guide_);
       load(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       load(json["rrt"], bucket.rrt_);
+      load(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
+      load(json["vct_sections"], bucket.vct_sections_);
+      load(json["expected_vct_sections"], bucket.expected_vct_sections_);
+      load(json["eit_sections"], bucket.eit_sections_);
+      load(json["expected_eit_sections"], bucket.expected_eit_sections_);
+      load(json["ett_sections"], bucket.ett_sections_);
+      load(json["expected_ett_sections"], bucket.expected_ett_sections_);
+      load(json["rrt_sections"], bucket.rrt_sections_);
+      load(json["expected_rrt_sections"], bucket.expected_rrt_sections_);
     }
 
 
@@ -5002,6 +5051,9 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
+      bucket.vct_sections_.insert(vct.section_number_);
+      bucket.expected_vct_sections_ = vct.last_section_number_ + 1;
+
       for (std::size_t i = 0; i < vct.num_channels_in_section_; i++)
       {
         const VirtualChannelTable::Channel & c = vct.channel_[i];
@@ -5085,6 +5137,9 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
+      bucket.rrt_sections_.insert(rrt.section_number_);
+      bucket.expected_rrt_sections_ = rrt.last_section_number_ + 1;
+
       RatingRegion & rr = bucket.rrt_[rrt.rating_region_];
       rrt.rating_region_name_text_.get(rr.name_);
 
@@ -5145,6 +5200,9 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
+      bucket.eit_sections_.insert(eit.section_number_);
+      bucket.expected_eit_sections_ = eit.last_section_number_ + 1;
+
       std::list<ChannelGuide::Item> new_items;
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
       {
@@ -5233,6 +5291,9 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
+      bucket.ett_sections_.insert(ett.section_number_);
+      bucket.expected_ett_sections_ = ett.last_section_number_ + 1;
+
       unsigned short int source_id = ett.etm_id_source_id_;
       const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
                                        source_id,
@@ -5362,7 +5423,7 @@ namespace yae
       }
 
       const Bucket & bucket = bucket_[bx];
-      return bucket.channel_guide_overlaps_gps_time(gps_time);
+      return bucket.has_epg_for(gps_time);
     }
 
     //----------------------------------------------------------------

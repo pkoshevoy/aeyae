@@ -2223,9 +2223,12 @@ namespace yae
     //
     struct YAE_API Bucket
     {
-      bool
-      channel_guide_overlaps_gps_time(uint32_t gps_time,
-                                      bool check_etm = true) const;
+      Bucket();
+
+      // check whether we have all the expected sections
+      // and the extent of the EIT events overlaps
+      // given GPS time:
+      bool has_epg_for(uint32_t gps_time) const;
 
       // map major.minor channel number to ChannelGuide:
       std::map<uint32_t, ChannelGuide> guide_;
@@ -2238,6 +2241,18 @@ namespace yae
 
       // map PID to major.minor channel number:
       std::map<uint16_t, uint32_t> pid_to_ch_num_;
+
+      std::set<uint8_t> vct_sections_;
+      uint8_t expected_vct_sections_;
+
+      std::set<uint8_t> eit_sections_;
+      uint8_t expected_eit_sections_;
+
+      std::set<uint8_t> ett_sections_;
+      uint8_t expected_ett_sections_;
+
+      std::set<uint8_t> rrt_sections_;
+      uint8_t expected_rrt_sections_;
     };
 
 
