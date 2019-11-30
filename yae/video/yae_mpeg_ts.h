@@ -132,7 +132,7 @@ namespace yae
     {
       TSPacket();
 
-      void load(IBitstream & bin, Context & ctx);
+      void load(IBitstream & bin);
       bool is_duplicate_of(const TSPacket & pkt) const;
 
       inline bool is_null_packet() const
@@ -2223,6 +2223,10 @@ namespace yae
     //
     struct YAE_API Bucket
     {
+      bool
+      channel_guide_overlaps_gps_time(uint32_t gps_time,
+                                      bool check_etm = true) const;
+
       // map major.minor channel number to ChannelGuide:
       std::map<uint32_t, ChannelGuide> guide_;
 
@@ -2231,7 +2235,11 @@ namespace yae
 
       // region rating table, indexed by ration region id:
       std::map<uint16_t, RatingRegion> rrt_;
+
+      // map PID to major.minor channel number:
+      std::map<uint16_t, uint32_t> pid_to_ch_num_;
     };
+
 
     YAE_API void save(Json::Value & json, const RatingValue & rv);
     YAE_API void load(const Json::Value & json, RatingValue & rv);
@@ -2259,13 +2267,44 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // IPacketHandler
+    //
+    struct YAE_API IPacketHandler
+    {
+      //----------------------------------------------------------------
+      // Packet
+      //
+      struct YAE_API Packet
+      {
+        Packet(uint16_t pid = 0x1FFF, const TBufferPtr & data = TBufferPtr()):
+          pid_(pid),
+          data_(data)
+        {}
+
+        uint16_t pid_;
+        TBufferPtr data_;
+      };
+
+      virtual ~IPacketHandler() {}
+
+      // NOTE: Context::mutex_ will be locked when this is called:
+      virtual void handle(const IPacketHandler::Packet & packet,
+                          const Bucket & bucket,
+                          uint32_t gps_time) = 0;
+    };
+
+
+    //----------------------------------------------------------------
     // Context
     //
     struct YAE_API Context
     {
       Context();
 
-      void load(IBitstream & bin, TSPacket & pkt);
+      void push(const TSPacket & pkt);
+
+      void handle(const IPacketHandler::Packet & packet,
+                  IPacketHandler & handler) const;
 
       void dump(const std::string & lang = std::string("eng")) const;
 

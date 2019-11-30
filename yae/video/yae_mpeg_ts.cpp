@@ -301,7 +301,7 @@ namespace yae
     // TSPacket::load
     //
     void
-    TSPacket::load(IBitstream & bin, Context & ctx)
+    TSPacket::load(IBitstream & bin)
     {
       sync_byte_ = bin.read(8);
       YAE_THROW_IF(sync_byte_ != 0x47);
@@ -4195,6 +4195,61 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // Bucket::channel_guide_overlaps_gps_time
+    //
+    bool
+    Bucket::channel_guide_overlaps_gps_time(uint32_t gps_time,
+                                            bool check_etm) const
+    {
+      if (guide_.empty())
+      {
+        return false;
+      }
+
+      for (std::map<uint32_t, ChannelGuide>::const_iterator
+             i = guide_.begin(); i != guide_.end(); ++i)
+      {
+        const ChannelGuide & chan = i->second;
+        if (chan.items_.empty())
+        {
+          return false;
+        }
+
+        // check that events overlap the requested timepoint:
+        const ChannelGuide::Item & head = chan.items_.front();
+        const ChannelGuide::Item & tail = chan.items_.back();
+
+        uint32_t t0 = head.t0_;
+        uint32_t t1 = tail.t0_ + tail.dt_;
+        if (gps_time < t0 || t1 <= gps_time)
+        {
+          return false;
+        }
+
+        if (!check_etm)
+        {
+          continue;
+        }
+
+        // check that we have descriptions for each event:
+        for (std::list<ChannelGuide::Item>::const_iterator
+               j = chan.items_.begin(); j != chan.items_.end(); ++j)
+        {
+          const ChannelGuide::Item & item = *j;
+          std::map<uint16_t, TLangText>::const_iterator
+            found_etm = chan.event_etm_.find(item.event_id_);
+          if (found_etm == chan.event_etm_.end())
+          {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    }
+
+
+    //----------------------------------------------------------------
     // save
     //
     void
@@ -4674,31 +4729,12 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // Context::load
+    // Context::push
     //
     void
-    Context::load(IBitstream & bitstream, TSPacket & pkt)
+    Context::push(const TSPacket & pkt)
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-
-      TBufferPtr packet = bitstream.read_bytes(188);
-      yae::Bitstream bin(packet);
-      pkt.load(bin, *this);
-
-      std::size_t end_pos = bin.position();
-      std::size_t bytes_consumed = end_pos >> 3;
-      if (bytes_consumed != 188)
-      {
-        std::string data_hex =
-          yae::to_hex(packet->get(),
-                      std::min<std::size_t>(32, packet->size()),
-                      4);
-        yae_wlog("TSPacket too short (%i bytes), %s ...",
-                 bytes_consumed,
-                 data_hex.c_str());
-        return;
-      }
-
       YAE_EXPECT(!pkt.transport_error_indicator_);
 
       // In transport streams, duplicate packets may be sent as two,
@@ -4775,10 +4811,10 @@ namespace yae
         // stream section data, the payload_unit_start_indicator has the
         // following significance:
         //
-        // - if the transport stream packet carries the first byte of a section,
-        //   the payload_unit_start_indicator value shall be '1', indicating
-        //   that the first byte of the payload of this transport stream
-        //   packet carries the pointer_field.
+        // - if the transport stream packet carries the first byte of
+        //   a section, the payload_unit_start_indicator value shall be '1',
+        //   indicating that the first byte of the payload of this
+        //   transport stream packet carries the pointer_field.
         // - if the transport stream packet does not carry the first byte of
         //   a section, the payload_unit_start_indicator value shall be '0',
         //   indicating that there is no pointer_field in the payload.
@@ -4809,6 +4845,22 @@ namespace yae
           pes.push_back(pkt);
         }
       }
+    }
+
+    //----------------------------------------------------------------
+    // Context::handle
+    //
+    void
+    Context::handle(const IPacketHandler::Packet & packet,
+                    IPacketHandler & handler) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      YAE_ASSERT(packet.data_->size() == 188);
+
+      uint32_t gps_time = gps_time_now();
+      std::size_t bx = bucket_index_at(gps_time);
+      const Bucket & bucket = bucket_[bx];
+      handler.handle(packet, bucket, gps_time);
     }
 
     //----------------------------------------------------------------
@@ -4979,6 +5031,8 @@ namespace yae
             for (std::size_t k = 0; k < d.number_elements_; k++)
             {
               const ServiceLocationDescriptor::Element & e = d.element_[k];
+              bucket.pid_to_ch_num_[e.elementary_pid_] = ch_num;
+
               ChannelGuide::Track & es = chan.es_[e.elementary_pid_];
               es.lang_ = lang_str(e.iso_639_language_code_);
               es.stream_type_ = e.stream_type_;
@@ -5308,46 +5362,7 @@ namespace yae
       }
 
       const Bucket & bucket = bucket_[bx];
-      if (bucket.guide_.empty())
-      {
-        return false;
-      }
-
-      for (std::map<uint32_t, ChannelGuide>::const_iterator
-             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
-      {
-        const ChannelGuide & chan = i->second;
-        if (chan.items_.empty())
-        {
-          return false;
-        }
-
-        // check that events overlap the requested timepoint:
-        const ChannelGuide::Item & head = chan.items_.front();
-        const ChannelGuide::Item & tail = chan.items_.back();
-
-        uint32_t t0 = head.t0_;
-        uint32_t t1 = tail.t0_ + tail.dt_;
-        if (gps_time < t0 || t1 <= gps_time)
-        {
-          return false;
-        }
-
-        // check that we have descriptions for each event:
-        for (std::list<ChannelGuide::Item>::const_iterator
-               j = chan.items_.begin(); j != chan.items_.end(); ++j)
-        {
-          const ChannelGuide::Item & item = *j;
-          std::map<uint16_t, TLangText>::const_iterator
-            found_etm = chan.event_etm_.find(item.event_id_);
-          if (found_etm == chan.event_etm_.end())
-          {
-            return false;
-          }
-        }
-      }
-
-      return true;
+      return bucket.channel_guide_overlaps_gps_time(gps_time);
     }
 
     //----------------------------------------------------------------

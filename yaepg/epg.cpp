@@ -32,6 +32,7 @@
 #include "yae/thread/yae_ring_buffer.h"
 #include "yae/thread/yae_worker.h"
 #include "yae/utils/yae_data.h"
+#include "yae/utils/yae_fifo.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_mpeg_ts.h"
 
@@ -62,20 +63,15 @@ namespace yae
     //----------------------------------------------------------------
     // Stream
     //
-    struct Stream
+    struct Stream : yae::mpeg_ts::IPacketHandler
     {
-      Stream(Capture & capture):
-        capture_(capture),
-        rb_(188 * 4096),
-        start_(0, 0)
-      {}
+      Stream(Capture & capture);
+      virtual ~Stream();
 
-      ~Stream()
-      {
-        rb_.close();
-        worker_.stop();
-        worker_.wait_until_finished();
-      }
+      virtual void
+      handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
+             const yae::mpeg_ts::Bucket & bucket,
+             uint32_t gps_time);
 
       Capture & capture_;
       yae::Worker worker_;
@@ -83,6 +79,11 @@ namespace yae
       yae::mpeg_ts::Context ctx_;
       yae::RingBuffer rb_;
       yae::TTime start_;
+
+      // buffer packets until we have enough info (EPG)
+      // to enable us to handle them properly:
+      yae::fifo<Packet> packets_;
+      std::map<uint32_t, yae::TOpenFilePtr> channels_;
     };
 
     //----------------------------------------------------------------
@@ -119,6 +120,7 @@ namespace yae
          std::size_t size);
 
     fs::path yaepg_;
+    fs::path basedir_;
     std::map<std::string, TStreamPtr> stream_;
     bool epg_only_;
   };
@@ -129,6 +131,7 @@ namespace yae
   //
   Capture::Capture(bool epg_only):
     yaepg_(yae::get_user_folder_path(".yaepg")),
+    basedir_(yae::get_temp_dir_utf8()),
     epg_only_(epg_only)
   {
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
@@ -229,6 +232,85 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Capture::Stream::Stream
+  //
+  Capture::Stream::Stream(Capture & capture):
+    capture_(capture),
+    rb_(188 * 4096),
+    start_(0, 0),
+    packets_(400000) // 75.2MB
+  {}
+
+  //----------------------------------------------------------------
+  // Capture::Stream::~Stream
+  //
+  Capture::Stream::~Stream()
+  {
+    rb_.close();
+    worker_.stop();
+    worker_.wait_until_finished();
+  }
+
+  //----------------------------------------------------------------
+  // Capture::Stream::handle
+  //
+  void
+  Capture::Stream::handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
+                          const yae::mpeg_ts::Bucket & bucket,
+                          uint32_t gps_time)
+  {
+    packets_.push(packet);
+
+    if (!bucket.channel_guide_overlaps_gps_time(gps_time, false))
+    {
+      return;
+    }
+
+    // consume the backlog:
+    yae::mpeg_ts::IPacketHandler::Packet pkt;
+    while (packets_.pop(pkt))
+    {
+      // shortcut:
+      const yae::IBuffer & data = *(pkt.data_);
+
+      std::map<uint16_t, uint32_t>::const_iterator found =
+        bucket.pid_to_ch_num_.find(pkt.pid_);
+      if (found == bucket.pid_to_ch_num_.end())
+      {
+        for (std::map<uint32_t, yae::TOpenFilePtr>::iterator
+               i = channels_.begin(); i != channels_.end(); ++i)
+        {
+          yae::TOpenFile & file = *(i->second);
+          YAE_ASSERT(file.write(data.get(), data.size()));
+        }
+      }
+      else
+      {
+        const uint32_t ch_num = found->second;
+        yae::TOpenFilePtr & file_ptr = channels_[ch_num];
+        if (!file_ptr)
+        {
+          uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+          uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+
+          const yae::mpeg_ts::ChannelGuide & chan =
+            yae::at(bucket.guide_, ch_num);
+
+          std::string fn = yae::strfmt("%02u.%02u-%s.ts",
+                                       major,
+                                       minor,
+                                       chan.name_.c_str());
+          std::string filepath = (capture_.basedir_ / fn).string();
+          file_ptr.reset(new TOpenFile(filepath, "wb"));
+        }
+
+        yae::TOpenFile & file = *file_ptr;
+        YAE_ASSERT(file.write(data.get(), data.size()));
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // Capture::Task::Task
   //
   Capture::Task::Task(const std::string & tuner_name,
@@ -280,15 +362,34 @@ namespace yae
       done += size;
       data.truncate(size);
       file.write(data.get(), size);
-#if 1
+
       // parse the transport stream:
       yae::Bitstream bitstream(data);
       while (!bitstream.exhausted())
       {
         try
         {
+          TBufferPtr pkt_data = bitstream.read_bytes(188);
+          yae::Bitstream bin(pkt_data);
+
           yae::mpeg_ts::TSPacket pkt;
-          ctx.load(bitstream, pkt);
+          pkt.load(bin);
+
+          std::size_t end_pos = bin.position();
+          std::size_t bytes_consumed = end_pos >> 3;
+
+          if (bytes_consumed != 188)
+          {
+            yae_wlog("TSPacket too short (%i bytes), %s ...",
+                     bytes_consumed,
+                     yae::to_hex(pkt_data->get(), 32, 4).c_str());
+            continue;
+          }
+
+          ctx.push(pkt);
+
+          yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);
+          ctx.handle(packet, stream_);
         }
         catch (const std::exception & e)
         {
@@ -313,7 +414,6 @@ namespace yae
                    frequency_.c_str());
         }
       }
-#endif
     }
   }
 
