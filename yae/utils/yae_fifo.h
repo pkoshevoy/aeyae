@@ -68,6 +68,12 @@ namespace yae
     inline bool empty() const
     { return data_.empty(); }
 
+    inline bool full() const
+    { return size_ == capacity_; }
+
+    inline std::size_t capacity() const
+    { return capacity_; }
+
     inline std::size_t size() const
     { return size_; }
 

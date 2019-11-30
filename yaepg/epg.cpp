@@ -261,7 +261,7 @@ namespace yae
   {
     packets_.push(packet);
 
-    if (!bucket.channel_guide_overlaps_gps_time(gps_time, false))
+    if (bucket.guide_.empty())
     {
       return;
     }
