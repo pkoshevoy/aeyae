@@ -15,6 +15,40 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Worker::Task::Task
+  //
+  Worker::Task::Task():
+    cancelled_(false)
+  {}
+
+  //----------------------------------------------------------------
+  // Worker::Task::~Task
+  //
+  Worker::Task::~Task()
+  {}
+
+  //----------------------------------------------------------------
+  // Worker::Task::cancel
+  //
+  void
+  Worker::Task::cancel()
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    cancelled_ = true;
+  }
+
+  //----------------------------------------------------------------
+  // Worker::Task::cancelled
+  //
+  bool
+  Worker::Task::cancelled() const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    return cancelled_;
+  }
+
+
+  //----------------------------------------------------------------
   // Worker::Worker
   //
   Worker::Worker(unsigned int offset, unsigned int stride):
@@ -56,11 +90,30 @@ namespace yae
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       stop_ = true;
+
+      for (std::list<yae::shared_ptr<Task> >::iterator
+             i = todo_.begin(); i != todo_.end(); ++i)
+      {
+        yae::shared_ptr<Task> & task_ptr = *i;
+        task_ptr->cancel();
+        task_ptr.reset();
+      }
+
       signal_.notify_all();
     }
 
     thread_.stop();
     thread_.wait();
+  }
+
+  //----------------------------------------------------------------
+  // Worker::stop_requested
+  //
+  bool
+  Worker::stop_requested() const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    return stop_;
   }
 
   //----------------------------------------------------------------
@@ -79,19 +132,39 @@ namespace yae
 
       if (stop_)
       {
+        todo_.clear();
+        count_ = 0;
+        signal_.notify_all();
         break;
       }
 
-      yae::shared_ptr<Task> task = todo_.front();
-      lock.unlock();
+      yae::shared_ptr<Task> task;
+      while (!todo_.empty())
+      {
+        task = todo_.front();
+        if (task)
+        {
+          break;
+        }
 
-      task->execute(*this);
+        // cleanup cancelled tasks:
+        todo_.pop_front();
+        count_--;
+        signal_.notify_all();
+      }
 
-      lock.lock();
-      todo_.pop_front();
-      YAE_ASSERT(count_ > 0);
-      count_--;
-      signal_.notify_all();
+      if (task)
+      {
+        lock.unlock();
+
+        task->execute(*this);
+
+        lock.lock();
+        todo_.pop_front();
+        YAE_ASSERT(count_ > 0);
+        count_--;
+        signal_.notify_all();
+      }
     }
   }
 
@@ -118,9 +191,12 @@ namespace yae
       signal_.wait(lock);
     }
 
-    todo_.push_back(task);
-    count_++;
-    signal_.notify_all();
+    if (!stop_)
+    {
+      todo_.push_back(task);
+      count_++;
+      signal_.notify_all();
+    }
   }
 
   //----------------------------------------------------------------

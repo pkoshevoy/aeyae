@@ -73,6 +73,7 @@ typedef yae::shared_ptr<hdhomerun_device_t,
 
 namespace yae
 {
+
   //----------------------------------------------------------------
   // LockTuner
   //
@@ -81,73 +82,169 @@ namespace yae
     hdhomerun_devptr_t hd_ptr_;
     std::string lockkey_path_;
 
-    //----------------------------------------------------------------
-    // LockTuner
-    //
-    LockTuner(hdhomerun_devptr_t hd_ptr)
-    {
-      lock(hd_ptr);
-    }
+    LockTuner(const hdhomerun_devptr_t & hd_ptr = hdhomerun_devptr_t());
+    ~LockTuner();
 
-    //----------------------------------------------------------------
-    // ~LockTuner
-    //
-    ~LockTuner()
-    {
-      unlock();
-    }
-
-    //----------------------------------------------------------------
-    // lock
-    //
-    void lock(hdhomerun_devptr_t hd_ptr)
-    {
-      if (hd_ptr == hd_ptr_)
-      {
-        return;
-      }
-
-      unlock();
-
-      hdhomerun_device_t & hd = *hd_ptr;
-      std::string name = hdhomerun_device_get_name(&hd);
-
-      std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-      lockkey_path_ = (fs::path(yaepg_dir) / (name + ".lockkey")).string();
-
-      yae::TOpenFile lock_file;
-      if (lock_file.open(lockkey_path_, "rb"))
-      {
-        lock_file.close();
-        hdhomerun_device_tuner_lockkey_force(&hd);
-        yae::remove_utf8(lockkey_path_);
-      }
-
-      char * ret_error = NULL;
-      if (hdhomerun_device_tuner_lockkey_request(&hd, &ret_error) <= 0)
-      {
-        YAE_THROW("failed to lock tuner: %s%s",
-                  name.c_str(),
-                  ret_error ? ret_error : "");
-      }
-
-      lock_file.open(lockkey_path_, "wb");
-      hd_ptr_ = hd_ptr;
-    }
-
-    //----------------------------------------------------------------
-    // unlock
-    //
-    void unlock()
-    {
-      if (hd_ptr_)
-      {
-        hdhomerun_device_t & hd = *hd_ptr_;
-        hdhomerun_device_tuner_lockkey_release(&hd);
-        yae::remove_utf8(lockkey_path_);
-      }
-    }
+    void lock(const hdhomerun_devptr_t & hd_ptr);
+    void unlock();
   };
+
+  //----------------------------------------------------------------
+  // LockTuner::LockTuner
+  //
+  LockTuner::LockTuner(const hdhomerun_devptr_t & hd_ptr)
+  {
+    lock(hd_ptr);
+  }
+
+  //----------------------------------------------------------------
+  // LockTuner::~LockTuner
+  //
+  LockTuner::~LockTuner()
+  {
+    unlock();
+  }
+
+  //----------------------------------------------------------------
+  // LockTuner::lock
+  //
+  void
+  LockTuner::lock(const hdhomerun_devptr_t & hd_ptr)
+  {
+    if (hd_ptr.get() == hd_ptr_.get())
+    {
+      return;
+    }
+
+    unlock();
+
+    hdhomerun_device_t & hd = *hd_ptr;
+    std::string name = hdhomerun_device_get_name(&hd);
+
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    lockkey_path_ = (fs::path(yaepg_dir) / (name + ".lockkey")).string();
+
+    yae::TOpenFile lock_file;
+    if (lock_file.open(lockkey_path_, "rb"))
+    {
+      lock_file.close();
+      hdhomerun_device_tuner_lockkey_force(&hd);
+      yae::remove_utf8(lockkey_path_);
+    }
+
+    char * ret_error = NULL;
+    if (hdhomerun_device_tuner_lockkey_request(&hd, &ret_error) <= 0)
+    {
+      YAE_THROW("failed to lock tuner: %s%s",
+                name.c_str(),
+                ret_error ? ret_error : "");
+    }
+
+    lock_file.open(lockkey_path_, "wb");
+    hd_ptr_ = hd_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // LockTuner::unlock
+  //
+  void
+  LockTuner::unlock()
+  {
+    if (hd_ptr_)
+    {
+      hdhomerun_device_t & hd = *hd_ptr_;
+      hdhomerun_device_tuner_lockkey_release(&hd);
+      yae::remove_utf8(lockkey_path_);
+    }
+  }
+
+
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::Private
+  //
+  struct HDHomeRun::Session::Private
+  {
+    Private():
+      stop_(TTime::now())
+    {}
+
+    inline bool expired() const
+    {
+      TTime t = TTime::now();
+      return stop_ <= t;
+    }
+
+    inline void extend(const TTime & t)
+    {
+      if (stop_ < t)
+      {
+        stop_ = t;
+      }
+    }
+
+    inline void finish()
+    {
+      stop_ = TTime::now();
+    }
+
+    TTime stop_;
+    LockTuner lock_tuner_;
+    hdhomerun_devptr_t hd_ptr_;
+    std::string tuner_name_;
+  };
+
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::Session
+  //
+  HDHomeRun::Session::Session():
+    private_(new HDHomeRun::Session::Private())
+  {}
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::~Session
+  //
+  HDHomeRun::Session::~Session()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::tuner_name
+  //
+  const std::string &
+  HDHomeRun::Session::tuner_name() const
+  {
+    return private_->tuner_name_;
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::expired
+  //
+  bool
+  HDHomeRun::Session::expired() const
+  {
+    return private_->expired();
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::extend
+  //
+  void
+  HDHomeRun::Session::extend(const TTime & t)
+  {
+    private_->extend(t);
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Session::finish
+  //
+  void
+  HDHomeRun::Session::finish()
+  {
+    private_->finish();
+  }
 
 
   //----------------------------------------------------------------
@@ -159,23 +256,22 @@ namespace yae
 
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
 
-    void capture(const std::string & tuner_name,
-                 hdhomerun_device_t * hd,
-                 const std::string & frequency,
-                 const Json::Value & freq,
-                 const yae::TTime & duration,
-                 const TCapturePtr & callback);
+    TSessionPtr open_session();
 
-    bool capture_all(const yae::TTime & duration,
-                     const TCapturePtr & callback);
+    bool scan_channels(const TSessionPtr & session_ptr,
+                       const IAssert & keep_going);
 
-    bool capture(const std::string & frequency,
-                 const TCapturePtr & callback,
-                 const yae::TTime & duration);
+    void capture(yae::weak_ptr<IStream> stream_ptr,
+                 const TSessionPtr & session_ptr,
+                 const std::string & frequency);
 
+    mutable boost::mutex mutex_;
     std::vector<struct hdhomerun_discover_device_t> devices_;
     std::map<std::string, hdhomerun_devptr_t> tuners_;
     Json::Value tuner_cache_;
+
+    // keep track of existing sessions, but don't extend their lifetime:
+    std::map<std::string, yae::weak_ptr<HDHomeRun::Session> > sessions_;
   };
 
 
@@ -185,6 +281,9 @@ namespace yae
   HDHomeRun::Private::Private():
     devices_(64)
   {
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+
     // discover HDHomeRun devices:
     int num_found =
       hdhomerun_discover_find_devices_custom_v2
@@ -217,246 +316,24 @@ namespace yae
         }
 
         hdhomerun_device_t & hd = *hd_ptr;
-        const char * name = hdhomerun_device_get_name(&hd);
-        const char * model = hdhomerun_device_get_model_str(&hd);
-        uint32_t target_addr = hdhomerun_device_get_local_machine_addr(&hd);
+        std::string name = hdhomerun_device_get_name(&hd);
+        tuners_[name] = hd_ptr;
 
+        std::string model = hdhomerun_device_get_model_str(&hd);
+        uint32_t target_addr = hdhomerun_device_get_local_machine_addr(&hd);
         yae_dlog("%s, id: %s, target addr: %u.%u.%u.%u",
-                 model,
-                 name,
+                 model.c_str(),
+                 name.c_str(),
                  (unsigned int)(target_addr >> 24) & 0x0FF,
                  (unsigned int)(target_addr >> 16) & 0x0FF,
                  (unsigned int)(target_addr >> 8) & 0x0FF,
                  (unsigned int)(target_addr >> 0) & 0x0FF);
 
-        // clear stale lock:
-        try { LockTuner lock(hd_ptr); } catch (...) {}
-
-        char * owner_str = NULL;
-        if (hdhomerun_device_get_tuner_lockkey_owner(&hd, &owner_str) != 1)
-        {
-          yae_wlog("hdhomerun_device_get_tuner_lockkey_owner failed for %s",
-                   name);
-          continue;
-        }
-
-        if (strcmp(owner_str, "none") != 0)
-        {
-          // tuner belongs to another process, ignore:
-          yae_wlog("skipping tuner %s, current owner: %s", name, owner_str);
-          continue;
-        }
-
-        char * status_str = NULL;
-        hdhomerun_tuner_status_t status = { 0 };
-        if (hdhomerun_device_get_tuner_status(&hd,
-                                              &status_str,
-                                              &status) == 1)
-        {
-          yae_dlog("\tstatus: %s", status_str);
-        }
-
-        std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-        YAE_ASSERT(yae::mkdir_p(yaepg_dir));
-
         std::string cache_path = (fs::path(yaepg_dir) / name).string();
         Json::Value & tuner_cache = tuner_cache_[name];
 
-        // load from cache
-        {
-          yae::TOpenFile cache_file(cache_path.c_str(), "rb");
-          if (cache_file.is_open())
-          {
-            std::string document = cache_file.read();
-            if (Json::Reader().parse(document, tuner_cache))
-            {
-              int64_t now = yae::TTime::now().get(1);
-              int64_t timestamp = tuner_cache.get("timestamp", 0).asInt64();
-              int64_t elapsed = now - timestamp;
-              int64_t threshold = 10 * 24 * 60 * 60;
-              if (threshold < elapsed)
-              {
-                // cache is too old, purge it:
-                yae_wlog("%s cache expired", cache_path.c_str());
-                tuner_cache.clear();
-              }
-            }
-          }
-        }
-
-        if (!tuner_cache.empty())
-        {
-          yae_wlog("using tuner cache %s", name);
-        }
-        else
-        {
-          // probably need to configure this tuner, or something:
-          yae_wlog("scanning %s", name);
-
-          try
-          {
-            LockTuner lock_tuner(hd_ptr);
-
-            hdhomerun_device_set_tuner_target(&hd, "none");
-
-            char * channelmap = NULL;
-            if (hdhomerun_device_get_tuner_channelmap(&hd, &channelmap) <= 0)
-            {
-              YAE_THROW("failed to query channelmap from device");
-            }
-
-            const char * scan_group =
-              hdhomerun_channelmap_get_channelmap_scan_group(channelmap);
-
-            if (!scan_group)
-            {
-              YAE_THROW("unknown channelmap '%s'", channelmap);
-            }
-
-            if (hdhomerun_device_channelscan_init(&hd, scan_group) <= 0)
-            {
-              YAE_THROW("failed to initialize channel scan: %s", scan_group);
-            }
-
-            while (!signal_handler_received_sigpipe() &&
-                   !signal_handler_received_sigint())
-            {
-              struct hdhomerun_channelscan_result_t result;
-              int ret = hdhomerun_device_channelscan_advance(&hd, &result);
-              if (ret <= 0)
-              {
-                break;
-              }
-
-              yae_dlog("SCANNING: %u (%s)",
-                       (unsigned int)(result.frequency),
-                       result.channel_str);
-
-              ret = hdhomerun_device_channelscan_detect(&hd, &result);
-              if (ret < 0)
-              {
-                break;
-              }
-
-              if (ret == 0)
-              {
-                continue;
-              }
-
-              yae_dlog("LOCK: %s (ss=%u snq=%u seq=%u)",
-                       result.status.lock_str,
-                       result.status.signal_strength,
-                       result.status.signal_to_noise_quality,
-                       result.status.symbol_error_quality);
-
-              if (result.transport_stream_id_detected)
-              {
-                yae_dlog("TSID: 0x%04X", result.transport_stream_id);
-              }
-
-              if (result.original_network_id_detected)
-              {
-                yae_dlog("ONID: 0x%04X", result.original_network_id);
-              }
-
-              if (result.program_count)
-              {
-                Json::Value v;
-                v["channel_str"] = result.channel_str;
-                v["channelmap"] = result.channelmap;
-                v["frequency"] = result.frequency;
-
-                v["original_network_id"] = result.original_network_id;
-                v["original_network_id_detected"] =
-                  result.original_network_id_detected;
-
-                v["transport_stream_id"] = result.transport_stream_id;
-                v["transport_stream_id_detected"] =
-                  result.transport_stream_id_detected;
-
-                v["program_count"] = result.program_count;
-                Json::Value & programs = v["programs"];
-
-                // status:
-                {
-                  Json::Value s;
-                  s["channel"] = result.status.channel;
-                  s["lock_str"] = result.status.lock_str;
-                  s["lock_supported"] = result.status.lock_supported;
-                  s["lock_unsupported"] = result.status.lock_unsupported;
-
-                  s["signal_present"] = result.status.signal_present;
-                  s["signal_strength"] = result.status.signal_strength;
-
-                  s["signal_to_noise_quality"] =
-                    result.status.signal_to_noise_quality;
-
-                  s["symbol_error_quality"] =
-                    result.status.symbol_error_quality;
-
-                  v["status"] = s;
-                }
-
-                for (int j = 0; j < result.program_count; j++)
-                {
-                  const hdhomerun_channelscan_program_t & program =
-                    result.programs[j];
-
-                  yae_dlog("PROGRAM %s", program.program_str);
-
-                  std::string key = yae::strfmt("%02i.%i %s",
-                                                program.virtual_major,
-                                                program.virtual_minor,
-                                                program.name);
-                  Json::Value p;
-
-                  p["program_number"] = program.program_number;
-                  p["virtual_major"] = program.virtual_major;
-                  p["virtual_minor"] = program.virtual_minor;
-                  p["name"] = program.name;
-                  p["type"] = program.type;
-
-                  programs.append(p);
-
-                  Json::Value & channels = tuner_cache["channels"];
-                  Json::Value z;
-                  z["frequency"] = result.frequency;
-                  z["program"] = p;
-
-                  channels[key] = z;
-                }
-
-                Json::Value & frequencies = tuner_cache["frequencies"];
-                frequencies[yae::to_text(result.frequency)] = v;
-              }
-            }
-          }
-          catch (const std::exception & e)
-          {
-            yae_wlog("failed to configure tuner %s: %s", name, e.what());
-            continue;
-          }
-          catch (...)
-          {
-            yae_wlog("failed to configure tuner %s: unexpected exception",
-                     name);
-            continue;
-          }
-
-          if (!tuner_cache.empty())
-          {
-            yae::TOpenFile cache_file(cache_path.c_str(), "wb");
-            if (cache_file.is_open())
-            {
-              tuner_cache["timestamp"] = Json::Int64(yae::TTime::now().get(1));
-              std::ostringstream oss;
-              Json::StyledStreamWriter().write(oss, tuner_cache);
-              cache_file.write(oss.str());
-            }
-          }
-        }
-
-        tuners_[std::string(name)] = hd_ptr;
+        // load from cache:
+        yae::TOpenFile(cache_path.c_str(), "rb").load(tuner_cache);
       }
     }
   }
@@ -468,6 +345,7 @@ namespace yae
   HDHomeRun::Private::
   get_channels(std::map<uint32_t, std::string> & chan_freq) const
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     for (Json::Value::const_iterator i = tuner_cache_.begin();
          i != tuner_cache_.end(); ++i)
     {
@@ -483,7 +361,6 @@ namespace yae
           std::string frequency = j.key().asString();
           const Json::Value & info = *j;
           const Json::Value & programs = info["programs"];
-
           for (Json::Value::const_iterator k = programs.begin();
                k != programs.end(); ++k)
           {
@@ -505,188 +382,424 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // HDHomeRun::Private::open_session
+  //
+  HDHomeRun::TSessionPtr
+  HDHomeRun::Private::open_session()
+  {
+    for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
+           i = tuners_.rbegin(); i != tuners_.rend(); ++i)
+    {
+      const std::string & tuner_name = i->first;
+      HDHomeRun::TSessionPtr session_ptr;
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        session_ptr = sessions_[tuner_name].lock();
+
+        if (session_ptr)
+        {
+          // we should not attempt sharing an existing session,
+          // and hopefully tuner locking would prevent it anyway:
+          continue;
+        }
+
+        session_ptr.reset(new HDHomeRun::Session());
+        sessions_[tuner_name] = session_ptr;
+      }
+
+      try
+      {
+        const hdhomerun_devptr_t & hd_ptr = i->second;
+        hdhomerun_device_t * hd = hd_ptr.get();
+
+        // clear stale lock:
+        try { LockTuner lock(hd_ptr); } catch (...) {}
+
+        char * owner = NULL;
+        if (hdhomerun_device_get_tuner_lockkey_owner(hd, &owner) != 1)
+        {
+          yae_wlog("hdhomerun_device_get_tuner_lockkey_owner failed for %s",
+                   tuner_name.c_str());
+          continue;
+        }
+
+        if (strcmp(owner, "none") != 0)
+        {
+          // tuner belongs to another process, ignore:
+          yae_wlog("skipping tuner %s, current owner: %s",
+                   tuner_name.c_str(),
+                   owner);
+          continue;
+        }
+
+        char * status_str = NULL;
+        hdhomerun_tuner_status_t status = { 0 };
+        if (hdhomerun_device_get_tuner_status(hd,
+                                              &status_str,
+                                              &status) == 1)
+        {
+          yae_dlog("%s, status: %s", tuner_name.c_str(), status_str);
+        }
+
+        HDHomeRun::Session::Private & session = *(session_ptr->private_);
+        session.lock_tuner_.lock(hd_ptr);
+        session.tuner_name_ = tuner_name;
+        session.hd_ptr_ = hd_ptr;
+        return session_ptr;
+      }
+      catch (const std::exception & e)
+      {
+        yae_wlog("failed to lock tuner %s: %s",
+                 tuner_name.c_str(),
+                 e.what());
+        continue;
+      }
+      catch (...)
+      {
+        yae_wlog("failed to configure tuner %s: unexpected exception",
+                 tuner_name.c_str());
+        continue;
+      }
+    }
+
+    return HDHomeRun::TSessionPtr();
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Private::scan_channels
+  //
+  bool
+  HDHomeRun::Private::scan_channels(const HDHomeRun::TSessionPtr & session_ptr,
+                                    const IAssert & keep_going)
+  {
+    // shortcuts:
+    HDHomeRun::Session::Private & session = *(session_ptr->private_);
+    const std::string & tuner_name = session.tuner_name_;
+    hdhomerun_device_t * hd = session.hd_ptr_.get();
+
+    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
+    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+
+    std::string cache_path = (fs::path(yaepg_dir) / tuner_name).string();
+    Json::Value tuner_cache;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      tuner_cache = tuner_cache_[tuner_name];
+    }
+
+    // check the cache:
+    {
+      int64_t now = yae::TTime::now().get(1);
+      int64_t timestamp = tuner_cache.get("timestamp", 0).asInt64();
+      int64_t elapsed = now - timestamp;
+      int64_t threshold = 10 * 24 * 60 * 60;
+
+      if (threshold < elapsed)
+      {
+        // cache is too old, purge it:
+        yae_wlog("%s channel scan cache expired", cache_path.c_str());
+        tuner_cache.clear();
+      }
+    }
+
+    if (!tuner_cache.empty())
+    {
+      int64_t ts = tuner_cache.get("timestamp", 0).asInt64();
+
+      struct tm localtime;
+      yae::unix_epoch_time_to_localtime(ts, localtime);
+      std::string date = yae::to_yyyymmdd_hhmmss(localtime);
+
+      yae_dlog("%s skipping channel scan, using cache from %s",
+               tuner_name.c_str(),
+               date.c_str());
+      return false;
+    }
+
+    try
+    {
+      hdhomerun_device_set_tuner_target(hd, "none");
+
+      char * channelmap = NULL;
+      if (hdhomerun_device_get_tuner_channelmap(hd, &channelmap) <= 0)
+      {
+        YAE_THROW("failed to query channelmap from device");
+      }
+
+      const char * scan_group =
+        hdhomerun_channelmap_get_channelmap_scan_group(channelmap);
+
+      if (!scan_group)
+      {
+        YAE_THROW("unknown channelmap '%s'", channelmap);
+      }
+
+      if (hdhomerun_device_channelscan_init(hd, scan_group) <= 0)
+      {
+        YAE_THROW("failed to initialize channel scan: %s", scan_group);
+      }
+
+      while (keep_going())
+      {
+        struct hdhomerun_channelscan_result_t result;
+        int ret = hdhomerun_device_channelscan_advance(hd, &result);
+        if (ret <= 0)
+        {
+          break;
+        }
+
+        yae_dlog("SCANNING: %u (%s)",
+                 (unsigned int)(result.frequency),
+                 result.channel_str);
+
+        ret = hdhomerun_device_channelscan_detect(hd, &result);
+        if (ret < 0)
+        {
+          break;
+        }
+
+        if (ret == 0)
+        {
+          continue;
+        }
+
+        yae_dlog("LOCK: %s (ss=%u snq=%u seq=%u)",
+                 result.status.lock_str,
+                 result.status.signal_strength,
+                 result.status.signal_to_noise_quality,
+                 result.status.symbol_error_quality);
+
+        if (result.transport_stream_id_detected)
+        {
+          yae_dlog("TSID: 0x%04X", result.transport_stream_id);
+        }
+
+        if (result.original_network_id_detected)
+        {
+          yae_dlog("ONID: 0x%04X", result.original_network_id);
+        }
+
+        if (!result.program_count)
+        {
+          continue;
+        }
+
+        Json::Value v;
+        v["channel_str"] = result.channel_str;
+        v["channelmap"] = result.channelmap;
+        v["frequency"] = result.frequency;
+
+        v["original_network_id"] = result.original_network_id;
+        v["original_network_id_detected"] =
+          result.original_network_id_detected;
+
+        v["transport_stream_id"] = result.transport_stream_id;
+        v["transport_stream_id_detected"] =
+          result.transport_stream_id_detected;
+
+        v["program_count"] = result.program_count;
+        Json::Value & programs = v["programs"];
+
+        // status:
+        {
+          Json::Value s;
+          s["channel"] = result.status.channel;
+          s["lock_str"] = result.status.lock_str;
+          s["lock_supported"] = result.status.lock_supported;
+          s["lock_unsupported"] = result.status.lock_unsupported;
+
+          s["signal_present"] = result.status.signal_present;
+          s["signal_strength"] = result.status.signal_strength;
+
+          s["signal_to_noise_quality"] =
+            result.status.signal_to_noise_quality;
+
+          s["symbol_error_quality"] =
+            result.status.symbol_error_quality;
+
+          v["status"] = s;
+        }
+
+        for (int j = 0; j < result.program_count; j++)
+        {
+          const hdhomerun_channelscan_program_t & program =
+            result.programs[j];
+
+          yae_dlog("PROGRAM %s", program.program_str);
+
+          std::string key = yae::strfmt("%02i.%i %s",
+                                        program.virtual_major,
+                                        program.virtual_minor,
+                                        program.name);
+          Json::Value p;
+
+          p["program_number"] = program.program_number;
+          p["virtual_major"] = program.virtual_major;
+          p["virtual_minor"] = program.virtual_minor;
+          p["name"] = program.name;
+          p["type"] = program.type;
+
+          programs.append(p);
+
+          Json::Value & channels = tuner_cache["channels"];
+          Json::Value z;
+          z["frequency"] = result.frequency;
+          z["program"] = p;
+
+          channels[key] = z;
+        }
+
+        Json::Value & frequencies = tuner_cache["frequencies"];
+        frequencies[yae::to_text(result.frequency)] = v;
+      }
+    }
+    catch (const std::exception & e)
+    {
+      yae_wlog("failed to configure tuner %s: %s",
+               tuner_name.c_str(),
+               e.what());
+      return false;
+    }
+    catch (...)
+    {
+      yae_wlog("failed to configure tuner %s: unexpected exception",
+               tuner_name.c_str());
+      return false;
+    }
+
+    if (!tuner_cache.empty())
+    {
+      tuner_cache["timestamp"] = Json::Int64(yae::TTime::now().get(1));
+      YAE_ASSERT(yae::TOpenFile(cache_path.c_str(), "wb").save(tuner_cache));
+
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      tuner_cache_[tuner_name] = tuner_cache;
+    }
+
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
   // HDHomeRun::Private::capture
   //
   void
-  HDHomeRun::Private::capture(const std::string & tuner_name,
-                              hdhomerun_device_t * hd,
-                              const std::string & frequency,
-                              const Json::Value & info,
-                              const yae::TTime & duration,
-                              const TCapturePtr & callback)
+  HDHomeRun::Private::capture(yae::weak_ptr<IStream> stream_weak_ptr,
+                              const HDHomeRun::TSessionPtr & session_ptr,
+                              const std::string & frequency)
   {
-    unsigned int tuner = hdhomerun_device_get_tuner(hd);
-    Json::Value programs = info.get("programs", Json::Value());
-    Json::Value status = info.get("status", Json::Value());
-    std::string channel = status.get("channel", "").asString();
+    // shortcuts:
+    HDHomeRun::Session::Private & session = *(session_ptr->private_);
+    const std::string & tuner_name = session.tuner_name_;
+    hdhomerun_device_t * hd = session.hd_ptr_.get();
 
-    std::string param = yae::strfmt("/tuner%i/channel", tuner);
-    char * error = NULL;
-    if (hdhomerun_device_set_var(hd,
-                                 param.c_str(),
-                                 channel.c_str(),
-                                 NULL,
-                                 &error) <= 0)
+    try
     {
-      YAE_THROW("failed to set channel, error: %s", error);
-    }
-
-    if (hdhomerun_device_stream_start(hd) <= 0)
-    {
-      YAE_THROW("failed to start stream for %s", channel.c_str());
-    }
-
-    std::string channels_txt;
-    {
-      std::ostringstream oss;
-      const char * separator = "";
-      for (Json::Value::iterator k = programs.begin();
-           k != programs.end(); ++k)
+      Json::Value programs;
+      Json::Value status;
       {
-        Json::Value prog = *k;
-        std::string prog_name = prog["name"].asString();
-        uint32_t major = prog["virtual_major"].asUInt();
-        uint32_t minor = prog["virtual_minor"].asUInt();
-        oss << separator << major << '.' << minor << ' ' << prog_name;
-        separator = ", ";
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        const Json::Value & info =
+          tuner_cache_[tuner_name]["frequencies"][frequency];
+        programs = info.get("programs", Json::Value());
+        status = info.get("status", Json::Value());
       }
-      channels_txt = oss.str().c_str();
-    }
-    yae_wlog("%s %sHz, capturing %s sample: %s",
-             tuner_name.c_str(),
-             frequency.c_str(),
-             duration.valid() ? duration.to_hhmmss().c_str() : "a",
-             channels_txt.c_str());
 
-    yae::TTime t_stop =
-      duration.valid() ?
-      yae::TTime::now() + duration :
-      yae::TTime::max_flicks();
+      std::string channel = status.get("channel", "").asString();
+      unsigned int tuner = hdhomerun_device_get_tuner(hd);
+      std::string param = yae::strfmt("/tuner%i/channel", tuner);
+      char * error = NULL;
 
-    while (!signal_handler_received_sigpipe() &&
-           !signal_handler_received_sigint())
-    {
-#ifdef _WIN32
-      // indicate activity to suppress auto sleep mode:
-      SetThreadExecutionState(ES_SYSTEM_REQUIRED);
-#endif
-
-      std::size_t buffer_size = 0;
-      uint8_t * buffer =
-        hdhomerun_device_stream_recv(hd,
-                                     VIDEO_DATA_BUFFER_SIZE_1S,
-                                     &buffer_size);
-      if (buffer)
+      if (hdhomerun_device_set_var(hd,
+                                   param.c_str(),
+                                   channel.c_str(),
+                                   NULL,
+                                   &error) <= 0)
       {
-        ICapture::TResponse r = callback->push(tuner_name,
-                                               frequency,
-                                               buffer,
-                                               buffer_size);
-        if (r == ICapture::STOP_E)
+        YAE_THROW("failed to set channel, error: %s", error);
+      }
+
+      if (hdhomerun_device_stream_start(hd) <= 0)
+      {
+        YAE_THROW("failed to start stream for %s", channel.c_str());
+      }
+
+      std::string channels_txt;
+      {
+        std::ostringstream oss;
+        const char * separator = "";
+        for (Json::Value::iterator k = programs.begin();
+             k != programs.end(); ++k)
+        {
+          Json::Value prog = *k;
+          std::string prog_name = prog["name"].asString();
+          uint32_t major = prog["virtual_major"].asUInt();
+          uint32_t minor = prog["virtual_minor"].asUInt();
+          oss << separator << major << '.' << minor << ' ' << prog_name;
+          separator = ", ";
+        }
+        channels_txt = oss.str().c_str();
+      }
+
+      yae_wlog("%s %sHz: capturing %s",
+               session.tuner_name_.c_str(),
+               frequency.c_str(),
+               channels_txt.c_str());
+
+      while (true)
+      {
+        yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
+        if (!stream_ptr)
         {
           return;
         }
-      }
 
-      yae::TTime t = yae::TTime::now();
-      if (t >= t_stop)
-      {
-        return;
-      }
-
-      if (!buffer)
-      {
-        msleep_approx(64);
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // HDHomeRun::Private::capture_all
-  //
-  bool
-  HDHomeRun::Private::capture_all(const yae::TTime & duration,
-                                  const TCapturePtr & callback)
-  {
-    for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
-           i = tuners_.rbegin(); i != tuners_.rend(); ++i)
-    {
-      const std::string & tuner_name = i->first;
-      hdhomerun_devptr_t hd_ptr = i->second;
-      try
-      {
-        LockTuner lock_tuner(hd_ptr);
-        hdhomerun_device_t * hd = hd_ptr.get();
-
-        Json::Value frequencies = tuner_cache_[tuner_name]["frequencies"];
-        for (Json::Value::iterator j = frequencies.begin();
-             j != frequencies.end(); ++j)
+        IStream & stream = *stream_ptr;
+        if (!stream.is_open())
         {
-          std::string frequency = j.key().asString();
-          capture(tuner_name, hd, frequency, *j, duration, callback);
+          return;
         }
 
-        return true;
-      }
-      catch (const std::exception & e)
-      {
-        yae_wlog("failed to configure tuner %s: %s",
-                 tuner_name.c_str(),
-                 e.what());
-        continue;
-      }
-      catch (...)
-      {
-        yae_wlog("failed to configure tuner %s: unexpected exception",
-                 tuner_name.c_str());
-        continue;
+#ifdef _WIN32
+        // indicate activity to suppress auto sleep mode:
+        SetThreadExecutionState(ES_SYSTEM_REQUIRED);
+#endif
+
+        static const std::size_t buffer_size_1s = VIDEO_DATA_BUFFER_SIZE_1S;
+        std::size_t buffer_size = 0;
+        uint8_t * buffer = hdhomerun_device_stream_recv(hd,
+                                                        buffer_size_1s,
+                                                        &buffer_size);
+
+        if (buffer && !stream.push(buffer, buffer_size))
+        {
+          return;
+        }
+
+        if (session.expired())
+        {
+          return;
+        }
+
+        if (!buffer)
+        {
+          msleep_approx(64);
+        }
       }
     }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // HDHomeRun::Private::capture
-  //
-  bool
-  HDHomeRun::Private::capture(const std::string & frequency,
-                              const TCapturePtr & callback,
-                              const yae::TTime & duration)
-  {
-    for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
-           i = tuners_.rbegin(); i != tuners_.rend(); ++i)
+    catch (const std::exception & e)
     {
-      const std::string & tuner_name = i->first;
-      hdhomerun_devptr_t hd_ptr = i->second;
-      try
-      {
-        LockTuner lock_tuner(hd_ptr);
-        hdhomerun_device_t * hd = hd_ptr.get();
-
-        const Json::Value & frequencies =
-          tuner_cache_[tuner_name]["frequencies"];
-
-        const Json::Value & info = frequencies[frequency];
-        capture(tuner_name, hd, frequency, info, duration, callback);
-        return true;
-      }
-      catch (const std::exception & e)
-      {
-        yae_wlog("failed to configure tuner %s: %s",
-                 tuner_name.c_str(),
-                 e.what());
-        continue;
-      }
-      catch (...)
-      {
-        yae_wlog("failed to configure tuner %s: unexpected exception",
-                 tuner_name.c_str());
-        continue;
-      }
+      yae_wlog("%s %sHz: stream failed: %s",
+               tuner_name.c_str(),
+               frequency.c_str(),
+               e.what());
     }
-
-    return false;
+    catch (...)
+    {
+      yae_wlog("%s %sHz: stream failed: unexpected exception",
+               tuner_name.c_str(),
+               frequency.c_str());
+    }
   }
 
 
@@ -706,33 +819,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // HDHomeRun::open_session
+  //
+  HDHomeRun::TSessionPtr
+  HDHomeRun::open_session()
+  {
+    return private_->open_session();
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::scan_channels
+  //
+  bool
+  HDHomeRun::scan_channels(TSessionPtr session_ptr,
+                           const IAssert & keep_going)
+  {
+    return private_->scan_channels(session_ptr, keep_going);
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::capture
+  //
+  void
+  HDHomeRun::capture(const TSessionPtr session_ptr,
+                     yae::weak_ptr<IStream> stream_ptr,
+                     const std::string & frequency)
+  {
+    private_->capture(stream_ptr, session_ptr, frequency);
+  }
+
+  //----------------------------------------------------------------
   // HDHomeRun::get_channels
   //
   bool
   HDHomeRun::get_channels(std::map<uint32_t, std::string> & ch_freq) const
   {
     return private_->get_channels(ch_freq);
-  }
-
-  //----------------------------------------------------------------
-  // HDHomeRun::capture_all
-  //
-  bool
-  HDHomeRun::capture_all(const yae::TTime & duration,
-                         const TCapturePtr & callback)
-  {
-    return private_->capture_all(duration, callback);
-  }
-
-  //----------------------------------------------------------------
-  // HDHomeRun::capture
-  //
-  bool
-  HDHomeRun::capture(const std::string & frequency,
-                     const TCapturePtr & callback,
-                     const yae::TTime & duration)
-  {
-    return private_->capture(frequency, callback, duration);
   }
 
 }

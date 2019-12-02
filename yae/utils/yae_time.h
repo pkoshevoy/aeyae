@@ -34,6 +34,51 @@ namespace yae
                               int hour, int min, int sec);
 
   //----------------------------------------------------------------
+  // unix_epoch_time_to_localtime
+  //
+  YAE_API void
+  unix_epoch_time_to_localtime(int64_t ts, struct tm & t);
+
+  //----------------------------------------------------------------
+  // localtime_to_unix_epoch_time
+  //
+  YAE_API int64_t
+  localtime_to_unix_epoch_time(const struct tm & t);
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_utc
+  //
+  YAE_API void
+  unix_epoch_time_to_utc(int64_t ts, struct tm & t);
+
+  //----------------------------------------------------------------
+  // utc_to_unix_epoch_time
+  //
+  YAE_API int64_t
+  utc_to_unix_epoch_time(const struct tm & t);
+
+ //----------------------------------------------------------------
+  // to_yyyymmdd
+  //
+  YAE_API std::string
+  to_yyyymmdd(const struct tm & t, const char * sep = "/");
+
+  //----------------------------------------------------------------
+  // to_hhmmss
+  //
+  YAE_API std::string
+  to_hhmmss(const struct tm & t, const char * sep = ":");
+
+  //----------------------------------------------------------------
+  // to_yyyymmdd_hhmmss
+  //
+  YAE_API std::string
+  to_yyyymmdd_hhmmss(const struct tm & t,
+                     const char * date_sep = "/",
+                     const char * separator = " ",
+                     const char * time_sep = ":");
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime_str
   //
   YAE_API std::string

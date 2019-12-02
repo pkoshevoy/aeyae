@@ -2310,6 +2310,50 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // EPG
+    //
+    struct YAE_API EPG
+    {
+
+      //----------------------------------------------------------------
+      // Program
+      //
+      struct YAE_API Program
+      {
+        std::string title_;
+        std::string description_;
+        std::string rating_;
+        uint32_t gps_time_;
+        uint32_t duration_;
+
+        // local time:
+        struct tm tm_;
+      };
+
+      //----------------------------------------------------------------
+      // Channel
+      //
+      struct YAE_API Channel
+      {
+        Channel();
+
+        void dump(std::ostream & oss) const;
+
+        uint16_t major_;
+        uint16_t minor_;
+        std::string name_;
+        std::string description_;
+        std::list<EPG::Program> programs_;
+        uint32_t gps_time_;
+      };
+
+      void dump(std::ostream & oss) const;
+
+      std::map<uint32_t, Channel> channels_;
+    };
+
+
+    //----------------------------------------------------------------
     // Context
     //
     struct YAE_API Context
@@ -2321,12 +2365,15 @@ namespace yae
       void handle(const IPacketHandler::Packet & packet,
                   IPacketHandler & handler) const;
 
-      void dump(const std::string & lang = std::string("eng")) const;
+      void get_epg(yae::mpeg_ts::EPG & epg,
+                   const std::string & lang = std::string("eng")) const;
 
       bool channel_guide_overlaps(int64_t t) const;
 
       void save(Json::Value & json) const;
       void load(const Json::Value & json);
+
+      void dump(const std::string & lang = std::string("eng")) const;
 
     protected:
       void consume(uint16_t pid,

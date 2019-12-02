@@ -53,17 +53,115 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // tm_to_str
+  // unix_epoch_time_to_localtime
   //
-  static std::string
-  tm_to_str(const struct tm & t)
+  void
+  unix_epoch_time_to_localtime(int64_t ts, struct tm & t)
   {
-    std::string txt = yae::strfmt("%04i/%02i/%02i %02i:%02i:%02i",
+    memset(&t, 0, sizeof(t));
+#ifdef _WIN32
+    _localtime64_s(&t, &ts);
+#else
+    time_t tt = time_t(ts);
+    localtime_r(&tt, &t);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // localtime_to_unix_epoch_time
+  //
+  int64_t
+  localtime_to_unix_epoch_time(const struct tm & t)
+  {
+    struct tm tm = t;
+#ifdef _WIN32
+    int64_t t_epoch = _mktime64(&tm);
+#else
+    int64_t t_epoch = timelocal(&tm);
+#endif
+    return t_epoch;
+  }
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_utc
+  //
+  void
+  unix_epoch_time_to_utc(int64_t ts, struct tm & t)
+  {
+    memset(&t, 0, sizeof(t));
+#ifdef _WIN32
+    _gmtime64_s(&t, &ts);
+#else
+    time_t tt = time_t(ts);
+    gmtime_r(&tt, &t);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // utc_to_unix_epoch_time
+  //
+  int64_t
+  utc_to_unix_epoch_time(const struct tm & t)
+  {
+    struct tm tm = t;
+#ifdef _WIN32
+    int64_t t_epoch = _mktime64(&tm);
+#else
+    int64_t t_epoch = timegm(&tm);
+#endif
+    return t_epoch;
+  }
+
+  //----------------------------------------------------------------
+  // to_yyyymmdd
+  //
+  std::string
+  to_yyyymmdd(const struct tm & t, const char * date_sep)
+  {
+    std::string txt = yae::strfmt("%04i%s%02i%s%02i",
                                   t.tm_year + 1900,
+                                  date_sep,
                                   t.tm_mon + 1,
-                                  t.tm_mday,
+                                  date_sep,
+                                  t.tm_mday);
+    return txt;
+  }
+
+  //----------------------------------------------------------------
+  // to_hhmmss
+  //
+  std::string
+  to_hhmmss(const struct tm & t, const char * time_sep)
+  {
+    std::string txt = yae::strfmt("%02i%s%02i%s%02i",
                                   t.tm_hour,
+                                  time_sep,
                                   t.tm_min,
+                                  time_sep,
+                                  t.tm_sec);
+    return txt;
+  }
+
+  //----------------------------------------------------------------
+  // to_yyyymmdd_hhmmss
+  //
+  std::string
+  to_yyyymmdd_hhmmss(const struct tm & t,
+                     const char * date_sep,
+                     const char * separator,
+                     const char * time_sep)
+  {
+    std::string txt = yae::strfmt("%04i%s%02i%s%02i%s%02i%s%02i%s%02i",
+                                  t.tm_year + 1900,
+                                  date_sep,
+                                  t.tm_mon + 1,
+                                  date_sep,
+                                  t.tm_mday,
+                                  separator,
+                                  t.tm_hour,
+                                  time_sep,
+                                  t.tm_min,
+                                  time_sep,
                                   t.tm_sec);
     return txt;
   }
@@ -74,14 +172,9 @@ namespace yae
   std::string
   unix_epoch_time_to_localtime_str(int64_t ts)
   {
-    struct tm t = { 0 };
-#ifdef _WIN32
-    _localtime64_s(&t, &ts);
-#else
-    time_t tt = time_t(ts);
-    localtime_r(&tt, &t);
-#endif
-    return tm_to_str(t);
+    struct tm t;
+    unix_epoch_time_to_localtime(ts, t);
+    return to_yyyymmdd_hhmmss(t);
   }
 
   //----------------------------------------------------------------
@@ -90,14 +183,9 @@ namespace yae
   std::string
   unix_epoch_time_to_utc_str(int64_t ts)
   {
-    struct tm t = { 0 };
-#ifdef _WIN32
-    _gmtime64_s(&t, &ts);
-#else
-    time_t tt = time_t(ts);
-    gmtime_r(&tt, &t);
-#endif
-    return tm_to_str(t);
+    struct tm t;
+    unix_epoch_time_to_utc(ts, t);
+    return to_yyyymmdd_hhmmss(t);
   }
 
   //----------------------------------------------------------------

@@ -6,6 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+
 // system:
 #ifdef _WIN32
 #include <windows.h>
@@ -14,512 +15,24 @@
 // standard:
 #include <iomanip>
 #include <iostream>
-#include <list>
-#include <map>
 #include <stdexcept>
-#include <string>
-#include <vector>
 
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/thread.hpp>
 #endif
 
 // yae:
 #include "yae/api/yae_log.h"
-#include "yae/thread/yae_ring_buffer.h"
-#include "yae/thread/yae_worker.h"
-#include "yae/utils/yae_data.h"
-#include "yae/utils/yae_fifo.h"
-#include "yae/utils/yae_utils.h"
-#include "yae/video/yae_mpeg_ts.h"
 
 // epg:
+#include "yae_dvr.h"
 #include "yae_hdhomerun.h"
 #include "yae_signal_handler.h"
 
 
-// namespace shortcut:
-namespace fs = boost::filesystem;
-
-
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // Capture
-  //
-  struct Capture : ICapture
-  {
-    Capture(bool epg_only = false);
-    ~Capture();
-
-    void save_epg() const;
-    void save_epg(const std::string & frequency) const;
-    void save_frequencies() const;
-
-    //----------------------------------------------------------------
-    // Stream
-    //
-    struct Stream : yae::mpeg_ts::IPacketHandler
-    {
-      Stream(Capture & capture);
-      virtual ~Stream();
-
-      virtual void
-      handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
-             const yae::mpeg_ts::Bucket & bucket,
-             uint32_t gps_time);
-
-      Capture & capture_;
-      yae::Worker worker_;
-      yae::TOpenFilePtr file_;
-      yae::mpeg_ts::Context ctx_;
-      yae::RingBuffer rb_;
-      yae::TTime start_;
-
-      // buffer packets until we have enough info (EPG)
-      // to enable us to handle them properly:
-      yae::fifo<Packet> packets_;
-      std::map<uint32_t, yae::TOpenFilePtr> channels_;
-    };
-
-    //----------------------------------------------------------------
-    // TStreamPtr
-    //
-    typedef boost::shared_ptr<Stream> TStreamPtr;
-
-    //----------------------------------------------------------------
-    // Task
-    //
-    struct Task : yae::Worker::Task
-    {
-      Task(const std::string & tuner_name,
-           const std::string & frequency,
-           std::size_t size,
-           Stream & stream);
-
-      // virtual:
-      void execute(const yae::Worker & worker);
-
-      std::string tuner_name_;
-      std::string frequency_;
-      std::size_t size_;
-      Stream & stream_;
-    };
-
-    //----------------------------------------------------------------
-    // push
-    //
-    TResponse
-    push(const std::string & tuner_name,
-         const std::string & frequency,
-         const void * data,
-         std::size_t size);
-
-    fs::path yaepg_;
-    fs::path basedir_;
-    std::map<std::string, TStreamPtr> stream_;
-    bool epg_only_;
-  };
-
-
-  //----------------------------------------------------------------
-  // Capture::Capture
-  //
-  Capture::Capture(bool epg_only):
-    yaepg_(yae::get_user_folder_path(".yaepg")),
-    basedir_(yae::get_temp_dir_utf8()),
-    epg_only_(epg_only)
-  {
-    YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
-
-    std::string freq_path = (yaepg_ / "frequencies.json").string();
-    Json::Value json;
-    yae::TOpenFile(freq_path, "rb").load(json);
-
-    std::list<std::string> frequencies;
-    yae::load(json, frequencies);
-
-    for (std::list<std::string>::const_iterator
-           i = frequencies.begin(); i != frequencies.end(); ++i)
-    {
-      const std::string & frequency = *i;
-      std::string epg_path =
-        (yaepg_ / ("epg-" + frequency + ".json")).string();
-
-      Json::Value epg;
-      if (yae::TOpenFile(epg_path, "rb").load(epg))
-      {
-        TStreamPtr & stream_ptr = stream_[frequency];
-        stream_ptr.reset(new Stream(*this));
-
-        Stream & stream = *stream_ptr;
-        stream.ctx_.load(epg[frequency]);
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Capture::~Capture
-  //
-  Capture::~Capture()
-  {
-    save_epg();
-  }
-
-  //----------------------------------------------------------------
-  // Capture::save_epg
-  //
-  void
-  Capture::save_epg() const
-  {
-    for (std::map<std::string, TStreamPtr>::const_iterator
-           i = stream_.begin(); i != stream_.end(); ++i)
-    {
-      const std::string & frequency = i->first;
-      save_epg(frequency);
-    }
-
-    save_frequencies();
-  }
-
-  //----------------------------------------------------------------
-  // Capture::save
-  //
-  void
-  Capture::save_epg(const std::string & frequency) const
-  {
-    const Stream & stream = *(yae::at(stream_, frequency));
-
-    Json::Value json;
-    stream.ctx_.save(json[frequency]);
-    json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
-
-    std::string epg_path = (yaepg_ / ("epg-" + frequency + ".json")).string();
-    yae::TOpenFile epg_file;
-    if (epg_file.open(epg_path, "wb"))
-    {
-      epg_file.save(json);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Capture::save_frequencies
-  //
-  void
-  Capture::save_frequencies() const
-  {
-    std::list<std::string> frequencies;
-    for (std::map<std::string, TStreamPtr>::const_iterator
-           i = stream_.begin(); i != stream_.end(); ++i)
-    {
-      const std::string & frequency = i->first;
-      frequencies.push_back(frequency);
-    }
-
-    Json::Value json;
-    yae::save(json, frequencies);
-
-    std::string freq_path = (yaepg_ / "frequencies.json").string();
-    yae::TOpenFile freq_file;
-    if (freq_file.open(freq_path, "wb"))
-    {
-      freq_file.save(json);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Capture::Stream::Stream
-  //
-  Capture::Stream::Stream(Capture & capture):
-    capture_(capture),
-    rb_(188 * 4096),
-    start_(0, 0),
-    packets_(400000) // 75.2MB
-  {}
-
-  //----------------------------------------------------------------
-  // Capture::Stream::~Stream
-  //
-  Capture::Stream::~Stream()
-  {
-    rb_.close();
-    worker_.stop();
-    worker_.wait_until_finished();
-  }
-
-  //----------------------------------------------------------------
-  // Capture::Stream::handle
-  //
-  void
-  Capture::Stream::handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
-                          const yae::mpeg_ts::Bucket & bucket,
-                          uint32_t gps_time)
-  {
-    packets_.push(packet);
-
-    if (bucket.guide_.empty())
-    {
-      return;
-    }
-
-    // consume the backlog:
-    yae::mpeg_ts::IPacketHandler::Packet pkt;
-    while (packets_.pop(pkt))
-    {
-      // shortcut:
-      const yae::IBuffer & data = *(pkt.data_);
-
-      std::map<uint16_t, uint32_t>::const_iterator found =
-        bucket.pid_to_ch_num_.find(pkt.pid_);
-      if (found == bucket.pid_to_ch_num_.end())
-      {
-        for (std::map<uint32_t, yae::TOpenFilePtr>::iterator
-               i = channels_.begin(); i != channels_.end(); ++i)
-        {
-          yae::TOpenFile & file = *(i->second);
-          YAE_ASSERT(file.write(data.get(), data.size()));
-        }
-      }
-      else
-      {
-        const uint32_t ch_num = found->second;
-        yae::TOpenFilePtr & file_ptr = channels_[ch_num];
-        if (!file_ptr)
-        {
-          uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-          uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-
-          const yae::mpeg_ts::ChannelGuide & chan =
-            yae::at(bucket.guide_, ch_num);
-
-          std::string fn = yae::strfmt("%02u.%02u-%s.ts",
-                                       major,
-                                       minor,
-                                       chan.name_.c_str());
-          std::string filepath = (capture_.basedir_ / fn).string();
-          file_ptr.reset(new TOpenFile(filepath, "wb"));
-        }
-
-        yae::TOpenFile & file = *file_ptr;
-        YAE_ASSERT(file.write(data.get(), data.size()));
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Capture::Task::Task
-  //
-  Capture::Task::Task(const std::string & tuner_name,
-                      const std::string & frequency,
-                      std::size_t size,
-                      Stream & stream):
-    tuner_name_(tuner_name),
-    frequency_(frequency),
-    size_(size),
-    stream_(stream)
-  {}
-
-  //----------------------------------------------------------------
-  // Capture::Task::execute
-  //
-  void
-  Capture::Task::execute(const yae::Worker & worker)
-  {
-    (void)worker;
-
-    yae::RingBuffer & rb = stream_.rb_;
-    TOpenFile & file = *(stream_.file_);
-    yae::mpeg_ts::Context & ctx = stream_.ctx_;
-
-    yae::TTime start = TTime::now();
-    std::size_t done = 0;
-    while (true)
-    {
-      std::size_t todo = std::min<std::size_t>(188 * 7, size_ - done);
-      if (todo < 188)
-      {
-        YAE_EXPECT(!todo);
-        break;
-      }
-
-      yae::Data data(todo);
-      std::size_t size = rb.pull(data.get(), data.size());
-
-      if (!size)
-      {
-        if (!rb.is_open())
-        {
-          break;
-        }
-
-        continue;
-      }
-
-      done += size;
-      data.truncate(size);
-      file.write(data.get(), size);
-
-      // parse the transport stream:
-      yae::Bitstream bitstream(data);
-      while (!bitstream.exhausted())
-      {
-        try
-        {
-          TBufferPtr pkt_data = bitstream.read_bytes(188);
-          yae::Bitstream bin(pkt_data);
-
-          yae::mpeg_ts::TSPacket pkt;
-          pkt.load(bin);
-
-          std::size_t end_pos = bin.position();
-          std::size_t bytes_consumed = end_pos >> 3;
-
-          if (bytes_consumed != 188)
-          {
-            yae_wlog("TSPacket too short (%i bytes), %s ...",
-                     bytes_consumed,
-                     yae::to_hex(pkt_data->get(), 32, 4).c_str());
-            continue;
-          }
-
-          ctx.push(pkt);
-
-          yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);
-          ctx.handle(packet, stream_);
-        }
-        catch (const std::exception & e)
-        {
-          std::string data_hex =
-            yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
-
-          yae_wlog("failed to parse %s, tuner %s, %sHz: %s",
-                   data_hex.c_str(),
-                   tuner_name_.c_str(),
-                   frequency_.c_str(),
-                   e.what());
-        }
-        catch (...)
-        {
-          std::string data_hex =
-            yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
-
-          yae_wlog("failed to parse %s..., tuner %s, %sHz %s: "
-                   "unexpected exception",
-                   data_hex.c_str(),
-                   tuner_name_.c_str(),
-                   frequency_.c_str());
-        }
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // Capture::push
-  //
-  ICapture::TResponse
-  Capture::push(const std::string & tuner_name,
-                const std::string & frequency,
-                const void * data,
-                std::size_t size)
-  {
-#if 0
-    std::string capture_path =
-      (fs::path(yae::get_temp_dir_utf8()) / (frequency + "-v1.ts")).string();
-
-    boost::shared_ptr<TOpenFile> file_ptr =
-      get_open_file(capture_path.c_str(), "wb");
-    YAE_THROW_IF(!file_ptr);
-
-    TOpenFile & capture = *file_ptr;
-    YAE_THROW_IF(!capture.is_open());
-
-    capture.write(data, size);
-#endif
-
-    TStreamPtr & stream_ptr = stream_[frequency];
-    if (!stream_ptr)
-    {
-      stream_ptr.reset(new Stream(*this));
-    }
-
-    Stream & stream = *stream_ptr;
-    yae::RingBuffer & rb = stream.rb_;
-    yae::mpeg_ts::Context & ctx = stream.ctx_;
-
-    if (!stream.start_.valid())
-    {
-      stream.start_ = TTime::now();
-    }
-
-    if (!stream.file_)
-    {
-      std::string capture_path =
-        (fs::path(yae::get_temp_dir_utf8()) / (frequency + ".ts")).string();
-
-      TOpenFilePtr file = get_open_file(capture_path.c_str(), "wb");
-      YAE_THROW_IF(!(file && file->is_open()));
-      stream.file_ = file;
-    }
-
-    yae::TOpenFile & file = *(stream.file_);
-
-    if (epg_only_)
-    {
-      // stop once Channel Guide extends to 9 hours from now
-      static const TTime nine_hours(9 * 60 * 60, 1);
-      TTime now = TTime::now();
-      int64_t t = (now + nine_hours).get(1);
-
-      if (ctx.channel_guide_overlaps(t) && rb.is_open())
-      {
-        TTime elapsed_time = now - stream.start_;
-        yae_dlog("%s %sHz EPG ready, elapsed time: %s",
-                 tuner_name.c_str(),
-                 frequency.c_str(),
-                 elapsed_time.to_hhmmss_ms().c_str());
-
-        // done:
-        rb.close();
-        file.close();
-        return STOP_E;
-      }
-    }
-
-    if (!size)
-    {
-      rb.close();
-      file.close();
-      return STOP_E;
-    }
-
-#if 0
-    std::string data_hex =
-      yae::to_hex(data, std::min<std::size_t>(size, 32), 4);
-
-    yae_dlog("%s %sHz: %5i %s...",
-             tuner_name.c_str(),
-             frequency.c_str(),
-             int(size),
-             data_hex.c_str());
-#endif
-
-    yae::shared_ptr<Task, yae::Worker::Task> task;
-    task.reset(new Task(tuner_name, frequency, size, stream));
-    stream.worker_.add(task);
-
-    TResponse response = MORE_E;
-    if (rb.push(data, size) != size)
-    {
-      response = STOP_E;
-    }
-
-    return response;
-  }
-
 
   //----------------------------------------------------------------
   // main_may_throw
@@ -531,50 +44,67 @@ namespace yae
     yae::signal_handler();
 
 #if 1
-    static const yae::TTime max_duration(30, 1);
-    yae::HDHomeRun hdhr;
+    DVR dvr;
 
-    std::map<uint32_t, std::string> channels;
-    hdhr.get_channels(channels);
+    dvr.scan_channels();
+    dvr.worker_.wait_until_finished();
 
-    std::list<std::string> frequencies;
-    for (std::map<uint32_t, std::string>::const_iterator
-           i = channels.begin(); i != channels.end(); ++i)
+    dvr.update_epg();
+    dvr.worker_.wait_until_finished();
+
+    yae::mpeg_ts::EPG epg;
+    uint32_t ch13p1 = yae::mpeg_ts::channel_number(13, 1);
+    DVR::TStreamPtr stream_ptr;
+
+    // FIXME: pull EPG, evaluate wishlist, start captures, etc...
+    while (!signal_handler_received_sigpipe() &&
+           !signal_handler_received_sigint())
     {
-      const std::string & frequency = i->second;
-      if (frequencies.empty() || frequencies.back() != frequency)
-      {
-        frequencies.push_back(frequency);
-      }
-    }
-
-    bool epg_only = true;
-    yae::shared_ptr<Capture, ICapture> dvr_ptr(new Capture(epg_only));
-    Capture & dvr = *dvr_ptr;
-
-    // hdhr.capture_all(max_duration, dvr_ptr);
-    // hdhr.capture(std::string("539000000"), dvr_ptr, max_duration);
-
-    for (std::list<std::string>::const_iterator
-           i = frequencies.begin(); i != frequencies.end(); ++i)
-    {
-      const std::string & frequency = *i;
-      hdhr.capture(frequency, dvr_ptr, max_duration);
-
-      yae::Capture::TStreamPtr stream_ptr;
-      stream_ptr = yae::get(dvr.stream_, frequency, stream_ptr);
+      dvr.get_epg(epg);
 
       if (!stream_ptr)
       {
-        continue;
-      }
+        std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+          found = epg.channels_.find(ch13p1);
 
-      const yae::Capture::Stream & stream = *stream_ptr;
-      const yae::mpeg_ts::Context & ctx = stream.ctx_;
-      ctx.dump();
-      dvr.save_epg(frequency);
-      dvr.save_frequencies();
+        if (found != epg.channels_.end())
+        {
+          uint32_t ch_num = found->first;
+          const yae::mpeg_ts::EPG::Channel & channel = found->second;
+
+          for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator i =
+                 channel.programs_.begin(); i != channel.programs_.end(); ++i)
+          {
+            const yae::mpeg_ts::EPG::Program & program = *i;
+            uint32_t t0 = program.gps_time_;
+            uint32_t t1 = program.duration_ + t0;
+
+            if (t0 <= channel.gps_time_ + 12 && channel.gps_time_ + 12 < t1)
+            {
+              std::map<uint32_t, std::string> frequencies;
+              dvr.hdhr_.get_channels(frequencies);
+
+              uint64_t num_sec = t1 - channel.gps_time_;
+              std::string frequency = yae::at(frequencies, ch_num);
+              stream_ptr = dvr.capture_stream(frequency, TTime(num_sec, 1));
+              // dvr.worker_.wait_until_finished();
+            }
+          }
+        }
+
+        if (!stream_ptr)
+        {
+          sleep(12);
+          continue;
+        }
+      }
+      else if (!stream_ptr->is_open())
+      {
+        break;
+      }
     }
+
+    dvr.shutdown();
 
 #else
 #if 0

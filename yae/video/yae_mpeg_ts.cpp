@@ -4495,6 +4495,67 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // EPG::Channel::Channel
+    //
+    EPG::Channel::Channel():
+      major_(0),
+      minor_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // EPG::Channel::dump
+    //
+    void
+    EPG::Channel::dump(std::ostream & oss) const
+    {
+      oss << major_ << '.' << minor_ << ' ' << name_;
+      if (!description_.empty())
+      {
+        oss << ", " << description_;
+      }
+      oss << ":\n";
+
+      for (std::list<EPG::Program>::const_iterator
+             i = programs_.begin(); i != programs_.end(); ++i)
+      {
+        const EPG::Program & program = *i;
+
+        std::string t = to_yyyymmdd_hhmmss(program.tm_);
+        oss << "  " << t << ' ' << program.title_;
+
+        if (!program.rating_.empty())
+        {
+          oss << " [" << program.rating_ << "]";
+        }
+
+        oss << '\n';
+
+        if (!program.description_.empty())
+        {
+          oss << "    " << program.description_ << '\n';
+        }
+
+        oss << std::endl;
+      }
+    }
+
+    //----------------------------------------------------------------
+    // EPG::dump
+    //
+    void
+    EPG::dump(std::ostream & oss) const
+    {
+      for (std::map<uint32_t, Channel>::const_iterator
+             i = channels_.begin(); i != channels_.end(); ++i)
+      {
+        const Channel & channel = i->second;
+        channel.dump(oss);
+        oss << '\n';
+      }
+    }
+
+
+    //----------------------------------------------------------------
     // Context::consume
     //
     void
@@ -5337,13 +5398,12 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::dump
+    // Context::get_epg
     //
     void
-    Context::dump(const std::string & lang) const
+    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      std::ostringstream oss;
 
       std::size_t bx = bucket_index_at(gps_time_now());
       for (std::size_t i = 0; i < 256; i++)
@@ -5361,43 +5421,39 @@ namespace yae
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
         const uint32_t ch_num = i->first;
-        const ChannelGuide & chan = i->second;
-        oss << '\n'
-            << channel_major(ch_num) << '.'
-            << channel_minor(ch_num) << ' ' << chan.name_;
-        if (!chan.channel_etm_.empty())
+        EPG::Channel & channel = epg.channels_[ch_num];
+        channel = EPG::Channel();
+        channel.major_ = channel_major(ch_num);
+        channel.minor_ = channel_minor(ch_num);
+
+        const ChannelGuide & guide = i->second;
+        channel.name_ = guide.name_;
+        channel.gps_time_ = gps_time_now();
+
+        if (!guide.channel_etm_.empty())
         {
-          oss << ", " << get_text(chan.channel_etm_, lang);
+          channel.description_ = get_text(guide.channel_etm_, lang);
         }
-        oss << ":\n";
 
         for (std::list<ChannelGuide::Item>::const_iterator
-               j = chan.items_.begin(); j != chan.items_.end(); ++j)
+               j = guide.items_.begin(); j != guide.items_.end(); ++j)
         {
           const ChannelGuide::Item & item = *j;
-          std::string t = gps_time_to_str(item.t0_);
-          oss << "  " << t << ' ' << item.get_title();
 
-          std::string rating = get_rating(bucket.rrt_, item.rating_, lang);
-          if (!rating.empty())
-          {
-            oss << " [" << rating << "]";
-          }
+          channel.programs_.push_back(EPG::Program());
+          EPG::Program & program = channel.programs_.back();
+          program.title_ = item.get_title(lang);
+          program.description_ = guide.get_description(item, lang);
+          program.rating_ = get_rating(bucket.rrt_, item.rating_, lang);
 
-          oss << '\n';
+          program.gps_time_ = item.t0_;
+          program.duration_ = item.dt_;
 
-          std::string description = chan.get_description(item, lang);
-          if (!description.empty())
-          {
-            oss << "    " << description << '\n';
-          }
-
-          oss << '\n';
+          static uint32_t seconds_per_day = 24 * 60 * 60;
+          int64_t t = gps_time_to_unix_time(item.t0_);
+          yae::unix_epoch_time_to_localtime(t, program.tm_);
         }
       }
-
-      yae_debug << oss.str();
-      // yae::dump("/tmp/yaepg.log", oss.str().c_str(), oss.str().size());
     }
 
     //----------------------------------------------------------------
@@ -5444,6 +5500,22 @@ namespace yae
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::load(json["bucket"], bucket_);
+    }
+
+    //----------------------------------------------------------------
+    // Context::dump
+    //
+    void
+    Context::dump(const std::string & lang) const
+    {
+      EPG epg;
+      get_epg(epg, lang);
+
+      std::ostringstream oss;
+      epg.dump(oss);
+
+      yae_debug << oss.str();
+      // yae::dump("/tmp/yaepg.log", oss.str().c_str(), oss.str().size());
     }
 
   }

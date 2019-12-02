@@ -9,7 +9,10 @@
 #ifndef YAE_HDHOMERUN_H_
 #define YAE_HDHOMERUN_H_
 
-// yae includes:
+// standard:
+#include <stdexcept>
+
+// aeyae:
 #include "yae/utils/yae_time.h"
 #include "yae/video/yae_mpeg_ts.h"
 
@@ -18,32 +21,58 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // ICapture
+  // IAssert
   //
-  struct ICapture
+  struct IAssert
   {
-    virtual ~ICapture() {}
+    virtual ~IAssert() {}
+    virtual bool eval() const = 0;
 
-    //----------------------------------------------------------------
-    // TResponse
-    //
-    typedef enum
+    inline bool operator()() const
     {
-      STOP_E = 0,
-      MORE_E = 1,
-    } TResponse;
+      if (!this->eval())
+      {
+        throw std::runtime_error("false predicate");
+      }
 
-    virtual TResponse
-    push(const std::string & tuner_name,
-         const std::string & frequency,
-         const void * data,
-         std::size_t size) = 0;
+      return true;
+    }
   };
 
+
   //----------------------------------------------------------------
-  // TCapturePtr
+  // DontStop
   //
-  typedef yae::shared_ptr<ICapture> TCapturePtr;
+  struct DontStop : IAssert
+  {
+    DontStop():
+      stop_(false)
+    {}
+
+    virtual bool eval() const
+    { return !stop_; }
+
+    bool stop_;
+  };
+
+
+  //----------------------------------------------------------------
+  // IStream
+  //
+  struct IStream
+  {
+    virtual ~IStream() {}
+
+    virtual void close() = 0;
+    virtual bool is_open() const = 0;
+
+    // return value will be interpreted as follows:
+    //
+    //  true  -- keep going
+    //  false -- stop
+    //
+    virtual bool push(const void * data, std::size_t size) = 0;
+  };
 
 
   //----------------------------------------------------------------
@@ -54,15 +83,46 @@ namespace yae
     HDHomeRun();
     ~HDHomeRun();
 
+    //----------------------------------------------------------------
+    // Session
+    //
+    struct Session
+    {
+      struct Private;
+      Private * private_;
+
+      Session();
+      ~Session();
+
+      const std::string & tuner_name() const;
+      const std::string & frequency() const;
+
+      bool expired() const;
+      void extend(const TTime & t);
+      void finish();
+
+    protected:
+      Session(const Session &);
+      Session & operator = (const Session &);
+    };
+
+    //----------------------------------------------------------------
+    // TSessionPtr
+    //
+    typedef yae::shared_ptr<Session> TSessionPtr;
+
+    // grab a tuner, if available:
+    TSessionPtr open_session();
+
+    bool scan_channels(TSessionPtr session_ptr,
+                       const IAssert & keep_going);
+
+    void capture(TSessionPtr session_ptr,
+                 yae::weak_ptr<IStream> stream_ptr,
+                 const std::string & frequency);
+
     // fill in the major.minor -> frequency lookup table:
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
-
-    bool capture_all(const yae::TTime & duration,
-                     const TCapturePtr & callback);
-
-    bool capture(const std::string & frequency,
-                 const TCapturePtr & callback,
-                 const yae::TTime & duration = yae::TTime(0, 0));
 
   protected:
     // intentionally disabled:

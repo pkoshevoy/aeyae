@@ -172,6 +172,8 @@ set(TARGET_LIBS
 
 set(project_sources
   epg.cpp
+  yae_dvr.h
+  yae_dvr.cpp
   yae_hdhomerun.h
   yae_hdhomerun.cpp
   yae_signal_handler.h

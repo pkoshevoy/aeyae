@@ -35,8 +35,16 @@ namespace yae
     //
     struct YAE_API Task
     {
-      virtual ~Task() {}
+      Task();
+      virtual ~Task();
+
       virtual void execute(const Worker & worker) = 0;
+      virtual void cancel();
+      virtual bool cancelled() const;
+
+    protected:
+      mutable boost::mutex mutex_;
+      bool cancelled_;
     };
 
     Worker(unsigned int offset = 0, unsigned int stride = 1);
@@ -44,6 +52,7 @@ namespace yae
 
     void start();
     void stop();
+    bool stop_requested() const;
 
     void set_queue_size_limit(std::size_t n);
     void add(const yae::shared_ptr<Task> & task);
