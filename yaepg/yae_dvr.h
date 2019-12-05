@@ -108,6 +108,7 @@ namespace yae
       Stream(DVR & dvr,
              const yae::HDHomeRun::TSessionPtr & session_ptr,
              const std::string & frequency);
+      ~Stream();
 
       void open(const yae::shared_ptr<Stream, IStream> & self_ptr);
 

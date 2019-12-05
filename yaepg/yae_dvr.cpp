@@ -327,6 +327,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::Stream::~Stream
+  //
+  DVR::Stream::~Stream()
+  {
+    worker_.stop();
+    worker_.wait_until_finished();
+  }
+
+  //----------------------------------------------------------------
   // DVR::Stream::open
   //
   void

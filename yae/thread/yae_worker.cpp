@@ -208,7 +208,20 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     while (!todo_.empty())
     {
-      signal_.wait(lock);
+      // clean up cancelled tasks:
+      if (!todo_.front())
+      {
+        todo_.pop_front();
+        count_--;
+        continue;
+      }
+
+      try
+      {
+        signal_.wait(lock);
+      }
+      catch (...)
+      {}
     }
   }
 
