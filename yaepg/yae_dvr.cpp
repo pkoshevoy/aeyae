@@ -330,10 +330,7 @@ namespace yae
   // DVR::Stream::~Stream
   //
   DVR::Stream::~Stream()
-  {
-    worker_.stop();
-    worker_.wait_until_finished();
-  }
+  {}
 
   //----------------------------------------------------------------
   // DVR::Stream::open
@@ -343,7 +340,10 @@ namespace yae
   {
     yae::shared_ptr<CaptureStream, yae::Worker::Task> task;
     task.reset(new CaptureStream(stream_ptr));
-    worker_.add(task);
+
+    worker_ = dvr_.get_stream_worker(frequency_);
+    worker_->add(task);
+    worker_->start();
   }
 
   //----------------------------------------------------------------
@@ -352,8 +352,6 @@ namespace yae
   void
   DVR::Stream::close()
   {
-    worker_.stop();
-
     PacketHandler & packet_handler = *packet_handler_;
     packet_handler.ring_buffer_.close();
 
@@ -373,7 +371,7 @@ namespace yae
       return false;
     }
 
-    return worker_.is_busy();
+    return worker_ ? worker_->is_busy() : false;
   }
 
   //----------------------------------------------------------------
@@ -495,6 +493,17 @@ namespace yae
       {
         Stream & stream = *stream_ptr;
         stream.close();
+      }
+    }
+
+    for (std::map<std::string, TWorkerPtr>::const_iterator
+           i = stream_worker_.begin(); i != stream_worker_.end(); ++i)
+    {
+      TWorkerPtr worker_ptr = i->second;
+      if (worker_ptr)
+      {
+        worker_ptr->stop();
+        worker_ptr->wait_until_finished();
       }
     }
   }
@@ -699,6 +708,20 @@ namespace yae
     }
 
     return stream_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_stream_worker
+  //
+  DVR::TWorkerPtr
+  DVR::get_stream_worker(const std::string & frequency)
+  {
+    TWorkerPtr & worker_ptr = stream_worker_[frequency];
+    if (!worker_ptr)
+    {
+      worker_ptr.reset(new yae::Worker());
+    }
+    return worker_ptr;
   }
 
   //----------------------------------------------------------------

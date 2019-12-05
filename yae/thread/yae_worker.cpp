@@ -56,7 +56,7 @@ namespace yae
     stride_(stride),
     limit_(0),
     count_(0),
-    stop_(false)
+    stop_(true)
   {
     start();
   }
@@ -75,6 +75,12 @@ namespace yae
   void
   Worker::start()
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    if (!stop_)
+    {
+      return;
+    }
+
     stop_ = false;
     thread_.set_context(this);
     thread_.run();
@@ -104,6 +110,7 @@ namespace yae
 
     thread_.stop();
     thread_.wait();
+    thread_.set_context(NULL);
   }
 
   //----------------------------------------------------------------

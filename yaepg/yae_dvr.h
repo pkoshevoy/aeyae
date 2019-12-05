@@ -101,6 +101,11 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // TWorkerPtr
+    //
+    typedef yae::shared_ptr<yae::Worker> TWorkerPtr;
+
+    //----------------------------------------------------------------
     // Stream
     //
     struct Stream : IStream
@@ -117,14 +122,13 @@ namespace yae
       virtual bool push(const void * data, std::size_t size);
 
       DVR & dvr_;
+      DVR::TWorkerPtr worker_;
       yae::HDHomeRun::TSessionPtr session_;
       std::string frequency_;
       TPacketHandlerPtr packet_handler_;
 
       // this will signal when channel guide is ready for this frequency:
       boost::condition_variable epg_ready_;
-
-      yae::Worker worker_;
     };
 
     //----------------------------------------------------------------
@@ -144,6 +148,8 @@ namespace yae
     TStreamPtr capture_stream(const std::string & frequency,
                               const TTime & duration);
 
+    TWorkerPtr get_stream_worker(const std::string & frequency);
+
     void get_epg(yae::mpeg_ts::EPG & epg,
                  const std::string & lang = std::string("eng")) const;
 
@@ -162,6 +168,7 @@ namespace yae
     fs::path basedir_;
 
     // keep track of existing streams, but don't extend their lifetime:
+    std::map<std::string, TWorkerPtr> stream_worker_;
     std::map<std::string, yae::weak_ptr<Stream, IStream> > stream_;
     std::map<std::string, TPacketHandlerPtr> packet_handler_;
   };

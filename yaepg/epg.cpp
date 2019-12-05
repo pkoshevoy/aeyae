@@ -62,7 +62,7 @@ namespace yae
            !signal_handler_received_sigint())
     {
       dvr.get_epg(epg);
-
+#if 0
       if (!stream_ptr)
       {
         std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
@@ -103,6 +103,8 @@ namespace yae
       {
         break;
       }
+#endif
+      boost::this_thread::sleep_for(boost::chrono::seconds(6));
     }
 
     dvr.shutdown();
