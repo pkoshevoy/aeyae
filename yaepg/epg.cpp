@@ -20,6 +20,7 @@
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
+#include <boost/thread/thread.hpp>
 #endif
 
 // yae:
@@ -94,7 +95,7 @@ namespace yae
 
         if (!stream_ptr)
         {
-          sleep(12);
+          boost::this_thread::sleep_for(boost::chrono::seconds(12));
           continue;
         }
       }
