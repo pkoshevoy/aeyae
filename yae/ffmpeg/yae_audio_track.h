@@ -36,7 +36,7 @@ namespace yae
   //
   struct YAE_API AudioTrack : public Track
   {
-    AudioTrack(Track & track);
+    AudioTrack(Track * track);
 
     // virtual:
     ~AudioTrack();

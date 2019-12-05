@@ -264,7 +264,7 @@ namespace yae
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
-        VideoTrackPtr track(new VideoTrack(*baseTrack));
+        VideoTrackPtr track(new VideoTrack(baseTrack.get()));
         VideoTraits traits;
         if (track->getTraits(traits) &&
             // avfilter does not support these pixel formats:
@@ -288,7 +288,7 @@ namespace yae
       }
       else if (codecType == AVMEDIA_TYPE_AUDIO)
       {
-        AudioTrackPtr track(new AudioTrack(*baseTrack));
+        AudioTrackPtr track(new AudioTrack(baseTrack.get()));
         AudioTraits traits;
         if (track->getTraits(traits))
         {
@@ -2637,7 +2637,7 @@ namespace yae
     {
       const std::map<TTime, TChapter> & chapters = summary.chapters_;
 
-      muxer->nb_chapters = chapters.size();
+      muxer->nb_chapters = uint32_t(chapters.size());
       muxer->chapters = (AVChapter **)av_malloc_array(muxer->nb_chapters,
                                                       sizeof(AVChapter *));
 
@@ -2650,7 +2650,7 @@ namespace yae
 
         AVChapter * av = (AVChapter *)av_mallocz(sizeof(AVChapter));
         muxer->chapters[ix] = av;
-        av->id = ix;
+        av->id = int(ix);
 
         TTime dt = ch.span_.t1_ - ch.span_.t0_;
         av->time_base.num = 1;
@@ -3527,7 +3527,7 @@ namespace yae
       for (std::size_t i = 0; i < buffer.planes(); i++)
       {
         src_data[i] = buffer.data(i);
-        src_linesize[i] = buffer.rowBytes(i);
+        src_linesize[i] = int(buffer.rowBytes(i));
       }
 
       av_image_copy(dst.data,

@@ -98,7 +98,7 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::VideoTrack
   //
-  VideoTrack::VideoTrack(Track & track):
+  VideoTrack::VideoTrack(Track * track):
     Track(track),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),

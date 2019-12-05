@@ -277,7 +277,7 @@ namespace yae
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
-        VideoTrackPtr track(new VideoTrack(*baseTrack));
+        VideoTrackPtr track(new VideoTrack(baseTrack.get()));
         VideoTraits traits;
         if (track->getTraits(traits) &&
             // avfilter does not support these pixel formats:
@@ -296,7 +296,7 @@ namespace yae
       }
       else if (codecType == AVMEDIA_TYPE_AUDIO)
       {
-        AudioTrackPtr track(new AudioTrack(*baseTrack));
+        AudioTrackPtr track(new AudioTrack(baseTrack.get()));
         AudioTraits traits;
         if (track->getTraits(traits))
         {

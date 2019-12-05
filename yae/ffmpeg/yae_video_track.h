@@ -60,7 +60,7 @@ namespace yae
   //
   struct YAE_API VideoTrack : public Track
   {
-    VideoTrack(Track & track);
+    VideoTrack(Track * track);
 
     // virtual:
     bool initTraits();

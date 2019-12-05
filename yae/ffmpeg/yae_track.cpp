@@ -204,7 +204,7 @@ namespace yae
   //----------------------------------------------------------------
   // Track::Track
   //
-  Track::Track(Track & track):
+  Track::Track(Track * track):
     thread_(this),
     context_(NULL),
     stream_(NULL),
@@ -219,11 +219,11 @@ namespace yae
     discarded_(0),
     packetQueue_(kQueueSizeLarge)
   {
-    std::swap(hw_device_ctx_, track.hw_device_ctx_);
-    std::swap(hw_frames_ctx_, track.hw_frames_ctx_);
-    std::swap(context_, track.context_);
-    std::swap(stream_, track.stream_);
-    std::swap(codecContext_, track.codecContext_);
+    std::swap(hw_device_ctx_, track->hw_device_ctx_);
+    std::swap(hw_frames_ctx_, track->hw_frames_ctx_);
+    std::swap(context_, track->context_);
+    std::swap(stream_, track->stream_);
+    std::swap(codecContext_, track->codecContext_);
   }
 
   //----------------------------------------------------------------

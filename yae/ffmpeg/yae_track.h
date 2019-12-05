@@ -184,7 +184,7 @@ namespace yae
     Track(AVFormatContext * context, AVStream * stream);
 
     // not-quiet a "move" constructor:
-    Track(Track & track);
+    Track(Track * track);
 
     // NOTE: destructor will close the stream:
     virtual ~Track();
