@@ -19,7 +19,6 @@
 #endif
 
 // std includes:
-#include <limits>
 #include <math.h>
 #include <string.h>
 #include <vector>
@@ -706,17 +705,12 @@ namespace yae
   //----------------------------------------------------------------
   // TAudioTempoFilterI16
   //
-  typedef AudioTempoFilter<short int,
-                           std::numeric_limits<short int>::min(),
-                           std::numeric_limits<short int>::max()>
-  TAudioTempoFilterI16;
+  typedef AudioTempoFilter<short int, -32768, 32767> TAudioTempoFilterI16;
 
   //----------------------------------------------------------------
   // TAudioTempoFilterI32
   //
-  typedef AudioTempoFilter<int,
-                           std::numeric_limits<int>::min(),
-                           std::numeric_limits<int>::max()>
+  typedef AudioTempoFilter<int, -2147483648, 2147483647>
   TAudioTempoFilterI32;
 
   //----------------------------------------------------------------
