@@ -179,10 +179,24 @@ namespace yae
           try
           {
             // attempt to parse the packet:
-            yae::Bitstream bs(data.get(offset, 188));
+            yae::TBufferPtr pkt_data = data.get(offset, 188);
+            yae::Bitstream bin(pkt_data);
 
             yae::mpeg_ts::TSPacket pkt;
-            ts_ctx.load(bs, pkt);
+            pkt.load(bin);
+
+            std::size_t end_pos = bin.position();
+            std::size_t bytes_consumed = end_pos >> 3;
+
+            if (bytes_consumed != 188)
+            {
+              yae_wlog("TS packet too short (%i bytes), %s ...",
+                       bytes_consumed,
+                       yae::to_hex(pkt_data->get(), 32, 4).c_str());
+              continue;
+            }
+
+            ts_ctx.push(pkt);
           }
           catch (const std::exception & e)
           {
