@@ -28,6 +28,238 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Wishlist::Item::matches
+  //
+  bool
+  Wishlist::Item::matches(const yae::mpeg_ts::EPG::Channel & channel,
+                          const yae::mpeg_ts::EPG::Program & program) const
+  {
+    if (ch_num_)
+    {
+      uint32_t require_ch_num = *ch_num_;
+      uint32_t ch_num = yae::mpeg_ts::channel_number(channel.major_,
+                                                     channel.minor_);
+      if (ch_num != *ch_num_)
+      {
+        return false;
+      }
+    }
+
+    if (date_)
+    {
+      const struct tm & tm = *date_;
+      YAE_EXPECT(tm.tm_gmtoff == program.tm_.tm_gmtoff);
+
+      if (tm.tm_year != program.tm_.tm_year ||
+          tm.tm_mon  != program.tm_.tm_mon  ||
+          tm.tm_mday != program.tm_.tm_mday)
+      {
+        return false;
+      }
+    }
+
+    if (when_)
+    {
+      const Timespan & timespan = *when_;
+      TTime t0((program.tm_.tm_hour * 60 +
+                program.tm_.tm_min) * 60 +
+               program.tm_.tm_sec, 1);
+      TTime t1 = t0 + TTime(program.duration_, 1);
+      if (!timespan.contains(Timespan(t0, t1)))
+      {
+        return false;
+      }
+    }
+
+    bool ok = false;
+    if (!title_.empty())
+    {
+      if (!rx_title_)
+      {
+        rx_title_.reset(boost::regex(title_, boost::regex::icase));
+      }
+
+      if (boost::regex_match(program.title_, *rx_title_))
+      {
+        ok = true;
+      }
+    }
+
+    if (!description_.empty())
+    {
+      if (!rx_description_)
+      {
+        rx_description_.reset(boost::regex(description_, boost::regex::icase));
+      }
+
+      if (boost::regex_match(program.description_, *rx_description_))
+      {
+        ok = true;
+      }
+    }
+
+    return ok || (ch_num_ && (date_ || when_));
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::matches
+  //
+  bool
+  Wishlist::matches(const yae::mpeg_ts::EPG::Channel & channel,
+                    const yae::mpeg_ts::EPG::Program & program) const
+  {
+    for (std::list<Item>::const_iterator
+           i = items_.begin(); i != items_.end(); ++i)
+    {
+      const Item & item = *i;
+      if (item.matches(channel, program))
+      {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+
+  //----------------------------------------------------------------
+  // Recording::Recording
+  //
+  Recording::Recording():
+    gps_start_(0),
+    cancelled_(false)
+  {}
+
+
+  //----------------------------------------------------------------
+  // Schedule::update
+  //
+  void
+  Schedule::update(const yae::mpeg_ts::EPG & epg,
+                   const Wishlist & wishlist)
+  {
+    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+    {
+      const uint32_t ch_num = i->first;
+      const yae::mpeg_ts::EPG::Channel & channel = i->second;
+
+      for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator
+             j = channel.programs_.begin(); j != channel.programs_.end(); ++j)
+      {
+        const yae::mpeg_ts::EPG::Program & program = *j;
+        if (!wishlist.matches(channel, program))
+        {
+          continue;
+        }
+
+        uint32_t gps_end = program.gps_time_ + program.duration_;
+        if (gps_end <= channel.gps_time_)
+        {
+          // it's in the past:
+          continue;
+        }
+
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        TRecordingPtr & rec_ptr = recordings_[ch_num][gps_end];
+        if (rec_ptr)
+        {
+          continue;
+        }
+
+        rec_ptr.reset(new Recording());
+        Recording & rec = *rec_ptr;
+        rec.gps_start_ = program.gps_time_;
+
+        std::ostringstream oss;
+        oss << to_yyyymmdd_hhmmss(program.tm_, "", "-", "")
+            << " "
+            << std::setfill('0') << std::setw(2) << channel.major_
+            << "."
+            << std::setfill('0') << std::setw(2) << channel.minor_
+            << " "
+            << program.title_
+            << ".ts";
+        rec.filename_ = oss.str().c_str();
+      }
+    }
+
+    // remove past recordings from schedule:
+    std::map<uint32_t, TScheduledRecordings> updated_schedule;
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    for (std::map<uint32_t, TScheduledRecordings>::const_iterator
+           i = recordings_.begin(); i != recordings_.end(); ++i)
+    {
+      const uint32_t ch_num = i->first;
+      std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+        ch_found = epg.channels_.find(ch_num);
+      if (ch_found == epg.channels_.end())
+      {
+        continue;
+      }
+
+      const yae::mpeg_ts::EPG::Channel & channel = ch_found->second;
+      const TScheduledRecordings & schedule = i->second;
+      for (TScheduledRecordings::const_iterator
+             j = schedule.begin(); j != schedule.end(); ++j)
+      {
+        const uint32_t gps_end = j->first;
+        if (gps_end < channel.gps_time_)
+        {
+          // it's in the past:
+          continue;
+        }
+
+        const TRecordingPtr & rec_ptr = j->second;
+        updated_schedule[ch_num][gps_end] = rec_ptr;
+      }
+    }
+
+    recordings_.swap(updated_schedule);
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::get
+  //
+  TRecordingPtr
+  Schedule::get(uint32_t ch_num, uint32_t gps_time) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
+    std::map<uint32_t, TScheduledRecordings>::const_iterator
+      ch_found = recordings_.find(ch_num);
+
+    if (ch_found == recordings_.end())
+    {
+      // nothing scheduled for this channel:
+      return TRecordingPtr();
+    }
+
+    // recordings are indexed by GPS end time:
+    const TScheduledRecordings & schedule = ch_found->second;
+
+    // find the earliest recording with end time greater or equal to gps_time:
+    TScheduledRecordings::const_iterator
+      found = schedule.lower_bound(gps_time);
+    if (found == schedule.end())
+    {
+      // nothing scheduled at or after given GPS time:
+      return TRecordingPtr();
+    }
+
+    const Recording & rec = *(found->second);
+    if (gps_time < rec.gps_start_)
+    {
+      // scheduled recording is later than given GPS time:
+      return TRecordingPtr();
+    }
+
+    return found->second;
+  }
+
+
+  //----------------------------------------------------------------
   // ParseStream
   //
   struct ParseStream : yae::Worker::Task

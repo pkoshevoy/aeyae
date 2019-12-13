@@ -49,13 +49,72 @@ namespace yae
     //
     struct Item
     {
+      bool matches(const yae::mpeg_ts::EPG::Channel & channel,
+                   const yae::mpeg_ts::EPG::Program & program) const;
+
       yae::optional<uint32_t> ch_num_;
-      std::string rx_title_;
-      std::string rx_descripton_;
+      yae::optional<struct tm> date_;
       yae::optional<Timespan> when_;
+      std::string title_;
+      std::string description_;
+
+    protected:
+      mutable yae::optional<boost::regex> rx_title_;
+      mutable yae::optional<boost::regex> rx_description_;
     };
 
+    bool matches(const yae::mpeg_ts::EPG::Channel & channel,
+                 const yae::mpeg_ts::EPG::Program & program) const;
+
     std::list<Item> items_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Recording
+  //
+  struct Recording
+  {
+    Recording();
+
+    uint32_t gps_start_;
+    std::string filename_;
+    yae::TOpenFilePtr file_;
+    bool cancelled_;
+  };
+
+  //----------------------------------------------------------------
+  // TRecordingPtr
+  //
+  typedef yae::shared_ptr<Recording> TRecordingPtr;
+
+  //----------------------------------------------------------------
+  // TScheduledRecordings
+  //
+  // indexed by GPS end time of the recording:
+  //
+  typedef std::map<uint32_t, TRecordingPtr> TScheduledRecordings;
+
+  //----------------------------------------------------------------
+  // Schedule
+  //
+  struct Schedule
+  {
+    // given a wishlist and current epg
+    // create program recording schedule
+    void update(const yae::mpeg_ts::EPG & epg,
+                const Wishlist & wishlist);
+
+    // find a scheduled recording corresponding to the
+    // given channel number and gps time:
+    TRecordingPtr get(uint32_t ch_num, uint32_t gps_time) const;
+
+  protected:
+    // protect against concurrent access:
+    mutable boost::mutex mutex_;
+
+    // indexed by channel number:
+    std::map<uint32_t, TScheduledRecordings> recordings_;
   };
 
 
@@ -64,7 +123,6 @@ namespace yae
   //
   struct DVR
   {
-
     //----------------------------------------------------------------
     // PacketHandler
     //
