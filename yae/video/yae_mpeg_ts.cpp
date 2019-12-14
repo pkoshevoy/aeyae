@@ -5429,6 +5429,7 @@ namespace yae
         const ChannelGuide & guide = i->second;
         channel.name_ = guide.name_;
         channel.gps_time_ = gps_time_now();
+        channel.epg_time_ = TTime::now();
 
         if (!guide.channel_etm_.empty())
         {

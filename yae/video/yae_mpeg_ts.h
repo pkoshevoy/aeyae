@@ -2339,12 +2339,19 @@ namespace yae
 
         void dump(std::ostream & oss) const;
 
+        inline uint32_t gps_time() const
+        {
+          uint32_t elapsed_sec = uint32_t((TTime::now() - epg_time_).get(1));
+          return gps_time_ + elapsed_sec;
+        }
+
         uint16_t major_;
         uint16_t minor_;
         std::string name_;
         std::string description_;
         std::list<EPG::Program> programs_;
         uint32_t gps_time_;
+        TTime epg_time_;
       };
 
       void dump(std::ostream & oss) const;

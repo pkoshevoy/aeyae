@@ -10,6 +10,7 @@
 #define YAE_TIME_H_
 
 // system includes:
+#include <algorithm>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -277,6 +278,9 @@ namespace yae
 
     inline Timespan operator - (const TTime & offset) const
     { return this->operator + (-offset); }
+
+    inline Timespan overlap(const Timespan & s) const
+    { return Timespan(std::max(t0_, s.t0_), std::min(t1_, s.t1_)); }
 
     inline TTime dt() const
     { return t1_ - t0_; }

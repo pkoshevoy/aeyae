@@ -65,8 +65,17 @@ namespace yae
       TTime t0((program.tm_.tm_hour * 60 +
                 program.tm_.tm_min) * 60 +
                program.tm_.tm_sec, 1);
-      TTime t1 = t0 + TTime(program.duration_, 1);
-      if (!timespan.contains(Timespan(t0, t1)))
+
+      Timespan program_timespan(t0, t0 + TTime(program.duration_, 1));
+      Timespan overlap = timespan.overlap(program_timespan);
+      if (overlap.empty())
+      {
+        return false;
+      }
+
+      double overlap_sec = overlap.dt().sec();
+      double overlap_ratio = overlap_sec / double(program.duration_);
+      if (overlap_ratio < 0.5)
       {
         return false;
       }
@@ -168,7 +177,7 @@ namespace yae
         const yae::mpeg_ts::EPG::Program & program = *j;
 
         uint32_t gps_t1 = program.gps_time_ + program.duration_;
-        if (gps_t1 <= channel.gps_time_)
+        if (gps_t1 <= channel.gps_time())
         {
           // it's in the past:
           continue;
@@ -229,7 +238,7 @@ namespace yae
         const TRecordingPtr & rec_ptr = j->second;
         const Recording & rec = *rec_ptr;
 
-        if (rec.gps_t1_ < channel.gps_time_)
+        if (rec.gps_t1_ < channel.gps_time())
         {
           // it's in the past:
           continue;
@@ -854,19 +863,21 @@ namespace yae
   //
   struct UpdateProgramGuide : yae::Worker::Task
   {
-    UpdateProgramGuide(DVR & dvr);
+    UpdateProgramGuide(DVR & dvr, bool slow);
 
     // virtual:
     void execute(const yae::Worker & worker);
 
     DVR & dvr_;
+    bool slow_;
   };
 
   //----------------------------------------------------------------
   // UpdateProgramGuide::UpdateProgramGuide
   //
-  UpdateProgramGuide::UpdateProgramGuide(DVR & dvr):
-    dvr_(dvr)
+  UpdateProgramGuide::UpdateProgramGuide(DVR & dvr, bool slow):
+    dvr_(dvr),
+    slow_(slow)
   {}
 
   //----------------------------------------------------------------
@@ -919,7 +930,11 @@ namespace yae
           return;
         }
 
-        if (stream.epg_ready_.timed_wait(lock, giveup_at))
+        if (slow_)
+        {
+          boost::this_thread::sleep_for(boost::chrono::seconds(1));
+        }
+        else if (stream.epg_ready_.timed_wait(lock, giveup_at))
         {
           break;
         }
@@ -944,10 +959,10 @@ namespace yae
   // DVR::update_epg
   //
   void
-  DVR::update_epg()
+  DVR::update_epg(bool slow)
   {
     yae::shared_ptr<UpdateProgramGuide, yae::Worker::Task> task;
-    task.reset(new UpdateProgramGuide(*this));
+    task.reset(new UpdateProgramGuide(*this, slow));
     worker_.add(task);
   }
 
@@ -1117,10 +1132,9 @@ namespace yae
     {
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
+      uint32_t gps_time = channel.gps_time();
 
-      TRecordingPtr rec_ptr = schedule_.get(ch_num,
-                                            channel.gps_time_ +
-                                            margin_seconds);
+      TRecordingPtr rec_ptr = schedule_.get(ch_num, gps_time + margin_seconds);
       if (!rec_ptr)
       {
         // nothing scheduled for this channel at this time:
@@ -1128,9 +1142,16 @@ namespace yae
       }
 
       Recording & rec = *rec_ptr;
-      uint64_t num_sec = rec.gps_t1_ - channel.gps_time_ + margin_seconds * 2;
+      uint64_t num_sec = rec.gps_t1_ - gps_time + margin_seconds * 2;
       std::string frequency = yae::at(frequencies, ch_num);
-      rec.stream_ = capture_stream(frequency, TTime(num_sec, 1));
+
+      TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
+      if (!rec.stream_)
+      {
+        yae_ilog("starting stream: %s", rec.filename_.c_str());
+      }
+
+      rec.stream_ = stream;
     }
   }
 

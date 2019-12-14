@@ -47,13 +47,38 @@ namespace yae
 #if 1
     DVR dvr;
 
-    // Fox 10pm - midnight:
+    // Fox 13.1, 10pm - midnight
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
       item.when_ = Timespan(TTime(22 * 60 * 60, 1),
                             TTime(24 * 60 * 60, 1));
+    }
+
+    // Fox 13.1, midnight - 2am
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
+      item.when_ = Timespan(TTime(0, 1), TTime(2 * 60 * 60, 1));
+    }
+
+    // Movies 14.2, midnight - 2am
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
+      item.when_ = Timespan(TTime(0, 1), TTime(2 * 60 * 60, 1));
+    }
+
+    // Movies 14.2, 9am - noon
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
+      item.when_ = Timespan(TTime( 9 * 60 * 60, 1),
+                            TTime(12 * 60 * 60, 1));
     }
 
     // The Simpsons:
@@ -72,9 +97,11 @@ namespace yae
 
     dvr.scan_channels();
     dvr.worker_.wait_until_finished();
+    TTime channel_scan_time = TTime::now();
 
     dvr.update_epg();
     dvr.worker_.wait_until_finished();
+    TTime epg_update_time = TTime::now();
 
     yae::mpeg_ts::EPG epg;
 
@@ -84,6 +111,25 @@ namespace yae
     {
       dvr.get_epg(epg);
       dvr.evaluate(epg);
+
+      if (dvr.worker_.is_idle())
+      {
+        TTime now = TTime::now();
+        double sec_since_channel_scan = (now - channel_scan_time).sec();
+        double sec_since_epg_update = (now - epg_update_time).sec();
+        if (sec_since_channel_scan > 86400)
+        {
+          dvr.scan_channels();
+          channel_scan_time = TTime::now();
+        }
+        else if (sec_since_epg_update > 1800)
+        {
+          // update EPG every 30 min:
+          dvr.update_epg(true);
+          epg_update_time = now;
+        }
+      }
+
       boost::this_thread::sleep_for(boost::chrono::seconds(1));
     }
 
