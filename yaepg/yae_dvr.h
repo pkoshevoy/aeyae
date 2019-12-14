@@ -77,7 +77,10 @@ namespace yae
   {
     Recording();
 
-    uint32_t gps_start_;
+    yae::TOpenFilePtr open_file(const fs::path & basedir);
+
+    yae::shared_ptr<IStream> stream_;
+    uint32_t gps_t1_;
     std::string filename_;
     yae::TOpenFilePtr file_;
     bool cancelled_;
@@ -91,7 +94,7 @@ namespace yae
   //----------------------------------------------------------------
   // TScheduledRecordings
   //
-  // indexed by GPS end time of the recording:
+  // indexed by GPS start time of the recording:
   //
   typedef std::map<uint32_t, TRecordingPtr> TScheduledRecordings;
 
@@ -217,6 +220,8 @@ namespace yae
     void save_epg() const;
     void save_frequencies() const;
 
+    void evaluate(const yae::mpeg_ts::EPG & epg);
+
     // protect against concurrent access:
     mutable boost::mutex mutex_;
 
@@ -229,6 +234,10 @@ namespace yae
     std::map<std::string, TWorkerPtr> stream_worker_;
     std::map<std::string, yae::weak_ptr<Stream, IStream> > stream_;
     std::map<std::string, TPacketHandlerPtr> packet_handler_;
+
+    // recordings wishlist, schedule, etc:
+    Schedule schedule_;
+    Wishlist wishlist_;
   };
 
 }

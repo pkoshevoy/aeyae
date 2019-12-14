@@ -10,6 +10,7 @@
 // standard:
 #include <iomanip>
 #include <iostream>
+#include <iterator>
 #include <stdexcept>
 
 // boost includes:
@@ -79,7 +80,8 @@ namespace yae
         rx_title_.reset(boost::regex(title_, boost::regex::icase));
       }
 
-      if (boost::regex_match(program.title_, *rx_title_))
+      if (program.title_ == title_ ||
+          boost::regex_match(program.title_, *rx_title_))
       {
         ok = true;
       }
@@ -92,7 +94,8 @@ namespace yae
         rx_description_.reset(boost::regex(description_, boost::regex::icase));
       }
 
-      if (boost::regex_match(program.description_, *rx_description_))
+      if (program.description_ == description_ ||
+          boost::regex_match(program.description_, *rx_description_))
       {
         ok = true;
       }
@@ -126,9 +129,24 @@ namespace yae
   // Recording::Recording
   //
   Recording::Recording():
-    gps_start_(0),
+    gps_t1_(0),
     cancelled_(false)
   {}
+
+  //----------------------------------------------------------------
+  // Recording::open_file
+  //
+  yae::TOpenFilePtr
+  Recording::open_file(const fs::path & basedir)
+  {
+    if (!file_)
+    {
+      std::string filepath = (basedir / filename_).string();
+      file_.reset(new yae::TOpenFile(filepath, "ab"));
+    }
+
+    return file_;
+  }
 
 
   //----------------------------------------------------------------
@@ -148,39 +166,42 @@ namespace yae
              j = channel.programs_.begin(); j != channel.programs_.end(); ++j)
       {
         const yae::mpeg_ts::EPG::Program & program = *j;
-        if (!wishlist.matches(channel, program))
-        {
-          continue;
-        }
 
-        uint32_t gps_end = program.gps_time_ + program.duration_;
-        if (gps_end <= channel.gps_time_)
+        uint32_t gps_t1 = program.gps_time_ + program.duration_;
+        if (gps_t1 <= channel.gps_time_)
         {
           // it's in the past:
           continue;
         }
 
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        TRecordingPtr & rec_ptr = recordings_[ch_num][gps_end];
-        if (rec_ptr)
+        if (!wishlist.matches(channel, program))
         {
           continue;
         }
 
-        rec_ptr.reset(new Recording());
-        Recording & rec = *rec_ptr;
-        rec.gps_start_ = program.gps_time_;
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        TRecordingPtr & rec_ptr = recordings_[ch_num][program.gps_time_];
+        if (!rec_ptr)
+        {
+          rec_ptr.reset(new Recording());
+        }
 
-        std::ostringstream oss;
-        oss << to_yyyymmdd_hhmmss(program.tm_, "", "-", "")
-            << " "
-            << std::setfill('0') << std::setw(2) << channel.major_
-            << "."
-            << std::setfill('0') << std::setw(2) << channel.minor_
-            << " "
-            << program.title_
-            << ".ts";
-        rec.filename_ = oss.str().c_str();
+        Recording & rec = *rec_ptr;
+        rec.gps_t1_ = gps_t1;
+
+        if (rec.filename_.empty())
+        {
+          std::ostringstream oss;
+          oss << to_yyyymmdd_hhmmss(program.tm_, "", "-", "")
+              << " "
+              << std::setfill('0') << std::setw(2) << channel.major_
+              << "."
+              << std::setfill('0') << std::setw(2) << channel.minor_
+              << " "
+              << program.title_
+              << ".ts";
+          rec.filename_ = oss.str().c_str();
+        }
       }
     }
 
@@ -204,15 +225,17 @@ namespace yae
       for (TScheduledRecordings::const_iterator
              j = schedule.begin(); j != schedule.end(); ++j)
       {
-        const uint32_t gps_end = j->first;
-        if (gps_end < channel.gps_time_)
+        const uint32_t gps_t0 = j->first;
+        const TRecordingPtr & rec_ptr = j->second;
+        const Recording & rec = *rec_ptr;
+
+        if (rec.gps_t1_ < channel.gps_time_)
         {
           // it's in the past:
           continue;
         }
 
-        const TRecordingPtr & rec_ptr = j->second;
-        updated_schedule[ch_num][gps_end] = rec_ptr;
+        updated_schedule[ch_num][gps_t0] = rec_ptr;
       }
     }
 
@@ -238,24 +261,50 @@ namespace yae
 
     // recordings are indexed by GPS end time:
     const TScheduledRecordings & schedule = ch_found->second;
-
-    // find the earliest recording with end time greater or equal to gps_time:
-    TScheduledRecordings::const_iterator
-      found = schedule.lower_bound(gps_time);
-    if (found == schedule.end())
+    if (schedule.empty())
     {
-      // nothing scheduled at or after given GPS time:
+      // nothing scheduled for this channel:
       return TRecordingPtr();
     }
 
-    const Recording & rec = *(found->second);
-    if (gps_time < rec.gps_start_)
+    uint32_t schedule_t0 = schedule.begin()->first;
+    uint32_t schedule_t1 = schedule.rbegin()->second->gps_t1_;
+    if (gps_time < schedule_t0 || schedule_t1 <= gps_time)
     {
-      // scheduled recording is later than given GPS time:
+      // nothing scheduled at given time:
       return TRecordingPtr();
     }
 
-    return found->second;
+    // find the earliest recording with start time greater than gps_time:
+    uint32_t rec_gps_t0 = 0;
+    TRecordingPtr rec_ptr;
+
+    TScheduledRecordings::const_iterator it = schedule.upper_bound(gps_time);
+    if (it == schedule.end())
+    {
+      TScheduledRecordings::const_reverse_iterator it = schedule.rbegin();
+      rec_gps_t0 = it->first;
+      rec_ptr = it->second;
+    }
+    else if (it != schedule.begin())
+    {
+      --it;
+      rec_gps_t0 = it->first;
+      rec_ptr = it->second;
+    }
+
+    if (!rec_ptr)
+    {
+      return TRecordingPtr();
+    }
+
+    const Recording & rec = *rec_ptr;
+    if (gps_time < rec_gps_t0 || rec.gps_t1_ <= gps_time)
+    {
+      return TRecordingPtr();
+    }
+
+    return rec_ptr;
   }
 
 
@@ -432,6 +481,18 @@ namespace yae
   DVR::PacketHandler::handle_backlog(const yae::mpeg_ts::Bucket & bucket,
                                      uint32_t gps_time)
   {
+    std::map<uint32_t, TRecordingPtr> recordings;
+    for (std::map<uint32_t, yae::mpeg_ts::ChannelGuide>::const_iterator
+           i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
+    {
+      const uint32_t ch_num = i->first;
+      TRecordingPtr rec_ptr = dvr_.schedule_.get(ch_num, gps_time);
+      if (rec_ptr)
+      {
+        recordings[ch_num] = rec_ptr;
+      }
+    }
+
     yae::mpeg_ts::IPacketHandler::Packet pkt;
     while (packets_.pop(pkt))
     {
@@ -440,40 +501,26 @@ namespace yae
       std::map<uint16_t, uint32_t>::const_iterator found =
         bucket.pid_to_ch_num_.find(pkt.pid_);
 
-      // FIXME: check whether current pstream should be stord to disk
-      // using the appropriate filename for the recorded EPG Program
-
       if (found == bucket.pid_to_ch_num_.end())
       {
-        for (std::map<uint32_t, yae::TOpenFilePtr>::iterator
-               i = channels_.begin(); i != channels_.end(); ++i)
+        for (std::map<uint32_t, TRecordingPtr>::iterator
+               i = recordings.begin(); i != recordings.end(); ++i)
         {
-          yae::TOpenFile & file = *(i->second);
+          Recording & rec = *(i->second);
+          yae::TOpenFile & file = *(rec.open_file(dvr_.basedir_));
           YAE_ASSERT(file.write(data.get(), data.size()));
         }
       }
       else
       {
         const uint32_t ch_num = found->second;
-        yae::TOpenFilePtr & file_ptr = channels_[ch_num];
-        if (!file_ptr)
+        TRecordingPtr rec_ptr = yae::get(recordings, ch_num, TRecordingPtr());
+        if (rec_ptr)
         {
-          uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-          uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-
-          const yae::mpeg_ts::ChannelGuide & chan =
-            yae::at(bucket.guide_, ch_num);
-
-          std::string fn = yae::strfmt("%02u.%02u-%s.ts",
-                                       major,
-                                       minor,
-                                       chan.name_.c_str());
-          std::string filepath = (dvr_.basedir_ / fn).string();
-          file_ptr.reset(new TOpenFile(filepath, "wb"));
+          Recording & rec = *rec_ptr;
+          yae::TOpenFile & file = *(rec.open_file(dvr_.basedir_));
+          YAE_ASSERT(file.write(data.get(), data.size()));
         }
-
-        yae::TOpenFile & file = *file_ptr;
-        YAE_ASSERT(file.write(data.get(), data.size()));
       }
     }
   }
@@ -1050,6 +1097,40 @@ namespace yae
     if (freq_file.open(freq_path, "wb"))
     {
       freq_file.save(json);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::evaluate
+  //
+  void
+  DVR::evaluate(const yae::mpeg_ts::EPG & epg)
+  {
+    static const uint32_t margin_seconds = 0;
+    schedule_.update(epg, wishlist_);
+
+    std::map<uint32_t, std::string> frequencies;
+    hdhr_.get_channels(frequencies);
+
+    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+    {
+      const uint32_t ch_num = i->first;
+      const yae::mpeg_ts::EPG::Channel & channel = i->second;
+
+      TRecordingPtr rec_ptr = schedule_.get(ch_num,
+                                            channel.gps_time_ +
+                                            margin_seconds);
+      if (!rec_ptr)
+      {
+        // nothing scheduled for this channel at this time:
+        continue;
+      }
+
+      Recording & rec = *rec_ptr;
+      uint64_t num_sec = rec.gps_t1_ - channel.gps_time_ + margin_seconds * 2;
+      std::string frequency = yae::at(frequencies, ch_num);
+      rec.stream_ = capture_stream(frequency, TTime(num_sec, 1));
     }
   }
 

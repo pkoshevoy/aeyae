@@ -47,6 +47,29 @@ namespace yae
 #if 1
     DVR dvr;
 
+    // Fox 10pm - midnight:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
+      item.when_ = Timespan(TTime(22 * 60 * 60, 1),
+                            TTime(24 * 60 * 60, 1));
+    }
+
+    // The Simpsons:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.title_ = "The Simpsons";
+    }
+
+    // Bob's Burgers:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.title_ = "Bob's Burgers";
+    }
+
     dvr.scan_channels();
     dvr.worker_.wait_until_finished();
 
@@ -54,57 +77,14 @@ namespace yae
     dvr.worker_.wait_until_finished();
 
     yae::mpeg_ts::EPG epg;
-    uint32_t ch13p1 = yae::mpeg_ts::channel_number(13, 1);
-    DVR::TStreamPtr stream_ptr;
 
-    // FIXME: pull EPG, evaluate wishlist, start captures, etc...
+    // pull EPG, evaluate wishlist, start captures, etc...
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
       dvr.get_epg(epg);
-#if 0
-      if (!stream_ptr)
-      {
-        std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-          found = epg.channels_.find(ch13p1);
-
-        if (found != epg.channels_.end())
-        {
-          uint32_t ch_num = found->first;
-          const yae::mpeg_ts::EPG::Channel & channel = found->second;
-
-          for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator i =
-                 channel.programs_.begin(); i != channel.programs_.end(); ++i)
-          {
-            const yae::mpeg_ts::EPG::Program & program = *i;
-            uint32_t t0 = program.gps_time_;
-            uint32_t t1 = program.duration_ + t0;
-
-            if (t0 <= channel.gps_time_ + 12 && channel.gps_time_ + 12 < t1)
-            {
-              std::map<uint32_t, std::string> frequencies;
-              dvr.hdhr_.get_channels(frequencies);
-
-              uint64_t num_sec = t1 - channel.gps_time_;
-              std::string frequency = yae::at(frequencies, ch_num);
-              stream_ptr = dvr.capture_stream(frequency, TTime(num_sec, 1));
-              // dvr.worker_.wait_until_finished();
-            }
-          }
-        }
-
-        if (!stream_ptr)
-        {
-          boost::this_thread::sleep_for(boost::chrono::seconds(12));
-          continue;
-        }
-      }
-      else if (!stream_ptr->is_open())
-      {
-        break;
-      }
-#endif
-      boost::this_thread::sleep_for(boost::chrono::seconds(6));
+      dvr.evaluate(epg);
+      boost::this_thread::sleep_for(boost::chrono::seconds(1));
     }
 
     dvr.shutdown();
