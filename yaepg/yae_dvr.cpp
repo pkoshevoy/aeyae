@@ -152,6 +152,13 @@ namespace yae
     {
       std::string filepath = (basedir / filename_).string();
       file_.reset(new yae::TOpenFile(filepath, "ab"));
+      bool ok = file_->is_open();
+
+      yae_ilog("writing to: %s, %s", filepath.c_str(), ok ? "ok" : "failed");
+      if (!ok)
+      {
+        file_.reset();
+      }
     }
 
     return file_;
@@ -516,8 +523,11 @@ namespace yae
                i = recordings.begin(); i != recordings.end(); ++i)
         {
           Recording & rec = *(i->second);
-          yae::TOpenFile & file = *(rec.open_file(dvr_.basedir_));
-          YAE_ASSERT(file.write(data.get(), data.size()));
+          yae::TOpenFilePtr file = rec.open_file(dvr_.basedir_);
+          if (file)
+          {
+            YAE_ASSERT(file->write(data.get(), data.size()));
+          }
         }
       }
       else
@@ -527,8 +537,11 @@ namespace yae
         if (rec_ptr)
         {
           Recording & rec = *rec_ptr;
-          yae::TOpenFile & file = *(rec.open_file(dvr_.basedir_));
-          YAE_ASSERT(file.write(data.get(), data.size()));
+          yae::TOpenFilePtr file = rec.open_file(dvr_.basedir_);
+          if (file)
+          {
+            YAE_ASSERT(file->write(data.get(), data.size()));
+          }
         }
       }
     }
@@ -724,9 +737,9 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::DVR
   //
-  DVR::DVR():
+  DVR::DVR(const std::string & basedir):
     yaepg_(yae::get_user_folder_path(".yaepg")),
-    basedir_(yae::get_temp_dir_utf8())
+    basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir)
   {
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
 

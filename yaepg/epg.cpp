@@ -36,6 +36,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // usage
+  //
+  static void
+  usage(char ** argv, const char * msg)
+  {
+    yae_elog("ERROR: %s", msg);
+    yae_elog("USAGE: %s [-b /yaetv/storage/path]", argv[0]);
+  }
+
+  //----------------------------------------------------------------
   // main_may_throw
   //
   int
@@ -44,8 +54,24 @@ namespace yae
     // install signal handler:
     yae::signal_handler();
 
+    std::string basedir;
+    for (int i = 1; i < argc; i++)
+    {
+      if (strcmp(argv[i], "-b") == 0)
+      {
+        if (argc <= i + 1)
+        {
+          usage(argv, "-b parameter requires a /file/path");
+          return i;
+        }
+
+        ++i;
+        basedir = argv[i];
+      }
+    }
+
 #if 1
-    DVR dvr;
+    DVR dvr(basedir);
 
     // Fox 13.1, 10pm - midnight
     {
@@ -64,7 +90,7 @@ namespace yae
       item.when_ = Timespan(TTime(0, 1), TTime(2 * 60 * 60, 1));
     }
 
-    // Movies 14.2, midnight - 2am
+    // Movies 14.2, midnight - 5am
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
@@ -100,7 +126,6 @@ namespace yae
     TTime channel_scan_time = TTime::now();
 
     dvr.update_epg();
-    dvr.worker_.wait_until_finished();
     TTime epg_update_time = TTime::now();
 
     yae::mpeg_ts::EPG epg;

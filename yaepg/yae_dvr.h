@@ -198,7 +198,7 @@ namespace yae
     typedef yae::shared_ptr<Stream, IStream> TStreamPtr;
 
 
-    DVR();
+    DVR(const std::string & basedir = std::string());
     ~DVR();
 
     // TStreamPtr get_stream(const std::string & frequency);
