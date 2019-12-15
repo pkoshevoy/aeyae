@@ -81,6 +81,16 @@ namespace yae
       }
     }
 
+    if (weekday_mask_)
+    {
+      uint8_t weekday_mask = *weekday_mask_;
+      uint8_t program_wday = (1 << program.tm_.tm_wday);
+      if ((weekday_mask & program_wday) != program_wday)
+      {
+        return false;
+      }
+    }
+
     bool ok = false;
     if (!title_.empty())
     {
@@ -110,7 +120,7 @@ namespace yae
       }
     }
 
-    return ok || (ch_num_ && (date_ || when_));
+    return ok || (ch_num_ && (date_ || weekday_mask_ || when_));
   }
 
   //----------------------------------------------------------------
@@ -1134,7 +1144,7 @@ namespace yae
   void
   DVR::evaluate(const yae::mpeg_ts::EPG & epg)
   {
-    static const uint32_t margin_seconds = 0;
+    static const uint32_t margin_seconds = 60;
     schedule_.update(epg, wishlist_);
 
     std::map<uint32_t, std::string> frequencies;

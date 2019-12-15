@@ -73,46 +73,48 @@ namespace yae
 #if 1
     DVR dvr(basedir);
 
-    // Fox 13.1, 10pm - midnight
+    // Fox 13.1, Sunday, 6pm - 9pm
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
-      item.when_ = Timespan(TTime(22 * 60 * 60, 1),
-                            TTime(24 * 60 * 60, 1));
+      item.weekday_mask_.reset(yae::Wishlist::Item::Sun);
+      item.when_ = Timespan(TTime(18 * 60 * 60, 1),
+                            TTime(21 * 60 * 60, 1));
     }
 
-    // Fox 13.1, midnight - 2am
-    {
-      dvr.wishlist_.items_.push_back(Wishlist::Item());
-      Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
-      item.when_ = Timespan(TTime(0, 1), TTime(2 * 60 * 60, 1));
-    }
-
-    // Movies 14.2, midnight - 5am
+    // Movies 14.2, Saturday - Sunday, 11am - 5am
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
-      item.when_ = Timespan(TTime(0, 1), TTime(5 * 60 * 60, 1));
-    }
-
-    // Movies 14.2, 11am - midnight
-    {
-      dvr.wishlist_.items_.push_back(Wishlist::Item());
-      Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
+      item.weekday_mask_.reset(yae::Wishlist::Item::Sat |
+                               yae::Wishlist::Item::Sun);
       item.when_ = Timespan(TTime(11 * 60 * 60, 1),
-                            TTime(24 * 60 * 60, 1));
+                            TTime(29 * 60 * 60, 1));
     }
 
-    // Movies 14.2, 9am - noon
+    // PBS 7.1, Sunday, Nature
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
-      item.title_ = "Nosferatu";
+      item.ch_num_ = yae::mpeg_ts::channel_number(7, 1);
+      item.title_ = "Nature";
+    }
+
+    // PBS 7.1, Sunday, Nova
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(7, 1);
+      item.title_ = "Nova";
+    }
+
+    // NHK Newsline:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.title_ = "NHK Newsline";
     }
 
     // The Simpsons:
@@ -127,6 +129,13 @@ namespace yae
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.title_ = "Bob's Burgers";
+    }
+
+    // The Big Bang Theory:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.title_ = "The Big Bang Theory";
     }
 
     dvr.scan_channels();

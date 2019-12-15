@@ -52,9 +52,21 @@ namespace yae
       bool matches(const yae::mpeg_ts::EPG::Channel & channel,
                    const yae::mpeg_ts::EPG::Program & program) const;
 
+      enum Weekday
+      {
+        Sun = 1 << 0,
+        Mon = 1 << 1,
+        Tue = 1 << 2,
+        Wed = 1 << 3,
+        Thu = 1 << 4,
+        Fri = 1 << 5,
+        Sat = 1 << 6
+      };
+
       yae::optional<uint32_t> ch_num_;
       yae::optional<struct tm> date_;
       yae::optional<Timespan> when_;
+      yae::optional<uint16_t> weekday_mask_;
       std::string title_;
       std::string description_;
 
