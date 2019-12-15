@@ -98,13 +98,21 @@ namespace yae
       item.when_ = Timespan(TTime(0, 1), TTime(5 * 60 * 60, 1));
     }
 
+    // Movies 14.2, 11am - midnight
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
+      item.when_ = Timespan(TTime(11 * 60 * 60, 1),
+                            TTime(24 * 60 * 60, 1));
+    }
+
     // Movies 14.2, 9am - noon
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
-      item.when_ = Timespan(TTime( 9 * 60 * 60, 1),
-                            TTime(12 * 60 * 60, 1));
+      item.title_ = "Nosferatu";
     }
 
     // The Simpsons:

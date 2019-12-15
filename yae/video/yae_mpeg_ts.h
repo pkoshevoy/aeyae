@@ -10,6 +10,7 @@
 #define YAE_MPEG_TS_H_
 
 // system includes:
+#include <bitset>
 #include <inttypes.h>
 #include <list>
 #include <map>
@@ -2219,6 +2220,38 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // Sections
+    //
+    struct YAE_API SectionSet
+    {
+      void set_last_section_number(uint8_t i);
+      void set_observed_section(uint8_t i);
+      bool is_complete() const;
+
+      std::bitset<0x100> expected_;
+      std::bitset<0x100> observed_;
+    };
+
+
+    //----------------------------------------------------------------
+    // TableSet
+    //
+    struct YAE_API TableSet
+    {
+      void reset();
+
+      void set_expected_table(uint8_t i);
+      void set_observed_table(uint8_t i,
+                              uint8_t section,
+                              uint8_t last_section_number);
+      bool is_complete() const;
+
+      std::bitset<0x100> expected_;
+      std::map<uint16_t, SectionSet> observed_;
+    };
+
+
+    //----------------------------------------------------------------
     // Bucket
     //
     struct YAE_API Bucket
@@ -2242,17 +2275,11 @@ namespace yae
       // map PID to major.minor channel number:
       std::map<uint16_t, uint32_t> pid_to_ch_num_;
 
-      std::set<uint8_t> vct_sections_;
-      uint8_t expected_vct_sections_;
-
-      std::set<uint8_t> eit_sections_;
-      uint8_t expected_eit_sections_;
-
-      std::set<uint8_t> ett_sections_;
-      uint8_t expected_ett_sections_;
-
-      std::set<uint8_t> rrt_sections_;
-      uint8_t expected_rrt_sections_;
+      bool observed_mgt_;
+      TableSet vct_table_set_;
+      TableSet eit_table_set_;
+      TableSet ett_table_set_;
+      TableSet rrt_table_set_;
     };
 
 
@@ -2276,6 +2303,15 @@ namespace yae
 
     YAE_API void save(Json::Value & json, const ChannelGuide & guide);
     YAE_API void load(const Json::Value & json, ChannelGuide & guide);
+
+    YAE_API void save(Json::Value & json, const ChannelGuide & guide);
+    YAE_API void load(const Json::Value & json, ChannelGuide & guide);
+
+    YAE_API void save(Json::Value & json, const SectionSet & section_set);
+    YAE_API void load(const Json::Value & json, SectionSet & section_set);
+
+    YAE_API void save(Json::Value & json, const TableSet & table_set);
+    YAE_API void load(const Json::Value & json, TableSet & table_set);
 
     YAE_API void save(Json::Value & json, const Bucket & bucket);
     YAE_API void load(const Json::Value & json, Bucket & bucket);
@@ -2407,10 +2443,11 @@ namespace yae
       std::string gps_time_to_str(uint32_t gps_time) const;
 
       void consume_stt(const STTSectionPtr & stt_section);
-      void consume_vct(const VirtualChannelTable & vct);
-      void consume_rrt(const RRTSectionPtr & rrt_section);
-      void consume_eit(const EventInformationTable & eit);
-      void consume_ett(const ExtendedTextTable & ett);
+      void consume_mgt(const MGTSectionPtr & mgt_section);
+      void consume_vct(const VirtualChannelTable & vct, uint16_t pid);
+      void consume_rrt(const RRTSectionPtr & rrt_section, uint16_t pid);
+      void consume_eit(const EventInformationTable & eit, uint16_t pid);
+      void consume_ett(const ExtendedTextTable & ett, uint16_t pid);
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
@@ -2447,6 +2484,7 @@ namespace yae
       std::set<uint16_t> pid_cvct_next_;
       std::set<uint16_t> pid_channel_ett_;
       std::set<uint16_t> pid_dccsct_;
+      std::map<uint16_t, uint8_t> pid_vct_;
       std::map<uint16_t, uint8_t> pid_eit_;
       std::map<uint16_t, uint8_t> pid_event_ett_;
       std::map<uint16_t, uint8_t> pid_rrt_;

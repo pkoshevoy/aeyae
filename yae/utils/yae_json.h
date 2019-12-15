@@ -10,6 +10,7 @@
 #define YAE_JSON_H_
 
 // std includes:
+#include <bitset>
 #include <list>
 #include <map>
 #include <set>
@@ -339,6 +340,24 @@ namespace yae
       load(*i, value);
       v.push_back(value);
     }
+  }
+
+  // std::bitset
+  template <std::size_t nbits>
+  void
+  save(Json::Value & json, const std::bitset<nbits> & bits)
+  {
+    std::string str = bits.to_string();
+    save(json, str);
+  }
+
+  template <std::size_t nbits>
+  void
+  load(const Json::Value & json, std::bitset<nbits> & bits)
+  {
+    std::string str;
+    load(json, str);
+    bits = std::bitset<nbits>(str);
   }
 
 }

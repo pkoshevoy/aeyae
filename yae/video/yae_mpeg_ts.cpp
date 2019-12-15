@@ -4195,13 +4195,104 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // SectionSet::set_last_section_number
+    //
+    void
+    SectionSet::set_last_section_number(uint8_t i)
+    {
+      expected_.set();
+      expected_ >>= (0xFF - i);
+    }
+
+    //----------------------------------------------------------------
+    // SectionSet::set_observed_section
+    //
+    void
+    SectionSet::set_observed_section(uint8_t i)
+    {
+      observed_.set(i);
+    }
+
+    //----------------------------------------------------------------
+    // SectionSet::is_complete
+    //
+    bool
+    SectionSet::is_complete() const
+    {
+      return expected_ == observed_;
+    }
+
+
+    //----------------------------------------------------------------
+    // TableSet::reset
+    //
+    void
+    TableSet::reset()
+    {
+      expected_.reset();
+      observed_.clear();
+    }
+
+    //----------------------------------------------------------------
+    // TableSet::set_expected_table
+    //
+    void
+    TableSet::set_expected_table(uint8_t i)
+    {
+      expected_.set(i);
+
+      SectionSet & expected = observed_[i];
+      expected.set_last_section_number(0x00);
+    }
+
+    //----------------------------------------------------------------
+    // TableSet::set_observed_table
+    //
+    void
+    TableSet::set_observed_table(uint8_t i,
+                                 uint8_t section,
+                                 uint8_t last_section_number)
+    {
+      SectionSet & observed = observed_[i];
+      observed.set_observed_section(section);
+      observed.set_last_section_number(last_section_number);
+    }
+
+    //----------------------------------------------------------------
+    // TableSet::is_complete
+    //
+    bool
+    TableSet::is_complete() const
+    {
+      for (std::size_t i = 0; i < 0x80; i++)
+      {
+        if (!expected_[i])
+        {
+          continue;
+        }
+
+        std::map<uint16_t, SectionSet>::const_iterator it = observed_.find(i);
+        if (it == observed_.end())
+        {
+          return false;
+        }
+
+        const SectionSet & observed = it->second;
+        if (!observed.is_complete())
+        {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+
+    //----------------------------------------------------------------
     // Bucket::Bucket
     //
     Bucket::Bucket():
-      expected_vct_sections_(0xFF),
-      expected_eit_sections_(0xFF),
-      expected_ett_sections_(0x00),
-      expected_rrt_sections_(0x00)
+      observed_mgt_(false)
     {}
 
     //----------------------------------------------------------------
@@ -4215,22 +4306,27 @@ namespace yae
         return false;
       }
 
-      if (vct_sections_.size() < expected_vct_sections_)
+      if (!observed_mgt_)
       {
         return false;
       }
 
-      if (eit_sections_.size() < expected_eit_sections_)
+      if (!vct_table_set_.is_complete())
       {
         return false;
       }
 
-      if (ett_sections_.size() < expected_ett_sections_)
+      if (!eit_table_set_.is_complete())
       {
         return false;
       }
 
-      if (rrt_sections_.size() < expected_rrt_sections_)
+      if (!ett_table_set_.is_complete())
+      {
+        return false;
+      }
+
+      if (!rrt_table_set_.is_complete())
       {
         return false;
       }
@@ -4255,12 +4351,7 @@ namespace yae
           return false;
         }
 
-#if 0
-        if (!check_etm)
-        {
-          continue;
-        }
-
+#if 1
         // check that we have descriptions for each event:
         for (std::list<ChannelGuide::Item>::const_iterator
                j = chan.items_.begin(); j != chan.items_.end(); ++j)
@@ -4457,20 +4548,59 @@ namespace yae
     // save
     //
     void
+    save(Json::Value & json, const SectionSet & section_set)
+    {
+      save(json["expected"], section_set.expected_);
+      save(json["observed"], section_set.observed_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, SectionSet & section_set)
+    {
+      load(json["expected"], section_set.expected_);
+      load(json["observed"], section_set.observed_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const TableSet & table_set)
+    {
+      save(json["expected"], table_set.expected_);
+      save(json["observed"], table_set.observed_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, TableSet & table_set)
+    {
+      load(json["expected"], table_set.expected_);
+      load(json["observed"], table_set.observed_);
+    }
+
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
     save(Json::Value & json, const Bucket & bucket)
     {
       save(json["guide"], bucket.guide_);
       save(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       save(json["rrt"], bucket.rrt_);
       save(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
-      save(json["vct_sections"], bucket.vct_sections_);
-      save(json["expected_vct_sections"], bucket.expected_vct_sections_);
-      save(json["eit_sections"], bucket.eit_sections_);
-      save(json["expected_eit_sections"], bucket.expected_eit_sections_);
-      save(json["ett_sections"], bucket.ett_sections_);
-      save(json["expected_ett_sections"], bucket.expected_ett_sections_);
-      save(json["rrt_sections"], bucket.rrt_sections_);
-      save(json["expected_rrt_sections"], bucket.expected_rrt_sections_);
+      save(json["observed_mgt"], bucket.observed_mgt_);
+      save(json["vct_table_set"], bucket.vct_table_set_);
+      save(json["eit_table_set"], bucket.eit_table_set_);
+      save(json["ett_table_set"], bucket.ett_table_set_);
+      save(json["rrt_table_set"], bucket.rrt_table_set_);
     }
 
     //----------------------------------------------------------------
@@ -4483,14 +4613,11 @@ namespace yae
       load(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       load(json["rrt"], bucket.rrt_);
       load(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
-      load(json["vct_sections"], bucket.vct_sections_);
-      load(json["expected_vct_sections"], bucket.expected_vct_sections_);
-      load(json["eit_sections"], bucket.eit_sections_);
-      load(json["expected_eit_sections"], bucket.expected_eit_sections_);
-      load(json["ett_sections"], bucket.ett_sections_);
-      load(json["expected_ett_sections"], bucket.expected_ett_sections_);
-      load(json["rrt_sections"], bucket.rrt_sections_);
-      load(json["expected_rrt_sections"], bucket.expected_rrt_sections_);
+      load(json["observed_mgt"], bucket.observed_mgt_);
+      load(json["vct_table_set"], bucket.vct_table_set_);
+      load(json["eit_table_set"], bucket.eit_table_set_);
+      load(json["ett_table_set"], bucket.ett_table_set_);
+      load(json["rrt_table_set"], bucket.rrt_table_set_);
     }
 
 
@@ -4657,104 +4784,27 @@ namespace yae
           {
             consume_stt(stt_section);
           }
+          else if (mgt_section)
+          {
+            consume_mgt(mgt_section);
+          }
           else if (vct_section)
           {
             const VirtualChannelTable & vct = *vct_section;
-            consume_vct(vct);
+            consume_vct(vct, pid);
           }
           else if (rrt_section)
           {
-            consume_rrt(rrt_section);
-          }
-          else if (mgt_section)
-          {
-            const MasterGuideTable & mgt = *mgt_section;
-            YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
-                         mgt.table_id_ > 0xCD);
-            YAE_THROW_IF(mgt.private_indicator_ != 1);
-
-            for (std::size_t i = 0; i < mgt.tables_defined_; i++)
-            {
-              const MasterGuideTable::Table & table = mgt.table_[i];
-              if (table.table_type_ == 0x0000)
-              {
-                pid_tvct_curr_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ == 0x0001)
-              {
-                pid_tvct_next_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ == 0x0002)
-              {
-                pid_cvct_curr_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ == 0x0003)
-              {
-                pid_cvct_next_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ == 0x0004)
-              {
-                pid_channel_ett_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ == 0x0005)
-              {
-                pid_dccsct_.insert(table.table_type_pid_);
-              }
-              else if (table.table_type_ >= 0x0100 &&
-                       table.table_type_ <= 0x017F)
-              {
-                pid_eit_[table.table_type_pid_] = table.table_type_ & 0x7F;
-              }
-              else if (table.table_type_ >= 0x0200 &&
-                       table.table_type_ <= 0x027F)
-              {
-                pid_event_ett_[table.table_type_pid_] =
-                  table.table_type_ & 0x7F;
-              }
-              else if (table.table_type_ >= 0x0300 &&
-                       table.table_type_ <= 0x03FF)
-              {
-                pid_rrt_[table.table_type_pid_] = table.table_type_ & 0xFF;
-              }
-              else if (table.table_type_ >= 0x1400 &&
-                       table.table_type_ <= 0x14FF)
-              {
-                pid_dcct_[table.table_type_pid_] = table.table_type_ & 0xFF;
-              }
-            }
+            consume_rrt(rrt_section, pid);
           }
         }
-        else if (yae::has(pid_tvct_curr_, pid))
+        else if (yae::has(pid_vct_, pid))
         {
           VCTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
           const VirtualChannelTable & vct = *section;
-          consume_vct(vct);
-        }
-        else if (yae::has(pid_tvct_next_, pid))
-        {
-          VCTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
-
-          const VirtualChannelTable & vct = *section;
-          consume_vct(vct);
-        }
-        else if (yae::has(pid_cvct_curr_, pid))
-        {
-          VCTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
-
-          const VirtualChannelTable & vct = *section;
-          consume_vct(vct);
-        }
-        else if (yae::has(pid_cvct_next_, pid))
-        {
-          VCTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
-
-          const VirtualChannelTable & vct = *section;
-          consume_vct(vct);
+          consume_vct(vct, pid);
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
@@ -4762,7 +4812,7 @@ namespace yae
           YAE_THROW_IF(!section);
 
           const ExtendedTextTable & ett = *section;
-          consume_ett(ett);
+          consume_ett(ett, pid);
         }
         else if (yae::has(pid_dccsct_, pid))
         {
@@ -4776,7 +4826,7 @@ namespace yae
           YAE_THROW_IF(!section);
 
           const EventInformationTable & eit = *section;
-          consume_eit(eit);
+          consume_eit(eit, pid);
         }
         else if (yae::has(pid_event_ett_, pid))
         {
@@ -4784,14 +4834,14 @@ namespace yae
           YAE_THROW_IF(!section);
 
           const ExtendedTextTable & ett = *section;
-          consume_ett(ett);
+          consume_ett(ett, pid);
         }
         else if (yae::has(pid_rrt_, pid))
         {
           RRTSectionPtr rrt_section = load_section(bin);
           YAE_THROW_IF(!rrt_section);
 
-          consume_rrt(rrt_section);
+          consume_rrt(rrt_section, pid);
         }
         else if (yae::has(pid_dcct_, pid))
         {
@@ -5073,10 +5123,88 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // Context::consume_mgt
+    //
+    void
+    Context::consume_mgt(const MGTSectionPtr & mgt_section)
+    {
+      const MasterGuideTable & mgt = *mgt_section;
+      YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
+                   mgt.table_id_ > 0xCD);
+      YAE_THROW_IF(mgt.private_indicator_ != 1);
+
+      Bucket & bucket = get_current_bucket();
+      bucket.observed_mgt_ = true;
+
+      for (std::size_t i = 0; i < mgt.tables_defined_; i++)
+      {
+        const MasterGuideTable::Table & table = mgt.table_[i];
+        if (table.table_type_ == 0x0000)
+        {
+          bucket.vct_table_set_.set_expected_table(table.table_type_);
+          pid_vct_[table.table_type_pid_] = table.table_type_;
+          pid_tvct_curr_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ == 0x0001)
+        {
+          bucket.vct_table_set_.set_expected_table(table.table_type_);
+          pid_vct_[table.table_type_pid_] = table.table_type_;
+          pid_tvct_next_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ == 0x0002)
+        {
+          bucket.vct_table_set_.set_expected_table(table.table_type_);
+          pid_vct_[table.table_type_pid_] = table.table_type_;
+          pid_cvct_curr_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ == 0x0003)
+        {
+          bucket.vct_table_set_.set_expected_table(table.table_type_);
+          pid_vct_[table.table_type_pid_] = table.table_type_;
+          pid_cvct_next_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ == 0x0004)
+        {
+          pid_channel_ett_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ == 0x0005)
+        {
+          pid_dccsct_.insert(table.table_type_pid_);
+        }
+        else if (table.table_type_ >= 0x0100 &&
+                 table.table_type_ <= 0x017F)
+        {
+          uint8_t eit_index = table.table_type_ & 0x7F;
+          bucket.eit_table_set_.set_expected_table(eit_index);
+          pid_eit_[table.table_type_pid_] = eit_index;
+        }
+        else if (table.table_type_ >= 0x0200 &&
+                 table.table_type_ <= 0x027F)
+        {
+          uint8_t ett_index = table.table_type_ & 0x7F;
+          bucket.ett_table_set_.set_expected_table(ett_index);
+          pid_event_ett_[table.table_type_pid_] = ett_index;
+        }
+        else if (table.table_type_ >= 0x0300 &&
+                 table.table_type_ <= 0x03FF)
+        {
+          uint8_t rrt_index = table.table_type_ & 0xFF;
+          bucket.rrt_table_set_.set_expected_table(rrt_index);
+          pid_rrt_[table.table_type_pid_] = rrt_index;
+        }
+        else if (table.table_type_ >= 0x1400 &&
+                 table.table_type_ <= 0x14FF)
+        {
+          pid_dcct_[table.table_type_pid_] = table.table_type_ & 0xFF;
+        }
+      }
+    }
+
+    //----------------------------------------------------------------
     // Context::consume_vct
     //
     void
-    Context::consume_vct(const VirtualChannelTable & vct)
+    Context::consume_vct(const VirtualChannelTable & vct, uint16_t pid)
     {
 #if 0
       std::ostringstream oss;
@@ -5112,8 +5240,10 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
-      bucket.vct_sections_.insert(vct.section_number_);
-      bucket.expected_vct_sections_ = vct.last_section_number_ + 1;
+      uint8_t vct_index = yae::get<uint16_t, uint8_t>(pid_vct_, pid, 0);
+      bucket.vct_table_set_.set_observed_table(vct_index,
+                                               vct.section_number_,
+                                               vct.last_section_number_);
 
       for (std::size_t i = 0; i < vct.num_channels_in_section_; i++)
       {
@@ -5159,7 +5289,7 @@ namespace yae
     // Context::consume_rrt
     //
     void
-    Context::consume_rrt(const RRTSectionPtr & rrt_section)
+    Context::consume_rrt(const RRTSectionPtr & rrt_section, uint16_t pid)
     {
       const RatingRegionTable & rrt = *(rrt_section);
 
@@ -5198,8 +5328,10 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
-      bucket.rrt_sections_.insert(rrt.section_number_);
-      bucket.expected_rrt_sections_ = rrt.last_section_number_ + 1;
+      uint8_t rrt_index = yae::get<uint16_t, uint8_t>(pid_rrt_, pid, 0);
+      bucket.rrt_table_set_.set_observed_table(rrt_index,
+                                               rrt.section_number_,
+                                               rrt.last_section_number_);
 
       RatingRegion & rr = bucket.rrt_[rrt.rating_region_];
       rrt.rating_region_name_text_.get(rr.name_);
@@ -5234,7 +5366,7 @@ namespace yae
     // Context::consume_eit
     //
     void
-    Context::consume_eit(const EventInformationTable & eit)
+    Context::consume_eit(const EventInformationTable & eit, uint16_t pid)
     {
 #if 0
       std::ostringstream oss;
@@ -5261,8 +5393,10 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
-      bucket.eit_sections_.insert(eit.section_number_);
-      bucket.expected_eit_sections_ = eit.last_section_number_ + 1;
+      uint8_t eit_index = yae::at(pid_eit_, pid);
+      bucket.eit_table_set_.set_observed_table(eit_index,
+                                               eit.section_number_,
+                                               eit.last_section_number_);
 
       std::list<ChannelGuide::Item> new_items;
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
@@ -5337,7 +5471,7 @@ namespace yae
     // Context::consume_ett
     //
     void
-    Context::consume_ett(const ExtendedTextTable & ett)
+    Context::consume_ett(const ExtendedTextTable & ett, uint16_t pid)
     {
 #if 0
       std::ostringstream oss;
@@ -5352,9 +5486,6 @@ namespace yae
 #endif
 
       Bucket & bucket = get_current_bucket();
-      bucket.ett_sections_.insert(ett.section_number_);
-      bucket.expected_ett_sections_ = ett.last_section_number_ + 1;
-
       unsigned short int source_id = ett.etm_id_source_id_;
       const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
                                        source_id,
@@ -5367,6 +5498,11 @@ namespace yae
       ChannelGuide & chan = bucket.guide_[ch_num];
       if (ett.etm_id_event_flag_)
       {
+        uint8_t ett_index = yae::at(pid_event_ett_, pid);
+        bucket.ett_table_set_.set_observed_table(ett_index,
+                                                 ett.section_number_,
+                                                 ett.last_section_number_);
+
         TLangText & lang_text = chan.event_etm_[ett.etm_id_event_id_];
         ett.extended_text_message_.get(lang_text);
       }
@@ -5471,7 +5607,7 @@ namespace yae
       std::size_t bx = bucket_index_at(gps_time);
       for (std::size_t i = 0; i < 256; i++)
       {
-        if (!bucket_[bx].guide_.empty())
+        if (bucket_[bx].has_epg_for(gps_time))
         {
           break;
         }

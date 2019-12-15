@@ -480,8 +480,8 @@ namespace yae
   {
     packets_.push(pkt);
 
-    // FIXME: check that VCT is complete:
-    if (bucket.guide_.empty())
+    if (bucket.guide_.empty() ||
+        (!packets_.full() && !bucket.vct_table_set_.is_complete()))
     {
       return;
     }
@@ -1159,7 +1159,7 @@ namespace yae
       std::string frequency = yae::at(frequencies, ch_num);
 
       TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
-      if (!rec.stream_)
+      if (!(rec.stream_ && rec.stream_->is_open()))
       {
         yae_ilog("starting stream: %s", rec.filename_.c_str());
       }
