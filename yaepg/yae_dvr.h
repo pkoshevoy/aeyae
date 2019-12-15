@@ -52,6 +52,9 @@ namespace yae
       bool matches(const yae::mpeg_ts::EPG::Channel & channel,
                    const yae::mpeg_ts::EPG::Program & program) const;
 
+      void save(Json::Value & json) const;
+      void load(const Json::Value & json);
+
       enum Weekday
       {
         Sun = 1 << 0,
@@ -81,6 +84,12 @@ namespace yae
     std::list<Item> items_;
   };
 
+  void save(Json::Value & json, const Wishlist::Item & item);
+  void load(const Json::Value & json, Wishlist::Item & item);
+
+  void save(Json::Value & json, const Wishlist & wishlist);
+  void load(const Json::Value & json, Wishlist & wishlist);
+
 
   //----------------------------------------------------------------
   // Recording
@@ -89,14 +98,28 @@ namespace yae
   {
     Recording();
 
+    fs::path get_title_path(const fs::path & basedir) const;
+    std::string get_basename() const;
     yae::TOpenFilePtr open_file(const fs::path & basedir);
 
-    yae::shared_ptr<IStream> stream_;
-    uint32_t gps_t1_;
-    std::string filename_;
-    yae::TOpenFilePtr file_;
     bool cancelled_;
+    uint64_t utc_t0_;
+    uint32_t gps_t0_;
+    uint32_t gps_t1_;
+    uint16_t channel_major_;
+    uint16_t channel_minor_;
+    std::string channel_name_;
+    std::string title_;
+    std::string rating_;
+    std::string description_;
+
+    yae::TOpenFilePtr file_;
+    yae::shared_ptr<IStream> stream_;
   };
+
+  void save(Json::Value & json, const Recording & rec);
+  void load(const Json::Value & json, Recording & rec);
+
 
   //----------------------------------------------------------------
   // TRecordingPtr
@@ -123,6 +146,16 @@ namespace yae
     // find a scheduled recording corresponding to the
     // given channel number and gps time:
     TRecordingPtr get(uint32_t ch_num, uint32_t gps_time) const;
+
+    // with margins, it's possible to have more than 1 recording active
+    // when one recoding is near the end and another is near beginning:
+    void get(std::set<TRecordingPtr> & recordings,
+             uint32_t ch_num,
+             uint32_t gps_time,
+             uint32_t margin_sec) const;
+
+    void save(Json::Value & json) const;
+    void load(const Json::Value & json);
 
   protected:
     // protect against concurrent access:
@@ -227,10 +260,12 @@ namespace yae
                  const std::string & lang = std::string("eng")) const;
 
     void save_epg(const std::string & frequency,
-                const yae::mpeg_ts::Context & ctx) const;
+                  const yae::mpeg_ts::Context & ctx) const;
 
     void save_epg() const;
     void save_frequencies() const;
+    void save_wishlist() const;
+    void save_schedule() const;
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 
@@ -250,6 +285,7 @@ namespace yae
     // recordings wishlist, schedule, etc:
     Schedule schedule_;
     Wishlist wishlist_;
+    yae::TTime margin_;
   };
 
 }

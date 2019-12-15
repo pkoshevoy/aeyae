@@ -138,6 +138,9 @@ namespace yae
       item.title_ = "The Big Bang Theory";
     }
 
+    // FIXME: there is probably a better place for this:
+    dvr.save_wishlist();
+
     dvr.scan_channels();
     dvr.worker_.wait_until_finished();
     TTime channel_scan_time = TTime::now();

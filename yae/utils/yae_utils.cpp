@@ -596,6 +596,78 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // sanitize_file_name
+  //
+  std::string
+  sanitize_filename_utf8(const std::string & fn)
+  {
+    std::string out;
+    const char * src = fn.empty() ? "" : &(fn[0]);
+    const char * end = src + strlen(src);
+    bool valid_utf8 = true;
+
+    while (src < end)
+    {
+      uint32_t uc = 0;
+      YAE_EXPECT((valid_utf8 = utf8_to_unicode(src, end, uc)));
+      if (valid_utf8)
+      {
+        if (uc == '/')
+        {
+          // replace with FULLWIDTH SOLIDUS
+          uc = 0xFF0F;
+        }
+        else if (uc == '\\')
+        {
+          // replace with FULLWIDTH REVERSE SOLIDUS
+          uc = 0xFF3C;
+        }
+        else if (uc == ':')
+        {
+          // replace with FULLWIDTH COLON
+          uc = 0xFF1A;
+        }
+        else if (uc == '*')
+        {
+          // replace with FULLWIDTH ASTERISK
+          uc = 0xFF0A;
+        }
+
+        unicode_to_utf8(uc, out);
+      }
+      else
+      {
+        src++;
+        out += '_';
+      }
+    }
+
+    return out;
+  }
+
+  //----------------------------------------------------------------
+  // replace_inplace
+  //
+  void
+  replace_inplace(std::string & text,
+                  const std::string & search_text,
+                  const std::string & replacement)
+  {
+    std::string::size_type pos = 0;
+    while (true)
+    {
+      pos = text.find(search_text, pos);
+      if (pos == std::string::npos)
+      {
+        break;
+      }
+
+      text.replace(pos, search_text.size(), replacement);
+      pos += replacement.size();
+    }
+  }
+
+  //----------------------------------------------------------------
   // data
   //
   static const char *
@@ -1482,6 +1554,53 @@ namespace yae
     {
       dst[i] = (unhex(src[0]) << 4) | unhex(src[1]);
     }
+  }
+
+  //----------------------------------------------------------------
+  // utf8_to_unicode
+  //
+  bool
+  utf8_to_unicode(const char *& src, const char * end, uint32_t & uc)
+  {
+    std::size_t sz = (end - src);
+    if (sz > 0 && ((src[0] & 0x80) == 0x00))
+    {
+      uc = src[0];
+      src++;
+    }
+    else if (sz > 1 && ((src[0] & 0xE0) == 0xC0 &&
+                        (src[1] & 0xC0) == 0x80))
+    {
+      uc = (((src[0] & 0x1F) << 6) |
+            ((src[1] & 0x3F)));
+      src += 2;
+    }
+    else if (sz > 2 && ((src[0] & 0xF0) == 0xE0 &&
+                        (src[1] & 0xC0) == 0x80 &&
+                        (src[2] & 0xC0) == 0x80))
+    {
+      uc = (((src[0] & 0x0F) << 12) |
+            ((src[1] & 0x3F) << 6) |
+            ((src[2] & 0x3F)));
+      src += 3;
+    }
+    else if (sz > 3 && ((src[0] & 0xF8) == 0xF0 &&
+                        (src[1] & 0xC0) == 0x80 &&
+                        (src[2] & 0xC0) == 0x80 &&
+                        (src[3] & 0xC0) == 0x80))
+    {
+      uc = (((src[0] & 0x07) << 18) |
+            ((src[1] & 0x3F) << 12) |
+            ((src[2] & 0x3F) << 6) |
+            ((src[3] & 0x3F)));
+      src += 4;
+    }
+    else
+    {
+      return false;
+    }
+
+    return true;
   }
 
   //----------------------------------------------------------------

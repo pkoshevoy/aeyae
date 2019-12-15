@@ -167,6 +167,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // to_yyyymmdd_hhmm
+  //
+  std::string
+  to_yyyymmdd_hhmm(const struct tm & t,
+                   const char * date_sep,
+                   const char * separator,
+                   const char * time_sep)
+  {
+    std::string txt = yae::strfmt("%04i%s%02i%s%02i%s%02i%s%02i",
+                                  t.tm_year + 1900,
+                                  date_sep,
+                                  t.tm_mon + 1,
+                                  date_sep,
+                                  t.tm_mday,
+                                  separator,
+                                  t.tm_hour,
+                                  time_sep,
+                                  t.tm_min);
+    return txt;
+  }
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime_str
   //
   std::string

@@ -124,6 +124,34 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Wishlist::Item::save
+  //
+  void
+  Wishlist::Item::save(Json::Value & json) const
+  {
+    yae::save(json, "ch_num", ch_num_);
+    yae::save(json, "date", date_);
+    yae::save(json, "when", when_);
+    yae::save(json, "weekday_mask", weekday_mask_);
+    yae::save(json, "title", title_);
+    yae::save(json, "description", description_);
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::Item::load
+  //
+  void
+  Wishlist::Item::load(const Json::Value & json)
+  {
+    yae::load(json, "ch_num", ch_num_);
+    yae::load(json, "date", date_);
+    yae::load(json, "when", when_);
+    yae::load(json, "weekday_mask", weekday_mask_);
+    yae::load(json, "title", title_);
+    yae::load(json, "description", description_);
+  }
+
+  //----------------------------------------------------------------
   // Wishlist::matches
   //
   bool
@@ -143,14 +171,100 @@ namespace yae
     return false;
   }
 
+  //----------------------------------------------------------------
+  // save
+  //
+  void
+  save(Json::Value & json, const Wishlist::Item & item)
+  {
+    item.save(json);
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  void
+  load(const Json::Value & json, Wishlist::Item & item)
+  {
+    item.load(json);
+  }
+
+  //----------------------------------------------------------------
+  // save
+  //
+  void
+  save(Json::Value & json, const Wishlist & wishlist)
+  {
+    save(json["items"], wishlist.items_);
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  void
+  load(const Json::Value & json, Wishlist & wishlist)
+  {
+    load(json["items"], wishlist.items_);
+  }
+
 
   //----------------------------------------------------------------
   // Recording::Recording
   //
   Recording::Recording():
+    utc_t0_(0),
+    gps_t0_(0),
     gps_t1_(0),
+    channel_major_(0),
+    channel_minor_(0),
     cancelled_(false)
   {}
+
+  //----------------------------------------------------------------
+  // Recording::get_title_path
+  //
+  fs::path
+  Recording::get_title_path(const fs::path & basedir) const
+  {
+    // title path:
+    std::string channel;
+    {
+      std::ostringstream oss;
+      oss << std::setfill('0') << std::setw(2) << channel_major_
+          << "."
+          << std::setfill('0') << std::setw(2) << channel_minor_;
+      channel = oss.str().c_str();
+    }
+
+    std::string safe_title = sanitize_filename_utf8(title_);
+    fs::path title_path = basedir / channel / safe_title;
+    return title_path;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::get_basename
+  //
+  std::string
+  Recording::get_basename() const
+  {
+    std::string safe_title = sanitize_filename_utf8(title_);
+
+    struct tm tm = { 0 };
+    unix_epoch_time_to_localtime(utc_t0_, tm);
+    std::string datetime_txt = to_yyyymmdd_hhmm(tm, "", "-", "");
+
+    std::ostringstream oss;
+    oss << datetime_txt
+        << " "
+        << std::setfill('0') << std::setw(2) << channel_major_
+        << "."
+        << std::setfill('0') << std::setw(2) << channel_minor_
+        << " "
+        << safe_title;
+
+    std::string basename = oss.str().c_str();
+    return basename;
+  }
 
   //----------------------------------------------------------------
   // Recording::open_file
@@ -158,20 +272,81 @@ namespace yae
   yae::TOpenFilePtr
   Recording::open_file(const fs::path & basedir)
   {
-    if (!file_)
+    if (file_ && file_->is_open())
     {
-      std::string filepath = (basedir / filename_).string();
-      file_.reset(new yae::TOpenFile(filepath, "ab"));
-      bool ok = file_->is_open();
+      return file_;
+    }
 
-      yae_ilog("writing to: %s, %s", filepath.c_str(), ok ? "ok" : "failed");
-      if (!ok)
+    file_.reset();
+
+    fs::path title_path = get_title_path(basedir);
+    std::string title_path_str = title_path.string();
+    if (!yae::mkdir_p(title_path_str))
+    {
+      yae_elog("mkdir_p failed for: %s", title_path_str.c_str());
+      return TOpenFilePtr();
+    }
+
+    std::string basename = get_basename();
+    std::string basepath = (title_path / basename).string();
+    std::string filepath = basepath + ".ts";
+    file_.reset(new yae::TOpenFile(filepath, "ab"));
+    bool ok = file_->is_open();
+
+    yae_ilog("writing to: %s, %s", filepath.c_str(), ok ? "ok" : "failed");
+    if (!ok)
+    {
+      file_.reset();
+      yae_elog("fopen failed for: %s", filepath.c_str());
+    }
+    else
+    {
+      Json::Value json;
+      yae::save(json, *this);
+      std::string filepath = basepath + ".json";
+      if (!yae::TOpenFile(filepath, "wb").save(json))
       {
-        file_.reset();
+        yae_wlog("fopen failed for: %s", filepath.c_str());
       }
     }
 
     return file_;
+  }
+
+  //----------------------------------------------------------------
+  // save
+  //
+  void
+  save(Json::Value & json, const Recording & rec)
+  {
+    save(json["cancelled"], rec.cancelled_);
+    save(json["utc_t0"], rec.utc_t0_);
+    save(json["gps_t0"], rec.gps_t0_);
+    save(json["gps_t1"], rec.gps_t1_);
+    save(json["channel_major"], rec.channel_major_);
+    save(json["channel_minor"], rec.channel_minor_);
+    save(json["channel_name"], rec.channel_name_);
+    save(json["title"], rec.title_);
+    save(json["rating"], rec.rating_);
+    save(json["description"], rec.description_);
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  void
+  load(const Json::Value & json, Recording & rec)
+  {
+    load(json["cancelled"], rec.cancelled_);
+    load(json["utc_t0"], rec.utc_t0_);
+    load(json["gps_t0"], rec.gps_t0_);
+    load(json["gps_t1"], rec.gps_t1_);
+    load(json["channel_major"], rec.channel_major_);
+    load(json["channel_minor"], rec.channel_minor_);
+    load(json["channel_name"], rec.channel_name_);
+    load(json["title"], rec.title_);
+    load(json["rating"], rec.rating_);
+    load(json["description"], rec.description_);
   }
 
 
@@ -213,21 +388,15 @@ namespace yae
         }
 
         Recording & rec = *rec_ptr;
+        rec.utc_t0_ = localtime_to_unix_epoch_time(program.tm_);
+        rec.gps_t0_ = program.gps_time_;
         rec.gps_t1_ = gps_t1;
-
-        if (rec.filename_.empty())
-        {
-          std::ostringstream oss;
-          oss << to_yyyymmdd_hhmmss(program.tm_, "", "-", "")
-              << " "
-              << std::setfill('0') << std::setw(2) << channel.major_
-              << "."
-              << std::setfill('0') << std::setw(2) << channel.minor_
-              << " "
-              << program.title_
-              << ".ts";
-          rec.filename_ = oss.str().c_str();
-        }
+        rec.channel_major_ = channel.major_;
+        rec.channel_minor_ = channel.minor_;
+        rec.channel_name_ = channel.name_;
+        rec.title_ = program.title_;
+        rec.rating_ = program.rating_;
+        rec.description_ = program.description_;
       }
     }
 
@@ -331,6 +500,51 @@ namespace yae
     }
 
     return rec_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::get
+  //
+  void
+  Schedule::get(std::set<TRecordingPtr> & recordings,
+                uint32_t ch_num,
+                uint32_t gps_time,
+                uint32_t margin_sec) const
+  {
+    TRecordingPtr leading = get(ch_num, gps_time + margin_sec);
+    TRecordingPtr trailing = get(ch_num, gps_time - margin_sec);
+
+    if (leading && trailing && leading != trailing)
+    {
+      recordings.insert(leading);
+      recordings.insert(trailing);
+    }
+    else if (leading)
+    {
+      recordings.insert(leading);
+    }
+    else if (trailing)
+    {
+      recordings.insert(trailing);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // save
+  //
+  void
+  Schedule::save(Json::Value & json) const
+  {
+    yae::save(json["recordings"], recordings_);
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  void
+  Schedule::load(const Json::Value & json)
+  {
+    yae::load(json["recordings"], recordings_);
   }
 
 
@@ -501,21 +715,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // write
+  //
+  static void
+  write(const DVR & dvr,
+        const std::set<TRecordingPtr> & recs,
+        const yae::IBuffer & data)
+  {
+    for (std::set<TRecordingPtr>::const_iterator
+           i = recs.begin(); i != recs.end(); ++i)
+    {
+      Recording & rec = *(*i);
+      yae::TOpenFilePtr file = rec.open_file(dvr.basedir_);
+      if (file)
+      {
+        YAE_ASSERT(file->write(data.get(), data.size()));
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // DVR::PacketHandler::handle_backlog
   //
   void
   DVR::PacketHandler::handle_backlog(const yae::mpeg_ts::Bucket & bucket,
                                      uint32_t gps_time)
   {
-    std::map<uint32_t, TRecordingPtr> recordings;
+    uint32_t margin = dvr_.margin_.get(1);
+    std::map<uint32_t, std::set<TRecordingPtr> > recordings;
+
     for (std::map<uint32_t, yae::mpeg_ts::ChannelGuide>::const_iterator
            i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
     {
       const uint32_t ch_num = i->first;
-      TRecordingPtr rec_ptr = dvr_.schedule_.get(ch_num, gps_time);
-      if (rec_ptr)
+      std::set<TRecordingPtr> recs;
+      dvr_.schedule_.get(recs, ch_num, gps_time, margin);
+      if (!recs.empty())
       {
-        recordings[ch_num] = rec_ptr;
+        recordings[ch_num].swap(recs);
       }
     }
 
@@ -529,29 +766,22 @@ namespace yae
 
       if (found == bucket.pid_to_ch_num_.end())
       {
-        for (std::map<uint32_t, TRecordingPtr>::iterator
-               i = recordings.begin(); i != recordings.end(); ++i)
+        for (std::map<uint32_t, std::set<TRecordingPtr> >::const_iterator
+               it = recordings.begin(); it != recordings.end(); ++it)
         {
-          Recording & rec = *(i->second);
-          yae::TOpenFilePtr file = rec.open_file(dvr_.basedir_);
-          if (file)
-          {
-            YAE_ASSERT(file->write(data.get(), data.size()));
-          }
+          const std::set<TRecordingPtr> & recs = it->second;
+          write(dvr_, recs, data);
         }
       }
       else
       {
         const uint32_t ch_num = found->second;
-        TRecordingPtr rec_ptr = yae::get(recordings, ch_num, TRecordingPtr());
-        if (rec_ptr)
+        std::map<uint32_t, std::set<TRecordingPtr> >::const_iterator
+          it = recordings.find(ch_num);
+        if (it != recordings.end())
         {
-          Recording & rec = *rec_ptr;
-          yae::TOpenFilePtr file = rec.open_file(dvr_.basedir_);
-          if (file)
-          {
-            YAE_ASSERT(file->write(data.get(), data.size()));
-          }
+          const std::set<TRecordingPtr> & recs = it->second;
+          write(dvr_, recs, data);
         }
       }
     }
@@ -749,17 +979,21 @@ namespace yae
   //
   DVR::DVR(const std::string & basedir):
     yaepg_(yae::get_user_folder_path(".yaepg")),
-    basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir)
+    basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
+    margin_(60, 1)
   {
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
 
-    std::string freq_path = (yaepg_ / "frequencies.json").string();
-    Json::Value json;
-    yae::TOpenFile(freq_path, "rb").load(json);
-
+    // load the frequencies:
     std::list<std::string> frequencies;
-    yae::load(json, frequencies);
+    {
+      std::string freq_path = (yaepg_ / "frequencies.json").string();
+      Json::Value json;
+      yae::TOpenFile(freq_path, "rb").load(json);
+      yae::load(json, frequencies);
+    }
 
+    // load the EPG:
     for (std::list<std::string>::const_iterator
            i = frequencies.begin(); i != frequencies.end(); ++i)
     {
@@ -776,6 +1010,22 @@ namespace yae
         PacketHandler & packet_handler = *packet_handler_ptr;
         packet_handler.ctx_.load(epg[frequency]);
       }
+    }
+
+    // load the wishlist:
+    {
+      std::string path = (yaepg_ / "wishlist.json").string();
+      Json::Value json;
+      yae::TOpenFile(path, "rb").load(json);
+      yae::load(json, wishlist_);
+    }
+
+    // load the schedule:
+    {
+      std::string path = (yaepg_ / "schedule.json").string();
+      Json::Value json;
+      yae::TOpenFile(path, "rb").load(json);
+      schedule_.load(json);
     }
   }
 
@@ -1139,12 +1389,46 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::save_wishlist
+  //
+  void
+  DVR::save_wishlist() const
+  {
+    Json::Value json;
+    yae::save(json, wishlist_);
+
+    std::string path = (yaepg_ / "wishlist.json").string();
+    yae::TOpenFile file;
+    if (!(file.open(path, "wb") && file.save(json)))
+    {
+      yae_elog("write failed: %s", path.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::save_schedule
+  //
+  void
+  DVR::save_schedule() const
+  {
+    Json::Value json;
+    schedule_.save(json);
+
+    std::string path = (yaepg_ / "schedule.json").string();
+    yae::TOpenFile file;
+    if (!(file.open(path, "wb") && file.save(json)))
+    {
+      yae_elog("write failed: %s", path.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
   // DVR::evaluate
   //
   void
   DVR::evaluate(const yae::mpeg_ts::EPG & epg)
   {
-    static const uint32_t margin_seconds = 60;
+    uint32_t margin_sec = margin_.get(1);
     schedule_.update(epg, wishlist_);
 
     std::map<uint32_t, std::string> frequencies;
@@ -1157,24 +1441,32 @@ namespace yae
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
       uint32_t gps_time = channel.gps_time();
 
-      TRecordingPtr rec_ptr = schedule_.get(ch_num, gps_time + margin_seconds);
-      if (!rec_ptr)
+      std::set<TRecordingPtr> recs;
+      schedule_.get(recs, ch_num, gps_time, margin_sec);
+      if (recs.empty())
       {
         // nothing scheduled for this channel at this time:
         continue;
       }
 
-      Recording & rec = *rec_ptr;
-      uint64_t num_sec = rec.gps_t1_ - gps_time + margin_seconds * 2;
-      std::string frequency = yae::at(frequencies, ch_num);
-
-      TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
-      if (!(rec.stream_ && rec.stream_->is_open()))
+      for (std::set<TRecordingPtr>::const_iterator
+             i = recs.begin(); i != recs.end(); ++i)
       {
-        yae_ilog("starting stream: %s", rec.filename_.c_str());
-      }
+        Recording & rec = *(*i);
+        uint64_t num_sec = rec.gps_t1_ + margin_sec - gps_time;
+        std::string frequency = yae::at(frequencies, ch_num);
 
-      rec.stream_ = stream;
+        TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
+        if (!(rec.stream_ && rec.stream_->is_open()))
+        {
+          yae_ilog("starting stream: %s", rec.get_basename().c_str());
+
+          // FIXME: there is probably a better place for this:
+          save_schedule();
+        }
+
+        rec.stream_ = stream;
+      }
     }
   }
 

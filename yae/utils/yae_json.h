@@ -15,6 +15,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <time.h>
 #include <vector>
 
 // boost:
@@ -27,10 +28,27 @@
 
 // yae includes:
 #include "../api/yae_api.h"
+#include "../api/yae_shared_ptr.h"
+#include "../utils/yae_time.h"
 
 
 namespace yae
 {
+  // forward declarations:
+  struct TTime;
+  struct Timespan;
+
+  // struct tm:
+  YAE_API void save(Json::Value & json, const struct tm & tm);
+  YAE_API void load(const Json::Value & json, struct tm & tm);
+
+  // yae::TTime:
+  YAE_API void save(Json::Value & json, const yae::TTime & t);
+  YAE_API void load(const Json::Value & json, yae::TTime & t);
+
+  // yae::Timespan:
+  YAE_API void save(Json::Value & json, const yae::Timespan & timespan);
+  YAE_API void load(const Json::Value & json, yae::Timespan & timespan);
 
   //----------------------------------------------------------------
   // get_u8
@@ -358,6 +376,80 @@ namespace yae
     std::string str;
     load(json, str);
     bits = std::bitset<nbits>(str);
+  }
+
+  // yae::shared_ptr
+  template <typename TData>
+  void
+  save(Json::Value & json, const yae::shared_ptr<TData> & ptr)
+  {
+    if (ptr)
+    {
+      save(json, *ptr);
+    }
+    else
+    {
+      json = Json::Value::nullRef;
+    }
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, yae::shared_ptr<TData> & ptr)
+  {
+    if (json.isNull())
+    {
+      ptr.reset();
+    }
+    else
+    {
+      ptr.reset(new TData());
+      load(json, *ptr);
+    }
+  }
+
+  // yae::optional
+  template <typename TData>
+  void
+  save(Json::Value & json, const char * key, const yae::optional<TData> & opt)
+  {
+    if (opt)
+    {
+      save(json[key], *opt);
+    }
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, const char * key, yae::optional<TData> & opt)
+  {
+    if (json.isMember(key))
+    {
+      TData data;
+      load(json[key], data);
+      opt.reset(data);
+    }
+  }
+
+  // optional std::string
+  template <typename TContainer>
+  inline void
+  save(Json::Value & json, const char * key, const TContainer & opt)
+  {
+    if (!opt.empty())
+    {
+      save(json[key], opt);
+    }
+  }
+
+  template <typename TContainer>
+  inline void
+  load(const Json::Value & json, const char * key, TContainer & opt)
+  {
+    if (json.isMember(key))
+    {
+      load(json[key], opt);
+    }
   }
 
 }

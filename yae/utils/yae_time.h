@@ -80,6 +80,15 @@ namespace yae
                      const char * time_sep = ":");
 
   //----------------------------------------------------------------
+  // to_yyyymmdd_hhmm
+  //
+  YAE_API std::string
+  to_yyyymmdd_hhmm(const struct tm & t,
+                   const char * date_sep = "/",
+                   const char * separator = " ",
+                   const char * time_sep = ":");
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime_str
   //
   YAE_API std::string

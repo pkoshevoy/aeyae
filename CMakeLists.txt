@@ -542,6 +542,8 @@ add_library(aeyae SHARED
   yae/utils/yae_benchmark.h
   yae/utils/yae_data.cpp
   yae/utils/yae_data.h
+  yae/utils/yae_json.cpp
+  yae/utils/yae_json.h
   yae/utils/yae_lru_cache.h
   yae/utils/yae_pgm_file.h
   yae/utils/yae_plugin_registry.cpp

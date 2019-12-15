@@ -1035,10 +1035,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // utf8_to_unicode
+  //
+  YAE_API bool
+  utf8_to_unicode(const char *& src, const char * end, uint32_t & uc);
+
+  //----------------------------------------------------------------
   // utf16_to_unicode
   //
   YAE_API bool
-  utf16_to_unicode(const uint16_t *& src, const uint16_t * end, uint32_t & out);
+  utf16_to_unicode(const uint16_t *& src, const uint16_t * end, uint32_t & uc);
 
   //----------------------------------------------------------------
   // utf16_to_unicode
@@ -1105,13 +1111,13 @@ namespace yae
   // utf16be_to_unicode
   //
   YAE_API bool
-  utf16be_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & out);
+  utf16be_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & uc);
 
   //----------------------------------------------------------------
   // utf16le_to_unicode
   //
   YAE_API bool
-  utf16le_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & out);
+  utf16le_to_unicode(const uint8_t *& src, const uint8_t * end, uint32_t & uc);
 
   //----------------------------------------------------------------
   // utf16_to_utf8
@@ -1275,6 +1281,20 @@ namespace yae
       out.push_back((TByte)c);
     }
   }
+
+  //----------------------------------------------------------------
+  // sanitize_filename_utf8
+  //
+  YAE_API std::string
+  sanitize_filename_utf8(const std::string & fn);
+
+  //----------------------------------------------------------------
+  // replace_inplace
+  //
+  YAE_API void
+  replace_inplace(std::string & text,
+                  const std::string & search_text,
+                  const std::string & replacement);
 
   //----------------------------------------------------------------
   // vstrfmt
