@@ -5651,7 +5651,7 @@ namespace yae
       std::ostringstream oss;
       epg.dump(oss);
 
-      yae_debug << oss.str();
+      yae_info << oss.str();
       // yae::dump("/tmp/yaepg.log", oss.str().c_str(), oss.str().size());
     }
 

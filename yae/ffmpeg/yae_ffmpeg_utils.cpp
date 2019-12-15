@@ -448,7 +448,7 @@ namespace yae
     {
       LogToFFmpeg * log_to_ffmpeg = new LogToFFmpeg();
 #ifdef NDEBUG
-      log_to_ffmpeg->setPriorityThreshold(yae::TLog::kWarning);
+      log_to_ffmpeg->setPriorityThreshold(yae::TLog::kInfo);
 #else
       log_to_ffmpeg->setPriorityThreshold(yae::TLog::kDebug);
 #endif
