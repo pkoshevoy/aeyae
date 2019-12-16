@@ -263,6 +263,7 @@ namespace yae
   void
   load(const Json::Value & json, std::map<TKey, TData> & kv)
   {
+    kv.clear();
     for (Json::Value::const_iterator i = json.begin(); i != json.end(); ++i)
     {
       TKey key = boost::lexical_cast<TKey>(i.key().asString());
@@ -292,6 +293,7 @@ namespace yae
   void
   load(const Json::Value & json, std::set<TData> & v)
   {
+    v.clear();
     for (Json::Value::const_iterator i = json.begin(); i != json.end(); ++i)
     {
       TData value;
@@ -322,6 +324,7 @@ namespace yae
   void
   load(const Json::Value & json, std::list<TData> & v)
   {
+    v.clear();
     for (Json::Value::const_iterator i = json.begin(); i != json.end(); ++i)
     {
       TData value;
@@ -352,6 +355,7 @@ namespace yae
   void
   load(const Json::Value & json, std::vector<TData> & v)
   {
+    v.clear();
     for (Json::Value::const_iterator i = json.begin(); i != json.end(); ++i)
     {
       TData value;

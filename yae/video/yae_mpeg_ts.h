@@ -2258,6 +2258,8 @@ namespace yae
     {
       Bucket();
 
+      TTime elapsed_time_since_mgt() const;
+
       // check whether we have all the expected sections
       // and the extent of the EIT events overlaps
       // given GPS time:
@@ -2275,7 +2277,7 @@ namespace yae
       // map PID to major.minor channel number:
       std::map<uint16_t, uint32_t> pid_to_ch_num_;
 
-      bool observed_mgt_;
+      TTime timestamp_mgt_;
       TableSet vct_table_set_;
       TableSet eit_table_set_;
       TableSet ett_table_set_;
@@ -2408,6 +2410,8 @@ namespace yae
       void handle(const IPacketHandler::Packet & packet,
                   IPacketHandler & handler) const;
 
+      bool epg_is_fresh() const;
+
       void get_epg(yae::mpeg_ts::EPG & epg,
                    const std::string & lang = std::string("eng")) const;
 
@@ -2418,11 +2422,6 @@ namespace yae
 
       void dump(const std::string & lang = std::string("eng")) const;
 
-    protected:
-      void consume(uint16_t pid,
-                   std::list<TSPacket> & packets,
-                   bool parse = true);
-
       inline std::size_t bucket_index_at(uint32_t gps_time) const
       { return (gps_time / 10800) & 0xFF; }
 
@@ -2432,6 +2431,18 @@ namespace yae
         std::size_t ix = this->bucket_index_at(gps_time);
         return bucket_[ix];
       }
+
+      inline const Bucket & get_current_bucket() const
+      {
+        uint32_t gps_time = this->gps_time_now();
+        std::size_t ix = this->bucket_index_at(gps_time);
+        return bucket_[ix];
+      }
+
+    protected:
+      void consume(uint16_t pid,
+                   std::list<TSPacket> & packets,
+                   bool parse = true);
 
       // protect against concurrent access:
       mutable boost::mutex mutex_;

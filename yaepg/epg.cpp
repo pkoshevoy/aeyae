@@ -148,9 +148,9 @@ namespace yae
     dvr.update_epg();
     TTime epg_update_time = TTime::now();
 
+    // pull EPG, evaluate wishlist, start captures, etc...
     yae::mpeg_ts::EPG epg;
 
-    // pull EPG, evaluate wishlist, start captures, etc...
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
@@ -162,14 +162,14 @@ namespace yae
         TTime now = TTime::now();
         double sec_since_channel_scan = (now - channel_scan_time).sec();
         double sec_since_epg_update = (now - epg_update_time).sec();
-        if (sec_since_channel_scan > 86400)
+
+        if (sec_since_channel_scan > dvr.channel_scan_period_.sec())
         {
           dvr.scan_channels();
           channel_scan_time = TTime::now();
         }
-        else if (sec_since_epg_update > 1800)
+        else if (sec_since_epg_update > dvr.epg_refresh_period_.sec())
         {
-          // update EPG every 30 min:
           dvr.update_epg(true);
           epg_update_time = now;
         }

@@ -285,6 +285,9 @@ namespace yae
     // recordings wishlist, schedule, etc:
     Schedule schedule_;
     Wishlist wishlist_;
+
+    yae::TTime channel_scan_period_;
+    yae::TTime epg_refresh_period_;
     yae::TTime margin_;
   };
 

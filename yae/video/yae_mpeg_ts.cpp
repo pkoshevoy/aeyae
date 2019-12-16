@@ -4292,8 +4292,22 @@ namespace yae
     // Bucket::Bucket
     //
     Bucket::Bucket():
-      observed_mgt_(false)
+      timestamp_mgt_(0, 0)
     {}
+
+    //----------------------------------------------------------------
+    // Bucket::elapsed_time_since_mgt
+    //
+    TTime
+    Bucket::elapsed_time_since_mgt() const
+    {
+      if (timestamp_mgt_.invalid())
+      {
+        return TTime::max_flicks();
+      }
+
+      return TTime::now() - timestamp_mgt_;
+    }
 
     //----------------------------------------------------------------
     // Bucket::has_epg_for
@@ -4306,7 +4320,7 @@ namespace yae
         return false;
       }
 
-      if (!observed_mgt_)
+      if (timestamp_mgt_.invalid())
       {
         return false;
       }
@@ -4596,7 +4610,7 @@ namespace yae
       save(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       save(json["rrt"], bucket.rrt_);
       save(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
-      save(json["observed_mgt"], bucket.observed_mgt_);
+      save(json["timestamp_mgt"], bucket.timestamp_mgt_);
       save(json["vct_table_set"], bucket.vct_table_set_);
       save(json["eit_table_set"], bucket.eit_table_set_);
       save(json["ett_table_set"], bucket.ett_table_set_);
@@ -4613,7 +4627,7 @@ namespace yae
       load(json["source_id_to_ch_num"], bucket.source_id_to_ch_num_);
       load(json["rrt"], bucket.rrt_);
       load(json["pid_to_ch_num"], bucket.pid_to_ch_num_);
-      load(json["observed_mgt"], bucket.observed_mgt_);
+      load(json["timestamp_mgt"], bucket.timestamp_mgt_);
       load(json["vct_table_set"], bucket.vct_table_set_);
       load(json["eit_table_set"], bucket.eit_table_set_);
       load(json["ett_table_set"], bucket.ett_table_set_);
@@ -5134,7 +5148,7 @@ namespace yae
       YAE_THROW_IF(mgt.private_indicator_ != 1);
 
       Bucket & bucket = get_current_bucket();
-      bucket.observed_mgt_ = true;
+      bucket.timestamp_mgt_ = TTime::now();
 
       for (std::size_t i = 0; i < mgt.tables_defined_; i++)
       {
@@ -5541,15 +5555,29 @@ namespace yae
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
 
-      std::size_t bx = bucket_index_at(gps_time_now());
+      uint32_t gps_time = gps_time_now();
+      std::size_t bx = bucket_index_at(gps_time);
+      yae::optional<std::size_t> bx_fallback;
+
       for (std::size_t i = 0; i < 256; i++)
       {
-        if (!bucket_[bx].guide_.empty())
+        const Bucket & bucket = bucket_[bx];
+        if (bucket.has_epg_for(gps_time))
         {
+          bx_fallback.reset();
           break;
+        }
+        else if (!bucket.guide_.empty() && !bx_fallback)
+        {
+          bx_fallback.reset(bx);
         }
 
         bx = (bx + 0xFF) & 0xFF;
+      }
+
+      if (bx_fallback)
+      {
+        bx = *bx_fallback;
       }
 
       const Bucket & bucket = bucket_[bx];
@@ -5637,6 +5665,8 @@ namespace yae
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::load(json["bucket"], bucket_);
+      YAE_EXPECT(bucket_.size() == 32 * 8);
+      bucket_.resize(32 * 8);
     }
 
     //----------------------------------------------------------------

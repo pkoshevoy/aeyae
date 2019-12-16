@@ -980,6 +980,8 @@ namespace yae
   DVR::DVR(const std::string & basedir):
     yaepg_(yae::get_user_folder_path(".yaepg")),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
+    channel_scan_period_(24 * 60 * 60, 1),
+    epg_refresh_period_(30 * 60, 1),
     margin_(60, 1)
   {
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
@@ -1182,6 +1184,17 @@ namespace yae
     {
       // shortuct:
       const std::string & frequency = *i;
+
+      DVR::TPacketHandlerPtr pkt_handler_ptr = dvr_.packet_handler_[frequency];
+      if (pkt_handler_ptr)
+      {
+        const yae::mpeg_ts::Context & ctx = pkt_handler_ptr->ctx_;
+        const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
+        if (bucket.elapsed_time_since_mgt() < dvr_.epg_refresh_period_)
+        {
+          continue;
+        }
+      }
 
       DVR::TStreamPtr stream_ptr = dvr_.capture_stream(frequency, sample_dur);
       if (!stream_ptr)
@@ -1445,7 +1458,11 @@ namespace yae
       schedule_.get(recs, ch_num, gps_time, margin_sec);
       if (recs.empty())
       {
-        // nothing scheduled for this channel at this time:
+#if 0
+        yae_ilog("nothing scheduled for %i.%i at this time",
+                 yae::mpeg_ts::channel_major(ch_num),
+                 yae::mpeg_ts::channel_minor(ch_num));
+#endif
         continue;
       }
 
