@@ -470,6 +470,23 @@ namespace yae
     return st.st_size;
   }
 
+  //----------------------------------------------------------------
+  // stat_lastmod
+  //
+  int64_t
+  stat_lastmod(const char * path_utf8)
+  {
+#ifdef _WIN32
+    std::wstring path_utf16 = utf8_to_utf16(path_utf8);
+    struct __stat64 st = { 0 };
+    int ret = _wstat64(path_utf16.c_str(), &st);
+    return ret == 0 ? st.st_mtime : std::numeric_limits<int64_t>::min();
+#else
+    struct stat st = { 0 };
+    int ret = stat(path_utf8, &st);
+    return ret == 0 ? st.st_mtim.tv_sec : std::numeric_limits<int64_t>::min();
+#endif
+  }
 
   //----------------------------------------------------------------
   // not_whitespace

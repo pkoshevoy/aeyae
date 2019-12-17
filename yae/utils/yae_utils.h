@@ -167,6 +167,15 @@ namespace yae
   file_size64(int fd);
 
   //----------------------------------------------------------------
+  // stat_lastmod
+  //
+  // NOTE: uses stat to return (unix) time of last modification,
+  // returns std::numeric_limits<int64_t>::min() if stat call fails.
+  //
+  YAE_API int64_t
+  stat_lastmod(const char * path_utf8);
+
+  //----------------------------------------------------------------
   // kDirSeparator
   //
 #ifdef _WIN32

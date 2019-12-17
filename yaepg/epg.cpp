@@ -73,6 +73,7 @@ namespace yae
 #if 1
     DVR dvr(basedir);
 
+#if 0
     // Fox 13.1, Sunday, 6pm - 9pm
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
@@ -140,6 +141,7 @@ namespace yae
 
     // FIXME: there is probably a better place for this:
     dvr.save_wishlist();
+#endif
 
     dvr.scan_channels();
     dvr.worker_.wait_until_finished();
@@ -154,6 +156,7 @@ namespace yae
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
+      dvr.load_wishlist();
       dvr.get_epg(epg);
       dvr.evaluate(epg);
 

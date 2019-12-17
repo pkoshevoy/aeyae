@@ -78,10 +78,13 @@ namespace yae
       mutable yae::optional<boost::regex> rx_description_;
     };
 
+    Wishlist();
+
     bool matches(const yae::mpeg_ts::EPG::Channel & channel,
                  const yae::mpeg_ts::EPG::Program & program) const;
 
     std::list<Item> items_;
+    int64_t lastmod_;
   };
 
   void save(Json::Value & json, const Wishlist::Item & item);
@@ -264,7 +267,10 @@ namespace yae
 
     void save_epg() const;
     void save_frequencies() const;
+
     void save_wishlist() const;
+    void load_wishlist();
+
     void save_schedule() const;
 
     void evaluate(const yae::mpeg_ts::EPG & epg);

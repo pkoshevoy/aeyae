@@ -29,6 +29,13 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Wishlist::Wishlist
+  //
+  Wishlist::Wishlist():
+    lastmod_(std::numeric_limits<int64_t>::min())
+  {}
+
+  //----------------------------------------------------------------
   // Wishlist::Item::matches
   //
   bool
@@ -1015,12 +1022,7 @@ namespace yae
     }
 
     // load the wishlist:
-    {
-      std::string path = (yaepg_ / "wishlist.json").string();
-      Json::Value json;
-      yae::TOpenFile(path, "rb").load(json);
-      yae::load(json, wishlist_);
-    }
+    load_wishlist();
 
     // load the schedule:
     {
@@ -1415,6 +1417,44 @@ namespace yae
     if (!(file.open(path, "wb") && file.save(json)))
     {
       yae_elog("write failed: %s", path.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::load_wishlist
+  //
+  void
+  DVR::load_wishlist()
+  {
+    try
+    {
+      std::string path = (yaepg_ / "wishlist.json").string();
+      int64_t lastmod = yae::stat_lastmod(path.c_str());
+      if (wishlist_.lastmod_ < lastmod)
+      {
+        struct tm tm;
+        unix_epoch_time_to_localtime(lastmod, tm);
+        std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
+        yae_ilog("loading wishlist %s, lastmod %s",
+                 path.c_str(),
+                 lastmod_txt.c_str());
+        Json::Value json;
+        if (yae::TOpenFile(path, "rb").load(json))
+        {
+          Wishlist wishlist;
+          yae::load(json, wishlist);
+          wishlist_.items_.swap(wishlist.items_);
+          wishlist_.lastmod_ = lastmod;
+        }
+      }
+    }
+    catch (const std::exception & e)
+    {
+      yae_elog("DVR::load_wishlist exception: %s", e.what());
+    }
+    catch (...)
+    {
+      yae_elog("DVR::load_wishlist unexpected exception");
     }
   }
 
