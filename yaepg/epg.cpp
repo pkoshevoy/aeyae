@@ -158,6 +158,15 @@ namespace yae
     {
       dvr.load_wishlist();
       dvr.get_epg(epg);
+
+#ifndef NDEBUG
+      {
+        Json::Value json;
+        yae::mpeg_ts::save(json, epg);
+        yae::TOpenFile((dvr.yaepg_ / "epg.json").string(), "wb").save(json);
+      }
+#endif
+
       dvr.evaluate(epg);
 
       if (dvr.worker_.is_idle())
@@ -178,7 +187,7 @@ namespace yae
         }
       }
 
-      boost::this_thread::sleep_for(boost::chrono::seconds(1));
+      boost::this_thread::sleep_for(boost::chrono::seconds(60));
     }
 
     dvr.shutdown();

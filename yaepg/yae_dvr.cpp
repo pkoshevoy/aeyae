@@ -336,6 +336,16 @@ namespace yae
     save(json["title"], rec.title_);
     save(json["rating"], rec.rating_);
     save(json["description"], rec.description_);
+
+#ifndef NDEBUG
+    std::ostringstream oss;
+    oss << unix_epoch_time_to_localtime_str(rec.utc_t0_) << " "
+        << rec.channel_major_ << "."
+        << rec.channel_minor_ << " "
+        << rec.title_ << " (now "
+        << unix_epoch_time_to_localtime_str(TTime::now().get(1)) << ")";
+    save(json["_debug"], oss.str());
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1236,7 +1246,7 @@ namespace yae
 
       const DVR::PacketHandler & packet_handler = *stream.packet_handler_;
       const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
-      ctx.dump();
+      // ctx.dump();
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
     }
@@ -1498,8 +1508,8 @@ namespace yae
       schedule_.get(recs, ch_num, gps_time, margin_sec);
       if (recs.empty())
       {
-#if 0
-        yae_ilog("nothing scheduled for %i.%i at this time",
+#if 1
+        yae_ilog("nothing scheduled for %i.%i",
                  yae::mpeg_ts::channel_major(ch_num),
                  yae::mpeg_ts::channel_minor(ch_num));
 #endif
@@ -1507,9 +1517,9 @@ namespace yae
       }
 
       for (std::set<TRecordingPtr>::const_iterator
-             i = recs.begin(); i != recs.end(); ++i)
+             j = recs.begin(); j != recs.end(); ++j)
       {
-        Recording & rec = *(*i);
+        Recording & rec = *(*j);
         uint64_t num_sec = rec.gps_t1_ + margin_sec - gps_time;
         std::string frequency = yae::at(frequencies, ch_num);
 
@@ -1520,6 +1530,10 @@ namespace yae
 
           // FIXME: there is probably a better place for this:
           save_schedule();
+        }
+        else
+        {
+          yae_ilog("already recording: %s", rec.get_basename().c_str());
         }
 
         rec.stream_ = stream;

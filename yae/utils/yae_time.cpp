@@ -194,7 +194,7 @@ namespace yae
   std::string
   unix_epoch_time_to_localtime_str(int64_t ts)
   {
-    struct tm t;
+    struct tm t = { 0 };
     unix_epoch_time_to_localtime(ts, t);
     return to_yyyymmdd_hhmmss(t);
   }
@@ -205,7 +205,7 @@ namespace yae
   std::string
   unix_epoch_time_to_utc_str(int64_t ts)
   {
-    struct tm t;
+    struct tm t = { 0 };
     unix_epoch_time_to_utc(ts, t);
     return to_yyyymmdd_hhmmss(t);
   }

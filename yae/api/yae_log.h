@@ -138,8 +138,26 @@ namespace yae
     { return Scribe(*this, kDebug, source); }
 
   protected:
+    //----------------------------------------------------------------
+    // Message
+    //
+    struct YAE_API Message
+    {
+      Message(int priority = 0,
+              const char * source = "",
+              const char * text = "");
+
+      bool operator == (const Message & msg) const;
+
+      int priority_;
+      std::string source_;
+      std::string message_;
+    };
+
     mutable boost::mutex mutex_;
     std::map<std::string, IMessageCarrier *> carriers_;
+    Message last_message_;
+    uint64_t message_repeated_;
   };
 
   //----------------------------------------------------------------

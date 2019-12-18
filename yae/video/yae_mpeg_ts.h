@@ -2397,6 +2397,16 @@ namespace yae
       std::map<uint32_t, Channel> channels_;
     };
 
+    YAE_API void save(Json::Value & json, const EPG::Program & program);
+    YAE_API void load(const Json::Value & json, EPG::Program & program);
+
+    YAE_API void save(Json::Value & json, const EPG::Channel & channel);
+    YAE_API void load(const Json::Value & json, EPG::Channel & channel);
+
+    YAE_API void save(Json::Value & json, const EPG & epg);
+    YAE_API void load(const Json::Value & json, EPG & epg);
+
+
 
     //----------------------------------------------------------------
     // Context

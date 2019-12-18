@@ -7,7 +7,9 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard:
+#include <inttypes.h>
 #include <stdarg.h>
+#include <stdint.h>
 
 // aeyae:
 #include "../api/yae_log.h"
@@ -22,7 +24,8 @@ namespace yae
   // TLog::TLog
   //
   TLog::TLog(const std::string & carrierId,
-             IMessageCarrier * carrier)
+             IMessageCarrier * carrier):
+    message_repeated_(0)
   {
     assign(carrierId, carrier);
   }
@@ -55,6 +58,8 @@ namespace yae
     }
 
     carriers_.clear();
+    last_message_ = Message();
+    message_repeated_ = 0;
   }
 
   //----------------------------------------------------------------
@@ -108,6 +113,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TLog::Message::Message
+  //
+  TLog::Message::Message(int priority,
+                         const char * source,
+                         const char * text):
+    priority_(priority),
+    source_(source),
+    message_(text)
+  {}
+
+  //----------------------------------------------------------------
+  // Message::operator ==
+  //
+  bool
+  TLog::Message::operator == (const TLog::Message & msg) const
+  {
+    return (msg.priority_ == priority_ &&
+            msg.source_ == source_ &&
+            msg.message_ == message_);
+  }
+
+  //----------------------------------------------------------------
   // TLog::deliver
   //
   //! broadcast a given message to every carrier
@@ -119,6 +146,36 @@ namespace yae
                 const char * message)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
+
+    Message new_message(messagePriority, source, message);
+    if (last_message_ == new_message)
+    {
+      message_repeated_++;
+      return;
+    }
+
+    if (message_repeated_)
+    {
+      std::string msg = strfmt("%s (message repeated %" PRIu64 " times)",
+                               last_message_.message_.c_str(),
+                               message_repeated_);
+      message_repeated_ = 0;
+
+      for (std::map<std::string, IMessageCarrier *>::iterator
+           i = carriers_.begin(); i != carriers_.end(); ++i)
+      {
+        IMessageCarrier * carrier = i->second;
+
+        if (carrier && messagePriority >= carrier->priorityThreshold())
+        {
+          carrier->deliver(last_message_.priority_,
+                           last_message_.source_.c_str(),
+                           msg.c_str());
+        }
+      }
+    }
+
+    last_message_ = new_message;
 
     for (std::map<std::string, IMessageCarrier *>::iterator
            i = carriers_.begin(); i != carriers_.end(); ++i)

@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae_ffmpeg_utils.h"
+#include "../utils/yae_time.h"
 
 // standard:
 #include <stdarg.h>
@@ -422,7 +423,18 @@ namespace yae
       priority < TLog::kError ? AV_LOG_WARNING :
       AV_LOG_ERROR;
 
-    av_log(NULL, log_level, "%s: %s\n", source, message);
+    // add timestamp to the message:
+    std::ostringstream oss;
+    TTime now = TTime::now();
+    int64_t now_usec = now.get(1000000);
+    oss << yae::unix_epoch_time_to_localtime_str(now.get(1))
+        << '.'
+        << std::setw(6) << std::setfill('0') << (now_usec % 1000000);
+
+    av_log(NULL, log_level, "%s %s: %s\n",
+           oss.str().c_str(),
+           source,
+           message);
   }
 
   //----------------------------------------------------------------

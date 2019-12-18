@@ -4894,6 +4894,87 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const EPG::Program & program)
+    {
+      save(json["title"], program.title_);
+      save(json["description"], program.description_);
+      save(json["rating"], program.rating_);
+      save(json["gps_time"], program.gps_time_);
+      save(json["duration"], program.duration_);
+      save(json["tm"], program.tm_);
+      save(json["tm_localtime"], to_yyyymmdd_hhmmss(program.tm_));
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, EPG::Program & program)
+    {
+      load(json["title"], program.title_);
+      load(json["description"], program.description_);
+      load(json["rating"], program.rating_);
+      load(json["gps_time"], program.gps_time_);
+      load(json["duration"], program.duration_);
+      load(json["tm"], program.tm_);
+    }
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const EPG::Channel & channel)
+    {
+      save(json["major"], channel.major_);
+      save(json["minor"], channel.minor_);
+      save(json["name"], channel.name_);
+      save(json["description"], channel.description_);
+      save(json["programs"], channel.programs_);
+      save(json["gps_time"], channel.gps_time_);
+      save(json["epg_time"], channel.epg_time_);
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, EPG::Channel & channel)
+    {
+      load(json["major"], channel.major_);
+      load(json["minor"], channel.minor_);
+      load(json["name"], channel.name_);
+      load(json["description"], channel.description_);
+      load(json["programs"], channel.programs_);
+      load(json["gps_time"], channel.gps_time_);
+      load(json["epg_time"], channel.epg_time_);
+    }
+
+    //----------------------------------------------------------------
+    // save
+    //
+    void
+    save(Json::Value & json, const EPG & epg)
+    {
+      save(json["channels"], epg.channels_);
+      save(json["_localtime_now"],
+           unix_epoch_time_to_localtime_str(TTime::now().get(1)));
+    }
+
+    //----------------------------------------------------------------
+    // load
+    //
+    void
+    load(const Json::Value & json, EPG & epg)
+    {
+      epg.channels_.clear();
+      load(json["channels"], epg.channels_);
+    }
+
+
+    //----------------------------------------------------------------
     // Context::Context
     //
     Context::Context():
