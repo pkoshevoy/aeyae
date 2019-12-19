@@ -1292,6 +1292,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // split
+  //
+  YAE_API std::size_t
+  split(std::vector<std::string> & tokens,
+        const char * separators,
+        const char * src,
+        const char * end = NULL);
+
+  //----------------------------------------------------------------
   // sanitize_filename_utf8
   //
   YAE_API std::string

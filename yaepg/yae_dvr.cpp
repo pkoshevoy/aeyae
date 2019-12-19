@@ -139,10 +139,10 @@ namespace yae
     if (channel_)
     {
       const std::pair<uint16_t, uint16_t> & channel = *channel_;
-      std::string xx_yy = strfmt("%02i.%02i",
-                                 int(channel.first),
-                                 int(channel.second));
-      json["channel"] = xx_yy;
+      std::string major_minor = strfmt("%i.%i",
+                                       int(channel.first),
+                                       int(channel.second));
+      json["channel"] = major_minor;
     }
 
     if (when_)
@@ -188,11 +188,15 @@ namespace yae
   {
     if (json.isMember("channel"))
     {
-      std::string xx_yy;
-      yae::load(json["channel"], xx_yy);
+      std::string major_minor;
+      yae::load(json["channel"], major_minor);
       std::pair<uint16_t, uint16_t> channel;
-      channel.first = boost::lexical_cast<uint16_t>(xx_yy.substr(0, 2));
-      channel.second = boost::lexical_cast<uint16_t>(xx_yy.substr(3, 2));
+
+      std::vector<std::string> tokens;
+      YAE_ASSERT(yae::split(tokens, ".", major_minor.c_str()) == 2);
+
+      channel.first = boost::lexical_cast<uint16_t>(tokens[0]);
+      channel.second = boost::lexical_cast<uint16_t>(tokens[1]);
       channel_.reset(channel);
     }
 

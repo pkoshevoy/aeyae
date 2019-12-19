@@ -613,6 +613,74 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // split
+  //
+  std::size_t
+  split(std::vector<std::string> & tokens,
+        const char * separators,
+        const char * src,
+        const char * end)
+  {
+    if (!end)
+    {
+      end = src + strlen(src);
+    }
+
+    std::set<uint32_t> uc_separators;
+    {
+      const char * sep_src = separators;
+      const char * sep_end = sep_src + strlen(separators);
+
+      while (sep_src < sep_end)
+      {
+        uint32_t uc = 0;
+        bool valid_utf8 = true;
+        YAE_ASSERT(valid_utf8 = utf8_to_unicode(sep_src, sep_end, uc));
+
+        if (!valid_utf8)
+        {
+          // separators must be valid UTF8
+          return 0;
+        }
+
+        uc_separators.insert(uc);
+      }
+    }
+
+    std::size_t num_tokens = 0;
+    const char * token_pos = src;
+    while (src < end)
+    {
+      uint32_t uc = 0;
+      const char * token_end = src;
+      if (!utf8_to_unicode(src, end, uc))
+      {
+        src++;
+        continue;
+      }
+
+      if (yae::has(uc_separators, uc))
+      {
+        if (token_pos < token_end)
+        {
+          tokens.push_back(std::string(token_pos, token_end));
+          num_tokens++;
+        }
+
+        token_pos = src;
+      }
+    }
+
+    if (token_pos < end)
+    {
+      tokens.push_back(std::string(token_pos, end));
+      num_tokens++;
+    }
+
+    return num_tokens;
+  }
+
+  //----------------------------------------------------------------
   // sanitize_file_name
   //
   std::string
