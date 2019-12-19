@@ -5639,17 +5639,16 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::get_epg
+    // Context::get_epg_bucket
     //
-    void
-    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
+    const Bucket &
+    Context::get_epg_bucket_nolock(uint32_t gps_time) const
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-
-      uint32_t gps_time = gps_time_now();
       std::size_t bx = bucket_index_at(gps_time);
       yae::optional<std::size_t> bx_fallback;
 
+      // find a bucket with events, walking backwards
+      // from the bucket that corresponds to the given timepoint:
       for (std::size_t i = 0; i < 256; i++)
       {
         const Bucket & bucket = bucket_[bx];
@@ -5672,6 +5671,19 @@ namespace yae
       }
 
       const Bucket & bucket = bucket_[bx];
+      return bucket;
+   }
+
+    //----------------------------------------------------------------
+    // Context::get_epg
+    //
+    void
+    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      uint32_t gps_time = gps_time_now();
+      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
+
       for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
@@ -5683,7 +5695,7 @@ namespace yae
 
         const ChannelGuide & guide = i->second;
         channel.name_ = guide.name_;
-        channel.gps_time_ = this->gps_time_now();
+        channel.gps_time_ = gps_time;
         channel.epg_time_ = TTime::now();
 
         // FIXME: pkoshevoy:
@@ -5731,22 +5743,31 @@ namespace yae
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = unix_time_to_gps_time(t);
-
-      // find a bucket with events, walking backwards
-      // from the bucket that corresponds to the given timepoint:
-      std::size_t bx = bucket_index_at(gps_time);
-      for (std::size_t i = 0; i < 256; i++)
-      {
-        if (bucket_[bx].has_epg_for(gps_time))
-        {
-          break;
-        }
-
-        bx = (bx + 0xFF) & 0xFF;
-      }
-
-      const Bucket & bucket = bucket_[bx];
+      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
       return bucket.has_epg_for(gps_time);
+    }
+
+    //----------------------------------------------------------------
+    // Context::get_epg_bucket
+    //
+    void
+    Context::get_channels(TChannels & channels) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      uint32_t gps_time = gps_time_now();
+      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
+
+      for (std::map<uint32_t, ChannelGuide>::const_iterator
+             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
+      {
+        const uint32_t ch_num = i->first;
+        const ChannelGuide & guide = i->second;
+
+        uint16_t major = channel_major(ch_num);
+        uint16_t minor = channel_minor(ch_num);
+        TChannelNames & names = channels[major];
+        names[minor] = guide.name_;
+      }
     }
 
     //----------------------------------------------------------------

@@ -143,12 +143,9 @@ namespace yae
     dvr.save_wishlist();
 #endif
 
-    dvr.scan_channels();
-    dvr.worker_.wait_until_finished();
     TTime channel_scan_time = TTime::now();
-
-    dvr.update_epg();
     TTime epg_update_time = TTime::now();
+    dvr.update_epg();
 
     // pull EPG, evaluate wishlist, start captures, etc...
     yae::mpeg_ts::EPG epg;
@@ -156,8 +153,12 @@ namespace yae
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
-      dvr.load_wishlist();
       dvr.get_epg(epg);
+
+      if (dvr.load_wishlist())
+      {
+        dvr.save_schedule();
+      }
 
 #ifndef NDEBUG
       {

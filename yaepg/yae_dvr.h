@@ -269,7 +269,7 @@ namespace yae
     void save_frequencies() const;
 
     void save_wishlist() const;
-    void load_wishlist();
+    bool load_wishlist();
 
     void save_schedule() const;
 

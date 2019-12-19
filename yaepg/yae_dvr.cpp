@@ -871,7 +871,6 @@ namespace yae
     session_(session_ptr),
     frequency_(frequency)
   {
-    // boost::unique_lock<boost::mutex> lock(dvr_.mutex_);
     packet_handler_ = dvr_.packet_handler_[frequency_];
 
     if (!packet_handler_)
@@ -1004,19 +1003,42 @@ namespace yae
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
 
     // load the frequencies:
-    std::list<std::string> frequencies;
+    std::map<std::string, yae::mpeg_ts::TChannels> frequencies;
+    try
     {
       std::string freq_path = (yaepg_ / "frequencies.json").string();
       Json::Value json;
       yae::TOpenFile(freq_path, "rb").load(json);
       yae::load(json, frequencies);
     }
+    catch (...)
+    {}
+
+    scan_channels();
+
+    if (frequencies.empty())
+    {
+      worker_.wait_until_finished();
+
+      std::map<uint32_t, std::string> channels;
+      hdhr_.get_channels(channels);
+
+      for (std::map<uint32_t, std::string>::const_iterator
+             i = channels.begin(); i != channels.end(); ++i)
+      {
+        const uint32_t ch_num = i->first;
+        const std::string & frequency = i->second;
+        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+        frequencies[frequency][major][minor] = std::string();
+      }
+    }
 
     // load the EPG:
-    for (std::list<std::string>::const_iterator
+    for (std::map<std::string, yae::mpeg_ts::TChannels>::const_iterator
            i = frequencies.begin(); i != frequencies.end(); ++i)
     {
-      const std::string & frequency = *i;
+      const std::string & frequency = i->first;
       std::string epg_path =
         (yaepg_ / ("epg-" + frequency + ".json")).string();
 
@@ -1256,7 +1278,7 @@ namespace yae
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       {
         TTime now = TTime::now();
         std::string ts =
@@ -1386,6 +1408,7 @@ namespace yae
     json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
     ctx.save(json[frequency]);
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
     std::string epg_path = (yaepg_ / ("epg-" + frequency + ".json")).string();
     yae::TOpenFile epg_file;
     if (epg_file.open(epg_path, "wb"))
@@ -1403,13 +1426,10 @@ namespace yae
     std::map<std::string, TPacketHandlerPtr> packet_handlers;
     get_packet_handlers(*this, packet_handlers);
 
-    std::list<std::string> frequencies;
     for (std::map<std::string, TPacketHandlerPtr>::const_iterator
            i = packet_handlers.begin(); i != packet_handlers.end(); ++i)
     {
       const std::string & frequency = i->first;
-      frequencies.push_back(frequency);
-
       const PacketHandler & packet_handler = *(i->second.get());
       save_epg(frequency, packet_handler.ctx_);
     }
@@ -1423,19 +1443,25 @@ namespace yae
   void
   DVR::save_frequencies() const
   {
-    std::list<std::string> frequencies;
+    std::map<std::string, yae::mpeg_ts::TChannels> frequencies;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       for (std::map<std::string, TPacketHandlerPtr>::const_iterator
              i = packet_handler_.begin(); i != packet_handler_.end(); ++i)
       {
-        frequencies.push_back(i->first);
+        const std::string & frequency = i->first;
+        const PacketHandler & packet_handler = *(i->second);
+        const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+
+        yae::mpeg_ts::TChannels & channels = frequencies[frequency];
+        ctx.get_channels(channels);
       }
     }
 
     Json::Value json;
     yae::save(json, frequencies);
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
     std::string freq_path = (yaepg_ / "frequencies.json").string();
     yae::TOpenFile freq_file;
     if (freq_file.open(freq_path, "wb"))
@@ -1453,6 +1479,7 @@ namespace yae
     Json::Value json;
     yae::save(json, wishlist_);
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
     std::string path = (yaepg_ / "wishlist.json").string();
     yae::TOpenFile file;
     if (!(file.open(path, "wb") && file.save(json)))
@@ -1464,7 +1491,7 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::load_wishlist
   //
-  void
+  bool
   DVR::load_wishlist()
   {
     try
@@ -1479,6 +1506,8 @@ namespace yae
         yae_ilog("loading wishlist %s, lastmod %s",
                  path.c_str(),
                  lastmod_txt.c_str());
+
+        boost::unique_lock<boost::mutex> lock(mutex_);
         Json::Value json;
         if (yae::TOpenFile(path, "rb").load(json))
         {
@@ -1486,6 +1515,7 @@ namespace yae
           yae::load(json, wishlist);
           wishlist_.items_.swap(wishlist.items_);
           wishlist_.lastmod_ = lastmod;
+          return true;
         }
       }
     }
@@ -1497,6 +1527,8 @@ namespace yae
     {
       yae_elog("DVR::load_wishlist unexpected exception");
     }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -1508,6 +1540,7 @@ namespace yae
     Json::Value json;
     schedule_.save(json);
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
     std::string path = (yaepg_ / "schedule.json").string();
     yae::TOpenFile file;
     if (!(file.open(path, "wb") && file.save(json)))
@@ -1539,7 +1572,7 @@ namespace yae
       schedule_.get(recs, ch_num, gps_time, margin_sec);
       if (recs.empty())
       {
-#if 1
+#if 0
         yae_ilog("nothing scheduled for %i.%i",
                  yae::mpeg_ts::channel_major(ch_num),
                  yae::mpeg_ts::channel_minor(ch_num));
