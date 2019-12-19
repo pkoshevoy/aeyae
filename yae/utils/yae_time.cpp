@@ -53,6 +53,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // unix_epoch_gps_offset
+  //
+  const int64_t unix_epoch_gps_offset =
+    yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime
   //
   void
@@ -192,23 +198,30 @@ namespace yae
   // unix_epoch_time_to_localtime_str
   //
   std::string
-  unix_epoch_time_to_localtime_str(int64_t ts)
+  unix_epoch_time_to_localtime_str(int64_t ts,
+                                   const char * date_sep,
+                                   const char * separator,
+                                   const char * time_sep)
   {
     struct tm t = { 0 };
     unix_epoch_time_to_localtime(ts, t);
-    return to_yyyymmdd_hhmmss(t);
+    return to_yyyymmdd_hhmmss(t, date_sep, separator, time_sep);
   }
 
   //----------------------------------------------------------------
   // unix_epoch_time_to_utc_str
   //
   std::string
-  unix_epoch_time_to_utc_str(int64_t ts)
+  unix_epoch_time_to_utc_str(int64_t ts,
+                             const char * date_sep,
+                             const char * separator,
+                             const char * time_sep)
   {
     struct tm t = { 0 };
     unix_epoch_time_to_utc(ts, t);
-    return to_yyyymmdd_hhmmss(t);
+    return to_yyyymmdd_hhmmss(t, date_sep, separator, time_sep);
   }
+
 
   //----------------------------------------------------------------
   // subsec_t
@@ -375,6 +388,17 @@ namespace yae
     TTime t(int64_t(now.tv_sec) * 1000000 + int64_t(now.tv_usec), 1000000);
 #endif
 
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::gps_now
+  //
+  TTime
+  TTime::gps_now()
+  {
+    TTime t = TTime::now();
+    t -= TTime(unix_epoch_gps_offset, 1);
     return t;
   }
 

@@ -35,6 +35,16 @@ namespace yae
                               int hour, int min, int sec);
 
   //----------------------------------------------------------------
+  // unix_epoch_gps_offset
+  //
+  // gps_time is approximately unix_time + gps_offset ... plus a small
+  // gps_utc_error_offset (which is about 18s currently)
+  //
+  // GPS time origin is Jan 6th 1980, 00:00 UTC
+  //
+  extern const int64_t YAE_API unix_epoch_gps_offset;
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime
   //
   YAE_API void
@@ -92,13 +102,19 @@ namespace yae
   // unix_epoch_time_to_localtime_str
   //
   YAE_API std::string
-  unix_epoch_time_to_localtime_str(int64_t ts);
+  unix_epoch_time_to_localtime_str(int64_t ts,
+                                   const char * date_sep = "/",
+                                   const char * separator = " ",
+                                   const char * time_sep = ":");
 
   //----------------------------------------------------------------
   // unix_epoch_time_to_utc_str
   //
   YAE_API std::string
-  unix_epoch_time_to_utc_str(int64_t ts);
+  unix_epoch_time_to_utc_str(int64_t ts,
+                             const char * date_sep = "/",
+                             const char * separator = " ",
+                             const char * time_sep = ":");
 
   //----------------------------------------------------------------
   // TTime
@@ -116,6 +132,7 @@ namespace yae
     static const TTime & max_flicks();
     static const TTime & min_flicks();
     static TTime now();
+    static TTime gps_now();
 
     TTime();
     TTime(int64_t time, uint64_t base);

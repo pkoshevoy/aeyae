@@ -4644,6 +4644,17 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
+    // EPG::Channel::gps_time
+    //
+    uint32_t
+    EPG::Channel::gps_time() const
+    {
+      TTime now = TTime::now();
+      uint32_t elapsed_sec = uint32_t((now - epg_time_).get(1));
+      return gps_time_ + elapsed_sec;
+    }
+
+    //----------------------------------------------------------------
     // EPG::Channel::dump
     //
     void
@@ -5119,24 +5130,19 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // unix_epoch_gps_offset
-    //
-    static const int64_t unix_epoch_gps_offset =
-      yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
-
-    //----------------------------------------------------------------
     // Context::gps_time_now
     //
     uint32_t
     Context::gps_time_now() const
     {
+      TTime now = TTime::now();
       if (stt_)
       {
-        uint32_t t = uint32_t(stt_->system_time_ - stt_error_);
-        return t;
+        int64_t elapsed_sec = uint32_t((now - stt_walltime_).get(1));
+        int64_t t = (stt_->system_time_ + elapsed_sec) - stt_error_;
+        return uint32_t(t);
       }
 
-      TTime now = TTime::now();
       int64_t t = now.get(1) - unix_epoch_gps_offset;
       return uint32_t(t);
     }
@@ -5197,9 +5203,13 @@ namespace yae
 
       int64_t err = stt.system_time_ - wall_gps_time;
       int64_t abs_err = (err < 0) ? -err : err;
-      static const int64_t err_threshold = 60 * 60 * 24 * 30; // 30 days
-      if (abs_err > err_threshold)
+      static const int64_t err_threshold_sec = 60;
+      if (abs_err >= err_threshold_sec)
       {
+
+        int64_t roundup_err = 60 * ((err + 30 * (err / abs_err)) / 60);
+        yae_wlog("actual GPS time differs from expected GPS time by approx %s",
+                 TTime(roundup_err, 1).to_short_txt().c_str());
         stt_error_ = err;
       }
 
@@ -5673,8 +5683,19 @@ namespace yae
 
         const ChannelGuide & guide = i->second;
         channel.name_ = guide.name_;
-        channel.gps_time_ = gps_time_now();
+        channel.gps_time_ = this->gps_time_now();
         channel.epg_time_ = TTime::now();
+
+        // FIXME: pkoshevoy:
+        TTime gps_now = TTime::gps_now().rebased(1);
+        TTime gps_time_err = TTime(channel.gps_time_, 1) - gps_now;
+        if (abs(gps_time_err.get(1)) >= 60)
+        {
+          yae_elog("GPS time discrepancy: expected approx %s, actual %s",
+                   gps_time_to_str(gps_now.get(1)).c_str(),
+                   gps_time_to_str(channel.gps_time_).c_str());
+          YAE_ASSERT(false);
+        }
 
         if (!guide.channel_etm_.empty())
         {

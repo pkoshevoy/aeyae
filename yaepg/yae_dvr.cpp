@@ -1198,57 +1198,88 @@ namespace yae
       const std::string & frequency = *i;
 
       DVR::TPacketHandlerPtr pkt_handler_ptr = dvr_.packet_handler_[frequency];
-      if (pkt_handler_ptr)
+      if (!pkt_handler_ptr)
       {
-        const yae::mpeg_ts::Context & ctx = pkt_handler_ptr->ctx_;
-        const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
-        if (bucket.elapsed_time_since_mgt() < dvr_.epg_refresh_period_)
-        {
-          continue;
-        }
-      }
-
-      DVR::TStreamPtr stream_ptr = dvr_.capture_stream(frequency, sample_dur);
-      if (!stream_ptr)
-      {
-        // no tuners available:
         continue;
       }
 
-      // wait until EPG is ready:
-      DVR::Stream & stream = *stream_ptr;
-      boost::system_time giveup_at(boost::get_system_time());
-      giveup_at += boost::posix_time::seconds(sample_dur.get(1));
+      const DVR::PacketHandler & packet_handler = *pkt_handler_ptr;
+      const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+      const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
 
-      boost::unique_lock<boost::mutex> lock(mutex_);
-      while (true)
+      if (dvr_.epg_refresh_period_ <= bucket.elapsed_time_since_mgt())
       {
-        if (yae::Worker::Task::cancelled_)
+        DVR::TStreamPtr stream_ptr =
+          dvr_.capture_stream(frequency, sample_dur);
+        if (stream_ptr)
         {
-          return;
-        }
+          // wait until EPG is ready:
+          DVR::Stream & stream = *stream_ptr;
+          boost::system_time giveup_at(boost::get_system_time());
+          giveup_at += boost::posix_time::seconds(sample_dur.get(1));
 
-        if (slow_)
-        {
-          boost::this_thread::sleep_for(boost::chrono::seconds(1));
-        }
-        else if (stream.epg_ready_.timed_wait(lock, giveup_at))
-        {
-          break;
-        }
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          while (true)
+          {
+            if (yae::Worker::Task::cancelled_)
+            {
+              return;
+            }
 
-        boost::system_time now(boost::get_system_time());
-        if (giveup_at <= now)
+            if (slow_)
+            {
+              boost::this_thread::sleep_for(boost::chrono::seconds(1));
+            }
+            else if (stream.epg_ready_.timed_wait(lock, giveup_at))
+            {
+              break;
+            }
+
+            boost::system_time now(boost::get_system_time());
+            if (giveup_at <= now)
+            {
+              break;
+            }
+          }
+        }
+        else
         {
-          break;
+          yae_wlog("failed to start EPG update for %s", frequency.c_str());
         }
       }
+      else
+      {
+        yae_dlog("skipping EPG update for %s", frequency.c_str());
+      }
 
-      const DVR::PacketHandler & packet_handler = *stream.packet_handler_;
-      const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
       // ctx.dump();
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
+
+#ifndef NDEBUG
+      {
+        TTime now = TTime::now();
+        std::string ts =
+          unix_epoch_time_to_localtime_str(now.get(1), "", "-", "");
+
+        yae::mpeg_ts::EPG epg;
+        ctx.get_epg(epg);
+
+        for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+               i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+        {
+          const yae::mpeg_ts::EPG::Channel & channel = i->second;
+          std::string fn = strfmt("epg-%02i.%02i-%s.json",
+                                  channel.major_,
+                                  channel.minor_,
+                                  ts.c_str());
+
+          Json::Value json;
+          yae::mpeg_ts::save(json, channel);
+          yae::TOpenFile((dvr_.yaepg_ / fn).string(), "wb").save(json);
+        }
+      }
+#endif
     }
   }
 

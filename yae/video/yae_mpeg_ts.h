@@ -2375,13 +2375,8 @@ namespace yae
       {
         Channel();
 
+        uint32_t gps_time() const;
         void dump(std::ostream & oss) const;
-
-        inline uint32_t gps_time() const
-        {
-          uint32_t elapsed_sec = uint32_t((TTime::now() - epg_time_).get(1));
-          return gps_time_ + elapsed_sec;
-        }
 
         uint16_t major_;
         uint16_t minor_;
