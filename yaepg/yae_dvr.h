@@ -66,7 +66,7 @@ namespace yae
         Sat = 1 << 6
       };
 
-      yae::optional<uint32_t> ch_num_;
+      yae::optional<std::pair<uint16_t, uint16_t> > channel_;
       yae::optional<struct tm> date_;
       yae::optional<Timespan> when_;
       yae::optional<uint16_t> weekday_mask_;

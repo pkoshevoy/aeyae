@@ -74,11 +74,13 @@ namespace yae
     DVR dvr(basedir);
 
 #if 0
+    dvr.wishlist_.items_.clear();
+
     // Fox 13.1, Sunday, 6pm - 9pm
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(13, 1);
+      item.channel_ = std::pair<uint16_t, uint16_t>(13, 1);
       item.weekday_mask_.reset(yae::Wishlist::Item::Sun);
       item.when_ = Timespan(TTime(18 * 60 * 60, 1),
                             TTime(21 * 60 * 60, 1));
@@ -88,7 +90,7 @@ namespace yae
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(14, 2);
+      item.channel_ = std::pair<uint16_t, uint16_t>(14, 2);
       item.weekday_mask_.reset(yae::Wishlist::Item::Sat |
                                yae::Wishlist::Item::Sun);
       item.when_ = Timespan(TTime(11 * 60 * 60, 1),
@@ -99,7 +101,7 @@ namespace yae
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(7, 1);
+      item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nature";
     }
 
@@ -107,7 +109,7 @@ namespace yae
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
-      item.ch_num_ = yae::mpeg_ts::channel_number(7, 1);
+      item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nova";
     }
 
@@ -115,6 +117,7 @@ namespace yae
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.channel_ = std::pair<uint16_t, uint16_t>(9, 1);
       item.title_ = "NHK Newsline";
     }
 
@@ -122,6 +125,7 @@ namespace yae
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.channel_ = std::pair<uint16_t, uint16_t>(13, 1);
       item.title_ = "The Simpsons";
     }
 
@@ -132,11 +136,42 @@ namespace yae
       item.title_ = "Bob's Burgers";
     }
 
+    // Family Guy:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.title_ = "Family Guy";
+    }
+
     // The Big Bang Theory:
     {
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.title_ = "The Big Bang Theory";
+    }
+
+    // The Late Show With Stephen Colbert:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.channel_ = std::pair<uint16_t, uint16_t>(2, 1);
+      item.title_ = "The Late Show With Stephen Colbert";
+    }
+
+    // Late Night With Seth Meyers:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
+      item.title_ = "Late Night With Seth Meyers";
+    }
+
+    // Saturday Night Live:
+    {
+      dvr.wishlist_.items_.push_back(Wishlist::Item());
+      Wishlist::Item & item = dvr.wishlist_.items_.back();
+      item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
+      item.title_ = "Saturday Night Live";
     }
 
     // FIXME: there is probably a better place for this:

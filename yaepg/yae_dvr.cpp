@@ -11,6 +11,7 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <sstream>
 #include <stdexcept>
 
 // boost includes:
@@ -42,12 +43,11 @@ namespace yae
   Wishlist::Item::matches(const yae::mpeg_ts::EPG::Channel & channel,
                           const yae::mpeg_ts::EPG::Program & program) const
   {
-    if (ch_num_)
+    if (channel_)
     {
-      uint32_t require_ch_num = *ch_num_;
-      uint32_t ch_num = yae::mpeg_ts::channel_number(channel.major_,
-                                                     channel.minor_);
-      if (ch_num != *ch_num_)
+      const std::pair<uint16_t, uint16_t> & require_channel = *channel_;
+      if (channel.major_ != require_channel.first ||
+          channel.minor_ != require_channel.second)
       {
         return false;
       }
@@ -127,7 +127,7 @@ namespace yae
       }
     }
 
-    return ok || (ch_num_ && (date_ || weekday_mask_ || when_));
+    return ok || (channel_ && (date_ || weekday_mask_ || when_));
   }
 
   //----------------------------------------------------------------
@@ -136,10 +136,46 @@ namespace yae
   void
   Wishlist::Item::save(Json::Value & json) const
   {
-    yae::save(json, "ch_num", ch_num_);
+    if (channel_)
+    {
+      const std::pair<uint16_t, uint16_t> & channel = *channel_;
+      std::string xx_yy = strfmt("%02i.%02i",
+                                 int(channel.first),
+                                 int(channel.second));
+      json["channel"] = xx_yy;
+    }
+
+    if (when_)
+    {
+      Json::Value & when = json["when"];
+      when["t0"] = when_->t0_.to_hhmmss();
+      when["t1"] = when_->t1_.to_hhmmss();
+    }
+
+    if (weekday_mask_)
+    {
+      static const char * alphabet[] = {
+        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+      };
+
+      const uint16_t weekday_mask = *weekday_mask_;
+      const char * separator = "";
+      std::ostringstream oss;
+      for (int i = 0; i < 7; i++)
+      {
+        int j = (i + 1) % 7;
+        uint16_t required = (1 << j);
+        if ((weekday_mask & required) == required)
+        {
+          oss << separator << alphabet[j];
+          separator = " ";
+        }
+      }
+
+      json["weekdays"] = oss.str();
+    }
+
     yae::save(json, "date", date_);
-    yae::save(json, "when", when_);
-    yae::save(json, "weekday_mask", weekday_mask_);
     yae::save(json, "title", title_);
     yae::save(json, "description", description_);
   }
@@ -150,10 +186,72 @@ namespace yae
   void
   Wishlist::Item::load(const Json::Value & json)
   {
-    yae::load(json, "ch_num", ch_num_);
+    if (json.isMember("channel"))
+    {
+      std::string xx_yy;
+      yae::load(json["channel"], xx_yy);
+      std::pair<uint16_t, uint16_t> channel;
+      channel.first = boost::lexical_cast<uint16_t>(xx_yy.substr(0, 2));
+      channel.second = boost::lexical_cast<uint16_t>(xx_yy.substr(3, 2));
+      channel_.reset(channel);
+    }
+
+    if (json.isMember("when"))
+    {
+      const Json::Value & when = json["when"];
+      std::string t0 = when["t0"].asString();
+      std::string t1 = when["t1"].asString();
+
+      Timespan ts;
+      YAE_EXPECT(yae::parse_time(ts.t0_, t0.c_str(), ":", "."));
+      YAE_EXPECT(yae::parse_time(ts.t1_, t1.c_str(), ":", "."));
+      when_.reset(ts);
+    }
+
+    if (json.isMember("weekdays"))
+    {
+      uint16_t weekday_mask = 0;
+
+      std::istringstream iss(json["weekdays"].asString());
+      while (!iss.eof())
+      {
+        std::string day;
+        iss >> day;
+
+        if (day == "Sun")
+        {
+          weekday_mask |= Sun;
+        }
+        else if (day == "Mon")
+        {
+          weekday_mask |= Mon;
+        }
+        else if (day == "Tue")
+        {
+          weekday_mask |= Tue;
+        }
+        else if (day == "Wed")
+        {
+          weekday_mask |= Wed;
+        }
+        else if (day == "Thu")
+        {
+          weekday_mask |= Thu;
+        }
+        else if (day == "Fri")
+        {
+          weekday_mask |= Fri;
+        }
+        else if (day == "Sat")
+        {
+          weekday_mask |= Sat;
+        }
+      }
+
+      weekday_mask_.reset(weekday_mask);
+    }
+
     yae::load(json, "date", date_);
-    yae::load(json, "when", when_);
-    yae::load(json, "weekday_mask", weekday_mask_);
     yae::load(json, "title", title_);
     yae::load(json, "description", description_);
   }
