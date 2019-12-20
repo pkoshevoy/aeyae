@@ -223,7 +223,7 @@ namespace yae
         }
       }
 
-      boost::this_thread::sleep_for(boost::chrono::seconds(60));
+      boost::this_thread::sleep_for(boost::chrono::seconds(30));
     }
 
     dvr.shutdown();
