@@ -215,6 +215,7 @@ namespace yae
     yae::save(json, "title", title_);
     yae::save(json, "description", description_);
     yae::save(json, "max_recordings", max_recordings_);
+    yae::save(json, "skip_duplicates", skip_duplicates_);
   }
 
   //----------------------------------------------------------------
@@ -296,6 +297,7 @@ namespace yae
     yae::load(json, "title", title_);
     yae::load(json, "description", description_);
     yae::load(json, "max_recordings", max_recordings_);
+    yae::load(json, "skip_duplicates", skip_duplicates_);
   }
 
   //----------------------------------------------------------------
@@ -365,6 +367,24 @@ namespace yae
     gps_t1_(0),
     channel_major_(0),
     channel_minor_(0),
+    max_recordings_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // Recording::Recording
+  //
+  Recording::Recording(const yae::mpeg_ts::EPG::Channel & channel,
+                       const yae::mpeg_ts::EPG::Program & program):
+    cancelled_(false),
+    utc_t0_(localtime_to_unix_epoch_time(program.tm_)),
+    gps_t0_(program.gps_time_),
+    gps_t1_(program.gps_time_ + program.duration_),
+    channel_major_(channel.major_),
+    channel_minor_(channel.minor_),
+    channel_name_(channel.name_),
+    title_(program.title_),
+    rating_(program.rating_),
+    description_(program.description_),
     max_recordings_(0)
   {}
 
@@ -522,8 +542,7 @@ namespace yae
   // Schedule::update
   //
   void
-  Schedule::update(const yae::mpeg_ts::EPG & epg,
-                   const Wishlist & wishlist)
+  Schedule::update(DVR & dvr, const yae::mpeg_ts::EPG & epg)
   {
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
@@ -543,10 +562,23 @@ namespace yae
           continue;
         }
 
-        const Wishlist::Item * want = wishlist.matches(channel, program);
+        const Wishlist::Item * want = dvr.wishlist_.matches(channel, program);
         if (!want)
         {
           continue;
+        }
+
+        if (want->skip_duplicates())
+        {
+          TRecordingPtr rec_ptr = dvr.already_recorded(channel, program);
+          if (rec_ptr)
+          {
+            // this program has already been recorded:
+            yae_ilog("skipping, already recorded: %s, %s",
+                     rec_ptr->get_basename().c_str(),
+                     program.description_.c_str());
+            continue;
+          }
         }
 
         boost::unique_lock<boost::mutex> lock(mutex_);
@@ -1782,6 +1814,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // load_recording
+  //
+  static TRecordingPtr
+  load_recording(const std::string & ts)
+  {
+    try
+    {
+      std::string path = ts.substr(0, ts.size() - 3) + ".json";
+      Json::Value json;
+      yae::TOpenFile(path, "rb").load(json);
+      TRecordingPtr rec_ptr(new Recording());
+      yae::load(json, *rec_ptr);
+      return rec_ptr;
+    }
+    catch (...)
+    {}
+
+    return TRecordingPtr();
+  }
+
+  //----------------------------------------------------------------
   // DVR::remove_excess_recordings
   //
   void
@@ -1810,6 +1863,12 @@ namespace yae
       }
 
       const std::string & ts = i->second;
+      TRecordingPtr rec_ptr = load_recording(ts);
+      if (rec.utc_t0_ <= rec_ptr->utc_t0_)
+      {
+        continue;
+      }
+
       if (remove_recording(ts))
       {
         removed_recordings++;
@@ -1885,13 +1944,72 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::already_recorded
+  //
+  TRecordingPtr
+  DVR::already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
+                        const yae::mpeg_ts::EPG::Program & program) const
+  {
+    if (program.description_.empty())
+    {
+      // can't check for duplicates without a description:
+      return TRecordingPtr();
+    }
+
+    const uint32_t margin_sec = margin_.get(1);
+    Recording rec(channel, program);
+
+    std::map<std::string, std::string> recordings;
+    {
+      std::string title_path = rec.get_title_path(basedir_).string();
+      CollectRecordings collect_recordings(recordings);
+      for_each_file_at(title_path, collect_recordings);
+    }
+
+    for (std::map<std::string, std::string>::iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      const std::string & ts = i->second;
+      TRecordingPtr rec_ptr = load_recording(ts);
+      if (!rec_ptr)
+      {
+        continue;
+      }
+
+      const Recording & recorded = *rec_ptr;
+      if (recorded.cancelled_ ||
+          rec.utc_t0_ <= recorded.utc_t0_ ||
+          rec.description_ != recorded.description_)
+      {
+        continue;
+      }
+
+      // check that the existing recording is approximately complete:
+      int64_t utc_t1 = yae::stat_lastmod(ts.c_str());
+      int64_t recorded_duration = utc_t1 - recorded.utc_t0_;
+      if (program.duration_ + 2 * margin_sec <= recorded_duration)
+      {
+        return rec_ptr;
+      }
+      else
+      {
+        yae_dlog("found an incomplete recording: %s, %s",
+                 recorded.get_basename().c_str(),
+                 program.description_.c_str());
+      }
+    }
+
+    return TRecordingPtr();
+  }
+
+  //----------------------------------------------------------------
   // DVR::evaluate
   //
   void
   DVR::evaluate(const yae::mpeg_ts::EPG & epg)
   {
     uint32_t margin_sec = margin_.get(1);
-    schedule_.update(epg, wishlist_);
+    schedule_.update(*this, epg);
 
     std::map<uint32_t, std::string> frequencies;
     hdhr_.get_channels(frequencies);

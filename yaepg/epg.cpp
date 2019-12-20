@@ -84,6 +84,7 @@ namespace yae
       item.weekday_mask_.reset(yae::Wishlist::Item::Sun);
       item.when_ = Timespan(TTime(18 * 60 * 60, 1),
                             TTime(21 * 60 * 60, 1));
+      item.skip_duplicates_ = true;
     }
 
     // Movies 14.2, Saturday - Sunday, 11am - 5am
@@ -96,6 +97,7 @@ namespace yae
       item.when_ = Timespan(TTime(11 * 60 * 60, 1),
                             TTime(29 * 60 * 60, 1));
       item.max_recordings_ = 1;
+      item.skip_duplicates_ = true;
     }
 
     // PBS 7.1, Sunday, Nature
@@ -105,6 +107,7 @@ namespace yae
       item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nature";
       item.max_recordings_ = 12;
+      item.skip_duplicates_ = true;
     }
 
     // PBS 7.1, Sunday, Nova
@@ -114,6 +117,7 @@ namespace yae
       item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nova";
       item.max_recordings_ = 12;
+      item.skip_duplicates_ = true;
     }
 
     // NHK Newsline:
@@ -131,6 +135,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(13, 1);
       item.title_ = "The Simpsons";
+      item.skip_duplicates_ = true;
     }
 
     // Bob's Burgers:
@@ -138,6 +143,7 @@ namespace yae
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.title_ = "Bob's Burgers";
+      item.skip_duplicates_ = true;
     }
 
     // Family Guy:
@@ -145,6 +151,7 @@ namespace yae
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.title_ = "Family Guy";
+      item.skip_duplicates_ = true;
     }
 
     // The Big Bang Theory:
@@ -152,6 +159,7 @@ namespace yae
       dvr.wishlist_.items_.push_back(Wishlist::Item());
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.title_ = "The Big Bang Theory";
+      item.skip_duplicates_ = true;
     }
 
     // The Late Show With Stephen Colbert:
@@ -161,6 +169,7 @@ namespace yae
       item.channel_ = std::pair<uint16_t, uint16_t>(2, 1);
       item.title_ = "The Late Show With Stephen Colbert";
       item.max_recordings_ = 5;
+      item.skip_duplicates_ = true;
     }
 
     // Late Night With Seth Meyers:
@@ -170,6 +179,7 @@ namespace yae
       item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
       item.title_ = "Late Night With Seth Meyers";
       item.max_recordings_ = 5;
+      item.skip_duplicates_ = true;
     }
 
     // Saturday Night Live:
@@ -179,6 +189,7 @@ namespace yae
       item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
       item.title_ = "Saturday Night Live";
       item.max_recordings_ = 10;
+      item.skip_duplicates_ = true;
     }
 
     // FIXME: there is probably a better place for this:

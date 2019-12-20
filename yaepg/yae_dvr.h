@@ -38,6 +38,9 @@ namespace fs = boost::filesystem;
 
 namespace yae
 {
+  // forward declarations:
+  struct DVR;
+
 
   //----------------------------------------------------------------
   // Wishlist
@@ -58,6 +61,9 @@ namespace yae
       inline bool max_recordings() const
       { return max_recordings_ ? *max_recordings_ : 0; }
 
+      inline bool skip_duplicates() const
+      { return skip_duplicates_ ? *skip_duplicates_ : false; }
+
       enum Weekday
       {
         Sun = 1 << 0,
@@ -69,6 +75,7 @@ namespace yae
         Sat = 1 << 6
       };
 
+      yae::optional<bool> skip_duplicates_;
       yae::optional<uint16_t> max_recordings_;
       yae::optional<std::pair<uint16_t, uint16_t> > channel_;
       yae::optional<struct tm> date_;
@@ -105,6 +112,8 @@ namespace yae
   struct Recording
   {
     Recording();
+    Recording(const yae::mpeg_ts::EPG::Channel & channel,
+              const yae::mpeg_ts::EPG::Program & program);
 
     fs::path get_title_path(const fs::path & basedir) const;
     std::string get_basename() const;
@@ -149,8 +158,7 @@ namespace yae
   {
     // given a wishlist and current epg
     // create program recording schedule
-    void update(const yae::mpeg_ts::EPG & epg,
-                const Wishlist & wishlist);
+    void update(DVR & dvr, const yae::mpeg_ts::EPG & epg);
 
     // find a scheduled recording corresponding to the
     // given channel number and gps time:
@@ -281,6 +289,11 @@ namespace yae
 
     void remove_excess_recordings(const Recording & rec);
     bool make_room_for(const Recording & rec, uint64_t num_sec);
+
+    // find an earlier recording with the same program description:
+    TRecordingPtr
+    already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
+                     const yae::mpeg_ts::EPG::Program & program) const;
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 
