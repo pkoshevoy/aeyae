@@ -32,9 +32,10 @@
 #else
 #include <dirent.h>
 #include <dlfcn.h>
+#include <sys/statvfs.h>
 #endif
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <fcntl.h>
 #include <iostream>
 #include <sstream>
@@ -486,6 +487,72 @@ namespace yae
     int ret = stat(path_utf8, &st);
     return ret == 0 ? st.st_mtim.tv_sec : std::numeric_limits<int64_t>::min();
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // stat_filesize
+  //
+  uint64_t
+  stat_filesize(const char * path_utf8)
+  {
+#ifdef _WIN32
+    std::wstring path_utf16 = utf8_to_utf16(path_utf8);
+    struct __stat64 st = { 0 };
+    int ret = _wstat64(path_utf16.c_str(), &st);
+    return ret == 0 ? st.st_size : 0;
+#else
+    struct stat st = { 0 };
+    int ret = stat(path_utf8, &st);
+    return ret == 0 ? st.st_size : 0;
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // stat_diskspace
+  //
+  bool
+  stat_diskspace(const char * path_utf8,
+                 uint64_t & filesystem_bytes,
+                 uint64_t & filesystem_bytes_free,
+                 uint64_t & available_bytes)
+  {
+    filesystem_bytes = 0;
+    filesystem_bytes_free = 0;
+    available_bytes = 0;
+
+#ifdef _WIN32
+    std::wstring path_utf16 = utf8_to_utf16(path_utf8);
+    ULARGE_INTEGER bytes_available_to_caller = 0;
+    ULARGE_INTEGER total_number_of_bytes = 0;
+    ULARGE_INTEGER total_number_of_bytes_free = 0;
+    BOOL ok = GetDiskFreeSpaceExW(path_utf16.c_str(),
+                                  &bytes_available_to_caller,
+                                  &total_number_of_bytes,
+                                  &total_number_of_bytes_free);
+    if (!ok)
+    {
+      return false;
+    }
+
+    filesystem_bytes = total_number_of_bytes.QuadPart;
+    filesystem_bytes_free = total_number_of_bytes_free.QuadPart;
+    available_bytes = bytes_available_to_caller.QuadPart;
+
+#else
+    struct statvfs stat = { 0 };
+    int err = statvfs(path_utf8, &stat);
+    if (err)
+    {
+      return false;
+    }
+
+    // the available size is f_bsize * f_bavail
+    filesystem_bytes = stat.f_frsize * stat.f_blocks;
+    filesystem_bytes_free = stat.f_bsize * stat.f_bfree;
+    available_bytes = stat.f_bsize * stat.f_bavail;
+#endif
+
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -1197,6 +1264,32 @@ namespace yae
   TOpenFolder::item_path() const
   {
     return private_->item_path();
+  }
+
+
+  //----------------------------------------------------------------
+  // CollectMatchingFiles::CollectMatchingFiles
+  //
+  CollectMatchingFiles::CollectMatchingFiles(std::set<std::string> & dst,
+                                             const std::string & regex):
+    pattern_(regex, boost::regex::icase),
+    files_(dst)
+  {}
+
+  //----------------------------------------------------------------
+  // CollectMatchingFiles::operator
+  //
+  bool
+  CollectMatchingFiles::operator()(bool is_folder,
+                                   const std::string & name,
+                                   const std::string & path)
+  {
+    if (!is_folder && boost::regex_match(name, pattern_))
+    {
+      files_.insert(path);
+    }
+
+    return true;
   }
 
 

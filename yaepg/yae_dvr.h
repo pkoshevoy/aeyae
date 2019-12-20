@@ -55,6 +55,9 @@ namespace yae
       void save(Json::Value & json) const;
       void load(const Json::Value & json);
 
+      inline bool max_recordings() const
+      { return max_recordings_ ? *max_recordings_ : 0; }
+
       enum Weekday
       {
         Sun = 1 << 0,
@@ -66,6 +69,7 @@ namespace yae
         Sat = 1 << 6
       };
 
+      yae::optional<uint16_t> max_recordings_;
       yae::optional<std::pair<uint16_t, uint16_t> > channel_;
       yae::optional<struct tm> date_;
       yae::optional<Timespan> when_;
@@ -80,8 +84,9 @@ namespace yae
 
     Wishlist();
 
-    bool matches(const yae::mpeg_ts::EPG::Channel & channel,
-                 const yae::mpeg_ts::EPG::Program & program) const;
+    const Item *
+    matches(const yae::mpeg_ts::EPG::Channel & channel,
+            const yae::mpeg_ts::EPG::Program & program) const;
 
     std::list<Item> items_;
     int64_t lastmod_;
@@ -115,6 +120,7 @@ namespace yae
     std::string title_;
     std::string rating_;
     std::string description_;
+    uint16_t max_recordings_;
 
     yae::TOpenFilePtr file_;
     yae::shared_ptr<IStream> stream_;
@@ -272,6 +278,9 @@ namespace yae
     bool load_wishlist();
 
     void save_schedule() const;
+
+    void remove_excess_recordings(const Recording & rec);
+    bool make_room_for(const Recording & rec, uint64_t num_sec);
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 

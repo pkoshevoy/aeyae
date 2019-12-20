@@ -178,6 +178,7 @@ namespace yae
     yae::save(json, "date", date_);
     yae::save(json, "title", title_);
     yae::save(json, "description", description_);
+    yae::save(json, "max_recordings", max_recordings_);
   }
 
   //----------------------------------------------------------------
@@ -258,12 +259,13 @@ namespace yae
     yae::load(json, "date", date_);
     yae::load(json, "title", title_);
     yae::load(json, "description", description_);
+    yae::load(json, "max_recordings", max_recordings_);
   }
 
   //----------------------------------------------------------------
   // Wishlist::matches
   //
-  bool
+  const Wishlist::Item *
   Wishlist::matches(const yae::mpeg_ts::EPG::Channel & channel,
                     const yae::mpeg_ts::EPG::Program & program) const
   {
@@ -273,11 +275,11 @@ namespace yae
       const Item & item = *i;
       if (item.matches(channel, program))
       {
-        return true;
+        return &item;
       }
     }
 
-    return false;
+    return NULL;
   }
 
   //----------------------------------------------------------------
@@ -321,12 +323,13 @@ namespace yae
   // Recording::Recording
   //
   Recording::Recording():
+    cancelled_(false),
     utc_t0_(0),
     gps_t0_(0),
     gps_t1_(0),
     channel_major_(0),
     channel_minor_(0),
-    cancelled_(false)
+    max_recordings_(0)
   {}
 
   //----------------------------------------------------------------
@@ -439,6 +442,11 @@ namespace yae
     save(json["rating"], rec.rating_);
     save(json["description"], rec.description_);
 
+    if (rec.max_recordings_)
+    {
+      save(json["max_recordings"], rec.max_recordings_);
+    }
+
 #ifndef NDEBUG
     std::ostringstream oss;
     oss << unix_epoch_time_to_localtime_str(rec.utc_t0_) << " "
@@ -466,6 +474,11 @@ namespace yae
     load(json["title"], rec.title_);
     load(json["rating"], rec.rating_);
     load(json["description"], rec.description_);
+
+    if (json.isMember("max_recordings"))
+    {
+      load(json["max_recordings"], rec.max_recordings_);
+    }
   }
 
 
@@ -494,7 +507,8 @@ namespace yae
           continue;
         }
 
-        if (!wishlist.matches(channel, program))
+        const Wishlist::Item * want = wishlist.matches(channel, program);
+        if (!want)
         {
           continue;
         }
@@ -516,6 +530,7 @@ namespace yae
         rec.title_ = program.title_;
         rec.rating_ = program.rating_;
         rec.description_ = program.description_;
+        rec.max_recordings_ = want->max_recordings();
       }
     }
 
@@ -1652,6 +1667,162 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // CollectRecordings
+  //
+  struct CollectRecordings
+  {
+    CollectRecordings(std::map<std::string, std::string> & dst):
+      pattern_("^.+\\.ts$", boost::regex::icase),
+      files_(dst)
+    {}
+
+    bool operator()(bool is_folder,
+                    const std::string & name,
+                    const std::string & path)
+    {
+      if (!is_folder && boost::regex_match(name, pattern_))
+      {
+        files_[name] = path;
+      }
+
+      return true;
+    }
+
+  protected:
+    boost::regex pattern_;
+
+    // files, indexed by filename:
+    std::map<std::string, std::string> & files_;
+  };
+
+  //----------------------------------------------------------------
+  // remove_recording
+  //
+  static uint64_t
+  remove_recording(const std::string & ts)
+  {
+    yae_ilog("removing %s", ts.c_str());
+
+    uint64_t size_ts = yae::stat_filesize(ts.c_str());
+    if (!yae::remove_utf8(ts))
+    {
+      yae_wlog("failed to remove %s", ts.c_str());
+      return 0;
+    }
+
+    std::string json = ts.substr(0, ts.size() - 3) + ".json";
+    if (!yae::remove_utf8(json))
+    {
+      yae_wlog("failed to remove %s", json.c_str());
+    }
+
+    return size_ts;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::remove_excess_recordings
+  //
+  void
+  DVR::remove_excess_recordings(const Recording & rec)
+  {
+    if (!rec.max_recordings_)
+    {
+      // unlimited:
+      return;
+    }
+
+    std::map<std::string, std::string> recordings;
+    {
+      std::string title_path = rec.get_title_path(basedir_).string();
+      CollectRecordings collect_recordings(recordings);
+      for_each_file_at(title_path, collect_recordings);
+    }
+
+    std::size_t removed_recordings = 0;
+    for (std::map<std::string, std::string>::iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      if (recordings.size() - removed_recordings <= rec.max_recordings_)
+      {
+        break;
+      }
+
+      const std::string & ts = i->second;
+      if (remove_recording(ts))
+      {
+        removed_recordings++;
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::make_room_for
+  //
+  bool
+  DVR::make_room_for(const Recording & rec, uint64_t num_sec)
+  {
+    // first, remove any existing old recordings beyond max recordings limit:
+    remove_excess_recordings(rec);
+
+    // must accommodate max 19.39Mbps ATSC transport stream:
+    std::string title_path = rec.get_title_path(basedir_).string();
+    uint64_t title_bytes = (num_sec * 20000000) >> 3;
+
+    uint64_t filesystem_bytes = 0;
+    uint64_t filesystem_bytes_free = 0;
+    uint64_t available_bytes = 0;
+
+    if (!yae::stat_diskspace(title_path.c_str(),
+                             filesystem_bytes,
+                             filesystem_bytes_free,
+                             available_bytes))
+    {
+      yae_elog("failed to query available disk space for %i.%i %s",
+               rec.channel_major_,
+               rec.channel_minor_,
+               title_path.c_str());
+      return false;
+    }
+
+    if (title_bytes < available_bytes)
+    {
+      return true;
+    }
+
+    std::map<std::string, std::string> recordings;
+    {
+      std::string title_path = rec.get_title_path(basedir_).string();
+      CollectRecordings collect_recordings(recordings);
+      for_each_file_at(title_path, collect_recordings);
+    }
+
+    std::size_t removed_bytes = 0;
+    for (std::map<std::string, std::string>::iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      if (title_bytes < available_bytes + removed_bytes)
+      {
+        break;
+      }
+
+      const std::string & ts = i->second;
+      removed_bytes += remove_recording(ts);
+    }
+
+    if (title_bytes < available_bytes + removed_bytes)
+    {
+      return true;
+    }
+
+    yae_elog("failed to free up disk space (%" PRIu64 " MiB) for %i.%i %s",
+             title_bytes >> 20,
+             rec.channel_major_,
+             rec.channel_minor_,
+             rec.title_.c_str());
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // DVR::evaluate
   //
   void
@@ -1686,11 +1857,20 @@ namespace yae
              j = recs.begin(); j != recs.end(); ++j)
       {
         Recording & rec = *(*j);
+        bool is_recording = rec.stream_ && rec.stream_->is_open();
         uint64_t num_sec = rec.gps_t1_ + margin_sec - gps_time;
-        std::string frequency = yae::at(frequencies, ch_num);
 
+        if (!is_recording)
+        {
+          if (!make_room_for(rec, num_sec))
+          {
+            continue;
+          }
+        }
+
+        std::string frequency = yae::at(frequencies, ch_num);
         TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
-        if (!(rec.stream_ && rec.stream_->is_open()))
+        if (!is_recording)
         {
           yae_ilog("starting stream: %s", rec.get_basename().c_str());
 

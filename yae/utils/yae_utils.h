@@ -176,6 +176,21 @@ namespace yae
   stat_lastmod(const char * path_utf8);
 
   //----------------------------------------------------------------
+  // stat_filesize
+  //
+  YAE_API uint64_t
+  stat_filesize(const char * path_utf8);
+
+  //----------------------------------------------------------------
+  // stat_diskspace
+  //
+  YAE_API bool
+  stat_diskspace(const char * path_utf8,
+                 uint64_t & filesystem_bytes,
+                 uint64_t & filesystem_bytes_free,
+                 uint64_t & available_bytes);
+
+  //----------------------------------------------------------------
   // kDirSeparator
   //
 #ifdef _WIN32
@@ -327,25 +342,14 @@ namespace yae
   //----------------------------------------------------------------
   // CollectMatchingFiles
   //
-  struct CollectMatchingFiles
+  struct YAE_API CollectMatchingFiles
   {
     CollectMatchingFiles(std::set<std::string> & dst,
-                         const std::string & regex):
-      pattern_(regex, boost::regex::icase),
-      files_(dst)
-    {}
+                         const std::string & regex);
 
     bool operator()(bool is_folder,
                     const std::string & name,
-                    const std::string & path)
-    {
-      if (!is_folder && boost::regex_match(name, pattern_))
-      {
-        files_.insert(path);
-      }
-
-      return true;
-    }
+                    const std::string & path);
 
   protected:
     boost::regex pattern_;

@@ -95,6 +95,7 @@ namespace yae
                                yae::Wishlist::Item::Sun);
       item.when_ = Timespan(TTime(11 * 60 * 60, 1),
                             TTime(29 * 60 * 60, 1));
+      item.max_recordings_ = 1;
     }
 
     // PBS 7.1, Sunday, Nature
@@ -103,6 +104,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nature";
+      item.max_recordings_ = 12;
     }
 
     // PBS 7.1, Sunday, Nova
@@ -111,6 +113,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(7, 1);
       item.title_ = "Nova";
+      item.max_recordings_ = 12;
     }
 
     // NHK Newsline:
@@ -119,6 +122,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(9, 1);
       item.title_ = "NHK Newsline";
+      item.max_recordings_ = 1;
     }
 
     // The Simpsons:
@@ -156,6 +160,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(2, 1);
       item.title_ = "The Late Show With Stephen Colbert";
+      item.max_recordings_ = 5;
     }
 
     // Late Night With Seth Meyers:
@@ -164,6 +169,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
       item.title_ = "Late Night With Seth Meyers";
+      item.max_recordings_ = 5;
     }
 
     // Saturday Night Live:
@@ -172,6 +178,7 @@ namespace yae
       Wishlist::Item & item = dvr.wishlist_.items_.back();
       item.channel_ = std::pair<uint16_t, uint16_t>(5, 1);
       item.title_ = "Saturday Night Live";
+      item.max_recordings_ = 10;
     }
 
     // FIXME: there is probably a better place for this:
