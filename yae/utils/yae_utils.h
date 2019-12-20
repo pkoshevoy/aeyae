@@ -306,7 +306,7 @@ namespace yae
     try
     {
       TOpenFolder folder(path_utf8);
-      while (folder.parse_next_item())
+      do
       {
         std::string name = folder.item_name();
         std::string path = folder.item_path();
@@ -330,6 +330,7 @@ namespace yae
           for_each_file_at(path, callback);
         }
       }
+      while (folder.parse_next_item());
     }
     catch (...)
     {

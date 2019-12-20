@@ -30,6 +30,42 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // recording_rx
+  //
+  static const char * recording_rx =
+    "^\\d{8}-\\d{4} \\d{1,2}\\.\\d{1,2} .+\\.ts$";
+
+  //----------------------------------------------------------------
+  // CollectRecordings
+  //
+  struct CollectRecordings
+  {
+    CollectRecordings(std::map<std::string, std::string> & dst):
+      pattern_(recording_rx, boost::regex::icase),
+      files_(dst)
+    {}
+
+    bool operator()(bool is_folder,
+                    const std::string & name,
+                    const std::string & path)
+    {
+      if (!is_folder && boost::regex_match(name, pattern_))
+      {
+        files_[name] = path;
+      }
+
+      return true;
+    }
+
+  protected:
+    boost::regex pattern_;
+
+    // files, indexed by filename:
+    std::map<std::string, std::string> & files_;
+  };
+
+
+  //----------------------------------------------------------------
   // Wishlist::Wishlist
   //
   Wishlist::Wishlist():
@@ -535,11 +571,15 @@ namespace yae
     }
 
     // remove past recordings from schedule:
+    std::map<uint32_t, TScheduledRecordings> current_schedule;
     std::map<uint32_t, TScheduledRecordings> updated_schedule;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      current_schedule = recordings_;
+    }
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
     for (std::map<uint32_t, TScheduledRecordings>::const_iterator
-           i = recordings_.begin(); i != recordings_.end(); ++i)
+           i = current_schedule.begin(); i != current_schedule.end(); ++i)
     {
       const uint32_t ch_num = i->first;
       std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
@@ -568,7 +608,11 @@ namespace yae
       }
     }
 
-    recordings_.swap(updated_schedule);
+    // update the schedule:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      recordings_.swap(updated_schedule);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1180,6 +1224,53 @@ namespace yae
       yae::TOpenFile(path, "rb").load(json);
       schedule_.load(json);
     }
+
+    uint64_t filesystem_bytes = 0;
+    uint64_t filesystem_bytes_free = 0;
+    uint64_t available_bytes = 0;
+
+    if (yae::stat_diskspace(basedir.c_str(),
+                            filesystem_bytes,
+                            filesystem_bytes_free,
+                            available_bytes))
+    {
+      yae_ilog("will write to %s: "
+               "%" PRIu64 " GB total, "
+               "%" PRIu64 " GB free, "
+               "%" PRIu64 " GB available",
+               basedir.c_str(),
+               filesystem_bytes / 1000000000,
+               filesystem_bytes_free / 1000000000,
+               available_bytes / 1000000000);
+    }
+    else
+    {
+      yae_elog("failed to query available disk space: %s",
+               basedir.c_str());
+    }
+
+    std::map<std::string, std::string> recordings;
+    {
+      CollectRecordings collect_recordings(recordings);
+      for_each_file_at(basedir, collect_recordings);
+    }
+
+    uint64_t recordings_bytes = 0;
+    for (std::map<std::string, std::string>::iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      const std::string & name = i->first;
+      const std::string & path = i->second;
+      uint64_t num_bytes = yae::stat_filesize(path.c_str());
+      recordings_bytes += num_bytes;
+
+      yae_ilog("recorded %.3f GB, %s",
+               double(num_bytes) / 1000000000.0,
+               name.c_str());
+    }
+
+    yae_ilog("total size of recordings: %.3F GB",
+             double(recordings_bytes) / 1000000000.0);
   }
 
   //----------------------------------------------------------------
@@ -1665,35 +1756,6 @@ namespace yae
       yae_elog("write failed: %s", path.c_str());
     }
   }
-
-  //----------------------------------------------------------------
-  // CollectRecordings
-  //
-  struct CollectRecordings
-  {
-    CollectRecordings(std::map<std::string, std::string> & dst):
-      pattern_("^.+\\.ts$", boost::regex::icase),
-      files_(dst)
-    {}
-
-    bool operator()(bool is_folder,
-                    const std::string & name,
-                    const std::string & path)
-    {
-      if (!is_folder && boost::regex_match(name, pattern_))
-      {
-        files_[name] = path;
-      }
-
-      return true;
-    }
-
-  protected:
-    boost::regex pattern_;
-
-    // files, indexed by filename:
-    std::map<std::string, std::string> & files_;
-  };
 
   //----------------------------------------------------------------
   // remove_recording

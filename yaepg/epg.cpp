@@ -203,10 +203,16 @@ namespace yae
       }
 
 #ifndef NDEBUG
+      for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+             i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
       {
+        const yae::mpeg_ts::EPG::Channel & channel = i->second;
+        std::string fn = strfmt("epg-%02i.%02i.json",
+                                channel.major_,
+                                channel.minor_);
         Json::Value json;
-        yae::mpeg_ts::save(json, epg);
-        yae::TOpenFile((dvr.yaepg_ / "epg.json").string(), "wb").save(json);
+        yae::mpeg_ts::save(json, channel);
+        yae::TOpenFile((dvr.yaepg_ / fn).string(), "wb").save(json);
       }
 #endif
 
