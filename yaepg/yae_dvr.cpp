@@ -1850,17 +1850,35 @@ namespace yae
       for_each_file_at(title_path, collect_recordings);
     }
 
-    std::size_t removed_recordings = 0;
+    std::size_t num_recordings = 0;
+    std::list<std::pair<std::string, TRecordingPtr> > recs;
     for (std::map<std::string, std::string>::iterator
-           i = recordings.begin(); i != recordings.end(); ++i)
+           i = recordings.begin(); i != recordings.end(); )
     {
-      if (recordings.size() - removed_recordings <= rec.max_recordings_)
+      const std::string & ts = i->second;
+      TRecordingPtr rec_ptr = load_recording(ts);
+
+      if (rec.utc_t0_ == rec_ptr->utc_t0_)
+      {
+        // ignore the current/in-progress recording:
+        continue;
+      }
+
+      recs.push_back(std::make_pair(ts, rec_ptr));
+      num_recordings++;
+    }
+
+    std::size_t removed_recordings = 0;
+    for (std::list<std::pair<std::string, TRecordingPtr> >::const_iterator
+           i = recs.begin(); i != recs.end(); ++i)
+    {
+      if (num_recordings - removed_recordings <= rec.max_recordings_)
       {
         break;
       }
 
-      const std::string & ts = i->second;
-      TRecordingPtr rec_ptr = load_recording(ts);
+      const std::string & ts = i->first;
+      const TRecordingPtr & rec_ptr = i->second;
       if (rec.utc_t0_ <= rec_ptr->utc_t0_)
       {
         continue;
