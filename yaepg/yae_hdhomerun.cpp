@@ -255,6 +255,7 @@ namespace yae
     Private();
 
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
+    bool get_channels(const std::string & freq, TChannels & channels) const;
 
     TSessionPtr open_session();
 
@@ -370,6 +371,49 @@ namespace yae
                                            program["virtual_minor"].asUInt());
             chan_freq[ch_num] = frequency;
           }
+        }
+
+        return true;
+      }
+      catch (...)
+      {}
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Private::get_channels
+  //
+  bool
+  HDHomeRun::Private::
+  get_channels(const std::string & frequency, TChannels & channels) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    for (Json::Value::const_iterator i = tuner_cache_.begin();
+         i != tuner_cache_.end(); ++i)
+    {
+      try
+      {
+        std::string tuner_name = i.key().asString();
+        const Json::Value & tuner_info = *i;
+        const Json::Value & frequencies = tuner_info["frequencies"];
+
+        if (!frequencies.isMember(frequency))
+        {
+          continue;
+        }
+
+        const Json::Value & info = frequencies[frequency];
+        const Json::Value & programs = info["programs"];
+        for (Json::Value::const_iterator k = programs.begin();
+             k != programs.end(); ++k)
+        {
+          const Json::Value & program = *k;
+          uint16_t major = uint16_t(program["virtual_major"].asUInt());
+          uint16_t minor = uint16_t(program["virtual_minor"].asUInt());
+          std::string name = program["name"].asString();
+          channels[major][minor] = name;
         }
 
         return true;
@@ -857,4 +901,12 @@ namespace yae
     return private_->get_channels(ch_freq);
   }
 
+  //----------------------------------------------------------------
+  // HDHomeRun::get_channels
+  //
+  bool
+  HDHomeRun::get_channels(const std::string & freq, TChannels & chans) const
+  {
+    return private_->get_channels(freq, chans);
+  }
 }

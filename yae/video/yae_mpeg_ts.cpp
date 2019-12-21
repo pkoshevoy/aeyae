@@ -5706,7 +5706,6 @@ namespace yae
           yae_elog("GPS time discrepancy: expected approx %s, actual %s",
                    gps_time_to_str(gps_now.get(1)).c_str(),
                    gps_time_to_str(channel.gps_time_).c_str());
-          YAE_ASSERT(false);
         }
 
         if (!guide.channel_etm_.empty())
@@ -5745,29 +5744,6 @@ namespace yae
       uint32_t gps_time = unix_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
       return bucket.has_epg_for(gps_time);
-    }
-
-    //----------------------------------------------------------------
-    // Context::get_epg_bucket
-    //
-    void
-    Context::get_channels(TChannels & channels) const
-    {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-      uint32_t gps_time = gps_time_now();
-      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
-
-      for (std::map<uint32_t, ChannelGuide>::const_iterator
-             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
-      {
-        const uint32_t ch_num = i->first;
-        const ChannelGuide & guide = i->second;
-
-        uint16_t major = channel_major(ch_num);
-        uint16_t minor = channel_minor(ch_num);
-        TChannelNames & names = channels[major];
-        names[minor] = guide.name_;
-      }
     }
 
     //----------------------------------------------------------------

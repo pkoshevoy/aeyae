@@ -76,6 +76,21 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TChannelNames
+  //
+  // channel names indexed by channel_minor
+  //
+  typedef std::map<uint16_t, std::string> TChannelNames;
+
+  //----------------------------------------------------------------
+  // TChannels
+  //
+  // indexed by channel_major
+  //
+  typedef std::map<uint16_t, TChannelNames> TChannels;
+
+
+  //----------------------------------------------------------------
   // HDHomeRun
   //
   struct HDHomeRun
@@ -123,6 +138,8 @@ namespace yae
 
     // fill in the major.minor -> frequency lookup table:
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
+    bool get_channels(const std::string & freq, TChannels & channels) const;
+
 
   protected:
     // intentionally disabled:

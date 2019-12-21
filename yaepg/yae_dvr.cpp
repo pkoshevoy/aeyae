@@ -1196,7 +1196,7 @@ namespace yae
     YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
 
     // load the frequencies:
-    std::map<std::string, yae::mpeg_ts::TChannels> frequencies;
+    std::map<std::string, yae::TChannels> frequencies;
     try
     {
       std::string freq_path = (yaepg_ / "frequencies.json").string();
@@ -1228,7 +1228,7 @@ namespace yae
     }
 
     // load the EPG:
-    for (std::map<std::string, yae::mpeg_ts::TChannels>::const_iterator
+    for (std::map<std::string, yae::TChannels>::const_iterator
            i = frequencies.begin(); i != frequencies.end(); ++i)
     {
       const std::string & frequency = i->first;
@@ -1443,6 +1443,7 @@ namespace yae
     dvr_.hdhr_.get_channels(channels);
 
     std::list<std::string> frequencies;
+#if 1
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
     {
@@ -1452,6 +1453,9 @@ namespace yae
         frequencies.push_back(frequency);
       }
     }
+#else
+    frequencies.push_back(std::string("503000000")); // 14.1
+#endif
 
     for (std::list<std::string>::const_iterator
            i = frequencies.begin(); i != frequencies.end(); ++i)
@@ -1514,15 +1518,12 @@ namespace yae
         yae_dlog("skipping EPG update for %s", frequency.c_str());
       }
 
-      // ctx.dump();
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
 
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
       {
-        TTime now = TTime::now();
-        std::string ts =
-          unix_epoch_time_to_localtime_str(now.get(1), "", "-", "");
+        ctx.dump();
 
         yae::mpeg_ts::EPG epg;
         ctx.get_epg(epg);
@@ -1531,10 +1532,9 @@ namespace yae
                i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
         {
           const yae::mpeg_ts::EPG::Channel & channel = i->second;
-          std::string fn = strfmt("epg-%02i.%02i-%s.json",
+          std::string fn = strfmt("epg-%02i.%02i.json",
                                   channel.major_,
-                                  channel.minor_,
-                                  ts.c_str());
+                                  channel.minor_);
 
           Json::Value json;
           yae::mpeg_ts::save(json, channel);
@@ -1683,18 +1683,15 @@ namespace yae
   void
   DVR::save_frequencies() const
   {
-    std::map<std::string, yae::mpeg_ts::TChannels> frequencies;
+    std::map<std::string, yae::TChannels> frequencies;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       for (std::map<std::string, TPacketHandlerPtr>::const_iterator
              i = packet_handler_.begin(); i != packet_handler_.end(); ++i)
       {
         const std::string & frequency = i->first;
-        const PacketHandler & packet_handler = *(i->second);
-        const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
-
-        yae::mpeg_ts::TChannels & channels = frequencies[frequency];
-        ctx.get_channels(channels);
+        yae::TChannels & channels = frequencies[frequency];
+        hdhr_.get_channels(frequency, channels);
       }
     }
 
@@ -1956,9 +1953,7 @@ namespace yae
       return TRecordingPtr();
     }
 
-    const uint32_t margin_sec = margin_.get(1);
     Recording rec(channel, program);
-
     std::map<std::string, std::string> recordings;
     {
       std::string title_path = rec.get_title_path(basedir_).string();
@@ -1987,7 +1982,7 @@ namespace yae
       // check that the existing recording is approximately complete:
       int64_t utc_t1 = yae::stat_lastmod(ts.c_str());
       int64_t recorded_duration = utc_t1 - recorded.utc_t0_;
-      if (program.duration_ + 2 * margin_sec <= recorded_duration)
+      if (program.duration_ <= recorded_duration)
       {
         return rec_ptr;
       }

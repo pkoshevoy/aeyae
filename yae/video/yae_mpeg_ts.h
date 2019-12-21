@@ -2403,20 +2403,6 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // TChannelNames
-    //
-    // channel names indexed by channel_minor
-    //
-    typedef std::map<uint16_t, std::string> TChannelNames;
-
-    //----------------------------------------------------------------
-    // TChannels
-    //
-    // indexed by channel_major
-    //
-    typedef std::map<uint16_t, TChannelNames> TChannels;
-
-    //----------------------------------------------------------------
     // Context
     //
     struct YAE_API Context
@@ -2434,8 +2420,6 @@ namespace yae
                    const std::string & lang = std::string("eng")) const;
 
       bool channel_guide_overlaps(int64_t t) const;
-
-      void get_channels(TChannels & channels) const;
 
       void save(Json::Value & json) const;
       void load(const Json::Value & json);

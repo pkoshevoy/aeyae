@@ -213,7 +213,7 @@ namespace yae
         dvr.save_schedule();
       }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
       for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
              i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
       {
@@ -252,6 +252,10 @@ namespace yae
 
     dvr.shutdown();
 
+#elif 1
+    DVR dvr(basedir);
+    dvr.update_epg(true);
+    dvr.worker_.wait_until_finished();
 #else
 #if 0
     const char * fn = "/tmp/473000000.ts"; // 10.1
