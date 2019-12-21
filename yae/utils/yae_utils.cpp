@@ -485,7 +485,11 @@ namespace yae
 #else
     struct stat st = { 0 };
     int ret = stat(path_utf8, &st);
+#ifdef __APPLE__
+    return ret == 0 ? st.st_mtime : std::numeric_limits<int64_t>::min();
+#else
     return ret == 0 ? st.st_mtim.tv_sec : std::numeric_limits<int64_t>::min();
+#endif
 #endif
   }
 
