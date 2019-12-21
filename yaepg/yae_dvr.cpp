@@ -220,6 +220,41 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // parse_channel_str
+  //
+  static bool
+  parse_channel_str(const std::string & major_minor,
+                    uint16_t & major,
+                    uint16_t & minor)
+  {
+    bool ok = true;
+    std::vector<std::string> tokens;
+    YAE_ASSERT(ok = (yae::split(tokens, ".", major_minor.c_str()) == 2));
+    if (ok)
+    {
+      major = boost::lexical_cast<uint16_t>(tokens[0]);
+      minor = boost::lexical_cast<uint16_t>(tokens[1]);
+    }
+    return ok;
+  }
+
+  //----------------------------------------------------------------
+  // parse_channel_str
+  //
+  static uint32_t
+  parse_channel_str(const std::string & major_minor)
+  {
+    uint16_t major = 0;
+    uint16_t minor = 0;
+    if (!parse_channel_str(major_minor, major, minor))
+    {
+      return 0;
+    }
+
+    return yae::mpeg_ts::channel_number(major, minor);
+  }
+
+  //----------------------------------------------------------------
   // Wishlist::Item::load
   //
   void
@@ -230,12 +265,7 @@ namespace yae
       std::string major_minor;
       yae::load(json["channel"], major_minor);
       std::pair<uint16_t, uint16_t> channel;
-
-      std::vector<std::string> tokens;
-      YAE_ASSERT(yae::split(tokens, ".", major_minor.c_str()) == 2);
-
-      channel.first = boost::lexical_cast<uint16_t>(tokens[0]);
-      channel.second = boost::lexical_cast<uint16_t>(tokens[1]);
+      parse_channel_str(major_minor, channel.first, channel.second);
       channel_.reset(channel);
     }
 
@@ -1200,9 +1230,9 @@ namespace yae
     std::map<std::string, yae::TChannels> frequencies;
     try
     {
-      std::string freq_path = (yaepg_ / "frequencies.json").string();
+      std::string path = (yaepg_ / "frequencies.json").string();
       Json::Value json;
-      yae::TOpenFile(freq_path, "rb").load(json);
+      yae::TOpenFile(path, "rb").load(json);
       yae::load(json, frequencies);
     }
     catch (...)
@@ -1246,6 +1276,9 @@ namespace yae
         packet_handler.ctx_.load(epg[frequency]);
       }
     }
+
+    // load the blacklist:
+    load_blacklist();
 
     // load the wishlist:
     load_wishlist();
@@ -1448,6 +1481,17 @@ namespace yae
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
     {
+      const uint32_t ch_num = i->first;
+      if (has(dvr_.blacklist_.channels_, ch_num))
+      {
+        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+        yae_wlog("skipping EPG update for blacklisted channel %i.%i",
+                 int(major),
+                 int(minor));
+        continue;
+      }
+
       const std::string & frequency = i->second;
       if (frequencies.empty() || frequencies.back() != frequency)
       {
@@ -1706,6 +1750,81 @@ namespace yae
     {
       freq_file.save(json);
     }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::Blacklist::Blacklist
+  //
+  DVR::Blacklist::Blacklist():
+    lastmod_(std::numeric_limits<int64_t>::min())
+  {}
+
+  //----------------------------------------------------------------
+  // DVR::save_blacklist
+  //
+  void
+  DVR::save_blacklist() const
+  {
+    std::list<std::string> blacklist;
+    for (std::set<uint32_t>::const_iterator i = blacklist_.channels_.begin();
+         i != blacklist_.channels_.end(); ++i)
+    {
+      const uint32_t ch_num = *i;
+      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+      uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+      std::string ch_str = strfmt("%i.%i", int(major), int(minor));
+      blacklist.push_back(ch_str);
+    }
+
+    Json::Value json;
+    yae::save(json, blacklist);
+
+    std::string path = (yaepg_ / "blacklist.json").string();
+    yae::TOpenFile(path, "wb").save(json);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::load_blacklist
+  //
+  bool
+  DVR::load_blacklist()
+  {
+    try
+    {
+      std::string path = (yaepg_ / "blacklist.json").string();
+      int64_t lastmod = yae::stat_lastmod(path.c_str());
+      if (blacklist_.lastmod_ < lastmod)
+      {
+        struct tm tm;
+        unix_epoch_time_to_localtime(lastmod, tm);
+        std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
+        yae_ilog("loading blacklist %s, lastmod %s",
+                 path.c_str(),
+                 lastmod_txt.c_str());
+
+        Json::Value json;
+        yae::TOpenFile(path, "rb").load(json);
+        std::list<std::string> blacklist;
+        yae::load(json, blacklist);
+
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        blacklist_.channels_.clear();
+        for (std::list<std::string>::const_iterator
+               i = blacklist.begin(); i != blacklist.end(); ++i)
+        {
+          const std::string & ch_str = *i;
+          uint32_t ch_num = parse_channel_str(ch_str);
+          blacklist_.channels_.insert(ch_num);
+        }
+
+        blacklist_.lastmod_ = lastmod;
+        return true;
+      }
+    }
+    catch (...)
+    {}
+
+    return false;
   }
 
   //----------------------------------------------------------------

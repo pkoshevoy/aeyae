@@ -189,6 +189,20 @@ namespace yae
   struct DVR
   {
     //----------------------------------------------------------------
+    // Blacklist
+    //
+    struct Blacklist
+    {
+      Blacklist();
+
+      void save() const;
+      bool load();
+
+      std::set<uint32_t> channels_;
+      int64_t lastmod_;
+    };
+
+    //----------------------------------------------------------------
     // PacketHandler
     //
     struct PacketHandler : yae::mpeg_ts::IPacketHandler
@@ -282,6 +296,9 @@ namespace yae
     void save_epg() const;
     void save_frequencies() const;
 
+    void save_blacklist() const;
+    bool load_blacklist();
+
     void save_wishlist() const;
     bool load_wishlist();
 
@@ -313,6 +330,9 @@ namespace yae
     // recordings wishlist, schedule, etc:
     Schedule schedule_;
     Wishlist wishlist_;
+
+    // channels we don't want to waste time on:
+    Blacklist blacklist_;
 
     yae::TTime channel_scan_period_;
     yae::TTime epg_refresh_period_;

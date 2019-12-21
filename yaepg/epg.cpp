@@ -74,6 +74,51 @@ namespace yae
     DVR dvr(basedir);
 
 #if 0
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(9, 91));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 4));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(11, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(11, 3));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 4));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 5));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 6));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 4));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 4));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 5));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 6));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 7));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(24, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(24, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(24, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(24, 4));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(25, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(25, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(25, 3));
+
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(50, 1));
+    dvr.save_blacklist();
+    return 0;
+#endif
+
+#if 0
     dvr.wishlist_.items_.clear();
 
     // Fox 13.1, Sunday, 6pm - 9pm
@@ -234,16 +279,18 @@ namespace yae
         TTime now = TTime::now();
         double sec_since_channel_scan = (now - channel_scan_time).sec();
         double sec_since_epg_update = (now - epg_update_time).sec();
+        bool blacklist_updated = dvr.load_blacklist();
 
-        if (sec_since_channel_scan > dvr.channel_scan_period_.sec())
-        {
-          dvr.scan_channels();
-          channel_scan_time = TTime::now();
-        }
-        else if (sec_since_epg_update > dvr.epg_refresh_period_.sec())
+        if (blacklist_updated ||
+            sec_since_epg_update > dvr.epg_refresh_period_.sec())
         {
           dvr.update_epg(true);
           epg_update_time = now;
+        }
+        else if (sec_since_channel_scan > dvr.channel_scan_period_.sec())
+        {
+          dvr.scan_channels();
+          channel_scan_time = TTime::now();
         }
       }
 
