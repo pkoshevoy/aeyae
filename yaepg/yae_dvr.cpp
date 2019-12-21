@@ -13,6 +13,7 @@
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 // boost includes:
 #ifndef Q_MOC_RUN
