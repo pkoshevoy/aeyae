@@ -2056,6 +2056,13 @@ namespace yae
 
         if (!is_recording)
         {
+          std::string title_path = rec.get_title_path(basedir_).string();
+          if (!yae::mkdir_p(title_path))
+          {
+            yae_elog("failed to mkdir %s", title_path.c_str());
+            continue;
+          }
+
           if (!make_room_for(rec, num_sec))
           {
             continue;
