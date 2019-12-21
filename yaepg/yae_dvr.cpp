@@ -1236,12 +1236,12 @@ namespace yae
       std::string epg_path =
         (yaepg_ / ("epg-" + frequency + ".json")).string();
 
+      TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
+      packet_handler_ptr.reset(new PacketHandler(*this));
+
       Json::Value epg;
       if (yae::TOpenFile(epg_path, "rb").load(epg))
       {
-        TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
-        packet_handler_ptr.reset(new PacketHandler(*this));
-
         PacketHandler & packet_handler = *packet_handler_ptr;
         packet_handler.ctx_.load(epg[frequency]);
       }
@@ -1464,10 +1464,10 @@ namespace yae
       // shortuct:
       const std::string & frequency = *i;
 
-      DVR::TPacketHandlerPtr pkt_handler_ptr = dvr_.packet_handler_[frequency];
+      DVR::TPacketHandlerPtr & pkt_handler_ptr = dvr_.packet_handler_[frequency];
       if (!pkt_handler_ptr)
       {
-        continue;
+        pkt_handler_ptr.reset(new DVR::PacketHandler(dvr_));
       }
 
       const DVR::PacketHandler & packet_handler = *pkt_handler_ptr;
@@ -1854,7 +1854,7 @@ namespace yae
     std::size_t num_recordings = 0;
     std::list<std::pair<std::string, TRecordingPtr> > recs;
     for (std::map<std::string, std::string>::iterator
-           i = recordings.begin(); i != recordings.end(); )
+           i = recordings.begin(); i != recordings.end(); ++i)
     {
       const std::string & ts = i->second;
       TRecordingPtr rec_ptr = load_recording(ts);
