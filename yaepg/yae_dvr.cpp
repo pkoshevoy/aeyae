@@ -1560,7 +1560,7 @@ namespace yae
       }
       else
       {
-        yae_dlog("skipping EPG update for %s", frequency.c_str());
+        yae_ilog("skipping EPG update for %s", frequency.c_str());
       }
 
       dvr_.save_epg(frequency, ctx);
@@ -2118,15 +2118,17 @@ namespace yae
       }
 
       // check that the existing recording is approximately complete:
+      std::string json_path = ts.substr(0, ts.size() - 3) + ".json";
+      int64_t utc_t0 = yae::stat_lastmod(json_path.c_str());
       int64_t utc_t1 = yae::stat_lastmod(ts.c_str());
-      int64_t recorded_duration = utc_t1 - recorded.utc_t0_;
+      int64_t recorded_duration = utc_t1 - utc_t0;
       if (program.duration_ <= recorded_duration)
       {
         return rec_ptr;
       }
       else
       {
-        yae_dlog("found an incomplete recording: %s, %s",
+        yae_ilog("found an incomplete recording: %s, %s",
                  recorded.get_basename().c_str(),
                  program.description_.c_str());
       }
@@ -2166,6 +2168,8 @@ namespace yae
         continue;
       }
 
+      std::ostringstream oss;
+      const char * sep = "";
       for (std::set<TRecordingPtr>::const_iterator
              j = recs.begin(); j != recs.end(); ++j)
       {
@@ -2199,10 +2203,16 @@ namespace yae
         }
         else
         {
-          yae_ilog("already recording: %s", rec.get_basename().c_str());
+          oss << sep << rec.get_basename();
+          sep = ", ";
         }
 
         rec.stream_ = stream;
+      }
+
+      if (!oss.str().empty())
+      {
+        yae_ilog("already recording: %s", oss.str().c_str());
       }
     }
   }
