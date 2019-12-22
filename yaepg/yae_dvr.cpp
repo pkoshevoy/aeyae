@@ -2149,6 +2149,9 @@ namespace yae
     std::map<uint32_t, std::string> frequencies;
     hdhr_.get_channels(frequencies);
 
+    std::ostringstream oss;
+    const char * sep = "";
+
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
@@ -2168,8 +2171,6 @@ namespace yae
         continue;
       }
 
-      std::ostringstream oss;
-      const char * sep = "";
       for (std::set<TRecordingPtr>::const_iterator
              j = recs.begin(); j != recs.end(); ++j)
       {
@@ -2203,17 +2204,17 @@ namespace yae
         }
         else
         {
-          oss << sep << rec.get_basename();
+          oss << sep << rec.get_basename().c_str();
           sep = ", ";
         }
 
         rec.stream_ = stream;
       }
+    }
 
-      if (!oss.str().empty())
-      {
-        yae_ilog("already recording: %s", oss.str().c_str());
-      }
+    if (!oss.str().empty())
+    {
+      yae_ilog("already recording: %s", oss.str().c_str());
     }
   }
 
