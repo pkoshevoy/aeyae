@@ -1597,7 +1597,7 @@ namespace yae
     if (found != dts_.end())
     {
       i = (found - dts_.begin()) - 1;
-      return i >= 0;
+      return found != dts_.begin();
     }
 
     i = dts_.size() - 1;
