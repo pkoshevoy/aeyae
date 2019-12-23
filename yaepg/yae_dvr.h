@@ -173,6 +173,7 @@ namespace yae
 
     void save(Json::Value & json) const;
     void load(const Json::Value & json);
+    void clear();
 
   protected:
     // protect against concurrent access:

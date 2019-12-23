@@ -771,21 +771,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // save
+  // Schedule::save
   //
   void
   Schedule::save(Json::Value & json) const
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     yae::save(json["recordings"], recordings_);
   }
 
   //----------------------------------------------------------------
-  // load
+  // Schedule::load
   //
   void
   Schedule::load(const Json::Value & json)
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     yae::load(json["recordings"], recordings_);
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::clear
+  //
+  void
+  Schedule::clear()
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    recordings_.clear();
   }
 
 
@@ -1353,8 +1365,11 @@ namespace yae
   void
   DVR::shutdown()
   {
+    yae_ilog("DVR shutdown");
     boost::unique_lock<boost::mutex> lock(mutex_);
+    schedule_.clear();
     worker_.stop();
+    worker_.wait_until_finished();
 
     for (std::map<std::string, yae::weak_ptr<Stream, IStream> >::const_iterator
            i = stream_.begin(); i != stream_.end(); ++i)

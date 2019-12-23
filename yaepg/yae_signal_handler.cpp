@@ -6,7 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae:
+// aeyae:
+#include "yae/api/yae_log.h"
+
+// yaepg:
 #include "yae_signal_handler.h"
 
 
@@ -19,6 +22,7 @@ namespace yae
   static void
   signal_handler_cb(int sig)
   {
+    yae_wlog("caught signal: %i", sig);
     SignalHandler & sh = signal_handler();
     sh.handle(sig);
   }

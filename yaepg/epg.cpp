@@ -241,6 +241,8 @@ namespace yae
     dvr.save_wishlist();
 #endif
 
+    TTime schedule_update_period = TTime(30, 1);
+    TTime schedule_update_time = TTime::now() - schedule_update_period;
     TTime channel_scan_time = TTime::now();
     TTime epg_update_time = TTime::now();
     dvr.update_epg();
@@ -251,32 +253,37 @@ namespace yae
     while (!signal_handler_received_sigpipe() &&
            !signal_handler_received_sigint())
     {
-      dvr.get_epg(epg);
+      TTime now = TTime::now();
 
       if (dvr.load_wishlist())
       {
         dvr.save_schedule();
       }
 
-#if 0 // ndef NDEBUG
-      for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-             i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+      if (schedule_update_period <= (now - schedule_update_time))
       {
-        const yae::mpeg_ts::EPG::Channel & channel = i->second;
-        std::string fn = strfmt("epg-%02i.%02i.json",
-                                channel.major_,
-                                channel.minor_);
-        Json::Value json;
-        yae::mpeg_ts::save(json, channel);
-        yae::TOpenFile((dvr.yaepg_ / fn).string(), "wb").save(json);
-      }
+        schedule_update_time = now;
+        dvr.get_epg(epg);
+
+#if 0 // ndef NDEBUG
+        for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+               i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+        {
+          const yae::mpeg_ts::EPG::Channel & channel = i->second;
+          std::string fn = strfmt("epg-%02i.%02i.json",
+                                  channel.major_,
+                                  channel.minor_);
+          Json::Value json;
+          yae::mpeg_ts::save(json, channel);
+          yae::TOpenFile((dvr.yaepg_ / fn).string(), "wb").save(json);
+        }
 #endif
 
-      dvr.evaluate(epg);
+        dvr.evaluate(epg);
+      }
 
       if (dvr.worker_.is_idle())
       {
-        TTime now = TTime::now();
         double sec_since_channel_scan = (now - channel_scan_time).sec();
         double sec_since_epg_update = (now - epg_update_time).sec();
         bool blacklist_updated = dvr.load_blacklist();
@@ -294,7 +301,7 @@ namespace yae
         }
       }
 
-      boost::this_thread::sleep_for(boost::chrono::seconds(30));
+      boost::this_thread::sleep_for(boost::chrono::seconds(1));
     }
 
     dvr.shutdown();
