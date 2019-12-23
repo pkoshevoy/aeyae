@@ -1596,6 +1596,7 @@ namespace yae
 
     if (found != dts_.end())
     {
+      YAE_ASSERT(found != dts_.begin());
       i = (found - dts_.begin()) - 1;
       return found != dts_.begin();
     }

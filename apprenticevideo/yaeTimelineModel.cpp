@@ -328,9 +328,9 @@ namespace yae
 
     double T1 = (unknownDuration_ ?
                  std::numeric_limits<double>::max() :
-                 timelineStart_ + timelineDuration_);
+                 timelineDuration_);
 
-    QString ts_p = getTimeStamp(timelineStart_,
+    QString ts_p = getTimeStamp(0.0,
                                 frameRate_,
                                 frameNumberSeparator_);
     updateAuxPlayhead(ts_p);
@@ -367,10 +367,14 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    QString ts_p = getTimeStamp(t, frameRate_, frameNumberSeparator_);
+    QString ts_p = getTimeStamp(t - timelineStart_,
+                                frameRate_,
+                                frameNumberSeparator_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(T1, frameRate_, frameNumberSeparator_);
+    QString ts_d = getTimeStamp(timelineDuration_,
+                                frameRate_,
+                                frameNumberSeparator_);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
@@ -587,7 +591,7 @@ namespace yae
       return false;
     }
 
-    seekTo(t.sec());
+    seekTo(timelineStart_ + t.sec());
 #endif
 
     return true;
@@ -778,7 +782,7 @@ namespace yae
     markerPlayhead_ = t;
     emit markerPlayheadChanged();
 
-    double seconds = markerPlayhead_ * timelineDuration_ + timelineStart_;
+    double seconds = markerPlayhead_ * timelineDuration_;
     QString ts = getTimeStamp(seconds, frameRate_, frameNumberSeparator_);
     updateAuxPlayhead(ts);
 
