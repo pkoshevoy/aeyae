@@ -3599,7 +3599,16 @@ namespace yae
   {
     RemuxModel & model = *model_;
     model.clips_.push_back(clip);
+    add_clip_row(clip);
+  }
 
+  //----------------------------------------------------------------
+  // RemuxView::add_clip_row
+  //
+  void
+  RemuxView::add_clip_row(const TClipPtr & clip)
+  {
+    RemuxModel & model = *model_;
     RemuxView & view = *this;
     Item & root = *root_;
 
@@ -3823,7 +3832,7 @@ namespace yae
     }
 
     // copy scrollview position from source scroll view to the new scroll view:
-    append_clip(new_clip);
+    add_clip_row(new_clip);
 
     Item & root = *root_;
     Item & gops = root["layout"]["gops"];

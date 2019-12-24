@@ -304,6 +304,11 @@ namespace yae
                        const TDemuxerInterfacePtr & src);
 
     void append_clip(const TClipPtr & clip);
+
+  protected:
+    void add_clip_row(const TClipPtr & clip);
+
+  public:
     void remove_clip(std::size_t index);
     void repeat_clip();
 
