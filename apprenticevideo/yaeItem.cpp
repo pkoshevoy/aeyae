@@ -1579,6 +1579,10 @@ namespace yae
         double z = child->attr<double>("z-order", 0.0);
         order[z].push_back(child);
       }
+      else
+      {
+        child->unpaint();
+      }
     }
 
     // NOTE: reverse order doesn't reverse z-order,
