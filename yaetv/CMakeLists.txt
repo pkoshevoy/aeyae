@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-project(epg)
-set(PROGNAME "yaepg")
+project(yaetv)
+set(PROGNAME "yaetv")
 
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
@@ -171,7 +171,7 @@ set(TARGET_LIBS
   )
 
 set(project_sources
-  epg.cpp
+  main.cpp
   yae_dvr.h
   yae_dvr.cpp
   yae_hdhomerun.h

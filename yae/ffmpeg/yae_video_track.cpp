@@ -1210,7 +1210,7 @@ namespace yae
       AVCodecContext * ctx = codecContext_.get();
 
       avcodec_flush_buffers(ctx);
-#if 1
+#if 0
       Track::close();
       ctx = Track::open();
       YAE_ASSERT(ctx);

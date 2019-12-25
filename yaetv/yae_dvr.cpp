@@ -1231,19 +1231,19 @@ namespace yae
   // DVR::DVR
   //
   DVR::DVR(const std::string & basedir):
-    yaepg_(yae::get_user_folder_path(".yaepg")),
+    yaetv_(yae::get_user_folder_path(".yaetv")),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
     margin_(60, 1)
   {
-    YAE_ASSERT(yae::mkdir_p(yaepg_.string()));
+    YAE_ASSERT(yae::mkdir_p(yaetv_.string()));
 
     // load the frequencies:
     std::map<std::string, yae::TChannels> frequencies;
     try
     {
-      std::string path = (yaepg_ / "frequencies.json").string();
+      std::string path = (yaetv_ / "frequencies.json").string();
       Json::Value json;
       yae::TOpenFile(path, "rb").load(json);
       yae::load(json, frequencies);
@@ -1277,7 +1277,7 @@ namespace yae
     {
       const std::string & frequency = i->first;
       std::string epg_path =
-        (yaepg_ / ("epg-" + frequency + ".json")).string();
+        (yaetv_ / ("epg-" + frequency + ".json")).string();
 
       TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
       packet_handler_ptr.reset(new PacketHandler(*this));
@@ -1298,7 +1298,7 @@ namespace yae
 
     // load the schedule:
     {
-      std::string path = (yaepg_ / "schedule.json").string();
+      std::string path = (yaetv_ / "schedule.json").string();
       Json::Value json;
       yae::TOpenFile(path, "rb").load(json);
       schedule_.load(json);
@@ -1599,7 +1599,7 @@ namespace yae
 
           Json::Value json;
           yae::mpeg_ts::save(json, channel);
-          yae::TOpenFile((dvr_.yaepg_ / fn).string(), "wb").save(json);
+          yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
         }
       }
 #endif
@@ -1710,7 +1710,7 @@ namespace yae
     ctx.save(json[frequency]);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string epg_path = (yaepg_ / ("epg-" + frequency + ".json")).string();
+    std::string epg_path = (yaetv_ / ("epg-" + frequency + ".json")).string();
     yae::TOpenFile epg_file;
     if (epg_file.open(epg_path, "wb"))
     {
@@ -1760,7 +1760,7 @@ namespace yae
     yae::save(json, frequencies);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string freq_path = (yaepg_ / "frequencies.json").string();
+    std::string freq_path = (yaetv_ / "frequencies.json").string();
     yae::TOpenFile freq_file;
     if (freq_file.open(freq_path, "wb"))
     {
@@ -1795,7 +1795,7 @@ namespace yae
     Json::Value json;
     yae::save(json, blacklist);
 
-    std::string path = (yaepg_ / "blacklist.json").string();
+    std::string path = (yaetv_ / "blacklist.json").string();
     yae::TOpenFile(path, "wb").save(json);
   }
 
@@ -1807,7 +1807,7 @@ namespace yae
   {
     try
     {
-      std::string path = (yaepg_ / "blacklist.json").string();
+      std::string path = (yaetv_ / "blacklist.json").string();
       int64_t lastmod = yae::stat_lastmod(path.c_str());
       if (blacklist_.lastmod_ < lastmod)
       {
@@ -1853,7 +1853,7 @@ namespace yae
     yae::save(json, wishlist_);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string path = (yaepg_ / "wishlist.json").string();
+    std::string path = (yaetv_ / "wishlist.json").string();
     yae::TOpenFile file;
     if (!(file.open(path, "wb") && file.save(json)))
     {
@@ -1869,7 +1869,7 @@ namespace yae
   {
     try
     {
-      std::string path = (yaepg_ / "wishlist.json").string();
+      std::string path = (yaetv_ / "wishlist.json").string();
       int64_t lastmod = yae::stat_lastmod(path.c_str());
       if (wishlist_.lastmod_ < lastmod)
       {
@@ -1914,7 +1914,7 @@ namespace yae
     schedule_.save(json);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string path = (yaepg_ / "schedule.json").string();
+    std::string path = (yaetv_ / "schedule.json").string();
     yae::TOpenFile file;
     if (!(file.open(path, "wb") && file.save(json)))
     {

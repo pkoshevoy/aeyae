@@ -275,7 +275,7 @@ namespace yae
                                   channel.minor_);
           Json::Value json;
           yae::mpeg_ts::save(json, channel);
-          yae::TOpenFile((dvr.yaepg_ / fn).string(), "wb").save(json);
+          yae::TOpenFile((dvr.yaetv_ / fn).string(), "wb").save(json);
         }
 #endif
 

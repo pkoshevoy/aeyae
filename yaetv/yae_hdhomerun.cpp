@@ -121,8 +121,8 @@ namespace yae
     hdhomerun_device_t & hd = *hd_ptr;
     std::string name = hdhomerun_device_get_name(&hd);
 
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-    lockkey_path_ = (fs::path(yaepg_dir) / (name + ".lockkey")).string();
+    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+    lockkey_path_ = (fs::path(yaetv_dir) / (name + ".lockkey")).string();
 
     yae::TOpenFile lock_file;
     if (lock_file.open(lockkey_path_, "rb"))
@@ -287,8 +287,8 @@ namespace yae
   HDHomeRun::Private::Private():
     devices_(64)
   {
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+    YAE_ASSERT(yae::mkdir_p(yaetv_dir));
 
     // discover HDHomeRun devices:
     int num_found =
@@ -335,7 +335,7 @@ namespace yae
                  (unsigned int)(target_addr >> 8) & 0x0FF,
                  (unsigned int)(target_addr >> 0) & 0x0FF);
 
-        std::string cache_path = (fs::path(yaepg_dir) / name).string();
+        std::string cache_path = (fs::path(yaetv_dir) / name).string();
         Json::Value & tuner_cache = tuner_cache_[name];
 
         // load from cache:
@@ -541,10 +541,10 @@ namespace yae
     const std::string & tuner_name = session.tuner_name_;
     hdhomerun_device_t * hd = session.hd_ptr_.get();
 
-    std::string yaepg_dir = yae::get_user_folder_path(".yaepg");
-    YAE_ASSERT(yae::mkdir_p(yaepg_dir));
+    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+    YAE_ASSERT(yae::mkdir_p(yaetv_dir));
 
-    std::string cache_path = (fs::path(yaepg_dir) / tuner_name).string();
+    std::string cache_path = (fs::path(yaetv_dir) / tuner_name).string();
     Json::Value tuner_cache;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);

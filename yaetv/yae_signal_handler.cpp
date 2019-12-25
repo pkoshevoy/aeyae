@@ -9,7 +9,7 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 
-// yaepg:
+// local:
 #include "yae_signal_handler.h"
 
 

@@ -320,7 +320,7 @@ namespace yae
 
     yae::HDHomeRun hdhr_;
     yae::Worker worker_;
-    fs::path yaepg_;
+    fs::path yaetv_;
     fs::path basedir_;
 
     // keep track of existing streams, but don't extend their lifetime:

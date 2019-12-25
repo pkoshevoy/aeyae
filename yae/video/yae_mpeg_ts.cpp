@@ -5781,7 +5781,6 @@ namespace yae
       epg.dump(oss);
 
       yae_info << oss.str();
-      // yae::dump("/tmp/yaepg.log", oss.str().c_str(), oss.str().size());
     }
 
   }
