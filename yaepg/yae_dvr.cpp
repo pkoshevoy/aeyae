@@ -93,8 +93,9 @@ namespace yae
     if (date_)
     {
       const struct tm & tm = *date_;
+#ifndef _WIN32
       YAE_EXPECT(tm.tm_gmtoff == program.tm_.tm_gmtoff);
-
+#endif
       if (tm.tm_year != program.tm_.tm_year ||
           tm.tm_mon  != program.tm_.tm_mon  ||
           tm.tm_mday != program.tm_.tm_mday)

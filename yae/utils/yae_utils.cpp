@@ -526,9 +526,9 @@ namespace yae
 
 #ifdef _WIN32
     std::wstring path_utf16 = utf8_to_utf16(path_utf8);
-    ULARGE_INTEGER bytes_available_to_caller = 0;
-    ULARGE_INTEGER total_number_of_bytes = 0;
-    ULARGE_INTEGER total_number_of_bytes_free = 0;
+    ULARGE_INTEGER bytes_available_to_caller;
+    ULARGE_INTEGER total_number_of_bytes;
+    ULARGE_INTEGER total_number_of_bytes_free;
     BOOL ok = GetDiskFreeSpaceExW(path_utf16.c_str(),
                                   &bytes_available_to_caller,
                                   &total_number_of_bytes,
