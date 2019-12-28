@@ -8,6 +8,8 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(PROGNAME "aeyae")
 project(aeyae)
 
+include("${PROJECT_SOURCE_DIR}/aeyae_get_git_revision.cmake")
+
 find_package(Threads REQUIRED)
 
 set(Boost_USE_MULTITHREAD ON)

@@ -318,6 +318,9 @@ namespace yae
   void
   MainWindow::fileExit()
   {
+    dvr_.shutdown();
+    thread_.stop();
+
     MainWindow::close();
     qApp->quit();
   }

@@ -5728,7 +5728,7 @@ namespace yae
         // FIXME: pkoshevoy:
         TTime gps_now = TTime::gps_now().rebased(1);
         TTime gps_time_err = TTime(channel.gps_time_, 1) - gps_now;
-        if (abs(gps_time_err.get(1)) >= 60)
+        if (std::abs(gps_time_err.get(1)) >= 60)
         {
           yae_elog("GPS time discrepancy: expected approx %s, actual %s",
                    gps_time_to_str(gps_now.get(1)).c_str(),

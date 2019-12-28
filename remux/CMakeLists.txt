@@ -276,10 +276,6 @@ if (WIN32)
   set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
 endif ()
 
-if (APPLE)
-  set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
-endif ()
-
 add_custom_target("update_resource_files_aeyaeremux" ALL
   COMMAND "${CMAKE_COMMAND}"
   -DAEYAE_SOURCE_DIR="${aeyae_SOURCE_DIR}"
@@ -547,13 +543,20 @@ endif ()
 if (APPLE)
   set_target_properties(${PROGNAME}
     PROPERTIES
-    MACOSX_BUNDLE_INFO_PLIST ${PROJECT_BINARY_DIR}/${PROGNAME}.plist)
+    MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJ_YYMMDD_HHMMSS}"
+    MACOSX_BUNDLE_LONG_VERSION_STRING "${PROJ_YYMMDD_HHMMSS}"
+    MACOSX_BUNDLE_INFO_STRING "Aeyae Remux by Pavel Koshevoy, build ${PROJ_WC_REVISION}"
+    MACOSX_BUNDLE_COPYRIGHT "Aeyae Remux by Pavel Koshevoy, build ${PROJ_WC_REVISION}"
+    MACOSX_BUNDLE_ICON_FILE "${PROGNAME}.icns"
+    MACOSX_BUNDLE_GUI_IDENTIFIER "com.pavelkoshevoy.${PROGNAME}"
+    MACOSX_BUNDLE_BUNDLE_NAME "${PROGNAME}"
+    MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/${PROGNAME}.plist.in")
 
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/${PROGNAME}.icns
+  set_source_files_properties("${PROJECT_SOURCE_DIR}/${PROGNAME}.icns"
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources)
 
-  set_source_files_properties(${PROJECT_SOURCE_DIR}/InfoPlist.strings
+  set_source_files_properties("${PROJECT_SOURCE_DIR}/InfoPlist.strings"
     PROPERTIES
     MACOSX_PACKAGE_LOCATION Resources/en.lproj)
 

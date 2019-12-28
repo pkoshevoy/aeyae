@@ -9,25 +9,25 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
-	<string>yaetv</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundleShortVersionString</key>
-	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<string>@MACOSX_BUNDLE_SHORT_VERSION_STRING@</string>
 	<key>CFBundleVersion</key>
-	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<string>@MACOSX_BUNDLE_LONG_VERSION_STRING@</string>
 	<key>CFBundleGetInfoString</key>
-	<string>yaetv by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
+	<string>@MACOSX_BUNDLE_INFO_STRING@</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>yaetv by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
+	<string>@MACOSX_BUNDLE_COPYRIGHT@</string>
 	<key>CFBundleIconFile</key>
-	<string>yaetv.icns</string>
+	<string>@MACOSX_BUNDLE_ICON_FILE@</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.pavelkoshevoy.yaetv</string>
+	<string>@MACOSX_BUNDLE_GUI_IDENTIFIER@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>yaetv</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundleDisplayName</key>
-	<string>yaetv</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>NSAppleScriptEnabled</key>
