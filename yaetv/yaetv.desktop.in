@@ -1,0 +1,16 @@
+[Desktop Entry]
+Comment=https://github.com/pkoshevoy/aeyae
+Exec=@CMAKE_INSTALL_PREFIX@/bin/yaetv %U
+GenericName=yaetv
+Categories=Qt;AudioVideo;Video;
+Icon=@CMAKE_INSTALL_PREFIX@/share/icons/yaetv.png
+Name=yaetv
+Path=
+StartupNotify=false
+Terminal=false
+TerminalOptions=
+Type=Application
+X-DBUS-ServiceName=
+X-DBUS-StartupType=none
+X-KDE-SubstituteUID=false
+X-KDE-Username=

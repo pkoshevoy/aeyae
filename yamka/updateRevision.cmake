@@ -1,4 +1,4 @@
-include("${PROJECT_SOURCE_DIR}/../getGitRevision.cmake")
+include("${PROJECT_SOURCE_DIR}/../aeyae_get_git_revision.cmake")
 
 
 configure_file(

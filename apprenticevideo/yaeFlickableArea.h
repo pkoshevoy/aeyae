@@ -17,6 +17,7 @@
 // local interfaces:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
+#include "yaeScrollview.h"
 #include "yaeVec.h"
 
 
@@ -34,14 +35,17 @@ namespace yae
   public:
     FlickableArea(const char * id,
                   ItemView & view,
-                  Item & vscrollbar);
+                  SliderDrag & vslider);
 
     FlickableArea(const char * id,
                   ItemView & view,
-                  Item * vscrollbar = NULL,
-                  Item * hscrollbar = NULL);
+                  SliderDrag * vslider = NULL,
+                  SliderDrag * hslider = NULL);
 
     ~FlickableArea();
+
+    void setHorSlider(SliderDrag * hslider);
+    void setVerSlider(SliderDrag * vslider);
 
     // virtual:
     bool onScroll(const TVec2D & itemCSysOrigin,
@@ -68,6 +72,9 @@ namespace yae
     void animate();
 
   protected:
+    Scrollview & find_hscrollview() const;
+    Scrollview & find_vscrollview() const;
+
     struct TPrivate;
     TPrivate * p_;
   };

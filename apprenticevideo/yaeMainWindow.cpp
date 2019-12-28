@@ -42,7 +42,8 @@
 #include <QVBoxLayout>
 #include <QWheelEvent>
 
-// yae includes:
+// aeyae includes:
+#include "yae/api/yae_version.h"
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/video/yae_pixel_formats.h"
@@ -62,7 +63,6 @@
 #include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
-#include "yaeVersion.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;

@@ -95,8 +95,11 @@ namespace yae
   //
   struct HDHomeRun
   {
-    HDHomeRun();
+    HDHomeRun(const std::string & cache_dir);
     ~HDHomeRun();
+
+    void discover_tuners(std::list<std::string> & tuners);
+    bool init(const std::string & tuner_name);
 
     //----------------------------------------------------------------
     // Session
@@ -126,8 +129,11 @@ namespace yae
     //
     typedef yae::shared_ptr<Session> TSessionPtr;
 
-    // grab a tuner, if available:
+    // grab any tuner, if available:
     TSessionPtr open_session();
+
+    // grab a specific tuner, if available:
+    TSessionPtr open_session(const std::string & tuner);
 
     bool scan_channels(TSessionPtr session_ptr,
                        const IAssert & keep_going);
@@ -139,6 +145,7 @@ namespace yae
     // fill in the major.minor -> frequency lookup table:
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
     bool get_channels(const std::string & freq, TChannels & channels) const;
+    bool get_channels(std::map<std::string, TChannels> & channels) const;
 
 
   protected:

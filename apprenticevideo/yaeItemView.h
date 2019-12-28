@@ -24,6 +24,7 @@
 // yae includes:
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_utils.h"
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -122,79 +123,6 @@ namespace yae
   private:
     PostponeEvent(const PostponeEvent &);
     PostponeEvent & operator = (const PostponeEvent &);
-  };
-
-
-  //----------------------------------------------------------------
-  // ContextCallback
-  //
-  struct ContextCallback
-  {
-    typedef void(*TFuncPtr)(void *);
-
-    ContextCallback(TFuncPtr func = NULL,
-                    void * context = NULL)
-    {
-      reset(func, context);
-    }
-
-    inline void reset(TFuncPtr func = NULL,
-                      void * context = NULL)
-    {
-      func_ = func;
-      context_ = context;
-    }
-
-    inline bool is_null() const
-    { return !func_; }
-
-    inline void operator()() const
-    {
-      if (func_)
-      {
-        func_(context_);
-      }
-    }
-
-  protected:
-    TFuncPtr func_;
-    void * context_;
-  };
-
-
-  //----------------------------------------------------------------
-  // ContextQuery
-  //
-  template <typename TData>
-  struct ContextQuery
-  {
-    typedef bool(*TFuncPtr)(void *, TData &);
-
-    ContextQuery(TFuncPtr func = NULL,
-                 void * context = NULL)
-    {
-      reset(func, context);
-    }
-
-    inline void reset(TFuncPtr func = NULL,
-                      void * context = NULL)
-    {
-      func_ = func;
-      context_ = context;
-    }
-
-    inline bool is_null() const
-    { return !func_; }
-
-    inline bool operator()(TData & result) const
-    {
-      bool ok = func_ ? func_(context_, result) : false;
-      return ok;
-    }
-
-  protected:
-    TFuncPtr func_;
-    void * context_;
   };
 
 

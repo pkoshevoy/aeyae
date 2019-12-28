@@ -2287,11 +2287,11 @@ namespace yae
 
     bool ok = connect(&t0_, SIGNAL(mapped(int)),
                       this, SLOT(timecode_changed_t0(int)));
-    YAE_ASSERT(true);
+    YAE_ASSERT(ok);
 
     ok = connect(&t1_, SIGNAL(mapped(int)),
                  this, SLOT(timecode_changed_t1(int)));
-    YAE_ASSERT(true);
+    YAE_ASSERT(ok);
 
     ok = connect(&actionSetInPoint_, SIGNAL(triggered()),
                  this, SLOT(set_in_point()));

@@ -160,6 +160,8 @@ namespace yae
     // create program recording schedule
     void update(DVR & dvr, const yae::mpeg_ts::EPG & epg);
 
+    void get(std::map<uint32_t, TScheduledRecordings> & recordings) const;
+
     // find a scheduled recording corresponding to the
     // given channel number and gps time:
     TRecordingPtr get(uint32_t ch_num, uint32_t gps_time) const;
@@ -220,7 +222,6 @@ namespace yae
 
       DVR & dvr_;
       yae::Worker worker_;
-      // yae::TOpenFilePtr file_;
       yae::mpeg_ts::Context ctx_;
       yae::RingBuffer ring_buffer_;
       yae::TTime start_;
@@ -275,10 +276,27 @@ namespace yae
     typedef yae::shared_ptr<Stream, IStream> TStreamPtr;
 
 
-    DVR(const std::string & basedir = std::string());
+    //----------------------------------------------------------------
+    // ServiceLoop
+    //
+    struct ServiceLoop : yae::Worker::Task
+    {
+      ServiceLoop(DVR & dvr);
+
+      // virtual:
+      void execute(const yae::Worker & worker);
+      void cancel();
+
+      DVR & dvr_;
+      DontStop keep_going_;
+    };
+
+
+    DVR(const std::string & yaetv_dir,
+        const std::string & recordings_dir);
     ~DVR();
 
-    // TStreamPtr get_stream(const std::string & frequency);
+    void init_packet_handlers();
     void shutdown();
     void scan_channels();
     void update_epg(bool slow = false);
@@ -287,6 +305,10 @@ namespace yae
                               const TTime & duration);
 
     TWorkerPtr get_stream_worker(const std::string & frequency);
+
+    void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
+    void get(Blacklist & blacklist) const;
+    void get(Wishlist & wishlist) const;
 
     void get_epg(yae::mpeg_ts::EPG & epg,
                  const std::string & lang = std::string("eng")) const;

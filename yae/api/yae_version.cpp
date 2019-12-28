@@ -6,11 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// standard:
 #include <sstream>
 
-// local interfaces:
-#include "yaeVersion.h"
+// aeyae:
+#include "yae_version.h"
 
 
 //----------------------------------------------------------------
@@ -33,7 +33,7 @@ parse_next(std::istringstream & iss)
 // yae_version
 //
 void
-yae_version(unsigned int *major, unsigned int *minor, unsigned int *patch)
+yae_version(unsigned int * major, unsigned int * minor, unsigned int * patch)
 {
   std::istringstream iss;
   iss.str(std::string(YAE_REVISION_TIMESTAMP));

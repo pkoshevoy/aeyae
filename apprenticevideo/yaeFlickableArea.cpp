@@ -49,12 +49,12 @@ namespace yae
 
     TPrivate(ItemView & itemView,
              FlickableArea & flickable,
-             Item * vscrollbar,
-             Item * hscrollbar):
+             SliderDrag * vslider,
+             SliderDrag * hslider):
       itemView_(itemView),
       flickable_(flickable),
-      vscrollbar_(vscrollbar),
-      hscrollbar_(hscrollbar),
+      vslider_(vslider),
+      hslider_(hslider),
       estimating_(false),
       nsamples_(0),
       v0_(0.0)
@@ -138,21 +138,21 @@ namespace yae
 
     void uncacheScrollbars()
     {
-      if (vscrollbar_)
+      if (vslider_)
       {
-        vscrollbar_->uncache();
+        vslider_->scrollbar_.uncache();
       }
 
-      if (hscrollbar_)
+      if (hslider_)
       {
-        hscrollbar_->uncache();
+        hslider_->scrollbar_.uncache();
       }
     }
 
     ItemView & itemView_;
     FlickableArea & flickable_;
-    Item * vscrollbar_;
-    Item * hscrollbar_;
+    SliderDrag * vslider_;
+    SliderDrag * hslider_;
     TVec2D startPos_;
     bool estimating_;
 
@@ -175,11 +175,11 @@ namespace yae
   //
   FlickableArea::FlickableArea(const char * id,
                                ItemView & itemView,
-                               Item & vscrollbar):
+                               SliderDrag & vslider):
     InputArea(id),
     p_(NULL)
   {
-    p_ = new TPrivate(itemView, *this, &vscrollbar, NULL);
+    p_ = new TPrivate(itemView, *this, &vslider, NULL);
   }
 
   //----------------------------------------------------------------
@@ -187,12 +187,12 @@ namespace yae
   //
   FlickableArea::FlickableArea(const char * id,
                                ItemView & itemView,
-                               Item * vscrollbar,
-                               Item * hscrollbar):
+                               SliderDrag * vslider,
+                               SliderDrag * hslider):
     InputArea(id),
     p_(NULL)
   {
-    p_ = new TPrivate(itemView, *this, vscrollbar, hscrollbar);
+    p_ = new TPrivate(itemView, *this, vslider, hslider);
   }
 
   //----------------------------------------------------------------
@@ -201,6 +201,24 @@ namespace yae
   FlickableArea::~FlickableArea()
   {
     delete p_;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::setHorSlider
+  //
+  void
+  FlickableArea::setHorSlider(SliderDrag * hslider)
+  {
+    p_->hslider_ = hslider;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::setVerSlider
+  //
+  void
+  FlickableArea::setVerSlider(SliderDrag * vslider)
+  {
+    p_->vslider_ = vslider;
   }
 
   //----------------------------------------------------------------
@@ -213,17 +231,16 @@ namespace yae
   {
     p_->dontAnimate();
 
-    Scrollview & scrollview = Item::ancestor<Scrollview>();
-    double sh = scrollview.height();
-    double ch = scrollview.content_->height();
+    Scrollview & vsv = find_vscrollview();
+    double sh = vsv.height();
+    double ch = vsv.content_->height();
     double yRange = sh - ch;
-    double y = scrollview.position_.y() * yRange + sh * degrees / 360.0;
+    double y = vsv.position_.y() * yRange + sh * degrees / 360.0;
     double s = std::min<double>(1.0, std::max<double>(0.0, y / yRange));
-    scrollview.position_.set_y(s);
+    vsv.position_.set_y(s);
 
     p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
-
     return true;
   }
 
@@ -236,8 +253,12 @@ namespace yae
   {
     p_->dontAnimate();
 
-    Scrollview & scrollview = Item::ancestor<Scrollview>();
-    p_->startPos_ = scrollview.position_;
+    Scrollview & hsv = find_hscrollview();
+    p_->startPos_.set_x(hsv.position_.x());
+
+    Scrollview & vsv = find_vscrollview();
+    p_->startPos_.set_y(vsv.position_.y());
+
     p_->tStart_ = boost::chrono::steady_clock::now();
     p_->nsamples_ = 0;
     p_->addSample(0.0, rootCSysPoint.y());
@@ -255,14 +276,15 @@ namespace yae
   {
     p_->dontAnimate();
 
-    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    Scrollview & hsv = find_hscrollview();
+    Scrollview & vsv = find_vscrollview();
 
-    double sw = scrollview.width();
-    double cw = scrollview.content_->width();
+    double sw = hsv.width();
+    double cw = hsv.content_->width();
     double xRange = sw - cw;
 
-    double sh = scrollview.height();
-    double ch = scrollview.content_->height();
+    double sh = vsv.height();
+    double ch = vsv.content_->height();
     double yRange = sh - ch;
 
     TVec2D drag = rootCSysDragEnd - rootCSysDragStart;
@@ -272,7 +294,8 @@ namespace yae
     TVec2D pos = p_->startPos_ + TVec2D(tx, ty);
     pos.clamp(0.0, 1.0);
 
-    scrollview.position_ = pos;
+    hsv.position_.set_x(pos.x());
+    vsv.position_.set_y(pos.y());
 
     p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
@@ -348,14 +371,15 @@ namespace yae
       return;
     }
 
-    Scrollview & scrollview = Item::ancestor<Scrollview>();
+    Scrollview & hsv = find_hscrollview();
+    Scrollview & vsv = find_vscrollview();
 
-    double sw = scrollview.width();
-    double cw = scrollview.content_->width();
+    double sw = hsv.width();
+    double cw = hsv.content_->width();
     double xRange = sw - cw;
 
-    double sh = scrollview.height();
-    double ch = scrollview.content_->height();
+    double sh = vsv.height();
+    double ch = vsv.content_->height();
     double yRange = sh - ch;
 
     boost::chrono::steady_clock::time_point tNow =
@@ -368,14 +392,16 @@ namespace yae
     v.set_x(v.x() / xRange);
     v.set_y(v.y() / yRange);
 
-    TVec2D pos = scrollview.position_ + v;
-    pos.clamp(0.0, 1.0);
+    TVec2D p0(hsv.position_.x(), vsv.position_.y());
+    TVec2D p1 = p0 + v;
+    p1.clamp(0.0, 1.0);
 
-    TVec2D diff = pos - scrollview.position_;
-    scrollview.position_ = pos;
+    TVec2D diff = p1 - p0;
+    hsv.position_.set_x(p1.x());
+    vsv.position_.set_y(p1.y());
 #if 0
     std::cerr
-      << "FIXME: pos: " << pos
+      << "FIXME: pos: " << p1
       << ", xrange: " << xRange
       << ", yrange: " << yRange
       << std::endl;
@@ -416,6 +442,30 @@ namespace yae
 
     YAE_ASSERT(v1.normSqrd() < p_->v0_.normSqrd());
     p_->v0_ = v1;
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::find_hscrollview
+  //
+  Scrollview &
+  FlickableArea::find_hscrollview() const
+  {
+    Scrollview & hsv =
+      p_->hslider_ ? p_->hslider_->scrollview_ :
+      p_->vslider_ ? p_->vslider_->scrollview_ :
+      Item::ancestor<Scrollview>();
+  }
+
+  //----------------------------------------------------------------
+  // FlickableArea::find_vscrollview
+  //
+  Scrollview &
+  FlickableArea::find_vscrollview() const
+  {
+    Scrollview & vsv =
+      p_->vslider_ ? p_->vslider_->scrollview_ :
+      p_->hslider_ ? p_->hslider_->scrollview_ :
+      Item::ancestor<Scrollview>();
   }
 
 }

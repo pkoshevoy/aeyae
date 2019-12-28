@@ -572,10 +572,7 @@ namespace yae
     }
 
     FlickableArea & maScrollview =
-      sview.add(new FlickableArea("ma_sview",
-                                  view,
-                                  &scrollbar,
-                                  &hscrollbar));
+      sview.add(new FlickableArea("ma_sview", view));
     maScrollview.anchors_.fill(sview);
 
     InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
@@ -585,11 +582,14 @@ namespace yae
     RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
     slider.anchors_.top_ = slider.
       addExpr(new CalcSliderTop(sview, scrollbar, slider));
-    slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
-    slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
+    slider.anchors_.left_ =
+      ItemRef::offset(scrollbar, kPropertyLeft, 2);
+    slider.anchors_.right_ =
+      ItemRef::offset(scrollbar, kPropertyRight, -2);
     slider.height_ = slider.
       addExpr(new CalcSliderHeight(sview, scrollbar, slider));
-    slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
+    slider.radius_ =
+      ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = slider.
       addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
     slider.color_ = slider.
@@ -598,19 +598,23 @@ namespace yae
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
     maSlider.anchors_.fill(slider);
+    maScrollview.setVerSlider(&maSlider);
 
-    InputArea & maHScrollbar = scrollbar.addNew<InputArea>("ma_hscrollbar");
+    InputArea & maHScrollbar = hscrollbar.addNew<InputArea>("ma_hscrollbar");
     maHScrollbar.anchors_.fill(hscrollbar);
 
     // configure horizontal scrollbar slider:
     RoundRect & hslider = hscrollbar.addNew<RoundRect>("hslider");
-    hslider.anchors_.top_ = ItemRef::offset(hscrollbar, kPropertyTop, 2);
-    hslider.anchors_.bottom_ = ItemRef::offset(hscrollbar, kPropertyBottom, -2);
+    hslider.anchors_.top_ =
+      ItemRef::offset(hscrollbar, kPropertyTop, 2);
+    hslider.anchors_.bottom_ =
+      ItemRef::offset(hscrollbar, kPropertyBottom, -2);
     hslider.anchors_.left_ =
       hslider.addExpr(new CalcSliderLeft(sview, hscrollbar, hslider));
     hslider.width_ =
       hslider.addExpr(new CalcSliderWidth(sview, hscrollbar, hslider));
-    hslider.radius_ = ItemRef::scale(hslider, kPropertyHeight, 0.5);
+    hslider.radius_ =
+      ItemRef::scale(hslider, kPropertyHeight, 0.5);
     hslider.background_ = hslider.
       addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
     hslider.color_ = hslider.
@@ -619,6 +623,7 @@ namespace yae
     SliderDrag & maHSlider =
       hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));
     maHSlider.anchors_.fill(hslider);
+    maScrollview.setHorSlider(&maHSlider);
 
     return sview;
   }

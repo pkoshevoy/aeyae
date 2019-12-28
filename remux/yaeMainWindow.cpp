@@ -39,6 +39,7 @@
 #include "json/json.h"
 
 // yae includes:
+#include "yae/api/yae_version.h"
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/video/yae_pixel_formats.h"
@@ -52,7 +53,6 @@
 #include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
-#include "apprenticevideo/yaeVersion.h"
 
 
 namespace yae
@@ -353,11 +353,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        av_log(NULL, AV_LOG_WARNING, "LoadTask::run exception: %s", e.what());
+       yae_wlog("LoadTask::run exception: %s", e.what());
       }
       catch (...)
       {
-        av_log(NULL, AV_LOG_WARNING, "LoadTask::run unknown exception");
+       yae_wlog("LoadTask::run unknown exception");
       }
 
       qApp->postEvent(target_, new Done());
@@ -388,8 +388,7 @@ namespace yae
       if (!open_primary_and_aux_demuxers(source, demuxers))
       {
         // failed to open the primary resource:
-        av_log(NULL, AV_LOG_WARNING,
-               "failed to open %s, skipping...",
+       yae_wlog("failed to open %s, skipping...",
                source.c_str());
         return TDemuxerInterfacePtr();
       }
@@ -455,13 +454,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        av_log(NULL, AV_LOG_WARNING,
-               "LoadTask::load_sources exception: %s", e.what());
+       yae_wlog("LoadTask::load_sources exception: %s", e.what());
       }
       catch (...)
       {
-        av_log(NULL, AV_LOG_WARNING,
-               "LoadTask::load_sources unknown exception");
+       yae_wlog("LoadTask::load_sources unknown exception");
       }
     }
   }
@@ -511,13 +508,13 @@ namespace yae
         if (!trim.t0_.empty() &&
             !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
         {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t0_.c_str());
+         yae_elog("failed to parse %s", trim.t0_.c_str());
         }
 
         if (!trim.t1_.empty() &&
             !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
         {
-          av_log(NULL, AV_LOG_ERROR, "failed to parse %s", trim.t1_.c_str());
+         yae_elog("failed to parse %s", trim.t1_.c_str());
         }
 
         TClipPtr clip(new Clip(demuxer, track_id, keep));
@@ -525,13 +522,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        av_log(NULL, AV_LOG_WARNING,
-               "LoadTask::load_source_clips exception: %s", e.what());
+       yae_wlog("LoadTask::load_source_clips exception: %s", e.what());
       }
       catch (...)
       {
-        av_log(NULL, AV_LOG_WARNING,
-               "LoadTask::load_source_clips unknown exception");
+       yae_wlog("LoadTask::load_source_clips unknown exception");
       }
     }
   }
@@ -828,11 +823,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        av_log(NULL, AV_LOG_WARNING, "ExportTask::run exception: %s", e.what());
+       yae_wlog("ExportTask::run exception: %s", e.what());
       }
       catch (...)
       {
-        av_log(NULL, AV_LOG_WARNING, "ExportTask::run unknown exception");
+       yae_wlog("ExportTask::run unknown exception");
       }
 
       qApp->postEvent(target_, new Done());

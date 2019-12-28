@@ -9,6 +9,9 @@
 #ifndef YAE_VERSION_H_
 #define YAE_VERSION_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 #define YAE_REVISION "@PROJ_WC_REVISION@"
 #define YAE_REVISION_TIMESTAMP "@PROJ_YY_MM_DD_HHMM@"
 
@@ -24,9 +27,12 @@
 // patch = (((day - 1) * 24 + hour) * 60 + minute),
 // fits in [0, 65535] range
 //
-extern "C" void yae_version(unsigned int *major,
-                            unsigned int *minor,
-                            unsigned int *patch);
+extern "C"
+{
+  YAE_API void yae_version(unsigned int *major,
+                           unsigned int *minor,
+                           unsigned int *patch);
+}
 
 
 #endif // YAE_VERSION_H_

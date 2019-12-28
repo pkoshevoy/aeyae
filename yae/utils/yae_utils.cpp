@@ -1890,6 +1890,49 @@ namespace yae
 
     return file;
   }
+
+
+  //----------------------------------------------------------------
+  // ContextCallback::ContextCallback
+  //
+  ContextCallback::ContextCallback(ContextCallback::TFuncPtr func,
+                                   void * context)
+  {
+    reset(func, context);
+  }
+
+  //----------------------------------------------------------------
+  // ContextCallback::reset
+  //
+  void
+  ContextCallback::reset(ContextCallback::TFuncPtr func,
+                         void * context)
+  {
+    func_ = func;
+    context_ = context;
+  }
+
+  //----------------------------------------------------------------
+  // ContextCallback::is_null
+  //
+  bool
+  ContextCallback::is_null() const
+  {
+    return !func_;
+  }
+
+  //----------------------------------------------------------------
+  // ContextCallback::operator
+  //
+  void
+  ContextCallback::operator()() const
+  {
+    if (func_)
+    {
+      func_(context_);
+    }
+  }
+
 }
 
 #if defined(_WIN32) && !defined(__MINGW32__)

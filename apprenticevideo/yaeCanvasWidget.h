@@ -134,8 +134,10 @@ namespace yae
 
       virtual void repaint()
       {
-        // this is just to prevent concurrent OpenGL access to the same context:
+        // this is just to prevent concurrent OpenGL access
+        // to the same context:
         TMakeCurrentContext lock(canvas_.Canvas::context());
+        YAE_ASSERT(isVisible());
 
 #ifdef YAE_USE_QOPENGL_WIDGET
         canvas_.TWidget::update();

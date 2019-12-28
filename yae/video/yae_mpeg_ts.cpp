@@ -4636,12 +4636,39 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // EPG::Program::operator
+    //
+    bool
+    EPG::Program::operator == (const EPG::Program & other) const
+    {
+      return (other.title_ == title_ &&
+              other.description_ == description_ &&
+              other.rating_ == rating_ &&
+              other.gps_time_ == gps_time_ &&
+              other.duration_ == duration_);
+    }
+
+
+    //----------------------------------------------------------------
     // EPG::Channel::Channel
     //
     EPG::Channel::Channel():
       major_(0),
       minor_(0)
     {}
+
+    //----------------------------------------------------------------
+    // EPG::Channel::operator
+    //
+    bool
+    EPG::Channel::operator == (const Channel & other) const
+    {
+      return (other.major_ == major_ &&
+              other.minor_ == minor_ &&
+              other.name_ == name_ &&
+              other.description_ == description_ &&
+              other.programs_ == programs_);
+    }
 
     //----------------------------------------------------------------
     // EPG::Channel::gps_time

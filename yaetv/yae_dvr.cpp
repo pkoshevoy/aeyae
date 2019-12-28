@@ -20,11 +20,12 @@
 #include <boost/thread.hpp>
 #endif
 
-// yae:
+// aeyae:
 #include "yae/api/yae_log.h"
 
-// epg:
+// yaetv:
 #include "yae_dvr.h"
+#include "yae_signal_handler.h"
 
 
 namespace yae
@@ -682,6 +683,16 @@ namespace yae
   //----------------------------------------------------------------
   // Schedule::get
   //
+  void
+  Schedule::get(std::map<uint32_t, TScheduledRecordings> & recordings) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    recordings = recordings_;
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::get
+  //
   TRecordingPtr
   Schedule::get(uint32_t ch_num, uint32_t gps_time) const
   {
@@ -1228,67 +1239,111 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DVR::ServiceLoop::ServiceLoop
+  //
+  DVR::ServiceLoop::ServiceLoop(DVR & dvr):
+    dvr_(dvr)
+  {}
+
+  //----------------------------------------------------------------
+  // DVR::ServiceLoop::execute
+  //
+  void
+  DVR::ServiceLoop::execute(const yae::Worker & worker)
+  {
+    dvr_.init_packet_handlers();
+
+    TTime schedule_update_period = TTime(30, 1);
+    TTime schedule_update_time = TTime::now() - schedule_update_period;
+    TTime channel_scan_time = TTime::now();
+    TTime epg_update_time = TTime::now();
+    dvr_.update_epg();
+
+    // pull EPG, evaluate wishlist, start captures, etc...
+    yae::mpeg_ts::EPG epg;
+
+    while (!keep_going_.stop_ &&
+           !signal_handler_received_sigpipe() &&
+           !signal_handler_received_sigint())
+    {
+      TTime now = TTime::now();
+
+      if (dvr_.load_wishlist())
+      {
+        dvr_.save_schedule();
+      }
+
+      if (schedule_update_period <= (now - schedule_update_time))
+      {
+        schedule_update_time = now;
+        dvr_.get_epg(epg);
+
+#if 0 // ndef NDEBUG
+        for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+               i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+        {
+          const yae::mpeg_ts::EPG::Channel & channel = i->second;
+          std::string fn = strfmt("epg-%02i.%02i.json",
+                                  channel.major_,
+                                  channel.minor_);
+          Json::Value json;
+          yae::mpeg_ts::save(json, channel);
+          yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
+        }
+#endif
+
+        dvr_.evaluate(epg);
+      }
+
+      if (dvr_.worker_.is_idle())
+      {
+        double sec_since_channel_scan = (now - channel_scan_time).sec();
+        double sec_since_epg_update = (now - epg_update_time).sec();
+        bool blacklist_updated = dvr_.load_blacklist();
+
+        if (blacklist_updated ||
+            sec_since_epg_update > dvr_.epg_refresh_period_.sec())
+        {
+          dvr_.update_epg(true);
+          epg_update_time = now;
+        }
+        else if (sec_since_channel_scan > dvr_.channel_scan_period_.sec())
+        {
+          dvr_.scan_channels();
+          channel_scan_time = TTime::now();
+        }
+      }
+
+      boost::this_thread::sleep_for(boost::chrono::seconds(1));
+    }
+
+    dvr_.shutdown();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::ServiceLoop::cancel
+  //
+  void
+  DVR::ServiceLoop::cancel()
+  {
+    yae::Worker::Task::cancel();
+    keep_going_.stop_ = true;
+  }
+
+
+  //----------------------------------------------------------------
   // DVR::DVR
   //
-  DVR::DVR(const std::string & basedir):
-    yaetv_(yae::get_user_folder_path(".yaetv")),
+  DVR::DVR(const std::string & yaetv_dir,
+           const std::string & basedir):
+    hdhr_(yaetv_dir),
+    yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
     margin_(60, 1)
   {
-    YAE_ASSERT(yae::mkdir_p(yaetv_.string()));
-
-    // load the frequencies:
-    std::map<std::string, yae::TChannels> frequencies;
-    try
-    {
-      std::string path = (yaetv_ / "frequencies.json").string();
-      Json::Value json;
-      yae::TOpenFile(path, "rb").load(json);
-      yae::load(json, frequencies);
-    }
-    catch (...)
-    {}
-
-    scan_channels();
-
-    if (frequencies.empty())
-    {
-      worker_.wait_until_finished();
-
-      std::map<uint32_t, std::string> channels;
-      hdhr_.get_channels(channels);
-
-      for (std::map<uint32_t, std::string>::const_iterator
-             i = channels.begin(); i != channels.end(); ++i)
-      {
-        const uint32_t ch_num = i->first;
-        const std::string & frequency = i->second;
-        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-        frequencies[frequency][major][minor] = std::string();
-      }
-    }
-
-    // load the EPG:
-    for (std::map<std::string, yae::TChannels>::const_iterator
-           i = frequencies.begin(); i != frequencies.end(); ++i)
-    {
-      const std::string & frequency = i->first;
-      std::string epg_path =
-        (yaetv_ / ("epg-" + frequency + ".json")).string();
-
-      TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
-      packet_handler_ptr.reset(new PacketHandler(*this));
-
-      Json::Value epg;
-      if (yae::TOpenFile(epg_path, "rb").load(epg))
-      {
-        PacketHandler & packet_handler = *packet_handler_ptr;
-        packet_handler.ctx_.load(epg[frequency]);
-      }
-    }
+    YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
 
     // load the blacklist:
     load_blacklist();
@@ -1358,6 +1413,51 @@ namespace yae
   DVR::~DVR()
   {
     shutdown();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::init_packet_handlers
+  //
+  void
+  DVR::init_packet_handlers()
+  {
+    // load the frequencies:
+    std::map<std::string, yae::TChannels> frequencies;
+    try
+    {
+      std::string path = (yaetv_ / "frequencies.json").string();
+      Json::Value json;
+      yae::TOpenFile(path, "rb").load(json);
+      yae::load(json, frequencies);
+    }
+    catch (...)
+    {}
+
+    if (frequencies.empty())
+    {
+      // NOTE: this assumes hdhr_.discover_tuners(..), hdhr_.init(tuner)
+      // has already happened:
+      hdhr_.get_channels(frequencies);
+    }
+
+    // load the EPG:
+    for (std::map<std::string, yae::TChannels>::const_iterator
+           i = frequencies.begin(); i != frequencies.end(); ++i)
+    {
+      const std::string & frequency = i->first;
+      std::string epg_path =
+        (yaetv_ / ("epg-" + frequency + ".json")).string();
+
+      TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
+      packet_handler_ptr.reset(new PacketHandler(*this));
+
+      Json::Value epg;
+      if (yae::TOpenFile(epg_path, "rb").load(epg))
+      {
+        PacketHandler & packet_handler = *packet_handler_ptr;
+        packet_handler.ctx_.load(epg[frequency]);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -1671,14 +1771,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // get_packet_handlers
+  // DVR::get
   //
-  static void
-  get_packet_handlers(const DVR & dvr,
-                      std::map<std::string, DVR::TPacketHandlerPtr> & ph)
+  void
+  DVR::get(std::map<std::string, DVR::TPacketHandlerPtr> & ph) const
   {
-    boost::unique_lock<boost::mutex> lock(dvr.mutex_);
-    ph = dvr.packet_handler_;
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    ph = packet_handler_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get
+  //
+  void
+  DVR::get(Blacklist & blacklist) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    blacklist = blacklist_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get
+  //
+  void
+  DVR::get(Wishlist & wishlist) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    wishlist = wishlist_;
   }
 
   //----------------------------------------------------------------
@@ -1688,13 +1807,17 @@ namespace yae
   DVR::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
   {
     std::map<std::string, TPacketHandlerPtr> packet_handlers;
-    get_packet_handlers(*this, packet_handlers);
+    get(packet_handlers);
 
     for (std::map<std::string, TPacketHandlerPtr>::const_iterator
            i = packet_handlers.begin(); i != packet_handlers.end(); ++i)
     {
-      const PacketHandler & packet_handler = *(i->second.get());
-      packet_handler.ctx_.get_epg(epg, lang);
+      const TPacketHandlerPtr & packet_handler_ptr = i->second;
+      if (packet_handler_ptr)
+      {
+        const PacketHandler & packet_handler = *packet_handler_ptr;
+        packet_handler.ctx_.get_epg(epg, lang);
+      }
     }
   }
 
@@ -1725,7 +1848,7 @@ namespace yae
   DVR::save_epg() const
   {
     std::map<std::string, TPacketHandlerPtr> packet_handlers;
-    get_packet_handlers(*this, packet_handlers);
+    get(packet_handlers);
 
     for (std::map<std::string, TPacketHandlerPtr>::const_iterator
            i = packet_handlers.begin(); i != packet_handlers.end(); ++i)

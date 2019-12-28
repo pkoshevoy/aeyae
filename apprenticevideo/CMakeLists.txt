@@ -1,10 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-project("apprenticevideo")
 set(PROGNAME "apprenticevideo")
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
+project("apprenticevideo")
 
 find_package(OpenGL REQUIRED)
 
@@ -209,7 +206,6 @@ set(project_sources
   yaeUtilsQt.h
   yaeUtilsQt.cpp
   yaeVec.h
-  yaeVersion.cpp
   )
 
 if (QT4_FOUND)
@@ -317,8 +313,6 @@ if (GLEW_INCLUDE_DIR)
   include_directories(AFTER ${GLEW_INCLUDE_DIR})
 endif ()
 
-set (YAE_VERSIONED_FILES "${PROJECT_BINARY_DIR}/yaeVersion.h")
-
 if (WIN32)
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES}
@@ -331,22 +325,15 @@ if (APPLE)
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
 endif ()
 
-add_custom_target("update_revision_apprenticevideo" ALL
-  DEPENDS
-#  ${YAE_VERSIONED_FILES}
-  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
-)
-
-add_custom_command(OUTPUT
-#  ${YAE_VERSIONED_FILES}
-  "${PROJECT_BINARY_DIR}/yaeVersion.h.tmp"
+add_custom_target("update_resource_files_apprenticevideo" ALL
   COMMAND "${CMAKE_COMMAND}"
+  -DAEYAE_SOURCE_DIR="${aeyae_SOURCE_DIR}"
+  -DAEYAE_BINARY_DIR="${aeyae_BINARY_DIR}"
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
   -DPROGNAME="${PROGNAME}"
-  -DSubversion_SVN_EXECUTABLE="${Subversion_SVN_EXECUTABLE}"
   -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
-  -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
+  -P "${aeyae_SOURCE_DIR}/aeyae_update_resource_files_to_revision.cmake")
 
 set(project_sources ${project_sources} ${YAE_VERSIONED_FILES})
 
@@ -394,7 +381,7 @@ add_executable(${PROGNAME}
   ${project_sources}
   )
 
-add_dependencies(${PROGNAME} "update_revision_apprenticevideo")
+add_dependencies(${PROGNAME} "update_resource_files_apprenticevideo")
 
 set(TARGET_LIBS
   ${TARGET_LIBS}
@@ -652,8 +639,6 @@ if (WIN32)
 
   add_executable(wixWrapper
     wixWrapper.cpp
-    yaeVersion.cpp
-    "${PROJECT_BINARY_DIR}/yaeVersion.h"
     )
 
   target_compile_definitions(wixWrapper PRIVATE -DJSON_DLL)
@@ -663,7 +648,7 @@ if (WIN32)
     ${Boost_LIBRARIES}
     )
 
-  add_dependencies(wixWrapper "update_revision_apprenticevideo")
+  add_dependencies(wixWrapper "update_resource_files_apprenticevideo")
 
   find_program(DEPENDENCY_WALKER NAMES depends.exe DOC
     "Dependency Walker executable depends.exe, http://www.dependencywalker.com/")

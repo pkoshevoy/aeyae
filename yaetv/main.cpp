@@ -11,6 +11,19 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#ifdef __APPLE__
+#include <ApplicationServices/ApplicationServices.h>
+#ifdef check
+#undef check
+#endif
+#endif
+
+// Qt:
+#include <QCoreApplication>
+#include <QDir>
+#ifdef YAE_USE_QT5
+#include <QSurfaceFormat>
+#endif
 
 // standard:
 #include <iomanip>
@@ -23,10 +36,12 @@
 #include <boost/thread/thread.hpp>
 #endif
 
-// yae:
+// aeyae:
 #include "yae/api/yae_log.h"
+#include "yae/api/yae_version.h"
 
-// epg:
+// local:
+#include "yaeMainWindow.h"
 #include "yae_dvr.h"
 #include "yae_hdhomerun.h"
 #include "yae_signal_handler.h"
@@ -36,44 +51,139 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // usage
+  // mainWindow
   //
-  static void
-  usage(char ** argv, const char * msg)
+  MainWindow * mainWindow = NULL;
+
+  //----------------------------------------------------------------
+  // Application
+  //
+  class Application : public QApplication
   {
-    yae_elog("ERROR: %s", msg);
-    yae_elog("USAGE: %s [-b /yaetv/storage/path]", argv[0]);
+  public:
+    Application(int & argc, char ** argv):
+      QApplication(argc, argv)
+    {
+#ifdef __APPLE__
+      QString appDir = QApplication::applicationDirPath();
+      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
+      QApplication::addLibraryPath(plugInsDir);
+#endif
+    }
+
+    // virtual: overridden to propagate custom events to the parent:
+    bool notify(QObject * receiver, QEvent * e)
+    {
+      YAE_ASSERT(receiver && e);
+      bool result = false;
+
+      QEvent::Type et = e ? e->type() : QEvent::None;
+      if (et >= QEvent::User)
+      {
+        e->ignore();
+      }
+
+      while (receiver)
+      {
+        result = QApplication::notify(receiver, e);
+        if (et < QEvent::User || (result && e->isAccepted()))
+        {
+          break;
+        }
+
+        receiver = receiver->parent();
+      }
+
+      return result;
+    }
+  };
+
+
+  //----------------------------------------------------------------
+  // parse_mpeg_ts
+  //
+  static const char *
+  parse_mpeg_ts(const char * fn)
+  {
+    yae::TOpenFile src(fn, "rb");
+    YAE_THROW_IF(!src.is_open());
+
+    yae::mpeg_ts::Context ts_ctx;
+    while (!src.is_eof())
+    {
+      yae::Data data(12 + 7 * 188);
+      uint64_t pos = yae::ftell64(src.file_);
+
+      std::size_t n = src.read(data.get(), data.size());
+      if (n < 188)
+      {
+        break;
+      }
+
+      data.truncate(n);
+
+      std::size_t offset = 0;
+      while (offset + 188 <= n)
+      {
+        // find to the the sync byte:
+        if (data[offset] == 0x47 &&
+            (n - offset == 188 || data[offset + 188] == 0x47))
+        {
+          try
+          {
+            // attempt to parse the packet:
+            yae::TBufferPtr pkt_data = data.get(offset, 188);
+            yae::Bitstream bin(pkt_data);
+
+            yae::mpeg_ts::TSPacket pkt;
+            pkt.load(bin);
+
+            std::size_t end_pos = bin.position();
+            std::size_t bytes_consumed = end_pos >> 3;
+
+            if (bytes_consumed != 188)
+            {
+              yae_wlog("TS packet too short (%i bytes), %s ...",
+                       bytes_consumed,
+                       yae::to_hex(pkt_data->get(), 32, 4).c_str());
+              continue;
+            }
+
+            ts_ctx.push(pkt);
+          }
+          catch (const std::exception & e)
+          {
+            yae_wlog("failed to parse TS packet at %" PRIu64 ", %s",
+                     pos + offset, e.what());
+          }
+          catch (...)
+          {
+            yae_wlog("failed to parse TS packet at %" PRIu64
+                     ", unexpected exception",
+                     pos + offset);
+          }
+
+          // skip to next packet:
+          offset += 188;
+        }
+        else
+        {
+          offset++;
+        }
+      }
+
+      yae::fseek64(src.file_, pos + offset, SEEK_SET);
+    }
+    ts_ctx.dump();
   }
 
   //----------------------------------------------------------------
-  // main_may_throw
+  // bootstrap_blacklist
   //
-  int
-  main_may_throw(int argc, char ** argv)
+  static void
+  bootstrap_blacklist(DVR & dvr)
   {
-    // install signal handler:
-    yae::signal_handler();
-
-    std::string basedir;
-    for (int i = 1; i < argc; i++)
-    {
-      if (strcmp(argv[i], "-b") == 0)
-      {
-        if (argc <= i + 1)
-        {
-          usage(argv, "-b parameter requires a /file/path");
-          return i;
-        }
-
-        ++i;
-        basedir = argv[i];
-      }
-    }
-
-#if 1
-    DVR dvr(basedir);
-
-#if 0
+    dvr.blacklist_.channels_.clear();
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(9, 91));
 
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 1));
@@ -115,10 +225,14 @@ namespace yae
 
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(50, 1));
     dvr.save_blacklist();
-    return 0;
-#endif
+  }
 
-#if 0
+  //----------------------------------------------------------------
+  // bootstrap_wishlist
+  //
+  static void
+  bootstrap_wishlist(DVR & dvr)
+  {
     dvr.wishlist_.items_.clear();
 
     // Fox 13.1, Sunday, 6pm - 9pm
@@ -237,197 +351,168 @@ namespace yae
       item.skip_duplicates_ = true;
     }
 
-    // FIXME: there is probably a better place for this:
     dvr.save_wishlist();
+  }
+
+
+  //----------------------------------------------------------------
+  // usage
+  //
+  static void
+  usage(char ** argv, const char * message)
+  {
+    std::cerr
+      << "\nUSAGE:\n"
+      << argv
+      << " -b " << (fs::path("path") / "to" / "storage" / "yaetv").string()
+      << " [--parse " << (fs::path("path") / "to" / "mpeg.ts").string() << "]"
+      << " [--no-ui]"
+      << "\n";
+
+    std::cerr
+      << "\nVERSION: " << YAE_REVISION
+#ifndef NDEBUG
+      << ", Debug build"
 #endif
+      << std::endl;
 
-    TTime schedule_update_period = TTime(30, 1);
-    TTime schedule_update_time = TTime::now() - schedule_update_period;
-    TTime channel_scan_time = TTime::now();
-    TTime epg_update_time = TTime::now();
-    dvr.update_epg();
-
-    // pull EPG, evaluate wishlist, start captures, etc...
-    yae::mpeg_ts::EPG epg;
-
-    while (!signal_handler_received_sigpipe() &&
-           !signal_handler_received_sigint())
+    if (message != NULL)
     {
-      TTime now = TTime::now();
+      std::cerr << "\n" << message << std::endl;
+    }
+  }
 
-      if (dvr.load_wishlist())
+  //----------------------------------------------------------------
+  // usage
+  //
+  static void
+  usage(char ** argv, const std::string & msg)
+  {
+    usage(argv, msg.c_str());
+  }
+
+
+  //----------------------------------------------------------------
+  // main_may_throw
+  //
+  int
+  main_may_throw(int argc, char ** argv)
+  {
+    // instantiate the logger:
+    yae::logger();
+
+    // install signal handler:
+    yae::signal_handler();
+
+    // parse input parameters:
+    std::string basedir;
+    bool no_ui = false;
+
+    for (int i = 1; i < argc; i++)
+    {
+      if (strcmp(argv[i], "-b") == 0)
       {
-        dvr.save_schedule();
-      }
+        if (argc <= i + 1)
+        {
+          usage(argv, "-b parameter requires a /file/path");
+          return i;
+        }
 
-      if (schedule_update_period <= (now - schedule_update_time))
+        ++i;
+        basedir = argv[i];
+      }
+      else if (strcmp(argv[i], "--no-ui") == 0)
       {
-        schedule_update_time = now;
-        dvr.get_epg(epg);
-
-#if 0 // ndef NDEBUG
-        for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-               i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
-        {
-          const yae::mpeg_ts::EPG::Channel & channel = i->second;
-          std::string fn = strfmt("epg-%02i.%02i.json",
-                                  channel.major_,
-                                  channel.minor_);
-          Json::Value json;
-          yae::mpeg_ts::save(json, channel);
-          yae::TOpenFile((dvr.yaetv_ / fn).string(), "wb").save(json);
-        }
-#endif
-
-        dvr.evaluate(epg);
+        no_ui = true;
       }
-
-      if (dvr.worker_.is_idle())
+      else if (strcmp(argv[i], "--parse") == 0)
       {
-        double sec_since_channel_scan = (now - channel_scan_time).sec();
-        double sec_since_epg_update = (now - epg_update_time).sec();
-        bool blacklist_updated = dvr.load_blacklist();
+        if (argc <= i + 1)
+        {
+          usage(argv, "--parse parameter requires a /file/path/to/some.ts");
+          return i;
+        }
 
-        if (blacklist_updated ||
-            sec_since_epg_update > dvr.epg_refresh_period_.sec())
-        {
-          dvr.update_epg(true);
-          epg_update_time = now;
-        }
-        else if (sec_since_channel_scan > dvr.channel_scan_period_.sec())
-        {
-          dvr.scan_channels();
-          channel_scan_time = TTime::now();
-        }
+        ++i;
+        parse_mpeg_ts(argv[i]);
+        return 0;
       }
-
-      boost::this_thread::sleep_for(boost::chrono::seconds(1));
+      else
+      {
+        usage(argv, strfmt("unrecognized parameter: %s", argv[i]));
+        return i;
+      }
     }
 
-    dvr.shutdown();
-
-#elif 1
-    DVR dvr(basedir);
-    dvr.update_epg(true);
-    dvr.worker_.wait_until_finished();
-#else
-#if 0
-    const char * fn = "/tmp/473000000.ts"; // 10.1
-    const char * fn = "/tmp/479000000.ts"; // 23.1 KBTU
-    const char * fn = "/tmp/491000000.ts"; // 11.1 KBYU
-    const char * fn = "/tmp/503000000.ts"; // 14.1 KJZZ
-    const char * fn = "/tmp/509000000.ts"; // 20.1 KTMW
-    const char * fn = "/tmp/515000000.ts"; // 50.1 KEJT
-    const char * fn = "/tmp/527000000.ts"; // 5.1 KSL
-    const char * fn = "/tmp/533000000.ts"; // 24.1 KPNZ
-    const char * fn = "/tmp/539000000.ts"; // 25.1 KSVN
-    const char * fn = "/tmp/551000000.ts"; // 7.1 KUED
-    const char * fn = "/tmp/557000000.ts"; // 13.1 KSTU
-    const char * fn = "/tmp/563000000.ts"; // 16.1 ION
-    const char * fn = "/tmp/569000000.ts"; // 4.1 KTVX
-    const char * fn = "/tmp/593000000.ts"; // 2.1 KUTV
-    const char * fn = "/tmp/599000000.ts"; // 30.1 KUCW
-#endif
-    const char * fn = "/tmp/605000000.ts"; // 9.1 KUEN
-#if 0
-#endif
-
-#if 0
-    const char * fn = "/scratch/DataSets/Video/epg/473000000.ts"; // 10.1
-    const char * fn = "/scratch/DataSets/Video/epg/479000000.ts"; // 23.1 KBTU
-    const char * fn = "/scratch/DataSets/Video/epg/491000000.ts"; // 11.1 KBYU
-    const char * fn = "/scratch/DataSets/Video/epg/503000000.ts"; // 14.1 KJZZ
-    const char * fn = "/scratch/DataSets/Video/epg/509000000.ts"; // 20.1 KTMW
-    const char * fn = "/scratch/DataSets/Video/epg/515000000.ts"; // 50.1 KEJT
-    const char * fn = "/scratch/DataSets/Video/epg/527000000.ts"; // 5.1 KSL
-    const char * fn = "/scratch/DataSets/Video/epg/533000000.ts"; // 24.1 KPNZ
-    const char * fn = "/scratch/DataSets/Video/epg/539000000.ts"; // 25.1 KSVN
-#endif
-#if 0
-    const char * fn = "/scratch/DataSets/Video/epg/551000000.ts"; // 7.1 KUED
-    const char * fn = "/scratch/DataSets/Video/epg/557000000.ts"; // 13.1 KSTU
-    const char * fn = "/scratch/DataSets/Video/epg/563000000.ts"; // 16.1 ION
-    const char * fn = "/scratch/DataSets/Video/epg/569000000.ts"; // 4.1 KTVX
-    const char * fn = "/scratch/DataSets/Video/epg/593000000.ts"; // 2.1 KUTV
-    const char * fn = "/scratch/DataSets/Video/epg/599000000.ts"; // 30.1 KUCW
-    const char * fn = "/scratch/DataSets/Video/epg/605000000.ts"; // 9.1 KUEN
-#endif
-
-    yae::TOpenFile src(fn, "rb");
-    YAE_THROW_IF(!src.is_open());
-
-    yae::mpeg_ts::Context ts_ctx;
-    while (!src.is_eof())
+    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+    if (basedir.empty())
     {
-      yae::Data data(12 + 7 * 188);
-      uint64_t pos = yae::ftell64(src.file_);
-
-      std::size_t n = src.read(data.get(), data.size());
-      if (n < 188)
+      std::string path = (fs::path(yaetv_dir) / "settings.json").string();
+      Json::Value json;
+      if (yae::TOpenFile(path, "rb").load(json))
       {
-        break;
+        basedir = json.get("basedir", "").asString();
       }
-
-      data.truncate(n);
-
-      std::size_t offset = 0;
-      while (offset + 188 <= n)
-      {
-        // find to the the sync byte:
-        if (data[offset] == 0x47 &&
-            (n - offset == 188 || data[offset + 188] == 0x47))
-        {
-          try
-          {
-            // attempt to parse the packet:
-            yae::TBufferPtr pkt_data = data.get(offset, 188);
-            yae::Bitstream bin(pkt_data);
-
-            yae::mpeg_ts::TSPacket pkt;
-            pkt.load(bin);
-
-            std::size_t end_pos = bin.position();
-            std::size_t bytes_consumed = end_pos >> 3;
-
-            if (bytes_consumed != 188)
-            {
-              yae_wlog("TS packet too short (%i bytes), %s ...",
-                       bytes_consumed,
-                       yae::to_hex(pkt_data->get(), 32, 4).c_str());
-              continue;
-            }
-
-            ts_ctx.push(pkt);
-          }
-          catch (const std::exception & e)
-          {
-            yae_wlog("failed to parse TS packet at %" PRIu64 ", %s",
-                     pos + offset, e.what());
-          }
-          catch (...)
-          {
-            yae_wlog("failed to parse TS packet at %" PRIu64
-                     ", unexpected exception",
-                     pos + offset);
-          }
-
-          // skip to next packet:
-          offset += 188;
-        }
-        else
-        {
-          offset++;
-        }
-      }
-
-      yae::fseek64(src.file_, pos + offset, SEEK_SET);
     }
-    ts_ctx.dump();
+
+    if (no_ui)
+    {
+      DVR dvr(yaetv_dir, basedir);
+
+      // bootstrap_blacklist(dvr);
+      // bootstrap_wishlist(dvr);
+
+      // NOTE: this list will not include any tuners that are currently
+      // locked (in use by another application):
+      std::list<std::string> available_tuners;
+      dvr.hdhr_.discover_tuners(available_tuners);
+
+      for (std::list<std::string>::const_iterator
+             i = available_tuners.begin(); i != available_tuners.end(); ++i)
+      {
+        const std::string & tuner_name = *i;
+
+        // NOTE: this can take a while if there aren't cached channel scan
+        // resuts for this tuner:
+        YAE_EXPECT(dvr.hdhr_.init(tuner_name));
+      }
+
+      DVR::ServiceLoop service_loop(dvr);
+      service_loop.execute(yae::Worker());
+      return 0;
+    }
+
+    yae::Application::setApplicationName("yaetv");
+    yae::Application::setOrganizationName("PavelKoshevoy");
+    yae::Application::setOrganizationDomain("sourceforge.net");
+
+#ifdef YAE_USE_QT5
+    // setup opengl:
+    {
+      QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
+                         QSurfaceFormat::DeprecatedFunctions);
+      fmt.setAlphaBufferSize(0);
+      fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
+      fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+      QSurfaceFormat::setDefaultFormat(fmt);
+    }
+    // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+    // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
+    // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
+    yae::Application::setAttribute(Qt::AA_ShareOpenGLContexts, true);
+    // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
 
+    yae::Application app(argc, argv);
+    yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir);
+    yae::mainWindow->show();
+    yae::mainWindow->initItemViews();
+
+    app.exec();
     return 0;
   }
 }
+
 
 //----------------------------------------------------------------
 // main
@@ -439,17 +524,45 @@ main(int argc, char ** argv)
 
   try
   {
-    // Create and install global locale (UTF-8)
+#if defined(_WIN32) && !defined(NDEBUG)
+    // restore console stdio:
     {
-#ifdef _WIN32
-      // configure console for UTF-8 output:
-      SetConsoleOutputCP(CP_UTF8);
+      AllocConsole();
 
-      // initialize network socket support:
+#pragma warning(push)
+#pragma warning(disable: 4996)
+
+      freopen("conin$", "r", stdin);
+      freopen("conout$", "w", stdout);
+      freopen("conout$", "w", stderr);
+
+#pragma warning(pop)
+      HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
+      if (stdout_handle != INVALID_HANDLE_VALUE)
+      {
+        COORD console_buffer_size;
+        console_buffer_size.X = 80;
+        console_buffer_size.Y = 9999;
+        SetConsoleScreenBufferSize(stdout_handle, console_buffer_size);
+      }
+    }
+#endif
+
+    // configure console for UTF-8 output:
+    yae::set_console_output_utf8();
+
+#ifdef _WIN32
+    // initialize network socket support:
+    {
       WORD version_requested = MAKEWORD(2, 0);
       WSADATA wsa_data;
       WSAStartup(version_requested, &wsa_data);
-#else
+    }
+#endif
+
+    // Create and install global locale (UTF-8)
+    {
+#ifndef _WIN32
       const char * lc_type = getenv("LC_TYPE");
       const char * lc_all = getenv("LC_ALL");
       const char * lang = getenv("LANG");
@@ -467,9 +580,29 @@ main(int argc, char ** argv)
     // Make boost.filesystem use global locale:
     boost::filesystem::path::imbue(std::locale());
 
-    yae::set_console_output_utf8();
-    yae::get_main_args_utf8(argc, argv);
+#ifdef __APPLE__
+    // show the Dock icon:
+    {
+      ProcessSerialNumber psn = { 0, kCurrentProcess };
+      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+    }
 
+    if (QSysInfo::MacintoshVersion == 0x000a)
+    {
+      // add a workaround for Qt 4.7 QTBUG-32789
+      // that manifests as misaligned text on OS X Mavericks:
+      QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
+    }
+    else if (QSysInfo::MacintoshVersion >= 0x000b)
+    {
+      // add a workaround for Qt 4.8 QTBUG-40833
+      // that manifests as misaligned text on OS X Yosemite:
+      QFont::insertSubstitution(".Helvetica Neue DeskInterface",
+                                "Helvetica Neue");
+    }
+#endif
+
+    yae::get_main_args_utf8(argc, argv);
     r = yae::main_may_throw(argc, argv);
     std::cout << std::flush;
   }

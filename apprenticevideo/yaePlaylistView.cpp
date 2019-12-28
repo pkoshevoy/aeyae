@@ -1709,7 +1709,7 @@ namespace yae
     footer.height_ = ItemRef::reference(filterItem, kPropertyHeight);
 
     FlickableArea & maScrollview =
-      sview.add(new FlickableArea("ma_sview", *this, scrollbar));
+      sview.add(new FlickableArea("ma_sview", *this));
     maScrollview.anchors_.fill(sview);
 
     InputArea & maScrollbar = scrollbar.addNew<InputArea>("ma_scrollbar");
@@ -1731,6 +1731,7 @@ namespace yae
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));
     maSlider.anchors_.fill(slider);
+    maScrollview.setVerSlider(&maSlider);
   }
 
   //----------------------------------------------------------------

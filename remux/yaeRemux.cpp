@@ -20,11 +20,11 @@
 #include "json/json.h"
 
 // aeyae:
+#include "yae/api/yae_version.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 
 // local:
 #include "yaeRemux.h"
-#include "yaeVersion.h"
 
 // namespace shortcuts:
 namespace fs = boost::filesystem;

@@ -1,0 +1,7 @@
+<RCC>
+  <qresource>
+    <file>../apprenticevideo/images/apprenticevideo-about.png</file>
+    <file>images/yaetv-logo.png</file>
+    <file>yaeAbout.html</file>
+  </qresource>
+</RCC>

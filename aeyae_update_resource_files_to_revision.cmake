@@ -1,3 +1,6 @@
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include("${AEYAE_SOURCE_DIR}/aeyae_get_git_revision.cmake")
+
 if (EXISTS "${PROJECT_SOURCE_DIR}/${PROGNAME}.rc.in")
   configure_file(
     "${PROJECT_SOURCE_DIR}/${PROGNAME}.rc.in"
@@ -16,4 +19,14 @@ if (EXISTS "${PROJECT_SOURCE_DIR}/${PROGNAME}.plist.in")
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp"
     "${PROJECT_BINARY_DIR}/${PROGNAME}.plist")
   file(REMOVE "${PROJECT_BINARY_DIR}/${PROGNAME}.plist.tmp")
+endif ()
+
+if (EXISTS "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in")
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp")
+  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop")
+  file(REMOVE "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp")
 endif ()

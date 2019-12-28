@@ -44,35 +44,6 @@ namespace yae
   class RemuxView;
   struct RemuxViewStyle;
 
-
-  //----------------------------------------------------------------
-  // ILayout
-  //
-  template <typename TModel, typename TView, typename TViewStyle>
-  struct YAEUI_API ILayout
-  {
-    typedef TModel model_type;
-    typedef TView view_type;
-    typedef TViewStyle style_type;
-
-    virtual ~ILayout() {}
-
-    virtual void layout(TModel & model,
-                        TView & view,
-                        const TViewStyle & style,
-                        Item & item,
-                        void * context = NULL) = 0;
-
-    // shortcut:
-    inline void layout(Item & item,
-                       TView & view,
-                       TModel & model,
-                       const TViewStyle & style)
-    {
-      this->layout(model, view, style, item, NULL);
-    }
-  };
-
   //----------------------------------------------------------------
   // TLayout
   //

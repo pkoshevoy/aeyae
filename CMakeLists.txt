@@ -5,6 +5,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+set(PROGNAME "aeyae")
 project(aeyae)
 
 find_package(Threads REQUIRED)
@@ -576,6 +577,22 @@ add_library(aeyae SHARED
   yae/video/yae_video_renderer.cpp
   yae/video/yae_video_renderer.h
   )
+
+add_custom_target("aeyae_update_revision" ALL
+  DEPENDS
+  "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
+)
+
+add_custom_command(OUTPUT
+  "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
+  COMMAND "${CMAKE_COMMAND}"
+  -DAEYAE_SOURCE_DIR="${aeyae_SOURCE_DIR}"
+  -DAEYAE_BINARY_DIR="${aeyae_BINARY_DIR}"
+  -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
+  -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
+  -DPROGNAME="${PROGNAME}"
+  -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
+  -P "${PROJECT_SOURCE_DIR}/aeyae_update_revision.cmake")
 
 set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
 # set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)

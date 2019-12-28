@@ -49,7 +49,8 @@
 #include <QSurfaceFormat>
 #endif
 
-// yae includes:
+// aeyae:
+#include "yae/api/yae_version.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/utils/yae_utils.h"
@@ -60,7 +61,6 @@
 #include "yaeMainWindow.h"
 #include "yaeRemux.h"
 #include "yaeUtilsQt.h"
-#include "yaeVersion.h"
 
 
 namespace yae

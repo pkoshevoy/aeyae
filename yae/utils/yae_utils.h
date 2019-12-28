@@ -1369,6 +1369,60 @@ namespace yae
     file->write(txt);
     file->flush();
   }
+
+
+  //----------------------------------------------------------------
+  // ContextCallback
+  //
+  struct YAE_API ContextCallback
+  {
+    typedef void(*TFuncPtr)(void *);
+
+    ContextCallback(TFuncPtr func = NULL, void * context = NULL);
+
+    void reset(TFuncPtr func = NULL, void * context = NULL);
+    bool is_null() const;
+    void operator()() const;
+
+  protected:
+    TFuncPtr func_;
+    void * context_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ContextQuery
+  //
+  template <typename TData>
+  struct ContextQuery
+  {
+    typedef bool(*TFuncPtr)(void *, TData &);
+
+    ContextQuery(TFuncPtr func = NULL, void * context = NULL)
+    {
+      reset(func, context);
+    }
+
+    inline void reset(TFuncPtr func = NULL, void * context = NULL)
+    {
+      func_ = func;
+      context_ = context;
+    }
+
+    inline bool is_null() const
+    { return !func_; }
+
+    inline bool operator()(TData & result) const
+    {
+      bool ok = func_ ? func_(context_, result) : false;
+      return ok;
+    }
+
+  protected:
+    TFuncPtr func_;
+    void * context_;
+  };
+
 }
 
 

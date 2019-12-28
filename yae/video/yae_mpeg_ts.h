@@ -2358,6 +2358,8 @@ namespace yae
       //
       struct YAE_API Program
       {
+        bool operator == (const Program & other) const;
+
         std::string title_;
         std::string description_;
         std::string rating_;
@@ -2374,6 +2376,8 @@ namespace yae
       struct YAE_API Channel
       {
         Channel();
+
+        bool operator == (const Channel & other) const;
 
         uint32_t gps_time() const;
         void dump(std::ostream & oss) const;

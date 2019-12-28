@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>LSUIElement</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.5.0</string>
+	<key>CFBundleExecutable</key>
+	<string>yaetv</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<key>CFBundleVersion</key>
+	<string>@PROJ_YYMMDD_HHMMSS@</string>
+	<key>CFBundleGetInfoString</key>
+	<string>yaetv by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>yaetv by Pavel Koshevoy, build @PROJ_WC_REVISION@</string>
+	<key>CFBundleIconFile</key>
+	<string>yaetv.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.pavelkoshevoy.yaetv</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>yaetv</string>
+	<key>CFBundleDisplayName</key>
+	<string>yaetv</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>NSAppleScriptEnabled</key>
+	<string>NO</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<string>YES</string>
+</dict>
+</plist>
