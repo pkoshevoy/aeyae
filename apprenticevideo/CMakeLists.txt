@@ -335,6 +335,10 @@ add_custom_target("update_resource_files_apprenticevideo" ALL
   -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
   -P "${aeyae_SOURCE_DIR}/aeyae_update_resource_files_to_revision.cmake")
 
+add_custom_command(OUTPUT "${YAE_VERSIONED_FILES}"
+  DEPENDS "update_resource_files_apprenticevideo"
+  COMMAND "${CMAKE_COMMAND}" -E echo "updating ${YAE_VERSIONED_FILES}")
+
 set(project_sources ${project_sources} ${YAE_VERSIONED_FILES})
 
 # Set some Win32 Specific Settings

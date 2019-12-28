@@ -454,6 +454,7 @@ namespace yae
       p_->hslider_ ? p_->hslider_->scrollview_ :
       p_->vslider_ ? p_->vslider_->scrollview_ :
       Item::ancestor<Scrollview>();
+    return hsv;
   }
 
   //----------------------------------------------------------------
@@ -466,6 +467,7 @@ namespace yae
       p_->vslider_ ? p_->vslider_->scrollview_ :
       p_->hslider_ ? p_->hslider_->scrollview_ :
       Item::ancestor<Scrollview>();
+    return vsv;
   }
 
 }

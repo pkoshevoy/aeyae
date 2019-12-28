@@ -31,7 +31,7 @@
 #include <boost/regex.hpp>
 
 // local imports:
-#include "yaeVersion.h"
+#include "yae/api/yae_version.h"
 #include "yae/utils/yae_utils.h"
 
 // namespace shortcut:
@@ -646,7 +646,7 @@ usage(char ** argv, const char * message = NULL)
 {
   std::cerr
     << "USAGE: " << argv[0]
-    << " -what [apprenticevideo|aeyaeremux]"
+    << " -what [apprenticevideo|aeyaeremux|yaetv]"
     << " -dep-walker pathToDependsExe"
     << " -allow dlls;allowed;search;path;list"
     << " -wix-candle pathWixCandleExe"
@@ -831,6 +831,15 @@ main(int argc, char ** argv)
     {
       data.ext_[i] = supported[i];
     }
+  }
+  else if (what == "yaetv")
+  {
+    data.installer_name_ = "yaetv";
+    data.product_id_ = "yaetv";
+    data.product_name_ = "yaetv";
+    data.guid_upgrade_ = "5E37BF6D-0389-47AD-9CC1-54EBC31BD292";
+    data.comments_ = "Digital Video Recorder";
+    data.ext_.clear();
   }
   else
   {

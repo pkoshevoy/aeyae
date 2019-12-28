@@ -473,7 +473,7 @@ namespace yae
 
     layout(*this, *style_, *root_);
 
-#if 1 // ndef NDEBUG
+#ifndef NDEBUG
     root.dump(std::cerr);
 #endif
   }

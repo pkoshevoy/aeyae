@@ -10,7 +10,7 @@
 #include <sstream>
 
 // aeyae:
-#include "yae_version.h"
+#include "yae/api/yae_version.h"
 
 
 //----------------------------------------------------------------

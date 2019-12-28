@@ -27,12 +27,9 @@
 // patch = (((day - 1) * 24 + hour) * 60 + minute),
 // fits in [0, 65535] range
 //
-extern "C"
-{
-  YAE_API void yae_version(unsigned int *major,
-                           unsigned int *minor,
-                           unsigned int *patch);
-}
+YAE_API void yae_version(unsigned int * major,
+                         unsigned int * minor,
+                         unsigned int * patch);
 
 
 #endif // YAE_VERSION_H_

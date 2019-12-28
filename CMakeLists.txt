@@ -502,6 +502,7 @@ add_library(aeyae SHARED
   yae/api/yae_settings.h
   yae/api/yae_settings_interface.h
   yae/api/yae_shared_ptr.h
+  yae/api/yae_version.cpp
 
   yae/ffmpeg/yae_audio_fragment.h
   yae/ffmpeg/yae_audio_tempo_filter.h
