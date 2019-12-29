@@ -302,7 +302,7 @@ namespace yae
     // since that will only break clipping for the top level scrollview
     // where it would have worked otherwise...
     //
-    // FIXME: rewrite clipping using clip planes, or stancil mask,
+    // FIXME: rewrite clipping using clip planes, or stencil mask,
     // or something else...
     if (clipContent_)
     {
