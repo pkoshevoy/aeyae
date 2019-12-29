@@ -160,9 +160,7 @@ namespace yae
       double d = (orientation_ == kHorizontal) ? delta.x() : delta.y();
       posOffset_ = d;
       pos_.uncache();
-
-      // this avoids uncaching the scrollview content:
-      parent_->uncacheSelfAndChildren();
+      parent_->uncache();
       return true;
     }
 

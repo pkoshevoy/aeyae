@@ -169,8 +169,6 @@ namespace yae
   void
   Scrollview::uncache()
   {
-    Item::uncache();
-
     if (uncacheContent_)
     {
       content_->uncache();
@@ -180,6 +178,8 @@ namespace yae
     {
       cliprect_->uncache();
     }
+
+    Item::uncache();
   }
 
   //----------------------------------------------------------------
