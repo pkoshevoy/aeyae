@@ -395,7 +395,7 @@ namespace yae
     // set current bitstream position:
     inline void seek(std::size_t bit_position)
     {
-      YAE_ASSERT(bit_position <= end_);
+      YAE_EXPECT(bit_position <= end_);
       YAE_THROW_IF(end_ < bit_position);
       position_ = bit_position;
     }

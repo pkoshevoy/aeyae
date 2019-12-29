@@ -2141,7 +2141,7 @@ namespace yae
         bin.position_plus_nbytes(rating_description_length_);
       rating_description_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
     }
 
@@ -3315,7 +3315,7 @@ namespace yae
         bin.position_plus_nbytes(rating_region_name_length_);
       rating_region_name_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
       dimensions_defined_ = bin.read(8);
@@ -3361,7 +3361,7 @@ namespace yae
       std::size_t stop_pos = bin.position_plus_nbytes(dimension_name_length_);
       dimension_name_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
       reserved_ = bin.read(3);
@@ -3397,14 +3397,14 @@ namespace yae
         bin.position_plus_nbytes(abbrev_rating_value_length_);
       abbrev_rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
       rating_value_length_ = bin.read(8);
       stop_pos = bin.position_plus_nbytes(rating_value_length_);
       rating_value_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
     }
 
@@ -3469,7 +3469,7 @@ namespace yae
       std::size_t stop_pos = bin.position_plus_nbytes(title_length_);
       title_text_.load(bin);
       YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_ASSERT(bin.position() == stop_pos);
+      YAE_EXPECT(bin.position() == stop_pos);
       bin.seek(stop_pos);
 
       reserved3_ = bin.read(4);
