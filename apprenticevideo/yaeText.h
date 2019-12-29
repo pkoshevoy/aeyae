@@ -110,6 +110,8 @@ namespace yae
     double fontAscent() const;
     double fontDescent() const;
     double fontHeight() const;
+    double textLeftBearing() const;
+    double textRightBearing() const;
 
     // virtual:
     double calcContentWidth() const;

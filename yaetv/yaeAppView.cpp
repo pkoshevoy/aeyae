@@ -222,6 +222,79 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ProgramTilePos
+  //
+  struct ProgramTilePos : TDoubleExpr
+  {
+    ProgramTilePos(const AppView & view, uint32_t ch_num, uint32_t gps_time):
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    void evaluate(double & result) const
+    {
+      const yae::mpeg_ts::EPG::Channel & channel =
+        yae::at(view_.epg_.channels_, ch_num_);
+
+      uint32_t gps_now = channel.gps_time();
+      gps_now -= gps_now % 3600;
+      double x = double(gps_time_) - double(gps_now);
+
+      double row_height = view_.style_->row_height_.get();
+      result = (row_height * 8) * (x / 3600.0);
+    }
+
+    const AppView & view_;
+    const uint32_t ch_num_;
+    const uint32_t gps_time_;
+  };
+
+  //----------------------------------------------------------------
+  // ProgramTileWidth
+  //
+  struct ProgramTileWidth : TDoubleExpr
+  {
+    ProgramTileWidth(const AppView & view, uint32_t duration):
+      view_(view),
+      duration_(duration)
+    {}
+
+    void evaluate(double & result) const
+    {
+      double row_height = view_.style_->row_height_.get();
+      result = (row_height * 8) * double(duration_) / 3600.0;
+    }
+
+    const AppView & view_;
+    const uint32_t duration_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CalcDistanceLeftRight
+  //
+  struct CalcDistanceLeftRight : TDoubleExpr
+  {
+    CalcDistanceLeftRight(const Item & a,
+                          const Item & b):
+      a_(a),
+      b_(b)
+    {}
+
+    void evaluate(double & result) const
+    {
+      double a = a_.right();
+      double b = b_.left();
+      result = b - a;
+    }
+
+    const Item & a_;
+    const Item & b_;
+  };
+
+
+  //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
   AppStyle::AppStyle(const char * id, const ItemView & view):
@@ -538,6 +611,7 @@ namespace yae
       return;
     }
 
+    epg_ = epg;
     DVR::Blacklist blacklist;
     dvr_->get(blacklist);
 
@@ -569,7 +643,6 @@ namespace yae
       num_channels++;
 
       yae::shared_ptr<Gradient, Item> & tile_ptr = ch_num_[ch_num];
-
       if (!tile_ptr)
       {
         std::string ch_str = strfmt("%i-%i", channel.major_, channel.minor_);
@@ -610,11 +683,100 @@ namespace yae
         ch_name.background_ = ch_name.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       }
-      else
+
+      // shortcut:
+      Gradient & tile = *tile_ptr;
+
+      yae::shared_ptr<Item> & row_ptr = ch_row_[ch_num];
+      if (!row_ptr)
       {
-        tile_ptr->uncache();
+        row_ptr.reset(new Item(tile.id_.c_str()));
+        Item & row = epg_grid.add<Item>(row_ptr);
+        // row.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
+        // row.height_ = ItemRef::reference(tile, kPropertyHeight);
+      }
+
+      // shortcut:
+      Item & row = *row_ptr;
+      std::map<uint32_t, yae::shared_ptr<Item> > & ch_progs = ch_prog_[ch_num];
+
+      for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator
+             j = channel.programs_.begin(); j != channel.programs_.end(); ++j)
+      {
+        const yae::mpeg_ts::EPG::Program & program = *j;
+        yae::shared_ptr<Item> & prog_ptr = ch_progs[program.gps_time_];
+        if (!prog_ptr)
+        {
+          std::string prog_ts = yae::to_yyyymmdd_hhmmss(program.tm_);
+          prog_ptr.reset(new Item(prog_ts.c_str()));
+
+          Item & prog = row.add<Item>(prog_ptr);
+          prog.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
+          prog.height_ = ItemRef::reference(tile, kPropertyHeight);
+          prog.anchors_.left_ = prog.
+            addExpr(new ProgramTilePos(*this, ch_num, program.gps_time_));
+          prog.width_ = prog.
+            addExpr(new ProgramTileWidth(*this, program.duration_));
+
+          RoundRect & bg = prog.addNew<RoundRect>("bg");
+          bg.anchors_.inset(prog, 1, 1);
+          bg.radius_ = ItemRef::constant(5.0);
+          bg.background_ = bg.
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+          bg.color_ = bg.
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+          Text & hhmm = prog.addNew<Text>("hhmm");
+          hhmm.font_ = style.font_;
+          hhmm.font_.setBold(true);
+          hhmm.anchors_.top_ = ItemRef::reference(prog, kPropertyTop, 1, 7);
+          hhmm.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft, 1, 10);
+          hhmm.fontSize_ = ItemRef::reference(style.row_height_, 0.33);
+          hhmm.elide_ = Qt::ElideNone;
+          hhmm.color_ = hhmm.
+            addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+          hhmm.background_ = hhmm.
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          int hour = (program.tm_.tm_hour < 13 ?
+                      program.tm_.tm_hour :
+                      program.tm_.tm_hour % 12);
+
+          std::string hhmm_txt = strfmt("%i:%02i", hour, program.tm_.tm_min);
+          hhmm.text_ = TVarRef::constant(TVar(hhmm_txt.c_str()));
+
+          RoundRect & rec = prog.addNew<RoundRect>("rec");
+          rec.anchors_.top_ = ItemRef::reference(hhmm, kPropertyBottom, 1, 3);
+          rec.anchors_.left_ = ItemRef::reference(hhmm, kPropertyLeft);
+          rec.width_ = rec.
+            addExpr(new OddRoundUp(prog, kPropertyHeight, 0.2));
+          rec.height_ = ItemRef::reference(rec.width_);
+          rec.radius_ = ItemRef::reference(rec.width_, 0.5);
+          rec.background_ = bg.
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          rec.color_ = bg.
+            addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.5));
+
+          Text & title = prog.addNew<Text>("title");
+          title.font_ = style.font_;
+          title.font_.setBold(true);
+          title.anchors_.bottom_ = ItemRef::reference(rec, kPropertyBottom);
+          title.anchors_.left_ = ItemRef::reference(rec, kPropertyRight, 1, 9);
+          title.margins_.
+            set_bottom(ItemRef::reference(title, kPropertyFontDescent, -1));
+          title.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
+          title.elide_ = Qt::ElideNone;
+          title.color_ = title.
+            addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+          title.background_ = title.
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          // FIXME: this should be an expression:
+          title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
+        }
       }
     }
+
+    // update epg:
+    epg_.channels_.swap(epg.channels_);
 
     dataChanged();
   }
@@ -635,8 +797,6 @@ namespace yae
     overview.visible_ = overview.
       addInverse(new In<AppView::kPlayerMode>(view));
     overview.visible_.disableCaching();
-    layout_scrollview(kScrollbarVertical, view, style, overview,
-                      kScrollbarVertical);
 
     PlayerItem & player = root.add(view.player_);
     player.anchors_.fill(bg);
@@ -693,7 +853,8 @@ namespace yae
     bg.anchors_.fill(panel);
 
     Scrollview & sv = layout_scrollview(kScrollbarVertical, view, style, panel,
-                                        kScrollbarNone);
+                                        kScrollbarVertical);
+    sv.clipContentTo(sv);
 
     Item & content = *(sv.content_);
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
@@ -714,9 +875,9 @@ namespace yae
     header.color_ = style.bg_epg_header_;
 
     Scrollview & vsv = panel.addNew<Scrollview>("vsv");
+    vsv.clipContentTo(vsv);
     vsv.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
     vsv.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
-    vsv.clipContent_ = true;
 
     Item & chan_bar = panel.addNew<Item>("chan_bar");
     chan_bar.anchors_.fill(panel);
@@ -748,9 +909,11 @@ namespace yae
     chan_list.width_ = ItemRef::reference(chan_bar, kPropertyWidth);
 
     Scrollview & hsv = vsv_content.addNew<Scrollview>("hsv");
-    hsv.clipContent_ = true;
-    hsv.anchors_.top_ = ItemRef::constant(0.0);
+    Item & hsv_clip = hsv.clipContentTo(vsv);
+    hsv_clip.anchors_.left_ = ItemRef::reference(chan_bar, kPropertyRight);
+    hsv.anchors_.top_ = ItemRef::reference(chan_list, kPropertyTop);
     hsv.anchors_.left_ = ItemRef::reference(chan_list, kPropertyRight);
+    hsv.height_ = ItemRef::reference(chan_list, kPropertyHeight);
 
     Item & epg_grid = *(hsv.content_);
     epg_grid.anchors_.top_ = ItemRef::constant(0.0);
@@ -773,6 +936,7 @@ namespace yae
     chan_bar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
     vsv.anchors_.right_ = ItemRef::reference(vscrollbar, kPropertyLeft);
     vsv.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
+    hsv.width_ = hsv.addExpr(new CalcDistanceLeftRight(chan_bar, vscrollbar));
 
     // configure vscrollbar slider:
     InputArea & vscrollbar_ia = vscrollbar.addNew<InputArea>("ia");

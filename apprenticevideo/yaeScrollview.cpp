@@ -155,13 +155,10 @@ namespace yae
   //----------------------------------------------------------------
   // Scrollview::Scrollview
   //
-  Scrollview::Scrollview(const char * id,
-                         bool clipContent,
-                         bool uncacheContent):
+  Scrollview::Scrollview(const char * id):
     Item(id),
     content_(new Item((std::string(id) + ".content").c_str())),
-    clipContent_(clipContent),
-    uncacheContent_(uncacheContent)
+    uncacheContent_(true)
   {
     content_->self_ = content_;
   }
@@ -178,6 +175,24 @@ namespace yae
     {
       content_->uncache();
     }
+
+    if (cliprect_)
+    {
+      cliprect_->uncache();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::clipContentTo
+  //
+  Item &
+  Scrollview::clipContentTo(const Item & item)
+  {
+    cliprect_.reset(new Item("cliprect"));
+    Item & cliprect = *cliprect_;
+    cliprect.self_ = cliprect_;
+    cliprect.anchors_.fill(item);
+    return cliprect;
   }
 
   //----------------------------------------------------------------
@@ -293,10 +308,10 @@ namespace yae
       return false;
     }
 
-    if (clipContent_)
+    if (cliprect_)
     {
       BBox bbox;
-      Item::get(kPropertyBBox, bbox);
+      cliprect_->get(kPropertyBBox, bbox);
 
       YAE_OGL_11_HERE();
       YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
@@ -316,7 +331,7 @@ namespace yae
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
     content.paint(xView, yView, canvas);
 
-    if (clipContent_)
+    if (cliprect_)
     {
       YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
     }
@@ -478,15 +493,13 @@ namespace yae
                     ItemView & view,
                     const ItemViewStyle & style,
                     Item & root,
-                    ScrollbarId inset,
-                    bool clipContent)
+                    ScrollbarId inset)
   {
     bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
     bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
 
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
-    sview.clipContent_ = clipContent;
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     Item & hscrollbar = root.addNew<Item>("hscrollbar");
@@ -634,12 +647,10 @@ namespace yae
   Scrollview &
   layout_scrollview(ItemView & view,
                     Item & root,
-                    ScrollbarId scroll,
-                    bool clipContent)
+                    ScrollbarId scroll)
   {
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
-    sview.clipContent_ = clipContent;
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);

@@ -113,7 +113,12 @@ namespace yae
     kPropertyEnabled,
     kPropertyChecked,
     kPropertyR1,
-    kPropertyR2
+    kPropertyR2,
+    kPropertyFontAscent,
+    kPropertyFontDescent,
+    kPropertyFontHeight,
+    kPropertyTextLeftBearing,
+    kPropertyTextRightBearing,
   };
 
   //----------------------------------------------------------------

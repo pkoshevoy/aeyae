@@ -154,9 +154,10 @@ namespace yae
     yae::shared_ptr<Item> epg_view_;
 
     yae::mpeg_ts::EPG epg_;
-    std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_num_;
-    std::map<uint32_t, yae::shared_ptr<Item> > ch_epg_;
     std::map<uint32_t, std::size_t> ch_ordinal_;
+    std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_num_;
+    std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
+    std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;
   };
 
 }

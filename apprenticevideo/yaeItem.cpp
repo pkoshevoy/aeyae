@@ -43,24 +43,21 @@ namespace yae
     {}
 
     // virtual:
-    void evaluate(Segment & result) const
+    void evaluate(Segment & r) const
     {
-      result.length_ = item_.calcContentWidth();
-      result.origin_ =
-        item_.anchors_.left_.isValid() ?
-        item_.left() :
-
-        item_.anchors_.right_.isValid() ?
-        item_.right() - result.length_ :
-
-        item_.hcenter() - result.length_ * 0.5;
+      r.length_ = item_.calcContentWidth();
+      r.origin_ =
+        item_.anchors_.left_.isValid() ? item_.left() :
+        item_.anchors_.right_.isValid() ? item_.right() - r.length_ :
+        item_.anchors_.hcenter_.isValid() ? item_.hcenter() - r.length_ * 0.5 :
+        std::numeric_limits<double>::max();
 
       for (std::vector<ItemPtr>::const_iterator i = item_.children_.begin();
            i != item_.children_.end(); ++i)
       {
         const ItemPtr & child = *i;
         const Segment & footprint = child->xExtent();
-        result.expand(footprint);
+        r.expand(footprint);
       }
     }
 
@@ -77,24 +74,21 @@ namespace yae
     {}
 
     // virtual:
-    void evaluate(Segment & result) const
+    void evaluate(Segment & r) const
     {
-      result.length_ = item_.calcContentHeight();
-      result.origin_ =
-        item_.anchors_.top_.isValid() ?
-        item_.top() :
-
-        item_.anchors_.bottom_.isValid() ?
-        item_.bottom() - result.length_ :
-
-        item_.vcenter() - result.length_ * 0.5;
+      r.length_ = item_.calcContentHeight();
+      r.origin_ =
+        item_.anchors_.top_.isValid() ? item_.top() :
+        item_.anchors_.bottom_.isValid() ? item_.bottom() - r.length_ :
+        item_.anchors_.vcenter_.isValid() ? item_.vcenter() - r.length_ * 0.5 :
+        std::numeric_limits<double>::max();
 
       for (std::vector<ItemPtr>::const_iterator i = item_.children_.begin();
            i != item_.children_.end(); ++i)
       {
         const ItemPtr & child = *i;
         const Segment & footprint = child->yExtent();
-        result.expand(footprint);
+        r.expand(footprint);
       }
     }
 
@@ -164,7 +158,8 @@ namespace yae
       }
       else
       {
-        YAE_ASSERT(item.anchors_.vcenter_.isValid());
+        YAE_ASSERT(item.anchors_.vcenter_.isValid() ||
+                   !item.children_.empty());
         h = yContent.length_;
       }
     }
@@ -1116,7 +1111,7 @@ namespace yae
       return w;
     }
 
-    // height is based on horizontal footprint of item content:
+    // width is based on horizontal footprint of item content:
     const Segment & xContent = this->xContent();
     double w = 0.0;
 
@@ -1136,7 +1131,7 @@ namespace yae
       }
       else
       {
-        YAE_ASSERT(anchors_.hcenter_.isValid());
+        YAE_ASSERT(anchors_.hcenter_.isValid() || !children_.empty());
         w = xContent.length_;
       }
     }

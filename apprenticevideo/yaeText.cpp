@@ -422,6 +422,54 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Text::textLeftBearing
+  //
+  double
+  Text::textLeftBearing() const
+  {
+    QString str = text();
+    if (str.isEmpty())
+    {
+      return 0;
+    }
+
+    QFont font = font_;
+    double fontSize = std::max(9.0, fontSize_.get());
+    double supersample = supersample_.get();
+
+    font.setPixelSize(fontSize * supersample);
+    QFontMetricsF fm(font);
+
+    QChar ch = str.at(0);
+    double leftBearing = fm.leftBearing(ch) / supersample;
+    return leftBearing;
+  }
+
+  //----------------------------------------------------------------
+  // Text::textRightBearing
+  //
+  double
+  Text::textRightBearing() const
+  {
+    QString str = text();
+    if (str.isEmpty())
+    {
+      return 0;
+    }
+
+    QFont font = font_;
+    double fontSize = std::max(9.0, fontSize_.get());
+    double supersample = supersample_.get();
+
+    font.setPixelSize(fontSize * supersample);
+    QFontMetricsF fm(font);
+
+    QChar ch = str.at(str.size() - 1);
+    double rightBearing = fm.rightBearing(str[0]) / supersample;
+    return rightBearing;
+  }
+
+  //----------------------------------------------------------------
   // Text::calcContentWidth
   //
   double
@@ -526,6 +574,26 @@ namespace yae
     if (property == kPropertyOpacity)
     {
       value = opacity_.get();
+    }
+    else if (property == kPropertyFontAscent)
+    {
+      value = fontAscent();
+    }
+    else if (property == kPropertyFontDescent)
+    {
+      value = fontDescent();
+    }
+    else if (property == kPropertyFontHeight)
+    {
+      value = fontHeight();
+    }
+    else if (property == kPropertyTextLeftBearing)
+    {
+      value = textLeftBearing();
+    }
+    else if (property == kPropertyTextRightBearing)
+    {
+      value = textRightBearing();
     }
     else
     {
