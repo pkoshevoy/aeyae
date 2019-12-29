@@ -242,7 +242,7 @@ namespace yae
       double x = double(gps_time_) - double(gps_now);
 
       double row_height = view_.style_->row_height_.get();
-      result = (row_height * 8) * (x / 3600.0);
+      result = (row_height * 8) * (x / 3600.0) + 3.0;
     }
 
     const AppView & view_;
