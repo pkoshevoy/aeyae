@@ -746,7 +746,7 @@ namespace yae
 
           RoundRect & rec = prog.addNew<RoundRect>("rec");
           rec.anchors_.top_ = ItemRef::reference(hhmm, kPropertyBottom, 1, 3);
-          rec.anchors_.left_ = ItemRef::reference(hhmm, kPropertyLeft);
+          rec.anchors_.left_ = ItemRef::reference(hhmm, kPropertyLeft, 1, -1);
           rec.width_ = rec.
             addExpr(new OddRoundUp(prog, kPropertyHeight, 0.2));
           rec.height_ = ItemRef::reference(rec.width_);
@@ -754,17 +754,21 @@ namespace yae
           rec.background_ = bg.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
           rec.color_ = bg.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.5));
+            addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.90));
 
           Text & title = prog.addNew<Text>("title");
           title.font_ = style.font_;
           title.font_.setBold(true);
-          title.anchors_.bottom_ = ItemRef::reference(rec, kPropertyBottom);
-          title.anchors_.left_ = ItemRef::reference(rec, kPropertyRight, 1, 9);
+          title.anchors_.bottom_ =
+            ItemRef::reference(rec, kPropertyBottom);
+          title.anchors_.left_ =
+            ItemRef::reference(rec, kPropertyRight, 1, 7);
+          title.anchors_.right_ =
+            ItemRef::reference(prog, kPropertyRight, 1, -10);
           title.margins_.
             set_bottom(ItemRef::reference(title, kPropertyFontDescent, -1));
           title.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
-          title.elide_ = Qt::ElideNone;
+          title.elide_ = Qt::ElideRight;
           title.color_ = title.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_));
           title.background_ = title.
