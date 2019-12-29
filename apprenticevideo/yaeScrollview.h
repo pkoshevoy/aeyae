@@ -103,9 +103,6 @@ namespace yae
     Scrollview(const char * id);
 
     // helper:
-    Item & clipContentTo(const Item & item);
-
-    // helper:
     void getContentView(TVec2D & origin,
                         Segment & xView,
                         Segment & yView) const;
@@ -161,9 +158,8 @@ namespace yae
     // and 1 corresponds to the end of content
     TVec2D position_;
 
-    // NOTE: the clipping rectangle must be specified
-    // in root item coordinate system:
-    ItemPtr cliprect_;
+    // set to true to clip content that extends beyond the scroll view:
+    bool clipContent_;
 
     // set to false if content doesn't need to be uncached
     // together with the scrollview:
@@ -272,7 +268,8 @@ namespace yae
                     ItemView & view,
                     const ItemViewStyle & style,
                     Item & root,
-                    ScrollbarId inset = kScrollbarNone);
+                    ScrollbarId inset = kScrollbarNone,
+                    bool clipContent = true);
 
   //----------------------------------------------------------------
   // layout_scrollview
@@ -280,7 +277,8 @@ namespace yae
   YAEUI_API Scrollview &
   layout_scrollview(ItemView & view,
                     Item & root,
-                    ScrollbarId scroll = kScrollbarBoth);
+                    ScrollbarId scroll = kScrollbarBoth,
+                    bool clipContent = true);
 
 }
 

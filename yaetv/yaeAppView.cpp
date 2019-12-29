@@ -160,7 +160,9 @@ namespace yae
       double d = (orientation_ == kHorizontal) ? delta.x() : delta.y();
       posOffset_ = d;
       pos_.uncache();
-      parent_->uncache();
+
+      // this avoids uncaching the scrollview content:
+      parent_->uncacheSelfAndChildren();
       return true;
     }
 
@@ -856,8 +858,6 @@ namespace yae
 
     Scrollview & sv = layout_scrollview(kScrollbarVertical, view, style, panel,
                                         kScrollbarVertical);
-    sv.clipContentTo(sv);
-
     Item & content = *(sv.content_);
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
   }
@@ -877,7 +877,7 @@ namespace yae
     header.color_ = style.bg_epg_header_;
 
     Scrollview & vsv = panel.addNew<Scrollview>("vsv");
-    vsv.clipContentTo(vsv);
+    vsv.clipContent_ = true;
     vsv.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
     vsv.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
 
@@ -905,14 +905,12 @@ namespace yae
     vsv_content.anchors_.top_ = ItemRef::constant(0.0);
     vsv_content.anchors_.left_ = ItemRef::constant(0.0);
 
+    Scrollview & hsv = vsv_content.addNew<Scrollview>("hsv");
     Item & chan_list = vsv_content.addNew<Item>("chan_list");
     chan_list.anchors_.top_ = ItemRef::constant(0.0);
     chan_list.anchors_.left_ = ItemRef::constant(0.0);
     chan_list.width_ = ItemRef::reference(chan_bar, kPropertyWidth);
 
-    Scrollview & hsv = vsv_content.addNew<Scrollview>("hsv");
-    Item & hsv_clip = hsv.clipContentTo(vsv);
-    hsv_clip.anchors_.left_ = ItemRef::reference(chan_bar, kPropertyRight);
     hsv.anchors_.top_ = ItemRef::reference(chan_list, kPropertyTop);
     hsv.anchors_.left_ = ItemRef::reference(chan_list, kPropertyRight);
     hsv.height_ = ItemRef::reference(chan_list, kPropertyHeight);

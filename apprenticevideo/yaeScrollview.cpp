@@ -158,6 +158,7 @@ namespace yae
   Scrollview::Scrollview(const char * id):
     Item(id),
     content_(new Item((std::string(id) + ".content").c_str())),
+    clipContent_(false),
     uncacheContent_(true)
   {
     content_->self_ = content_;
@@ -174,25 +175,7 @@ namespace yae
       content_->uncache();
     }
 
-    if (cliprect_)
-    {
-      cliprect_->uncache();
-    }
-
     Item::uncache();
-  }
-
-  //----------------------------------------------------------------
-  // Scrollview::clipContentTo
-  //
-  Item &
-  Scrollview::clipContentTo(const Item & item)
-  {
-    cliprect_.reset(new Item("cliprect"));
-    Item & cliprect = *cliprect_;
-    cliprect.self_ = cliprect_;
-    cliprect.anchors_.fill(item);
-    return cliprect;
   }
 
   //----------------------------------------------------------------
@@ -308,10 +291,23 @@ namespace yae
       return false;
     }
 
-    if (cliprect_)
+    TVec2D origin;
+    Segment xView;
+    Segment yView;
+    getContentView(origin, xView, yView);
+
+    // NOTE: this doesn't work right for nested Scrollviews
+    // due to coordinate system transformation of the scrollview content,
+    // so don't bother enabling scissor clipping for the 2+ nested scrollviews
+    // since that will only break clipping for the top level scrollview
+    // where it would have worked otherwise...
+    //
+    // FIXME: rewrite clipping using clip planes, or stancil mask,
+    // or something else...
+    if (clipContent_)
     {
       BBox bbox;
-      cliprect_->get(kPropertyBBox, bbox);
+      Item::get(kPropertyBBox, bbox);
 
       YAE_OGL_11_HERE();
       YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
@@ -321,17 +317,12 @@ namespace yae
       yae_assert_gl_no_error();
     }
 
-    TVec2D origin;
-    Segment xView;
-    Segment yView;
-    getContentView(origin, xView, yView);
-
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
     YAE_OGL_11_HERE();
     YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
     content.paint(xView, yView, canvas);
 
-    if (cliprect_)
+    if (clipContent_)
     {
       YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
     }
@@ -493,13 +484,15 @@ namespace yae
                     ItemView & view,
                     const ItemViewStyle & style,
                     Item & root,
-                    ScrollbarId inset)
+                    ScrollbarId inset,
+                    bool clipContent)
   {
     bool inset_h = (kScrollbarHorizontal & inset) == kScrollbarHorizontal;
     bool inset_v = (kScrollbarVertical & inset) == kScrollbarVertical;
 
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
+    sview.clipContent_ = clipContent;
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     Item & hscrollbar = root.addNew<Item>("hscrollbar");
@@ -647,10 +640,12 @@ namespace yae
   Scrollview &
   layout_scrollview(ItemView & view,
                     Item & root,
-                    ScrollbarId scroll)
+                    ScrollbarId scroll,
+                    bool clipContent)
   {
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
+    sview.clipContent_ = clipContent;
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     sview.anchors_.top_ = ItemRef::reference(root, kPropertyTop);

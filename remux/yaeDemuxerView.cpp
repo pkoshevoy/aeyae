@@ -975,7 +975,6 @@ namespace yae
 
     Scrollview & sv =
       layout_scrollview(kScrollbarBoth, view, style, root, kScrollbarBoth);
-    sv.clipContentTo(sv);
     sv.uncacheContent_ = false;
 
     Item & content = *(sv.content_);
@@ -1959,10 +1958,8 @@ namespace yae
       sources.anchors_.fill(bg);
       sources.visible_ = sources.addExpr(new In<RemuxView::kSourceMode>(view));
       sources.visible_.disableCaching();
-      Scrollview & ssv =
-        layout_scrollview(kScrollbarVertical, view, style, sources,
-                          kScrollbarVertical);
-      ssv.clipContentTo(ssv);
+      layout_scrollview(kScrollbarVertical, view, style, sources,
+                        kScrollbarVertical);
 
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
@@ -2045,7 +2042,6 @@ namespace yae
       Scrollview & sv =
         layout_scrollview(kScrollbarVertical, view, style, clips,
                           kScrollbarVertical);
-      sv.clipContentTo(sv);
 
       Item & clips_container = *(sv.content_);
 
@@ -3506,7 +3502,8 @@ namespace yae
                                            style,
                                            prog,
                                            // kScrollbarHorizontal,
-                                           kScrollbarNone);
+                                           kScrollbarNone,
+                                           false); // no clipping
       Item & psv_content = *(psv.content_);
       psv_content.height_ = ItemRef::reference(psv, kPropertyHeight);
 
