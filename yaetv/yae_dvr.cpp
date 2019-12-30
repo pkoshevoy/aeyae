@@ -17,6 +17,7 @@
 
 // boost includes:
 #ifndef Q_MOC_RUN
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/thread.hpp>
 #endif
 
@@ -1006,18 +1007,27 @@ namespace yae
   DVR::PacketHandler::handle_backlog(const yae::mpeg_ts::Bucket & bucket,
                                      uint32_t gps_time)
   {
-    uint32_t margin = dvr_.margin_.get(1);
-    std::map<uint32_t, std::set<TRecordingPtr> > recordings;
+    static boost::random::mt11213b prng;
+    static const double prng_max =
+      std::numeric_limits<boost::random::mt11213b::result_type>::max();
 
-    for (std::map<uint32_t, yae::mpeg_ts::ChannelGuide>::const_iterator
-           i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
+    if (recordings_update_gps_time_ < gps_time)
     {
-      const uint32_t ch_num = i->first;
-      std::set<TRecordingPtr> recs;
-      dvr_.schedule_.get(recs, ch_num, gps_time, margin);
-      if (!recs.empty())
+      // wait 8..15s before re-caching scheduled recordings:
+      uint32_t r = uint32_t(8.0 * (double(prng()) / prng_max));
+      recordings_update_gps_time_ = gps_time + 8 + r;
+
+      uint32_t margin = dvr_.margin_.get(1);
+      for (std::map<uint32_t, yae::mpeg_ts::ChannelGuide>::const_iterator
+             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
-        recordings[ch_num].swap(recs);
+        const uint32_t ch_num = i->first;
+        std::set<TRecordingPtr> recs;
+        dvr_.schedule_.get(recs, ch_num, gps_time, margin);
+        if (!recs.empty())
+        {
+          recordings_[ch_num].swap(recs);
+        }
       }
     }
 
@@ -1032,7 +1042,7 @@ namespace yae
       if (found == bucket.pid_to_ch_num_.end())
       {
         for (std::map<uint32_t, std::set<TRecordingPtr> >::const_iterator
-               it = recordings.begin(); it != recordings.end(); ++it)
+               it = recordings_.begin(); it != recordings_.end(); ++it)
         {
           const std::set<TRecordingPtr> & recs = it->second;
           write(dvr_, recs, data);
@@ -1042,8 +1052,8 @@ namespace yae
       {
         const uint32_t ch_num = found->second;
         std::map<uint32_t, std::set<TRecordingPtr> >::const_iterator
-          it = recordings.find(ch_num);
-        if (it != recordings.end())
+          it = recordings_.find(ch_num);
+        if (it != recordings_.end())
         {
           const std::set<TRecordingPtr> & recs = it->second;
           write(dvr_, recs, data);

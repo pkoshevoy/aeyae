@@ -230,6 +230,10 @@ namespace yae
       // to enable us to handle them properly:
       yae::fifo<Packet> packets_;
       std::map<uint32_t, yae::TOpenFilePtr> channels_;
+
+      // cache scheduled recordings to avoid lock contention:
+      std::map<uint32_t, std::set<TRecordingPtr> > recordings_;
+      uint32_t recordings_update_gps_time_;
     };
 
     //----------------------------------------------------------------
