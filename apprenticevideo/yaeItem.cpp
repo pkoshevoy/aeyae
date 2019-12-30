@@ -1198,6 +1198,14 @@ namespace yae
       return l;
     }
 
+    const Segment & xContent = this->xContent();
+    if (!xContent.isEmpty())
+    {
+      double l = xContent.origin_;
+      l += margins_.left();
+      return l;
+    }
+
     return margins_.left();
   }
 
@@ -1246,6 +1254,14 @@ namespace yae
       double h = height();
       double c = anchors_.vcenter_.get();
       double t = c - 0.5 * h;
+      return t;
+    }
+
+    const Segment & yContent = this->yContent();
+    if (!yContent.isEmpty())
+    {
+      double t = yContent.origin_;
+      t += margins_.top();
       return t;
     }
 

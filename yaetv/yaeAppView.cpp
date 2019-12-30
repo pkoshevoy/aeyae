@@ -623,7 +623,7 @@ namespace yae
     Item & vsv_content = *(vsv.content_);
     Item & chan_list = vsv_content.get<Item>("chan_list");
     Scrollview & hsv = vsv_content.get<Scrollview>("hsv");
-    Item & epg_grid = *(hsv.content_);
+    Item & hsv_content = *(hsv.content_);
 
 
     // update the layout:
@@ -691,9 +691,7 @@ namespace yae
       if (!row_ptr)
       {
         row_ptr.reset(new Item(tile.id_.c_str()));
-        Item & row = epg_grid.add<Item>(row_ptr);
-        // row.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
-        // row.height_ = ItemRef::reference(tile, kPropertyHeight);
+        hsv_content.add<Item>(row_ptr);
       }
 
       // shortcut:
@@ -902,9 +900,6 @@ namespace yae
     chan_bar_shadow.color_ = style.bg_epg_shadow_;
 
     Item & vsv_content = *(vsv.content_);
-    vsv_content.anchors_.top_ = ItemRef::constant(0.0);
-    vsv_content.anchors_.left_ = ItemRef::constant(0.0);
-
     Scrollview & hsv = vsv_content.addNew<Scrollview>("hsv");
     Item & chan_list = vsv_content.addNew<Item>("chan_list");
     chan_list.anchors_.top_ = ItemRef::constant(0.0);
@@ -915,10 +910,7 @@ namespace yae
     hsv.anchors_.left_ = ItemRef::reference(chan_list, kPropertyRight);
     hsv.height_ = ItemRef::reference(chan_list, kPropertyHeight);
 
-    Item & epg_grid = *(hsv.content_);
-    epg_grid.anchors_.top_ = ItemRef::constant(0.0);
-    epg_grid.anchors_.left_ = ItemRef::constant(0.0);
-
+    Item & hsv_content = *(hsv.content_);
     Item & hscrollbar = panel.addNew<Item>("hscrollbar");
     Item & vscrollbar = panel.addNew<Item>("vscrollbar");
 

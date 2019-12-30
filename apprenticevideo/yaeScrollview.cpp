@@ -186,27 +186,29 @@ namespace yae
                              Segment & xView,
                              Segment & yView) const
   {
+    double sceneOriginY = this->content_->top();
     double sceneHeight = this->content_->height();
     double viewHeight = this->height();
 
+    double sceneOriginX = this->content_->left();
     double sceneWidth = this->content_->width();
     double viewWidth = this->width();
 
     const Segment & xExtent = this->xExtent();
     const Segment & yExtent = this->yExtent();
 
-    double dy = 0.0;
+    double dy = sceneOriginY;
     if (sceneHeight > viewHeight)
     {
       double range = sceneHeight - viewHeight;
-      dy = this->position_.y() * range;
+      dy += this->position_.y() * range;
     }
 
-    double dx = 0.0;
+    double dx = sceneOriginX;
     if (sceneWidth > viewWidth)
     {
       double range = sceneWidth - viewWidth;
-      dx = this->position_.x() * range;
+      dx += this->position_.x() * range;
     }
 
     origin.x() = floor(xExtent.origin_ - dx);
