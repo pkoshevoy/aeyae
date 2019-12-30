@@ -144,6 +144,20 @@ namespace yae
                          // in the coordinate system of the root item:
                          std::list<VisibleItem> & visibleItems);
 
+    // [0, 1] view position relative to content size
+    // identifying an origin point within content:
+    double content_origin_x() const;
+    double content_origin_y() const;
+
+    // [0, 1] view position relative to content size
+    // where 0 corresponds to the beginning of content
+    // and 1 corresponds to the end of content
+    double position_x() const;
+    double position_y() const;
+
+    void set_position_x(double x);
+    void set_position_y(double y);
+
 #ifndef NDEBUG
     // virtual:
     void dump(std::ostream & os,
@@ -153,17 +167,16 @@ namespace yae
     // item container:
     ItemPtr content_;
 
-    // [0, 1] view position relative to content size
-    // where 0 corresponds to the beginning of content
-    // and 1 corresponds to the end of content
-    TVec2D position_;
-
     // set to true to clip content that extends beyond the scroll view:
     bool clipContent_;
 
     // set to false if content doesn't need to be uncached
     // together with the scrollview:
     bool uncacheContent_;
+
+  protected:
+    double offset_x_;
+    double offset_y_;
   };
 
   //----------------------------------------------------------------

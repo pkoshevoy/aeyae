@@ -235,9 +235,9 @@ namespace yae
     double sh = vsv.height();
     double ch = vsv.content_->height();
     double yRange = sh - ch;
-    double y = vsv.position_.y() * yRange + sh * degrees / 360.0;
+    double y = vsv.position_y() * yRange + sh * degrees / 360.0;
     double s = std::min<double>(1.0, std::max<double>(0.0, y / yRange));
-    vsv.position_.set_y(s);
+    vsv.set_position_y(s);
 
     p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
@@ -254,10 +254,10 @@ namespace yae
     p_->dontAnimate();
 
     Scrollview & hsv = find_hscrollview();
-    p_->startPos_.set_x(hsv.position_.x());
+    p_->startPos_.set_x(hsv.position_x());
 
     Scrollview & vsv = find_vscrollview();
-    p_->startPos_.set_y(vsv.position_.y());
+    p_->startPos_.set_y(vsv.position_y());
 
     p_->tStart_ = boost::chrono::steady_clock::now();
     p_->nsamples_ = 0;
@@ -294,8 +294,8 @@ namespace yae
     TVec2D pos = p_->startPos_ + TVec2D(tx, ty);
     pos.clamp(0.0, 1.0);
 
-    hsv.position_.set_x(pos.x());
-    vsv.position_.set_y(pos.y());
+    hsv.set_position_x(pos.x());
+    vsv.set_position_y(pos.y());
 
     p_->uncacheScrollbars();
     p_->itemView_.delegate()->requestRepaint();
@@ -392,13 +392,13 @@ namespace yae
     v.set_x(v.x() / xRange);
     v.set_y(v.y() / yRange);
 
-    TVec2D p0(hsv.position_.x(), vsv.position_.y());
+    TVec2D p0(hsv.position_x(), vsv.position_y());
     TVec2D p1 = p0 + v;
     p1.clamp(0.0, 1.0);
 
     TVec2D diff = p1 - p0;
-    hsv.position_.set_x(p1.x());
-    vsv.position_.set_y(p1.y());
+    hsv.set_position_x(p1.x());
+    vsv.set_position_y(p1.y());
 #if 0
     std::cerr
       << "FIXME: pos: " << p1

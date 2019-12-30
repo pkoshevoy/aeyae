@@ -2440,7 +2440,7 @@ namespace yae
 
     while (range_h > 0.0)
     {
-      double view_y0 = range_h * sv->position_.y();
+      double view_y0 = range_h * sv->position_y();
       double view_y1 = view_y0 + view_h;
 
       double item_y0 = get_frame_pos_y(view, ir);
@@ -2450,13 +2450,13 @@ namespace yae
       {
         double y = item_y0 / range_h;
         y = std::min<double>(1.0, y);
-        sv->position_.set_y(y);
+        sv->set_position_y(y);
       }
       else if (item_y1 > view_y1)
       {
         double y = (item_y1 - view_h) / range_h;
         y = std::max<double>(0.0, y);
-        sv->position_.set_y(y);
+        sv->set_position_y(y);
       }
       else
       {
@@ -2470,7 +2470,7 @@ namespace yae
 
     while (range_w > 0.0)
     {
-      double view_x0 = range_w * sv->position_.x();
+      double view_x0 = range_w * sv->position_x();
       double view_x1 = view_x0 + view_w;
 
       double item_x0 = get_frame_pos_x(view, ic);
@@ -2480,13 +2480,13 @@ namespace yae
       {
         double x = item_x0 / range_w;
         x = std::min<double>(1.0, x);
-        sv->position_.set_x(x);
+        sv->set_position_x(x);
       }
       else if (item_x1 > view_x1)
       {
         double x = (item_x1 - view_w) / range_w;
         x = std::max<double>(0.0, x);
-        sv->position_.set_x(x);
+        sv->set_position_x(x);
       }
       else
       {
@@ -3851,7 +3851,8 @@ namespace yae
         const Scrollview & src_sv =
           item.get<Scrollview>("clip_layout.scrollview");
 
-        new_sv.position_ = src_sv.position_;
+        new_sv.set_position_x(src_sv.position_x());
+        new_sv.set_position_y(src_sv.position_y());
         break;
       }
     }

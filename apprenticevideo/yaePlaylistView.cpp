@@ -1936,7 +1936,7 @@ namespace yae
       return;
     }
 
-    double y_view = range * sview.position_.y();
+    double y_view = range * sview.position_y();
 
     if (key == Qt::Key_PageUp)
     {
@@ -1957,7 +1957,7 @@ namespace yae
       y_view = range;
     }
 
-    sview.position_.set_y(y_view / range);
+    sview.set_position_y(y_view / range);
     scrollbar.uncache();
     view.delegate()->requestRepaint();
   }
@@ -2012,7 +2012,7 @@ namespace yae
       return;
     }
 
-    double view_y0 = range * sview.position_.y();
+    double view_y0 = range * sview.position_y();
     double view_y1 = view_y0 + h_view - h_footer;
 
     double h_item = groupOnly ? (h_view - h_footer) : item.height();
@@ -2023,13 +2023,13 @@ namespace yae
     {
       double y = (item_y0 - h_header) / range;
       y = std::min<double>(1.0, y);
-      sview.position_.set_y(y);
+      sview.set_position_y(y);
     }
     else if (item_y1 > view_y1)
     {
       double y = (item_y1 - (h_view - h_footer)) / range;
       y = std::max<double>(0.0, y);
-      sview.position_.set_y(y);
+      sview.set_position_y(y);
     }
     else
     {

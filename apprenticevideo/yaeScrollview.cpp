@@ -48,7 +48,7 @@ namespace yae
     double scale = viewHeight / sceneHeight;
     double minHeight = slider_.width() * 5.0;
     double height = minHeight + (scrollbarHeight - minHeight) * scale;
-    double y = (scrollbarHeight - height) * view_.position_.y();
+    double y = (scrollbarHeight - height) * view_.position_y();
     result += y;
   }
 
@@ -115,7 +115,7 @@ namespace yae
     double scale = viewWidth / sceneWidth;
     double minWidth = slider_.height() * 5.0;
     double width = minWidth + (scrollbarWidth - minWidth) * scale;
-    double x = (scrollbarWidth - width) * view_.position_.x();
+    double x = (scrollbarWidth - width) * view_.position_x();
     result += x;
   }
 
@@ -159,7 +159,9 @@ namespace yae
     Item(id),
     content_(new Item((std::string(id) + ".content").c_str())),
     clipContent_(false),
-    uncacheContent_(true)
+    uncacheContent_(true),
+    offset_x_(0),
+    offset_y_(0)
   {
     content_->self_ = content_;
   }
@@ -186,33 +188,30 @@ namespace yae
                              Segment & xView,
                              Segment & yView) const
   {
-    double sceneHeight = this->content_->height();
-    double viewHeight = this->height();
+    const Segment & view_x = this->xExtent();
+    const Segment & view_y = this->yExtent();
 
-    double sceneWidth = this->content_->width();
-    double viewWidth = this->width();
-
-    const Segment & xExtent = this->xExtent();
-    const Segment & yExtent = this->yExtent();
-
-    double dy = this->content_->top();
-    if (sceneHeight > viewHeight)
-    {
-      double range = sceneHeight - viewHeight;
-      dy += this->position_.y() * range;
-    }
+    const Segment & scene_x = this->content_->xExtent();
+    const Segment & scene_y = this->content_->yExtent();
 
     double dx = this->content_->left();
-    if (sceneWidth > viewWidth)
+    if (scene_x.length_ > view_x.length_)
     {
-      double range = sceneWidth - viewWidth;
-      dx += this->position_.x() * range;
+      double range = scene_x.length_ - view_x.length_;
+      dx += this->position_x() * range;
     }
 
-    origin.x() = floor(xExtent.origin_ - dx);
-    origin.y() = floor(yExtent.origin_ - dy);
-    xView = Segment(dx, xExtent.length_);
-    yView = Segment(dy, yExtent.length_);
+    double dy = scene_y.origin_;
+    if (scene_y.length_ > view_y.length_)
+    {
+      double range = scene_y.length_ - view_y.length_;
+      dy += this->position_y() * range;
+    }
+
+    origin.x() = floor(view_x.origin_ - dx);
+    origin.y() = floor(view_y.origin_ - dy);
+    xView = Segment(dx, view_x.length_);
+    yView = Segment(dy, view_y.length_);
   }
 
   //----------------------------------------------------------------
@@ -340,6 +339,80 @@ namespace yae
     content_->unpaint();
   }
 
+  //----------------------------------------------------------------
+  // Scrollview::content_origin_x
+  //
+  double
+  Scrollview::content_origin_x() const
+  {
+    const Segment & s = content_->xExtent();
+    double vw = this->width();
+    double o =
+      (0.0 <= s.origin_) ? 0.0 :
+      (s.length_ <= vw) ? 0.0 :
+      (-s.origin_ / (s.length_ - vw));
+    return o;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::content_origin_y
+  //
+  double
+  Scrollview::content_origin_y() const
+  {
+    const Segment & s = content_->yExtent();
+    double vh = this->height();
+    double o =
+      (0.0 <= s.origin_) ? 0.0 :
+      (s.length_ <= vh) ? 0.0 :
+      (-s.origin_ / (s.length_ - vh));
+    return o;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::position_x
+  //
+  double
+  Scrollview::position_x() const
+  {
+    double x = content_origin_x();
+    x = std::min(1.0, std::max(0.0, x + offset_x_));
+    return x;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::position_y
+  //
+  double
+  Scrollview::position_y() const
+  {
+    double y = content_origin_y();
+    y = std::min(1.0, std::max(0.0, y + offset_y_));
+    return y;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::set_position_x
+  //
+  void
+  Scrollview::set_position_x(double x)
+  {
+    double o = content_origin_x();
+    x = std::min(1.0, std::max(0.0, x));
+    offset_x_ = x - o;
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::set_position_y
+  //
+  void
+  Scrollview::set_position_y(double y)
+  {
+    double o = content_origin_y();
+    y = std::min(1.0, std::max(0.0, y));
+    offset_y_ = y - o;
+  }
+
 #ifndef NDEBUG
   //----------------------------------------------------------------
   // Scrollview::dump
@@ -376,8 +449,8 @@ namespace yae
   {
     bool vertical = scrollbar_.attr<bool>("vertical", true);
     startPos_ = vertical ?
-      scrollview_.position_.y() :
-      scrollview_.position_.x();
+      scrollview_.position_y() :
+      scrollview_.position_x();
     return true;
   }
 
@@ -403,11 +476,11 @@ namespace yae
 
     if (vertical)
     {
-      scrollview_.position_.set_y(t);
+      scrollview_.set_position_y(t);
     }
     else
     {
-      scrollview_.position_.set_x(t);
+      scrollview_.set_position_x(t);
     }
 
     parent_->uncache();
