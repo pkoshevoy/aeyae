@@ -947,7 +947,8 @@ namespace yae
   DVR::PacketHandler::PacketHandler(DVR & dvr):
     dvr_(dvr),
     ring_buffer_(188 * 4096),
-    packets_(400000) // 75.2MB
+    packets_(400000), // 75.2MB
+    recordings_update_gps_time_(0)
   {}
 
   //----------------------------------------------------------------
@@ -1016,6 +1017,7 @@ namespace yae
       // wait 8..15s before re-caching scheduled recordings:
       uint32_t r = uint32_t(8.0 * (double(prng()) / prng_max));
       recordings_update_gps_time_ = gps_time + 8 + r;
+      recordings_.clear();
 
       uint32_t margin = dvr_.margin_.get(1);
       for (std::map<uint32_t, yae::mpeg_ts::ChannelGuide>::const_iterator
