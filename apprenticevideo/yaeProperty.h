@@ -119,6 +119,8 @@ namespace yae
     kPropertyFontHeight,
     kPropertyTextLeftBearing,
     kPropertyTextRightBearing,
+    kPropertyScrollviewXPos,
+    kPropertyScrollviewYPos,
   };
 
   //----------------------------------------------------------------

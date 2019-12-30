@@ -2454,7 +2454,7 @@ namespace yae
 
       Item & root = *root_;
       Scrollview & sview = root.get<Scrollview>("scrollview");
-      FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
+      FlickableArea & ma_sview = sview.Item::get<FlickableArea>("ma_sview");
 
       if (!ma_sview.isAnimating())
       {
@@ -2491,7 +2491,7 @@ namespace yae
 
     Item & root = *root_;
     Scrollview & sview = root.get<Scrollview>("scrollview");
-    FlickableArea & ma_sview = sview.get<FlickableArea>("ma_sview");
+    FlickableArea & ma_sview = sview.Item::get<FlickableArea>("ma_sview");
     ma_sview.stopAnimating();
 
     QModelIndex currentIndex = model_->currentItem();

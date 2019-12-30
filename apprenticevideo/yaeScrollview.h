@@ -109,6 +109,7 @@ namespace yae
 
     // virtual:
     void uncache();
+    void uncacheSelf();
     bool paint(const Segment & xregion,
                const Segment & yregion,
                Canvas * canvas) const;
@@ -144,6 +145,9 @@ namespace yae
                          // in the coordinate system of the root item:
                          std::list<VisibleItem> & visibleItems);
 
+    // virtual:
+    void get(Property property, double & value) const;
+
     // [0, 1] view position relative to content size
     // identifying an origin point within content:
     double content_origin_x() const;
@@ -166,6 +170,11 @@ namespace yae
 
     // item container:
     ItemPtr content_;
+
+    // optional scrollview position ...
+    // NOTE: if defined then set_position_* are ignored
+    ItemRef position_x_;
+    ItemRef position_y_;
 
     // set to true to clip content that extends beyond the scroll view:
     bool clipContent_;

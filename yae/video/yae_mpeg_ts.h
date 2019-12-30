@@ -2391,6 +2391,9 @@ namespace yae
         TTime epg_time_;
       };
 
+      // calculate [t0, t1) GPS time bounding box over all channels/programs:
+      void gps_timespan(uint32_t & gps_t0, uint32_t & gps_t1) const;
+
       void dump(std::ostream & oss) const;
 
       std::map<uint32_t, Channel> channels_;

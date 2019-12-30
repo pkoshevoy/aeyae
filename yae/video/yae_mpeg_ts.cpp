@@ -4719,6 +4719,31 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // EPG::gps_timespan
+    //
+    void
+    EPG::gps_timespan(uint32_t & gps_t0, uint32_t & gps_t1) const
+    {
+      gps_t0 = std::numeric_limits<uint32_t>::max();
+      gps_t1 = std::numeric_limits<uint32_t>::min();
+
+      for (std::map<uint32_t, Channel>::const_iterator
+             i = channels_.begin(); i != channels_.end(); ++i)
+      {
+        const Channel & channel = i->second;
+        if (channel.programs_.empty())
+        {
+          continue;
+        }
+
+        const EPG::Program & p0 = channel.programs_.front();
+        const EPG::Program & p1 = channel.programs_.back();
+        gps_t0 = std::min(gps_t0, p0.gps_time_);
+        gps_t1 = std::max(gps_t1, p1.gps_time_ + p1.duration_);
+      }
+    }
+
+    //----------------------------------------------------------------
     // EPG::dump
     //
     void

@@ -181,6 +181,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Scrollview::uncacheSelf
+  //
+  void
+  Scrollview::uncacheSelf()
+  {
+    position_x_.uncache();
+    position_y_.uncache();
+
+    Item::uncacheSelf();
+  }
+
+  //----------------------------------------------------------------
   // Scrollview::getContentView
   //
   void
@@ -340,6 +352,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Scrollview::get
+  //
+  void
+  Scrollview::get(Property property, double & value) const
+  {
+    if (property == kPropertyScrollviewXPos)
+    {
+      value = position_x();
+    }
+    else if (property == kPropertyScrollviewYPos)
+    {
+      value = position_y();
+    }
+    else
+    {
+      Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
   // Scrollview::content_origin_x
   //
   double
@@ -375,6 +407,11 @@ namespace yae
   double
   Scrollview::position_x() const
   {
+    if (position_x_.isValid())
+    {
+      return position_x_.get();
+    }
+
     double x = content_origin_x();
     x = std::min(1.0, std::max(0.0, x + offset_x_));
     return x;
@@ -386,6 +423,11 @@ namespace yae
   double
   Scrollview::position_y() const
   {
+    if (position_y_.isValid())
+    {
+      return position_y_.get();
+    }
+
     double y = content_origin_y();
     y = std::min(1.0, std::max(0.0, y + offset_y_));
     return y;
