@@ -101,8 +101,11 @@ namespace yae
              i = todo_.begin(); i != todo_.end(); ++i)
       {
         yae::shared_ptr<Task> & task_ptr = *i;
-        task_ptr->cancel();
-        task_ptr.reset();
+        if (task_ptr)
+        {
+          task_ptr->cancel();
+          task_ptr.reset();
+        }
       }
 
       signal_.notify_all();

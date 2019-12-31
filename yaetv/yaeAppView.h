@@ -41,17 +41,24 @@
 
 namespace yae
 {
+  // forward declarations:
+  class AppView;
+
+
   //----------------------------------------------------------------
   // AppStyle
   //
   struct AppStyle : public ItemViewStyle
   {
-    AppStyle(const char * id, const ItemView & view);
+    AppStyle(const char * id, const AppView & view);
+
+    ItemRef unit_size_;
 
     ColorRef bg_sidebar_;
     ColorRef bg_splitter_;
     ColorRef bg_epg_;
     ColorRef fg_epg_;
+    ColorRef fg_epg_chan_;
     ColorRef bg_epg_tile_;
     ColorRef fg_epg_line_;
     ColorRef bg_epg_scrollbar_;

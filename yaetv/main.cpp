@@ -102,7 +102,7 @@ namespace yae
   //----------------------------------------------------------------
   // parse_mpeg_ts
   //
-  static const char *
+  static void
   parse_mpeg_ts(const char * fn)
   {
     yae::TOpenFile src(fn, "rb");
