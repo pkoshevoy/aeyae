@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_log.h"
+
+// local:
 #include "yaeCanvasRenderer.h"
 #include "yaeFlickableArea.h"
 #include "yaeItemView.h"
@@ -206,7 +209,19 @@ namespace yae
     const Segment & scene_x = this->content_->xExtent();
     const Segment & scene_y = this->content_->yExtent();
 
-    double dx = this->content_->left();
+#if 0
+    if (id_ == "vsv" || id_ == "hsv" || id_ == "timeline")
+    {
+      yae_dlog("%s: view_w: %f, scene_x: [%f, %f), position_x: %f",
+               id_.c_str(),
+               view_x.length_,
+               scene_x.origin_,
+               scene_x.length_,
+               position_x());
+    }
+#endif
+
+    double dx = scene_x.origin_;
     if (scene_x.length_ > view_x.length_)
     {
       double range = scene_x.length_ - view_x.length_;
@@ -368,6 +383,48 @@ namespace yae
     else
     {
       Item::get(property, value);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::get_content_view_x
+  //
+  void
+  Scrollview::get_content_view_x(double & x, double & w) const
+  {
+    const Segment & view = this->xExtent();
+    const Segment & scene = this->content_->xExtent();
+
+    x = scene.origin_;
+    w = scene.length_;
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double t = position_x();
+      x += range * t;
+      w = view.length_;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Scrollview::get_content_view_y
+  //
+  void
+  Scrollview::get_content_view_y(double & y, double & h) const
+  {
+    const Segment & view = this->yExtent();
+    const Segment & scene = this->content_->yExtent();
+
+    y = scene.origin_;
+    h = scene.length_;
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double t = position_y();
+      y += range * t;
+      h = view.length_;
     }
   }
 

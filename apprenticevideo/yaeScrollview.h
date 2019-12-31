@@ -148,6 +148,11 @@ namespace yae
     // virtual:
     void get(Property property, double & value) const;
 
+    // get visible content range according to current
+    // scrollview position and size:
+    void get_content_view_x(double & x, double & w) const;
+    void get_content_view_y(double & y, double & h) const;
+
     // [0, 1] view position relative to content size
     // identifying an origin point within content:
     double content_origin_x() const;

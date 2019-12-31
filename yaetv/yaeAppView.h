@@ -154,6 +154,7 @@ namespace yae
     yae::shared_ptr<Item> epg_view_;
 
     yae::mpeg_ts::EPG epg_;
+    DVR::Blacklist blacklist_;
     std::map<uint32_t, std::size_t> ch_ordinal_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;

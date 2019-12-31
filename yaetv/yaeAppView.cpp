@@ -161,8 +161,15 @@ namespace yae
       posOffset_ = d;
       pos_.uncache();
 
-      // this avoids uncaching the scrollview content:
+#if 0
+      // this avoids uncaching the scrollview content,
+      // but doesn't work well when there are nested scrollviews:
       parent_->uncacheSelfAndChildren();
+#else
+      // scrollviews with content that should not be uncached by the Splitter
+      // should have set sv.uncacheContent_ = false
+      parent_->uncache();
+#endif
       return true;
     }
 
@@ -223,6 +230,63 @@ namespace yae
     const uint32_t ch_num_;
   };
 
+  //----------------------------------------------------------------
+  // gps_time_round_dn
+  //
+  static uint32_t
+  gps_time_round_dn(uint32_t t)
+  {
+    // avoid rounding down by almost an hour
+    // if `t` is less than 60s from a whole hour already:
+    t += 59;
+    t -= t % 60;
+
+    uint32_t r = t % 3600;
+    return t - r;
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_round_up
+  //
+  static uint32_t
+  gps_time_round_up(uint32_t t)
+  {
+    // avoid rounding up by almost an hour
+    // if `t` is less than 60s from a whole hour already:
+    t -= t % 60;
+
+    uint32_t r = t % 3600;
+    return r ? t + (3600 - r) : t;
+  }
+
+  //----------------------------------------------------------------
+  // seconds_to_px
+  //
+  static double
+  seconds_to_px(const AppView & view, uint32_t sec)
+  {
+    double row_height = view.style_->row_height_.get();
+    double px = (row_height * 8) * (sec / 3600.0);
+    return px;
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_to_px
+  //
+  static double
+  gps_time_to_px(const AppView & view, uint32_t gps_time)
+  {
+    int64_t gps_now = TTime::gps_now().get(1);
+
+    // round-down to whole hour:
+    gps_now = gps_time_round_dn(gps_now);
+
+    bool negative = (gps_time < gps_now);
+    uint32_t sec = negative ? (gps_now - gps_time) : (gps_time - gps_now);
+    double px = seconds_to_px(view, sec);
+    return (negative ? -px : px) + 3.0;
+  }
+
 
   //----------------------------------------------------------------
   // ProgramTilePos
@@ -236,14 +300,7 @@ namespace yae
 
     void evaluate(double & result) const
     {
-      int64_t gps_now = TTime::gps_now().get(1);
-
-      // round-down to whole hour:
-      gps_now -= gps_now % 3600;
-
-      double x = double(gps_time_) - double(gps_now);
-      double row_height = view_.style_->row_height_.get();
-      result = (row_height * 8) * (x / 3600.0) + 3.0;
+      result = gps_time_to_px(view_, gps_time_);
     }
 
     const AppView & view_;
@@ -262,14 +319,77 @@ namespace yae
 
     void evaluate(double & result) const
     {
-      double row_height = view_.style_->row_height_.get();
-      result = (row_height * 8) * double(duration_) / 3600.0;
+      result = seconds_to_px(view_, duration_);
     }
 
     const AppView & view_;
     const uint32_t duration_;
   };
 
+  //----------------------------------------------------------------
+  // ProgramRowPos
+  //
+  struct ProgramRowPos : TDoubleExpr
+  {
+    ProgramRowPos(const AppView & view, uint32_t ch_num):
+      view_(view),
+      ch_num_(ch_num)
+    {}
+
+    void evaluate(double & result) const
+    {
+      const yae::mpeg_ts::EPG::Channel & channel =
+        yae::at(view_.epg_.channels_, ch_num_);
+
+      if (channel.programs_.empty())
+      {
+        result = 0.0;
+      }
+      else
+      {
+        const yae::mpeg_ts::EPG::Program & p0 = channel.programs_.front();
+        uint32_t t0 = gps_time_round_dn(p0.gps_time_);
+        result = gps_time_to_px(view_, t0);
+      }
+    }
+
+    const AppView & view_;
+    const uint32_t ch_num_;
+  };
+
+  //----------------------------------------------------------------
+  // ProgramRowLen
+  //
+  struct ProgramRowLen : TDoubleExpr
+  {
+    ProgramRowLen(const AppView & view, uint32_t ch_num):
+      view_(view),
+      ch_num_(ch_num)
+    {}
+
+    void evaluate(double & result) const
+    {
+      const yae::mpeg_ts::EPG::Channel & channel =
+        yae::at(view_.epg_.channels_, ch_num_);
+
+      if (channel.programs_.empty())
+      {
+        result = 0.0;
+      }
+      else
+      {
+        const yae::mpeg_ts::EPG::Program & p0 = channel.programs_.front();
+        const yae::mpeg_ts::EPG::Program & p1 = channel.programs_.back();
+        uint32_t t0 = gps_time_round_dn(p0.gps_time_);
+        uint32_t t1 = gps_time_round_up(p1.gps_time_ + p1.duration_);
+        uint32_t dt = t1 - t0;
+        result = seconds_to_px(view_, dt);
+      }
+    }
+
+    const AppView & view_;
+    const uint32_t ch_num_;
+  };
 
   //----------------------------------------------------------------
   // CalcDistanceLeftRight
@@ -291,6 +411,49 @@ namespace yae
 
     const Item & a_;
     const Item & b_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CalcViewPositionX
+  //
+  struct CalcViewPositionX : TDoubleExpr
+  {
+    CalcViewPositionX(const Scrollview & src, const Scrollview & dst):
+      src_(src),
+      dst_(dst)
+    {}
+
+    void evaluate(double & result) const
+    {
+      double x = 0;
+      double w = 0;
+      src_.get_content_view_x(x, w);
+
+      const Segment & scene = dst_.content_->xExtent();
+      const Segment & view = dst_.xExtent();
+
+      if (scene.length_ <= view.length_)
+      {
+        result = 0.0;
+        return;
+      }
+
+#if 0 // disabled to avoid introducing a misalignment between src/dst
+      // at position == 1 ... for dst to remain aligned with src
+      // position has to be allowed to exceen [0, 1] range:
+      if (scene.end() < x + view.length_)
+      {
+        x = scene.end() - view.length_;
+      }
+#endif
+
+      double range = scene.length_ - view.length_;
+      result = (x - scene.origin_) / range;
+    }
+
+    const Scrollview & src_;
+    const Scrollview & dst_;
   };
 
 
@@ -606,14 +769,18 @@ namespace yae
     yae::mpeg_ts::EPG epg;
     dvr_->get_epg(epg);
 
-    if (epg.channels_ == epg_.channels_)
+    DVR::Blacklist blacklist;
+    dvr_->get(blacklist);
+
+    if (epg.channels_ == epg_.channels_ &&
+        blacklist.channels_ == blacklist_.channels_)
     {
       return;
     }
 
-    epg_ = epg;
-    DVR::Blacklist blacklist;
-    dvr_->get(blacklist);
+    // update:
+    epg_.channels_.swap(epg.channels_);
+    blacklist_.channels_.swap(blacklist.channels_);
 
     // shortcuts:
     AppView & view = *this;
@@ -632,6 +799,7 @@ namespace yae
     uint32_t gps_t0 = std::numeric_limits<uint32_t>::max();
     uint32_t gps_t1 = std::numeric_limits<uint32_t>::min();
     std::size_t num_channels = 0;
+    ch_ordinal_.clear();
 
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tiles;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_rows;
@@ -639,12 +807,12 @@ namespace yae
     std::map<uint32_t, yae::shared_ptr<Item> > tickmarks;
 
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+           i = epg_.channels_.begin(); i != epg_.channels_.end(); ++i)
     {
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
 
-      if (yae::has(blacklist.channels_, ch_num))
+      if (yae::has(blacklist_.channels_, ch_num))
       {
         continue;
       }
@@ -674,7 +842,7 @@ namespace yae
         tile.anchors_.left_ = ItemRef::reference(ch_list, kPropertyLeft);
         tile.anchors_.right_ = ItemRef::reference(ch_list, kPropertyRight);
         tile.anchors_.top_ = tile.
-          addExpr(new ChannelRowTop(*this, ch_list, ch_num));
+          addExpr(new ChannelRowTop(view, ch_list, ch_num));
 
         Text & maj_min = tile.addNew<Text>("maj_min");
         maj_min.font_ = style.font_;
@@ -712,8 +880,14 @@ namespace yae
       yae::shared_ptr<Item> & row_ptr = ch_row_[ch_num];
       if (!row_ptr)
       {
-        row_ptr.reset(new Item(tile.id_.c_str()));
-        hsv_content.add<Item>(row_ptr);
+        row_ptr.reset(new Item(("row" + tile.id_).c_str()));
+        Item & row = hsv_content.add<Item>(row_ptr);
+
+        // extend EPG to nearest whole hour, both ends:
+        row.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
+        row.anchors_.left_ = row.addExpr(new ProgramRowPos(view, ch_num));
+        row.width_ = row.addExpr(new ProgramRowLen(view, ch_num));
+        row.height_ = ItemRef::reference(tile, kPropertyHeight);
       }
 
       ch_rows[ch_num] = row_ptr;
@@ -737,9 +911,9 @@ namespace yae
           prog.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
           prog.height_ = ItemRef::reference(tile, kPropertyHeight);
           prog.anchors_.left_ = prog.
-            addExpr(new ProgramTilePos(*this, program.gps_time_));
+            addExpr(new ProgramTilePos(view, program.gps_time_));
           prog.width_ = prog.
-            addExpr(new ProgramTileWidth(*this, program.duration_));
+            addExpr(new ProgramTileWidth(view, program.duration_));
 
           RoundRect & bg = prog.addNew<RoundRect>("bg");
           bg.anchors_.inset(prog, 1, 1);
@@ -809,19 +983,19 @@ namespace yae
     uint32_t i0 = gps_t0 - (gps_t0 % 3600);
     for (uint32_t gps_time = i0; gps_time < gps_t1; gps_time += 3600)
     {
-      int64_t ts = unix_epoch_gps_offset + gps_time;
       ItemPtr & item_ptr = tickmark_[gps_time];
       if (!item_ptr)
       {
+        int64_t ts = unix_epoch_gps_offset + gps_time;
         item_ptr.reset(new Item(unix_epoch_time_to_localtime_str(ts).c_str()));
 
         Item & item = tc.add(item_ptr);
         item.anchors_.top_ = ItemRef::reference(tc, kPropertyTop);
         item.height_ = ItemRef::reference(tc, kPropertyHeight);
         item.anchors_.left_ = item.
-          addExpr(new ProgramTilePos(*this, gps_time));
+          addExpr(new ProgramTilePos(view, gps_time));
         item.width_ = item.
-          addExpr(new ProgramTileWidth(*this, 3600));
+          addExpr(new ProgramTileWidth(view, 3600));
 
         Rectangle & tickmark = item.addNew<Rectangle>("tickmark");
         tickmark.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
@@ -859,15 +1033,66 @@ namespace yae
       tickmarks[gps_time] = item_ptr;
     }
 
+    // old channel tiles also must be removed from ch_list:
+    for (std::map<uint32_t, yae::shared_ptr<Gradient, Item> >::const_iterator
+           i = ch_tile_.begin(); i != ch_tile_.end(); ++i)
+    {
+      uint32_t ch_num = i->first;
+      if (!yae::has(ch_tiles, ch_num))
+      {
+        yae::shared_ptr<Gradient, Item> tile_ptr = i->second;
+        YAE_ASSERT(ch_list.remove(tile_ptr));
+      }
+    }
+
+    // old channel rows also must be removed from hsv_content:
+    for (std::map<uint32_t, yae::shared_ptr<Item> >::const_iterator
+           i = ch_row_.begin(); i != ch_row_.end(); ++i)
+    {
+      uint32_t ch_num = i->first;
+      yae::shared_ptr<Item> row_ptr = i->second;
+
+      if (!yae::has(ch_rows, ch_num))
+      {
+        YAE_ASSERT(hsv_content.remove(row_ptr));
+        continue;
+      }
+
+      Item & row = *row_ptr;
+      std::map<uint32_t, yae::shared_ptr<Item> > & progs_v0 = ch_prog_[ch_num];
+      std::map<uint32_t, yae::shared_ptr<Item> > & progs_v1 = ch_progs[ch_num];
+
+      for (std::map<uint32_t, yae::shared_ptr<Item> >::const_iterator
+             j = progs_v0.begin(); j != progs_v0.end(); ++j)
+      {
+        uint32_t gps_time = j->first;
+        if (!yae::has(progs_v1, gps_time))
+        {
+          yae::shared_ptr<Item> prog = j->second;
+          YAE_ASSERT(row.remove(prog));
+        }
+      }
+    }
+
+    // old tickmarks also must be removed from tc:
+    for (std::map<uint32_t, yae::shared_ptr<Item> >::const_iterator
+           i = tickmark_.begin(); i != tickmark_.end(); ++i)
+    {
+      uint32_t gps_time = i->first;
+      if (!yae::has(tickmarks, gps_time))
+      {
+        yae::shared_ptr<Item> item_ptr = i->second;
+        YAE_ASSERT(tc.remove(item_ptr));
+      }
+    }
+
     // prune old items:
     ch_tile_.swap(ch_tiles);
     ch_row_.swap(ch_rows);
     ch_prog_.swap(ch_progs);
     tickmark_.swap(tickmarks);
 
-    // update epg:
-    epg_.channels_.swap(epg.channels_);
-
+    hsv_content.uncache();
     dataChanged();
   }
 
@@ -1005,6 +1230,7 @@ namespace yae
     ch_list.anchors_.left_ = ItemRef::constant(0.0);
     ch_list.width_ = ItemRef::reference(chan_bar, kPropertyWidth);
 
+    hsv.uncacheContent_ = false;
     hsv.anchors_.top_ = ItemRef::reference(ch_list, kPropertyTop);
     hsv.anchors_.left_ = ItemRef::reference(ch_list, kPropertyRight);
     hsv.height_ = ItemRef::reference(ch_list, kPropertyHeight);
@@ -1088,10 +1314,12 @@ namespace yae
     // setup tickmarks scrollview:
     Scrollview & timeline = epg_header.addNew<Scrollview>("timeline");
     {
-      timeline.anchors_.fill(epg_header);
       timeline.clipContent_ = true;
-      timeline.position_x_ = ItemRef::uncacheable(hsv, kPropertyScrollviewXPos);
-      timeline.position_y_ = ItemRef::uncacheable(hsv, kPropertyScrollviewYPos);
+      timeline.anchors_.fill(epg_header);
+      timeline.position_y_ = ItemRef::constant(0.0);
+      timeline.position_x_ = timeline.
+        addExpr(new CalcViewPositionX(hsv, timeline));
+      timeline.position_x_.disableCaching();
 
       Item & t = *(timeline.content_);
       t.anchors_.top_ = ItemRef::constant(0.0);
