@@ -1375,7 +1375,7 @@ namespace yae
     uint64_t filesystem_bytes_free = 0;
     uint64_t available_bytes = 0;
 
-    if (yae::stat_diskspace(basedir.c_str(),
+    if (yae::stat_diskspace(basedir_.c_str(),
                             filesystem_bytes,
                             filesystem_bytes_free,
                             available_bytes))
@@ -1384,7 +1384,7 @@ namespace yae
                "%" PRIu64 " GB total, "
                "%" PRIu64 " GB free, "
                "%" PRIu64 " GB available",
-               basedir.c_str(),
+               basedir_.c_str(),
                filesystem_bytes / 1000000000,
                filesystem_bytes_free / 1000000000,
                available_bytes / 1000000000);
@@ -1392,13 +1392,13 @@ namespace yae
     else
     {
       yae_elog("failed to query available disk space: %s",
-               basedir.c_str());
+               basedir_.c_str());
     }
 
     std::map<std::string, std::string> recordings;
     {
       CollectRecordings collect_recordings(recordings);
-      for_each_file_at(basedir, collect_recordings);
+      for_each_file_at(basedir_.string(), collect_recordings);
     }
 
     uint64_t recordings_bytes = 0;
