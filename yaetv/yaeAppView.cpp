@@ -266,7 +266,7 @@ namespace yae
   seconds_to_px(const AppView & view, uint32_t sec)
   {
     double unit_size = view.style_->unit_size_.get();
-    double px = (unit_size * 6.156) * (sec / 3600.0);
+    double px = (unit_size * 6.159) * (sec / 3600.0);
     return px;
   }
 
@@ -963,7 +963,7 @@ namespace yae
           Text & hhmm = prog.addNew<Text>("hhmm");
           hhmm.font_ = style.font_;
           // hhmm.font_.setBold(true);
-          hhmm.font_.setWeight(QFont::DemiBold);
+          hhmm.font_.setWeight(62);
           hhmm.fontSize_ = ItemRef::reference(style.unit_size_, 0.312);
           hhmm.anchors_.top_ = ItemRef::reference(prog, kPropertyTop, 1, 7);
           hhmm.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft, 1, 10);
@@ -995,7 +995,7 @@ namespace yae
           Text & title = prog.addNew<Text>("title");
           title.font_ = style.font_;
           // title.font_.setBold(true);
-          title.font_.setWeight(QFont::DemiBold);
+          title.font_.setWeight(62);
           title.fontSize_ = ItemRef::reference(style.unit_size_, 0.312);
           title.anchors_.bottom_ =
             ItemRef::reference(rec, kPropertyBottom);
