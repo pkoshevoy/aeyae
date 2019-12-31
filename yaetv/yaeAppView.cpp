@@ -980,8 +980,9 @@ namespace yae
     }
 
     // update tickmarks:
-    uint32_t i0 = gps_t0 - (gps_t0 % 3600);
-    for (uint32_t gps_time = i0; gps_time < gps_t1; gps_time += 3600)
+    uint32_t i0 = gps_time_round_dn(gps_t0);
+    uint32_t i1 = gps_time_round_up(gps_t1);
+    for (uint32_t gps_time = i0; gps_time < i1; gps_time += 3600)
     {
       ItemPtr & item_ptr = tickmark_[gps_time];
       if (!item_ptr)
