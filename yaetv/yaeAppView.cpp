@@ -95,11 +95,11 @@ namespace yae
 
       if (side_ == kLeft)
       {
-        result = container_.left() + unit_size * 9.0;
+        result = container_.left() + unit_size * 7.0;
       }
       else
       {
-        result = container_.right() - unit_size * 9.0;
+        result = container_.right() - unit_size * 3.0;
       }
     }
 
