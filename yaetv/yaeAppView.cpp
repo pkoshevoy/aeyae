@@ -893,18 +893,21 @@ namespace yae
     DVR::Blacklist blacklist;
     dvr_->get(blacklist);
 
+    std::map<uint32_t, TScheduledRecordings> schedule;
+    dvr_->schedule_.get(schedule);
+
     if (epg.channels_ == epg_.channels_ &&
-        blacklist.channels_ == blacklist_.channels_)
+        blacklist.channels_ == blacklist_.channels_ &&
+        schedule == schedule_)
     {
+      requestRepaint();
       return;
     }
 
     // update:
     epg_.channels_.swap(epg.channels_);
     blacklist_.channels_.swap(blacklist.channels_);
-
-    schedule_.clear();
-    dvr_->schedule_.get(schedule_);
+    schedule_.swap(schedule);
 
     // shortcuts:
     AppView & view = *this;
@@ -929,6 +932,7 @@ namespace yae
     std::map<uint32_t, yae::shared_ptr<Item> > ch_rows;
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_progs;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmarks;
+    std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlights;
 
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg_.channels_.begin(); i != epg_.channels_.end(); ++i)
@@ -1163,6 +1167,81 @@ namespace yae
       tickmarks[gps_time] = item_ptr;
     }
 
+    // highlight timespan of the recordings on the timeline:
+    std::map<uint32_t, uint32_t> rec_times;
+    for (std::map<uint32_t, TScheduledRecordings>::const_iterator
+           i = schedule_.begin(); i != schedule_.end(); ++i)
+    {
+      const TScheduledRecordings & recordings = i->second;
+      for (TScheduledRecordings::const_iterator
+             j = recordings.begin(); j != recordings.end(); ++j)
+      {
+        const Recording & rec = *(j->second);
+        uint32_t gps_t1 = yae::get(rec_times, rec.gps_t0_, rec.gps_t1_);
+        rec_times[rec.gps_t0_] = std::max(rec.gps_t1_, gps_t1);
+      }
+    }
+
+    // combine overlapping timespans:
+    while (rec_times.size() > 1)
+    {
+      std::map<uint32_t, uint32_t>::iterator i = rec_times.begin();
+      bool combined = false;
+
+      std::map<uint32_t, uint32_t>::iterator prev = i;
+      ++i;
+
+      while (i != rec_times.end())
+      {
+        uint32_t & prev_t1 = prev->second;
+        uint32_t t0 = i->first;
+        uint32_t t1 = i->second;
+
+        if (t0 <= prev_t1)
+        {
+          prev_t1 = std::max(prev_t1, t1);
+          rec_times.erase(i);
+          combined = true;
+          break;
+        }
+
+        prev = i;
+        ++i;
+      }
+
+      if (!combined)
+      {
+        break;
+      }
+    }
+
+    for (std::map<uint32_t, uint32_t>::const_iterator
+           i = rec_times.begin(); i != rec_times.end(); ++i)
+    {
+      uint32_t gps_t0 = i->first;
+
+      yae::shared_ptr<Rectangle, Item> & item_ptr = rec_highlight_[gps_t0];
+      if (!item_ptr)
+      {
+        uint32_t gps_t1 = i->second;
+        int64_t ts = unix_epoch_gps_offset + gps_t0;
+        std::string ts_str = unix_epoch_time_to_localtime_str(ts);
+        item_ptr.reset(new Rectangle(("rec " + ts_str).c_str()));
+
+        Rectangle & highlight = tc.add<Rectangle>(item_ptr);
+        highlight.anchors_.top_ = ItemRef::reference(tc, kPropertyTop);
+        highlight.height_ = ItemRef::reference(tc, kPropertyHeight);
+        highlight.anchors_.left_ = highlight.
+          addExpr(new ProgramTilePos(view, gps_t0));
+        highlight.width_ = highlight.
+          addExpr(new ProgramTileWidth(view, gps_t1 - gps_t0));
+        highlight.color_ = highlight.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_rec_, 0.1));
+      }
+
+      rec_highlights[gps_t0] = item_ptr;
+    }
+
     // old channel tiles also must be removed from ch_list:
     for (std::map<uint32_t, yae::shared_ptr<Gradient, Item> >::const_iterator
            i = ch_tile_.begin(); i != ch_tile_.end(); ++i)
@@ -1216,11 +1295,24 @@ namespace yae
       }
     }
 
+    // old highlights also must be removed from tc:
+    for (std::map<uint32_t, yae::shared_ptr<Rectangle, Item> >::const_iterator
+           i = rec_highlight_.begin(); i != rec_highlight_.end(); ++i)
+    {
+      uint32_t gps_time = i->first;
+      if (!yae::has(rec_highlights, gps_time))
+      {
+        yae::shared_ptr<Item> item_ptr = i->second;
+        YAE_ASSERT(tc.remove(item_ptr));
+      }
+    }
+
     // prune old items:
     ch_tile_.swap(ch_tiles);
     ch_row_.swap(ch_rows);
     ch_prog_.swap(ch_progs);
     tickmark_.swap(tickmarks);
+    rec_highlight_.swap(rec_highlights);
 
     hsv_content.uncache();
     dataChanged();

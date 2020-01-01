@@ -33,6 +33,7 @@
 #include "yaeItemRef.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
+#include "yaeRectangle.h"
 #include "yaeScrollview.h"
 #include "yaeTimelineItem.h"
 #include "yae_dvr.h"
@@ -169,6 +170,7 @@ namespace yae
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmark_;
+    std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlight_;
   };
 
 }
