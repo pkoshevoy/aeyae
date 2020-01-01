@@ -1053,6 +1053,42 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::xContentDisableCaching
+  //
+  void
+  Item::xContentDisableCaching()
+  {
+    xContent_.disableCaching();
+  }
+
+  //----------------------------------------------------------------
+  // Item::yContentDisableCaching
+  //
+  void
+  Item::yContentDisableCaching()
+  {
+    yContent_.disableCaching();
+  }
+
+  //----------------------------------------------------------------
+  // Item::xExtentDisableCaching
+  //
+  void
+  Item::xExtentDisableCaching()
+  {
+    xExtent_.disableCaching();
+  }
+
+  //----------------------------------------------------------------
+  // Item::yExtentDisableCaching
+  //
+  void
+  Item::yExtentDisableCaching()
+  {
+    yExtent_.disableCaching();
+  }
+
+  //----------------------------------------------------------------
   // Item::xContent
   //
   const Segment &

@@ -271,6 +271,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // px_to_seconds
+  //
+  static double
+  px_to_seconds(const AppView & view, double px)
+  {
+    double unit_size = view.style_->unit_size_.get();
+    double sec = (px * 3600.0) / (unit_size * 6.159);
+    return sec;
+  }
+
+  //----------------------------------------------------------------
   // gps_time_to_px
   //
   static double
@@ -458,6 +469,38 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // NowMarkerPos
+  //
+  struct NowMarkerPos : TDoubleExpr
+  {
+    NowMarkerPos(const AppView & view,
+                 const Item & epg_header,
+                 const Scrollview & hsv):
+      view_(view),
+      epg_header_(epg_header),
+      hsv_(hsv)
+    {}
+
+    void evaluate(double & result) const
+    {
+      double x = 0;
+      double w = 0;
+      hsv_.get_content_view_x(x, w);
+      double sec = px_to_seconds(view_, x);
+
+      int64_t gps_now = TTime::gps_now().get(1);
+      int64_t origin = gps_time_round_dn(gps_now);
+      int64_t dt = gps_now - origin;
+      result = epg_header_.left() + seconds_to_px(view_, dt - sec);
+    }
+
+    const AppView & view_;
+    const Item & epg_header_;
+    const Scrollview & hsv_;
+  };
+
+
+  //----------------------------------------------------------------
   // UnitSize
   //
   struct UnitSize : TDoubleExpr
@@ -528,6 +571,7 @@ namespace yae
     uint32_t ch_num_;
     uint32_t gps_time_;
   };
+
 
   //----------------------------------------------------------------
   // AppStyle::AppStyle
@@ -1291,6 +1335,7 @@ namespace yae
     vsv.anchors_.top_ = ItemRef::reference(ch_header, kPropertyBottom);
     vsv.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
 
+    Rectangle & now_marker = panel.addNew<Rectangle>("now_marker");
     Item & chan_bar = panel.addNew<Item>("chan_bar");
     chan_bar.anchors_.fill(panel);
     chan_bar.anchors_.top_ = ItemRef::reference(ch_header, kPropertyBottom);
@@ -1414,6 +1459,17 @@ namespace yae
       t.anchors_.right_ = ItemRef::reference(hsv_content, kPropertyRight);
       t.height_ = ItemRef::reference(epg_header, kPropertyHeight);
     }
+
+    // setup "now" time marker:
+    now_marker.color_ = now_marker.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.78));
+    now_marker.width_ = ItemRef::constant(1.0);
+    now_marker.anchors_.top_ = ItemRef::reference(panel, kPropertyTop);
+    now_marker.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
+    now_marker.anchors_.left_ = now_marker.
+      addExpr(new NowMarkerPos(view, epg_header, hsv));
+    now_marker.anchors_.left_.disableCaching();
+    now_marker.xExtentDisableCaching();
   }
 
   //----------------------------------------------------------------

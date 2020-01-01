@@ -484,6 +484,13 @@ namespace yae
     // virtual:
     void get(Property property, TVar & value) const;
 
+    // content and extent bounding boxes are cached by default,
+    // use this to disable if necessary:
+    void xContentDisableCaching();
+    void yContentDisableCaching();
+    void xExtentDisableCaching();
+    void yExtentDisableCaching();
+
     const Segment & xContent() const;
     const Segment & yContent() const;
     const Segment & xExtent() const;
