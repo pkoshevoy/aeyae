@@ -60,7 +60,6 @@ namespace yae
     ColorRef fg_epg_;
     ColorRef fg_epg_chan_;
     ColorRef bg_epg_tile_;
-    ColorRef fg_epg_line_;
     ColorRef bg_epg_scrollbar_;
     ColorRef fg_epg_scrollbar_;
     ColorRef bg_epg_cancelled_;

@@ -564,7 +564,7 @@ namespace yae
         }
       }
 
-      result = style.fg_epg_line_.get();
+      result = style.fg_epg_.get().a_scaled(0.2);
     }
 
     const AppView & view_;
@@ -589,7 +589,6 @@ namespace yae
     fg_epg_ = ColorRef::constant(Color(0x000000, 1.0));
     fg_epg_chan_ = ColorRef::constant(Color(0x3D3D3D, 1.0));
     bg_epg_tile_ = ColorRef::constant(Color(0xE1E1E1, 1.0));
-    fg_epg_line_ = ColorRef::constant(Color(0xB9B9B9, 1.0));
     bg_epg_scrollbar_ = ColorRef::constant(Color(0xF9F9F9, 1.0));
     fg_epg_scrollbar_ = ColorRef::constant(Color(0xC0C0C0, 1.0));
     bg_epg_cancelled_ = ColorRef::constant(Color(0x000000, 1.0));
@@ -1134,7 +1133,7 @@ namespace yae
         tickmark.height_ = ItemRef::reference(item, kPropertyHeight);
         tickmark.width_ = ItemRef::constant(1.0);
         tickmark.color_ = tickmark.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.90));
+            addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.1));
 
         struct tm t;
         unix_epoch_time_to_localtime(ts, t);
@@ -1155,7 +1154,7 @@ namespace yae
           ItemRef::reference(tickmark, kPropertyRight, 1, 5);
         label.elide_ = Qt::ElideNone;
         label.color_ = label.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
         label.background_ = label.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
         label.text_ = TVarRef::constant(TVar(t_str.c_str()));
@@ -1462,7 +1461,7 @@ namespace yae
 
     // setup "now" time marker:
     now_marker.color_ = now_marker.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.78));
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.2));
     now_marker.width_ = ItemRef::constant(1.0);
     now_marker.anchors_.top_ = ItemRef::reference(panel, kPropertyTop);
     now_marker.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
