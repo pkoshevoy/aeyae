@@ -63,6 +63,7 @@ namespace yae
     ColorRef fg_epg_line_;
     ColorRef bg_epg_scrollbar_;
     ColorRef fg_epg_scrollbar_;
+    ColorRef bg_epg_cancelled_;
     ColorRef bg_epg_rec_;
     ColorRef bg_epg_sel_;
 
@@ -162,6 +163,8 @@ namespace yae
 
     yae::mpeg_ts::EPG epg_;
     DVR::Blacklist blacklist_;
+    std::map<uint32_t, TScheduledRecordings> schedule_;
+
     std::map<uint32_t, std::size_t> ch_ordinal_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;

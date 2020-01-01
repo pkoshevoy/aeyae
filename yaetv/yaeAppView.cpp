@@ -487,6 +487,49 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // RecButtonColor
+  //
+  struct RecButtonColor : TColorExpr
+  {
+    RecButtonColor(const AppView & view, uint32_t ch_num, uint32_t gps_time):
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const AppStyle & style = *(view_.style_);
+
+      std::map<uint32_t, TScheduledRecordings>::const_iterator
+        found_ch = view_.schedule_.find(ch_num_);
+      if (found_ch != view_.schedule_.end())
+      {
+        const TScheduledRecordings & schedule = found_ch->second;
+        TScheduledRecordings::const_iterator found = schedule.find(gps_time_);
+
+        if (found != schedule.end())
+        {
+          TRecordingPtr rec_ptr = found->second;
+          const Recording & rec = *rec_ptr;
+
+          result = (rec.cancelled_ ?
+                    style.bg_epg_cancelled_.get() :
+                    style.bg_epg_rec_.get());
+          return;
+        }
+      }
+
+      result = style.fg_epg_line_.get();
+    }
+
+    const AppView & view_;
+    uint32_t ch_num_;
+    uint32_t gps_time_;
+  };
+
+  //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
   AppStyle::AppStyle(const char * id, const AppView & view):
@@ -505,7 +548,8 @@ namespace yae
     fg_epg_line_ = ColorRef::constant(Color(0xB9B9B9, 1.0));
     bg_epg_scrollbar_ = ColorRef::constant(Color(0xF9F9F9, 1.0));
     fg_epg_scrollbar_ = ColorRef::constant(Color(0xC0C0C0, 1.0));
-    bg_epg_rec_ = ColorRef::constant(Color(0xFF0000, 0.1));
+    bg_epg_cancelled_ = ColorRef::constant(Color(0x000000, 1.0));
+    bg_epg_rec_ = ColorRef::constant(Color(0xFF0000, 1.0));
 
     // FIXME: maybe use Qt to lookup system highlight color for selection,
     // and wrap it in an expression:
@@ -816,6 +860,9 @@ namespace yae
     epg_.channels_.swap(epg.channels_);
     blacklist_.channels_.swap(blacklist.channels_);
 
+    schedule_.clear();
+    dvr_->schedule_.get(schedule_);
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -990,7 +1037,7 @@ namespace yae
           rec.background_ = rec.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
           rec.color_ = rec.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_line_, 0.90));
+            addExpr(new RecButtonColor(view, ch_num, program.gps_time_));
 
           Text & title = prog.addNew<Text>("title");
           title.font_ = style.font_;
