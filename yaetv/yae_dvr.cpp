@@ -819,7 +819,9 @@ namespace yae
       return;
     }
 
+    found_rec->second->cancelled_ = true;
     schedule.erase(found_rec);
+
     if (schedule.empty())
     {
       recordings_.erase(found_sched);
