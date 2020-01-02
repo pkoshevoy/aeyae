@@ -336,7 +336,7 @@ namespace yae
   //----------------------------------------------------------------
   // Wishlist::matches
   //
-  const Wishlist::Item *
+  yae::shared_ptr<Wishlist::Item>
   Wishlist::matches(const yae::mpeg_ts::EPG::Channel & channel,
                     const yae::mpeg_ts::EPG::Program & program) const
   {
@@ -346,11 +346,11 @@ namespace yae
       const Item & item = *i;
       if (item.matches(channel, program))
       {
-        return &item;
+        return yae::shared_ptr<Item>(new Item(item));
       }
     }
 
-    return NULL;
+    return yae::shared_ptr<Item>();
   }
 
   //----------------------------------------------------------------
@@ -595,7 +595,14 @@ namespace yae
           continue;
         }
 
-        const Wishlist::Item * want = dvr.wishlist_.matches(channel, program);
+        yae::shared_ptr<Wishlist::Item> want =
+          dvr.explicitly_scheduled(channel, program);
+
+        if (!want)
+        {
+          want = dvr.wishlist_.matches(channel, program);
+        }
+
         if (!want)
         {
           continue;
@@ -767,6 +774,16 @@ namespace yae
     TRecordingPtr leading = get(ch_num, gps_time + margin_sec);
     TRecordingPtr trailing = get(ch_num, gps_time - margin_sec);
 
+    if (leading && leading->cancelled_)
+    {
+      leading.reset();
+    }
+
+    if (trailing && trailing->cancelled_)
+    {
+      trailing.reset();
+    }
+
     if (leading && trailing && leading != trailing)
     {
       recordings.insert(leading);
@@ -779,6 +796,33 @@ namespace yae
     else if (trailing)
     {
       recordings.insert(trailing);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::remove
+  //
+  void
+  Schedule::remove(uint32_t ch_num, uint32_t gps_time)
+  {
+    std::map<uint32_t, TScheduledRecordings>::iterator
+      found_sched = recordings_.find(ch_num);
+    if (found_sched == recordings_.end())
+    {
+      return;
+    }
+
+    TScheduledRecordings & schedule = found_sched->second;
+    TScheduledRecordings::iterator found_rec = schedule.find(gps_time);
+    if (found_rec == schedule.end())
+    {
+      return;
+    }
+
+    schedule.erase(found_rec);
+    if (schedule.empty())
+    {
+      recordings_.erase(found_sched);
     }
   }
 
@@ -2052,6 +2096,100 @@ namespace yae
     {
       yae_elog("write failed: %s", path.c_str());
     }
+  }
+
+  //----------------------------------------------------------------
+  // wishlist_item_filename
+  //
+  static std::string
+  wishlist_item_filename(const yae::mpeg_ts::EPG::Channel & channel,
+                         const yae::mpeg_ts::EPG::Program & program)
+  {
+    std::string ts = to_yyyymmdd_hhmm(program.tm_, "", "-", "");
+    std::string name = strfmt("rec-%02i.%02i-%s.json",
+                              channel.major_,
+                              channel.minor_,
+                              ts.c_str());
+    return name;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::schedule_recording
+  //
+  void
+  DVR::schedule_recording(const yae::mpeg_ts::EPG::Channel & channel,
+                          const yae::mpeg_ts::EPG::Program & program)
+  {
+    Wishlist::Item rec;
+    rec.channel_ = std::pair<uint16_t, uint16_t>(channel.major_,
+                                                 channel.minor_);
+    rec.title_ = program.title_;
+    rec.date_ = program.tm_;
+
+    TTime t0(program.tm_.tm_sec + 60 *
+             (program.tm_.tm_min + 60 *
+              program.tm_.tm_hour), 1);
+    TTime t1 = t0 + TTime(program.duration_, 1);
+    rec.when_ = Timespan(t0, t1);
+
+    Json::Value json;
+    yae::save(json, rec);
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::string name = wishlist_item_filename(channel, program);
+    std::string path = (yaetv_ / name).string();
+
+    yae::TOpenFile file;
+    if (!(file.open(path, "wb") && file.save(json)))
+    {
+      yae_elog("write failed: %s", path.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::cancel_recording
+  //
+  void
+  DVR::cancel_recording(const yae::mpeg_ts::EPG::Channel & channel,
+                        const yae::mpeg_ts::EPG::Program & program)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::string name = wishlist_item_filename(channel, program);
+    std::string path = (yaetv_ / name).string();
+    remove_utf8(path);
+
+    uint32_t ch_num = yae::mpeg_ts::channel_number(channel.major_,
+                                                   channel.minor_);
+    schedule_.remove(ch_num, program.gps_time_);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::explicitly_scheduled
+  //
+  yae::shared_ptr<Wishlist::Item>
+  DVR::explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
+                            const yae::mpeg_ts::EPG::Program & program) const
+  {
+    Json::Value json;
+    yae::shared_ptr<Wishlist::Item> item_ptr;
+    std::string name = wishlist_item_filename(channel, program);
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::string path = (yaetv_ / name).string();
+
+    yae::TOpenFile file;
+    if (file.open(path, "rb") && file.load(json))
+    {
+      Wishlist::Item item;
+      yae::load(json, item);
+
+      if (item.matches(channel, program))
+      {
+        item_ptr.reset(new Wishlist::Item(item));
+      }
+    }
+
+    return item_ptr;
   }
 
   //----------------------------------------------------------------

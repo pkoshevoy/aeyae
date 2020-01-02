@@ -622,6 +622,41 @@ namespace yae
     const Item & item_;
   };
 
+
+  //----------------------------------------------------------------
+  // ToggleRecording
+  //
+  struct ToggleRecording : public InputArea
+  {
+    ToggleRecording(const char * id,
+                    AppView & view,
+                    uint32_t ch_num,
+                    uint32_t gps_time):
+      InputArea(id),
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.toggle_recording(ch_num_, gps_time_);
+      return true;
+    }
+
+    AppView & view_;
+    uint32_t ch_num_;
+    uint32_t gps_time_;
+  };
+
+
   //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
@@ -1163,6 +1198,10 @@ namespace yae
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
           // FIXME: this should be an expression:
           title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
+
+           ToggleRecording & toggle = body.add<ToggleRecording>
+             (new ToggleRecording("toggle", view, ch_num, program.gps_time_));
+           toggle.anchors_.fill(rec);
         }
 
         progs_v1[program.gps_time_] = prog_ptr;
@@ -1376,6 +1415,73 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::toggle_recording
+  //
+  void
+  AppView::toggle_recording(uint32_t ch_num, uint32_t gps_time)
+  {
+    yae::shared_ptr<Wishlist::Item> explicitly_scheduled;
+    const yae::mpeg_ts::EPG::Channel * channel = NULL;
+    const yae::mpeg_ts::EPG::Program * program = NULL;
+
+    if (epg_.find(ch_num, gps_time, channel, program))
+    {
+      explicitly_scheduled = dvr_->explicitly_scheduled(*channel, *program);
+    }
+    else
+    {
+      yae_elog("toggle recording: not found in EPG");
+    }
+
+    if (explicitly_scheduled)
+    {
+      yae_ilog("cancel recording: %02i.%02i %02i:%02i %s",
+               channel->major_,
+               channel->minor_,
+               program->tm_.tm_hour,
+               program->tm_.tm_min,
+               program->title_.c_str());
+      dvr_->cancel_recording(*channel, *program);
+      sync_ui();
+      return;
+    }
+
+    std::map<uint32_t, TScheduledRecordings>::const_iterator
+      found_sched = schedule_.find(ch_num);
+    if (found_sched != schedule_.end())
+    {
+      const TScheduledRecordings & schedule = found_sched->second;
+      TScheduledRecordings::const_iterator found_rec = schedule.find(gps_time);
+      if (found_rec != schedule.end())
+      {
+        yae_ilog("toggle recording: %02i.%02i %02i:%02i %s",
+                 channel->major_,
+                 channel->minor_,
+                 program->tm_.tm_hour,
+                 program->tm_.tm_min,
+                 program->title_.c_str());
+        TRecordingPtr rec_ptr = found_rec->second;
+        Recording & rec = *rec_ptr;
+        rec.cancelled_ = !rec.cancelled_;
+        sync_ui();
+        return;
+      }
+    }
+
+    if (channel && program)
+    {
+      yae_ilog("schedule recording: %02i.%02i %02i:%02i %s",
+               channel->major_,
+               channel->minor_,
+               program->tm_.tm_hour,
+               program->tm_.tm_min,
+               program->title_.c_str());
+      dvr_->schedule_recording(*channel, *program);
+      sync_ui();
+    }
+  }
+
+  //----------------------------------------------------------------
   // AppView::layout
   //
   void
@@ -1481,6 +1587,9 @@ namespace yae
       ItemRef::reference(ch_header, kPropertyBottom);
     epg_header.orientation_ = Gradient::kVertical;
     epg_header.color_ = style.bg_epg_header_;
+
+    FlickableArea & flickable =
+      panel.add(new FlickableArea("flickable", view));
 
     Scrollview & vsv = panel.addNew<Scrollview>("vsv");
     vsv.clipContent_ = true;
@@ -1588,11 +1697,8 @@ namespace yae
     hslider_ia.anchors_.fill(hslider);
 
     // enable flicking the scrollviews:
-    FlickableArea & flickable =
-      panel.add(new FlickableArea("flickable",
-                                  view,
-                                  &vslider_ia,
-                                  &hslider_ia));
+    flickable.setVerSlider(&vslider_ia);
+    flickable.setHorSlider(&hslider_ia);
     flickable.anchors_.fill(vsv);
 
     // setup tickmarks scrollview:

@@ -138,6 +138,8 @@ namespace yae
 
     void sync_ui();
 
+    void toggle_recording(uint32_t ch_num, uint32_t gps_time);
+
   protected:
     // helpers:
     void layout(AppView & view, AppStyle & style, Item & root);

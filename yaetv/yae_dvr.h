@@ -91,7 +91,7 @@ namespace yae
 
     Wishlist();
 
-    const Item *
+    yae::shared_ptr<Item>
     matches(const yae::mpeg_ts::EPG::Channel & channel,
             const yae::mpeg_ts::EPG::Program & program) const;
 
@@ -172,6 +172,8 @@ namespace yae
              uint32_t ch_num,
              uint32_t gps_time,
              uint32_t margin_sec) const;
+
+    void remove(uint32_t ch_num, uint32_t gps_time);
 
     void save(Json::Value & json) const;
     void load(const Json::Value & json);
@@ -330,6 +332,18 @@ namespace yae
     bool load_wishlist();
 
     void save_schedule() const;
+
+    // NOTE: this explicitly bypasses the regular Wishlist and generates
+    // a separate item one-item wishlist just for the specified program:
+    void schedule_recording(const yae::mpeg_ts::EPG::Channel & channel,
+                            const yae::mpeg_ts::EPG::Program & program);
+
+    void cancel_recording(const yae::mpeg_ts::EPG::Channel & channel,
+                          const yae::mpeg_ts::EPG::Program & program);
+
+    yae::shared_ptr<Wishlist::Item>
+    explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
+                         const yae::mpeg_ts::EPG::Program & program) const;
 
     void remove_excess_recordings(const Recording & rec);
     bool make_room_for(const Recording & rec, uint64_t num_sec);

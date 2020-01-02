@@ -4671,6 +4671,25 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // EPG::Channel::find
+    //
+    const EPG::Program *
+    EPG::Channel::find(uint32_t gps_time) const
+    {
+      for (std::list<EPG::Program>::const_iterator
+             i = programs_.begin(); i != programs_.end(); ++i)
+      {
+        const EPG::Program & program = *i;
+        if (program.gps_time_ == gps_time)
+        {
+          return &program;
+        }
+      }
+
+      return NULL;
+    }
+
+    //----------------------------------------------------------------
     // EPG::Channel::gps_time
     //
     uint32_t
@@ -4716,6 +4735,27 @@ namespace yae
 
         oss << std::endl;
       }
+    }
+
+    //----------------------------------------------------------------
+    // EPG::find
+    //
+    bool
+    EPG::find(uint32_t ch_num, uint32_t gps_time,
+              const EPG::Channel *& channel,
+              const EPG::Program *& program) const
+    {
+      std::map<uint32_t, Channel>::const_iterator
+        found = channels_.find(ch_num);
+
+      if (found == channels_.end())
+      {
+        return false;
+      }
+
+      channel = &(found->second);
+      program = channel->find(gps_time);
+      return program != NULL;
     }
 
     //----------------------------------------------------------------

@@ -2380,6 +2380,10 @@ namespace yae
         bool operator == (const Channel & other) const;
 
         uint32_t gps_time() const;
+
+        // helper:
+        const EPG::Program * find(uint32_t gps_time) const;
+
         void dump(std::ostream & oss) const;
 
         uint16_t major_;
@@ -2390,6 +2394,12 @@ namespace yae
         uint32_t gps_time_;
         TTime epg_time_;
       };
+
+      // helper:
+      bool find(uint32_t ch_num,
+                uint32_t gps_time,
+                const Channel *& channel,
+                const Program *& program) const;
 
       // calculate [t0, t1) GPS time bounding box over all channels/programs:
       void gps_timespan(uint32_t & gps_t0, uint32_t & gps_t1) const;
