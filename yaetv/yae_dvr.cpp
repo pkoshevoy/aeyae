@@ -805,6 +805,7 @@ namespace yae
   void
   Schedule::remove(uint32_t ch_num, uint32_t gps_time)
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     std::map<uint32_t, TScheduledRecordings>::iterator
       found_sched = recordings_.find(ch_num);
     if (found_sched == recordings_.end())
