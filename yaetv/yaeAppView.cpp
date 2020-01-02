@@ -264,7 +264,7 @@ namespace yae
   //
   // static const double kTimePixelScaleFactor = 6.159;
   // static const double kTimePixelScaleFactor = 7.175;
-  static const double kTimePixelScaleFactor = 7.2875;
+  static const double kTimePixelScaleFactor = 7.29;
 
   //----------------------------------------------------------------
   // seconds_to_px

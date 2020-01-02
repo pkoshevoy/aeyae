@@ -52,9 +52,14 @@ namespace yae
   void
   SignalHandler::handle(int sig)
   {
-    boost::lock_guard<boost::mutex> lock(mutex_);
-    received_.insert(sig);
-    signal_.notify_all();
+    // hold the mutex to update the received signals set, and to notify:
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      received_.insert(sig);
+      signal_.notify_all();
+    }
+
+    call_callbacks(sig);
   }
 
   //----------------------------------------------------------------
@@ -113,6 +118,42 @@ namespace yae
 #endif
   }
 
+  //----------------------------------------------------------------
+  // SignalHandler::add
+  //
+  void
+  SignalHandler::add(SignalHandler::TFuncPtr callback, void * context)
+  {
+    callback_.insert(std::make_pair(callback, context));
+
+    std::set<int> received;
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      received.swap(received_);
+    }
+
+    for (std::set<int>::const_iterator
+           i = received.begin(); i != received.end(); ++i)
+    {
+      int sig = *i;
+      call_callbacks(sig);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // SignalHandler::call_callbacks
+  //
+  void
+  SignalHandler::call_callbacks(int sig)
+  {
+    for (std::set<std::pair<TFuncPtr, void *> >::const_iterator
+           i = callback_.begin(); i != callback_.end(); ++i)
+    {
+      const TFuncPtr & callback = (*i).first;
+      void * context = (*i).second;
+      callback(context, sig);
+    }
+  }
 
   //----------------------------------------------------------------
   // signal_handler

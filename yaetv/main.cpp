@@ -354,6 +354,38 @@ namespace yae
     dvr.save_wishlist();
   }
 
+  //----------------------------------------------------------------
+  // signal_callback_dvr
+  //
+  static void
+  signal_callback_dvr(void * context, int sig)
+  {
+    (void)sig;
+    DVR::ServiceLoop * service_loop = (DVR::ServiceLoop *)context;
+
+    if (signal_handler_received_sigpipe() ||
+        signal_handler_received_sigint())
+    {
+      service_loop->keep_going_.stop_ = true;
+      service_loop->dvr_.shutdown();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // signal_callback_app
+  //
+  static void
+  signal_callback_app(void * context, int sig)
+  {
+    (void)sig;
+    Application * app = (Application *)(context);
+
+    if (signal_handler_received_sigint())
+    {
+      app->postEvent(mainWindow, new QCloseEvent());
+    }
+  }
+
 
   //----------------------------------------------------------------
   // usage
@@ -459,6 +491,9 @@ namespace yae
     {
       DVR dvr(yaetv_dir, basedir);
 
+      DVR::ServiceLoop service_loop(dvr);
+      signal_handler().add(&signal_callback_dvr, &service_loop);
+
       // bootstrap_blacklist(dvr);
       // bootstrap_wishlist(dvr);
 
@@ -477,7 +512,6 @@ namespace yae
         YAE_EXPECT(dvr.hdhr_.init(tuner_name));
       }
 
-      DVR::ServiceLoop service_loop(dvr);
       service_loop.execute(yae::Worker());
       return 0;
     }
@@ -508,6 +542,7 @@ namespace yae
     yae::mainWindow->show();
     yae::mainWindow->initItemViews();
 
+    signal_handler().add(&signal_callback_app, &app);
     app.exec();
     return 0;
   }

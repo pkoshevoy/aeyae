@@ -11,6 +11,7 @@
 
 // standard:
 #include <set>
+#include <utility>
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -35,10 +36,16 @@ namespace yae
     bool received_sigpipe();
     bool received_sigint();
 
+    typedef void(*TFuncPtr)(void *, int);
+    void add(TFuncPtr cb, void * ctx);
+
   protected:
+    void call_callbacks(int sig);
+
     boost::condition_variable signal_;
     mutable boost::mutex mutex_;
     std::set<int> received_;
+    std::set<std::pair<TFuncPtr, void *> > callback_;
   };
 
   //----------------------------------------------------------------

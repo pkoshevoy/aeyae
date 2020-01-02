@@ -26,7 +26,6 @@
 
 // yaetv:
 #include "yae_dvr.h"
-#include "yae_signal_handler.h"
 
 
 namespace yae
@@ -1274,9 +1273,7 @@ namespace yae
     // pull EPG, evaluate wishlist, start captures, etc...
     yae::mpeg_ts::EPG epg;
 
-    while (!keep_going_.stop_ &&
-           !signal_handler_received_sigpipe() &&
-           !signal_handler_received_sigint())
+    while (!keep_going_.stop_)
     {
       TTime now = TTime::now();
 

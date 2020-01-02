@@ -1384,6 +1384,13 @@ namespace yae
     bool is_null() const;
     void operator()() const;
 
+    inline bool operator < (const ContextCallback & other) const
+    {
+      return (func_ == other.func_ ?
+              context_ < other.context_ :
+              func_ < other.func_);
+    }
+
   protected:
     TFuncPtr func_;
     void * context_;
