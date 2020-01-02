@@ -574,6 +574,47 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DoesItemFit
+  //
+  struct DoesItemFit : TBoolExpr
+  {
+    DoesItemFit(const ItemRef & x0,
+                const ItemRef & x1,
+                const Item & item):
+      x0_(x0),
+      x1_(x1),
+      item_(item)
+    {
+      x0_.disableCaching();
+      x1_.disableCaching();
+    }
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      double x = item_.left();
+      if (x < x0_.get())
+      {
+        result = false;
+        return;
+      }
+
+      double w = item_.width();
+      if (x + w > x1_.get())
+      {
+        result = false;
+        return;
+      }
+
+      result = true;
+    }
+
+    ItemRef x0_;
+    ItemRef x1_;
+    const Item & item_;
+  };
+
+  //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
   AppStyle::AppStyle(const char * id, const AppView & view):
@@ -912,6 +953,8 @@ namespace yae
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
     Item & panel = *epg_view_;
     Gradient & epg_header = panel.get<Gradient>("epg_header");
     Scrollview & vsv = panel.get<Scrollview>("vsv");
@@ -977,9 +1020,11 @@ namespace yae
         // maj_min.font_.setBold(true);
         // maj_min.font_.setStretch(104);
         maj_min.font_.setWeight(QFont::Medium);
-        maj_min.fontSize_ = ItemRef::reference(style.unit_size_, 0.36);
-        maj_min.anchors_.top_ = ItemRef::reference(tile, kPropertyTop, 1, 5);
-        maj_min.anchors_.left_ = ItemRef::reference(tile, kPropertyLeft, 1, 5);
+        maj_min.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.36);
+        maj_min.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
+        maj_min.anchors_.left_ = ItemRef::reference(tile, kPropertyLeft);
+        maj_min.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
+        maj_min.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         maj_min.text_ = TVarRef::constant(TVar(ch_str.c_str()));
         maj_min.elide_ = Qt::ElideNone;
         maj_min.color_ = maj_min.
@@ -990,11 +1035,10 @@ namespace yae
         Text & ch_name = tile.addNew<Text>("ch_name");
         ch_name.font_ = style.font_;
         // ch_name.font_.setWeight(QFont::Light);
-        ch_name.fontSize_ = ItemRef::reference(style.unit_size_, 0.28);
-        ch_name.anchors_.top_ =
-          ItemRef::reference(maj_min, kPropertyBottom, 1, 2);
-        ch_name.anchors_.left_ =
-          ItemRef::reference(maj_min, kPropertyLeft);
+        ch_name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.28);
+        ch_name.anchors_.top_ = ItemRef::reference(maj_min, kPropertyBottom);
+        ch_name.anchors_.left_ = ItemRef::reference(maj_min, kPropertyLeft);
+        ch_name.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
         ch_name.text_ = TVarRef::constant(TVar(channel.name_.c_str()));
         ch_name.elide_ = Qt::ElideNone;
         ch_name.color_ = ch_name.
@@ -1047,20 +1091,24 @@ namespace yae
             addExpr(new ProgramTileWidth(view, program.duration_));
 
           RoundRect & bg = prog.addNew<RoundRect>("bg");
-          bg.anchors_.inset(prog, 1, 1);
-          bg.radius_ = ItemRef::constant(5.0);
+          bg.anchors_.fill(prog);
+          bg.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.03));
+          bg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
           bg.background_ = bg.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_));
           bg.color_ = bg.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
 
-          Text & hhmm = prog.addNew<Text>("hhmm");
+          Item & body = bg.addNew<Item>("body");
+          body.anchors_.fill(bg);
+          body.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+
+          Text & hhmm = body.addNew<Text>("hhmm");
           hhmm.font_ = style.font_;
-          // hhmm.font_.setBold(true);
           hhmm.font_.setWeight(62);
-          hhmm.fontSize_ = ItemRef::reference(style.unit_size_, 0.312);
-          hhmm.anchors_.top_ = ItemRef::reference(prog, kPropertyTop, 1, 7);
-          hhmm.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft, 1, 10);
+          hhmm.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+          hhmm.anchors_.top_ = ItemRef::reference(body, kPropertyTop);
+          hhmm.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
           hhmm.elide_ = Qt::ElideNone;
           hhmm.color_ = hhmm.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -1074,31 +1122,35 @@ namespace yae
           std::string hhmm_txt = strfmt("%i:%02i", hour, program.tm_.tm_min);
           hhmm.text_ = TVarRef::constant(TVar(hhmm_txt.c_str()));
 
-          RoundRect & rec = prog.addNew<RoundRect>("rec");
-          rec.anchors_.top_ = ItemRef::reference(hhmm, kPropertyBottom, 1, 3);
-          rec.anchors_.left_ = ItemRef::reference(hhmm, kPropertyLeft, 1, -1);
-          rec.width_ = rec.
-            addExpr(new OddRoundUp(prog, kPropertyHeight, 0.2));
+          hhmm.visible_ = hhmm.addExpr
+            (new DoesItemFit(ItemRef::reference(body, kPropertyLeft),
+                             ItemRef::reference(body, kPropertyRight),
+                             hhmm));
+
+          RoundRect & rec = body.addNew<RoundRect>("rec");
+          rec.width_ = rec.addExpr(new OddRoundUp(bg, kPropertyHeight, 0.25));
           rec.height_ = ItemRef::reference(rec.width_);
           rec.radius_ = ItemRef::reference(rec.width_, 0.5);
+          rec.anchors_.bottom_ = ItemRef::reference(body, kPropertyBottom);
+          rec.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
           rec.background_ = rec.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
           rec.color_ = rec.
             addExpr(new RecButtonColor(view, ch_num, program.gps_time_));
+          rec.visible_ = rec.addExpr
+            (new DoesItemFit(ItemRef::reference(body, kPropertyLeft),
+                             ItemRef::reference(body, kPropertyRight),
+                             rec));
 
-          Text & title = prog.addNew<Text>("title");
+          Text & title = body.addNew<Text>("title");
           title.font_ = style.font_;
-          // title.font_.setBold(true);
           title.font_.setWeight(62);
-          title.fontSize_ = ItemRef::reference(style.unit_size_, 0.312);
-          title.anchors_.bottom_ =
-            ItemRef::reference(rec, kPropertyBottom);
-          title.anchors_.left_ =
-            ItemRef::reference(rec, kPropertyRight, 1, 7);
-          title.anchors_.right_ =
-            ItemRef::reference(prog, kPropertyRight, 1, -10);
+          title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+          title.anchors_.vcenter_ = ItemRef::reference(rec, kPropertyVCenter);
+          title.anchors_.left_ = ItemRef::reference(rec, kPropertyRight);
+          title.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
           title.margins_.
-            set_bottom(ItemRef::reference(title, kPropertyFontDescent, -1));
+            set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
           title.elide_ = Qt::ElideRight;
           title.color_ = title.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -1152,10 +1204,10 @@ namespace yae
         Text & label = item.addNew<Text>("time");
         label.font_ = style.font_;
         label.fontSize_ = ItemRef::reference(style.unit_size_, 0.29);
-        label.anchors_.vcenter_ =
-          ItemRef::reference(item, kPropertyVCenter, 1, 1);
-        label.anchors_.left_ =
-          ItemRef::reference(tickmark, kPropertyRight, 1, 5);
+        label.anchors_.vcenter_ = ItemRef::reference(item, kPropertyVCenter);
+        label.anchors_.left_ = ItemRef::reference(tickmark, kPropertyRight);
+        label.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.03));
+        label.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         label.elide_ = Qt::ElideNone;
         label.color_ = label.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
@@ -1325,6 +1377,9 @@ namespace yae
   AppView::layout(AppView & view, AppStyle & style, Item & root)
   {
     Item & hidden = root.addHidden(new Item("hidden"));
+    hidden.width_ = hidden.
+      addExpr(style_item_ref(view, &AppStyle::unit_size_));
+
     Rectangle & bg = root.addNew<Rectangle>("background");
     bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
     bg.anchors_.fill(root);
@@ -1401,14 +1456,15 @@ namespace yae
   void
   AppView::layout_epg(AppView & view, AppStyle & style, Item & panel)
   {
+    Item & root = *(view.root_);
+    Item & hidden = root.get<Item>("hidden");
+
     Gradient & ch_header = panel.addNew<Gradient>("ch_header");
     ch_header.anchors_.fill(panel);
     ch_header.anchors_.right_.reset();
-    ch_header.width_ = ch_header.
-      addExpr(style_item_ref(view, &AppStyle::unit_size_, 2.6));
+    ch_header.width_ = ItemRef::reference(hidden, kUnitSize, 2.6);
     ch_header.anchors_.bottom_.reset();
-    ch_header.height_ = ch_header.
-      addExpr(style_item_ref(view, &AppStyle::unit_size_, 0.42));
+    ch_header.height_ = ItemRef::reference(hidden, kUnitSize, 0.42);
     ch_header.orientation_ = Gradient::kVertical;
     ch_header.color_ = style.bg_epg_header_;
 

@@ -121,6 +121,7 @@ namespace yae
     kPropertyTextRightBearing,
     kPropertyScrollviewXPos,
     kPropertyScrollviewYPos,
+    kUnitSize = kPropertyWidth,
   };
 
   //----------------------------------------------------------------
