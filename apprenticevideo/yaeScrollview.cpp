@@ -434,12 +434,12 @@ namespace yae
   double
   Scrollview::content_origin_x() const
   {
-    const Segment & s = content_->xExtent();
+    const Segment & scene = content_->xExtent();
     double vw = this->width();
     double o =
-      (0.0 <= s.origin_) ? 0.0 :
-      (s.length_ <= vw) ? 0.0 :
-      (-s.origin_ / (s.length_ - vw));
+      (0.0 <= scene.origin_) ? 0.0 :
+      (scene.length_ <= vw) ? 0.0 :
+      (-scene.origin_ / (scene.length_ - vw));
     return o;
   }
 
@@ -469,9 +469,18 @@ namespace yae
       return position_x_.get();
     }
 
-    double x = content_origin_x();
-    x = std::min(1.0, std::max(0.0, x + offset_x_));
-    return x;
+    const Segment & view = this->xExtent();
+    const Segment & scene = this->content_->xExtent();
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double x = content_origin_x() + offset_x_ / range;
+      x = std::min(1.0, std::max(0.0, x));
+      return x;
+    }
+
+    return 0.0;
   }
 
   //----------------------------------------------------------------
@@ -485,9 +494,18 @@ namespace yae
       return position_y_.get();
     }
 
-    double y = content_origin_y();
-    y = std::min(1.0, std::max(0.0, y + offset_y_));
-    return y;
+    const Segment & view = this->yExtent();
+    const Segment & scene = this->content_->yExtent();
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double y = content_origin_y() + offset_y_ / range;
+      y = std::min(1.0, std::max(0.0, y));
+      return y;
+    }
+
+    return 0.0;
   }
 
   //----------------------------------------------------------------
@@ -496,9 +514,17 @@ namespace yae
   void
   Scrollview::set_position_x(double x)
   {
-    double o = content_origin_x();
     x = std::min(1.0, std::max(0.0, x));
-    offset_x_ = x - o;
+
+    const Segment & view = this->xExtent();
+    const Segment & scene = this->content_->xExtent();
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double x0 = content_origin_x();
+      offset_x_ = range * (x - x0);
+    }
   }
 
   //----------------------------------------------------------------
@@ -507,9 +533,17 @@ namespace yae
   void
   Scrollview::set_position_y(double y)
   {
-    double o = content_origin_y();
     y = std::min(1.0, std::max(0.0, y));
-    offset_y_ = y - o;
+
+    const Segment & view = this->yExtent();
+    const Segment & scene = this->content_->yExtent();
+
+    if (view.length_ < scene.length_)
+    {
+      double range = scene.length_ - view.length_;
+      double y0 = content_origin_y();
+      offset_y_ = range * (y - y0);
+    }
   }
 
 #ifndef NDEBUG

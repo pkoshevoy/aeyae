@@ -95,7 +95,7 @@ namespace yae
 
       if (side_ == kLeft)
       {
-        result = container_.left() + unit_size * 7.0;
+        result = container_.left() + unit_size * 0.0;
       }
       else
       {
@@ -260,13 +260,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // kTimePixelScaleFactor
+  //
+  // static const double kTimePixelScaleFactor = 6.159;
+  // static const double kTimePixelScaleFactor = 7.175;
+  static const double kTimePixelScaleFactor = 7.2875;
+
+  //----------------------------------------------------------------
   // seconds_to_px
   //
   static double
   seconds_to_px(const AppView & view, uint32_t sec)
   {
     double unit_size = view.style_->unit_size_.get();
-    double px = (unit_size * 6.159) * (sec / 3600.0);
+    double px = (unit_size * kTimePixelScaleFactor) * (sec / 3600.0);
     return px;
   }
 
@@ -277,7 +284,7 @@ namespace yae
   px_to_seconds(const AppView & view, double px)
   {
     double unit_size = view.style_->unit_size_.get();
-    double sec = (px * 3600.0) / (unit_size * 6.159);
+    double sec = (px * 3600.0) / (unit_size * kTimePixelScaleFactor);
     return sec;
   }
 
@@ -522,6 +529,7 @@ namespace yae
 #endif
       {
         result = 38.4;
+        // result = 114;
       }
     }
 
@@ -1009,7 +1017,7 @@ namespace yae
         Gradient & tile = ch_list.add<Gradient>(tile_ptr);
         tile.orientation_ = Gradient::kVertical;
         tile.color_ = style.bg_epg_channel_;
-        tile.height_ = ItemRef::reference(style.unit_size_, 1.12);
+        tile.height_ = ItemRef::reference(hidden, kUnitSize, 1.12);
         tile.anchors_.left_ = ItemRef::reference(ch_list, kPropertyLeft);
         tile.anchors_.right_ = ItemRef::reference(ch_list, kPropertyRight);
         tile.anchors_.top_ = tile.
@@ -1017,8 +1025,6 @@ namespace yae
 
         Text & maj_min = tile.addNew<Text>("maj_min");
         maj_min.font_ = style.font_;
-        // maj_min.font_.setBold(true);
-        // maj_min.font_.setStretch(104);
         maj_min.font_.setWeight(QFont::Medium);
         maj_min.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.36);
         maj_min.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
@@ -1034,7 +1040,6 @@ namespace yae
 
         Text & ch_name = tile.addNew<Text>("ch_name");
         ch_name.font_ = style.font_;
-        // ch_name.font_.setWeight(QFont::Light);
         ch_name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.28);
         ch_name.anchors_.top_ = ItemRef::reference(maj_min, kPropertyBottom);
         ch_name.anchors_.left_ = ItemRef::reference(maj_min, kPropertyLeft);
@@ -1203,7 +1208,7 @@ namespace yae
 
         Text & label = item.addNew<Text>("time");
         label.font_ = style.font_;
-        label.fontSize_ = ItemRef::reference(style.unit_size_, 0.29);
+        label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         label.anchors_.vcenter_ = ItemRef::reference(item, kPropertyVCenter);
         label.anchors_.left_ = ItemRef::reference(tickmark, kPropertyRight);
         label.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.03));
@@ -1522,14 +1527,14 @@ namespace yae
     hscrollbar.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
     hscrollbar.anchors_.right_ = ItemRef::reference(vscrollbar, kPropertyLeft);
     hscrollbar.anchors_.bottom_ = ItemRef::reference(panel, kPropertyBottom);
-    hscrollbar.height_ = ItemRef::reference(style.unit_size_, 0.33);
+    hscrollbar.height_ = ItemRef::reference(hidden, kUnitSize, 0.33);
     hscrollbar.color_ = hscrollbar.
       addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_));
 
     vscrollbar.anchors_.top_ = ItemRef::reference(ch_header, kPropertyBottom);
     vscrollbar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
     vscrollbar.anchors_.right_ = ItemRef::reference(panel, kPropertyRight);
-    vscrollbar.width_ = ItemRef::reference(style.unit_size_, 0.33);
+    vscrollbar.width_ = ItemRef::reference(hidden, kUnitSize, 0.33);
     vscrollbar.color_ = hscrollbar.color_;
 
     chan_bar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
