@@ -1667,16 +1667,18 @@ namespace yae
     dvr_.hdhr_.get_channels(channels);
 
     std::list<std::string> frequencies;
+    std::map<std::string, uint16_t> channel_major;
 #if 1
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
     {
       const uint32_t ch_num = i->first;
+      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+
       if (has(dvr_.blacklist_.channels_, ch_num))
       {
-        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
         uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-        yae_wlog("skipping EPG update for blacklisted channel %i.%i",
+        yae_ilog("skipping EPG update for blacklisted channel %i.%i",
                  int(major),
                  int(minor));
         continue;
@@ -1687,6 +1689,8 @@ namespace yae
       {
         frequencies.push_back(frequency);
       }
+
+      channel_major[frequency] = major;
     }
 #else
     frequencies.push_back(std::string("503000000")); // 14.1
@@ -1697,6 +1701,7 @@ namespace yae
     {
       // shortuct:
       const std::string & frequency = *i;
+      uint16_t major = yae::at(channel_major, frequency);
 
       DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
       if (!handler_ptr)
@@ -1708,7 +1713,10 @@ namespace yae
       const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
       const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
 
-      if (dvr_.epg_refresh_period_ <= bucket.elapsed_time_since_mgt())
+      TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
+      YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
+
+      if (dvr_.epg_refresh_period_ <= elapsed_time_since_mgt)
       {
         DVR::TStreamPtr stream_ptr =
           dvr_.capture_stream(frequency, sample_dur);
@@ -1751,12 +1759,16 @@ namespace yae
         }
         else
         {
-          yae_wlog("failed to start EPG update for %s", frequency.c_str());
+          yae_wlog("failed to start EPG update for channels %i.* (%s)",
+                   major,
+                   frequency.c_str());
         }
       }
       else
       {
-        yae_ilog("skipping EPG update for %s", frequency.c_str());
+        yae_ilog("skipping EPG update for channels %i.* (%s)",
+                 major,
+                 frequency.c_str());
       }
 
       dvr_.save_epg(frequency, ctx);

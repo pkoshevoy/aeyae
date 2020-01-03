@@ -323,7 +323,7 @@ namespace yae
     YAE_THROW_IF(!yae::mkdir_p(cache_dir_));
 
     dbg_.reset(hdhomerun_debug_create());
-    hdhomerun_debug_set_prefix(dbg_.get(), "yaetv-hdhd");
+    hdhomerun_debug_set_prefix(dbg_.get(), "yaetv-hdhr");
 
     std::string dbg_path = (fs::path(cache_dir) / "yaetv-hdhr.log").string();
     hdhomerun_debug_set_filename(dbg_.get(), dbg_path.c_str());
@@ -331,7 +331,7 @@ namespace yae
     hdhomerun_debug_enable(dbg_.get());
 
     std::string ts = unix_epoch_time_to_localtime_str(TTime::now().get(1));
-    hdhomerun_debug_printf(dbg_.get(), "FIXME: pkoshevoy: %s", ts.c_str());
+    hdhomerun_debug_printf(dbg_.get(), "start: %s", ts.c_str());
   }
 
   //----------------------------------------------------------------
