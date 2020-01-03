@@ -35,7 +35,7 @@ namespace yae
   // recording_rx
   //
   static const char * recording_rx =
-    "^\\d{8}-\\d{4} \\d{1,2}\\.\\d{1,2} .+\\.ts$";
+    "^\\d{8}-\\d{4} \\d{1,2}\\.\\d{1,2} .+\\.mpg$";
 
   //----------------------------------------------------------------
   // CollectRecordings
@@ -490,7 +490,7 @@ namespace yae
 
     std::string basename = get_basename();
     std::string basepath = (title_path / basename).string();
-    std::string filepath = basepath + ".ts";
+    std::string filepath = basepath + ".mpg";
     file_.reset(new yae::TOpenFile(filepath, "ab"));
     bool ok = file_->is_open();
 

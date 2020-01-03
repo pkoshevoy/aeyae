@@ -397,7 +397,7 @@ namespace yae
       << "\nUSAGE:\n"
       << argv
       << " -b " << (fs::path("path") / "to" / "storage" / "yaetv").string()
-      << " [--parse " << (fs::path("path") / "to" / "mpeg.ts").string() << "]"
+      << " [--parse " << (fs::path("path") / "to" / "file.mpg").string() << "]"
       << " [--no-ui]"
       << "\n";
 
@@ -461,7 +461,7 @@ namespace yae
       {
         if (argc <= i + 1)
         {
-          usage(argv, "--parse parameter requires a /file/path/to/some.ts");
+          usage(argv, "--parse parameter requires a /file/path/to/some.mpg");
           return i;
         }
 
