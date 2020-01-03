@@ -107,7 +107,7 @@ namespace yae
     stop_ = true;
     pause_ = false;
     terminator_.stopWaiting(true);
-    thread_.stop();
+    thread_.interrupt();
     thread_.wait();
   }
 

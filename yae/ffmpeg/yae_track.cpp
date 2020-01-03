@@ -684,7 +684,7 @@ namespace yae
   {
     terminator_.stopWaiting(true);
     packetQueue_.close();
-    thread_.stop();
+    thread_.interrupt();
     return thread_.wait();
   }
 

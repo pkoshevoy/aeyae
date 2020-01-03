@@ -366,7 +366,7 @@ namespace yae
     if (signal_handler_received_sigpipe() ||
         signal_handler_received_sigint())
     {
-      service_loop->keep_going_.stop_ = true;
+      service_loop->cancel();
       service_loop->dvr_.shutdown();
     }
   }
@@ -513,6 +513,7 @@ namespace yae
       }
 
       service_loop.execute(yae::Worker());
+      dvr.shutdown();
       return 0;
     }
 

@@ -1496,7 +1496,7 @@ namespace yae
   Canvas::cropAutoDetectStop()
   {
     autoCrop_.stop();
-    autoCropThread_.stop();
+    autoCropThread_.interrupt();
     autoCropThread_.wait();
     autoCropThread_.set_context(NULL);
   }

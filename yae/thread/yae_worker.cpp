@@ -111,7 +111,7 @@ namespace yae
       signal_.notify_all();
     }
 
-    thread_.stop();
+    thread_.interrupt();
     thread_.wait();
     thread_.set_context(NULL);
   }
@@ -176,6 +176,15 @@ namespace yae
         signal_.notify_all();
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // Worker::interrupt
+  //
+  void
+  Worker::interrupt()
+  {
+    thread_.interrupt();
   }
 
   //----------------------------------------------------------------

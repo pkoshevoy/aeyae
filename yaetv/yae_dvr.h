@@ -246,11 +246,6 @@ namespace yae
 
 
     //----------------------------------------------------------------
-    // TWorkerPtr
-    //
-    typedef yae::shared_ptr<yae::Worker> TWorkerPtr;
-
-    //----------------------------------------------------------------
     // Stream
     //
     struct Stream : IStream
@@ -267,7 +262,7 @@ namespace yae
       virtual bool push(const void * data, std::size_t size);
 
       DVR & dvr_;
-      DVR::TWorkerPtr worker_;
+      yae::TWorkerPtr worker_;
       yae::HDHomeRun::TSessionPtr session_;
       std::string frequency_;
       TPacketHandlerPtr packet_handler_;
@@ -355,6 +350,51 @@ namespace yae
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 
+    inline TTime next_channel_scan() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_channel_scan_);
+    }
+
+    inline void set_next_channel_scan(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_channel_scan_ = t;
+    }
+
+    inline TTime next_epg_refresh() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_epg_refresh_);
+    }
+
+    inline void set_next_epg_refresh(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_epg_refresh_ = t;
+    }
+
+    inline TTime next_schedule_refresh() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_schedule_refresh_);
+    }
+
+    inline void set_next_schedule_refresh(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_schedule_refresh_ = t;
+    }
+
+    inline void cache_epg(const yae::mpeg_ts::EPG & epg)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      epg_ = epg;
+      epg_lastmod_ = TTime::now();
+    }
+
+    bool get_cached_epg(TTime & lastmod, yae::mpeg_ts::EPG & epg) const;
+
     // protect against concurrent access:
     mutable boost::mutex mutex_;
 
@@ -367,6 +407,7 @@ namespace yae
     std::map<std::string, TWorkerPtr> stream_worker_;
     std::map<std::string, yae::weak_ptr<Stream, IStream> > stream_;
     std::map<std::string, TPacketHandlerPtr> packet_handler_;
+    TWorkerPtr service_loop_worker_;
 
     // recordings wishlist, schedule, etc:
     Schedule schedule_;
@@ -375,9 +416,18 @@ namespace yae
     // channels we don't want to waste time on:
     Blacklist blacklist_;
 
-    yae::TTime channel_scan_period_;
-    yae::TTime epg_refresh_period_;
-    yae::TTime margin_;
+    TTime channel_scan_period_;
+    TTime epg_refresh_period_;
+    TTime schedule_refresh_period_;
+    TTime margin_;
+
+  protected:
+    TTime next_channel_scan_;
+    TTime next_epg_refresh_;
+    TTime next_schedule_refresh_;
+
+    yae::mpeg_ts::EPG epg_;
+    TTime epg_lastmod_;
   };
 
 }

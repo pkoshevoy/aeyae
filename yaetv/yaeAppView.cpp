@@ -717,7 +717,8 @@ namespace yae
     ItemView("AppView"),
     dvr_(NULL),
     view_mode_(kProgramGuideMode),
-    sync_ui_(this)
+    sync_ui_(this),
+    epg_lastmod_(0, 0)
   {
     Item & root = *root_;
 
@@ -970,28 +971,28 @@ namespace yae
       return;
     }
 
-    // fill in the channel list:
-    yae::mpeg_ts::EPG epg;
-    dvr_->get_epg(epg);
-
-    DVR::Blacklist blacklist;
-    dvr_->get(blacklist);
-
-    std::map<uint32_t, TScheduledRecordings> schedule;
-    dvr_->schedule_.get(schedule);
-
-    if (epg.channels_ == epg_.channels_ &&
-        blacklist.channels_ == blacklist_.channels_ &&
-        schedule == schedule_)
+    // check if model data has changed:
     {
-      requestRepaint();
-      return;
-    }
+      bool epg_unchanged = !dvr_->get_cached_epg(epg_lastmod_, epg_);
 
-    // update:
-    epg_.channels_.swap(epg.channels_);
-    blacklist_.channels_.swap(blacklist.channels_);
-    schedule_.swap(schedule);
+      DVR::Blacklist blacklist;
+      dvr_->get(blacklist);
+
+      std::map<uint32_t, TScheduledRecordings> schedule;
+      dvr_->schedule_.get(schedule);
+
+      if (epg_unchanged &&
+          blacklist.channels_ == blacklist_.channels_ &&
+          schedule == schedule_)
+      {
+        requestRepaint();
+        return;
+      }
+
+      // update:
+      blacklist_.channels_.swap(blacklist.channels_);
+      schedule_.swap(schedule);
+    }
 
     // shortcuts:
     AppView & view = *this;

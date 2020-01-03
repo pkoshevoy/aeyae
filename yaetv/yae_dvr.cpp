@@ -1311,15 +1311,17 @@ namespace yae
   {
     dvr_.init_packet_handlers();
 
-    TTime schedule_update_period = TTime(30, 1);
-    TTime schedule_update_time = TTime::now() - schedule_update_period;
-    TTime channel_scan_time = TTime::now();
-    TTime epg_update_time = TTime::now();
-    dvr_.update_epg();
+    TTime now = TTime::now();
+    dvr_.set_next_channel_scan(now);
+    dvr_.set_next_epg_refresh(now);
+    dvr_.set_next_schedule_refresh(now);
+
+    yae::mpeg_ts::EPG epg;
+    dvr_.get_epg(epg);
+    dvr_.cache_epg(epg);
+    dvr_.update_epg(true);
 
     // pull EPG, evaluate wishlist, start captures, etc...
-    yae::mpeg_ts::EPG epg;
-
     while (!keep_going_.stop_)
     {
       TTime now = TTime::now();
@@ -1329,10 +1331,19 @@ namespace yae
         dvr_.save_schedule();
       }
 
-      if (schedule_update_period <= (now - schedule_update_time))
+      if (dvr_.next_schedule_refresh() <= now)
       {
-        schedule_update_time = now;
-        dvr_.get_epg(epg);
+        dvr_.set_next_schedule_refresh(now + dvr_.schedule_refresh_period_);
+
+        yae::mpeg_ts::EPG curr_epg;
+        dvr_.get_epg(curr_epg);
+
+        bool epg_changed = (epg.channels_ != curr_epg.channels_);
+        if (epg_changed)
+        {
+          epg.channels_.swap(curr_epg.channels_);
+          dvr_.cache_epg(epg);
+        }
 
 #if 0 // ndef NDEBUG
         for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
@@ -1349,31 +1360,35 @@ namespace yae
 #endif
 
         dvr_.evaluate(epg);
+        continue;
       }
 
       if (dvr_.worker_.is_idle())
       {
-        double sec_since_channel_scan = (now - channel_scan_time).sec();
-        double sec_since_epg_update = (now - epg_update_time).sec();
-        bool blacklist_updated = dvr_.load_blacklist();
+        bool blacklist_changed = dvr_.load_blacklist();
 
-        if (blacklist_updated ||
-            sec_since_epg_update > dvr_.epg_refresh_period_.sec())
+        if (blacklist_changed || now <= dvr_.next_epg_refresh())
         {
+          dvr_.set_next_epg_refresh(now + dvr_.epg_refresh_period_);
           dvr_.update_epg(true);
-          epg_update_time = now;
+          continue;
         }
-        else if (sec_since_channel_scan > dvr_.channel_scan_period_.sec())
+
+        if (now <= dvr_.next_channel_scan())
         {
+          dvr_.set_next_channel_scan(now + dvr_.channel_scan_period_);
           dvr_.scan_channels();
-          channel_scan_time = TTime::now();
+          continue;
         }
       }
 
-      boost::this_thread::sleep_for(boost::chrono::seconds(1));
+      try
+      {
+        boost::this_thread::sleep_for(boost::chrono::seconds(1));
+      }
+      catch (...)
+      {}
     }
-
-    dvr_.shutdown();
   }
 
   //----------------------------------------------------------------
@@ -1397,6 +1412,7 @@ namespace yae
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
+    schedule_refresh_period_(30, 1),
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
@@ -1523,6 +1539,8 @@ namespace yae
   DVR::shutdown()
   {
     yae_ilog("DVR shutdown");
+    service_loop_worker_.reset();
+
     boost::unique_lock<boost::mutex> lock(mutex_);
     schedule_.clear();
     worker_.stop();
@@ -1680,13 +1698,13 @@ namespace yae
       // shortuct:
       const std::string & frequency = *i;
 
-      DVR::TPacketHandlerPtr & pkt_handler_ptr = dvr_.packet_handler_[frequency];
-      if (!pkt_handler_ptr)
+      DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
+      if (!handler_ptr)
       {
-        pkt_handler_ptr.reset(new DVR::PacketHandler(dvr_));
+        handler_ptr.reset(new DVR::PacketHandler(dvr_));
       }
 
-      const DVR::PacketHandler & packet_handler = *pkt_handler_ptr;
+      const DVR::PacketHandler & packet_handler = *handler_ptr;
       const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
       const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
 
@@ -1701,22 +1719,28 @@ namespace yae
           boost::system_time giveup_at(boost::get_system_time());
           giveup_at += boost::posix_time::seconds(sample_dur.get(1));
 
-          boost::unique_lock<boost::mutex> lock(mutex_);
           while (true)
           {
+            boost::unique_lock<boost::mutex> lock(mutex_);
             if (yae::Worker::Task::cancelled_)
             {
               return;
             }
 
-            if (slow_)
+            try
             {
-              boost::this_thread::sleep_for(boost::chrono::seconds(1));
+              if (slow_)
+              {
+                lock.unlock();
+                boost::this_thread::sleep_for(boost::chrono::seconds(1));
+              }
+              else if (stream.epg_ready_.timed_wait(lock, giveup_at))
+              {
+                break;
+              }
             }
-            else if (stream.epg_ready_.timed_wait(lock, giveup_at))
-            {
-              break;
-            }
+            catch (...)
+            {}
 
             boost::system_time now(boost::get_system_time());
             if (giveup_at <= now)
@@ -1815,7 +1839,7 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::get_stream_worker
   //
-  DVR::TWorkerPtr
+  TWorkerPtr
   DVR::get_stream_worker(const std::string & frequency)
   {
     TWorkerPtr & worker_ptr = stream_worker_[frequency];
@@ -2138,14 +2162,33 @@ namespace yae
     Json::Value json;
     yae::save(json, rec);
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string name = wishlist_item_filename(channel, program);
-    std::string path = (yaetv_ / name).string();
-
-    yae::TOpenFile file;
-    if (!(file.open(path, "wb") && file.save(json)))
+    // avoid race condition with Schedule::update:
     {
-      yae_elog("write failed: %s", path.c_str());
+      boost::unique_lock<boost::mutex> lock(mutex_);
+
+      std::string name = wishlist_item_filename(channel, program);
+      std::string path = (yaetv_ / name).string();
+
+      // if cancelled, then un-cancel:
+      remove_utf8((path + ".cancelled").c_str());
+
+      // write it out, then close the file:
+      {
+        yae::TOpenFile file;
+        if (!(file.open(path, "wb") && file.save(json)))
+        {
+          yae_elog("write failed: %s", path.c_str());
+          return;
+        }
+      }
+    }
+
+    set_next_schedule_refresh(TTime::now());
+
+    if (service_loop_worker_)
+    {
+      // wake up the worker:
+      service_loop_worker_->interrupt();
     }
   }
 
@@ -2156,10 +2199,17 @@ namespace yae
   DVR::cancel_recording(const yae::mpeg_ts::EPG::Channel & channel,
                         const yae::mpeg_ts::EPG::Program & program)
   {
+    // avoid race condition with Schedule::update:
     boost::unique_lock<boost::mutex> lock(mutex_);
+
     std::string name = wishlist_item_filename(channel, program);
     std::string path = (yaetv_ / name).string();
-    remove_utf8(path);
+
+    // clean up any prior placeholder:
+    remove_utf8((path + ".cancelled").c_str());
+
+    int err = rename_utf8(path.c_str(), (path + ".cancelled").c_str());
+    YAE_ASSERT(!err);
 
     uint32_t ch_num = yae::mpeg_ts::channel_number(channel.major_,
                                                    channel.minor_);
@@ -2173,11 +2223,13 @@ namespace yae
   DVR::explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
                             const yae::mpeg_ts::EPG::Program & program) const
   {
+    // avoid race condition with Schedule::update:
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     Json::Value json;
     yae::shared_ptr<Wishlist::Item> item_ptr;
-    std::string name = wishlist_item_filename(channel, program);
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::string name = wishlist_item_filename(channel, program);
     std::string path = (yaetv_ / name).string();
 
     yae::TOpenFile file;
@@ -2496,6 +2548,23 @@ namespace yae
         rec.stream_ = stream;
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_cached_epg
+  //
+  bool
+  DVR::get_cached_epg(TTime & lastmod, yae::mpeg_ts::EPG & epg) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    if (lastmod.invalid() || lastmod < epg_lastmod_)
+    {
+      lastmod = epg_lastmod_;
+      epg = epg_;
+      return true;
+    }
+
+    return false;
   }
 
 }

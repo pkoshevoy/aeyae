@@ -106,9 +106,6 @@ namespace yae
     // frame canvas:
     TCanvasWidget * canvas_;
 
-    // DVR service loop thread:
-    yae::Worker thread_;
-
     yae::DVR dvr_;
     AppView view_;
     SpinnerView spinner_;

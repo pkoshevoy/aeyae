@@ -68,6 +68,8 @@ namespace yae
 
     void thread_loop();
 
+    void interrupt();
+
   private:
     // intentionally disabled:
     Worker(const Worker &);
@@ -82,6 +84,11 @@ namespace yae
     Thread<Worker> thread_;
     bool stop_;
   };
+
+  //----------------------------------------------------------------
+  // TWorkerPtr
+  //
+  typedef yae::shared_ptr<yae::Worker> TWorkerPtr;
 
 }
 

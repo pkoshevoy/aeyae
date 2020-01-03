@@ -164,6 +164,8 @@ namespace yae
     yae::shared_ptr<Item> epg_view_;
 
     yae::mpeg_ts::EPG epg_;
+    yae::TTime epg_lastmod_;
+
     DVR::Blacklist blacklist_;
     std::map<uint32_t, TScheduledRecordings> schedule_;
 

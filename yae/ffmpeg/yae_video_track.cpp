@@ -1075,7 +1075,7 @@ namespace yae
 
       terminator_.stopWaiting(true);
       frameQueue_.clear();
-      thread_.stop();
+      thread_.interrupt();
       thread_.wait();
     }
 

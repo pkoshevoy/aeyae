@@ -106,11 +106,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Thread::start: " << e.what() << std::endl;
+        std::cerr << "Thread::run: " << e.what() << std::endl;
       }
       catch (...)
       {
-        std::cerr << "Thread::start: unexpected exception" << std::endl;
+        std::cerr << "Thread::run: unexpected exception" << std::endl;
       }
 
       delete thread_;
@@ -118,7 +118,7 @@ namespace yae
       return false;
     }
 
-    void stop()
+    void interrupt()
     {
       try
       {
@@ -129,11 +129,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Thread::stop: " << e.what() << std::endl;
+        std::cerr << "Thread::interrupt: " << e.what() << std::endl;
       }
       catch (...)
       {
-        std::cerr << "Thread::stop: unexpected exception" << std::endl;
+        std::cerr << "Thread::interrupt: unexpected exception" << std::endl;
       }
     }
 

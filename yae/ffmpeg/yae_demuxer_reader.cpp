@@ -752,7 +752,7 @@ namespace yae
     outputTerminator_.stopWaiting(true);
     framestepTerminator_.stopWaiting(true);
 
-    thread_.stop();
+    thread_.interrupt();
     return thread_.wait();
   }
 

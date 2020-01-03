@@ -450,7 +450,7 @@ namespace yae
   //
   ThumbnailProvider::TPrivate::~TPrivate()
   {
-    thread_.stop();
+    thread_.interrupt();
     thread_.wait();
   }
 

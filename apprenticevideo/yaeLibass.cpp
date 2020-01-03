@@ -303,7 +303,7 @@ namespace yae
   void
   TLibass::asyncInitStop()
   {
-    thread_.stop();
+    thread_.interrupt();
     thread_.wait();
     thread_.set_context(NULL);
   }

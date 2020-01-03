@@ -64,7 +64,7 @@ namespace yae
   //
   TaskRunner::TPrivate::~TPrivate()
   {
-    thread_.stop();
+    thread_.interrupt();
     thread_.wait();
   }
 
@@ -226,7 +226,7 @@ namespace yae
         signal_.notify_all();
       }
 
-      thread_.stop();
+      thread_.interrupt();
       thread_.wait();
     }
 

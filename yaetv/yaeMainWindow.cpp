@@ -319,7 +319,6 @@ namespace yae
   MainWindow::fileExit()
   {
     dvr_.shutdown();
-    thread_.stop();
 
     MainWindow::close();
     qApp->quit();
@@ -482,12 +481,20 @@ namespace yae
         dynamic_cast<InitTuners::Done *>(e);
       if (done)
       {
-        if (thread_.is_idle())
+        if (!dvr_.service_loop_worker_)
+        {
+          dvr_.service_loop_worker_.reset(new yae::Worker());
+        }
+
+        TWorkerPtr service_loop_worker_ptr = dvr_.service_loop_worker_;
+        Worker & service_loop_worker = *service_loop_worker_ptr;
+
+        if (service_loop_worker.is_idle())
         {
           yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
           task.reset(new DVR::ServiceLoop(dvr_));
           DVR::ServiceLoop & service_loop = *task;
-          thread_.add(task);
+          service_loop_worker.add(task);
         }
 
         tasks_.pop_front();
