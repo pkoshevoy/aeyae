@@ -5790,7 +5790,7 @@ namespace yae
         channel.gps_time_ = gps_time;
         channel.epg_time_ = TTime::now();
 
-        // FIXME: pkoshevoy:
+#if 0
         TTime gps_now = TTime::gps_now().rebased(1);
         TTime gps_time_err = TTime(channel.gps_time_, 1) - gps_now;
         if (std::abs(gps_time_err.get(1)) >= 60)
@@ -5799,6 +5799,7 @@ namespace yae
                    gps_time_to_str(gps_now.get(1)).c_str(),
                    gps_time_to_str(channel.gps_time_).c_str());
         }
+#endif
 
         if (!guide.channel_etm_.empty())
         {

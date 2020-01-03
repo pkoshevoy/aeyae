@@ -70,6 +70,27 @@ typedef yae::shared_ptr<hdhomerun_device_t,
                         hdhomerun_device_deallocator> hdhomerun_devptr_t;
 
 
+//----------------------------------------------------------------
+// hdhomerun_debug_deallocator
+//
+struct hdhomerun_debug_deallocator
+{
+  inline static void destroy(hdhomerun_debug_t * dbg)
+  {
+    if (dbg)
+    {
+      hdhomerun_debug_destroy(dbg);
+    }
+  }
+};
+
+//----------------------------------------------------------------
+// hdhomerun_dbgptr_t
+//
+typedef yae::shared_ptr<hdhomerun_debug_t,
+                        hdhomerun_debug_t,
+                        hdhomerun_debug_deallocator> hdhomerun_dbgptr_t;
+
 
 namespace yae
 {
@@ -286,6 +307,9 @@ namespace yae
 
     // keep track of existing sessions, but don't extend their lifetime:
     std::map<std::string, yae::weak_ptr<HDHomeRun::Session> > sessions_;
+
+    // for HDHomeRun debug logging:
+    hdhomerun_dbgptr_t dbg_;
   };
 
 
@@ -297,6 +321,17 @@ namespace yae
     cache_dir_(cache_dir)
   {
     YAE_THROW_IF(!yae::mkdir_p(cache_dir_));
+
+    dbg_.reset(hdhomerun_debug_create());
+    hdhomerun_debug_set_prefix(dbg_.get(), "yaetv-hdhd");
+
+    std::string dbg_path = (fs::path(cache_dir) / "yaetv-hdhr.log").string();
+    hdhomerun_debug_set_filename(dbg_.get(), dbg_path.c_str());
+
+    hdhomerun_debug_enable(dbg_.get());
+
+    std::string ts = unix_epoch_time_to_localtime_str(TTime::now().get(1));
+    hdhomerun_debug_printf(dbg_.get(), "FIXME: pkoshevoy: %s", ts.c_str());
   }
 
   //----------------------------------------------------------------
