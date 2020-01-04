@@ -1275,8 +1275,11 @@ namespace yae
              j = recordings.begin(); j != recordings.end(); ++j)
       {
         const Recording & rec = *(j->second);
-        uint32_t gps_t1 = yae::get(rec_times, rec.gps_t0_, rec.gps_t1_);
-        rec_times[rec.gps_t0_] = std::max(rec.gps_t1_, gps_t1);
+        if (!rec.cancelled_)
+        {
+          uint32_t gps_t1 = yae::get(rec_times, rec.gps_t0_, rec.gps_t1_);
+          rec_times[rec.gps_t0_] = std::max(rec.gps_t1_, gps_t1);
+        }
       }
     }
 
@@ -1444,7 +1447,8 @@ namespace yae
                program->tm_.tm_min,
                program->title_.c_str());
       dvr_->cancel_recording(*channel, *program);
-      requestRepaint();
+      schedule_.clear();
+      sync_ui();
       return;
     }
 
@@ -1466,7 +1470,8 @@ namespace yae
                  program->tm_.tm_hour,
                  program->tm_.tm_min,
                  program->title_.c_str());
-        requestRepaint();
+        schedule_.clear();
+        sync_ui();
         return;
       }
     }
@@ -1480,6 +1485,7 @@ namespace yae
                program->tm_.tm_min,
                program->title_.c_str());
       dvr_->schedule_recording(*channel, *program);
+      schedule_.clear();
       requestRepaint();
       return;
     }
