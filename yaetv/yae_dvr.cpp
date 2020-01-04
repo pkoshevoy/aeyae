@@ -2274,7 +2274,7 @@ namespace yae
       return 0;
     }
 
-    std::string json = ts.substr(0, ts.size() - 3) + ".json";
+    std::string json = ts.substr(0, ts.size() - 4) + ".json";
     if (!yae::remove_utf8(json))
     {
       yae_wlog("failed to remove %s", json.c_str());
@@ -2291,7 +2291,7 @@ namespace yae
   {
     try
     {
-      std::string path = ts.substr(0, ts.size() - 3) + ".json";
+      std::string path = ts.substr(0, ts.size() - 4) + ".json";
       Json::Value json;
       yae::TOpenFile(path, "rb").load(json);
       TRecordingPtr rec_ptr(new Recording());
@@ -2471,7 +2471,7 @@ namespace yae
       }
 
       // check that the existing recording is approximately complete:
-      std::string json_path = ts.substr(0, ts.size() - 3) + ".json";
+      std::string json_path = ts.substr(0, ts.size() - 4) + ".json";
       int64_t utc_t0 = yae::stat_lastmod(json_path.c_str());
       int64_t utc_t1 = yae::stat_lastmod(ts.c_str());
       int64_t recorded_duration = utc_t1 - utc_t0;
