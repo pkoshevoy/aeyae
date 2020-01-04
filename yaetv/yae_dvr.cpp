@@ -1311,7 +1311,7 @@ namespace yae
   {
     dvr_.init_packet_handlers();
 
-    TTime now = TTime::now();
+    TTime now = TTime::now().rebased(1);
     dvr_.set_next_channel_scan(now);
     dvr_.set_next_epg_refresh(now);
     dvr_.set_next_schedule_refresh(now);
@@ -1324,7 +1324,7 @@ namespace yae
     // pull EPG, evaluate wishlist, start captures, etc...
     while (!keep_going_.stop_)
     {
-      TTime now = TTime::now();
+      now = TTime::now().rebased(1);
 
       if (dvr_.load_wishlist())
       {
@@ -1367,14 +1367,14 @@ namespace yae
       {
         bool blacklist_changed = dvr_.load_blacklist();
 
-        if (blacklist_changed || now <= dvr_.next_epg_refresh())
+        if (blacklist_changed || dvr_.next_epg_refresh() <= now)
         {
           dvr_.set_next_epg_refresh(now + dvr_.epg_refresh_period_);
           dvr_.update_epg(true);
           continue;
         }
 
-        if (now <= dvr_.next_channel_scan())
+        if (dvr_.next_channel_scan() <= now)
         {
           dvr_.set_next_channel_scan(now + dvr_.channel_scan_period_);
           dvr_.scan_channels();

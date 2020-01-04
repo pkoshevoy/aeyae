@@ -6,9 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// aeyae:
-#include "yae_ffmpeg_utils.h"
-#include "../utils/yae_time.h"
+// system:
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 // standard:
 #include <stdarg.h>
@@ -26,6 +27,10 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/log.h>
 }
+
+// aeyae:
+#include "yae_ffmpeg_utils.h"
+#include "../utils/yae_time.h"
 
 
 namespace yae
@@ -446,8 +451,12 @@ namespace yae
     static boost::mutex * mutex = new boost::mutex();
     boost::lock_guard<boost::mutex> lock(*mutex);
     std::string message = yae::vstrfmt(format, args);
+#ifdef _WIN32
+    OutputDebugStringA( message.c_str());
+#else
     fprintf(stderr, "%s", message.c_str());
     fflush(stderr);
+#endif
     // YAE_BREAKPOINT_IF(level < AV_LOG_WARNING);
   }
 
@@ -465,7 +474,9 @@ namespace yae
       log_to_ffmpeg->setPriorityThreshold(yae::TLog::kDebug);
 #endif
       assign(std::string("av_log"), log_to_ffmpeg);
-      // av_log_set_callback(&av_log_callback);
+#ifdef _WIN32
+      av_log_set_callback(&av_log_callback);
+#endif
     }
   };
 

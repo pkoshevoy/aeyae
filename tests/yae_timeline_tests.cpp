@@ -78,6 +78,30 @@ BOOST_AUTO_TEST_CASE(yae_time)
   BOOST_CHECK_EQUAL(apc.time_, std::numeric_limits<int64_t>::max() / 2);
 }
 
+BOOST_AUTO_TEST_CASE(yae_time_now)
+{
+  TTime now = TTime::now();
+
+  struct tm tm_utc;
+  struct tm tm_local;
+
+  yae::unix_epoch_time_to_utc(now.get(1), tm_utc);
+  yae::unix_epoch_time_to_localtime(now.get(1), tm_local);
+
+  int64_t t_utc = yae::utc_to_unix_epoch_time(tm_utc);
+  int64_t t_local = yae::localtime_to_unix_epoch_time(tm_local);
+
+  BOOST_CHECK_EQUAL(now.get(1), t_utc);
+  BOOST_CHECK_EQUAL(now.get(1), t_local);
+
+  int64_t t_now = yae::unix_epoch_time_at_utc_time(tm_utc.tm_year + 1900,
+                                                   tm_utc.tm_mon + 1,
+                                                   tm_utc.tm_mday,
+                                                   tm_utc.tm_hour,
+                                                   tm_utc.tm_min,
+                                                   tm_utc.tm_sec);
+  BOOST_CHECK_EQUAL(now.get(1), t_now);
+}
 
 BOOST_AUTO_TEST_CASE(yae_parse_time)
 {

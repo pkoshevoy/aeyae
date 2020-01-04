@@ -45,7 +45,7 @@ namespace yae
     t.tm_min  = min;
     t.tm_sec  = sec;
 #ifdef _WIN32
-    int64_t t_epoch = _mktime64(&t);
+    int64_t t_epoch = _mkgmtime64(&t);
 #else
     int64_t t_epoch = timegm(&t);
 #endif
@@ -111,7 +111,7 @@ namespace yae
   {
     struct tm tm = t;
 #ifdef _WIN32
-    int64_t t_epoch = _mktime64(&tm);
+    int64_t t_epoch = _mkgmtime64(&tm);
 #else
     int64_t t_epoch = timegm(&tm);
 #endif

@@ -186,25 +186,35 @@ namespace yae
     dvr.blacklist_.channels_.clear();
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(9, 91));
 
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 1));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 2));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 3));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 4));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 1));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 2));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 3));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(10, 4));
 
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(11, 2));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(11, 3));
 
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 1));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 2));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(13, 3));
+
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 1));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 2));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 3));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 4));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 5));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(16, 6));
 
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 1));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 2));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 3));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 4));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 5));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 6));
+    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(19, 7));
+
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 1));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 2));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 3));
-    dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 4));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 3));
+    // dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(20, 4));
 
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 1));
     dvr.blacklist_.channels_.insert(yae::mpeg_ts::channel_number(23, 2));

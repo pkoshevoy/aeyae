@@ -29,6 +29,7 @@
 #if defined(_WIN32)
 #include <windows.h>
 #include <io.h>
+#include <share.h>
 #else
 #include <dirent.h>
 #include <dlfcn.h>
@@ -369,8 +370,15 @@ namespace yae
     wchar_t * wname = cstr_to_utf16(filename_utf8);
     wchar_t * wmode = cstr_to_utf16(mode);
 
-    _wfopen_s(&file, wname, wmode);
+    // type of sharing allowed:
+    int shflag =
+      (std::strstr(mode, "w") != NULL ||
+       std::strstr(mode, "a") != NULL ||
+       std::strstr(mode, "r+") != NULL) ?
+      _SH_DENYWR : // deny write access to the file
+      _SH_DENYNO; // permit read and write access
 
+    file = _wfsopen(wname, wmode, shflag);
     free(wname);
     free(wmode);
 #else

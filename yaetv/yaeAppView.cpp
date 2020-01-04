@@ -1072,7 +1072,7 @@ namespace yae
         maj_min.color_ = maj_min.
         addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
         maj_min.background_ = maj_min.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
 
         Text & ch_name = tile.addNew<Text>("ch_name");
         ch_name.font_ = style.font_;
@@ -1085,7 +1085,7 @@ namespace yae
         ch_name.color_ = ch_name.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
         ch_name.background_ = ch_name.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
       }
 
       ch_tiles[ch_num] = tile_ptr;
@@ -1154,7 +1154,7 @@ namespace yae
           hhmm.color_ = hhmm.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_));
           hhmm.background_ = hhmm.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
 
           int hour =
             (program.tm_.tm_hour > 12) ? program.tm_.tm_hour % 12 :
@@ -1196,7 +1196,7 @@ namespace yae
           title.color_ = title.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_));
           title.background_ = title.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
           // FIXME: this should be an expression:
           title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
 
@@ -1257,7 +1257,7 @@ namespace yae
         label.color_ = label.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
         label.background_ = label.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
         label.text_ = TVarRef::constant(TVar(t_str.c_str()));
       }
 
