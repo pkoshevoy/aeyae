@@ -1455,16 +1455,17 @@ namespace yae
       TScheduledRecordings::const_iterator found_rec = schedule.find(gps_time);
       if (found_rec != schedule.end())
       {
-        yae_ilog("toggle recording: %02i.%02i %02i:%02i %s",
+        TRecordingPtr rec_ptr = found_rec->second;
+        Recording & rec = *rec_ptr;
+        rec.cancelled_ = !rec.cancelled_;
+        yae_ilog("%s wishlist recording: %02i.%02i %02i:%02i %s",
+                 rec.cancelled_ ? "cancel" : "schedule",
                  channel->major_,
                  channel->minor_,
                  program->tm_.tm_hour,
                  program->tm_.tm_min,
                  program->title_.c_str());
-        TRecordingPtr rec_ptr = found_rec->second;
-        Recording & rec = *rec_ptr;
-        rec.cancelled_ = !rec.cancelled_;
-        sync_ui();
+        dataChanged();
         return;
       }
     }
