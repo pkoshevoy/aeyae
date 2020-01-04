@@ -648,6 +648,7 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     {
       view_.toggle_recording(ch_num_, gps_time_);
+      parent_->uncache();
       return true;
     }
 
@@ -1443,7 +1444,7 @@ namespace yae
                program->tm_.tm_min,
                program->title_.c_str());
       dvr_->cancel_recording(*channel, *program);
-      sync_ui();
+      requestRepaint();
       return;
     }
 
@@ -1465,7 +1466,7 @@ namespace yae
                  program->tm_.tm_hour,
                  program->tm_.tm_min,
                  program->title_.c_str());
-        dataChanged();
+        requestRepaint();
         return;
       }
     }
@@ -1479,7 +1480,8 @@ namespace yae
                program->tm_.tm_min,
                program->title_.c_str());
       dvr_->schedule_recording(*channel, *program);
-      sync_ui();
+      requestRepaint();
+      return;
     }
   }
 
