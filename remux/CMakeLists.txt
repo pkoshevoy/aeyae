@@ -284,6 +284,7 @@ add_custom_target("update_resource_files_aeyaeremux" ALL
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
   -DPROGNAME="${PROGNAME}"
   -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
+  -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"
   -P "${aeyae_SOURCE_DIR}/aeyae_update_resource_files_to_revision.cmake")
 
 add_custom_command(OUTPUT "${YAE_VERSIONED_FILE}"
