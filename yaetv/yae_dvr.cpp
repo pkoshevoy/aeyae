@@ -993,7 +993,7 @@ namespace yae
   //
   DVR::PacketHandler::PacketHandler(DVR & dvr):
     dvr_(dvr),
-    ring_buffer_(188 * 4096),
+    ring_buffer_(188 * 32768),
     packets_(400000), // 75.2MB
     recordings_update_gps_time_(0)
   {}
@@ -1192,7 +1192,7 @@ namespace yae
     }
 
     PacketHandler & packet_handler = *packet_handler_;
-    packet_handler.ring_buffer_.open(188 * 4096);
+    packet_handler.ring_buffer_.open(188 * 32768);
 
     if (session_)
     {
