@@ -213,6 +213,34 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // to_str
+  //
+  const char *
+  to_str(TLog::TPriority p)
+  {
+    switch (p)
+    {
+      case TLog::kDebug:
+        return "DEBUG";
+
+      case TLog::kInfo:
+        return "INFO";
+
+      case TLog::kWarning:
+        return "WARNING";
+
+      case TLog::kError:
+        return "ERROR";
+
+      default:
+        break;
+    }
+
+    YAE_ASSERT(false);
+    return "FIXME";
+  }
+
+  //----------------------------------------------------------------
   // log
   //
   void

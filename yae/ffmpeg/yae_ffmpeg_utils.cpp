@@ -456,31 +456,11 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(*mutex);
     std::string message = yae::vstrfmt(format, args);
 
-#if 1
-    // FIXME: pkoshevoy: this should be a separate message carrier instead:
-    static std::string ts =
-      yae::unix_epoch_time_to_localtime_str(TTime::now().get(1), "", "-", "");
-
-    static fs::path log_path =
-      fs::path(get_home_path_utf8()) / ".yaetv" /
-      yae::strfmt("yaetv-%s.log", ts.c_str());
-
-    static TOpenFilePtr log_file_ptr =
-      yae::get_open_file(log_path.string().c_str(), "wb");
-
-    if (log_file_ptr)
-    {
-      TOpenFile & file = *log_file_ptr;
-      file.write(message);
-      file.flush();
-    }
-#endif
-
 #ifdef _WIN32
     OutputDebugStringA( message.c_str());
 #else
-    //    fprintf(stderr, "%s", message.c_str());
-    //    fflush(stderr);
+    fprintf(stderr, "%s", message.c_str());
+    fflush(stderr);
 #endif
     // YAE_BREAKPOINT_IF(level < AV_LOG_WARNING);
   }
@@ -499,7 +479,7 @@ namespace yae
       log_to_ffmpeg->setPriorityThreshold(yae::TLog::kDebug);
 #endif
       assign(std::string("av_log"), log_to_ffmpeg);
-#if 1 // def _WIN32
+#ifdef _WIN32
       av_log_set_callback(&av_log_callback);
 #endif
     }

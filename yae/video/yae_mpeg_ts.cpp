@@ -5096,7 +5096,6 @@ namespace yae
     void
     Context::push(const TSPacket & pkt)
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
       YAE_EXPECT(!pkt.transport_error_indicator_);
 
       // In transport streams, duplicate packets may be sent as two,
@@ -5336,6 +5335,7 @@ namespace yae
                    mgt.table_id_ > 0xCD);
       YAE_THROW_IF(mgt.private_indicator_ != 1);
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
       bucket.timestamp_mgt_ = TTime::now();
 
@@ -5442,6 +5442,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
       uint8_t vct_index = yae::get<uint16_t, uint8_t>(pid_vct_, pid, 0);
       bucket.vct_table_set_.set_observed_table(vct_index,
@@ -5530,6 +5531,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
       uint8_t rrt_index = yae::get<uint16_t, uint8_t>(pid_rrt_, pid, 0);
       bucket.rrt_table_set_.set_observed_table(rrt_index,
@@ -5595,6 +5597,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
       uint8_t eit_index = yae::at(pid_eit_, pid);
       bucket.eit_table_set_.set_observed_table(eit_index,
@@ -5688,6 +5691,7 @@ namespace yae
       yae_debug << oss.str();
 #endif
 
+      boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
       unsigned short int source_id = ett.etm_id_source_id_;
       const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,

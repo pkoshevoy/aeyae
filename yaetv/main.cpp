@@ -396,6 +396,77 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // LogToFile
+  //
+  struct LogToFile : public IMessageCarrier
+  {
+    LogToFile(const std::string & path):
+      file_(get_open_file(path.c_str(), "wb")),
+      threshold_(TLog::kDebug)
+    {}
+
+    // virtual:
+    void destroy()
+    { delete this; }
+
+    //! a prototype factory method for constructing objects of the same kind,
+    //! but not necessarily deep copies of the original prototype object:
+    // virtual:
+    LogToFile * clone() const
+    { return new LogToFile(*this); }
+
+    // virtual:
+    const char * name() const
+    { return "LogToFile"; }
+
+    // virtual:
+    const char * guid() const
+    { return "6cab86bf-402b-4251-8eae-fe105359bf8b"; }
+
+    // virtual:
+    ISettingGroup * settings()
+    { return NULL; }
+
+    // virtual:
+    int priorityThreshold() const
+    { return threshold_; }
+
+    // virtual:
+    void setPriorityThreshold(int priority)
+    { threshold_ = priority; }
+
+    // virtual:
+    void deliver(int priority, const char * source, const char * message)
+    {
+      if (priority < threshold_)
+      {
+        return;
+      }
+
+      // add timestamp to the message:
+      std::ostringstream oss;
+      TTime now = TTime::now();
+      int64_t now_usec = now.get(1000000);
+      oss << yae::unix_epoch_time_to_localtime_str(now.get(1))
+          << '.'
+          << std::setw(6) << std::setfill('0') << (now_usec % 1000000)
+          << " [" << yae::to_str((TLog::TPriority)(priority)) << "] "
+          << source << ": "
+          << message << std::endl;
+
+      if (file_)
+      {
+        file_->write(oss.str());
+        file_->flush();
+      }
+    }
+
+  protected:
+    TOpenFilePtr file_;
+    int threshold_;
+  };
+
 
   //----------------------------------------------------------------
   // usage
@@ -440,8 +511,20 @@ namespace yae
   int
   main_may_throw(int argc, char ** argv)
   {
+    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+
     // instantiate the logger:
-    yae::logger();
+    {
+      yae::TLog & logger = yae::logger();
+
+      std::string ts =
+        unix_epoch_time_to_localtime_str(TTime::now().get(1), "", "-", "");
+
+      fs::path log_path =
+        fs::path(yaetv_dir) / yae::strfmt("yaetv-%s.log", ts.c_str());
+
+      logger.assign(std::string("yaetv"), new LogToFile(log_path.string()));
+    }
 
     // install signal handler:
     yae::signal_handler();
@@ -486,7 +569,6 @@ namespace yae
       }
     }
 
-    std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
     if (basedir.empty())
     {
       std::string path = (fs::path(yaetv_dir) / "settings.json").string();

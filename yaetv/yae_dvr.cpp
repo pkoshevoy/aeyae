@@ -1078,11 +1078,12 @@ namespace yae
           recordings_[ch_num].swap(recs);
         }
       }
-
+#if 0
       double ring_buffer_occupancy = ring_buffer_.occupancy();
       yae_ilog("%sring buffer occupancy: %f",
                ctx_.log_prefix_.c_str(),
                ring_buffer_occupancy);
+#endif
     }
 
     yae::mpeg_ts::IPacketHandler::Packet pkt;
@@ -1294,6 +1295,15 @@ namespace yae
              data_hex.c_str());
 #endif
 
+    double ring_buffer_occupancy = ring_buffer.occupancy();
+    if (ring_buffer_occupancy > 0.7)
+    {
+      yae_wlog("%sring buffer occupancy: %f",
+               ctx.log_prefix_.c_str(),
+               ring_buffer_occupancy);
+    }
+
+#if 0
     // check if Channel Guide extends to 9 hours from now
     {
       static const TTime nine_hours(9 * 60 * 60, 1);
@@ -1303,6 +1313,7 @@ namespace yae
         epg_ready_.notify_all();
       }
     }
+#endif
 
     yae::shared_ptr<ParseStream, yae::Worker::Task> task;
     task.reset(new ParseStream(packet_handler,
