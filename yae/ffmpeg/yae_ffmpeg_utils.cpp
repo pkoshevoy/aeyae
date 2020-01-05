@@ -479,8 +479,8 @@ namespace yae
 #ifdef _WIN32
     OutputDebugStringA( message.c_str());
 #else
-    fprintf(stderr, "%s", message.c_str());
-    fflush(stderr);
+    //    fprintf(stderr, "%s", message.c_str());
+    //    fflush(stderr);
 #endif
     // YAE_BREAKPOINT_IF(level < AV_LOG_WARNING);
   }
