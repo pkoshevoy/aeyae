@@ -769,6 +769,7 @@ namespace yae
     const char * src = fn.empty() ? "" : &(fn[0]);
     const char * end = src + strlen(src);
     bool valid_utf8 = true;
+    std::size_t nq = 0;
 
     while (src < end)
     {
@@ -795,6 +796,20 @@ namespace yae
         {
           // replace with FULLWIDTH ASTERISK
           uc = 0xFF0A;
+        }
+        else if (uc == '"')
+        {
+          static const uint32_t left_double_quotation_mark = 0x201C;
+          static const uint32_t right_double_quotation_mark = 0x201D;
+          uc = ((nq & 1) == 0) ?
+            left_double_quotation_mark :
+            right_double_quotation_mark;
+          nq++;
+        }
+        else if (uc == '\'')
+        {
+          // replace with modifier letter apostrophe:
+          uc = 0x02BC;
         }
 
         unicode_to_utf8(uc, out);
