@@ -2431,8 +2431,6 @@ namespace yae
       void handle(const IPacketHandler::Packet & packet,
                   IPacketHandler & handler) const;
 
-      bool epg_is_fresh() const;
-
       void get_epg(yae::mpeg_ts::EPG & epg,
                    const std::string & lang = std::string("eng")) const;
 

@@ -39,6 +39,9 @@ namespace yae
     std::size_t push(const void * data, std::size_t size);
     std::size_t pull(void * data, std::size_t size);
 
+    // pull as many whole frames as possible:
+    std::size_t pull(yae::Data & data, std::size_t frame_size);
+
     double occupancy() const;
 
   private:

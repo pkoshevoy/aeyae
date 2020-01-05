@@ -166,6 +166,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // RingBuffer::pull
+  //
+  std::size_t
+  RingBuffer::pull(yae::Data & data, std::size_t frame_size)
+  {
+    std::size_t num_frames = 0;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      num_frames = size_ / frame_size;
+    }
+
+    std::size_t data_size = num_frames ? num_frames * frame_size : frame_size;
+    data.resize(data_size);
+    return pull(data.get(), data_size);
+  }
+
+  //----------------------------------------------------------------
   // RingBuffer::occupancy
   //
   double

@@ -865,31 +865,19 @@ namespace yae
   //
   struct ParseStream : yae::Worker::Task
   {
-    ParseStream(DVR::PacketHandler & packet_handler,
-                const std::string & tuner_name,
-                const std::string & frequency,
-                std::size_t size);
+    ParseStream(DVR::PacketHandler & packet_handler);
 
     // virtual:
     void execute(const yae::Worker & worker);
 
     DVR::PacketHandler & packet_handler_;
-    std::string tuner_name_;
-    std::string frequency_;
-    std::size_t size_;
   };
 
   //----------------------------------------------------------------
   // ParseStream::ParseStream
   //
-  ParseStream::ParseStream(DVR::PacketHandler & packet_handler,
-                           const std::string & tuner_name,
-                           const std::string & frequency,
-                           std::size_t size):
-    packet_handler_(packet_handler),
-    tuner_name_(tuner_name),
-    frequency_(frequency),
-    size_(size)
+  ParseStream::ParseStream(DVR::PacketHandler & packet_handler):
+    packet_handler_(packet_handler)
   {}
 
   //----------------------------------------------------------------
@@ -902,20 +890,18 @@ namespace yae
 
     yae::RingBuffer & ring_buffer = packet_handler_.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
+    yae::Data data;
 
-    yae::TTime start = TTime::now();
-    std::size_t done = 0;
     while (true)
     {
-      std::size_t todo = std::min<std::size_t>(188 * 7, size_ - done);
-      if (todo < 188)
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      if (yae::Worker::Task::cancelled_)
       {
-        YAE_EXPECT(!todo);
-        break;
+        return;
       }
 
-      yae::Data data(todo);
-      std::size_t size = ring_buffer.pull(data.get(), data.size());
+      // pull all 188-byte frames from the ring buffer:
+      std::size_t size = ring_buffer.pull(data, 188);
 
       if (!size)
       {
@@ -927,7 +913,6 @@ namespace yae
         continue;
       }
 
-      done += size;
       data.truncate(size);
 
       // parse the transport stream:
@@ -964,11 +949,9 @@ namespace yae
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
-          yae_wlog("%sfailed to parse %s, tuner %s, %sHz: %s",
+          yae_wlog("%sfailed to parse %s: %s",
                    ctx.log_prefix_.c_str(),
                    data_hex.c_str(),
-                   tuner_name_.c_str(),
-                   frequency_.c_str(),
                    e.what());
         }
         catch (...)
@@ -976,12 +959,9 @@ namespace yae
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
-          yae_wlog("%sfailed to parse %s..., tuner %s, %sHz %s: "
-                   "unexpected exception",
+          yae_wlog("%sfailed to parse %s: unexpected exception",
                    ctx.log_prefix_.c_str(),
-                   data_hex.c_str(),
-                   tuner_name_.c_str(),
-                   frequency_.c_str());
+                   data_hex.c_str());
         }
       }
     }
@@ -996,7 +976,9 @@ namespace yae
     ring_buffer_(188 * 32768),
     packets_(400000), // 75.2MB
     recordings_update_gps_time_(0)
-  {}
+  {
+    worker_.set_queue_size_limit(1);
+  }
 
   //----------------------------------------------------------------
   // DVR::PacketHandler::~PacketHandler
@@ -1315,12 +1297,12 @@ namespace yae
     }
 #endif
 
-    yae::shared_ptr<ParseStream, yae::Worker::Task> task;
-    task.reset(new ParseStream(packet_handler,
-                               session_->tuner_name(),
-                               frequency_,
-                               size));
-    packet_handler.worker_.add(task);
+    if (packet_handler.worker_.is_idle())
+    {
+      yae::shared_ptr<ParseStream, yae::Worker::Task> task;
+      task.reset(new ParseStream(packet_handler));
+      packet_handler.worker_.add(task);
+    }
 
     if (ring_buffer.push(data, size) != size)
     {
