@@ -890,7 +890,7 @@ namespace yae
 
     yae::RingBuffer & ring_buffer = packet_handler_.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
-    yae::Data data;
+    yae::Data data(188 * 32768);
 
     while (true)
     {
@@ -900,8 +900,8 @@ namespace yae
         return;
       }
 
-      // pull all 188-byte frames from the ring buffer:
-      std::size_t size = ring_buffer.pull(data, 188);
+      data.resize(188 * 32768);
+      std::size_t size = ring_buffer.pull(data.get(), data.size());
 
       if (!size)
       {
@@ -973,7 +973,7 @@ namespace yae
   //
   DVR::PacketHandler::PacketHandler(DVR & dvr):
     dvr_(dvr),
-    ring_buffer_(188 * 32768),
+    ring_buffer_(188 * 262144),
     packets_(400000), // 75.2MB
     recordings_update_gps_time_(0)
   {
@@ -1175,7 +1175,7 @@ namespace yae
     }
 
     PacketHandler & packet_handler = *packet_handler_;
-    packet_handler.ring_buffer_.open(188 * 32768);
+    packet_handler.ring_buffer_.open(188 * 262144);
 
     if (session_)
     {
