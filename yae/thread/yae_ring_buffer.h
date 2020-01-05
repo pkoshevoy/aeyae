@@ -39,6 +39,8 @@ namespace yae
     std::size_t push(const void * data, std::size_t size);
     std::size_t pull(void * data, std::size_t size);
 
+    double occupancy() const;
+
   private:
     // intentionally disabled:
     RingBuffer(const RingBuffer &);

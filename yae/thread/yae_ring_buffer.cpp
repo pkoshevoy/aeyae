@@ -165,4 +165,15 @@ namespace yae
     return done;
   }
 
+  //----------------------------------------------------------------
+  // RingBuffer::occupancy
+  //
+  double
+  RingBuffer::occupancy() const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    double t = double(size_) / double(data_.size());
+    return t;
+  }
+
 }

@@ -929,7 +929,6 @@ namespace yae
 
       done += size;
       data.truncate(size);
-      // file.write(data.get(), size);
 
       // parse the transport stream:
       yae::Bitstream bitstream(data);
@@ -1079,6 +1078,11 @@ namespace yae
           recordings_[ch_num].swap(recs);
         }
       }
+
+      double ring_buffer_occupancy = ring_buffer_.occupancy();
+      yae_ilog("%sring buffer occupancy: %f",
+               ctx_.log_prefix_.c_str(),
+               ring_buffer_occupancy);
     }
 
     yae::mpeg_ts::IPacketHandler::Packet pkt;
