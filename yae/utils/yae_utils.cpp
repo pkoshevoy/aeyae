@@ -806,11 +806,6 @@ namespace yae
             right_double_quotation_mark;
           nq++;
         }
-        else if (uc == '\'')
-        {
-          // replace with modifier letter apostrophe:
-          uc = 0x02BC;
-        }
 
         unicode_to_utf8(uc, out);
       }
