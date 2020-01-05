@@ -2460,6 +2460,9 @@ namespace yae
         return bucket_[ix];
       }
 
+      // for more human-friendly logging:
+      std::string log_prefix_;
+
     protected:
       // helpers:
       const Bucket & get_epg_bucket_nolock(uint32_t gps_time) const;

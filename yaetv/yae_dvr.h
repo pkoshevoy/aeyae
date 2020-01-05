@@ -226,12 +226,10 @@ namespace yae
       yae::Worker worker_;
       yae::mpeg_ts::Context ctx_;
       yae::RingBuffer ring_buffer_;
-      yae::TTime start_;
 
       // buffer packets until we have enough info (EPG)
       // to enable us to handle them properly:
       yae::fifo<Packet> packets_;
-      std::map<uint32_t, yae::TOpenFilePtr> channels_;
 
       // cache scheduled recordings to avoid lock contention:
       std::map<uint32_t, std::set<TRecordingPtr> > recordings_;

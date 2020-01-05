@@ -113,7 +113,6 @@ namespace yae
       ~Session();
 
       const std::string & tuner_name() const;
-      const std::string & frequency() const;
 
       bool expired() const;
       void extend(const TTime & t);
@@ -147,6 +146,8 @@ namespace yae
     bool get_channels(const std::string & freq, TChannels & channels) const;
     bool get_channels(std::map<std::string, TChannels> & channels) const;
 
+    // helper:
+    uint16_t get_channel_major(const std::string & frequency) const;
 
   protected:
     // intentionally disabled:

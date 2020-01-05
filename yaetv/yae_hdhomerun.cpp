@@ -283,6 +283,7 @@ namespace yae
     bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
     bool get_channels(const std::string & freq, TChannels & channels) const;
     bool get_channels(std::map<std::string, TChannels> & freq_channels) const;
+    uint16_t get_channel_major(const std::string & frequency) const;
 
     HDHomeRun::TSessionPtr open_session();
     HDHomeRun::TSessionPtr open_session(const std::string & tuner_name);
@@ -549,6 +550,38 @@ namespace yae
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::Private::get_channel_major
+  //
+  uint16_t
+  HDHomeRun::Private::get_channel_major(const std::string & frequency) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    for (Json::Value::const_iterator i = tuner_cache_.begin();
+         i != tuner_cache_.end(); ++i)
+    {
+      try
+      {
+        std::string tuner_name = i.key().asString();
+        const Json::Value & tuner_info = *i;
+        const Json::Value & frequencies = tuner_info["frequencies"];
+        const Json::Value & info = frequencies[frequency];
+        const Json::Value & programs = info["programs"];
+        for (Json::Value::const_iterator k = programs.begin();
+             k != programs.end(); ++k)
+        {
+          const Json::Value & program = *k;
+          uint16_t major = uint16_t(program["virtual_major"].asUInt());
+          return major;
+        }
+      }
+      catch (...)
+      {}
+    }
+
+    return 0;
   }
 
   //----------------------------------------------------------------
@@ -1136,4 +1169,14 @@ namespace yae
   {
     return private_->get_channels(channels);
   }
+
+  //----------------------------------------------------------------
+  // HDHomeRun::get_channel_major
+  //
+  uint16_t
+  HDHomeRun::get_channel_major(const std::string & frequency) const
+  {
+    return private_->get_channel_major(frequency);
+  }
+
 }

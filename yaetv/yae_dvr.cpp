@@ -901,7 +901,6 @@ namespace yae
     (void)worker;
 
     yae::RingBuffer & ring_buffer = packet_handler_.ring_buffer_;
-    // TOpenFile & file = *(packet_handler_.file_);
     yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
 
     yae::TTime start = TTime::now();
@@ -949,7 +948,8 @@ namespace yae
 
           if (bytes_consumed != 188)
           {
-            yae_wlog("TSPacket too short (%i bytes), %s ...",
+            yae_wlog("%sTSPacket too short (%i bytes), %s ...",
+                     ctx.log_prefix_.c_str(),
                      bytes_consumed,
                      yae::to_hex(pkt_data->get(), 32, 4).c_str());
             continue;
@@ -965,7 +965,8 @@ namespace yae
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
-          yae_wlog("failed to parse %s, tuner %s, %sHz: %s",
+          yae_wlog("%sfailed to parse %s, tuner %s, %sHz: %s",
+                   ctx.log_prefix_.c_str(),
                    data_hex.c_str(),
                    tuner_name_.c_str(),
                    frequency_.c_str(),
@@ -976,8 +977,9 @@ namespace yae
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
-          yae_wlog("failed to parse %s..., tuner %s, %sHz %s: "
+          yae_wlog("%sfailed to parse %s..., tuner %s, %sHz %s: "
                    "unexpected exception",
+                   ctx.log_prefix_.c_str(),
                    data_hex.c_str(),
                    tuner_name_.c_str(),
                    frequency_.c_str());
@@ -1187,6 +1189,25 @@ namespace yae
 
     PacketHandler & packet_handler = *packet_handler_;
     packet_handler.ring_buffer_.open(188 * 4096);
+
+    if (session_)
+    {
+      std::ostringstream oss;
+      const char * sep = "";
+
+      std::string tuner_name = session_->tuner_name();
+      oss << tuner_name << " " << frequency << "Hz";
+
+      uint16_t channel_major = dvr_.hdhr_.get_channel_major(frequency_);
+      if (channel_major)
+      {
+        oss << ", channel major " << channel_major;
+      }
+
+      oss << ", ";
+
+      packet_handler.ctx_.log_prefix_ = oss.str().c_str();
+    }
   }
 
   //----------------------------------------------------------------
@@ -1255,20 +1276,19 @@ namespace yae
       return false;
     }
 
+    PacketHandler & packet_handler = *packet_handler_;
+    yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
+    yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+
 #if 0
     std::string data_hex =
       yae::to_hex(data, std::min<std::size_t>(size, 32), 4);
 
-    yae_dlog("%s %sHz: %5i %s...",
-             tuner_name.c_str(),
-             frequency.c_str(),
+    yae_dlog("%s%5i %s...",
+             packet_handler.ctx_.log_prefix_.c_str(),
              int(size),
              data_hex.c_str());
 #endif
-
-    PacketHandler & packet_handler = *packet_handler_;
-    yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
-    yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
 
     // check if Channel Guide extends to 9 hours from now
     {
@@ -1726,6 +1746,11 @@ namespace yae
           DVR::Stream & stream = *stream_ptr;
           boost::system_time giveup_at(boost::get_system_time());
           giveup_at += boost::posix_time::seconds(sample_dur.get(1));
+
+          yae_wlog("%sstarted EPG update for channels %i.* (%s)",
+                   packet_handler.ctx_.log_prefix_.c_str(),
+                   major,
+                   frequency.c_str());
 
           while (true)
           {

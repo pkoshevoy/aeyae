@@ -4811,7 +4811,8 @@ namespace yae
                                     4);
 
 #if 0
-      yae_dlog("%5i (0x%04X) pid   %8i pkts   %8i bytes   %s ...",
+      yae_dlog("%s%5i (0x%04X) pid   %8i pkts   %8i bytes   %s ...",
+               log_prefix_.c_str(),
                int(pid),
                int(pid),
                int(packets.size()),
@@ -4987,11 +4988,14 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        yae_elog("failed to load PESPacket: %s", e.what());
+        yae_elog("%sfailed to load PESPacket: %s",
+                 log_prefix_.c_str(),
+                 e.what());
       }
       catch (...)
       {
-        yae_elog("failed to load PESPacket: unexpected exception");
+        yae_elog("%sfailed to load PESPacket: unexpected exception",
+                 log_prefix_.c_str());
       }
     }
 
@@ -5138,7 +5142,7 @@ namespace yae
         if (pkt.continuity_counter_ != expected)
         {
           // discontinuity detected, dump the payload:
-          yae_wlog("detected TSPacket discontinuity");
+          yae_wlog("%sdetected TSPacket discontinuity", log_prefix_.c_str());
           pes_[pkt.pid_].clear();
         }
       }
@@ -5300,7 +5304,9 @@ namespace yae
       {
 
         int64_t roundup_err = 60 * ((err + 30 * (err / abs_err)) / 60);
-        yae_wlog("actual GPS time differs from expected GPS time by approx %s",
+        yae_wlog("%sactual GPS time differs from expected GPS time "
+                 "by approximately %s",
+                 log_prefix_.c_str(),
                  TTime(roundup_err, 1).to_short_txt().c_str());
         stt_error_ = err;
       }
@@ -5795,7 +5801,8 @@ namespace yae
         TTime gps_time_err = TTime(channel.gps_time_, 1) - gps_now;
         if (std::abs(gps_time_err.get(1)) >= 60)
         {
-          yae_elog("GPS time discrepancy: expected approx %s, actual %s",
+          yae_elog("%sGPS time discrepancy: expected approx %s, actual %s",
+                   log_prefix_.c_str(),
                    gps_time_to_str(gps_now.get(1)).c_str(),
                    gps_time_to_str(channel.gps_time_).c_str());
         }
