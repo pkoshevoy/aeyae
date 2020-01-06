@@ -21,6 +21,10 @@
 #include <boost/thread.hpp>
 #endif
 
+#ifdef __APPLE__
+#include "yaeAppleUtils.h"
+#endif
+
 // aeyae:
 #include "yae/api/yae_log.h"
 
@@ -871,6 +875,10 @@ namespace yae
     void execute(const yae::Worker & worker);
 
     DVR::PacketHandler & packet_handler_;
+
+#ifdef __APPLE__
+    yae::PreventAppNap prevent_app_nap_;
+#endif
   };
 
   //----------------------------------------------------------------

@@ -19,6 +19,23 @@ namespace yae
   // absoluteUrlFrom
   //
   std::string absoluteUrlFrom(const char * utf8_url);
+
+  //----------------------------------------------------------------
+  // PreventAppNap
+  //
+  struct PreventAppNap
+  {
+    PreventAppNap();
+    ~PreventAppNap();
+
+  private:
+    // intentionally disabled:
+    PreventAppNap(const PreventAppNap &);
+    PreventAppNap & operator = (const PreventAppNap &);
+
+    struct Private;
+    Private * private_;
+  };
 }
 
 
