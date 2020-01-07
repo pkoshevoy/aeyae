@@ -295,6 +295,13 @@ namespace yae
       return false;
     }
 
+#ifdef _WIN32
+    if (al::ends_with(dirname, ":"))
+    {
+      dirname += "\\";
+    }
+#endif
+
     if (!mkdir_p(dirname))
     {
       return false;
