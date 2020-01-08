@@ -159,10 +159,12 @@ namespace yae
         // start activity that tells App Nap to mind its own business:
         // (NSActivityUserInitiatedAllowingIdleSystemSleep |
         //  NSActivityLatencyCritical)
-        activity_ = objc_msgSend(processInfo_,
-                                 sel_beginActivityWithOptions_,
-                                 0x00FFFFFFULL | 0xFF00000000ULL,
-                                 reason_);
+        activity_ =
+          objc_msgSend(processInfo_,
+                       sel_beginActivityWithOptions_,
+                       (NSActivityUserInitiatedAllowingIdleSystemSleep |
+                        NSActivityLatencyCritical),
+                       reason_);
       }
 
       ~Activity()
@@ -175,14 +177,14 @@ namespace yae
     };
 
     static boost::mutex mutex_;
-    static boost::shared_ptr<Activity> activity_;
+    static Activity * activity_;
 
     Private()
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       if (!activity_)
       {
-        activity_.reset(new Activity());
+        activity_ = new Activity();
       }
 
       activity_->count_++;
@@ -196,7 +198,8 @@ namespace yae
         activity_->count_--;
         if (!activity_->count_)
         {
-          activity_.reset();
+          delete activity_;
+          activity_ = NULL;
         }
       }
     }
@@ -211,7 +214,7 @@ namespace yae
   //----------------------------------------------------------------
   // PreventAppNap::Private::activity_
   //
-  boost::shared_ptr<PreventAppNap::Private::Activity>
+  PreventAppNap::Private::Activity *
   PreventAppNap::Private::activity_;
 
   //----------------------------------------------------------------
