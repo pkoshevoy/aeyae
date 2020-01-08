@@ -53,6 +53,8 @@ namespace yae
   {
     AppStyle(const char * id, const AppView & view);
 
+    virtual void uncache();
+
     ItemRef unit_size_;
 
     ColorRef bg_sidebar_;
@@ -70,6 +72,9 @@ namespace yae
     TGradientPtr bg_epg_header_;
     TGradientPtr bg_epg_shadow_;
     TGradientPtr bg_epg_channel_;
+
+    TTexturePtr collapsed_;
+    TTexturePtr expanded_;
   };
 
   //----------------------------------------------------------------
@@ -106,7 +111,7 @@ namespace yae
     { return dvr_; }
 
     // virtual:
-    const ItemViewStyle * style() const
+    const AppStyle * style() const
     { return style_; }
 
     // virtual: returns false if size didn't change
@@ -153,11 +158,15 @@ namespace yae
     // model:
     yae::DVR * dvr_;
 
-    ViewMode view_mode_;
-
     QTimer sync_ui_;
 
   public:
+    // UI state:
+    ViewMode view_mode_;
+
+    // collapsed item groups:
+    std::set<std::string> collapsed_;
+
     yae::shared_ptr<AppStyle, Item> style_;
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;

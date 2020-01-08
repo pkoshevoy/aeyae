@@ -16,6 +16,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
+#include "yaeTexturedRect.h"
 #include "yae_axis_item.h"
 #include "yae_checkbox_item.h"
 #include "yae_input_proxy_item.h"
@@ -95,7 +96,7 @@ namespace yae
 
       if (side_ == kLeft)
       {
-        result = container_.left() + unit_size * 0.0;
+        result = container_.left() + unit_size * 7.0;
       }
       else
       {
@@ -708,7 +709,155 @@ namespace yae
       gradient[0.00] = Color(0xE9E9ED, 1.00);
       gradient[1.00] = Color(0xDCDBDF, 1.00);
     }
+
+    // generate collapsed group button texture:
+    collapsed_ = Item::addHidden<Texture>
+      (new Texture("collapsed", QImage())).sharedPtr<Texture>();
+    {
+      /*
+      QImage img = triangleImage(128,
+                                 fg_group_.get(),
+                                 bg_group_.get().transparent(),
+                                 90.0);
+      collapsed_->setImage(img);
+      */
+    }
+
+    // generate expanded group button texture:
+    expanded_ = Item::addHidden<Texture>
+      (new Texture("expanded", QImage())).sharedPtr<Texture>();
+    {
+      /*
+      QImage img = triangleImage(128,
+                                 fg_group_.get(),
+                                 bg_group_.get().transparent(),
+                                 180.0);
+      expanded_->setImage(img);
+      */
+    }
   }
+
+  //----------------------------------------------------------------
+  // AppStyle::uncache
+  //
+  void
+  AppStyle::uncache()
+  {
+    unit_size_.uncache();
+
+    bg_sidebar_.uncache();
+    bg_splitter_.uncache();
+    bg_epg_.uncache();
+    fg_epg_.uncache();
+    fg_epg_chan_.uncache();
+    bg_epg_tile_.uncache();
+    bg_epg_scrollbar_.uncache();
+    fg_epg_scrollbar_.uncache();
+    bg_epg_cancelled_.uncache();
+    bg_epg_rec_.uncache();
+    bg_epg_sel_.uncache();
+
+    collapsed_->uncache();
+    expanded_->uncache();
+
+    ItemViewStyle::uncache();
+  }
+
+
+  //----------------------------------------------------------------
+  // GetTexCollapsed
+  //
+  struct GetTexCollapsed : public TTextureExpr
+  {
+    GetTexCollapsed(AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const AppStyle & style = *(view_.style());
+      Item & root = *(view_.root());
+      Item & hidden = root.get<Item>("hidden");
+
+      uint32_t l = yae::floor_log2<double>(hidden.width());
+      l = std::min<uint32_t>(l, 8);
+      uint32_t tex_width = 1 << l;
+
+      QImage img = triangleImage(// texture width, power of 2:
+                                 tex_width,
+                                 // color:
+                                 style.fg_epg_.get().a_scaled(0.7),
+                                 // background color:
+                                 style.bg_sidebar_.get().transparent(),
+                                 // rotation angle:
+                                 90.0);
+
+      style.collapsed_->setImage(img);
+      result = style.collapsed_;
+    }
+
+    AppView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // GetTexExpanded
+  //
+  struct GetTexExpanded : public TTextureExpr
+  {
+    GetTexExpanded(AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const AppStyle & style = *(view_.style());
+      Item & root = *(view_.root());
+      Item & hidden = root.get<Item>("hidden");
+
+      uint32_t l = yae::floor_log2<double>(hidden.width());
+      l = std::min<uint32_t>(l, 8);
+      uint32_t tex_width = 1 << l;
+
+      QImage img = triangleImage(// texture width, power of 2:
+                                 tex_width,
+                                 // color:
+                                 style.fg_epg_.get().a_scaled(0.7),
+                                 // background color:
+                                 style.bg_sidebar_.get().transparent(),
+                                 // rotation angle:
+                                 180.0);
+
+      style.expanded_->setImage(img);
+      result = style.expanded_;
+    }
+
+    AppView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // IsCollapsed
+  //
+  struct IsCollapsed : public TBoolExpr
+  {
+    IsCollapsed(const AppView & view, const Item & item):
+      view_(view),
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = yae::has(view_.collapsed_, item_.id_);
+    }
+
+    const AppView & view_;
+    const Item & item_;
+  };
+
 
 
   //----------------------------------------------------------------
@@ -1561,14 +1710,111 @@ namespace yae
   void
   AppView::layout_sidebar(AppView & view, AppStyle & style, Item & panel)
   {
+    Item & root = *(view.root_);
+    Item & hidden = root.get<Item>("hidden");
+
     Rectangle & bg = panel.addNew<Rectangle>("bg_sidebar");
     bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_sidebar_));
     bg.anchors_.fill(panel);
 
     Scrollview & sv = layout_scrollview(kScrollbarVertical, view, style, panel,
                                         kScrollbarVertical);
-    Item & content = *(sv.content_);
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
+
+    Item & sidebar = *(sv.content_);
+
+    // add yaetv group:
+    {
+      Item & group = sidebar.addNew<Item>("yaetv_group");
+      group.anchors_.top_ = ItemRef::reference(sidebar, kPropertyTop);
+      group.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
+      group.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+      group.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.18));
+
+      Item & header = group.addNew<Item>("header");
+      header.anchors_.fill(group);
+      header.anchors_.bottom_.reset();
+
+#if 0
+      Rectangle & toggle = header.addNew<Rectangle>("toggle");
+      toggle.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
+#else
+      InputArea & toggle = header.addNew<InputArea>("toggle");
+#endif
+
+      TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
+      TexturedRect & expanded = toggle.addNew<TexturedRect>("expanded");
+
+      Text & title = header.addNew<Text>("title");
+
+      Item & baseline = header.addNew<Item>("baseline_xheight");
+      baseline.anchors_.fill(header);
+      baseline.anchors_.top_.reset();
+      baseline.anchors_.bottom_ =
+        ItemRef::reference(title, kPropertyBottom);
+      baseline.margins_.
+        set_bottom(ItemRef::reference(title, kPropertyFontDescent));
+      baseline.height_ =
+        // ItemRef::reference(title, kPropertyFontXHeight, 1, 2);
+        baseline.addExpr(new CalcGlyphHeight(title, QChar('X')), 1, 2);
+
+      // open/close disclosure [>] button:
+      toggle.height_ = ItemRef::reference(baseline, kPropertyHeight);
+      toggle.width_ = ItemRef::reference(toggle, kPropertyHeight);
+      toggle.anchors_.bottom_ = ItemRef::reference(baseline, kPropertyBottom);
+      toggle.anchors_.right_ = ItemRef::reference(title, kPropertyLeft);
+      toggle.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+
+      expanded.visible_ = expanded.addInverse(new IsCollapsed(view, group));
+      expanded.texture_ = expanded.addExpr(new GetTexExpanded(view));
+      expanded.height_ = ItemRef::reference(toggle, kPropertyHeight);
+      expanded.width_ = ItemRef::reference(expanded, kPropertyHeight);
+      expanded.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
+      expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+      expanded.margins_.
+        set_top(ItemRef::reference(expanded, kPropertyHeight, -0.125));
+      expanded.margins_.
+        set_bottom(ItemRef::reference(expanded, kPropertyHeight, 0.125));
+
+      collapsed.visible_ = collapsed.addExpr(new IsCollapsed(view, group));
+      collapsed.texture_ = collapsed.addExpr(new GetTexCollapsed(view));
+      collapsed.height_ = ItemRef::reference(toggle, kPropertyHeight);
+      collapsed.width_ = ItemRef::reference(collapsed, kPropertyHeight);
+      collapsed.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
+      collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+      collapsed.margins_.
+        set_left(ItemRef::reference(collapsed, kPropertyHeight, -0.125));
+      collapsed.margins_.
+        set_right(ItemRef::reference(collapsed, kPropertyHeight, 0.125));
+
+      title.font_ = style.font_;
+      // title.font_.setWeight(62);
+      title.font_.setBold(true);
+      // title.font_.setCapitalization(QFont::AllUppercase);
+      title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      title.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      title.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
+      title.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
+      title.margins_.
+        set_left(ItemRef::reference(title, kPropertyFontHeight, 1.25));
+
+      title.elide_ = Qt::ElideRight;
+      title.color_ = title.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      title.background_ = title.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      // title.text_ = TVarRef::constant(TVar("LIBRARY"));
+      title.text_ = TVarRef::constant(TVar("Digital Video Recorder"));
+#if 0
+      Rectangle & fixme = header.addNew<Rectangle>("fixme");
+      fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
+      fixme.anchors_.fill(title);
+
+      Rectangle & fix2 = header.addNew<Rectangle>("fix2");
+      fix2.color_ = ColorRef::constant(Color(0xFF0000, 0.25));
+      fix2.anchors_.fill(baseline);
+#endif
+   }
   }
 
   //----------------------------------------------------------------

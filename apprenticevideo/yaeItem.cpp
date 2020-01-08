@@ -939,6 +939,14 @@ namespace yae
     {
       value = margins_.bottom();
     }
+    else if (property == kPropertyContentWidth)
+    {
+      value = calcContentWidth();
+    }
+    else if (property == kPropertyContentHeight)
+    {
+      value = calcContentHeight();
+    }
     else
     {
       YAE_ASSERT(false);

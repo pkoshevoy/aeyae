@@ -66,6 +66,51 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // CalcGlyphBBox
+  //
+  struct CalcGlyphBBox : public TBBoxExpr
+  {
+    CalcGlyphBBox(const Text & item, const QChar & glyph);
+
+    // virtual:
+    void evaluate(BBox & result) const;
+
+    const Text & item_;
+    QChar glyph_;
+  };
+
+  //----------------------------------------------------------------
+  // CalcGlyphWidth
+  //
+  struct CalcGlyphWidth : public TDoubleExpr
+  {
+    CalcGlyphWidth(const Text & item, const QChar & glyph);
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    const Text & item_;
+    QChar glyph_;
+  };
+
+
+  //----------------------------------------------------------------
+  // CalcGlyphHeight
+  //
+  struct CalcGlyphHeight : public TDoubleExpr
+  {
+    CalcGlyphHeight(const Text & item, const QChar & glyph);
+
+    // virtual:
+    void evaluate(double & result) const;
+
+    const Text & item_;
+    QChar glyph_;
+  };
+
+
+
+  //----------------------------------------------------------------
   // Supersample
   //
   template <typename TFontSizeItem>
@@ -112,6 +157,9 @@ namespace yae
     double fontHeight() const;
     double textLeftBearing() const;
     double textRightBearing() const;
+
+    // use to calculate x-height, etc...
+    void calcGlyphBBox(BBox & bbox, QChar glyph) const;
 
     // virtual:
     double calcContentWidth() const;

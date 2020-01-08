@@ -77,6 +77,64 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // CalcGlyphBBox::CalcGlyphBBox
+  //
+  CalcGlyphBBox::CalcGlyphBBox(const Text & item, const QChar & glyph):
+    item_(item),
+    glyph_(glyph)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcGlyphBBox::evaluate
+  //
+  void
+  CalcGlyphBBox::evaluate(BBox & result) const
+  {
+    item_.calcGlyphBBox(result, glyph_);
+  }
+
+
+  //----------------------------------------------------------------
+  // CalcGlyphWidth::CalcGlyphWidth
+  //
+  CalcGlyphWidth::CalcGlyphWidth(const Text & item, const QChar & glyph):
+    item_(item),
+    glyph_(glyph)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcGlyphWidth::evaluate
+  //
+  void
+  CalcGlyphWidth::evaluate(double & result) const
+  {
+    BBox bbox;
+    item_.calcGlyphBBox(bbox, glyph_);
+    result = bbox.w_;
+  }
+
+
+  //----------------------------------------------------------------
+  // CalcGlyphHeight::CalcGlyphHeight
+  //
+  CalcGlyphHeight::CalcGlyphHeight(const Text & item, const QChar & glyph):
+    item_(item),
+    glyph_(glyph)
+  {}
+
+  //----------------------------------------------------------------
+  // CalcGlyphHeight::evaluate
+  //
+  void
+  CalcGlyphHeight::evaluate(double & result) const
+  {
+    BBox bbox;
+    item_.calcGlyphBBox(bbox, glyph_);
+    result = bbox.h_;
+  }
+
+
+  //----------------------------------------------------------------
   // getMaxRect
   //
   static void
@@ -128,6 +186,50 @@ namespace yae
     }
 
     return text;
+  }
+
+  //----------------------------------------------------------------
+  // calcBBox
+  //
+  static void
+  calcBBox(BBox & bbox,
+           const Text & item,
+           QChar glyph,
+           double maxWidth = std::numeric_limits<short int>::max(),
+           double maxHeight = std::numeric_limits<short int>::max())
+  {
+    QFont font = item.font_;
+    double fontSize = std::max(9.0, item.fontSize_.get());
+    double supersample = item.supersample_.get();
+
+    font.setPixelSize(fontSize * supersample);
+    QFontMetricsF fm(font);
+
+    QRectF maxRect(0.0, 0.0,
+                   maxWidth * supersample,
+                   maxHeight * supersample);
+
+    QRectF rect = fm.boundingRect(glyph);
+
+    bbox.x_ =
+      (maxWidth < double(std::numeric_limits<short int>::max())) ?
+      (rect.x() / supersample) : 0.0;
+
+    bbox.y_ =
+      (maxHeight < double(std::numeric_limits<short int>::max())) ?
+      (rect.y() / supersample) : 0.0;
+
+    bbox.w_ = rect.width() / supersample;
+    bbox.h_ = rect.height() / supersample;
+#if QT_VERSION >= 0x050600
+    if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
+    {
+      bbox.x_ -= 0.8;
+      bbox.y_ -= 0.8;
+      bbox.w_ += 1.6;
+      bbox.h_ += 1.6;
+    }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -470,6 +572,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Text::calcGlyphBBox
+  //
+  void
+  Text::calcGlyphBBox(BBox & bbox, QChar glyph) const
+  {
+    calcBBox(bbox, *this, glyph);
+  }
+
+  //----------------------------------------------------------------
   // Text::calcContentWidth
   //
   double
@@ -586,6 +697,12 @@ namespace yae
     else if (property == kPropertyFontHeight)
     {
       value = fontHeight();
+    }
+    else if (property == kPropertyFontXHeight)
+    {
+      BBox bbox;
+      calcGlyphBBox(bbox, QChar('x'));
+      value = bbox.h_;
     }
     else if (property == kPropertyTextLeftBearing)
     {
