@@ -39,7 +39,7 @@ namespace yae
   {
 
     // forward declarations:
-    struct YAE_API Context;
+    struct Context;
 
     //----------------------------------------------------------------
     // AdaptationField

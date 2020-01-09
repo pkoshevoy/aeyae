@@ -1211,7 +1211,7 @@ namespace yae
 
         Text & maj_min = tile.addNew<Text>("maj_min");
         maj_min.font_ = style.font_;
-        maj_min.font_.setWeight(QFont::Medium);
+        maj_min.font_.setWeight(57);
         maj_min.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.36);
         maj_min.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
         maj_min.anchors_.left_ = ItemRef::reference(tile, kPropertyLeft);

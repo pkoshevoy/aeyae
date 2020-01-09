@@ -604,7 +604,8 @@ namespace yae
         YAE_EXPECT(dvr.hdhr_.init(tuner_name));
       }
 
-      service_loop.execute(yae::Worker());
+      yae::Worker dummy;
+      service_loop.execute(dummy);
       dvr.shutdown();
       return 0;
     }
