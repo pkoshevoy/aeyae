@@ -26,7 +26,7 @@
 namespace yae
 {
   // forward declarations:
-  struct YAE_API IMessageCarrier;
+  struct IMessageCarrier;
 
   //----------------------------------------------------------------
   // TLog
