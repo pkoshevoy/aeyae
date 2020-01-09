@@ -1734,6 +1734,7 @@ namespace yae
       Item & header = group.addNew<Item>("header");
       header.anchors_.fill(group);
       header.anchors_.bottom_.reset();
+      header.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
 
 #if 0
       Rectangle & toggle = header.addNew<Rectangle>("toggle");
@@ -1756,7 +1757,7 @@ namespace yae
         set_bottom(ItemRef::reference(title, kPropertyFontDescent));
       baseline.height_ =
         // ItemRef::reference(title, kPropertyFontXHeight, 1, 2);
-        baseline.addExpr(new CalcGlyphHeight(title, QChar('X')), 1, 2);
+        baseline.addExpr(new CalcGlyphHeight(title, QChar('X')));
 
       // open/close disclosure [>] button:
       toggle.height_ = ItemRef::reference(baseline, kPropertyHeight);
@@ -1792,7 +1793,7 @@ namespace yae
       title.font_.setBold(true);
       // title.font_.setCapitalization(QFont::AllUppercase);
       title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      title.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      title.anchors_.vcenter_ = ItemRef::reference(header, kPropertyVCenter);
       title.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
       title.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
       title.margins_.
@@ -1809,12 +1810,20 @@ namespace yae
       Rectangle & fixme = header.addNew<Rectangle>("fixme");
       fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
       fixme.anchors_.fill(title);
-
-      Rectangle & fix2 = header.addNew<Rectangle>("fix2");
-      fix2.color_ = ColorRef::constant(Color(0xFF0000, 0.25));
-      fix2.anchors_.fill(baseline);
 #endif
-   }
+
+#if 1
+      Rectangle & fix2 = header.addNew<Rectangle>("fix2");
+      fix2.color_ = ColorRef::constant(Color(0xFFFF00, 0.5));
+      fix2.anchors_.fill(header);
+#endif
+
+      // Program Guide
+      // Channels
+      // Wishlist
+      // Schedule
+      // Recordings
+    }
   }
 
   //----------------------------------------------------------------
