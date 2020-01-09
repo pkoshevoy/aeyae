@@ -159,12 +159,10 @@ namespace yae
         // start activity that tells App Nap to mind its own business:
         // (NSActivityUserInitiatedAllowingIdleSystemSleep |
         //  NSActivityLatencyCritical)
-        activity_ =
-          objc_msgSend(processInfo_,
-                       sel_beginActivityWithOptions_,
-                       (NSActivityUserInitiatedAllowingIdleSystemSleep |
-                        NSActivityLatencyCritical),
-                       reason_);
+        activity_ = objc_msgSend(processInfo_,
+                                 sel_beginActivityWithOptions_,
+                                 0x00FFFFFFULL | 0xFF00000000ULL,
+                                 reason_);
       }
 
       ~Activity()
