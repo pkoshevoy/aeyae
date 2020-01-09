@@ -581,13 +581,10 @@ add_library(aeyae SHARED
   yae/video/yae_video_renderer.h
   )
 
-add_custom_target("aeyae_update_revision" ALL
-  DEPENDS
-  "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
-)
-
-add_custom_command(OUTPUT
-  "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
+add_custom_command(
+  OUTPUT "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
+  BYPRODUCTS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h"
+  MAIN_DEPENDENCY "${PROJECT_SOURCE_DIR}/yae/api/yae_version.h.in"
   COMMAND "${CMAKE_COMMAND}"
   -DAEYAE_SOURCE_DIR="${aeyae_SOURCE_DIR}"
   -DAEYAE_BINARY_DIR="${aeyae_BINARY_DIR}"
@@ -597,6 +594,12 @@ add_custom_command(OUTPUT
   -DGIT_EXECUTABLE="${GIT_EXECUTABLE}"
   -DCMAKE_INSTALL_PREFIX="${CMAKE_INSTALL_PREFIX}"
   -P "${PROJECT_SOURCE_DIR}/aeyae_update_revision.cmake")
+
+add_custom_target("aeyae_update_revision" ALL
+  DEPENDS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
+  COMMAND "${CMAKE_COMMAND}" -E echo "updating ${PROJECT_BINARY_DIR}/yae/api/yae_version.h")
+
+add_dependencies(aeyae "aeyae_update_revision")
 
 set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
 # set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
