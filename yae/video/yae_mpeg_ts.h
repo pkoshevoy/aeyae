@@ -2458,6 +2458,12 @@ namespace yae
         return bucket_[ix];
       }
 
+      inline void clear_buffers()
+      {
+        prev_.clear();
+        pes_.clear();
+      }
+
       // for more human-friendly logging:
       std::string log_prefix_;
 

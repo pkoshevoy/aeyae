@@ -870,6 +870,7 @@ namespace yae
   struct ParseStream : yae::Worker::Task
   {
     ParseStream(DVR::PacketHandler & packet_handler);
+    ~ParseStream();
 
     // virtual:
     void execute(const yae::Worker & worker);
@@ -887,6 +888,15 @@ namespace yae
   ParseStream::ParseStream(DVR::PacketHandler & packet_handler):
     packet_handler_(packet_handler)
   {}
+
+  //----------------------------------------------------------------
+  // ParseStream::~ParseStream
+  //
+  ParseStream::~ParseStream()
+  {
+    yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
+    ctx.clear_buffers();
+  }
 
   //----------------------------------------------------------------
   // ParseStream::execute
