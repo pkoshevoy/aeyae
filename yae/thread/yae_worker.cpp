@@ -137,7 +137,12 @@ namespace yae
       boost::unique_lock<boost::mutex> lock(mutex_);
       while (todo_.empty() && !stop_)
       {
-        signal_.wait(lock);
+        try
+        {
+          signal_.wait(lock);
+        }
+        catch (...)
+        {}
       }
 
       if (stop_)
@@ -205,9 +210,14 @@ namespace yae
   Worker::add(const yae::shared_ptr<Task> & task)
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
-    while (limit_ && limit_ <= count_)
+    while (limit_ && limit_ <= count_ && !stop_)
     {
-      signal_.wait(lock);
+      try
+      {
+        signal_.wait(lock);
+      }
+      catch (...)
+      {}
     }
 
     if (!stop_)

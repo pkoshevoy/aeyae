@@ -1578,11 +1578,12 @@ namespace yae
     yae_ilog("DVR shutdown");
     service_loop_worker_.reset();
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    schedule_.clear();
     worker_.stop();
     worker_.wait_until_finished();
 
+    // clear the schedule:
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    schedule_.clear();
 
     for (std::map<std::string, TPacketHandlerPtr>::const_iterator
            i = packet_handler_.begin(); i != packet_handler_.end(); ++i)

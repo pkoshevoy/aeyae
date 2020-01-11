@@ -107,97 +107,74 @@ namespace yae
   {
     struct Activity
     {
-      uint64_t count_;
-      Class class_NSProcessInfo_;
-      Class class_NSString_;
-      SEL sel_processInfo_;
-      SEL sel_beginActivityWithOptions_;
-      SEL sel_endActivity_;
-      SEL sel_alloc_;
-      SEL sel_initWithUTF8String_;
-      id processInfo_;
-      id reason_;
       id activity_;
+      uint64_t count_;
 
       Activity():
-        count_(0),
-        class_NSProcessInfo_((Class)objc_getClass("NSProcessInfo")),
-        class_NSString_((Class)objc_getClass("NSString")),
-        sel_processInfo_(sel_getUid("processInfo")),
-        sel_beginActivityWithOptions_(sel_getUid("beginActivityWithOptions:"
-                                                 "reason:")),
-        sel_endActivity_(sel_getUid("endActivity:")),
-        sel_alloc_(sel_getUid("alloc")),
-        sel_initWithUTF8String_(sel_getUid("initWithUTF8String:")),
-        processInfo_(NULL),
-        reason_(NULL),
-        activity_(NULL)
+        activity_(NULL),
+        count_(0)
       {
-        if (!(class_NSProcessInfo_ &&
-              class_NSString_ &&
-              class_getClassMethod(class_NSProcessInfo_,
-                                   sel_processInfo_) &&
-              class_getInstanceMethod(class_NSProcessInfo_,
-                                      sel_beginActivityWithOptions_)))
-        {
-          return;
-        }
-
-        processInfo_ = objc_msgSend((id)class_NSProcessInfo_,
-                                    sel_processInfo_);
-        if (!processInfo_)
+        NSProcessInfo * processInfo = [NSProcessInfo processInfo];
+        if (!processInfo)
         {
           return;
         }
 
         // create a reason string
-        reason_ = objc_msgSend(class_NSString_, sel_alloc_);
-        reason_ = objc_msgSend(reason_,
-                               sel_initWithUTF8String_,
-                               "Timing Crititcal");
+        NSString * because =
+          [[NSString alloc] initWithUTF8String:"yae::PreventAppNap"];
 
         // start activity that tells App Nap to mind its own business:
         // (NSActivityUserInitiatedAllowingIdleSystemSleep |
         //  NSActivityLatencyCritical)
-        activity_ = objc_msgSend(processInfo_,
-                                 sel_beginActivityWithOptions_,
-                                 0x00FFFFFFULL | 0xFF00000000ULL,
-                                 reason_);
+        NSActivityOptions opts = 0x00FFFFFFULL | 0xFF00000000ULL;
+        activity_ = [processInfo
+                     beginActivityWithOptions:opts
+                     reason:because];
+        [activity_ retain];
+        [because release];
       }
 
       ~Activity()
       {
         if (activity_)
         {
-          objc_msgSend(processInfo_, sel_endActivity_, activity_);
+          NSProcessInfo * processInfo = [NSProcessInfo processInfo];
+          if (!processInfo)
+          {
+            return;
+          }
+
+          [processInfo endActivity: activity_];
+          [activity_ release];
         }
       }
     };
 
     static boost::mutex mutex_;
-    static Activity * activity_;
+    static Activity * singleton_;
 
     Private()
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      if (!activity_)
+      if (!singleton_)
       {
-        activity_ = new Activity();
+        singleton_ = new Activity();
       }
 
-      activity_->count_++;
+      singleton_->count_++;
     }
 
     ~Private()
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      if (activity_)
+      if (singleton_)
       {
-        activity_->count_--;
-        if (!activity_->count_)
+        singleton_->count_--;
+        if (!singleton_->count_)
         {
-          delete activity_;
-          activity_ = NULL;
+          delete singleton_;
+          singleton_ = NULL;
         }
       }
     }
@@ -210,10 +187,10 @@ namespace yae
   PreventAppNap::Private::mutex_;
 
   //----------------------------------------------------------------
-  // PreventAppNap::Private::activity_
+  // PreventAppNap::Private::singleton_
   //
   PreventAppNap::Private::Activity *
-  PreventAppNap::Private::activity_;
+  PreventAppNap::Private::singleton_;
 
   //----------------------------------------------------------------
   // PreventAppNap::PreventAppNap
