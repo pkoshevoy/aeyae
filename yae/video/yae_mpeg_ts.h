@@ -2379,7 +2379,7 @@ namespace yae
 
         bool operator == (const Channel & other) const;
 
-        uint32_t gps_time() const;
+        // uint32_t gps_time() const;
 
         // helper:
         const EPG::Program * find(uint32_t gps_time) const;

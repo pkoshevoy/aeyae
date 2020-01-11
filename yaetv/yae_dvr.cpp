@@ -581,6 +581,8 @@ namespace yae
   void
   Schedule::update(DVR & dvr, const yae::mpeg_ts::EPG & epg)
   {
+    uint64_t gps_now = TTime::gps_now().get(1);
+
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
@@ -593,7 +595,7 @@ namespace yae
         const yae::mpeg_ts::EPG::Program & program = *j;
 
         uint32_t gps_t1 = program.gps_time_ + program.duration_;
-        if (gps_t1 <= channel.gps_time())
+        if (gps_t1 <= gps_now)
         {
           // it's in the past:
           continue;
@@ -674,7 +676,7 @@ namespace yae
         const TRecordingPtr & rec_ptr = j->second;
         const Recording & rec = *rec_ptr;
 
-        if (rec.gps_t1_ < channel.gps_time())
+        if (rec.gps_t1_ < gps_now)
         {
           // it's in the past:
           continue;
@@ -2547,7 +2549,7 @@ namespace yae
     {
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
-      uint32_t gps_time = channel.gps_time();
+      uint32_t gps_time = TTime::gps_now().get(1);
 
       std::set<TRecordingPtr> recs;
       schedule_.get(recs, ch_num, gps_time, margin_sec);

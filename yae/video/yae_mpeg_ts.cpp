@@ -4688,7 +4688,7 @@ namespace yae
 
       return NULL;
     }
-
+#if 0
     //----------------------------------------------------------------
     // EPG::Channel::gps_time
     //
@@ -4699,7 +4699,7 @@ namespace yae
       uint32_t elapsed_sec = uint32_t((now - epg_time_).get(1));
       return gps_time_ + elapsed_sec;
     }
-
+#endif
     //----------------------------------------------------------------
     // EPG::Channel::dump
     //
