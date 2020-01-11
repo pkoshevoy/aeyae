@@ -1583,21 +1583,28 @@ namespace yae
     worker_.stop();
     worker_.wait_until_finished();
 
-    for (std::map<std::string, yae::weak_ptr<Stream, IStream> >::const_iterator
-           i = stream_.begin(); i != stream_.end(); ++i)
+
+    for (std::map<std::string, TPacketHandlerPtr>::const_iterator
+           i = packet_handler_.begin(); i != packet_handler_.end(); ++i)
     {
-      TStreamPtr stream_ptr = i->second.lock();
+      std::string frequency = i->first;
+      TPacketHandlerPtr packet_handler_ptr = i->second;
+      if (packet_handler_ptr)
+      {
+        PacketHandler & ph = *packet_handler_ptr;
+        ph.ring_buffer_.close();
+        ph.worker_.stop();
+        ph.worker_.wait_until_finished();
+      }
+
+      TStreamPtr stream_ptr = stream_[frequency].lock();
       if (stream_ptr)
       {
         Stream & stream = *stream_ptr;
         stream.close();
       }
-    }
 
-    for (std::map<std::string, TWorkerPtr>::const_iterator
-           i = stream_worker_.begin(); i != stream_worker_.end(); ++i)
-    {
-      TWorkerPtr worker_ptr = i->second;
+      TWorkerPtr worker_ptr = stream_worker_[frequency];
       if (worker_ptr)
       {
         worker_ptr->stop();
@@ -1816,7 +1823,7 @@ namespace yae
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
 
-#ifndef NDEBUG
+#if 1 // ndef NDEBUG
       {
         ctx.dump();
 

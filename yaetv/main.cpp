@@ -377,7 +377,6 @@ namespace yae
         signal_handler_received_sigint())
     {
       service_loop->cancel();
-      service_loop->dvr_.shutdown();
     }
   }
 
