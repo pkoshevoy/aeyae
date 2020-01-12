@@ -1832,7 +1832,7 @@ namespace yae
       dvr_.save_epg(frequency, ctx);
       dvr_.save_frequencies();
 
-#if 1 // ndef NDEBUG
+#if 0 // ndef NDEBUG
       {
         ctx.dump();
 
