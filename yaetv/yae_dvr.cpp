@@ -2187,11 +2187,29 @@ namespace yae
     schedule_.save(json);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string path = (yaetv_ / "schedule.json").string();
-    yae::TOpenFile file;
-    if (!(file.open(path, "wb") && file.save(json)))
     {
-      yae_elog("write failed: %s", path.c_str());
+      std::string path = (yaetv_ / "schedule.json").string();
+      yae::TOpenFile file;
+      if (!(file.open(path, "wb") && file.save(json)))
+      {
+        yae_elog("write failed: %s", path.c_str());
+      }
+    }
+
+    // and another one, for post-mortem debugging:
+    {
+      int64_t t = yae::TTime::now().get(1);
+      t -= t % 1800; // round-down to half-hour:
+
+      struct tm tm;
+      yae::unix_epoch_time_to_localtime(t, tm);
+      std::string fn = strfmt("schedule-%02i%02i.json", tm.tm_hour, tm.tm_min);
+      std::string path = (yaetv_ / fn).string();
+      yae::TOpenFile file;
+      if (!(file.open(path, "wb") && file.save(json)))
+      {
+        yae_elog("write failed: %s", path.c_str());
+      }
     }
   }
 
