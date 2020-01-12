@@ -627,7 +627,7 @@ namespace yae
   void
   Canvas::paintCanvas()
   {
-    YAE_BENCHMARK(benchmark, "Canvas::paintCanvas");
+    // YAE_BENCHMARK(benchmark, "Canvas::paintCanvas");
 
     // this is just to prevent concurrent OpenGL access to the same context:
     TMakeCurrentContext lock(context());

@@ -2193,7 +2193,7 @@ namespace yae
   TModernCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
-    YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+    // YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
 
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -2723,7 +2723,7 @@ namespace yae
   TLegacyCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
-    YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+    // YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
 
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -3263,7 +3263,7 @@ namespace yae
   CanvasRenderer::loadFrame(IOpenGLContext & context,
                             const TVideoFramePtr & frame)
   {
-    YAE_BENCHMARK(benchmark, "CanvasRenderer::loadFrame");
+    // YAE_BENCHMARK(benchmark, "CanvasRenderer::loadFrame");
 
     if (modern_)
     {

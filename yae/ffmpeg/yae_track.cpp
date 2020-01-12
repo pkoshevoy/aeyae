@@ -517,7 +517,7 @@ namespace yae
       AvFrm frm;
       AVFrame & decodedFrame = frm.get();
       {
-        YAE_BENCHMARK(benchmark, "avcodec_receive_frame");
+        // YAE_BENCHMARK(benchmark, "avcodec_receive_frame");
         err = avcodec_receive_frame(ctx, &decodedFrame);
       }
 
@@ -548,7 +548,7 @@ namespace yae
   int
   Track::decode(AVCodecContext * ctx, const AvPkt & pkt)
   {
-    YAE_BENCHMARK(benchmark, "Track::decode");
+    // YAE_BENCHMARK(benchmark, "Track::decode");
 
     int errSend = AVERROR(EAGAIN);
     int errRecv = AVERROR(EAGAIN);
@@ -559,7 +559,7 @@ namespace yae
 
       const AVPacket & packet = pkt.get();
       {
-        YAE_BENCHMARK(benchmark, "avcodec_send_packet");
+        // YAE_BENCHMARK(benchmark, "avcodec_send_packet");
         errSend = avcodec_send_packet(ctx, &packet);
       }
 

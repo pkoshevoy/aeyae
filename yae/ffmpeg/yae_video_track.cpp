@@ -452,7 +452,7 @@ namespace yae
   void
   VideoTrack::handle(const AvFrm & decodedFrame)
   {
-    YAE_BENCHMARK(benchmark, "VideoTrack::handle");
+    // YAE_BENCHMARK(benchmark, "VideoTrack::handle");
 
     try
     {
@@ -892,7 +892,7 @@ namespace yae
 
         // put the output frame into frame queue:
         {
-          YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
+          // YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
           if (!frameQueue_.push(vfPtr, &terminator_))
           {
             return;
@@ -1108,7 +1108,7 @@ namespace yae
   bool
   VideoTrack::getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
-    YAE_BENCHMARK(benchmark, "VideoTrack::getNextFrame");
+    // YAE_BENCHMARK(benchmark, "VideoTrack::getNextFrame");
 
     bool ok = true;
     while (ok)

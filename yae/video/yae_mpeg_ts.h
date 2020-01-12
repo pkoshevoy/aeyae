@@ -27,6 +27,7 @@
 
 // yae includes:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_data.h"
 #include "yae/utils/yae_json.h"
 #include "yae/utils/yae_time.h"
@@ -2466,6 +2467,9 @@ namespace yae
 
       // for more human-friendly logging:
       std::string log_prefix_;
+
+      // for profiling:
+      mutable yae::Timesheet timesheet_;
 
     protected:
       // helpers:

@@ -5096,6 +5096,7 @@ namespace yae
     void
     Context::push(const TSPacket & pkt)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "push");
       YAE_EXPECT(!pkt.transport_error_indicator_);
 
       // In transport streams, duplicate packets may be sent as two,
@@ -5215,6 +5216,7 @@ namespace yae
     Context::handle(const IPacketHandler::Packet & packet,
                     IPacketHandler & handler) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "handle");
       boost::unique_lock<boost::mutex> lock(mutex_);
       YAE_ASSERT(packet.data_->size() == 188);
 
@@ -5289,6 +5291,7 @@ namespace yae
     void
     Context::consume_stt(const STTSectionPtr & stt_section)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_stt");
       stt_walltime_ = TTime::now();
       stt_ = stt_section;
 
@@ -5330,6 +5333,7 @@ namespace yae
     void
     Context::consume_mgt(const MGTSectionPtr & mgt_section)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_mgt");
       const MasterGuideTable & mgt = *mgt_section;
       YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
                    mgt.table_id_ > 0xCD);
@@ -5409,6 +5413,7 @@ namespace yae
     void
     Context::consume_vct(const VirtualChannelTable & vct, uint16_t pid)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_vct");
 #if 0
       std::ostringstream oss;
       oss << "VCT: channels: [";
@@ -5495,6 +5500,7 @@ namespace yae
     void
     Context::consume_rrt(const RRTSectionPtr & rrt_section, uint16_t pid)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_rrt");
       const RatingRegionTable & rrt = *(rrt_section);
 
 #if 0
@@ -5573,6 +5579,7 @@ namespace yae
     void
     Context::consume_eit(const EventInformationTable & eit, uint16_t pid)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_eit");
 #if 0
       std::ostringstream oss;
       oss << "EIT: source_id " << eit.source_id_ << ", [";
@@ -5679,6 +5686,7 @@ namespace yae
     void
     Context::consume_ett(const ExtendedTextTable & ett, uint16_t pid)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_ett");
 #if 0
       std::ostringstream oss;
       oss << "ETT: source " << ett.etm_id_source_id_;
@@ -5726,6 +5734,7 @@ namespace yae
     Context::dump(const std::vector<TDescriptorPtr> & descriptors,
                   std::ostream & oss) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "dump1");
       oss << "descriptors: [ ";
       const char * isep = "";
       for (std::vector<TDescriptorPtr>::const_iterator
@@ -5746,6 +5755,8 @@ namespace yae
     const Bucket &
     Context::get_epg_bucket_nolock(uint32_t gps_time) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context",
+                                  "get_epg_bucket_nolock");
       std::size_t bx = bucket_index_at(gps_time);
       yae::optional<std::size_t> bx_fallback;
 
@@ -5782,6 +5793,7 @@ namespace yae
     void
     Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = gps_time_now();
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
@@ -5844,6 +5856,8 @@ namespace yae
     bool
     Context::channel_guide_overlaps(int64_t t) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context",
+                                  "channel_guide_overlaps");
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = unix_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
@@ -5856,6 +5870,7 @@ namespace yae
     void
     Context::save(Json::Value & json) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "save");
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::save(json["bucket"], bucket_);
     }
@@ -5866,6 +5881,7 @@ namespace yae
     void
     Context::load(const Json::Value & json)
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "load");
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::load(json["bucket"], bucket_);
       YAE_EXPECT(bucket_.size() == 32 * 8);
@@ -5878,6 +5894,7 @@ namespace yae
     void
     Context::dump(const std::string & lang) const
     {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "dump2");
       EPG epg;
       get_epg(epg, lang);
 

@@ -2523,7 +2523,7 @@ namespace yae
     YAE_BENCHMARK_CLEAR();
     YAE_LIFETIME_CLEAR();
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     std::string desktop =
       YAE_STANDARD_LOCATION(DesktopLocation).toUtf8().constData();
     std::string timesheet = (fs::path(desktop) / "aeyae.timesheet").string();

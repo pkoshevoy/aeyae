@@ -251,6 +251,9 @@ namespace yae
     // omitting leading zeros and trailing factional zeros
     std::string to_short_txt() const;
 
+    // seconds.msec -- even shorter than to_short_txt:
+    std::string sec_msec() const;
+
     int64_t time_;
     uint64_t base_;
   };

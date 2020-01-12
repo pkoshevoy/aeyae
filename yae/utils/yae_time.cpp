@@ -734,6 +734,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::sec_msec
+  //
+  std::string
+  TTime::sec_msec() const
+  {
+    // rescale to msec:
+    int64_t t = get(1000);
+    const char * sign = t < 0 ? "-" : "";
+    t < 0 && (t = -t);
+
+    int64_t ms = t % 1000;
+    t /= 1000;
+
+    std::ostringstream oss;
+    oss << sign
+        << t << '.'
+        << std::setfill('0') << std::setw(3) << ms;
+    return std::string(oss.str().c_str());
+  }
+
+  //----------------------------------------------------------------
   // operator <<
   //
   std::ostream &

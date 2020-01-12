@@ -1596,6 +1596,14 @@ namespace yae
         ph.ring_buffer_.close();
         ph.worker_.stop();
         ph.worker_.wait_until_finished();
+
+        // save timesheet to disk:
+        yae::mpeg_ts::Context & ctx = ph.ctx_;
+        std::string timesheet = ctx.timesheet_.to_str();
+        std::string fn = strfmt("timesheet.%s.log", ctx.log_prefix_.c_str());
+        fn = sanitize_filename_utf8(fn);
+        fn = (fs::path(yae::get_temp_dir_utf8()) / fn).string();
+        yae::TOpenFile(fn, "wb").write(timesheet);
       }
 
       TStreamPtr stream_ptr = stream_[frequency].lock();

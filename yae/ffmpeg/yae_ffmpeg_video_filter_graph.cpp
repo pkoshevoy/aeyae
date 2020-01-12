@@ -302,7 +302,7 @@ namespace yae
                           const char * filter_chain,
                           unsigned int setup_hints)
   {
-    YAE_BENCHMARK(benchmark, "VideoFilterGraph::setup");
+    // YAE_BENCHMARK(benchmark, "VideoFilterGraph::setup");
 
     filter_chain = filter_chain ? filter_chain : "";
 
@@ -424,7 +424,7 @@ namespace yae
   void
   VideoFilterGraph::push(AVFrame * frame)
   {
-    YAE_BENCHMARK(benchmark, "VideoFilterGraph::push");
+    // YAE_BENCHMARK(benchmark, "VideoFilterGraph::push");
 
     if (!frame)
     {
@@ -453,7 +453,7 @@ namespace yae
   bool
   VideoFilterGraph::pull(AVFrame * frame, AVRational & out_timebase)
   {
-    YAE_BENCHMARK(benchmark, "VideoFilterGraph::pull");
+    // YAE_BENCHMARK(benchmark, "VideoFilterGraph::pull");
 
     // avoid leaking unintentionally:
     av_frame_unref(frame);

@@ -219,7 +219,7 @@ namespace yae
 
       if (repaintEvent)
       {
-        YAE_BENCHMARK(benchmark, "ItemView::event repaintEvent");
+        // YAE_BENCHMARK(benchmark, "ItemView::event repaintEvent");
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
         std::cerr << "FIXME: ItemView::repaintEvent " << root_->id_
@@ -320,7 +320,7 @@ namespace yae
   void
   ItemView::paint(Canvas * canvas)
   {
-    YAE_BENCHMARK(benchmark, "ItemView::paint ");
+    // YAE_BENCHMARK(benchmark, "ItemView::paint ");
 
     requestRepaintEvent_.setDelivered(true);
 
@@ -340,7 +340,7 @@ namespace yae
 
       Item & item = *itemPtr;
 
-      YAE_BENCHMARK(benchmark, (std::string("uncache ") + item.id_).c_str());
+      // YAE_BENCHMARK(benchmark, (std::string("uncache ") + item.id_).c_str());
       item.uncache();
     }
 
@@ -454,7 +454,7 @@ namespace yae
   bool
   ItemView::processEvent(Canvas * canvas, QEvent * event)
   {
-    YAE_BENCHMARK(benchmark, "ItemView::processEvent");
+    // YAE_BENCHMARK(benchmark, "ItemView::processEvent");
 
     QEvent::Type et = event->type();
     if (et != QEvent::Paint &&
