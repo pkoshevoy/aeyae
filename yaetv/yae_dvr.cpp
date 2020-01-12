@@ -1780,7 +1780,7 @@ namespace yae
           boost::system_time giveup_at(boost::get_system_time());
           giveup_at += boost::posix_time::seconds(sample_dur.get(1));
 
-          yae_wlog("%sstarted EPG update for channels %i.* (%s)",
+          yae_ilog("%sstarted EPG update for channels %i.* (%s)",
                    packet_handler.ctx_.log_prefix_.c_str(),
                    major,
                    frequency.c_str());

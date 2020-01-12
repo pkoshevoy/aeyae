@@ -731,7 +731,7 @@ namespace yae
       if (threshold < elapsed)
       {
         // cache is too old, purge it:
-        yae_wlog("%s channel scan cache expired", cache_path.c_str());
+        yae_ilog("%s channel scan cache expired", cache_path.c_str());
         tuner_cache.clear();
       }
     }
@@ -779,7 +779,6 @@ namespace yae
         int ret = hdhomerun_device_channelscan_advance(hd, &result);
         if (ret <= 0)
         {
-          yae_wlog("hdhomerun_device_channelscan_advance: %i", ret);
           break;
         }
 
@@ -796,8 +795,6 @@ namespace yae
         ret = hdhomerun_device_channelscan_detect(hd, &result);
         if (ret < 0)
         {
-          yae_wlog("hdhomerun_device_channelscan_detect: %i", ret);
-          // break;
           continue;
         }
 
@@ -1009,7 +1006,7 @@ namespace yae
         channels_txt = oss.str().c_str();
       }
 
-      yae_wlog("%s %sHz: capturing %s",
+      yae_ilog("%s %sHz: capturing %s",
                session.tuner_name_.c_str(),
                frequency.c_str(),
                channels_txt.c_str());
