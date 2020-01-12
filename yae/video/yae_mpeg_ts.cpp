@@ -4335,11 +4335,6 @@ namespace yae
         return false;
       }
 
-      if (!ett_table_set_.is_complete())
-      {
-        return false;
-      }
-
       if (!rrt_table_set_.is_complete())
       {
         return false;
@@ -4613,7 +4608,6 @@ namespace yae
       save(json["timestamp_mgt"], bucket.timestamp_mgt_);
       save(json["vct_table_set"], bucket.vct_table_set_);
       save(json["eit_table_set"], bucket.eit_table_set_);
-      save(json["ett_table_set"], bucket.ett_table_set_);
       save(json["rrt_table_set"], bucket.rrt_table_set_);
     }
 
@@ -4630,7 +4624,6 @@ namespace yae
       load(json["timestamp_mgt"], bucket.timestamp_mgt_);
       load(json["vct_table_set"], bucket.vct_table_set_);
       load(json["eit_table_set"], bucket.eit_table_set_);
-      load(json["ett_table_set"], bucket.ett_table_set_);
       load(json["rrt_table_set"], bucket.rrt_table_set_);
     }
 
@@ -4688,7 +4681,7 @@ namespace yae
 
       return NULL;
     }
-#if 0
+
     //----------------------------------------------------------------
     // EPG::Channel::gps_time
     //
@@ -4699,7 +4692,7 @@ namespace yae
       uint32_t elapsed_sec = uint32_t((now - epg_time_).get(1));
       return gps_time_ + elapsed_sec;
     }
-#endif
+
     //----------------------------------------------------------------
     // EPG::Channel::dump
     //
@@ -5323,7 +5316,7 @@ namespace yae
       oss << ", ";
       dump(stt.descriptor_, oss);
       oss << "\n\n";
-      yae_debug << oss.str();
+      yae_debug << log_prefix_ << oss.str();
 #endif
     }
 
@@ -5346,6 +5339,29 @@ namespace yae
       for (std::size_t i = 0; i < mgt.tables_defined_; i++)
       {
         const MasterGuideTable::Table & table = mgt.table_[i];
+        uint16_t table_pid = table.table_type_pid_;
+        uint16_t curr_version = table.table_type_version_number_;
+
+        std::map<uint16_t, uint16_t> & versions =
+          (table.table_type_ == 0x0000) ? version_vct_ :
+          (table.table_type_ >= 0x0300 &&
+           table.table_type_ <= 0x03FF) ? version_rrt_ :
+          version_;
+
+        uint16_t prev_version =
+          yae::get(versions, table_pid, uint16_t((curr_version + 31) % 32));
+        if (curr_version != prev_version)
+        {
+          yae_ilog("%stable PID %u (type 0x%04X) version changed: %u -> %u",
+                   log_prefix_.c_str(),
+                   table_pid,
+                   table.table_type_,
+                   prev_version,
+                   curr_version);
+        }
+
+        versions[table_pid] = curr_version;
+
         if (table.table_type_ == 0x0000)
         {
           bucket.vct_table_set_.set_expected_table(table.table_type_);
@@ -5444,7 +5460,7 @@ namespace yae
       oss << "\n]\nadditional_";
       dump(vct.additional_descriptor_, oss);
       oss << "\n\n";
-      yae_debug << oss.str();
+      yae_debug << log_prefix_ << oss.str();
 #endif
 
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -5534,7 +5550,7 @@ namespace yae
       oss << "]\n";
       dump(rrt.descriptor_, oss);
       oss << "\n\n";
-      yae_debug << oss.str();
+      yae_debug << log_prefix_ << oss.str();
 #endif
 
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -5566,7 +5582,7 @@ namespace yae
       }
 
       rr.dimensions_.swap(dimensions);
-   }
+    }
 
     //----------------------------------------------------------------
     // ch_invalid
@@ -5580,9 +5596,16 @@ namespace yae
     Context::consume_eit(const EventInformationTable & eit, uint16_t pid)
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "consume_eit");
+      uint16_t table_version = eit.version_number_;
+      uint8_t eit_index = yae::at(pid_eit_, pid);
+
 #if 0
       std::ostringstream oss;
-      oss << "EIT: source_id " << eit.source_id_ << ", [";
+      oss << "EIT-" << int(eit_index) << " (pid " << pid
+          << ", version " << table_version << ", section "
+          << int(1 + eit.section_number_) << "/"
+          << int(1 + eit.last_section_number_) << ")"
+          << ", source_id " << eit.source_id_ << ", [";
 
       const char * isep = "\n  ";
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
@@ -5601,12 +5624,24 @@ namespace yae
         dump(e.descriptor_, oss);
       }
       oss << "\n]\n\n";
-      yae_debug << oss.str();
+      yae_debug << log_prefix_ << oss.str();
 #endif
 
       boost::unique_lock<boost::mutex> lock(mutex_);
       Bucket & bucket = get_current_bucket();
-      uint8_t eit_index = yae::at(pid_eit_, pid);
+
+      // sanity check:
+      const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
+                                       eit.source_id_,
+                                       ch_invalid);
+      if (ch_num == ch_invalid)
+      {
+        return;
+      }
+
+      // shortcut to the corresponding channel guide:
+      ChannelGuide & chan = bucket.guide_[ch_num];
+
       bucket.eit_table_set_.set_observed_table(eit_index,
                                                eit.section_number_,
                                                eit.last_section_number_);
@@ -5640,15 +5675,6 @@ namespace yae
         return;
       }
 
-      const uint32_t ch_num = yae::get(bucket.source_id_to_ch_num_,
-                                       eit.source_id_,
-                                       ch_invalid);
-      if (ch_num == ch_invalid)
-      {
-        return;
-      }
-
-      ChannelGuide & chan = bucket.guide_[ch_num];
       std::list<ChannelGuide::Item> old_items = chan.items_;
       if (old_items.empty())
       {
@@ -5687,16 +5713,32 @@ namespace yae
     Context::consume_ett(const ExtendedTextTable & ett, uint16_t pid)
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "consume_ett");
+      uint16_t table_version = ett.version_number_;
+
 #if 0
       std::ostringstream oss;
-      oss << "ETT: source " << ett.etm_id_source_id_;
+      if (ett.etm_id_event_flag_)
+      {
+        uint8_t ett_index = yae::at(pid_event_ett_, pid);
+        oss << "ETT-" << int(ett_index);
+      }
+      else
+      {
+        oss << "ETT ";
+      }
+
+      oss << " (pid " << pid
+          << ", version " << table_version << ", section "
+          << int(1 + ett.section_number_) << "/"
+          << int(1 + ett.last_section_number_) << ")"
+          << ", source " << ett.etm_id_source_id_;
       if (ett.etm_id_event_flag_)
       {
         oss << ", event " << ett.etm_id_event_id_;
       }
       oss << ": " << ett.extended_text_message_.to_str()
           << "\n\n";
-      yae_debug << oss.str();
+      yae_debug << log_prefix_ << oss.str();
 #endif
 
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -5834,8 +5876,7 @@ namespace yae
         {
           const ChannelGuide::Item & item = *j;
 
-          channel.programs_.push_back(EPG::Program());
-          EPG::Program & program = channel.programs_.back();
+          EPG::Program program;
           program.title_ = item.get_title(lang);
           program.description_ = guide.get_description(item, lang);
           program.rating_ = get_rating(bucket.rrt_, item.rating_, lang);
@@ -5846,6 +5887,14 @@ namespace yae
           static uint32_t seconds_per_day = 24 * 60 * 60;
           int64_t t = gps_time_to_unix_time(item.t0_);
           yae::unix_epoch_time_to_localtime(t, program.tm_);
+
+          while (!channel.programs_.empty() &&
+                 program.gps_time_ <= channel.programs_.back().gps_time_)
+          {
+            channel.programs_.pop_back();
+          }
+
+          channel.programs_.push_back(program);
         }
       }
     }

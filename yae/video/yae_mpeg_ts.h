@@ -2380,7 +2380,7 @@ namespace yae
 
         bool operator == (const Channel & other) const;
 
-        // uint32_t gps_time() const;
+        uint32_t gps_time() const;
 
         // helper:
         const EPG::Program * find(uint32_t gps_time) const;
@@ -2535,6 +2535,13 @@ namespace yae
       std::map<uint16_t, uint8_t> pid_event_ett_;
       std::map<uint16_t, uint8_t> pid_rrt_;
       std::map<uint16_t, uint8_t> pid_dcct_;
+
+      // table versions, indexed by pid;
+      // VCT and RRT version are stored separately
+      // because they can share PID with MGT table:
+      std::map<uint16_t, uint16_t> version_;
+      std::map<uint16_t, uint16_t> version_vct_;
+      std::map<uint16_t, uint16_t> version_rrt_;
     };
 
   }

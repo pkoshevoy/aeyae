@@ -298,7 +298,7 @@ namespace yae
     void init_packet_handlers();
     void shutdown();
     void scan_channels();
-    void update_epg(bool slow = false);
+    void update_epg();
 
     TStreamPtr capture_stream(const std::string & frequency,
                               const TTime & duration);

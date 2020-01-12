@@ -581,8 +581,6 @@ namespace yae
   void
   Schedule::update(DVR & dvr, const yae::mpeg_ts::EPG & epg)
   {
-    uint64_t gps_now = TTime::gps_now().get(1);
-
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
@@ -595,7 +593,7 @@ namespace yae
         const yae::mpeg_ts::EPG::Program & program = *j;
 
         uint32_t gps_t1 = program.gps_time_ + program.duration_;
-        if (gps_t1 <= gps_now)
+        if (gps_t1 <= channel.gps_time())
         {
           // it's in the past:
           continue;
@@ -676,7 +674,7 @@ namespace yae
         const TRecordingPtr & rec_ptr = j->second;
         const Recording & rec = *rec_ptr;
 
-        if (rec.gps_t1_ < gps_now)
+        if (rec.gps_t1_ < channel.gps_time())
         {
           // it's in the past:
           continue;
@@ -1305,7 +1303,6 @@ namespace yae
                ring_buffer_occupancy);
     }
 
-#if 0
     // check if Channel Guide extends to 9 hours from now
     {
       static const TTime nine_hours(9 * 60 * 60, 1);
@@ -1315,7 +1312,6 @@ namespace yae
         epg_ready_.notify_all();
       }
     }
-#endif
 
     if (packet_handler.worker_.is_idle())
     {
@@ -1356,7 +1352,7 @@ namespace yae
     yae::mpeg_ts::EPG epg;
     dvr_.get_epg(epg);
     dvr_.cache_epg(epg);
-    dvr_.update_epg(true);
+    dvr_.update_epg();
 
     // pull EPG, evaluate wishlist, start captures, etc...
     while (!keep_going_.stop_)
@@ -1407,7 +1403,7 @@ namespace yae
         if (blacklist_changed || dvr_.next_epg_refresh() <= now)
         {
           dvr_.set_next_epg_refresh(now + dvr_.epg_refresh_period_);
-          dvr_.update_epg(true);
+          dvr_.update_epg();
           continue;
         }
 
@@ -1689,21 +1685,19 @@ namespace yae
   //
   struct UpdateProgramGuide : yae::Worker::Task
   {
-    UpdateProgramGuide(DVR & dvr, bool slow);
+    UpdateProgramGuide(DVR & dvr);
 
     // virtual:
     void execute(const yae::Worker & worker);
 
     DVR & dvr_;
-    bool slow_;
   };
 
   //----------------------------------------------------------------
   // UpdateProgramGuide::UpdateProgramGuide
   //
-  UpdateProgramGuide::UpdateProgramGuide(DVR & dvr, bool slow):
-    dvr_(dvr),
-    slow_(slow)
+  UpdateProgramGuide::UpdateProgramGuide(DVR & dvr):
+    dvr_(dvr)
   {}
 
   //----------------------------------------------------------------
@@ -1746,7 +1740,11 @@ namespace yae
       channel_major[frequency] = major;
     }
 #else
-    frequencies.push_back(std::string("503000000")); // 14.1
+    {
+      std::string frequency = "503000000"; // 14.*
+      frequencies.push_back(frequency);
+      channel_major[frequency] = 14;
+    }
 #endif
 
     for (std::list<std::string>::const_iterator
@@ -1795,12 +1793,7 @@ namespace yae
 
             try
             {
-              if (slow_)
-              {
-                lock.unlock();
-                boost::this_thread::sleep_for(boost::chrono::seconds(1));
-              }
-              else if (stream.epg_ready_.timed_wait(lock, giveup_at))
+              if (stream.epg_ready_.timed_wait(lock, giveup_at))
               {
                 break;
               }
@@ -1814,12 +1807,43 @@ namespace yae
               break;
             }
           }
+
+          dvr_.save_epg(frequency, ctx);
+          dvr_.save_frequencies();
+
+          ctx.dump();
+
+          // also store it to disk, to help with post-mortem debugging:
+          yae::mpeg_ts::EPG epg;
+          ctx.get_epg(epg);
+
+          int64_t t = yae::TTime::now().get(1);
+          t -= t % 1800; // round-down to half-hour:
+
+          struct tm tm;
+          yae::unix_epoch_time_to_localtime(t, tm);
+
+          for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+                 i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+          {
+            const yae::mpeg_ts::EPG::Channel & channel = i->second;
+            std::string fn = strfmt("epg-%02i.%02i-%02u%02u.json",
+                                    channel.major_,
+                                    channel.minor_,
+                                    tm.tm_hour,
+                                    tm.tm_min);
+
+            Json::Value json;
+            yae::mpeg_ts::save(json, channel);
+            yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
+          }
         }
         else
         {
           yae_wlog("failed to start EPG update for channels %i.* (%s)",
                    major,
                    frequency.c_str());
+          continue;
         }
       }
       else
@@ -1827,32 +1851,8 @@ namespace yae
         yae_ilog("skipping EPG update for channels %i.* (%s)",
                  major,
                  frequency.c_str());
+        continue;
       }
-
-      dvr_.save_epg(frequency, ctx);
-      dvr_.save_frequencies();
-
-#if 0 // ndef NDEBUG
-      {
-        ctx.dump();
-
-        yae::mpeg_ts::EPG epg;
-        ctx.get_epg(epg);
-
-        for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-               i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
-        {
-          const yae::mpeg_ts::EPG::Channel & channel = i->second;
-          std::string fn = strfmt("epg-%02i.%02i.json",
-                                  channel.major_,
-                                  channel.minor_);
-
-          Json::Value json;
-          yae::mpeg_ts::save(json, channel);
-          yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
-        }
-      }
-#endif
     }
   }
 
@@ -1861,10 +1861,10 @@ namespace yae
   // DVR::update_epg
   //
   void
-  DVR::update_epg(bool slow)
+  DVR::update_epg()
   {
     yae::shared_ptr<UpdateProgramGuide, yae::Worker::Task> task;
-    task.reset(new UpdateProgramGuide(*this, slow));
+    task.reset(new UpdateProgramGuide(*this));
     worker_.add(task);
   }
 
@@ -2583,7 +2583,7 @@ namespace yae
     {
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
-      uint32_t gps_time = TTime::gps_now().get(1);
+      uint32_t gps_time = channel.gps_time();
 
       std::set<TRecordingPtr> recs;
       schedule_.get(recs, ch_num, gps_time, margin_sec);
