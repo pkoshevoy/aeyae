@@ -1396,6 +1396,15 @@ namespace yae
         const char * am_pm = (t.tm_hour < 12) ? "AM" : "PM";
         std::string t_str = strfmt("%i:00 %s", hour, am_pm);
 
+        if (hour % 12 == 0)
+        {
+          t_str += strfmt(", %s %s %i %04i",
+                          yae::kWeekdays[t.tm_wday % 7],
+                          yae::kMonths[t.tm_mon % 12],
+                          t.tm_mday + 1,
+                          t.tm_year + 1900);
+        }
+
         Text & label = item.addNew<Text>("time");
         label.font_ = style.font_;
         label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);

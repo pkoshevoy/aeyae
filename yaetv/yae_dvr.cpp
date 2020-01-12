@@ -36,6 +36,31 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kWeekdays
+  //
+  const char * kWeekdays[7] = {
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+  };
+
+  //----------------------------------------------------------------
+  // kMonths
+  //
+  const char * kMonths[12] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  };
+
+  //----------------------------------------------------------------
   // recording_rx
   //
   static const char * recording_rx =
@@ -197,10 +222,6 @@ namespace yae
 
     if (weekday_mask_)
     {
-      static const char * alphabet[] = {
-        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-      };
-
       const uint16_t weekday_mask = *weekday_mask_;
       const char * separator = "";
       std::ostringstream oss;
@@ -210,7 +231,7 @@ namespace yae
         uint16_t required = (1 << j);
         if ((weekday_mask & required) == required)
         {
-          oss << separator << alphabet[j];
+          oss << separator << kWeekdays[j];
           separator = " ";
         }
       }

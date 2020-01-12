@@ -5830,22 +5830,21 @@ namespace yae
    }
 
     //----------------------------------------------------------------
-    // Context::get_epg
+    // Context::get_epg_nolock
     //
     void
-    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
+    Context::get_epg_nolock(const Bucket & bucket,
+                            yae::mpeg_ts::EPG & epg,
+                            const std::string & lang) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg_nolock");
       uint32_t gps_time = gps_time_now();
-      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
 
       for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
         const uint32_t ch_num = i->first;
         EPG::Channel & channel = epg.channels_[ch_num];
-        channel = EPG::Channel();
         channel.major_ = channel_major(ch_num);
         channel.minor_ = channel_minor(ch_num);
 
@@ -5896,6 +5895,40 @@ namespace yae
 
           channel.programs_.push_back(program);
         }
+      }
+    }
+
+    //----------------------------------------------------------------
+    // Context::get_epg_now
+    //
+    void
+    Context::get_epg_now(yae::mpeg_ts::EPG & epg,
+                         const std::string & lang) const
+    {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      uint32_t gps_time = gps_time_now();
+      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
+      get_epg_nolock(bucket, epg, lang);
+    }
+
+    //----------------------------------------------------------------
+    // Context::get_epg
+    //
+    void
+    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
+    {
+      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
+      uint32_t gps_time = gps_time_now();
+      std::size_t bx_now = bucket_index_at(gps_time);
+      std::size_t num_bx = bucket_.size();
+
+      for (std::size_t i = 0; i < num_bx; i++)
+      {
+        std::size_t bx = (bx_now + i + 1) % num_bx;
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        const Bucket & bucket = bucket_[bx];
+        get_epg_nolock(bucket, epg, lang);
       }
     }
 

@@ -2432,6 +2432,13 @@ namespace yae
       void handle(const IPacketHandler::Packet & packet,
                   IPacketHandler & handler) const;
 
+      void get_epg_nolock(const Bucket & bucket,
+                          yae::mpeg_ts::EPG & epg,
+                          const std::string & lang = std::string("eng")) const;
+
+      void get_epg_now(yae::mpeg_ts::EPG & epg,
+                       const std::string & lang = std::string("eng")) const;
+
       void get_epg(yae::mpeg_ts::EPG & epg,
                    const std::string & lang = std::string("eng")) const;
 
