@@ -394,7 +394,7 @@ namespace yae
         const std::string & what = j->first;
         const Timesheet::Log & log = j->second;
         oss << "    " << std::right << std::setw(30) << what
-            << ", count: " << std::setw(8) << std::left
+            << ", count: " << std::setw(16) << std::left
             << log.n_
             << " avg work: " << std::setw(8) << std::left
             << log.avg_work().sec_msec()
