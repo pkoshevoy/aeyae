@@ -222,6 +222,68 @@ namespace yae
     return to_yyyymmdd_hhmmss(t, date_sep, separator, time_sep);
   }
 
+  //----------------------------------------------------------------
+  // approx_leap_seconds_at
+  //
+  static int64_t
+  approx_leap_seconds_at(uint32_t gps_time)
+  {
+    // there have been 18 leap seconds added in the time period
+    // from Jan 1st 1980 to Jan 1st 2020:
+    static const uint32_t gps_time_2020_01_01 = 1261872000;
+    double t = double(gps_time) / double(gps_time_2020_01_01);
+    double leap_sec = 18.0 * t;
+    return int64_t(leap_sec);
+  }
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_gps_time
+  //
+  uint32_t
+  unix_epoch_time_to_gps_time(int64_t ts)
+  {
+    int64_t gps_time = ts - unix_epoch_gps_offset;
+#if 1
+    // add the leap seconds:
+    gps_time += approx_leap_seconds_at(gps_time);
+#endif
+    return uint32_t(gps_time);
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_to_unix_epoch_time
+  //
+  int64_t
+  gps_time_to_unix_epoch_time(uint32_t gps_time)
+  {
+    int64_t t = gps_time + unix_epoch_gps_offset;
+#if 1
+    // subtract the leap seconds:
+    t -= approx_leap_seconds_at(gps_time);
+#endif
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_to_localtime_str
+  //
+  std::string
+  gps_time_to_localtime_str(uint32_t gps_time)
+  {
+    int64_t t = gps_time_to_unix_epoch_time(gps_time);
+    return unix_epoch_time_to_localtime_str(t);
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_to_localtime
+  //
+  void
+  gps_time_to_localtime(uint32_t gps_time, struct tm & t)
+  {
+    int64_t ts = gps_time_to_unix_epoch_time(gps_time);
+    unix_epoch_time_to_localtime(ts, t);
+  }
+
 
   //----------------------------------------------------------------
   // subsec_t
@@ -399,6 +461,10 @@ namespace yae
   {
     TTime t = TTime::now();
     t -= TTime(unix_epoch_gps_offset, 1);
+#if 1
+    // add in leap seconds:
+    t.time_ += t.base_ * approx_leap_seconds_at(t.time_);
+#endif
     return t;
   }
 

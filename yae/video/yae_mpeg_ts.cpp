@@ -4683,17 +4683,6 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // EPG::Channel::gps_time
-    //
-    uint32_t
-    EPG::Channel::gps_time() const
-    {
-      TTime now = TTime::now();
-      uint32_t elapsed_sec = uint32_t((now - epg_time_).get(1));
-      return gps_time_ + elapsed_sec;
-    }
-
-    //----------------------------------------------------------------
     // EPG::Channel::dump
     //
     void
@@ -5033,8 +5022,6 @@ namespace yae
       save(json["name"], channel.name_);
       save(json["description"], channel.description_);
       save(json["programs"], channel.programs_);
-      save(json["gps_time"], channel.gps_time_);
-      save(json["epg_time"], channel.epg_time_);
     }
 
     //----------------------------------------------------------------
@@ -5048,8 +5035,6 @@ namespace yae
       load(json["name"], channel.name_);
       load(json["description"], channel.description_);
       load(json["programs"], channel.programs_);
-      load(json["gps_time"], channel.gps_time_);
-      load(json["epg_time"], channel.epg_time_);
     }
 
     //----------------------------------------------------------------
@@ -5235,47 +5220,6 @@ namespace yae
 
       int64_t t = now.get(1) - unix_epoch_gps_offset;
       return uint32_t(t);
-    }
-
-    //----------------------------------------------------------------
-    // Context::gps_time_to_unix_time
-    //
-    int64_t
-    Context::gps_time_to_unix_time(uint32_t gps_time) const
-    {
-      int64_t t = unix_epoch_gps_offset + gps_time - stt_error_;
-      if (stt_)
-      {
-        t -= stt_->gps_utc_offset_;
-      }
-
-      return t;
-    }
-
-    //----------------------------------------------------------------
-    // Context::unix_time_to_gps_time
-    //
-    uint32_t
-    Context::unix_time_to_gps_time(int64_t t) const
-    {
-      uint32_t gps_time = uint32_t((t - unix_epoch_gps_offset) + stt_error_);
-
-      if (stt_)
-      {
-        gps_time += stt_->gps_utc_offset_;
-      }
-
-      return gps_time;
-    }
-
-    //----------------------------------------------------------------
-    // Context::gps_time_to_str
-    //
-    std::string
-    Context::gps_time_to_str(uint32_t gps_time) const
-    {
-      int64_t t = gps_time_to_unix_time(gps_time);
-      return yae::unix_epoch_time_to_localtime_str(t);
     }
 
     //----------------------------------------------------------------
@@ -5850,18 +5794,18 @@ namespace yae
 
         const ChannelGuide & guide = i->second;
         channel.name_ = guide.name_;
-        channel.gps_time_ = gps_time;
-        channel.epg_time_ = TTime::now();
 
-#if 0
-        TTime gps_now = TTime::gps_now().rebased(1);
-        TTime gps_time_err = TTime(channel.gps_time_, 1) - gps_now;
-        if (std::abs(gps_time_err.get(1)) >= 60)
+#if 1
+        int64_t gps_time = TTime::gps_now().get(1);
+        uint32_t chan_time = gps_time_now();
+        int64_t time_err = gps_time - chan_time;
+        if (std::abs(time_err) >= 60)
         {
-          yae_elog("%sGPS time discrepancy: expected approx %s, actual %s",
+          yae_elog("%schannel GPS time discrepancy: "
+                   "expected approx %s, actual %s",
                    log_prefix_.c_str(),
-                   gps_time_to_str(gps_now.get(1)).c_str(),
-                   gps_time_to_str(channel.gps_time_).c_str());
+                   yae::gps_time_to_localtime_str(gps_time).c_str(),
+                   yae::gps_time_to_localtime_str(chan_time).c_str());
         }
 #endif
 
@@ -5883,9 +5827,7 @@ namespace yae
           program.gps_time_ = item.t0_;
           program.duration_ = item.dt_;
 
-          static uint32_t seconds_per_day = 24 * 60 * 60;
-          int64_t t = gps_time_to_unix_time(item.t0_);
-          yae::unix_epoch_time_to_localtime(t, program.tm_);
+          yae::gps_time_to_localtime(item.t0_, program.tm_);
 
           while (!channel.programs_.empty() &&
                  program.gps_time_ <= channel.programs_.back().gps_time_)
@@ -5941,7 +5883,7 @@ namespace yae
       yae::Timesheet::Probe probe(timesheet_, "Context",
                                   "channel_guide_overlaps");
       boost::unique_lock<boost::mutex> lock(mutex_);
-      uint32_t gps_time = unix_time_to_gps_time(t);
+      uint32_t gps_time = yae::unix_epoch_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
       return bucket.has_epg_for(gps_time);
     }

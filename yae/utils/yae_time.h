@@ -117,6 +117,31 @@ namespace yae
                              const char * time_sep = ":");
 
   //----------------------------------------------------------------
+  // unix_epoch_time_to_gps_time
+  //
+  YAE_API uint32_t
+  unix_epoch_time_to_gps_time(int64_t ts);
+
+  //----------------------------------------------------------------
+  // gps_time_to_unix_epoch_time
+  //
+  YAE_API int64_t
+  gps_time_to_unix_epoch_time(uint32_t gps_time);
+
+  //----------------------------------------------------------------
+  // gps_time_to_localtime_str
+  //
+  YAE_API std::string
+  gps_time_to_localtime_str(uint32_t gps_time);
+
+  //----------------------------------------------------------------
+  // gps_time_to_localtime
+  //
+  YAE_API void
+  gps_time_to_localtime(uint32_t gps_time, struct tm & t);
+
+
+  //----------------------------------------------------------------
   // TTime
   //
   struct YAE_API TTime

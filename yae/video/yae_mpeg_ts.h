@@ -2380,8 +2380,6 @@ namespace yae
 
         bool operator == (const Channel & other) const;
 
-        uint32_t gps_time() const;
-
         // helper:
         const EPG::Program * find(uint32_t gps_time) const;
 
@@ -2392,8 +2390,6 @@ namespace yae
         std::string name_;
         std::string description_;
         std::list<EPG::Program> programs_;
-        uint32_t gps_time_;
-        TTime epg_time_;
       };
 
       // helper:
@@ -2491,9 +2487,6 @@ namespace yae
 
       // helpers:
       uint32_t gps_time_now() const;
-      int64_t gps_time_to_unix_time(uint32_t gps_time) const;
-      uint32_t unix_time_to_gps_time(int64_t t) const;
-      std::string gps_time_to_str(uint32_t gps_time) const;
 
       void consume_stt(const STTSectionPtr & stt_section);
       void consume_mgt(const MGTSectionPtr & mgt_section);
