@@ -1810,6 +1810,7 @@ namespace yae
     mainview.add<Item>(epg_view_);
     Item & epg_view = *epg_view_;
     epg_view.anchors_.fill(mainview);
+    epg_view.visible_ = epg_view.addExpr(new In<kProgramGuideMode>(*this));
     layout_epg(view, style, epg_view);
   }
 
@@ -2054,23 +2055,23 @@ namespace yae
                        kRecordingsMode,
                        "Recordings");
 
-    // Wishlist
-    Item & wishlist_group =
-      layout_sidebar_group(view,
-                           style,
-                           sidebar,
-                           top_group,
-                           "wishlist_group",
-                           "Wishlist");
-
     // Playlist
     Item & playlist_group =
       layout_sidebar_group(view,
                            style,
                            sidebar,
-                           wishlist_group,
+                           top_group,
                            "playlist_group",
                            "Playlist");
+
+    // Wishlist
+    Item & wishlist_group =
+      layout_sidebar_group(view,
+                           style,
+                           sidebar,
+                           playlist_group,
+                           "wishlist_group",
+                           "Wishlist");
   }
 
   //----------------------------------------------------------------
