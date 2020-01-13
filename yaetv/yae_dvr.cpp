@@ -2590,6 +2590,53 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::get_recordings
+  //
+  void
+  DVR::get_recordings(std::map<std::string, TRecordingPtr> & by_filename,
+                      std::map<std::string, TRecordingPtr> & by_playlist) const
+  {
+    std::map<std::string, std::string> recordings;
+    {
+      CollectRecordings collect_recordings(recordings);
+      for_each_file_at(basedir_.string(), collect_recordings);
+    }
+
+    std::map<std::string, TRecordingPtr> rec_by_fn;
+    std::map<std::string, TRecordingPtr> rec_by_pl;
+
+    for (std::map<std::string, std::string>::iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      const std::string & filename = i->first;
+      const std::string & filepath = i->second;
+
+      TRecordingPtr rec_ptr = yae::get(by_filename, filename, TRecordingPtr());
+      if (!rec_ptr)
+      {
+        rec_ptr = load_recording(filepath);
+      }
+
+      if (!rec_ptr)
+      {
+        continue;
+      }
+
+      const Recording & recorded = *rec_ptr;
+      std::string playlist = yae::strfmt("%i-%i %s",
+                                         recorded.channel_major_,
+                                         recorded.channel_minor_,
+                                         recorded.title_.c_str());
+
+      rec_by_fn[filename] = rec_ptr;
+      rec_by_pl[playlist] = rec_ptr;
+    }
+
+    by_filename.swap(rec_by_fn);
+    by_playlist.swap(rec_by_pl);
+  }
+
+  //----------------------------------------------------------------
   // DVR::evaluate
   //
   void

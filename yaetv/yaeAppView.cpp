@@ -1231,9 +1231,14 @@ namespace yae
       std::map<uint32_t, TScheduledRecordings> schedule;
       dvr_->schedule_.get(schedule);
 
+      std::map<std::string, TRecordingPtr> recordings;
+      std::map<std::string, TRecordingPtr> playlists;
+      dvr_->get_recordings(recordings, playlists);
+
       if (epg_unchanged &&
           blacklist.channels_ == blacklist_.channels_ &&
-          schedule == schedule_)
+          schedule == schedule_ &&
+          recordings == recordings_)
       {
         requestRepaint();
         return;
@@ -1242,6 +1247,8 @@ namespace yae
       // update:
       blacklist_.channels_.swap(blacklist.channels_);
       schedule_.swap(schedule);
+      recordings_.swap(recordings);
+      playlists_.swap(playlists);
     }
 
     // shortcuts:

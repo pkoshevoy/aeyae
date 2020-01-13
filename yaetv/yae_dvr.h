@@ -356,6 +356,10 @@ namespace yae
     already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
                      const yae::mpeg_ts::EPG::Program & program) const;
 
+    void
+    get_recordings(std::map<std::string, TRecordingPtr> & by_filename,
+                   std::map<std::string, TRecordingPtr> & by_playlist) const;
+
     void evaluate(const yae::mpeg_ts::EPG & epg);
 
     inline TTime next_channel_scan() const

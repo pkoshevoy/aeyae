@@ -180,6 +180,12 @@ namespace yae
     DVR::Blacklist blacklist_;
     std::map<uint32_t, TScheduledRecordings> schedule_;
 
+    // all recordings, indexed by filename:
+    std::map<std::string, TRecordingPtr> recordings_;
+
+    // all recordings, indexed by playlist:
+    std::map<std::string, TRecordingPtr> playlists_;
+
     std::map<uint32_t, std::size_t> ch_ordinal_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;
