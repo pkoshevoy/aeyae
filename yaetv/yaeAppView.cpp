@@ -705,12 +705,9 @@ namespace yae
       {
         view_.collapsed_.insert(item_.id_);
       }
-#if 0
+
       item_.parent_->uncache();
       view_.requestRepaint();
-#else
-      view_.dataChanged();
-#endif
       return true;
     }
 
@@ -1919,6 +1916,7 @@ namespace yae
     body.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
     body.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
     body.visible_ = collapsed.addInverse(new IsCollapsed(view, group));
+    body.height_ = body.addExpr(new InvisibleItemZeroHeight(body));
 
     return group;
   }
