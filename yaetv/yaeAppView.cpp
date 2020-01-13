@@ -44,6 +44,25 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // InViewMode
+  //
+  struct InViewMode : public TBoolExpr
+  {
+    InViewMode(const AppView & view, AppView::ViewMode mode):
+      view_(view),
+      mode_(mode)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    { result = (view_.view_mode() == mode_); }
+
+    const AppView & view_;
+    AppView::ViewMode mode_;
+  };
+
+
+  //----------------------------------------------------------------
   // IsPlaybackPaused
   //
   struct IsPlaybackPaused : public TBoolExpr
@@ -686,8 +705,12 @@ namespace yae
       {
         view_.collapsed_.insert(item_.id_);
       }
+#if 0
       item_.parent_->uncache();
       view_.requestRepaint();
+#else
+      view_.dataChanged();
+#endif
       return true;
     }
 
@@ -1793,10 +1816,164 @@ namespace yae
     layout_epg(view, style, epg_view);
   }
 
-  static void
-  layout_collapsible_group()
+  //----------------------------------------------------------------
+  // layout_sidebar_group
+  //
+  static Item &
+  layout_sidebar_group(AppView & view,
+                       AppStyle & style,
+                       Item & sidebar,
+                       Item & prev_item,
+                       const char * group_name,
+                       const char * title_text)
   {
+    Item & root = *(view.root());
+    Item & hidden = root.get<Item>("hidden");
+
+    Item & group = sidebar.addNew<Item>(group_name);
+    group.anchors_.top_ = ItemRef::reference(prev_item, kPropertyBottom);
+    group.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
+    group.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+
+    Item & header = group.addNew<Item>("header");
+    header.anchors_.fill(group);
+    header.anchors_.bottom_.reset();
+    header.height_ = ItemRef::reference(hidden, kUnitSize, 0.67);
+
+    CollapseExpand & toggle = header.
+      add(new CollapseExpand("toggle", view, group));
+
+    TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
+    TexturedRect & expanded = toggle.addNew<TexturedRect>("expanded");
+
+    Text & title = header.addNew<Text>("title");
+
+    Item & baseline = header.addNew<Item>("baseline_xheight");
+    baseline.anchors_.fill(header);
+    baseline.anchors_.top_.reset();
+    baseline.anchors_.bottom_ =
+      ItemRef::reference(title, kPropertyBottom);
+    baseline.margins_.
+      set_bottom(ItemRef::reference(title, kPropertyFontDescent, 1, -1));
+    baseline.height_ =
+      baseline.addExpr(new CalcGlyphHeight(title, QChar('X')), 1, 2);
+
+    // open/close disclosure [>] button:
+    toggle.height_ = ItemRef::reference(baseline, kPropertyHeight);
+    toggle.width_ = ItemRef::reference(toggle, kPropertyHeight);
+    toggle.anchors_.bottom_ = ItemRef::reference(baseline, kPropertyBottom);
+    toggle.anchors_.left_ = ItemRef::reference(baseline, kPropertyLeft);
+    toggle.margins_.set_left(ItemRef::reference(baseline, kPropertyHeight));
+
+    expanded.visible_ = expanded.addInverse(new IsCollapsed(view, group));
+    expanded.texture_ = expanded.addExpr(new GetTexExpanded(view));
+    expanded.height_ = ItemRef::reference(toggle, kPropertyHeight);
+    expanded.width_ = ItemRef::reference(expanded, kPropertyHeight);
+    expanded.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
+    expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    expanded.margins_.
+      set_top(ItemRef::reference(expanded, kPropertyHeight, -0.125));
+    expanded.margins_.
+      set_bottom(ItemRef::reference(expanded, kPropertyHeight, 0.125));
+
+    collapsed.visible_ = collapsed.addExpr(new IsCollapsed(view, group));
+    collapsed.texture_ = collapsed.addExpr(new GetTexCollapsed(view));
+    collapsed.height_ = ItemRef::reference(toggle, kPropertyHeight);
+    collapsed.width_ = ItemRef::reference(collapsed, kPropertyHeight);
+    collapsed.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
+    collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
+    collapsed.margins_.
+      set_left(ItemRef::reference(collapsed, kPropertyHeight, -0.125));
+    collapsed.margins_.
+      set_right(ItemRef::reference(collapsed, kPropertyHeight, 0.125));
+
+    title.font_ = style.font_;
+    title.font_.setBold(true);
+    title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+    title.anchors_.vcenter_ = ItemRef::reference(header, kPropertyVCenter);
+    title.anchors_.left_ = ItemRef::reference(toggle, kPropertyRight);
+    title.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
+    title.margins_.
+      set_left(ItemRef::reference(baseline, kPropertyHeight, 0.5));
+
+    title.elide_ = Qt::ElideRight;
+    title.color_ = title.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    title.background_ = title.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    title.text_ = TVarRef::constant(TVar(title_text));
+#if 0
+    Rectangle & fixme = header.addNew<Rectangle>("fixme");
+    fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
+    fixme.anchors_.fill(title);
+#endif
+
+#if 0
+    Rectangle & fix2 = header.addNew<Rectangle>("fix2");
+    fix2.color_ = ColorRef::constant(Color(0xFFFF00, 0.5));
+    fix2.anchors_.fill(baseline);
+#endif
+
+    Item & body = group.addNew<Item>("body");
+    body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
+    body.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
+    body.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
+    body.visible_ = collapsed.addInverse(new IsCollapsed(view, group));
+
+    return group;
   }
+
+  //----------------------------------------------------------------
+  // add_viewmode_row
+  //
+  static SetViewMode &
+  add_viewmode_row(AppView & view,
+                   AppStyle & style,
+                   Item & sidebar,
+                   Item & group,
+                   Item * prev,
+                   const char * id,
+                   AppView::ViewMode mode,
+                   const char * text)
+  {
+    Item & root = *(view.root());
+    Item & hidden = root.get<Item>("hidden");
+    Item & body = group.get<Item>("body");
+
+    SetViewMode & row = body.add(new SetViewMode(id, view, mode));
+
+    row.anchors_.top_ = prev ?
+      ItemRef::reference(*prev, kPropertyBottom) :
+      ItemRef::reference(body, kPropertyTop);
+
+    row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+
+    Rectangle & bg_row = row.addNew<Rectangle>("bg");
+    bg_row.anchors_.fill(row);
+    bg_row.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
+    bg_row.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+    bg_row.color_ = bg_row.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+    bg_row.visible_ = bg_row.addExpr(new InViewMode(view, mode));
+
+    Text & label = row.addNew<Text>("label");
+    label.font_ = style.font_;
+    label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+    label.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+    label.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    label.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.3));
+    label.elide_ = Qt::ElideRight;
+    label.color_ = label.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+    label.background_ = label.
+      addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+    label.text_ = TVarRef::constant(TVar(text));
+
+    return row;
+  }
+
 
   //----------------------------------------------------------------
   // AppView::layout_sidebar
@@ -1811,7 +1988,10 @@ namespace yae
     bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_sidebar_));
     bg.anchors_.fill(panel);
 
-    Scrollview & sv = layout_scrollview(kScrollbarVertical, view, style, panel);
+    Scrollview & sv = layout_scrollview(kScrollbarVertical,
+                                        view,
+                                        style,
+                                        panel);
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
 
     Item & sidebar = *(sv.content_);
@@ -1823,131 +2003,76 @@ namespace yae
     spacer.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
     spacer.height_ = ItemRef::reference(hidden, kUnitSize, 0.14);
 
-    // add yaetv group:
-    {
-      Item & group = sidebar.addNew<Item>("yaetv_group");
-      group.anchors_.top_ = ItemRef::reference(spacer, kPropertyBottom);
-      group.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
-      group.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+    // Digital Video Recorder:
+    Item & top_group =
+      layout_sidebar_group(view,
+                           style,
+                           sidebar,
+                           spacer,
+                           "top_group",
+                           "Digital Video Recorder");
 
-      Item & header = group.addNew<Item>("header");
-      header.anchors_.fill(group);
-      header.anchors_.bottom_.reset();
-      header.height_ = ItemRef::reference(hidden, kUnitSize, 0.67);
+    // Program Guide
+    SetViewMode & view_epg =
+      add_viewmode_row(view,
+                       style,
+                       sidebar,
+                       top_group,
+                       NULL, // prev
+                       "set_view_mode_program_guide",
+                       kProgramGuideMode,
+                       "Program Guide");
 
-      CollapseExpand & toggle = header.
-        add(new CollapseExpand("toggle", view, group));
+    // Channels
+    SetViewMode & edit_channels =
+      add_viewmode_row(view,
+                       style,
+                       sidebar,
+                       top_group,
+                       &view_epg, // prev
+                       "set_view_mode_channel_list",
+                       kChannelListMode,
+                       "Channels");
 
-      TexturedRect & collapsed = toggle.addNew<TexturedRect>("collapsed");
-      TexturedRect & expanded = toggle.addNew<TexturedRect>("expanded");
+    // Schedule
+    SetViewMode & edit_schedule =
+      add_viewmode_row(view,
+                       style,
+                       sidebar,
+                       top_group,
+                       &edit_channels, // prev
+                       "set_view_mode_schedule",
+                       kScheduleMode,
+                       "Schedule");
 
-      Text & title = header.addNew<Text>("title");
+    // Recordings
+    SetViewMode & view_recordings =
+      add_viewmode_row(view,
+                       style,
+                       sidebar,
+                       top_group,
+                       &edit_schedule, // prev
+                       "set_view_mode_recordings",
+                       kRecordingsMode,
+                       "Recordings");
 
-      Item & baseline = header.addNew<Item>("baseline_xheight");
-      baseline.anchors_.fill(header);
-      baseline.anchors_.top_.reset();
-      baseline.anchors_.bottom_ =
-        ItemRef::reference(title, kPropertyBottom);
-      baseline.margins_.
-        set_bottom(ItemRef::reference(title, kPropertyFontDescent));
-      baseline.height_ =
-        baseline.addExpr(new CalcGlyphHeight(title, QChar('X')));
+    // Wishlist
+    Item & wishlist_group =
+      layout_sidebar_group(view,
+                           style,
+                           sidebar,
+                           top_group,
+                           "wishlist_group",
+                           "Wishlist");
 
-      // open/close disclosure [>] button:
-      toggle.height_ = ItemRef::reference(baseline, kPropertyHeight);
-      toggle.width_ = ItemRef::reference(toggle, kPropertyHeight);
-      toggle.anchors_.bottom_ = ItemRef::reference(baseline, kPropertyBottom);
-      toggle.anchors_.right_ = ItemRef::reference(title, kPropertyLeft);
-      toggle.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
-
-      expanded.visible_ = expanded.addInverse(new IsCollapsed(view, group));
-      expanded.texture_ = expanded.addExpr(new GetTexExpanded(view));
-      expanded.height_ = ItemRef::reference(toggle, kPropertyHeight);
-      expanded.width_ = ItemRef::reference(expanded, kPropertyHeight);
-      expanded.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
-      expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
-      expanded.margins_.
-        set_top(ItemRef::reference(expanded, kPropertyHeight, -0.125));
-      expanded.margins_.
-        set_bottom(ItemRef::reference(expanded, kPropertyHeight, 0.125));
-
-      collapsed.visible_ = collapsed.addExpr(new IsCollapsed(view, group));
-      collapsed.texture_ = collapsed.addExpr(new GetTexCollapsed(view));
-      collapsed.height_ = ItemRef::reference(toggle, kPropertyHeight);
-      collapsed.width_ = ItemRef::reference(collapsed, kPropertyHeight);
-      collapsed.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
-      collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
-      collapsed.margins_.
-        set_left(ItemRef::reference(collapsed, kPropertyHeight, -0.125));
-      collapsed.margins_.
-        set_right(ItemRef::reference(collapsed, kPropertyHeight, 0.125));
-
-      title.font_ = style.font_;
-      title.font_.setBold(true);
-      title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      title.anchors_.vcenter_ = ItemRef::reference(header, kPropertyVCenter);
-      title.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
-      title.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-      title.margins_.
-        set_left(ItemRef::reference(title, kPropertyFontHeight, 1.25));
-
-      title.elide_ = Qt::ElideRight;
-      title.color_ = title.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      title.background_ = title.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-      title.text_ = TVarRef::constant(TVar("Digital Video Recorder"));
-#if 0
-      Rectangle & fixme = header.addNew<Rectangle>("fixme");
-      fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
-      fixme.anchors_.fill(title);
-#endif
-
-#if 0
-      Rectangle & fix2 = header.addNew<Rectangle>("fix2");
-      fix2.color_ = ColorRef::constant(Color(0xFFFF00, 0.5));
-      fix2.anchors_.fill(header);
-#endif
-
-      Item & body = group.addNew<Item>("body");
-      body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
-      body.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
-      body.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-      body.visible_ = collapsed.addInverse(new IsCollapsed(view, group));
-
-      // Program Guide
-      SetViewMode & row = body.
-        add(new SetViewMode("row_ia", view, kProgramGuideMode));
-      row.anchors_.top_ = ItemRef::reference(body, kPropertyTop);
-      row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-      row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-      row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
-
-      Rectangle & bg_row = row.addNew<Rectangle>("bg");
-      bg_row.anchors_.fill(row);
-      bg_row.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
-      bg_row.anchors_.right_ = ItemRef::reference(vscrollbar, kPropertyRight);
-      bg_row.color_ = bg_row.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-
-      Text & label = row.addNew<Text>("label");
-      label.font_ = style.font_;
-      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-      label.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-      label.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-      label.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.8));
-      label.elide_ = Qt::ElideRight;
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-      label.text_ = TVarRef::constant(TVar("Program Guide"));
-
-      // Channels
-      // Wishlist
-      // Schedule
-      // Recordings
-    }
+    // Playlist
+    Item & playlist_group =
+      layout_sidebar_group(view,
+                           style,
+                           sidebar,
+                           wishlist_group,
+                           "playlist_group",
+                           "Playlist");
   }
 
   //----------------------------------------------------------------
