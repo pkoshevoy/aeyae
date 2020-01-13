@@ -155,6 +155,11 @@ namespace yae
   typedef yae::shared_ptr<Recording> TRecordingPtr;
 
   //----------------------------------------------------------------
+  // TRecordings
+  //
+  typedef std::map<std::string, TRecordingPtr> TRecordings;
+
+  //----------------------------------------------------------------
   // TScheduledRecordings
   //
   // indexed by GPS start time of the recording:
@@ -357,8 +362,8 @@ namespace yae
                      const yae::mpeg_ts::EPG::Program & program) const;
 
     void
-    get_recordings(std::map<std::string, TRecordingPtr> & by_filename,
-                   std::map<std::string, TRecordingPtr> & by_playlist) const;
+    get_recordings(TRecordings & by_filename,
+                   std::map<std::string, TRecordings> & by_playlist) const;
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 

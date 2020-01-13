@@ -1231,8 +1231,8 @@ namespace yae
       std::map<uint32_t, TScheduledRecordings> schedule;
       dvr_->schedule_.get(schedule);
 
-      std::map<std::string, TRecordingPtr> recordings;
-      std::map<std::string, TRecordingPtr> playlists;
+      TRecordings recordings;
+      std::map<std::string, TRecordings> playlists;
       dvr_->get_recordings(recordings, playlists);
 
       if (epg_unchanged &&

@@ -2593,8 +2593,8 @@ namespace yae
   // DVR::get_recordings
   //
   void
-  DVR::get_recordings(std::map<std::string, TRecordingPtr> & by_filename,
-                      std::map<std::string, TRecordingPtr> & by_playlist) const
+  DVR::get_recordings(TRecordings & by_filename,
+                      std::map<std::string, TRecordings> & by_playlist) const
   {
     std::map<std::string, std::string> recordings;
     {
@@ -2602,8 +2602,8 @@ namespace yae
       for_each_file_at(basedir_.string(), collect_recordings);
     }
 
-    std::map<std::string, TRecordingPtr> rec_by_fn;
-    std::map<std::string, TRecordingPtr> rec_by_pl;
+    TRecordings rec_by_fn;
+    std::map<std::string, TRecordings> rec_by_pl;
 
     for (std::map<std::string, std::string>::iterator
            i = recordings.begin(); i != recordings.end(); ++i)
@@ -2629,7 +2629,7 @@ namespace yae
                                          recorded.title_.c_str());
 
       rec_by_fn[filename] = rec_ptr;
-      rec_by_pl[playlist] = rec_ptr;
+      rec_by_pl[playlist][filename] = rec_ptr;
     }
 
     by_filename.swap(rec_by_fn);
