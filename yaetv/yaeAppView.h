@@ -131,6 +131,8 @@ namespace yae
     inline ViewMode view_mode() const
     { return view_mode_; }
 
+    void set_view_mode(ViewMode mode);
+
   signals:
     void toggle_fullscreen();
 
