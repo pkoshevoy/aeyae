@@ -132,6 +132,7 @@ namespace yae
     { return view_mode_; }
 
     void set_view_mode(ViewMode mode);
+    void select_playlist(const std::string & name);
 
   signals:
     void toggle_fullscreen();
@@ -144,6 +145,7 @@ namespace yae
     void toggle_playback();
 
     void sync_ui();
+    void sync_ui_playlists();
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
 
@@ -165,6 +167,8 @@ namespace yae
   public:
     // UI state:
     ViewMode view_mode_;
+    std::string selected_playlist_;
+    std::string selected_wishlist_;
 
     // collapsed item groups:
     std::set<std::string> collapsed_;
@@ -172,6 +176,7 @@ namespace yae
     yae::shared_ptr<AppStyle, Item> style_;
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
+    yae::shared_ptr<Item> sideview_;
     yae::shared_ptr<Item> epg_view_;
 
     yae::mpeg_ts::EPG epg_;
@@ -192,6 +197,14 @@ namespace yae
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmark_;
     std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlight_;
+
+    // sidebar playlist stuff:
+    std::map<std::string, std::size_t> pl_ordinal_;
+    std::map<std::string, yae::shared_ptr<Item> > pl_sidebar_;
+
+    // sidebar wishlist stuff:
+    std::map<std::string, std::size_t> wl_ordinal_;
+    std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
   };
 
 }

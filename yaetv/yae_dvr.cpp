@@ -1989,7 +1989,7 @@ namespace yae
       if (packet_handler_ptr)
       {
         const PacketHandler & packet_handler = *packet_handler_ptr;
-        packet_handler.ctx_.get_epg(epg, lang);
+        packet_handler.ctx_.get_epg_now(epg, lang);
       }
     }
   }
@@ -2623,7 +2623,7 @@ namespace yae
       }
 
       const Recording & recorded = *rec_ptr;
-      std::string playlist = yae::strfmt("%i-%i %s",
+      std::string playlist = yae::strfmt("%02i.%02i %s",
                                          recorded.channel_major_,
                                          recorded.channel_minor_,
                                          recorded.title_.c_str());

@@ -375,6 +375,13 @@ namespace yae
     typedef yae::shared_ptr<Item> ItemPtr;
 
     Item(const char * id);
+
+    // this exists so Text item can override content bbox calculation
+    // in order to better support center-aligned text layout:
+    Item(const char * id,
+         const SegmentRef & x_content,
+         const SegmentRef & y_content);
+
     virtual ~Item() {}
 
     //----------------------------------------------------------------

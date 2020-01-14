@@ -793,6 +793,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::Item
+  //
+  Item::Item(const char * id,
+             const SegmentRef & x_content,
+             const SegmentRef & y_content):
+    parent_(NULL),
+    visible_(BoolRef::constant(true)),
+    xContent_(x_content),
+    yContent_(y_content),
+    xExtent_(addExpr(new CalcXExtent(*this))),
+    yExtent_(addExpr(new CalcYExtent(*this))),
+    painted_(false)
+  {
+    if (id)
+    {
+      id_.assign(id);
+    }
+  }
+
+  //----------------------------------------------------------------
   // Item::calcContentWidth
   //
   double

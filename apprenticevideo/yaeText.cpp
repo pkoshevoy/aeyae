@@ -298,6 +298,57 @@ namespace yae
     const Text & item_;
   };
 
+  //----------------------------------------------------------------
+  // TextXContent
+  //
+  struct TextXContent : public TSegmentExpr
+  {
+    TextXContent(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(Segment & r) const
+    {
+      const BBox & t = item_.getTextBBox();
+      r.length_ = t.w_;
+      r.origin_ =
+        item_.anchors_.left_.isValid() ? item_.left() :
+        item_.anchors_.right_.isValid() ? item_.right() - r.length_ :
+        item_.anchors_.hcenter_.isValid() ? item_.hcenter() - r.length_ * 0.5 :
+        std::numeric_limits<double>::max();
+
+      r.origin_ += t.x_;
+    }
+
+    const Text & item_;
+  };
+
+  //----------------------------------------------------------------
+  // TextYContent
+  //
+  struct TextYContent : public TSegmentExpr
+  {
+    TextYContent(const Text & item):
+      item_(item)
+    {}
+
+    // virtual:
+    void evaluate(Segment & r) const
+    {
+      const BBox & t = item_.getTextBBox();
+      r.length_ = t.h_;
+      r.origin_ =
+        item_.anchors_.top_.isValid() ? item_.top() :
+        item_.anchors_.bottom_.isValid() ? item_.bottom() - r.length_ :
+        item_.anchors_.vcenter_.isValid() ? item_.vcenter() - r.length_ * 0.5 :
+        std::numeric_limits<double>::max();
+
+      r.origin_ += t.y_;
+    }
+
+    const Text & item_;
+  };
 
   //----------------------------------------------------------------
   // Text::TPrivate
@@ -397,8 +448,12 @@ namespace yae
       int flags = item.textFlags();
       QString text = getElidedText(maxRect.width(), item, fm, flags);
 
+      QRectF imgRect;
+      imgRect.setWidth(bboxContent.w_ * supersample);
+      imgRect.setHeight(bboxContent.h_ * supersample);
+
       painter.setPen(QColor(color));
-      painter.drawText(maxRect, flags, text);
+      painter.drawText(imgRect, flags, text);
     }
 
     // do not upload supersampled texture at full size, scale down first:
@@ -436,7 +491,7 @@ namespace yae
   // Text::Text
   //
   Text::Text(const char * id):
-    Item(id),
+    Item(id, SegmentRef(), SegmentRef()),
     p_(new Text::TPrivate()),
     alignment_(Qt::AlignLeft),
     elide_(Qt::ElideNone),
@@ -448,6 +503,9 @@ namespace yae
     supersample_ = ItemRef::constant(1.0);
     bboxText_ = addExpr(new CalcTextBBox(*this));
     p_->ready_ = addExpr(new UploadTexture<Text>(*this));
+
+    Item::xContent_ = addExpr(new TextXContent(*this));
+    Item::yContent_ = addExpr(new TextYContent(*this));
   }
 
   //----------------------------------------------------------------

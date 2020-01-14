@@ -175,6 +175,9 @@ namespace yae
     // accessors to current text payload:
     QString text() const;
 
+    inline const BBox & getTextBBox() const
+    { return bboxText_.get(); }
+
     // virtual:
     void get(Property property, bool & value) const;
 
