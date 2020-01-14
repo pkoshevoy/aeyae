@@ -1155,13 +1155,13 @@ namespace yae
     row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
     row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
 
-    Rectangle & bg_row = row.addNew<Rectangle>("bg");
-    bg_row.anchors_.fill(row);
-    bg_row.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
-    bg_row.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-    bg_row.color_ = bg_row.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-    bg_row.visible_ = bg_row.addExpr(new InViewMode(view, mode));
+    Rectangle & bg = row.addNew<Rectangle>("bg");
+    bg.anchors_.fill(row);
+    bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
+    bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+    bg.color_ = bg.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+    bg.visible_ = bg.addExpr(new InViewMode(view, mode));
 
     Text & label = row.addNew<Text>("label");
     label.font_ = style.font_;
@@ -1344,6 +1344,9 @@ namespace yae
   void
   AppView::set_view_mode(AppView::ViewMode mode)
   {
+    selected_playlist_.clear();
+    selected_wishlist_.clear();
+
     if (view_mode_ == mode)
     {
       return;
@@ -1975,9 +1978,10 @@ namespace yae
         bg.anchors_.fill(row);
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-        bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-        bg.visible_ = bg.addExpr(new IsSelected(view.selected_playlist_,
-                                                row.id_));
+        bg.color_ = bg.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+        bg.visible_ = bg.
+          addExpr(new IsSelected(view.selected_playlist_, row.id_));
 
         RoundRect & chbg = row.addNew<RoundRect>("chbg");
         // chbg.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
