@@ -124,6 +124,7 @@ namespace yae
     Recording();
     Recording(const yae::mpeg_ts::EPG::Channel & channel,
               const yae::mpeg_ts::EPG::Program & program);
+    ~Recording();
 
     fs::path get_title_path(const fs::path & basedir) const;
     std::string get_basename() const;

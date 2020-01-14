@@ -447,6 +447,18 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // Recording::~Recording
+  //
+  Recording::~Recording()
+  {
+    if (file_ && file_->is_open())
+    {
+      std::string fn = get_basename();
+      yae_ilog("stopped recording: %s", fn.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
   // Recording::get_title_path
   //
   fs::path
