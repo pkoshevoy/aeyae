@@ -42,6 +42,8 @@ namespace yae
   //
   // GPS time origin is Jan 6th 1980, 00:00 UTC
   //
+  // unix epoch gps offset is 315964800
+  //
   extern const int64_t YAE_API unix_epoch_gps_offset;
 
   //----------------------------------------------------------------

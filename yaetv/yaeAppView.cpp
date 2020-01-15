@@ -2045,6 +2045,8 @@ namespace yae
         YAE_ASSERT(body.remove(row_ptr));
       }
     }
+
+    pl_sidebar_.swap(rows);
   }
 
   //----------------------------------------------------------------
