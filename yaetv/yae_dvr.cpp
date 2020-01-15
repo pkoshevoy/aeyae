@@ -1254,7 +1254,9 @@ namespace yae
   // DVR::Stream::~Stream
   //
   DVR::Stream::~Stream()
-  {}
+  {
+    close();
+  }
 
   //----------------------------------------------------------------
   // DVR::Stream::open
