@@ -5920,7 +5920,7 @@ namespace yae
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "dump2");
       EPG epg;
-      get_epg(epg, lang);
+      get_epg_now(epg, lang);
 
       std::ostringstream oss;
       epg.dump(oss);
