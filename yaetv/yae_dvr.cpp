@@ -1855,7 +1855,7 @@ namespace yae
 
           // also store it to disk, to help with post-mortem debugging:
           yae::mpeg_ts::EPG epg;
-          ctx.get_epg(epg);
+          ctx.get_epg_now(epg);
 
           int64_t t = yae::TTime::now().get(1);
           t -= t % 1800; // round-down to half-hour:
