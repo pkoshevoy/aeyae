@@ -1247,6 +1247,7 @@ namespace yae
       oss << ", ";
 
       packet_handler.ctx_.log_prefix_ = oss.str().c_str();
+      yae_ilog("stream start: %s", packet_handler.ctx_.log_prefix_.c_str());
     }
   }
 
@@ -1279,6 +1280,8 @@ namespace yae
   DVR::Stream::close()
   {
     PacketHandler & packet_handler = *packet_handler_;
+
+    yae_ilog("stream stop: %s", packet_handler.ctx_.log_prefix_.c_str());
     packet_handler.ring_buffer_.close();
 
     // it's as ready as it's going to be:
