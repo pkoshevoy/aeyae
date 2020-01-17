@@ -946,6 +946,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // StopStream
+  //
+  struct StopStream
+  {
+    StopStream(const hdhomerun_devptr_t & hd_ptr):
+      hd_ptr_(hd_ptr)
+    {}
+
+    ~StopStream()
+    {
+      hdhomerun_device_t * hd = hd_ptr_.get();
+      if (hd)
+      {
+        hdhomerun_device_stream_stop(hd);
+      }
+    }
+
+    hdhomerun_devptr_t hd_ptr_;
+  };
+
+  //----------------------------------------------------------------
   // HDHomeRun::Private::capture
   //
   void
@@ -957,6 +978,7 @@ namespace yae
     HDHomeRun::Session::Private & session = *(session_ptr->private_);
     const std::string & tuner_name = session.tuner_name_;
     hdhomerun_device_t * hd = session.hd_ptr_.get();
+    yae::shared_ptr<StopStream> stop_stream;
 
     try
     {
@@ -987,6 +1009,10 @@ namespace yae
       if (hdhomerun_device_stream_start(hd) <= 0)
       {
         YAE_THROW("failed to start stream for %s", channel.c_str());
+      }
+      else
+      {
+        stop_stream.reset(new StopStream(session.hd_ptr_));
       }
 
       std::string channels_txt;
