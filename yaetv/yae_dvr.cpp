@@ -1228,6 +1228,7 @@ namespace yae
     }
 
     PacketHandler & packet_handler = *packet_handler_;
+    packet_handler.packets_.clear();
     packet_handler.ring_buffer_.open(188 * 262144);
 
     if (session_)
