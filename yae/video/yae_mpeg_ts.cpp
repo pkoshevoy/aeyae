@@ -5210,6 +5210,7 @@ namespace yae
     uint32_t
     Context::gps_time_now() const
     {
+#if 0
       TTime now = TTime::now();
       if (stt_)
       {
@@ -5220,6 +5221,9 @@ namespace yae
 
       int64_t t = now.get(1) - unix_epoch_gps_offset;
       return uint32_t(t);
+#else
+      return uint32_t(TTime::gps_now().get(1));
+#endif
     }
 
     //----------------------------------------------------------------
@@ -5795,7 +5799,7 @@ namespace yae
         const ChannelGuide & guide = i->second;
         channel.name_ = guide.name_;
 
-#if 1
+#if 0
         int64_t gps_time = TTime::gps_now().get(1);
         uint32_t chan_time = gps_time_now();
         int64_t time_err = gps_time - chan_time;
