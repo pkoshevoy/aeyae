@@ -1102,9 +1102,9 @@ namespace yae
       xbutton.addExpr(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
-    toggle.width_ = ItemRef::reference(text, kPropertyHeight);
-    toggle.height_ = ItemRef::reference(text, kPropertyHeight);
-    toggle.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    toggle.width_ = ItemRef::reference(text, kPropertyFontHeight);
+    toggle.height_ = ItemRef::reference(text, kPropertyFontHeight);
+    toggle.anchors_.vcenter_ = ItemRef::reference(text, kPropertyVCenter);
     toggle.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
     collapsed.texture_ = TTextureRef::constant(style.collapsed_);
@@ -1410,9 +1410,9 @@ namespace yae
       xbutton.addExpr(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
-    toggle.width_ = ItemRef::reference(text, kPropertyHeight);
-    toggle.height_ = ItemRef::reference(text, kPropertyHeight);
-    toggle.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
+    toggle.width_ = ItemRef::reference(text, kPropertyFontHeight);
+    toggle.height_ = ItemRef::reference(text, kPropertyFontHeight);
+    toggle.anchors_.vcenter_ = ItemRef::reference(text, kPropertyVCenter);
     toggle.anchors_.left_ = ItemRef::offset(title, kPropertyLeft);
 
     collapsed.texture_ = TTextureRef::constant(style.collapsed_);
