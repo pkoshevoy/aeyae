@@ -1846,6 +1846,9 @@ namespace yae
     }
 
     // unreferenced playlist items must be removed:
+    std::string sidebar_sel = view.sidebar_sel_;
+    std::string prev_playlist;
+
     for (std::map<std::string, yae::shared_ptr<Item> >::const_iterator
            i = pl_sidebar_.begin(); i != pl_sidebar_.end(); ++i)
     {
@@ -1854,10 +1857,27 @@ namespace yae
       {
         yae::shared_ptr<Item> row_ptr = i->second;
         YAE_ASSERT(body.remove(row_ptr));
+        pl_layout_.erase(name);
+
+        if (view.sidebar_sel_ == name)
+        {
+          sidebar_sel = prev_playlist;
+        }
+      }
+      else
+      {
+        prev_playlist = name;
       }
     }
 
+    if (sidebar_sel.empty())
+    {
+      sidebar_sel = "view_mode_recordings";
+    }
+
+    view.sidebar_sel_ = sidebar_sel;
     pl_sidebar_.swap(rows);
+    dataChanged();
   }
 
   //----------------------------------------------------------------
@@ -1911,6 +1931,7 @@ namespace yae
     Item & table = *(sv.content_);
 
     std::size_t num_recs = 0;
+    std::map<std::string, yae::shared_ptr<Item> > rows;
 
     for (TRecordings::const_iterator
            i = playlist_recs.begin(); i != playlist_recs.end(); ++i)
@@ -1957,7 +1978,24 @@ namespace yae
         std::string url = "image://thumbnails/" + path;
         thumbnail.url_ = TVarRef::constant(QString::fromUtf8(url.c_str()));
       }
+
+      rows[name] = row_ptr;
     }
+
+    // unreferenced playlist items must be removed:
+    for (std::map<std::string, yae::shared_ptr<Item> >::const_iterator
+           i = layout.items_.begin(); i != layout.items_.end(); ++i)
+    {
+      const std::string & name = i->first;
+      if (!yae::has(rows, name))
+      {
+        yae::shared_ptr<Item> row_ptr = i->second;
+        YAE_ASSERT(table.remove(row_ptr));
+      }
+    }
+
+    layout.items_.swap(rows);
+    table.uncache();
   }
 
   //----------------------------------------------------------------
