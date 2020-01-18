@@ -1954,7 +1954,7 @@ namespace yae
                                               16.0 / 9.0);
 
         std::string path = rec.get_filepath(dvr_->basedir_, ".mpg");
-        std::string url = "image://thumbnails/file://" + path;
+        std::string url = "image://thumbnails/" + path;
         thumbnail.url_ = TVarRef::constant(QString::fromUtf8(url.c_str()));
       }
     }
