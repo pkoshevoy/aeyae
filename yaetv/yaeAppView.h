@@ -78,26 +78,23 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Layout
+  //
+  struct YAEUI_API Layout
+  {
+    yae::shared_ptr<Item> container_;
+    std::map<std::string, std::size_t> index_;
+    std::map<std::string, yae::shared_ptr<Item> > items_;
+  };
+
+  //----------------------------------------------------------------
   // AppView
   //
-  class YAEUI_API AppView : public ItemView
+  class AppView : public ItemView
   {
     Q_OBJECT;
 
   public:
-
-    //----------------------------------------------------------------
-    // ViewMode
-    //
-    enum ViewMode
-    {
-      kChannelListMode = 0,
-      kProgramGuideMode = 1,
-      kWishlistMode = 2,
-      kScheduleMode = 3,
-      kRecordingsMode = 4,
-      kPlayerMode = 5,
-    };
 
     AppView();
 
@@ -128,11 +125,7 @@ namespace yae
     bool processRightClick();
 
     // accessor:
-    inline ViewMode view_mode() const
-    { return view_mode_; }
-
-    void set_view_mode(ViewMode mode);
-    void select_playlist(const std::string & name);
+    void set_sidebar_selection(const std::string & sel);
 
   signals:
     void toggle_fullscreen();
@@ -141,11 +134,13 @@ namespace yae
     void layoutChanged();
     void dataChanged();
 
-    bool is_playback_paused();
+    bool is_playback_paused() const;
     void toggle_playback();
 
     void sync_ui();
     void sync_ui_playlists();
+    void sync_ui_playlist(const std::string & playlist_name,
+                          const TRecordings & playlist_recs);
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
 
@@ -166,9 +161,8 @@ namespace yae
 
   public:
     // UI state:
-    ViewMode view_mode_;
-    std::string selected_playlist_;
-    std::string selected_wishlist_;
+    std::string sidebar_sel_;
+    TRecordingPtr player_sel_;
 
     // collapsed item groups:
     std::set<std::string> collapsed_;
@@ -177,6 +171,7 @@ namespace yae
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
     yae::shared_ptr<Item> sideview_;
+    yae::shared_ptr<Item> mainview_;
     yae::shared_ptr<Item> epg_view_;
 
     yae::mpeg_ts::EPG epg_;
@@ -191,19 +186,20 @@ namespace yae
     // all recordings, indexed by playlist:
     std::map<std::string, TRecordings> playlists_;
 
-    std::map<uint32_t, std::size_t> ch_ordinal_;
+    std::map<uint32_t, std::size_t> ch_index_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmark_;
     std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlight_;
 
-    // sidebar playlist stuff:
-    std::map<std::string, std::size_t> pl_ordinal_;
+    // playlist stuff:
+    std::map<std::string, std::size_t> pl_index_;
     std::map<std::string, yae::shared_ptr<Item> > pl_sidebar_;
+    std::map<std::string, yae::shared_ptr<Layout> > pl_layout_;
 
     // sidebar wishlist stuff:
-    std::map<std::string, std::size_t> wl_ordinal_;
+    std::map<std::string, std::size_t> wl_index_;
     std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
   };
 

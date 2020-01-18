@@ -505,6 +505,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Recording::get_filepath
+  //
+  std::string
+  Recording::get_filepath(const fs::path & basedir, const char * ext) const
+  {
+    fs::path title_path = get_title_path(basedir);
+    std::string basename = get_basename();
+    std::string basepath = (title_path / basename).string();
+    std::string filepath = basepath + ext;
+    return filepath;
+  }
+
+  //----------------------------------------------------------------
   // Recording::open_file
   //
   yae::TOpenFilePtr

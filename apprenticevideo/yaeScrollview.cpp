@@ -878,4 +878,15 @@ namespace yae
 
     return sview;
   }
+
+  //----------------------------------------------------------------
+  // get_scrollview
+  //
+  Scrollview &
+  get_scrollview(Item & root)
+  {
+    std::string id = root.id_ + ".scrollview";
+    return root.get<Scrollview>(id.c_str());
+  }
+
 }

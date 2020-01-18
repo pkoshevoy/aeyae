@@ -128,6 +128,8 @@ namespace yae
 
     fs::path get_title_path(const fs::path & basedir) const;
     std::string get_basename() const;
+    std::string get_filepath(const fs::path & basedir,
+                             const char * suffix = ".mpg") const;
     yae::TOpenFilePtr open_file(const fs::path & basedir);
 
     bool cancelled_;

@@ -1033,6 +1033,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlaylistItemFilePath
+  //
+  struct PlaylistItemFilePath : ThumbnailProvider::GetFilePath
+  {
+    PlaylistItemFilePath(const TPlaylistModel & playlist):
+      playlist_(playlist)
+    {}
+
+    // virtual:
+    QString operator()(const QString & id) const
+    { return playlist_.lookupItemFilePath(id); }
+
+    const TPlaylistModel & playlist_;
+  };
+
+  //----------------------------------------------------------------
   // MainWindow::initPlayerWidget
   //
   void
@@ -1070,8 +1086,10 @@ namespace yae
 
     // add image://thumbnails/... provider:
     QQmlEngine * qmlEngine = playerWidget_->engine();
+    boost::shared_ptr<ThumbnailProvider::GetFilePath>
+      getFilePath(new PlaylistItemFilePath(playlistModel_));
     ThumbnailProvider * imageProvider =
-      new ThumbnailProvider(readerPrototype_, playlistModel_);
+      new ThumbnailProvider(readerPrototype_, getFilePath);
     qmlEngine->addImageProvider(QString::fromUtf8("thumbnails"),
                                 imageProvider);
 
@@ -1159,8 +1177,10 @@ namespace yae
     playlistView_.setEnabled(false);
 
     // add image://thumbnails/... provider:
+    boost::shared_ptr<ThumbnailProvider::GetFilePath>
+      getFilePath(new PlaylistItemFilePath(playlistModel_));
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
-      imageProvider(new ThumbnailProvider(readerPrototype_, playlistModel_));
+      imageProvider(new ThumbnailProvider(readerPrototype_, getFilePath));
     playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
                                    imageProvider);
 

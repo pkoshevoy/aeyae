@@ -70,7 +70,8 @@ namespace yae
 
   public:
     MainWindow(const std::string & yaetv_dir,
-               const std::string & recordings_dir);
+               const std::string & recordings_dir,
+               const IReaderPtr & reader_prototype);
     ~MainWindow();
 
     void initItemViews();
@@ -102,6 +103,9 @@ namespace yae
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
+
+    // file reader prototype factory instance:
+    IReaderPtr reader_prototype_;
 
     // frame canvas:
     TCanvasWidget * canvas_;

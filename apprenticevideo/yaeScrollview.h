@@ -307,6 +307,11 @@ namespace yae
                     ScrollbarId scroll = kScrollbarBoth,
                     bool clipContent = true);
 
+  //----------------------------------------------------------------
+  // get_scrollview
+  //
+  YAEUI_API Scrollview & get_scrollview(Item & root);
+
 }
 
 

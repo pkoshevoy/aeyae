@@ -175,6 +175,8 @@ set(project_sources
   ../apprenticevideo/yaeFlickableArea.h
   ../apprenticevideo/yaeGradient.cpp
   ../apprenticevideo/yaeGradient.h
+  ../apprenticevideo/yaeImage.cpp
+  ../apprenticevideo/yaeImage.h
   ../apprenticevideo/yaeImageProvider.cpp
   ../apprenticevideo/yaeImageProvider.h
   ../apprenticevideo/yaeInputArea.cpp
@@ -207,6 +209,8 @@ set(project_sources
   ../apprenticevideo/yaeTexture.h
   ../apprenticevideo/yaeTexturedRect.cpp
   ../apprenticevideo/yaeTexturedRect.h
+  ../apprenticevideo/yaeThumbnailProvider.h
+  ../apprenticevideo/yaeThumbnailProvider.cpp
   ../apprenticevideo/yaeTimelineItem.h
   ../apprenticevideo/yaeTimelineItem.cpp
   ../apprenticevideo/yaeTimelineModel.h

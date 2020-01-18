@@ -30,7 +30,6 @@
 
 // local includes:
 #include "yaeImageProvider.h"
-#include "yaePlaylistModelProxy.h"
 
 
 namespace yae
@@ -41,8 +40,22 @@ namespace yae
   //
   struct ThumbnailProvider : public ImageProvider
   {
+
+    //----------------------------------------------------------------
+    // GetFilePath
+    //
+    struct GetFilePath
+    {
+      virtual ~GetFilePath() {}
+
+      virtual QString operator()(const QString & id) const
+      { return id; }
+    };
+
     ThumbnailProvider(const IReaderPtr & readerPrototype,
-                      const TPlaylistModel & playlist,
+
+                      const boost::shared_ptr<GetFilePath> & getFilePath =
+                      boost::shared_ptr<GetFilePath>(new GetFilePath()),
 
                       // default thumbnail size:
                       const QSize & envelopeSize = QSize(384, 216),

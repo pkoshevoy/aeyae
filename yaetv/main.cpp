@@ -39,6 +39,8 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_version.h"
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_reader.h"
 
 // local:
 #include "yaeMainWindow.h"
@@ -49,6 +51,11 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // plugins
+  //
+  TPluginRegistry plugins;
 
   //----------------------------------------------------------------
   // mainWindow
@@ -630,8 +637,28 @@ namespace yae
     // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
 
+    // load reader plugin:
+    yae::IReaderPtr reader;
+    std::string plugins_folder_path;
+    if (yae::get_current_executable_plugins_folder(plugins_folder_path) &&
+        plugins.load(plugins_folder_path.c_str()))
+    {
+      std::list<yae::IReaderPtr> readers;
+      if (plugins.find<yae::IReader>(readers))
+      {
+        reader = readers.front();
+      }
+    }
+
+    if (!reader)
+    {
+      yae_elog("failed to find IReader plugin here: %s",
+               plugins_folder_path.c_str());
+      return 1;
+    }
+
     yae::Application app(argc, argv);
-    yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir);
+    yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir, reader);
     yae::mainWindow->show();
     yae::mainWindow->initItemViews();
 

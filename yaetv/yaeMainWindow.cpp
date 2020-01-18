@@ -180,8 +180,10 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const std::string & yaetv_dir,
-                         const std::string & recordings_dir):
+                         const std::string & recordings_dir,
+                         const IReaderPtr & reader_prototype):
     QMainWindow(NULL, 0),
+    reader_prototype_(reader_prototype),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir)
   {
@@ -293,6 +295,11 @@ namespace yae
   void
   MainWindow::initItemViews()
   {
+    // add image://thumbnails/... provider:
+    yae::shared_ptr<ThumbnailProvider, ImageProvider>
+      image_provider(new ThumbnailProvider(reader_prototype_));
+    view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
+
     canvas_->initializePrivateBackend();
     canvas_->append(&view_);
 

@@ -25,13 +25,17 @@
 #include "yae/video/yae_pixel_format_traits.h"
 
 // local includes:
-#include "yaePlaylist.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // TGetFilePathPtr
+  //
+  typedef boost::shared_ptr<ThumbnailProvider::GetFilePath> TGetFilePathPtr;
 
   //----------------------------------------------------------------
   // TCleanup
@@ -217,8 +221,7 @@ namespace yae
   static QImage
   getThumbnail(const yae::IReaderPtr & readerPrototype,
                const QSize & thumbnailMaxSize,
-               const TPlaylistModel & playlist,
-               const QString & id)
+               const QString & itemFilePath)
   {
     static QVector<QRgb> palette(256);
     static bool palette_ready = false;
@@ -241,15 +244,6 @@ namespace yae
       (QString::fromUtf8(":/images/broken-glass.png"));
 
     QImage image;
-
-    QString itemFilePath = playlist.lookupItemFilePath(id);
-#if 0
-    std::cerr
-      << "\nFIXME: getThumbnail"
-      << "\n item id: " << id.toUtf8().constData()
-      << "\nfilepath: " << itemFilePath.toUtf8().constData()
-      << std::endl;
-#endif
 
     IReaderPtr reader = yae::openFile(readerPrototype, itemFilePath);
     if (!reader)
@@ -340,7 +334,7 @@ namespace yae
     typedef ThumbnailProvider::ICallback ICallback;
 
     TPrivate(const IReaderPtr & readerPrototype,
-             const TPlaylistModel & playlist,
+             const TGetFilePathPtr & getFilePath,
              const QSize & envelopeSize,
              std::size_t cacheCapacity);
     ~TPrivate();
@@ -404,7 +398,7 @@ namespace yae
     };
 
     IReaderPtr readerPrototype_;
-    const TPlaylistModel & playlist_;
+    TGetFilePathPtr getFilePath_;
     QSize envelopeSize_;
 
     // thumbnail request queue and image cache:
@@ -433,11 +427,11 @@ namespace yae
   // ThumbnailProvider::TPrivate::TPrivate
   //
   ThumbnailProvider::TPrivate::TPrivate(const IReaderPtr & readerPrototype,
-                                        const TPlaylistModel & playlist,
+                                        const TGetFilePathPtr & getFilePath,
                                         const QSize & envelopeSize,
                                         std::size_t cacheCapacity):
     readerPrototype_(readerPrototype),
-    playlist_(playlist),
+    getFilePath_(getFilePath),
     envelopeSize_(envelopeSize),
     submitted_(0),
     completed_(0),
@@ -512,10 +506,20 @@ namespace yae
 
     if (!payload)
     {
+      const GetFilePath & get_file_path = *getFilePath_;
+      QString itemFilePath = get_file_path(id);
+
+#if 0
+      std::cerr
+        << "\nFIXME: getThumbnail"
+        << "\n item id: " << id.toUtf8().constData()
+        << "\nfilepath: " << itemFilePath.toUtf8().constData()
+        << std::endl;
+#endif
+
       QImage image = getThumbnail(readerPrototype_,
                                   thumbnailMaxSize,
-                                  playlist_,
-                                  id);
+                                  itemFilePath);
 
       bool sizeAcceptable =
         (image.height() <= thumbnailMaxSize.height() &&
@@ -644,17 +648,16 @@ namespace yae
     request_.clear();
   }
 
-
   //----------------------------------------------------------------
   // ThumbnailProvider::ThumbnailProvider
   //
   ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
-                                       const TPlaylistModel & playlist,
+                                       const TGetFilePathPtr & getFilePath,
                                        const QSize & envelopeSize,
                                        std::size_t cacheCapacity):
     ImageProvider(),
     private_(new TPrivate(readerPrototype,
-                          playlist,
+                          getFilePath,
                           envelopeSize,
                           cacheCapacity))
   {}
