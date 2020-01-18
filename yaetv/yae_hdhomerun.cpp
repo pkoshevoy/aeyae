@@ -192,6 +192,16 @@ namespace yae
       stop_(TTime::now())
     {}
 
+    void save_timesheet()
+    {
+      std::string timesheet = timesheet_.to_str();
+      TTime t = TTime::now();
+      std::string fn = strfmt("timesheet.%s.log", tuner_name_.c_str());
+      fn = sanitize_filename_utf8(fn);
+      fn = (fs::path(yae::get_temp_dir_utf8()) / fn).string();
+      yae::TOpenFile(fn, "ab").write(timesheet);
+    }
+
     inline bool expired() const
     {
       TTime t = TTime::now();
@@ -215,6 +225,9 @@ namespace yae
     LockTuner lock_tuner_;
     hdhomerun_devptr_t hd_ptr_;
     std::string tuner_name_;
+
+    // for profiling:
+    mutable yae::Timesheet timesheet_;
   };
 
 
@@ -950,20 +963,27 @@ namespace yae
   //
   struct StopStream
   {
-    StopStream(const hdhomerun_devptr_t & hd_ptr):
-      hd_ptr_(hd_ptr)
+    StopStream(const HDHomeRun::TSessionPtr & session_ptr):
+      session_ptr_(session_ptr)
     {}
 
     ~StopStream()
     {
-      hdhomerun_device_t * hd = hd_ptr_.get();
-      if (hd)
+      if (session_ptr_)
       {
-        hdhomerun_device_stream_stop(hd);
+        HDHomeRun::Session::Private & session = *(session_ptr_->private_);
+
+        hdhomerun_device_t * hd = session.hd_ptr_.get();
+        if (hd)
+        {
+          hdhomerun_device_stream_stop(hd);
+        }
+
+        session.save_timesheet();
       }
     }
 
-    hdhomerun_devptr_t hd_ptr_;
+    HDHomeRun::TSessionPtr session_ptr_;
   };
 
   //----------------------------------------------------------------
@@ -1012,7 +1032,7 @@ namespace yae
       }
       else
       {
-        stop_stream.reset(new StopStream(session.hd_ptr_));
+        stop_stream.reset(new StopStream(session_ptr));
       }
 
       std::string channels_txt;
@@ -1058,13 +1078,27 @@ namespace yae
 
         static const std::size_t buffer_size_1s = VIDEO_DATA_BUFFER_SIZE_1S;
         std::size_t buffer_size = 0;
-        uint8_t * buffer = hdhomerun_device_stream_recv(hd,
-                                                        buffer_size_1s,
-                                                        &buffer_size);
-
-        if (buffer && !stream.push(buffer, buffer_size))
+        uint8_t * buffer = NULL;
         {
-          return;
+          yae::Timesheet::Probe probe(session.timesheet_,
+                                      "HDHomeRun::Private::capture",
+                                      "hdhomerun_device_stream_recv");
+
+          buffer = hdhomerun_device_stream_recv(hd,
+                                                buffer_size_1s,
+                                                &buffer_size);
+        }
+
+        if (buffer)
+        {
+          yae::Timesheet::Probe probe(session.timesheet_,
+                                      "HDHomeRun::Private::capture",
+                                      "stream.push");
+
+          if (!stream.push(buffer, buffer_size))
+          {
+            return;
+          }
         }
 
         if (session.expired())

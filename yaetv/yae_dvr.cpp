@@ -1096,6 +1096,10 @@ namespace yae
 
     if (recordings_update_gps_time_ < gps_time)
     {
+      yae::Timesheet::Probe probe(ctx_.timesheet_,
+                                  "PacketHandler::handle_backlog",
+                                  "dvr_.schedule_.get");
+
       // wait 8..15s before re-caching scheduled recordings:
       uint32_t r = uint32_t(8.0 * (double(prng()) / prng_max));
       recordings_update_gps_time_ = gps_time + 8 + r;
@@ -1120,6 +1124,11 @@ namespace yae
                ring_buffer_occupancy);
 #endif
     }
+
+    yae::Timesheet::Probe probe(ctx_.timesheet_,
+                                "PacketHandler::handle_backlog",
+                                "write");
+
 
     yae::mpeg_ts::IPacketHandler::Packet pkt;
     while (packets_.pop(pkt))
@@ -2709,16 +2718,26 @@ namespace yae
 
         std::string frequency = yae::at(frequencies, ch_num);
         TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
-        if (!is_recording)
+
+        if (!stream)
         {
-          yae_ilog("starting stream: %s", rec.get_basename().c_str());
+          yae_elog("failed to start a stream: %s",
+                   rec.get_basename().c_str());
+        }
+        else if (!is_recording)
+        {
+          yae_ilog("%sstarting stream: %s",
+                   stream->packet_handler_->ctx_.log_prefix_.c_str(),
+                   rec.get_basename().c_str());
 
           // FIXME: there is probably a better place for this:
           save_schedule();
         }
         else
         {
-          yae_ilog("already recording: %s", rec.get_basename().c_str());
+          yae_ilog("%salready recording: %s",
+                   stream->packet_handler_->ctx_.log_prefix_.c_str(),
+                   rec.get_basename().c_str());
         }
 
         rec.stream_ = stream;
