@@ -522,9 +522,22 @@ namespace yae
   int
   Text::textFlags() const
   {
-    Qt::TextFlag textFlags = (elide_ == Qt::ElideNone ?
-                              Qt::TextWordWrap :
-                              Qt::TextSingleLine);
+    bool oneline = true;
+    bool linewrap = false;
+    Qt::TextFlag textFlags = Qt::TextSingleLine;
+
+    if (Item::getAttr("linewrap", linewrap))
+    {
+      textFlags = linewrap ? Qt::TextWordWrap : Qt::TextSingleLine;
+    }
+    else if (Item::getAttr("oneline", oneline))
+    {
+      textFlags = oneline ? Qt::TextSingleLine : Qt::TextWordWrap;
+    }
+    else if (elide_ == Qt::ElideNone)
+    {
+      textFlags = Qt::TextWordWrap;
+    }
 
     int flags = alignment_ | textFlags;
     return flags;
@@ -654,7 +667,8 @@ namespace yae
   double
   Text::calcContentHeight() const
   {
-    if (elide_ != Qt::ElideNone)
+    int flags = textFlags();
+    if ((flags & Qt::TextSingleLine) == Qt::TextSingleLine)
     {
       // single line:
       BBox bbox;

@@ -275,6 +275,9 @@ namespace yae
     { offset(reference, ox, -ox, oy, -oy); }
 
     void center(const TDoubleProp & reference);
+    void hcenter(const TDoubleProp & reference);
+    void vcenter(const TDoubleProp & reference);
+
     void topLeft(const TDoubleProp & reference, double offset = 0.0);
     void topRight(const TDoubleProp & reference, double offset = 0.0);
     void bottomLeft(const TDoubleProp & reference, double offset = 0.0);

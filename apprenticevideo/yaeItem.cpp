@@ -681,6 +681,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Anchors::hcenter
+  //
+  void
+  Anchors::hcenter(const TDoubleProp & ref)
+  {
+    top_ = ItemRef::reference(ref, kPropertyTop);
+    bottom_ = ItemRef::reference(ref, kPropertyBottom);
+    hcenter_ = ItemRef::reference(ref, kPropertyHCenter);
+  }
+
+  //----------------------------------------------------------------
+  // Anchors::vcenter
+  //
+  void
+  Anchors::vcenter(const TDoubleProp & ref)
+  {
+    left_ = ItemRef::reference(ref, kPropertyLeft);
+    right_ = ItemRef::reference(ref, kPropertyRight);
+    vcenter_ = ItemRef::reference(ref, kPropertyVCenter);
+  }
+
+  //----------------------------------------------------------------
   // Anchors::topLeft
   //
   void

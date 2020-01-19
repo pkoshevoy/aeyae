@@ -1881,6 +1881,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // humanize_size
+  //
+  static std::string
+  humanize_size(uint64_t nbytes)
+  {
+    if (nbytes < 1000000)
+    {
+      double kb = double(nbytes) * 1e-3;
+      std::string sz = strfmt("%.1f KB", kb);
+      return sz;
+    }
+
+    if (nbytes < 1000000000)
+    {
+      double mb = double(nbytes) * 1e-6;
+      std::string sz = strfmt("%.1f MB", mb);
+      return sz;
+    }
+
+    double gb = double(nbytes) * 1e-9;
+    std::string sz = strfmt("%.1f GB", gb);
+    return sz;
+  }
+
+  //----------------------------------------------------------------
   // AppView::sync_ui_playlist
   //
   void
@@ -1909,12 +1934,112 @@ namespace yae
       Item & header = container.addNew<Item>("header");
       header.anchors_.fill(container);
       header.anchors_.bottom_.reset();
-      header.height_ = ItemRef::reference(hidden, kUnitSize, 0.67);
+      header.height_ = ItemRef::reference(hidden, kUnitSize, 0.4);
 
       Rectangle & bg = header.addNew<Rectangle>("bg");
       bg.anchors_.fill(header);
       bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
 
+      // add table columns:
+      Item & h1 = header.addNew<Item>("h1");
+      Rectangle & l1 = header.addNew<Rectangle>("l1");
+      Item & h2 = header.addNew<Item>("h2");
+      Rectangle & l2 = header.addNew<Rectangle>("l2");
+      Item & h3 = header.addNew<Item>("h3");
+      Rectangle & l3 = header.addNew<Rectangle>("l3");
+      Item & h4 = header.addNew<Item>("h4");
+
+      h1.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      h1.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+      h1.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
+      h1.anchors_.right_ = ItemRef::reference(l1, kPropertyLeft);
+
+      Text & t1 = h1.addNew<Text>("t1");
+      t1.anchors_.vcenter(h1);
+      t1.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t1.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t1.font_ = style.font_;
+      t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      t1.elide_ = Qt::ElideRight;
+      t1.color_ = t1.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      t1.background_ = t1.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t1.text_ = TVarRef::constant(TVar("Title and Description"));
+
+      l1.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
+      l1.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -1);
+      l1.anchors_.right_ = ItemRef::reference(h2, kPropertyLeft);
+      l1.width_ = ItemRef::constant(1);
+      l1.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+
+      h2.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      h2.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+      h2.anchors_.right_ = ItemRef::reference(l2, kPropertyLeft);
+      h2.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+
+      Text & t2 = h2.addNew<Text>("t2");
+      t2.anchors_.vcenter(h2);
+      t2.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t2.font_ = style.font_;
+      t2.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      t2.elide_ = Qt::ElideRight;
+      t2.color_ = t2.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      t2.background_ = t2.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t2.text_ = TVarRef::constant(TVar("Duration"));
+
+      l2.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
+      l2.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -1);
+      l2.anchors_.right_ = ItemRef::reference(h3, kPropertyLeft);
+      l2.width_ = ItemRef::constant(1);
+      l2.color_ = l2.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+
+      h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+      h3.anchors_.right_ = ItemRef::reference(l3, kPropertyLeft);
+      h3.width_ = ItemRef::reference(hidden, kUnitSize, 4.0);
+
+      Text & t3 = h3.addNew<Text>("t3");
+      t3.anchors_.vcenter(h3);
+      t3.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t3.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t3.font_ = style.font_;
+      t3.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      t3.elide_ = Qt::ElideRight;
+      t3.color_ = t3.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      t3.background_ = t3.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t3.text_ = TVarRef::constant(TVar("Date"));
+
+      l3.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
+      l3.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -1);
+      l3.anchors_.right_ = ItemRef::reference(h4, kPropertyLeft);
+      l3.width_ = ItemRef::constant(1);
+      l3.color_ = l3.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+
+      h4.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+      h4.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+      h4.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
+      h4.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+
+      Text & t4 = h4.addNew<Text>("t4");
+      t4.anchors_.vcenter(h4);
+      t4.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t4.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+      t4.font_ = style.font_;
+      t4.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      t4.elide_ = Qt::ElideRight;
+      t4.color_ = t4.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      t4.background_ = t4.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t4.text_ = TVarRef::constant(TVar("Size"));
+
+      // layout the table body:
       Item & body = container.addNew<Item>("body");
       body.anchors_.fill(container);
       body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
@@ -1929,6 +2054,10 @@ namespace yae
     Item & body = container.get<Item>("body");
     Scrollview & sv = get_scrollview(body);
     Item & table = *(sv.content_);
+    Item & h1 = header.get<Item>("h1");
+    Item & h2 = header.get<Item>("h2");
+    Item & h3 = header.get<Item>("h3");
+    Item & h4 = header.get<Item>("h4");
 
     std::size_t num_recs = 0;
     std::map<std::string, yae::shared_ptr<Item> > rows;
@@ -1963,9 +2092,35 @@ namespace yae
         bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
         bg.visible_ = bg.addExpr(new IsOddRow(layout.index_, row.id_));
 
+        Item & c1 = row.addNew<Item>("c1");
+        Item & c2 = row.addNew<Item>("c2");
+        Item & c3 = row.addNew<Item>("c3");
+        Item & c4 = row.addNew<Item>("c4");
+
+        c1.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c1.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+        c1.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c1.width_ = ItemRef::reference(h1, kPropertyWidth);
+
+        c2.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c2.anchors_.left_ = ItemRef::reference(c1, kPropertyRight);
+        c2.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c2.width_ = ItemRef::reference(h2, kPropertyWidth);
+
+        c3.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c3.anchors_.left_ = ItemRef::reference(c2, kPropertyRight);
+        c3.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c3.width_ = ItemRef::reference(h3, kPropertyWidth);
+
+        c4.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c4.anchors_.left_ = ItemRef::reference(c3, kPropertyRight);
+        c4.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c4.width_ = ItemRef::reference(h4, kPropertyWidth);
+
+        // thumbnail, title, description:
         Item & inner = row.addNew<Item>("inner");
         inner.anchors_.fill(row);
-        inner.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.15));
+        inner.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
 
         Image & thumbnail = inner.addNew<Image>("thumbnail");
         thumbnail.setContext(view);
@@ -1977,6 +2132,93 @@ namespace yae
         std::string path = rec.get_filepath(dvr_->basedir_, ".mpg");
         std::string url = "image://thumbnails/" + path;
         thumbnail.url_ = TVarRef::constant(QString::fromUtf8(url.c_str()));
+
+        Text & title = c1.addNew<Text>("title");
+        title.anchors_.top_ = ItemRef::reference(c1, kPropertyTop);
+        title.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
+        title.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+        title.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        title.font_ = style.font_;
+        title.font_.setWeight(62);
+        title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        title.elide_ = Qt::ElideRight;
+        title.color_ = title.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        title.background_ = title.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        title.text_ =
+          TVarRef::constant(TVar(QString::fromUtf8(rec.title_.c_str())));
+
+        Text & desc = c1.addNew<Text>("desc");
+        desc.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
+        desc.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
+        desc.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+        desc.anchors_.bottom_ = ItemRef::reference(c1, kPropertyBottom);
+        desc.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        desc.font_ = style.font_;
+        desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        desc.elide_ = Qt::ElideNone;
+        desc.color_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        desc.background_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        desc.text_ =
+          TVarRef::constant(TVar(QString::fromUtf8(rec.description_.c_str())));
+        desc.setAttr("linewrap", true);
+#if 0
+        Rectangle & fixme = row.addNew<Rectangle>("fixme");
+        fixme.anchors_.fill(desc);
+        fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
+#endif
+        // duration:
+        Text & length = c2.addNew<Text>("length");
+        length.anchors_.fill(c2);
+        length.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        length.font_ = style.font_;
+        length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        length.font_.setWeight(62);
+        length.elide_ = Qt::ElideRight;
+        length.color_ = length.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        length.background_ = length.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+        TTime dt(rec.gps_t1_ - rec.gps_t0_, 1);
+        length.text_ =
+          TVarRef::constant(TVar(QString::fromUtf8(dt.to_hhmmss().c_str())));
+
+        // when recorded:
+        Text & date = c3.addNew<Text>("date");
+        date.anchors_.fill(c3);
+        date.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        date.font_ = style.font_;
+        date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        date.font_.setWeight(62);
+        date.elide_ = Qt::ElideRight;
+        date.color_ = date.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        date.background_ = date.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+        std::string ts = unix_epoch_time_to_utc_str(rec.utc_t0_);
+        date.text_ = TVarRef::constant(TVar(QString::fromUtf8(ts.c_str())));
+
+        // file size:
+        Text & nbytes = c4.addNew<Text>("nbytes");
+        nbytes.anchors_.fill(c4);
+        nbytes.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        nbytes.font_ = style.font_;
+        nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        nbytes.font_.setWeight(62);
+        nbytes.elide_ = Qt::ElideRight;
+        nbytes.color_ = nbytes.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        nbytes.background_ = nbytes.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+        uint64_t num_bytes = yae::stat_filesize(path.c_str());
+        std::string sz = humanize_size(num_bytes);
+        nbytes.text_ = TVarRef::constant(TVar(QString::fromUtf8(sz.c_str())));
       }
 
       rows[name] = row_ptr;
