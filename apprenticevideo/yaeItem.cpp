@@ -674,10 +674,12 @@ namespace yae
   // Anchors::center
   //
   void
-  Anchors::center(const TDoubleProp & ref)
+  Anchors::center(const TDoubleProp & ref,
+                  double ox,
+                  double oy)
   {
-    hcenter_ = ItemRef::offset(ref, kPropertyHCenter);
-    vcenter_ = ItemRef::offset(ref, kPropertyVCenter);
+    hcenter_ = ItemRef::offset(ref, kPropertyHCenter, ox);
+    vcenter_ = ItemRef::offset(ref, kPropertyVCenter, oy);
   }
 
   //----------------------------------------------------------------

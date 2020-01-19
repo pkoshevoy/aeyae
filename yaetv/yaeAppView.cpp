@@ -811,6 +811,36 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetPlaylistSize
+  //
+  struct GetPlaylistSize : public TVarExpr
+  {
+    GetPlaylistSize(const AppView & view, const std::string & name):
+      view_(view),
+      name_(name)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      std::size_t n = 0;
+
+      std::map<std::string, TRecordings>::const_iterator
+        found = view_.playlists_.find(name_);
+
+      if (found != view_.playlists_.end())
+      {
+        n = found->second.size();
+      }
+
+      result = QVariant(QString::number(n));
+    }
+
+    const AppView & view_;
+    std::string name_;
+  };
+
+  //----------------------------------------------------------------
   // humanize_size
   //
   static std::string
@@ -1845,9 +1875,8 @@ namespace yae
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & chbg = row.addNew<RoundRect>("chbg");
-        // chbg.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
         chbg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
-        chbg.background_ = bg.
+        chbg.background_ = chbg.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
         chbg.color_ = chbg.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
@@ -1877,12 +1906,17 @@ namespace yae
         chbg.anchors_.fill(chan);
 
         Text & title = row.addNew<Text>("title");
+        RoundRect & count_bg = row.addNew<RoundRect>("count_bg");
+        Text & count = row.addNew<Text>("count");
+
         title.font_ = style.font_;
         title.font_.setWeight(62);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         title.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         title.anchors_.left_ = ItemRef::reference(chan, kPropertyRight);
+        title.anchors_.right_ = ItemRef::reference(count_bg, kPropertyLeft);
         title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         title.elide_ = Qt::ElideRight;
         title.color_ = title.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
@@ -1890,6 +1924,31 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
         title.text_ = TVarRef::constant
           (TVar(QString::fromUtf8(rec.title_.c_str())));
+
+        count.font_ = style.font_;
+        count.font_.setWeight(62);
+        count.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        count.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        count.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+        count.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        count.elide_ = Qt::ElideRight;
+        count.color_ = count.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
+        count.background_ = count.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
+        count.text_ = count.addExpr(new GetPlaylistSize(view, name));
+        count.text_.disableCaching();
+
+        count_bg.anchors_.center(count, -1.0, -1.0);
+        count_bg.width_ = count_bg.
+          addExpr(new OddRoundUp(count, kPropertyWidth));
+        count_bg.height_ = count_bg.
+          addExpr(new OddRoundUp(count, kPropertyHeight));
+        count_bg.radius_ = ItemRef::scale(count, kPropertyHeight, 0.5);
+        count_bg.color_ = count_bg.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0));
+        count_bg.background_ = count_bg.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       }
 
       rows[name] = row_ptr;
@@ -2229,7 +2288,7 @@ namespace yae
         date.background_ = date.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
 
-        std::string ts = unix_epoch_time_to_utc_str(rec.utc_t0_);
+        std::string ts = unix_epoch_time_to_localtime_str(rec.utc_t0_);
         date.text_ = TVarRef::constant(TVar(QString::fromUtf8(ts.c_str())));
 
         // file size:

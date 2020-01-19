@@ -274,7 +274,9 @@ namespace yae
     inline void inset(const TDoubleProp & reference, double ox, double oy)
     { offset(reference, ox, -ox, oy, -oy); }
 
-    void center(const TDoubleProp & reference);
+    void center(const TDoubleProp & reference,
+                double ox = 0.0,
+                double oy = 0.0);
     void hcenter(const TDoubleProp & reference);
     void vcenter(const TDoubleProp & reference);
 
