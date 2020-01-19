@@ -811,6 +811,58 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // humanize_size
+  //
+  static std::string
+  humanize_size(uint64_t nbytes)
+  {
+    if (nbytes < 1000)
+    {
+      std::string sz = strfmt("%" PRIu64 " Bytes", nbytes);
+      return sz;
+    }
+
+    if (nbytes < 1000000)
+    {
+      uint64_t kb = nbytes / 1000;
+      std::string sz = strfmt("%" PRIu64 " KB", kb);
+      return sz;
+    }
+
+    if (nbytes < 1000000000)
+    {
+      uint64_t mb = nbytes / 1000000;
+      std::string sz = strfmt("%" PRIu64" MB", mb);
+      return sz;
+    }
+
+    double gb = double(nbytes) * 1e-9;
+    std::string sz = strfmt("%.2f GB", gb);
+    return sz;
+  }
+
+  //----------------------------------------------------------------
+  // GetFileSize
+  //
+  struct GetFileSize : public TVarExpr
+  {
+    GetFileSize(const std::string & path):
+      path_(path)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      uint64_t nbytes = yae::stat_filesize(path_.c_str());
+      std::string sz = humanize_size(nbytes);
+      result = QVariant(QString::fromUtf8(sz.c_str()));
+    }
+
+    std::string path_;
+  };
+
+
+  //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
   AppStyle::AppStyle(const char * id, const AppView & view):
@@ -1845,6 +1897,8 @@ namespace yae
       sync_ui_playlist(name, recs);
     }
 
+    sync_ui_playlist(std::string("view_mode_recordings"), recordings_);
+
     // unreferenced playlist items must be removed:
     std::string sidebar_sel = view.sidebar_sel_;
     std::string prev_playlist;
@@ -1878,31 +1932,6 @@ namespace yae
     view.sidebar_sel_ = sidebar_sel;
     pl_sidebar_.swap(rows);
     dataChanged();
-  }
-
-  //----------------------------------------------------------------
-  // humanize_size
-  //
-  static std::string
-  humanize_size(uint64_t nbytes)
-  {
-    if (nbytes < 1000000)
-    {
-      double kb = double(nbytes) * 1e-3;
-      std::string sz = strfmt("%.1f KB", kb);
-      return sz;
-    }
-
-    if (nbytes < 1000000000)
-    {
-      double mb = double(nbytes) * 1e-6;
-      std::string sz = strfmt("%.1f MB", mb);
-      return sz;
-    }
-
-    double gb = double(nbytes) * 1e-9;
-    std::string sz = strfmt("%.1f GB", gb);
-    return sz;
   }
 
   //----------------------------------------------------------------
@@ -2215,10 +2244,8 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
         nbytes.background_ = nbytes.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-
-        uint64_t num_bytes = yae::stat_filesize(path.c_str());
-        std::string sz = humanize_size(num_bytes);
-        nbytes.text_ = TVarRef::constant(TVar(QString::fromUtf8(sz.c_str())));
+        nbytes.text_ = nbytes.addExpr(new GetFileSize(path));
+        nbytes.text_.disableCaching();
       }
 
       rows[name] = row_ptr;
