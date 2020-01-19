@@ -60,12 +60,22 @@ namespace yae
     void animate_hover(bool force = false) const;
     void animate_click() const;
 
+    //----------------------------------------------------------------
+    // Callback
+    //
+    struct YAEUI_API Callback
+    {
+      virtual ~Callback() {}
+      virtual void operator()(const CheckboxItem &) const = 0;
+    };
+
     ItemView & view_;
     BoolRef enabled_;
     BoolRef checked_;
+    BoolRef animate_;
     ColorRef color_;
 
-    ContextCallback toggle_checked_;
+    yae::shared_ptr<Callback> on_toggle_;
 
     ItemView::TAnimatorPtr hover_;
     ItemView::TAnimatorPtr click_;

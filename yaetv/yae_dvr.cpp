@@ -1778,6 +1778,7 @@ namespace yae
 
     std::list<std::string> frequencies;
     std::map<std::string, uint16_t> channel_major;
+
 #if 1
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
@@ -1785,7 +1786,10 @@ namespace yae
       const uint32_t ch_num = i->first;
       uint16_t major = yae::mpeg_ts::channel_major(ch_num);
 
-      if (has(dvr_.blacklist_.channels_, ch_num))
+      DVR::Blacklist blacklist;
+      dvr_.get(blacklist);
+
+      if (has(blacklist.channels_, ch_num))
       {
         uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
         yae_ilog("skipping EPG update for blacklisted channel %i.%i",
@@ -2112,20 +2116,52 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // DVR::Blacklist::toggle
+  //
+  void
+  DVR::Blacklist::toggle(uint32_t ch_num)
+  {
+    std::set<uint32_t>::iterator found = channels_.find(ch_num);
+    if (found == channels_.end())
+    {
+      channels_.insert(ch_num);
+    }
+    else
+    {
+      channels_.erase(found);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::toggle_blacklist
+  //
+  void
+  DVR::toggle_blacklist(uint32_t ch_num)
+  {
+    // toggle the blacklist item:
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    blacklist_.toggle(ch_num);
+  }
+
+  //----------------------------------------------------------------
   // DVR::save_blacklist
   //
   void
   DVR::save_blacklist() const
   {
     std::list<std::string> blacklist;
-    for (std::set<uint32_t>::const_iterator i = blacklist_.channels_.begin();
-         i != blacklist_.channels_.end(); ++i)
     {
-      const uint32_t ch_num = *i;
-      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-      uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-      std::string ch_str = strfmt("%i.%i", int(major), int(minor));
-      blacklist.push_back(ch_str);
+      boost::unique_lock<boost::mutex> lock(mutex_);
+
+      for (std::set<uint32_t>::const_iterator i = blacklist_.channels_.begin();
+           i != blacklist_.channels_.end(); ++i)
+      {
+        const uint32_t ch_num = *i;
+        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+        std::string ch_str = strfmt("%i.%i", int(major), int(minor));
+        blacklist.push_back(ch_str);
+      }
     }
 
     Json::Value json;

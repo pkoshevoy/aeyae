@@ -1116,6 +1116,48 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // IsBlacklisted
+  //
+  struct IsBlacklisted : public TBoolExpr
+  {
+    IsBlacklisted(const AppView & view, uint16_t major, uint16_t minor):
+      view_(view),
+      ch_num_(yae::mpeg_ts::channel_number(major, minor))
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = yae::has(view_.blacklist_.channels_, ch_num_);
+    }
+
+    const AppView & view_;
+    uint32_t ch_num_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleBlacklist
+  //
+  struct OnToggleBlacklist : CheckboxItem::Callback
+  {
+    OnToggleBlacklist(AppView & view, uint16_t major, uint16_t minor):
+      view_(view),
+      ch_num_(yae::mpeg_ts::channel_number(major, minor))
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem & cbox) const
+    {
+      view_.model()->toggle_blacklist(ch_num_);
+      view_.model()->save_blacklist();
+      view_.sync_ui();
+    }
+
+    AppView & view_;
+    uint32_t ch_num_;
+  };
+
+  //----------------------------------------------------------------
   // AppStyle::AppStyle
   //
   AppStyle::AppStyle(const char * id, const AppView & view):
@@ -1983,12 +2025,8 @@ namespace yae
     Item & mainview = *mainview_;
 
     Item & panel = *(ch_layout_.item_);
-    Item & header = panel.get<Item>("header");
-    Item & body = panel.get<Item>("body");
-    Scrollview & sv = get_scrollview(body);
+    Scrollview & sv = get_scrollview(panel);
     Item & table = *(sv.content_);
-    Item & h1 = header.get<Item>("h1");
-    Item & h2 = header.get<Item>("h2");
 
     ch_layout_.names_.clear();
     ch_layout_.index_.clear();
@@ -2073,18 +2111,29 @@ namespace yae
             bg.visible_ = bg.
               addInverse(new IsOddRow(layout.index_, row.id_));
 #endif
+
+            CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+            cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+            cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+            cbox.margins_.set_left(ItemRef::reference(row.height_, 0.33));
+            cbox.height_ = ItemRef::reference(row.height_, 0.75);
+            cbox.width_ = cbox.height_;
+            cbox.checked_ = cbox.
+              addInverse(new IsBlacklisted(view, ch_major, ch_minor));
+            cbox.on_toggle_.
+              reset(new OnToggleBlacklist(view, ch_major, ch_minor));
+
             Item & maj_min = row.addNew<Item>("maj_min");
             maj_min.anchors_.fill(row);
-            maj_min.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+            maj_min.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
             maj_min.anchors_.right_.reset();
-            maj_min.width_ = ItemRef::reference(hidden, kUnitSize, 1.1);
+            maj_min.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+            maj_min.margins_.set_left(ItemRef::reference(row.height_, 0.33));
 
             Text & ch_text = row.addNew<Text>("ch_text");
             ch_text.anchors_.vcenter(maj_min);
             ch_text.font_ = style.font_;
             ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-            ch_text.margins_.
-              set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
             ch_text.elide_ = Qt::ElideRight;
             ch_text.color_ = ch_text.
               addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
@@ -2097,8 +2146,6 @@ namespace yae
             name.anchors_.left_ = ItemRef::reference(maj_min, kPropertyRight);
             name.font_ = style.font_;
             name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-            name.margins_.
-              set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
             name.elide_ = Qt::ElideRight;
             name.color_ = name.
               addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
@@ -3134,68 +3181,7 @@ namespace yae
     panel.visible_ = panel.
       addExpr(new IsSelected(sidebar_sel_, "view_mode_channel_list"));
 
-    Item & header = panel.addNew<Item>("header");
-    header.anchors_.fill(panel);
-    header.anchors_.bottom_.reset();
-    header.height_ = ItemRef::reference(hidden, kUnitSize, 0.4);
-
-    Rectangle & bg = header.addNew<Rectangle>("bg");
-    bg.anchors_.fill(header);
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-
-    // add table columns:
-    Item & h1 = header.addNew<Item>("h1");
-    Rectangle & l1 = header.addNew<Rectangle>("l1");
-    Item & h2 = header.addNew<Item>("h2");
-
-    h1.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
-    h1.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
-    h1.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
-    h1.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
-
-    Text & t1 = h1.addNew<Text>("t1");
-    t1.anchors_.vcenter(h1);
-    t1.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
-    t1.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
-    t1.font_ = style.font_;
-    t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
-    t1.elide_ = Qt::ElideRight;
-    t1.color_ = t1.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    t1.background_ = t1.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-    t1.text_ = TVarRef::constant(TVar("Frequency"));
-
-    l1.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
-    l1.anchors_.left_ = ItemRef::reference(h1, kPropertyRight);
-    l1.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
-    l1.width_ = ItemRef::constant(1);
-    l1.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
-
-    h2.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
-    h2.anchors_.left_ = ItemRef::reference(l1, kPropertyRight);
-    h2.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
-    h2.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-
-    Text & t2 = h2.addNew<Text>("t2");
-    t2.anchors_.vcenter(h2);
-    t2.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
-    t2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
-    t2.font_ = style.font_;
-    t2.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
-    t2.elide_ = Qt::ElideRight;
-    t2.color_ = t2.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    t2.background_ = t2.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-    t2.text_ = TVarRef::constant(TVar("Channel"));
-
-    // layout the table body:
-    Item & body = panel.addNew<Item>("body");
-    body.anchors_.fill(panel);
-    body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
-
-    layout_scrollview(kScrollbarVertical, view, style, body);
+    layout_scrollview(kScrollbarVertical, view, style, panel);
   }
 
   //----------------------------------------------------------------

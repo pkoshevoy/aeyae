@@ -218,8 +218,7 @@ namespace yae
     {
       Blacklist();
 
-      void save() const;
-      bool load();
+      void toggle(uint32_t ch_num);
 
       std::set<uint32_t> channels_;
       int64_t lastmod_;
@@ -336,6 +335,7 @@ namespace yae
     void save_epg() const;
     void save_frequencies() const;
 
+    void toggle_blacklist(uint32_t ch_num);
     void save_blacklist() const;
     bool load_blacklist();
 

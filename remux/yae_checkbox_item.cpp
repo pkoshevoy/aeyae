@@ -40,26 +40,13 @@ namespace yae
       }
 
       bool enabled = item_.enabled_.get();
-      bool checked = item_.checked_.get();
       if (enabled)
       {
-        if (checked)
-        {
-          result = style->fg_controls_.get();
-        }
-        else
-        {
-          result = style->cursor_.get();
-
-          if (!border_)
-          {
-            result.set_a(0.0);
-          }
-        }
+        result = style->fg_controls_.get();
       }
       else
       {
-        result = style->cursor_.get().a_scaled(0.5);
+        result = style->fg_controls_.get().a_scaled(0.5);
       }
     }
 
@@ -216,7 +203,8 @@ namespace yae
     ClickableItem(id),
     view_(view),
     enabled_(true),
-    checked_(true)
+    checked_(true),
+    animate_(false)
   {
     color_ = addExpr(new CheckboxColor(*this));
     RoundRect & spotlight = addNew<RoundRect>("spotlight");
@@ -372,7 +360,16 @@ namespace yae
   CheckboxItem::onPress(const TVec2D & itemCSysOrigin,
                         const TVec2D & rootCSysPoint)
   {
-    checked_ = BoolRef::constant(!checked_.get());
+    if (on_toggle_)
+    {
+      const Callback & on_toggle = *on_toggle_;
+      on_toggle(*this);
+    }
+    else
+    {
+      checked_ = BoolRef::constant(!checked_.get());
+    }
+
     animate_click();
     return true;
   }
@@ -443,6 +440,11 @@ namespace yae
   void
   CheckboxItem::animate_hover(bool force) const
   {
+    if (!animate_.get())
+    {
+      return;
+    }
+
     HoverAnimator & animator = dynamic_cast<HoverAnimator &>(*(hover_.get()));
     TransitionItem & opacity = Item::find<TransitionItem>("hover_opacity");
 
@@ -464,6 +466,11 @@ namespace yae
   void
   CheckboxItem::animate_click() const
   {
+    if (!animate_.get())
+    {
+      return;
+    }
+
     ClickAnimator & animator = dynamic_cast<ClickAnimator &>(*(click_.get()));
     TransitionItem & opacity = Item::find<TransitionItem>("click_opacity");
 
