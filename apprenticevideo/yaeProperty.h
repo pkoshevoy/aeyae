@@ -42,6 +42,10 @@ namespace yae
       QVariant(value)
     {}
 
+    TVar(const std::string & value):
+      QVariant(QString::fromUtf8(value.c_str()))
+    {}
+
     inline TVar & operator *= (double scale)
     {
       (void)scale;

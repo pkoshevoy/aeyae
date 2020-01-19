@@ -82,9 +82,16 @@ namespace yae
   //
   struct YAEUI_API Layout
   {
-    yae::shared_ptr<Item> container_;
+    yae::shared_ptr<Item> item_;
+
+    // index -> id
+    std::vector<std::string> names_;
+
+    // id -> index
     std::map<std::string, std::size_t> index_;
-    std::map<std::string, yae::shared_ptr<Item> > items_;
+
+    // id -> layout
+    std::map<std::string, yae::shared_ptr<Layout> > items_;
   };
 
   //----------------------------------------------------------------
@@ -138,6 +145,8 @@ namespace yae
     void toggle_playback();
 
     void sync_ui();
+    void sync_ui_epg();
+    void sync_ui_channels();
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);
@@ -147,12 +156,10 @@ namespace yae
   protected:
     // helpers:
     void layout(AppView & view, AppStyle & style, Item & root);
-    void layout_sidebar(AppView & view, AppStyle & style, Item & root);
-    void layout_epg(AppView & view, AppStyle & style, Item & root);
-    void layout_channels(AppView & view, AppStyle & style, Item & root);
-    void layout_wishlist(AppView & view, AppStyle & style, Item & root);
-    void layout_schedule(AppView & view, AppStyle & style, Item & root);
-    void layout_recordings(AppView & view, AppStyle & style, Item & root);
+    void layout_sidebar(AppView & view, AppStyle & style, Item & sideview);
+    void layout_epg(AppView & view, AppStyle & style, Item & mainview);
+    void layout_channels(AppView & view, AppStyle & style, Item & mainview);
+    void layout_schedule(AppView & view, AppStyle & style, Item & mainview);
 
     // model:
     yae::DVR * dvr_;
@@ -178,6 +185,7 @@ namespace yae
     yae::TTime epg_lastmod_;
 
     DVR::Blacklist blacklist_;
+    std::map<std::string, TChannels> channels_;
     std::map<uint32_t, TScheduledRecordings> schedule_;
 
     // all recordings, indexed by filename:
@@ -192,6 +200,9 @@ namespace yae
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmark_;
     std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlight_;
+
+    // channel list stuff:
+    Layout ch_layout_;
 
     // playlist stuff:
     std::map<std::string, std::size_t> pl_index_;
