@@ -2867,7 +2867,7 @@ namespace yae
         // thumbnail, title, description:
         Item & inner = row.addNew<Item>("inner");
         inner.anchors_.fill(row);
-        inner.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        inner.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
 
         Image & thumbnail = inner.addNew<Image>("thumbnail");
         thumbnail.setContext(view);
@@ -2884,7 +2884,7 @@ namespace yae
         title.anchors_.top_ = ItemRef::reference(c1, kPropertyTop);
         title.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
         title.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
-        title.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        title.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
         title.font_ = style.font_;
         title.font_.setWeight(62);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -2901,7 +2901,7 @@ namespace yae
         desc.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
         desc.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
         desc.anchors_.bottom_ = ItemRef::reference(c1, kPropertyBottom);
-        desc.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        desc.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
         desc.font_ = style.font_;
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.elide_ = Qt::ElideNone;
@@ -2920,7 +2920,7 @@ namespace yae
         // duration:
         Text & length = c2.addNew<Text>("length");
         length.anchors_.fill(c2);
-        length.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        length.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
         length.font_ = style.font_;
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         length.font_.setWeight(62);
@@ -2935,7 +2935,7 @@ namespace yae
         // when recorded:
         Text & date = c3.addNew<Text>("date");
         date.anchors_.fill(c3);
-        date.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        date.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
         date.font_ = style.font_;
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         date.font_.setWeight(62);
@@ -2950,7 +2950,7 @@ namespace yae
         // file size:
         Text & nbytes = c4.addNew<Text>("nbytes");
         nbytes.anchors_.fill(c4);
-        nbytes.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        nbytes.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
         nbytes.font_ = style.font_;
         nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         nbytes.font_.setWeight(62);
