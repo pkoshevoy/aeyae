@@ -2440,8 +2440,8 @@ namespace yae
         Item & row2 = row.addNew<Item>("row2");
         row2.anchors_.fill(row);
         row2.anchors_.top_ = ItemRef::reference(row1, kPropertyBottom);
-        row2.anchors_.left_ = ItemRef::reference(ch_text, kPropertyLeft);
-        row2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 1));
+        row2.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
+        row2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.6));
 
         Text & desc = row2.addNew<Text>("desc");
         desc.anchors_.fill(row2);
