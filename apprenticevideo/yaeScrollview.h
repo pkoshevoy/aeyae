@@ -295,6 +295,18 @@ namespace yae
                     ItemView & view,
                     const ItemViewStyle & style,
                     Item & root,
+                    const ItemRef & scrollbar_size_ref,
+                    ScrollbarId inset = kScrollbarNone,
+                    bool clipContent = true);
+
+  //----------------------------------------------------------------
+  // layout_scrollview
+  //
+  YAEUI_API Scrollview &
+  layout_scrollview(ScrollbarId scrollbars,
+                    ItemView & view,
+                    const ItemViewStyle & style,
+                    Item & root,
                     ScrollbarId inset = kScrollbarNone,
                     bool clipContent = true);
 

@@ -690,6 +690,7 @@ namespace yae
                     ItemView & view,
                     const ItemViewStyle & style,
                     Item & root,
+                    const ItemRef & scrollbar_size_ref,
                     ScrollbarId inset,
                     bool clipContent)
   {
@@ -713,12 +714,12 @@ namespace yae
 
                // vertical scrollbar width:
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               ItemRef::uncacheable(style.row_height_, 0.41667) :
+               ItemRef::uncacheable(scrollbar_size_ref) :
                ItemRef::constant(inset_v ? -1.0 : 0.0),
 
                // horizontal scrollbar width:
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               ItemRef::uncacheable(style.row_height_, 0.41667) :
+               ItemRef::uncacheable(scrollbar_size_ref) :
                ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
@@ -729,7 +730,7 @@ namespace yae
     scrollbar.width_ = scrollbar.addExpr
       (new Conditional<ItemRef>
        (scrollbar.visible_,
-        ItemRef::uncacheable(style.row_height_, 0.41667),
+        ItemRef::uncacheable(scrollbar_size_ref),
         ItemRef::constant(0.0)));
 
     hscrollbar.setAttr("vertical", false);
@@ -743,11 +744,11 @@ namespace yae
                kScrollbarHorizontal,
 
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               ItemRef::uncacheable(style.row_height_, 0.41667) :
+               ItemRef::uncacheable(scrollbar_size_ref) :
                ItemRef::constant(inset_v ? -1.0 : 0.0),
 
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               ItemRef::uncacheable(style.row_height_, 0.41667) :
+               ItemRef::uncacheable(scrollbar_size_ref) :
                ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
@@ -758,7 +759,7 @@ namespace yae
     hscrollbar.height_ = hscrollbar.addExpr
       (new Conditional<ItemRef>
        (hscrollbar.visible_,
-        ItemRef::uncacheable(style.row_height_, 0.41667),
+        ItemRef::uncacheable(scrollbar_size_ref),
         ItemRef::constant(0.0)));
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
@@ -795,9 +796,9 @@ namespace yae
     slider.anchors_.top_ = slider.
       addExpr(new CalcSliderTop(sview, scrollbar, slider));
     slider.anchors_.left_ =
-      ItemRef::offset(scrollbar, kPropertyLeft, 2);
+      ItemRef::offset(scrollbar, kPropertyLeft, 2.5);
     slider.anchors_.right_ =
-      ItemRef::offset(scrollbar, kPropertyRight, -2);
+      ItemRef::offset(scrollbar, kPropertyRight, -2.5);
     slider.height_ = slider.
       addExpr(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ =
@@ -818,9 +819,9 @@ namespace yae
     // configure horizontal scrollbar slider:
     RoundRect & hslider = hscrollbar.addNew<RoundRect>("hslider");
     hslider.anchors_.top_ =
-      ItemRef::offset(hscrollbar, kPropertyTop, 2);
+      ItemRef::offset(hscrollbar, kPropertyTop, 2.5);
     hslider.anchors_.bottom_ =
-      ItemRef::offset(hscrollbar, kPropertyBottom, -2);
+      ItemRef::offset(hscrollbar, kPropertyBottom, -2.5);
     hslider.anchors_.left_ =
       hslider.addExpr(new CalcSliderLeft(sview, hscrollbar, hslider));
     hslider.width_ =
@@ -839,6 +840,30 @@ namespace yae
 
     return sview;
   }
+
+  //----------------------------------------------------------------
+  // layout_scrollview
+  //
+  Scrollview &
+  layout_scrollview(ScrollbarId scrollbars,
+                    ItemView & view,
+                    const ItemViewStyle & style,
+                    Item & root,
+                    ScrollbarId inset,
+                    bool clipContent)
+  {
+    ItemRef scrollbar_size_ref =
+      ItemRef::uncacheable(style.row_height_, 0.41667);
+
+    return layout_scrollview(scrollbars,
+                             view,
+                             style,
+                             root,
+                             scrollbar_size_ref,
+                             inset,
+                             clipContent);
+  }
+
 
   //----------------------------------------------------------------
   // layout_scrollview

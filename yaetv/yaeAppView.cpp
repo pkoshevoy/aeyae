@@ -2787,7 +2787,8 @@ namespace yae
       body.anchors_.fill(panel);
       body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
 
-      layout_scrollview(kScrollbarVertical, view, style, body);
+      layout_scrollview(kScrollbarVertical, view, style, body,
+                        ItemRef::reference(hidden, kUnitSize, 0.33));
     }
 
     // shortcuts:
@@ -3188,10 +3189,9 @@ namespace yae
     bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_sidebar_));
     bg.anchors_.fill(panel);
 
-    Scrollview & sv = layout_scrollview(kScrollbarVertical,
-                                        view,
-                                        style,
-                                        panel);
+    Scrollview & sv =
+      layout_scrollview(kScrollbarVertical, view, style, panel,
+                        ItemRef::reference(hidden, kUnitSize, 0.33));
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
 
     Item & sidebar = *(sv.content_);
@@ -3463,7 +3463,8 @@ namespace yae
     panel.visible_ = panel.
       addExpr(new IsSelected(sidebar_sel_, "view_mode_channel_list"));
 
-    layout_scrollview(kScrollbarVertical, view, style, panel);
+    layout_scrollview(kScrollbarVertical, view, style, panel,
+                      ItemRef::reference(hidden, kUnitSize, 0.33));
   }
 
   //----------------------------------------------------------------
@@ -3570,7 +3571,8 @@ namespace yae
     container.anchors_.fill(panel);
     container.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
 
-    layout_scrollview(kScrollbarVertical, view, style, container);
+    layout_scrollview(kScrollbarVertical, view, style, container,
+                      ItemRef::reference(hidden, kUnitSize, 0.33));
   }
 
 }
