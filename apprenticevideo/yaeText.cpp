@@ -6,6 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <algorithm>
+#include <limits>
+
 // Qt library:
 #include <QColor>
 #include <QCoreApplication>
@@ -192,11 +196,7 @@ namespace yae
   // calcBBox
   //
   static void
-  calcBBox(BBox & bbox,
-           const Text & item,
-           QChar glyph,
-           double maxWidth = std::numeric_limits<short int>::max(),
-           double maxHeight = std::numeric_limits<short int>::max())
+  calcBBox(BBox & bbox, const Text & item, QChar glyph)
   {
     QFont font = item.font_;
     double fontSize = std::max(9.0, item.fontSize_.get());
@@ -204,23 +204,14 @@ namespace yae
 
     font.setPixelSize(fontSize * supersample);
     QFontMetricsF fm(font);
-
-    QRectF maxRect(0.0, 0.0,
-                   maxWidth * supersample,
-                   maxHeight * supersample);
-
     QRectF rect = fm.boundingRect(glyph);
 
-    bbox.x_ =
-      (maxWidth < double(std::numeric_limits<short int>::max())) ?
-      (rect.x() / supersample) : 0.0;
-
-    bbox.y_ =
-      (maxHeight < double(std::numeric_limits<short int>::max())) ?
-      (rect.y() / supersample) : 0.0;
+    bbox.x_ = 0.0;
+    bbox.y_ = 0.0;
 
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
+
 #if QT_VERSION >= 0x050600
     if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
     {
@@ -265,8 +256,9 @@ namespace yae
       (maxHeight < double(std::numeric_limits<short int>::max())) ?
       (rect.y() / supersample) : 0.0;
 
-    bbox.w_ = rect.width() / supersample;
-    bbox.h_ = rect.height() / supersample;
+    bbox.w_ = std::min(maxWidth, rect.width() / supersample);
+    bbox.h_ = std::min(maxHeight, rect.height() / supersample);
+
 #if QT_VERSION >= 0x050600
     if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
     {
@@ -415,6 +407,11 @@ namespace yae
 
     BBox bboxContent;
     item.Item::get(kPropertyBBoxContent, bboxContent);
+    if (bboxContent.w_ < 0.0 ||
+        bboxContent.h_ < 0.0)
+    {
+      return true;
+    }
 
     iw_ = (int)ceil(bboxContent.w_ * supersample);
     ih_ = (int)ceil(bboxContent.h_ * supersample);
