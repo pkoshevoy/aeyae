@@ -650,6 +650,66 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // IsCancelled
+  //
+  struct IsCancelled : TBoolExpr
+  {
+    IsCancelled(const AppView & view, uint32_t ch_num, uint32_t gps_time):
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = true;
+
+      std::map<uint32_t, TScheduledRecordings>::const_iterator
+        found_ch = view_.schedule_.find(ch_num_);
+      if (found_ch != view_.schedule_.end())
+      {
+        const TScheduledRecordings & schedule = found_ch->second;
+        TScheduledRecordings::const_iterator found = schedule.find(gps_time_);
+
+        if (found != schedule.end())
+        {
+          TRecordingPtr rec_ptr = found->second;
+          const Recording & rec = *rec_ptr;
+          result = rec.cancelled_;
+        }
+      }
+    }
+
+    const AppView & view_;
+    uint32_t ch_num_;
+    uint32_t gps_time_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleSchedule
+  //
+  struct OnToggleSchedule : CheckboxItem::Action
+  {
+    OnToggleSchedule(AppView & view, uint32_t ch_num, uint32_t gps_time):
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem &) const
+    {
+      view_.toggle_recording(ch_num_, gps_time_);
+      view_.dataChanged();
+    }
+
+    AppView & view_;
+    uint32_t ch_num_;
+    uint32_t gps_time_;
+  };
+
+  //----------------------------------------------------------------
   // RecButtonColor
   //
   struct RecButtonColor : TColorExpr
@@ -1138,7 +1198,7 @@ namespace yae
   //----------------------------------------------------------------
   // OnToggleBlacklist
   //
-  struct OnToggleBlacklist : CheckboxItem::Callback
+  struct OnToggleBlacklist : CheckboxItem::Action
   {
     OnToggleBlacklist(AppView & view, uint16_t major, uint16_t minor):
       view_(view),
@@ -1146,7 +1206,7 @@ namespace yae
     {}
 
     // virtual:
-    void operator()(const CheckboxItem & cbox) const
+    void operator()(const CheckboxItem &) const
     {
       view_.model()->toggle_blacklist(ch_num_);
       view_.model()->save_blacklist();
@@ -1558,6 +1618,12 @@ namespace yae
         sync_ui_channels();
       }
 
+      if (!same_schedule)
+      {
+        schedule_.swap(schedule);
+        sync_ui_schedule();
+      }
+
       if (same_program_guide &&
           same_blacklist &&
           same_schedule)
@@ -1567,7 +1633,6 @@ namespace yae
       }
 
       // update:
-      schedule_.swap(schedule);
       sync_ui_epg();
     }
   }
@@ -2193,6 +2258,223 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::sync_ui_schedule
+  //
+  void
+  AppView::sync_ui_schedule()
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+    Item & mainview = *mainview_;
+
+    Item & panel = *(sch_layout_.item_);
+    Item & header = panel.get<Item>("header");
+    Item & container = panel.get<Item>("container");
+    Scrollview & sv = get_scrollview(container);
+    Item & table = *(sv.content_);
+    Item & h1 = header.get<Item>("h1");
+    Item & h2 = header.get<Item>("h2");
+    Item & h3 = header.get<Item>("h3");
+
+    TRecordings schedule;
+    for (std::map<uint32_t, TScheduledRecordings>::const_iterator
+           i = schedule_.begin(); i != schedule_.end(); ++i)
+    {
+      const TScheduledRecordings & ch_recs = i->second;
+      for (TScheduledRecordings::const_iterator
+             j = ch_recs.begin(); j != ch_recs.end(); ++j)
+      {
+        const TRecordingPtr & rec_ptr = j->second;
+        const Recording & rec = *rec_ptr;
+        std::string basename = rec.get_basename();
+        schedule[basename] = rec_ptr;
+      }
+    }
+
+    sch_layout_.names_.clear();
+    sch_layout_.index_.clear();
+    std::map<std::string, yae::shared_ptr<Layout> > rows;
+
+    for (TRecordings::const_iterator
+           i = schedule.begin(); i != schedule.end(); ++i)
+    {
+      const std::string & rec_id = i->first;
+      const Recording & rec = *(i->second);
+      const uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
+                                                           rec.channel_minor_);
+
+      sch_layout_.index_[rec_id] = sch_layout_.names_.size();
+      sch_layout_.names_.push_back(rec_id);
+
+      yae::shared_ptr<Layout> & layout_ptr = sch_layout_.items_[rec_id];
+      if (!layout_ptr)
+      {
+        layout_ptr.reset(new Layout());
+        Layout & layout = *layout_ptr;
+
+        layout.item_.reset(new Item(rec_id.c_str()));
+        Item & row = table.add<Item>(layout.item_);
+
+        row.anchors_.left_ = ItemRef::reference(table, kPropertyLeft);
+        row.anchors_.right_ = ItemRef::reference(table, kPropertyRight);
+        row.anchors_.top_ = row.addExpr(new ListItemTop(view,
+                                                        table,
+                                                        sch_layout_.index_,
+                                                        row.id_,
+                                                        1.78));
+        row.height_ = ItemRef::reference(hidden, kUnitSize, 1.78);
+
+        Rectangle & bg = row.addNew<Rectangle>("bg");
+        bg.anchors_.fill(row);
+        bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+        bg.visible_ = bg.addExpr(new IsOddRow(sch_layout_.index_, row.id_));
+
+        Item & c1 = row.addNew<Item>("c1");
+        Item & c2 = row.addNew<Item>("c2");
+        Item & c3 = row.addNew<Item>("c3");
+
+        c1.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c1.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+        c1.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c1.width_ = ItemRef::reference(h1, kPropertyWidth);
+
+        c2.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c2.anchors_.left_ = ItemRef::reference(c1, kPropertyRight);
+        c2.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c2.width_ = ItemRef::reference(h2, kPropertyWidth);
+
+        c3.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c3.anchors_.left_ = ItemRef::reference(c2, kPropertyRight);
+        c3.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c3.width_ = ItemRef::reference(h3, kPropertyWidth);
+
+        // checkbox, channel, title:
+        Item & row1 = row.addNew<Item>("row1");
+        row1.anchors_.fill(row);
+        row1.anchors_.bottom_.reset();
+        row1.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+        row1.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+
+        CheckboxItem & cbox = row1.add(new CheckboxItem("cbox", view));
+        cbox.anchors_.vcenter(row1);
+        cbox.anchors_.right_.reset();
+        cbox.margins_.set_left(ItemRef::reference(row1.height_, 0.33));
+        cbox.height_ = ItemRef::reference(row1.height_, 0.75);
+        cbox.width_ = cbox.height_;
+        cbox.checked_ = cbox.
+          addInverse(new IsCancelled(view, ch_num, rec.gps_t0_));
+        cbox.on_toggle_.
+          reset(new OnToggleSchedule(view, ch_num, rec.gps_t0_));
+        Item & maj_min = row1.addNew<Item>("maj_min");
+        maj_min.anchors_.fill(row1);
+        maj_min.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
+        maj_min.anchors_.right_.reset();
+        maj_min.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+        maj_min.margins_.set_left(ItemRef::reference(row1.height_, 0.33));
+
+        Text & ch_text = row1.addNew<Text>("ch_text");
+        ch_text.anchors_.vcenter(maj_min);
+        ch_text.font_ = style.font_;
+        ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        ch_text.elide_ = Qt::ElideRight;
+        ch_text.color_ = ch_text.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+        ch_text.background_ = ch_text.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        std::string ch_txt = strfmt("%i-%i",
+                                    rec.channel_major_,
+                                    rec.channel_minor_);
+        ch_text.text_ = TVarRef::constant(TVar(ch_txt));
+
+        Text & title = row1.addNew<Text>("title");
+        title.anchors_.vcenter(row1);
+        title.anchors_.left_ = ItemRef::reference(maj_min, kPropertyRight);
+        title.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+        title.font_ = style.font_;
+        title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        title.elide_ = Qt::ElideRight;
+        title.color_ = title.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+        title.background_ = title.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        title.text_ = TVarRef::constant(TVar(rec.title_));
+
+        // duration:
+        Text & length = row1.addNew<Text>("length");
+        length.anchors_.vcenter(row1);
+        length.anchors_.left_ = ItemRef::reference(c2, kPropertyLeft);
+        length.anchors_.right_ = ItemRef::reference(c2, kPropertyRight);
+        length.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        length.font_ = style.font_;
+        length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        length.font_.setWeight(62);
+        length.elide_ = Qt::ElideRight;
+        length.color_ = length.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        length.background_ = length.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        TTime dt(rec.gps_t1_ - rec.gps_t0_, 1);
+        length.text_ = TVarRef::constant(TVar(dt.to_hhmmss()));
+
+        // when recorded:
+        Text & date = row1.addNew<Text>("date");
+        date.anchors_.vcenter(row1);
+        date.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+        date.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
+        date.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
+        date.font_ = style.font_;
+        date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+        date.font_.setWeight(62);
+        date.elide_ = Qt::ElideRight;
+        date.color_ = date.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+        date.background_ = date.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        std::string ts = unix_epoch_time_to_localtime_str(rec.utc_t0_);
+        date.text_ = TVarRef::constant(TVar(ts));
+
+        // description:
+        Item & row2 = row.addNew<Item>("row2");
+        row2.anchors_.fill(row);
+        row2.anchors_.top_ = ItemRef::reference(row1, kPropertyBottom);
+        row2.anchors_.left_ = ItemRef::reference(ch_text, kPropertyLeft);
+        row2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 1));
+
+        Text & desc = row2.addNew<Text>("desc");
+        desc.anchors_.fill(row2);
+        desc.font_ = style.font_;
+        desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        desc.elide_ = Qt::ElideNone;
+        desc.color_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+        desc.background_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        desc.text_ = TVarRef::constant(TVar(rec.description_));
+      }
+
+      rows[rec_id] = layout_ptr;
+    }
+
+    // unreferenced rows must be removed:
+    for (std::map<std::string, yae::shared_ptr<Layout> >::const_iterator
+           i = sch_layout_.items_.begin(); i != sch_layout_.items_.end(); ++i)
+    {
+      const std::string & name = i->first;
+      if (!yae::has(rows, name))
+      {
+        yae::shared_ptr<Item> row_ptr = i->second->item_;
+        YAE_ASSERT(table.remove(row_ptr));
+      }
+    }
+
+    sch_layout_.items_.swap(rows);
+    sch_layout_.item_->uncache();
+  }
+
+  //----------------------------------------------------------------
   // AppView::sync_ui_playlists
   //
   void
@@ -2585,7 +2867,7 @@ namespace yae
         // thumbnail, title, description:
         Item & inner = row.addNew<Item>("inner");
         inner.anchors_.fill(row);
-        inner.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        inner.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
 
         Image & thumbnail = inner.addNew<Image>("thumbnail");
         thumbnail.setContext(view);
@@ -2602,7 +2884,7 @@ namespace yae
         title.anchors_.top_ = ItemRef::reference(c1, kPropertyTop);
         title.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
         title.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
-        title.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        title.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         title.font_ = style.font_;
         title.font_.setWeight(62);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -2619,7 +2901,7 @@ namespace yae
         desc.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
         desc.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
         desc.anchors_.bottom_ = ItemRef::reference(c1, kPropertyBottom);
-        desc.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        desc.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         desc.font_ = style.font_;
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.elide_ = Qt::ElideNone;
@@ -2638,7 +2920,7 @@ namespace yae
         // duration:
         Text & length = c2.addNew<Text>("length");
         length.anchors_.fill(c2);
-        length.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        length.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         length.font_ = style.font_;
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         length.font_.setWeight(62);
@@ -2647,15 +2929,13 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
         length.background_ = length.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-
         TTime dt(rec.gps_t1_ - rec.gps_t0_, 1);
-        length.text_ =
-          TVarRef::constant(TVar(QString::fromUtf8(dt.to_hhmmss().c_str())));
+        length.text_ = TVarRef::constant(TVar(dt.to_hhmmss()));
 
         // when recorded:
         Text & date = c3.addNew<Text>("date");
         date.anchors_.fill(c3);
-        date.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        date.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         date.font_ = style.font_;
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         date.font_.setWeight(62);
@@ -2664,14 +2944,13 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
         date.background_ = date.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-
         std::string ts = unix_epoch_time_to_localtime_str(rec.utc_t0_);
-        date.text_ = TVarRef::constant(TVar(QString::fromUtf8(ts.c_str())));
+        date.text_ = TVarRef::constant(TVar(ts));
 
         // file size:
         Text & nbytes = c4.addNew<Text>("nbytes");
         nbytes.anchors_.fill(c4);
-        nbytes.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        nbytes.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         nbytes.font_ = style.font_;
         nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         nbytes.font_.setWeight(62);
@@ -2841,6 +3120,9 @@ namespace yae
 
     // layout Channel List panel:
     layout_channels(view, style, mainview);
+
+    // layout Scheduled Recordings panel:
+    layout_schedule(view, style, mainview);
   }
 
   //----------------------------------------------------------------
@@ -2957,7 +3239,7 @@ namespace yae
                        sidebar,
                        top_group,
                        &edit_channels, // prev
-                       "view_mode_edit_schedule",
+                       "view_mode_schedule",
                        "Schedule");
 
     // Recordings
@@ -3170,7 +3452,7 @@ namespace yae
   void
   AppView::layout_channels(AppView & view, AppStyle & style, Item & mainview)
   {
-   // shortcuts:
+    // shortcuts:
     Item & root = *root_;
     Item & hidden = root.get<Item>("hidden");
     Layout & layout = ch_layout_;
@@ -3188,7 +3470,107 @@ namespace yae
   // AppView::layout_schedule
   //
   void
-  AppView::layout_schedule(AppView & view, AppStyle & style, Item & root)
-  {}
+  AppView::layout_schedule(AppView & view, AppStyle & style, Item & mainview)
+  {
+    // shortcuts:
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+    Layout & layout = sch_layout_;
+
+    layout.item_.reset(new Item("schedule_view"));
+    Item & panel = mainview.add<Item>(layout.item_);
+    panel.anchors_.fill(mainview);
+    panel.visible_ = panel.
+      addExpr(new IsSelected(sidebar_sel_, "view_mode_schedule"));
+
+    Item & header = panel.addNew<Item>("header");
+    header.anchors_.fill(panel);
+    header.anchors_.bottom_.reset();
+    header.height_ = ItemRef::reference(hidden, kUnitSize, 0.4);
+
+    Rectangle & bg = header.addNew<Rectangle>("bg");
+    bg.anchors_.fill(header);
+    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+    // add table columns:
+    Item & h1 = header.addNew<Item>("h1");
+    Rectangle & l1 = header.addNew<Rectangle>("l1");
+    Item & h2 = header.addNew<Item>("h2");
+    Rectangle & l2 = header.addNew<Rectangle>("l2");
+    Item & h3 = header.addNew<Item>("h3");
+
+    h1.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+    h1.anchors_.left_ = ItemRef::reference(header, kPropertyLeft);
+    h1.anchors_.right_ = ItemRef::reference(l1, kPropertyLeft);
+    h1.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+
+    Text & t1 = h1.addNew<Text>("t1");
+    t1.anchors_.vcenter(h1);
+    t1.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t1.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t1.font_ = style.font_;
+    t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+    t1.elide_ = Qt::ElideRight;
+    t1.color_ = t1.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    t1.background_ = t1.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t1.text_ = TVarRef::constant(TVar("Title and Description"));
+
+    l1.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
+    l1.anchors_.right_ = ItemRef::reference(h2, kPropertyLeft);
+    l1.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
+    l1.width_ = ItemRef::constant(1);
+    l1.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+
+    h2.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+    h2.anchors_.right_ = ItemRef::reference(l2, kPropertyLeft);
+    h2.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+    h2.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+
+    Text & t2 = h2.addNew<Text>("t2");
+    t2.anchors_.vcenter(h2);
+    t2.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t2.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t2.font_ = style.font_;
+    t2.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+    t2.elide_ = Qt::ElideRight;
+    t2.color_ = t2.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    t2.background_ = t2.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t2.text_ = TVarRef::constant(TVar("Duration"));
+
+    l2.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
+    l2.anchors_.right_ = ItemRef::reference(h3, kPropertyLeft);
+    l2.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
+    l2.width_ = ItemRef::constant(1);
+    l2.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+
+    h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
+    h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
+    h3.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
+    h3.width_ = ItemRef::reference(hidden, kUnitSize, 4.0);
+
+    Text & t3 = h3.addNew<Text>("t3");
+    t3.anchors_.vcenter(h3);
+    t3.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t3.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+    t3.font_ = style.font_;
+    t3.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+    t3.elide_ = Qt::ElideRight;
+    t3.color_ = t3.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    t3.background_ = t3.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t3.text_ = TVarRef::constant(TVar("Date"));
+
+    // layout the table container:
+    Item & container = panel.addNew<Item>("container");
+    container.anchors_.fill(panel);
+    container.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
+
+    layout_scrollview(kScrollbarVertical, view, style, container);
+  }
 
 }

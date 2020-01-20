@@ -360,9 +360,11 @@ namespace yae
   CheckboxItem::onPress(const TVec2D & itemCSysOrigin,
                         const TVec2D & rootCSysPoint)
   {
+    animate_click();
+
     if (on_toggle_)
     {
-      const Callback & on_toggle = *on_toggle_;
+      const Action & on_toggle = *on_toggle_;
       on_toggle(*this);
     }
     else
@@ -370,7 +372,6 @@ namespace yae
       checked_ = BoolRef::constant(!checked_.get());
     }
 
-    animate_click();
     return true;
   }
 
