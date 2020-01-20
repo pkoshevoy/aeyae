@@ -202,7 +202,8 @@ namespace yae
     Splitter(const char * id,
              const ItemRef & lowerBound,
              const ItemRef & upperBound,
-             Orientation orientation):
+             Orientation orientation,
+             double initialPos = 0.0):
       InputArea(id, true),
       orientation_(orientation),
       lowerBound_(lowerBound),
@@ -211,6 +212,10 @@ namespace yae
       posOffset_(0)
     {
       pos_ = addExpr(new Pos(*this));
+
+      double v_min = lowerBound_.get();
+      double v_max = upperBound_.get();
+      posAnchor_ = initialPos * (v_max - v_min);
     }
 
     // virtual:
@@ -3101,7 +3106,9 @@ namespace yae
                        hidden.addExpr
                        (new SplitterPos(view, overview, SplitterPos::kRight)),
                        // orientation:
-                       Splitter::kHorizontal));
+                       Splitter::kHorizontal,
+                       // initial position:
+                       0.4));
     splitter.anchors_.inset(sep, -5.0, 0.0);
 
     sep.anchors_.top_ = ItemRef::reference(overview, kPropertyTop);
