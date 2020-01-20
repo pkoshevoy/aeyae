@@ -834,6 +834,36 @@ namespace yae
     uint32_t gps_time_;
   };
 
+
+  //----------------------------------------------------------------
+  // DeleteRecording
+  //
+  struct DeleteRecording : public InputArea
+  {
+    DeleteRecording(const char * id, AppView & view, const std::string & rec):
+      InputArea(id),
+      view_(view),
+      rec_(rec)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.delete_recording(rec_);
+      return true;
+    }
+
+    AppView & view_;
+    std::string rec_;
+  };
+
+
   //----------------------------------------------------------------
   // CollapseExpand
   //
@@ -986,6 +1016,41 @@ namespace yae
     }
 
     std::string path_;
+  };
+
+
+  //----------------------------------------------------------------
+  // GetTexTrashcan
+  //
+  struct GetTexTrashcan : public TTextureExpr
+  {
+    GetTexTrashcan(AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const
+    {
+      const AppStyle & style = *(view_.style());
+      Item & root = *(view_.root());
+      Item & hidden = root.get<Item>("hidden");
+
+      uint32_t l = yae::floor_log2<double>(hidden.width());
+      l = std::min<uint32_t>(l, 8);
+      uint32_t tex_width = 1 << l;
+
+      QImage img = trashcanImage(// texture width, power of 2:
+                                 tex_width,
+                                 // color:
+                                 style.fg_.get(),
+                                 // background color:
+                                 style.fg_.get().transparent());
+
+      style.trashcan_->setImage(img);
+      result = style.trashcan_;
+    }
+
+    AppView & view_;
   };
 
 
@@ -1276,28 +1341,14 @@ namespace yae
     // generate collapsed group button texture:
     collapsed_ = Item::addHidden<Texture>
       (new Texture("collapsed", QImage())).sharedPtr<Texture>();
-    {
-      /*
-      QImage img = triangleImage(128,
-                                 fg_group_.get(),
-                                 bg_group_.get().transparent(),
-                                 90.0);
-      collapsed_->setImage(img);
-      */
-    }
 
     // generate expanded group button texture:
     expanded_ = Item::addHidden<Texture>
       (new Texture("expanded", QImage())).sharedPtr<Texture>();
-    {
-      /*
-      QImage img = triangleImage(128,
-                                 fg_group_.get(),
-                                 bg_group_.get().transparent(),
-                                 180.0);
-      expanded_->setImage(img);
-      */
-    }
+
+    // generate trashcan texture:
+    trashcan_ = Item::addHidden<Texture>
+      (new Texture("trashcan", QImage())).sharedPtr<Texture>();
   }
 
   //----------------------------------------------------------------
@@ -1322,6 +1373,7 @@ namespace yae
 
     collapsed_->uncache();
     expanded_->uncache();
+    trashcan_->uncache();
 
     ItemViewStyle::uncache();
   }
@@ -2748,7 +2800,7 @@ namespace yae
       h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
       h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
       h3.anchors_.right_ = ItemRef::reference(l3, kPropertyLeft);
-      h3.width_ = ItemRef::reference(hidden, kUnitSize, 4.0);
+      h3.width_ = ItemRef::reference(hidden, kUnitSize, 3.5);
 
       Text & t3 = h3.addNew<Text>("t3");
       t3.anchors_.vcenter(h3);
@@ -2772,7 +2824,7 @@ namespace yae
       h4.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
       h4.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
       h4.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-      h4.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+      h4.width_ = ItemRef::reference(hidden, kUnitSize, 3.0);
 
       Text & t4 = h4.addNew<Text>("t4");
       t4.anchors_.vcenter(h4);
@@ -2845,35 +2897,41 @@ namespace yae
         bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
         bg.visible_ = bg.addExpr(new IsOddRow(layout.index_, row.id_));
 
+        // thumbnail, title, description:
+        Item & inner = row.addNew<Item>("inner");
+        inner.anchors_.fill(row);
+        inner.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.26));
+
+        Item & row1 = row.addNew<Item>("row1");
+        row1.anchors_.fill(row);
+        row1.anchors_.bottom_.reset();
+        row1.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+        row1.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
+
         Item & c1 = row.addNew<Item>("c1");
         Item & c2 = row.addNew<Item>("c2");
         Item & c3 = row.addNew<Item>("c3");
         Item & c4 = row.addNew<Item>("c4");
 
-        c1.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
-        c1.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
-        c1.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c1.anchors_.top_ = ItemRef::reference(row1, kPropertyTop);
+        c1.anchors_.left_ = ItemRef::reference(row1, kPropertyLeft);
+        c1.anchors_.bottom_ = ItemRef::reference(row1, kPropertyBottom);
         c1.width_ = ItemRef::reference(h1, kPropertyWidth);
 
-        c2.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c2.anchors_.top_ = ItemRef::reference(row1, kPropertyTop);
         c2.anchors_.left_ = ItemRef::reference(c1, kPropertyRight);
-        c2.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c2.anchors_.bottom_ = ItemRef::reference(row1, kPropertyBottom);
         c2.width_ = ItemRef::reference(h2, kPropertyWidth);
 
-        c3.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c3.anchors_.top_ = ItemRef::reference(row1, kPropertyTop);
         c3.anchors_.left_ = ItemRef::reference(c2, kPropertyRight);
-        c3.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c3.anchors_.bottom_ = ItemRef::reference(row1, kPropertyBottom);
         c3.width_ = ItemRef::reference(h3, kPropertyWidth);
 
-        c4.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
+        c4.anchors_.top_ = ItemRef::reference(row1, kPropertyTop);
         c4.anchors_.left_ = ItemRef::reference(c3, kPropertyRight);
-        c4.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+        c4.anchors_.bottom_ = ItemRef::reference(row1, kPropertyBottom);
         c4.width_ = ItemRef::reference(h4, kPropertyWidth);
-
-        // thumbnail, title, description:
-        Item & inner = row.addNew<Item>("inner");
-        inner.anchors_.fill(row);
-        inner.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
 
         Image & thumbnail = inner.addNew<Image>("thumbnail");
         thumbnail.setContext(view);
@@ -2887,10 +2945,10 @@ namespace yae
         thumbnail.url_ = TVarRef::constant(QString::fromUtf8(url.c_str()));
 
         Text & title = c1.addNew<Text>("title");
-        title.anchors_.top_ = ItemRef::reference(c1, kPropertyTop);
+        title.anchors_.vcenter(c1);
         title.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
-        title.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
-        title.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.26));
+        title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.26));
         title.font_ = style.font_;
         title.font_.setWeight(62);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -2905,9 +2963,10 @@ namespace yae
         Text & desc = c1.addNew<Text>("desc");
         desc.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
         desc.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
-        desc.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
-        desc.anchors_.bottom_ = ItemRef::reference(c1, kPropertyBottom);
-        desc.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        desc.anchors_.right_ = ItemRef::reference(inner, kPropertyRight);
+        desc.anchors_.bottom_ = ItemRef::reference(inner, kPropertyBottom);
+        desc.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
+        desc.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.26));
         desc.font_ = style.font_;
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.elide_ = Qt::ElideNone;
@@ -2918,15 +2977,12 @@ namespace yae
         desc.text_ =
           TVarRef::constant(TVar(QString::fromUtf8(rec.description_.c_str())));
         desc.setAttr("linewrap", true);
-#if 0
-        Rectangle & fixme = row.addNew<Rectangle>("fixme");
-        fixme.anchors_.fill(desc);
-        fixme.color_ = ColorRef::constant(Color(0x00FF00, 0.5));
-#endif
+
         // duration:
         Text & length = c2.addNew<Text>("length");
-        length.anchors_.fill(c2);
-        length.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        length.anchors_.vcenter(c2);
+        length.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        length.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         length.font_ = style.font_;
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         length.font_.setWeight(62);
@@ -2940,8 +2996,9 @@ namespace yae
 
         // when recorded:
         Text & date = c3.addNew<Text>("date");
-        date.anchors_.fill(c3);
-        date.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        date.anchors_.vcenter(c3);
+        date.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        date.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         date.font_ = style.font_;
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         date.font_.setWeight(62);
@@ -2955,8 +3012,9 @@ namespace yae
 
         // file size:
         Text & nbytes = c4.addNew<Text>("nbytes");
-        nbytes.anchors_.fill(c4);
-        nbytes.margins_.set(ItemRef::reference(row, kPropertyHeight, 0.13));
+        nbytes.anchors_.vcenter(c4);
+        nbytes.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        nbytes.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.26));
         nbytes.font_ = style.font_;
         nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         nbytes.font_.setWeight(62);
@@ -2967,6 +3025,33 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
         nbytes.text_ = nbytes.addExpr(new GetFileSize(path));
         nbytes.text_.disableCaching();
+
+        // trashcan:
+        RoundRect & trashcan_bg = c4.addNew<RoundRect>("trashcan_bg");
+        TexturedRect & trashcan = c4.addNew<TexturedRect>("trashcan");
+        trashcan.anchors_.top_ =
+          ItemRef::reference(nbytes, kPropertyTop);
+        trashcan.anchors_.bottom_ =
+          ItemRef::reference(nbytes, kPropertyBottom);
+        trashcan.anchors_.right_ =
+          ItemRef::reference(inner, kPropertyRight);
+        trashcan.margins_.
+          set_bottom(ItemRef::reference(nbytes, kPropertyFontDescent));
+        trashcan.width_ = ItemRef::reference(trashcan, kPropertyHeight);
+        trashcan.texture_ = trashcan.addExpr(new GetTexTrashcan(view));
+
+        trashcan_bg.anchors_.center(trashcan);
+        trashcan_bg.width_ = ItemRef::scale(trashcan, kPropertyHeight, 2);
+        trashcan_bg.height_ = ItemRef::reference(trashcan_bg, kPropertyWidth);
+        trashcan_bg.radius_ = ItemRef::scale(trashcan_bg, kPropertyWidth, 0.5);
+        trashcan_bg.color_ = trashcan_bg.
+          addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+        trashcan_bg.background_ = trashcan_bg.
+          addExpr(style_color_ref(view, &AppStyle::fg_, 0.0));
+
+        DeleteRecording & trashcan_ia =
+          c4.add(new DeleteRecording("trashcan_ia", view, name));
+        trashcan_ia.anchors_.fill(trashcan_bg);
       }
 
       rows[name] = rowlayout_ptr;
@@ -3058,6 +3143,28 @@ namespace yae
       requestRepaint();
       return;
     }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::delete_recording
+  //
+  void
+  AppView::delete_recording(const std::string & name)
+  {
+    TRecordings::iterator found = recordings_.find(name);
+    YAE_ASSERT(found != recordings_.end());
+    if (found == recordings_.end())
+    {
+      return;
+    }
+
+    const Recording & rec = *(found->second);
+
+    // FIXME: ask for confirmation:
+
+    // stop recording, if recording
+    // then delete the recording
+    yae_wlog("DELETE: %s", rec.get_filepath(dvr_->basedir_).c_str());
   }
 
   //----------------------------------------------------------------
@@ -3558,7 +3665,7 @@ namespace yae
     h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
     h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
     h3.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-    h3.width_ = ItemRef::reference(hidden, kUnitSize, 4.0);
+    h3.width_ = ItemRef::reference(hidden, kUnitSize, 3.5);
 
     Text & t3 = h3.addNew<Text>("t3");
     t3.anchors_.vcenter(h3);

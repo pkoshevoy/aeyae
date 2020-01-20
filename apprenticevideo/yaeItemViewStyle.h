@@ -59,6 +59,14 @@ namespace yae
             double thickness = 0.8,
             double rotateAngle = 0.0);
 
+  //----------------------------------------------------------------
+  // trashcanImage
+  //
+  YAEUI_API QImage
+  trashcanImage(unsigned int w,
+                const Color & color,
+                const Color & background);
+
 
   //----------------------------------------------------------------
   // ItemViewStyle

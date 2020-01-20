@@ -236,6 +236,101 @@ namespace yae
     return img;
   }
 
+  //----------------------------------------------------------------
+  // trashcanImage
+  //
+  QImage
+  trashcanImage(unsigned int w,
+                const Color & color,
+                const Color & background)
+  {
+    QImage img(w, w, QImage::Format_ARGB32);
+
+    // supersample each pixel:
+    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+
+    static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
+
+#if 0
+    static const BBox shapes[] = {
+      BBox(0.40, 0.0, 0.2, 0.1), // handle
+      BBox(0.10, 0.1, 0.8, 0.1), // lid
+      BBox(0.15, 0.3, 0.1, 0.7), // bar1
+      BBox(0.35, 0.3, 0.1, 0.7), // bar2
+      BBox(0.55, 0.3, 0.1, 0.7), // bar3
+      BBox(0.75, 0.3, 0.1, 0.7), // bar4
+    };
+#else
+    static const BBox shapes[] = {
+      BBox(0.45, 0.0, 0.1, 0.1), // handle
+      BBox(0.15, 0.1, 0.7, 0.1), // lid
+      BBox(0.25, 0.3, 0.1, 0.7), // bar1
+      BBox(0.45, 0.3, 0.1, 0.7), // bar2
+      BBox(0.65, 0.3, 0.1, 0.7), // bar3
+    };
+#endif
+
+    static const unsigned int num_shapes = sizeof(shapes) / sizeof(shapes[0]);
+
+    TVec2D u_axis(w, 0);
+    TVec2D v_axis(0, w);
+    TVec2D origin(0.0, 0.0);
+
+    Vec<double, 4> outerColor(background);
+    Vec<double, 4> innerColor(color);
+    TVec2D samplePoint;
+
+    double sampleSize = 1.0 / double(w * supersample);
+    double sampleArea = sampleSize * sampleSize;
+    BBox sampleBox(0, 0, sampleSize, sampleSize);
+
+    for (int y = 0; y < int(w); y++)
+    {
+      unsigned char * dst = img.scanLine(y);
+      samplePoint.set_y(y);
+
+      for (int x = 0; x < int(w); x++, dst += 4)
+      {
+        samplePoint.set_x(x);
+
+        double outer = 0.0;
+        double inner = 0.0;
+        unsigned int num_samples = 0;
+
+        for (unsigned int k = 0; k < supersample; k++)
+        {
+          TVec2D wcs_pt = samplePoint + sp[k];
+          TVec2D pt = wcs_to_lcs(origin, u_axis, v_axis, wcs_pt);
+          sampleBox.x_ = pt.x();
+          sampleBox.y_ = pt.y();
+
+          double overlapMax = 0.0;
+          for (unsigned int z = 0; z < num_shapes; z++)
+          {
+            const BBox & shape = shapes[z];
+            double overlapArea = shape.intersect(sampleBox).area();
+            overlapMax = std::max(overlapMax, overlapArea);
+          }
+
+          double innerOverlap = overlapMax / sampleArea;
+          double outerOverlap = 1.0 - innerOverlap;
+
+          outer += outerOverlap;
+          inner += innerOverlap;
+          num_samples += 1;
+        }
+
+        double outerWeight = outer / double(num_samples);
+        double innerWeight = inner / double(num_samples);
+        Color c(outerColor * outerWeight + innerColor * innerWeight);
+        memcpy(dst, &(c.argb_), sizeof(c.argb_));
+      }
+    }
+
+    return img;
+  }
+
 
   //----------------------------------------------------------------
   // ItemViewStyle::ItemViewStyle

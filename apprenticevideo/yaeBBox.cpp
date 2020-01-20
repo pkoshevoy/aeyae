@@ -57,4 +57,27 @@ namespace yae
       }
     }
   }
+
+  //----------------------------------------------------------------
+  // BBox::intersect
+  //
+  BBox
+  BBox::intersect(const BBox & b) const
+  {
+    const BBox & a = *this;
+
+    double x0 = (a.x0() < b.x0()) ? b.x0() : a.x0();
+    double x1 = (a.x1() < b.x1()) ? a.x1() : b.x1();
+
+    double y0 = (a.y0() < b.y0()) ? b.y0() : a.y0();
+    double y1 = (a.y1() < b.y1()) ? a.y1() : b.y1();
+
+    if (x0 < x1 && y0 < y1)
+    {
+      return BBox(x0, y0, x1 - x0, y1 - y0);
+    }
+
+    return BBox();
+  }
+
 }

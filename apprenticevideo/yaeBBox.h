@@ -32,9 +32,17 @@ namespace yae
       h_(0.0)
     {}
 
+    BBox(double x, double y, double w, double h):
+      x_(x),
+      y_(y),
+      w_(w),
+      h_(h)
+    {}
+
     void clear();
     bool isEmpty() const;
     void expand(const BBox & bbox);
+    BBox intersect(const BBox & bbox) const;
 
     inline bool disjoint(const BBox & b) const
     {
@@ -56,6 +64,18 @@ namespace yae
     { return y_; }
 
     inline double bottom() const
+    { return y_ + h_; }
+
+    inline double x0() const
+    { return x_; }
+
+    inline double x1() const
+    { return x_ + w_; }
+
+    inline double y0() const
+    { return y_; }
+
+    inline double y1() const
     { return y_ + h_; }
 
     inline Segment x() const
@@ -99,6 +119,9 @@ namespace yae
 
     inline double aspectRatio() const
     { return h_ == 0.0 ? 0.0 : (w_ / h_); }
+
+    inline double area() const
+    { return w_ * h_; }
 
     double x_;
     double y_;

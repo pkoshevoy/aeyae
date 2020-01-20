@@ -75,6 +75,7 @@ namespace yae
 
     TTexturePtr collapsed_;
     TTexturePtr expanded_;
+    TTexturePtr trashcan_;
   };
 
   //----------------------------------------------------------------
@@ -153,6 +154,7 @@ namespace yae
                           const TRecordings & playlist_recs);
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
+    void delete_recording(const std::string & name);
 
   protected:
     // helpers:
