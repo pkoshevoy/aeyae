@@ -2601,7 +2601,7 @@ namespace yae
 
         count_bg.anchors_.center(count, -1.0, -1.0);
         count_bg.width_ = count_bg.
-          addExpr(new OddRoundUp(count, kPropertyWidth));
+          addExpr(new OddRoundUp(count, kPropertyWidth, 1.0, 7.0));
         count_bg.height_ = count_bg.
           addExpr(new OddRoundUp(count, kPropertyHeight));
         count_bg.radius_ = ItemRef::scale(count, kPropertyHeight, 0.5);
