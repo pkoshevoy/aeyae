@@ -423,6 +423,8 @@ namespace yae
     font_size_ = addExpr(new GetFontSize(title_height_, 0.52,
                                          cell_height_, 0.15));
 
+    unit_size_ = title_height_;
+
     // color palette:
     bg_ = ColorRef::constant(Color(0x1f1f1f, 0.87));
     fg_ = ColorRef::constant(Color(0xffffff, 1.0));
@@ -525,6 +527,7 @@ namespace yae
     cell_height_.uncache();
     title_height_.uncache();
     font_size_.uncache();
+    unit_size_.uncache();
 
     bg_.uncache();
     fg_.uncache();

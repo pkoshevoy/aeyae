@@ -132,6 +132,9 @@ namespace yae
                              const char * suffix = ".mpg") const;
     yae::TOpenFilePtr open_file(const fs::path & basedir);
 
+    inline uint32_t ch_num() const
+    { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
+
     bool cancelled_;
     uint64_t utc_t0_;
     uint32_t gps_t0_;
@@ -191,6 +194,7 @@ namespace yae
              uint32_t gps_time,
              uint32_t margin_sec) const;
 
+    bool toggle(uint32_t ch_num, uint32_t gps_time);
     void remove(uint32_t ch_num, uint32_t gps_time);
 
     void save(Json::Value & json) const;
@@ -355,6 +359,9 @@ namespace yae
     yae::shared_ptr<Wishlist::Item>
     explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
                          const yae::mpeg_ts::EPG::Program & program) const;
+
+    void toggle_recording(uint32_t ch_num, uint32_t gps_time);
+    void delete_recording(const Recording & rec);
 
     void remove_excess_recordings(const Recording & rec);
     bool make_room_for(const Recording & rec, uint64_t num_sec);

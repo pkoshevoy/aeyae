@@ -1357,8 +1357,6 @@ namespace yae
   void
   AppStyle::uncache()
   {
-    unit_size_.uncache();
-
     bg_sidebar_.uncache();
     bg_splitter_.uncache();
     bg_epg_.uncache();
@@ -1776,7 +1774,7 @@ namespace yae
         maj_min.text_ = TVarRef::constant(TVar(ch_str.c_str()));
         maj_min.elide_ = Qt::ElideNone;
         maj_min.color_ = maj_min.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
         maj_min.background_ = maj_min.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
 
@@ -2964,7 +2962,7 @@ namespace yae
         desc.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
         desc.anchors_.left_ = ItemRef::reference(thumbnail, kPropertyRight);
         desc.anchors_.right_ = ItemRef::reference(inner, kPropertyRight);
-        desc.anchors_.bottom_ = ItemRef::reference(inner, kPropertyBottom);
+        desc.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
         desc.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
         desc.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.26));
         desc.font_ = style.font_;
@@ -3079,70 +3077,10 @@ namespace yae
   void
   AppView::toggle_recording(uint32_t ch_num, uint32_t gps_time)
   {
-    yae::shared_ptr<Wishlist::Item> explicitly_scheduled;
-    const yae::mpeg_ts::EPG::Channel * channel = NULL;
-    const yae::mpeg_ts::EPG::Program * program = NULL;
-
-    if (epg_.find(ch_num, gps_time, channel, program))
-    {
-      explicitly_scheduled = dvr_->explicitly_scheduled(*channel, *program);
-    }
-    else
-    {
-      yae_elog("toggle recording: not found in EPG");
-    }
-
-    if (explicitly_scheduled)
-    {
-      yae_ilog("cancel recording: %02i.%02i %02i:%02i %s",
-               channel->major_,
-               channel->minor_,
-               program->tm_.tm_hour,
-               program->tm_.tm_min,
-               program->title_.c_str());
-      dvr_->cancel_recording(*channel, *program);
-      schedule_.clear();
-      sync_ui();
-      return;
-    }
-
-    std::map<uint32_t, TScheduledRecordings>::const_iterator
-      found_sched = schedule_.find(ch_num);
-    if (found_sched != schedule_.end())
-    {
-      const TScheduledRecordings & schedule = found_sched->second;
-      TScheduledRecordings::const_iterator found_rec = schedule.find(gps_time);
-      if (found_rec != schedule.end())
-      {
-        TRecordingPtr rec_ptr = found_rec->second;
-        Recording & rec = *rec_ptr;
-        rec.cancelled_ = !rec.cancelled_;
-        yae_ilog("%s wishlist recording: %02i.%02i %02i:%02i %s",
-                 rec.cancelled_ ? "cancel" : "schedule",
-                 channel->major_,
-                 channel->minor_,
-                 program->tm_.tm_hour,
-                 program->tm_.tm_min,
-                 program->title_.c_str());
-        schedule_.clear();
-        sync_ui();
-        return;
-      }
-    }
-
-    if (channel && program)
-    {
-      yae_ilog("schedule recording: %02i.%02i %02i:%02i %s",
-               channel->major_,
-               channel->minor_,
-               program->tm_.tm_hour,
-               program->tm_.tm_min,
-               program->title_.c_str());
-      dvr_->schedule_recording(*channel, *program);
-      schedule_.clear();
-      requestRepaint();
-      return;
-    }
+    dvr_->toggle_recording(ch_num, gps_time);
+    schedule_.clear();
+    sync_ui();
+    requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -3158,13 +3096,9 @@ namespace yae
       return;
     }
 
-    const Recording & rec = *(found->second);
-
-    // FIXME: ask for confirmation:
-
-    // stop recording, if recording
-    // then delete the recording
-    yae_wlog("DELETE: %s", rec.get_filepath(dvr_->basedir_).c_str());
+    // ask for confirmation:
+    TRecordingPtr rec_ptr = found->second;
+    emit confirm_delete(rec_ptr);
   }
 
   //----------------------------------------------------------------

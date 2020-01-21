@@ -278,6 +278,10 @@ namespace yae
     ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(confirm_delete(TRecordingPtr)),
+                 this, SLOT(confirmDelete(TRecordingPtr)));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -307,6 +311,15 @@ namespace yae
     view_.setEnabled(true);
     view_.layoutChanged();
 
+    // action confirmation view:
+    confirm_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    confirm_.query_fullscreen_.reset(&context_query_fullscreen, this);
+
+    canvas_->append(&confirm_);
+    confirm_.setStyle(view_.style());
+    confirm_.setEnabled(false);
+
+    // spinner view:
     spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
     spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
@@ -453,6 +466,58 @@ namespace yae
   {
     yae::swapShortcuts(shortcutExit_, actionExit);
     yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
+  }
+
+  //----------------------------------------------------------------
+  // ConfirmDeleteRecording
+  //
+  struct ConfirmDeleteRecording : ConfirmView::Action
+  {
+    ConfirmDeleteRecording(AppView & view, const TRecordingPtr & rec):
+      view_(view),
+      rec_(rec)
+    {}
+
+    // virtual:
+    void operator()() const
+    {
+      const Recording & rec = *rec_;
+      view_.model()->delete_recording(rec);
+      view_.sync_ui();
+      view_.requestRepaint();
+    }
+
+    AppView & view_;
+    TRecordingPtr rec_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::confirmDelete
+  //
+  void
+  MainWindow::confirmDelete(TRecordingPtr rec_ptr)
+  {
+    const Recording & rec = *rec_ptr;
+    const AppStyle & style = *(view_.style());
+
+    std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
+    confirm_.message_ = TVarRef::constant(TVar(msg));
+    confirm_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm_.fg_ = style.bg_;
+
+    confirm_.affirmative_.reset(new ConfirmDeleteRecording(view_, rec_ptr));
+    ConfirmView::Action & aff = *confirm_.affirmative_;
+    aff.message_ = TVarRef::constant(TVar("Delete"));
+    aff.bg_ = style.cursor_;
+    aff.fg_ = style.fg_;
+
+    confirm_.negative_.reset(new ConfirmView::Action());
+    ConfirmView::Action & neg = *confirm_.negative_;
+    neg.message_ = TVarRef::constant(TVar("Cancel"));
+    neg.bg_ = style.fg_;
+    neg.fg_ = style.bg_;
+
+    confirm_.setEnabled(true);
   }
 
   //----------------------------------------------------------------

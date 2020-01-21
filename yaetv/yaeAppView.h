@@ -55,8 +55,6 @@ namespace yae
 
     virtual void uncache();
 
-    ItemRef unit_size_;
-
     ColorRef bg_sidebar_;
     ColorRef bg_splitter_;
     ColorRef bg_epg_;
@@ -137,6 +135,7 @@ namespace yae
 
   signals:
     void toggle_fullscreen();
+    void confirm_delete(TRecordingPtr);
 
   public slots:
     void layoutChanged();

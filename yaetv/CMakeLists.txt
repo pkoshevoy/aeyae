@@ -124,6 +124,7 @@ endif ()
 set(project_moc_hxx
 
   yaeAppView.h
+  yaeConfirmView.h
   yaeMainWindow.h
 
   ../apprenticevideo/yaeCanvasWidget.h
@@ -153,6 +154,8 @@ set(project_sources
 
   yaeAppView.cpp
   yaeAppView.h
+  yaeConfirmView.cpp
+  yaeConfirmView.h
   yaeMainWindow.cpp
   yaeMainWindow.h
 

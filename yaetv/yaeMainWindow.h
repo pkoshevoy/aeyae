@@ -27,6 +27,7 @@
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
+#include "yaeConfirmView.h"
 #include "yaeSpinnerView.h"
 
 // uic:
@@ -89,6 +90,7 @@ namespace yae
     void enterFullScreen();
     void exitFullScreen();
     void swapShortcuts();
+    void confirmDelete(TRecordingPtr);
 
   protected:
     // virtual:
@@ -112,6 +114,7 @@ namespace yae
 
     yae::DVR dvr_;
     AppView view_;
+    ConfirmView confirm_;
     SpinnerView spinner_;
 
     // background thread, etc...

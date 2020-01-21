@@ -852,6 +852,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Schedule::toggle
+  //
+  bool
+  Schedule::toggle(uint32_t ch_num, uint32_t gps_time)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    std::map<uint32_t, TScheduledRecordings>::iterator
+      found_sched = recordings_.find(ch_num);
+    if (found_sched == recordings_.end())
+    {
+      return false;
+    }
+
+    TScheduledRecordings & schedule = found_sched->second;
+    TScheduledRecordings::iterator found_rec = schedule.find(gps_time);
+    if (found_rec == schedule.end())
+    {
+      return false;
+    }
+
+    Recording & rec = *(found_rec->second);
+    rec.cancelled_ = !(rec.cancelled_);
+
+    yae_ilog("%s wishlist recording: %s",
+             rec.cancelled_ ? "cancel" : "schedule",
+             rec.get_basename().c_str());
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // Schedule::remove
   //
   void
@@ -2346,6 +2376,13 @@ namespace yae
     TTime t1 = t0 + TTime(program.duration_, 1);
     rec.when_ = Timespan(t0, t1);
 
+    yae_ilog("schedule recording: %02i.%02i %02i:%02i %s",
+             channel.major_,
+             channel.minor_,
+             program.tm_.tm_hour,
+             program.tm_.tm_min,
+             program.title_.c_str());
+
     Json::Value json;
     yae::save(json, rec);
 
@@ -2386,6 +2423,13 @@ namespace yae
   DVR::cancel_recording(const yae::mpeg_ts::EPG::Channel & channel,
                         const yae::mpeg_ts::EPG::Program & program)
   {
+    yae_ilog("cancel recording: %02i.%02i %02i:%02i %s",
+             channel.major_,
+             channel.minor_,
+             program.tm_.tm_hour,
+             program.tm_.tm_min,
+             program.title_.c_str());
+
     // avoid race condition with Schedule::update:
     boost::unique_lock<boost::mutex> lock(mutex_);
 
@@ -2438,35 +2482,35 @@ namespace yae
   // remove_recording
   //
   static uint64_t
-  remove_recording(const std::string & ts)
+  remove_recording(const std::string & mpg)
   {
-    yae_ilog("removing %s", ts.c_str());
+    yae_ilog("removing %s", mpg.c_str());
 
-    uint64_t size_ts = yae::stat_filesize(ts.c_str());
-    if (!yae::remove_utf8(ts))
+    uint64_t size_mpg = yae::stat_filesize(mpg.c_str());
+    if (!yae::remove_utf8(mpg))
     {
-      yae_wlog("failed to remove %s", ts.c_str());
+      yae_wlog("failed to remove %s", mpg.c_str());
       return 0;
     }
 
-    std::string json = ts.substr(0, ts.size() - 4) + ".json";
+    std::string json = mpg.substr(0, mpg.size() - 4) + ".json";
     if (!yae::remove_utf8(json))
     {
       yae_wlog("failed to remove %s", json.c_str());
     }
 
-    return size_ts;
+    return size_mpg;
   }
 
   //----------------------------------------------------------------
   // load_recording
   //
   static TRecordingPtr
-  load_recording(const std::string & ts)
+  load_recording(const std::string & mpg)
   {
     try
     {
-      std::string path = ts.substr(0, ts.size() - 4) + ".json";
+      std::string path = mpg.substr(0, mpg.size() - 4) + ".json";
       Json::Value json;
       yae::TOpenFile(path, "rb").load(json);
       TRecordingPtr rec_ptr(new Recording());
@@ -2477,6 +2521,71 @@ namespace yae
     {}
 
     return TRecordingPtr();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::toggle_recording
+  //
+  void
+  DVR::toggle_recording(uint32_t ch_num, uint32_t gps_time)
+  {
+    yae::shared_ptr<Wishlist::Item> explicitly_scheduled;
+    yae::mpeg_ts::EPG::Channel channel;
+
+    // avoid race condition with EPG updates:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      channel = yae::get(epg_.channels_, ch_num);
+    }
+
+    const yae::mpeg_ts::EPG::Program * program = channel.find(gps_time);
+    if (program)
+    {
+      explicitly_scheduled = DVR::explicitly_scheduled(channel, *program);
+    }
+    else
+    {
+      yae_elog("toggle recording: not found in EPG");
+    }
+
+    if (explicitly_scheduled)
+    {
+      cancel_recording(channel, *program);
+      return;
+    }
+
+    if (schedule_.toggle(ch_num, gps_time))
+    {
+      return;
+    }
+
+    if (program)
+    {
+      schedule_recording(channel, *program);
+      return;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::delete_recording
+  //
+  void
+  DVR::delete_recording(const Recording & rec)
+  {
+    // shortcut:
+    uint32_t ch_num = rec.ch_num();
+
+    // cancel recording, if recording:
+    {
+      TRecordingPtr rec_ptr = schedule_.get(rec.ch_num(), rec.gps_t0_);
+      if (rec_ptr && !rec_ptr->cancelled_)
+      {
+        toggle_recording(ch_num, rec.gps_t0_);
+      }
+    }
+
+    yae_ilog("deleting recording %s", rec.get_filepath(basedir_).c_str());
+    remove_recording(rec.get_filepath(basedir_));
   }
 
   //----------------------------------------------------------------
@@ -2503,8 +2612,8 @@ namespace yae
     for (std::map<std::string, std::string>::iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
-      const std::string & ts = i->second;
-      TRecordingPtr rec_ptr = load_recording(ts);
+      const std::string & mpg = i->second;
+      TRecordingPtr rec_ptr = load_recording(mpg);
 
       if (rec.utc_t0_ == rec_ptr->utc_t0_)
       {
@@ -2512,7 +2621,7 @@ namespace yae
         continue;
       }
 
-      recs.push_back(std::make_pair(ts, rec_ptr));
+      recs.push_back(std::make_pair(mpg, rec_ptr));
       num_recordings++;
     }
 
@@ -2525,14 +2634,14 @@ namespace yae
         break;
       }
 
-      const std::string & ts = i->first;
+      const std::string & mpg = i->first;
       const TRecordingPtr & rec_ptr = i->second;
       if (rec.utc_t0_ <= rec_ptr->utc_t0_)
       {
         continue;
       }
 
-      if (remove_recording(ts))
+      if (remove_recording(mpg))
       {
         removed_recordings++;
       }
@@ -2589,8 +2698,8 @@ namespace yae
         break;
       }
 
-      const std::string & ts = i->second;
-      removed_bytes += remove_recording(ts);
+      const std::string & mpg = i->second;
+      removed_bytes += remove_recording(mpg);
     }
 
     if (title_bytes < available_bytes + removed_bytes)
@@ -2630,8 +2739,8 @@ namespace yae
     for (std::map<std::string, std::string>::iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
-      const std::string & ts = i->second;
-      TRecordingPtr rec_ptr = load_recording(ts);
+      const std::string & mpg = i->second;
+      TRecordingPtr rec_ptr = load_recording(mpg);
       if (!rec_ptr)
       {
         continue;
@@ -2646,9 +2755,9 @@ namespace yae
       }
 
       // check that the existing recording is approximately complete:
-      std::string json_path = ts.substr(0, ts.size() - 4) + ".json";
+      std::string json_path = mpg.substr(0, mpg.size() - 4) + ".json";
       int64_t utc_t0 = yae::stat_lastmod(json_path.c_str());
-      int64_t utc_t1 = yae::stat_lastmod(ts.c_str());
+      int64_t utc_t1 = yae::stat_lastmod(mpg.c_str());
       int64_t recorded_duration = utc_t1 - utc_t0;
       if (program.duration_ <= recorded_duration)
       {

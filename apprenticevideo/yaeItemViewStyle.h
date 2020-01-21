@@ -100,6 +100,7 @@ namespace yae
     ItemRef cell_height_;
     ItemRef title_height_;
     ItemRef font_size_;
+    ItemRef unit_size_;
 
     // color palette:
     ColorRef bg_;
