@@ -232,6 +232,17 @@ namespace yae
                double maxWidth,
                double maxHeight)
   {
+    if (maxWidth <= 0.0 || maxHeight <= 0.0)
+    {
+#if 0
+      yae_dlog("%s, max bbox [%f x %f]",
+               item.text_.get().toString().toUtf8().constData(),
+               maxWidth, maxHeight);
+#endif
+      bbox.clear();
+      return;
+    }
+
     QFont font = item.font_;
     double fontSize = std::max(9.0, item.fontSize_.get());
     double supersample = item.supersample_.get();
@@ -256,8 +267,8 @@ namespace yae
       (maxHeight < double(std::numeric_limits<short int>::max())) ?
       (rect.y() / supersample) : 0.0;
 
-    bbox.w_ = std::min(maxWidth, rect.width() / supersample);
-    bbox.h_ = std::min(maxHeight, rect.height() / supersample);
+    bbox.w_ = std::max(0.0, std::min(maxWidth, rect.width() / supersample));
+    bbox.h_ = std::max(0.0, std::min(maxHeight, rect.height() / supersample));
 
 #if QT_VERSION >= 0x050600
     if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
