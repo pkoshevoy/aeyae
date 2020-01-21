@@ -1,2 +1,4 @@
 # emacs backup files
 *~
+.DS_Store
+CMakeLists.txt.user*
