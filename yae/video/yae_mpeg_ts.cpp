@@ -5594,10 +5594,47 @@ namespace yae
                                                eit.section_number_,
                                                eit.last_section_number_);
 
+      // GPS time rounded down to nearest 3 hours
+      // (each EIT table spans 3 hours):
+      uint32_t t_now = TTime::gps_now().get(1);
+      int64_t t_eit = t_now - t_now % 10800;
+      int64_t t_min = t_eit + 10800 * (eit_index);
+      int64_t t_max = t_eit + 10800 * (eit_index + 1);
+#if 0
+      yae_wlog("%sEIT-0 origin %s, EIT-%i time window [%s, %s]",
+               log_prefix_.c_str(),
+               unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                t_eit).c_str(),
+               eit_index,
+               unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                t_min).c_str(),
+               unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                t_max).c_str());
+#endif
       std::list<ChannelGuide::Item> new_items;
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
       {
         const EventInformationTable::Event & e = eit.event_[i];
+        uint32_t event_t0 = e.start_time_  - e.start_time_ % 60;
+        uint32_t event_t1 = event_t0 +  e.length_in_seconds_;
+        if (event_t1 < t_min || event_t0 > t_max)
+        {
+          // event does not belong in this EIT 3 hour window, ignore it:
+          yae_wlog("%sevent %i (%s, %s, %s) falls outside "
+                   "EIT-%i time window [%s, %s]",
+                   log_prefix_.c_str(),
+                   e.event_id_,
+                   e.title_text_.to_str().c_str(),
+                   unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                    e.start_time_).c_str(),
+                   yae::TTime(e.length_in_seconds_, 1).to_hhmmss().c_str(),
+                   eit_index,
+                   unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                    t_min).c_str(),
+                   unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                    t_max).c_str());
+          continue;
+        }
 
         new_items.push_back(ChannelGuide::Item());
         ChannelGuide::Item & item = new_items.back();
