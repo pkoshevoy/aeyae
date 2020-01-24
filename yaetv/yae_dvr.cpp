@@ -443,7 +443,9 @@ namespace yae
     title_(program.title_),
     rating_(program.rating_),
     description_(program.description_),
-    max_recordings_(0)
+    max_recordings_(0),
+    dat_time_(0),
+    mpg_size_(0)
   {}
 
   //----------------------------------------------------------------
@@ -451,7 +453,7 @@ namespace yae
   //
   Recording::~Recording()
   {
-    if (file_ && file_->is_open())
+    if (mpg_ && mpg_->is_open())
     {
       std::string fn = get_basename();
       yae_ilog("stopped recording: %s", fn.c_str());
@@ -518,17 +520,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Recording::open_file
+  // Recording::open_mpg
   //
   yae::TOpenFilePtr
-  Recording::open_file(const fs::path & basedir)
+  Recording::open_mpg(const fs::path & basedir)
   {
-    if (file_ && file_->is_open())
+    if (mpg_ && mpg_->is_open())
     {
-      return file_;
+      return mpg_;
     }
 
-    file_.reset();
+    mpg_.reset();
 
     fs::path title_path = get_title_path(basedir);
     std::string title_path_str = title_path.string();
@@ -541,17 +543,21 @@ namespace yae
     std::string basename = get_basename();
     std::string basepath = (title_path / basename).string();
     std::string filepath = basepath + ".mpg";
-    file_.reset(new yae::TOpenFile(filepath, "ab"));
-    bool ok = file_->is_open();
+    mpg_.reset(new yae::TOpenFile(filepath, "ab"));
+    bool ok = mpg_->is_open();
 
     yae_ilog("writing to: %s, %s", filepath.c_str(), ok ? "ok" : "failed");
     if (!ok)
     {
-      file_.reset();
+      mpg_.reset();
       yae_elog("fopen failed for: %s", filepath.c_str());
     }
     else
     {
+      dat_time_ = 0;
+      mpg_size_ = yae::stat_filesize((basepath + ".mpg").c_str());
+      YAE_ASSERT(mpg_size_ % 188 == 0);
+
       Json::Value json;
       yae::save(json, *this);
       std::string filepath = basepath + ".json";
@@ -561,7 +567,77 @@ namespace yae
       }
     }
 
-    return file_;
+    return mpg_;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::open_dat
+  //
+  yae::TOpenFilePtr
+  Recording::open_dat(const fs::path & basedir)
+  {
+    if (dat_ && dat_->is_open())
+    {
+      return dat_;
+    }
+
+    dat_.reset();
+
+    std::string filepath = get_filepath(basedir, ".dat");
+    dat_.reset(new yae::TOpenFile(filepath, "ab"));
+
+    if (!dat_->is_open())
+    {
+      yae_wlog("fopen failed for: %s", filepath.c_str());
+      dat_.reset();
+    }
+
+    return dat_;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::write
+  //
+  void
+  Recording::write(const fs::path & basedir, const yae::IBuffer & data)
+  {
+    open_mpg(basedir);
+    if (!mpg_)
+    {
+      return;
+    }
+
+    open_dat(basedir);
+    write_dat();
+
+    YAE_ASSERT(mpg_->write(data.get(), data.size()));
+    mpg_size_ += data.size();
+  }
+
+  //----------------------------------------------------------------
+  // Recording::write_dat
+  //
+  void
+  Recording::write_dat()
+  {
+    if (!dat_)
+    {
+      return;
+    }
+
+    int64_t time_now = yae::TTime::now().get(1);
+    int64_t elapsed_sec = time_now - dat_time_;
+
+    if (elapsed_sec > 0)
+    {
+      dat_time_ = time_now;
+      yae::Data payload(16);
+      yae::Bitstream bs(payload);
+      bs.write_bits(64, dat_time_);
+      bs.write_bits(64, mpg_size_);
+      YAE_ASSERT(dat_->write(payload.get(), payload.size()));
+      dat_->flush();
+    }
   }
 
   //----------------------------------------------------------------
@@ -1118,11 +1194,7 @@ namespace yae
            i = recs.begin(); i != recs.end(); ++i)
     {
       Recording & rec = *(*i);
-      yae::TOpenFilePtr file = rec.open_file(dvr.basedir_);
-      if (file)
-      {
-        YAE_ASSERT(file->write(data.get(), data.size()));
-      }
+      rec.write(dvr.basedir_, data);
     }
   }
 
@@ -2491,6 +2563,12 @@ namespace yae
     {
       yae_wlog("failed to remove %s", mpg.c_str());
       return 0;
+    }
+
+    std::string dat = mpg.substr(0, mpg.size() - 4) + ".dat";
+    if (!yae::remove_utf8(dat))
+    {
+      yae_wlog("failed to remove %s", dat.c_str());
     }
 
     std::string json = mpg.substr(0, mpg.size() - 4) + ".json";

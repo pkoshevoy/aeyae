@@ -130,7 +130,12 @@ namespace yae
     std::string get_basename() const;
     std::string get_filepath(const fs::path & basedir,
                              const char * suffix = ".mpg") const;
-    yae::TOpenFilePtr open_file(const fs::path & basedir);
+
+    yae::TOpenFilePtr open_mpg(const fs::path & basedir);
+    yae::TOpenFilePtr open_dat(const fs::path & basedir);
+
+    void write(const fs::path & basedir, const yae::IBuffer & data);
+    void write_dat();
 
     inline uint32_t ch_num() const
     { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
@@ -147,8 +152,11 @@ namespace yae
     std::string description_;
     uint16_t max_recordings_;
 
-    yae::TOpenFilePtr file_;
+    yae::TOpenFilePtr mpg_; // transport stream (188 byte packets)
+    yae::TOpenFilePtr dat_; // time:filesize 8 byte pairs
     yae::shared_ptr<IStream> stream_;
+    uint64_t dat_time_;
+    uint64_t mpg_size_;
   };
 
   void save(Json::Value & json, const Recording & rec);
