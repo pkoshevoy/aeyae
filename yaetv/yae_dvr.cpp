@@ -1061,7 +1061,7 @@ namespace yae
 
     yae::RingBuffer & ring_buffer = packet_handler_.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
-    yae::Data data(188 * 32768);
+    yae::Data data(188 * 4096);
 
     while (true)
     {
@@ -1071,7 +1071,7 @@ namespace yae
         return;
       }
 
-      data.resize(188 * 32768);
+      data.resize(188 * 4096);
       std::size_t size = ring_buffer.pull(data.get(), data.size());
 
       if (!size)
