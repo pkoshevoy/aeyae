@@ -5667,8 +5667,8 @@ namespace yae
         return;
       }
 
-      // drop items more than 31 days in the past from t_now:
-      uint32_t t_old = t_now - 31 * 24 * 3600;
+      // drop items more than 28 days in the past from t_now:
+      uint32_t t_old = t_now - 28 * 24 * 3600;
       for (std::list<ChannelGuide::Item>::iterator it = old_items.begin();
            it != old_items.end(); )
       {
@@ -5684,7 +5684,6 @@ namespace yae
                    unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
                                                     item.t0_).c_str(),
                    yae::TTime(item.dt_, 1).to_hhmmss().c_str(),
-                   eit_index,
                    unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
                                                     t_old).c_str());
           it = old_items.erase(it);
