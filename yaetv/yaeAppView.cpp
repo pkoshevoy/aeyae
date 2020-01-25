@@ -406,16 +406,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // gps_time_to_px
+  // gps_now_round_dn
   //
-  static double
-  gps_time_to_px(const AppView & view, uint32_t gps_time)
+  static int64_t
+  gps_now_round_dn()
   {
     int64_t gps_now = TTime::gps_now().get(1);
 
     // round-down to whole hour:
     gps_now = gps_time_round_dn(gps_now);
 
+    return gps_now;
+  }
+
+  //----------------------------------------------------------------
+  // gps_time_to_px
+  //
+  static double
+  gps_time_to_px(const AppView & view, uint32_t gps_time)
+  {
+    int64_t gps_now = gps_now_round_dn();
     bool negative = (gps_time < gps_now);
     uint32_t sec = negative ? (gps_now - gps_time) : (gps_time - gps_now);
     double px = seconds_to_px(view, sec);
@@ -1383,8 +1393,9 @@ namespace yae
   AppView::AppView():
     ItemView("AppView"),
     dvr_(NULL),
-    sidebar_sel_("view_mode_program_guide"),
     sync_ui_(this),
+    gps_hour_(gps_now_round_dn()),
+    sidebar_sel_("view_mode_program_guide"),
     epg_lastmod_(0, 0)
   {
     Item & root = *root_;
@@ -1677,6 +1688,22 @@ namespace yae
       {
         schedule_.swap(schedule);
         sync_ui_schedule();
+      }
+
+      // when EPG layout origin jumps -- uncache EPG layout
+      // so that all the programs would be redrawn
+      // at the correct coordinates:
+      int64_t gps_hour = gps_now_round_dn();
+      if (gps_hour != gps_hour_)
+      {
+        gps_hour_ = gps_hour;
+
+        Item & panel = *epg_view_;
+        Scrollview & vsv = panel.get<Scrollview>("vsv");
+        Item & vsv_content = *(vsv.content_);
+        Scrollview & hsv = vsv_content.get<Scrollview>("hsv");
+        Item & hsv_content = *(hsv.content_);
+        hsv_content.uncache();
       }
 
       if (same_program_guide &&

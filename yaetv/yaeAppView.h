@@ -168,6 +168,9 @@ namespace yae
 
     QTimer sync_ui_;
 
+    // for manual uncaching of EPG layout at the top of each hour:
+    int64_t gps_hour_;
+
   public:
     // UI state:
     std::string sidebar_sel_;

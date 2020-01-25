@@ -5615,7 +5615,7 @@ namespace yae
       for (std::size_t i = 0; i < eit.num_events_in_section_; i++)
       {
         const EventInformationTable::Event & e = eit.event_[i];
-        uint32_t event_t0 = e.start_time_  - e.start_time_ % 60;
+        uint32_t event_t0 = e.start_time_ - e.start_time_ % 60;
         uint32_t event_t1 = event_t0 +  e.length_in_seconds_;
         if (event_t1 < t_min || event_t0 > t_max)
         {
@@ -5665,6 +5665,34 @@ namespace yae
       {
         chan.items_.swap(new_items);
         return;
+      }
+
+      // drop items more than 31 days in the past from t_now:
+      uint32_t t_old = t_now - 31 * 24 * 3600;
+      for (std::list<ChannelGuide::Item>::iterator it = old_items.begin();
+           it != old_items.end(); )
+      {
+        const ChannelGuide::Item & item = *it;
+        uint32_t event_t0 = item.t0_ - item.t0_ % 60;
+        uint32_t event_t1 = event_t0 +  item.dt_;
+        if (event_t1 <= t_old)
+        {
+          yae_wlog("%s(old) event %i (%s, %s, %s) is older than %s, dropping",
+                   log_prefix_.c_str(),
+                   item.event_id_,
+                   item.get_title().c_str(),
+                   unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                    item.t0_).c_str(),
+                   yae::TTime(item.dt_, 1).to_hhmmss().c_str(),
+                   eit_index,
+                   unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
+                                                    t_old).c_str());
+          it = old_items.erase(it);
+        }
+        else
+        {
+          ++it;
+        }
       }
 
       // get the bounding box of the new EIT:

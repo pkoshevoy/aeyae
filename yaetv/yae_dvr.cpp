@@ -489,7 +489,7 @@ namespace yae
   {
     std::string safe_title = sanitize_filename_utf8(title_);
 
-    struct tm tm = { 0 };
+    struct tm tm;
     unix_epoch_time_to_localtime(utc_t0_, tm);
     std::string datetime_txt = to_yyyymmdd_hhmm(tm, "", "-", "");
 
@@ -789,7 +789,6 @@ namespace yae
         continue;
       }
 
-      const yae::mpeg_ts::EPG::Channel & channel = ch_found->second;
       const TScheduledRecordings & schedule = i->second;
       for (TScheduledRecordings::const_iterator
              j = schedule.begin(); j != schedule.end(); ++j)
@@ -1358,8 +1357,6 @@ namespace yae
     if (session_)
     {
       std::ostringstream oss;
-      const char * sep = "";
-
       std::string tuner_name = session_->tuner_name();
       oss << tuner_name << " " << frequency << "Hz";
 
@@ -1507,6 +1504,7 @@ namespace yae
   void
   DVR::ServiceLoop::execute(const yae::Worker & worker)
   {
+    (void)worker;
     dvr_.init_packet_handlers();
 
     TTime now = TTime::now().rebased(1);
@@ -2915,7 +2913,6 @@ namespace yae
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
       const uint32_t ch_num = i->first;
-      const yae::mpeg_ts::EPG::Channel & channel = i->second;
       uint32_t gps_time = TTime::gps_now().get(1);
 
       std::set<TRecordingPtr> recs;
