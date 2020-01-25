@@ -5598,8 +5598,8 @@ namespace yae
       // (each EIT table spans 3 hours):
       uint32_t t_now = TTime::gps_now().get(1);
       int64_t t_eit = t_now - t_now % 10800;
-      int64_t t_min = t_eit + 10800 * (eit_index);
-      int64_t t_max = t_eit + 10800 * (eit_index + 1);
+      int64_t t_min = t_now - t_now % (24 * 3600);
+      int64_t t_max = t_min + 96 * 3600;
 #if 0
       yae_wlog("%sEIT-0 origin %s, EIT-%i time window [%s, %s]",
                log_prefix_.c_str(),
@@ -5621,14 +5621,13 @@ namespace yae
         {
           // event does not belong in this EIT 3 hour window, ignore it:
           yae_wlog("%sevent %i (%s, %s, %s) falls outside "
-                   "EIT-%i time window [%s, %s]",
+                   "time window [%s, %s]",
                    log_prefix_.c_str(),
                    e.event_id_,
                    e.title_text_.to_str().c_str(),
                    unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
                                                     e.start_time_).c_str(),
                    yae::TTime(e.length_in_seconds_, 1).to_hhmmss().c_str(),
-                   eit_index,
                    unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
                                                     t_min).c_str(),
                    unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
