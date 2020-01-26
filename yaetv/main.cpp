@@ -518,6 +518,7 @@ namespace yae
   main_may_throw(int argc, char ** argv)
   {
     std::string yaetv_dir = yae::get_user_folder_path(".yaetv");
+    YAE_THROW_IF(!yae::mkdir_p(yaetv_dir));
 
     // instantiate the logger:
     {
