@@ -96,6 +96,85 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ISeekPos
+  //
+  struct YAE_API ISeekPos
+  {
+    virtual ~ISeekPos() {}
+    virtual std::string to_str() const = 0;
+    virtual bool lt(const TFrameBase & f, double dur = 0.0) const = 0;
+    virtual bool gt(const TFrameBase & f, double dur = 0.0) const = 0;
+    virtual std::string to_str(const TFrameBase & f, double dur) const = 0;
+    virtual int seek(AVFormatContext * ctx, const AVStream * s) const = 0;
+  };
+
+  //----------------------------------------------------------------
+  // TPosPtr
+  //
+  typedef yae::shared_ptr<ISeekPos> TSeekPosPtr;
+
+
+  //----------------------------------------------------------------
+  // TimePos
+  //
+  struct YAE_API TimePos : ISeekPos
+  {
+    TimePos(double pos);
+
+    // virtual:
+    std::string to_str() const;
+
+    // virtual:
+    bool lt(const TFrameBase & f, double dur = 0.0) const;
+    bool gt(const TFrameBase & f, double dur = 0.0) const;
+
+    // virtual:
+    std::string to_str(const TFrameBase & f, double dur) const;
+
+    // virtual:
+    int seek(AVFormatContext * ctx, const AVStream * s) const;
+
+    // seconds:
+    double pos_;
+  };
+
+  //----------------------------------------------------------------
+  // TTimePosPtr
+  //
+  typedef yae::shared_ptr<TimePos, ISeekPos> TTimePosPtr;
+
+
+  //----------------------------------------------------------------
+  // BytePos
+  //
+  struct YAE_API BytePos : ISeekPos
+  {
+    BytePos(uint64_t pos);
+
+    // virtual:
+    std::string to_str() const;
+
+    // virtual:
+    bool lt(const TFrameBase & f, double dur = 0.0) const;
+    bool gt(const TFrameBase & f, double dur = 0.0) const;
+
+    // virtual:
+    std::string to_str(const TFrameBase & f, double dur) const;
+
+    // virtual:
+    int seek(AVFormatContext * ctx, const AVStream * s) const;
+
+    // bytes:
+    uint64_t pos_;
+  };
+
+  //----------------------------------------------------------------
+  // TBytePosPtr
+  //
+  typedef yae::shared_ptr<BytePos, ISeekPos> TBytePosPtr;
+
+
+  //----------------------------------------------------------------
   // AvPkt
   //
   struct YAE_API AvPkt
@@ -291,8 +370,8 @@ namespace yae
     uint64_t received_;
     uint64_t errors_;
 
-    double timeIn_;
-    double timeOut_;
+    TSeekPosPtr posIn_;
+    TSeekPosPtr posOut_;
     bool playbackEnabled_;
     int64_t startTime_;
 

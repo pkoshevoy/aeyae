@@ -161,12 +161,11 @@ namespace yae
           if (nextPTS < prevPTS_)
           {
 #ifndef NDEBUG
-            std::cerr
+            yae_debug
               << "\nNOTE: non-monotonically increasing "
-              << "audio timestamps detected:" << std::endl
-              << "  prev = " << prevPTS_ << std::endl
-              << "  next = " << nextPTS << std::endl
-              << std::endl;
+              << "audio timestamps detected:"
+              << "\n  prev = " << prevPTS_
+              << "\n  next = " << nextPTS << "\n";
 #endif
             hasPrevPTS_ = false;
           }
@@ -245,6 +244,7 @@ namespace yae
       TAudioFramePtr afPtr(new TAudioFrame());
       TAudioFrame & af = *afPtr;
 
+      af.pos_ = decoded.pkt_pos;
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
       af.trackId_ = Track::id();
@@ -295,15 +295,15 @@ namespace yae
         {
           double ta = prevPTS_.sec();
           double tb = af.time_.sec();
-          // std::cerr << "audio pts: " << tb << std::endl;
           double dt = tb - ta;
-          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+          // yae_debug << "audio pts: " << tb << "\n";
+          // yae_debug << ta << " ... " << tb << ", dt: " << dt << "\n";
+
           if (dt > 0.67)
           {
-            std::cerr
-              << "\nNOTE: detected large audio PTS jump -- " << std::endl
-              << dt << " seconds" << std::endl
-              << std::endl;
+            yae_debug
+              << "\nNOTE: detected large audio PTS jump -- \n"
+              << dt << " seconds\n\n";
           }
         }
 #endif
@@ -316,19 +316,19 @@ namespace yae
       // make sure the frame is in the in/out interval:
       if (playbackEnabled_)
       {
-        double t = af.time_.sec();
         double dt = double(numOutputSamples) / double(output_.sampleRate_);
-        if (t > timeOut_ || (t + dt) < timeIn_)
+        bool after_out_point = posOut_->lt(af);
+        bool before_in_point = posIn_->gt(af, dt);
+        if (after_out_point || before_in_point)
         {
-          if (t > timeOut_)
+          if (after_out_point)
           {
             discarded_++;
           }
-
 #if 0
-          std::cerr << "discarding audio frame: " << t
-                    << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
-                    << std::endl;
+          yae_debug << "discarding audio frame: " << posIn_->to_str(af)
+                    << ", expecting [" << posIn_->to_str()
+                    << ", " << posOut_->to_str() << ")\n";
 #endif
           return;
         }
@@ -405,7 +405,7 @@ namespace yae
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       {
         std::string ts = to_hhmmss_ms(afPtr);
-        std::cerr << "push audio frame: " << ts << std::endl;
+        yae_debug << "push audio frame: " << ts << "\n";
       }
 #endif
 
@@ -415,7 +415,7 @@ namespace yae
         return;
       }
 
-      // std::cerr << "A: " << af.time_.sec() << std::endl;
+      // yae_debug << "A: " << af.time_.sec() << "\n";
     }
     catch (...)
     {}
@@ -663,40 +663,14 @@ namespace yae
       }
 
       // discard outlier frames:
-      const AudioTraits & atraits = frame->traits_;
+      const TAudioFrame & af = *frame;
+      double dt = af.durationInSeconds();
 
-      unsigned int sampleSize = getBitsPerSample(atraits.sampleFormat_) / 8;
-      YAE_ASSERT(sampleSize > 0);
+      bool after_out_point = posOut_->lt(af);
+      bool before_in_point = posIn_->gt(af, dt);
 
-      int channels = getNumberOfChannels(atraits.channelLayout_);
-      YAE_ASSERT(channels > 0);
-
-      std::size_t bytesPerSample = channels * sampleSize;
-      std::size_t frameSize = frame->data_->rowBytes(0);
-      std::size_t numSamples = bytesPerSample ? frameSize / bytesPerSample : 0;
-
-      double t = frame->time_.sec();
-      double dt = double(numSamples) / double(atraits.sampleRate_);
-
-#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      static TTime prevTime(0, 1000);
-
-      std::string in = TTime(timeIn_).to_hhmmss_ms();
-      std::cerr << "\n\t\t\tAUDIO TIME IN:    " << timeIn_ << std::endl;
-
-      std::string ts = to_hhmmss_ms(frame);
-      std::cerr << "\t\t\tPOP AUDIO frame:  " << ts << std::endl;
-
-      std::string t0 = prevTime.to_hhmmss_ms();
-      std::cerr << "\t\t\tPREV AUDIO frame: " << t0 << std::endl;
-#endif
-
-      if ((!playbackEnabled_ || t < timeOut_) && (t + dt) > timeIn_)
+      if ((!playbackEnabled_ || posOut_->gt(af)) && posIn_->lt(af, dt))
       {
-#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::cerr << "\t\t\tNEXT AUDIO frame: " << ts << std::endl;
-        prevTime = frame->time_;
-#endif
         break;
       }
     }
@@ -708,16 +682,18 @@ namespace yae
   // AudioTrack::setPlaybackInterval
   //
   void
-  AudioTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
+  AudioTrack::setPlaybackInterval(const TSeekPosPtr & posIn,
+                                  const TSeekPosPtr & posOut,
+                                  bool enabled)
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr
-      << "SET AUDIO TRACK TIME IN: " << TTime(timeIn)
-      << std::endl;
+    yae_debug
+      << "SET AUDIO TRACK IN POINT: " << posIn->to_str()
+      << "\n";
 #endif
 
-    timeIn_ = timeIn;
-    timeOut_ = timeOut;
+    posIn_ = posIn;
+    posOut_ = posOut;
     playbackEnabled_ = enabled;
     discarded_ = 0;
   }
@@ -726,7 +702,8 @@ namespace yae
   // AudioTrack::resetTimeCounters
   //
   int
-  AudioTrack::resetTimeCounters(double seekTime, bool dropPendingFrames)
+  AudioTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
+                                bool dropPendingFrames)
   {
     packetQueue_.clear();
 
@@ -742,9 +719,8 @@ namespace yae
     }
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr
-      << "\n\tAUDIO TRACK reset time counters, start new sequence\n"
-      << std::endl;
+    yae_debug
+      << "\n\tAUDIO TRACK reset time counters, start new sequence\n\n";
 #endif
 
     // drop filtergraph contents:
@@ -769,10 +745,10 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekTime, timeOut_, playbackEnabled_);
+    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
-    startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
+    startTime_ = 0;
     samplesDecoded_ = 0;
 
     return err;

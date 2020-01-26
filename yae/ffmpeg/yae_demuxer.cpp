@@ -3979,7 +3979,8 @@ namespace yae
     demuxer.populate();
 
     // decode:
-    decoder.resetTimeCounters(dts_span.t0_.sec(), false);
+    TSeekPosPtr seekPos(new TimePos(dts_span.t0_.sec()));
+    decoder.resetTimeCounters(seekPos, false);
     decoder.decoderStartup();
 
     while (true)

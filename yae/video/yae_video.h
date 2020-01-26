@@ -390,6 +390,7 @@ namespace yae
     TFrameBase(unsigned int rendererHints = 0):
       rendererHints_(rendererHints),
       readerId_((unsigned int)~0),
+      pos_(std::numeric_limits<int64_t>::min()),
       tempo_(1.0)
     {}
 
@@ -402,7 +403,10 @@ namespace yae
     //! global track ID tag:
     std::string trackId_;
 
-    //! frame position:
+    //! approx. byte position of the packet that produced this frame:
+    int64_t pos_;
+
+    //! frame PTS:
     TTime time_;
 
     //! frame duration tempo scaling:
@@ -516,6 +520,9 @@ namespace yae
   //
   struct YAE_API TVideoFrame : public TFrame<VideoTraits>
   {
+    // helper:
+    double durationInSeconds() const;
+
     std::list<TSubsFrame> subs_;
   };
 
@@ -531,6 +538,7 @@ namespace yae
   {
     // helper:
     std::size_t numSamples() const;
+    double durationInSeconds() const;
   };
 
   //----------------------------------------------------------------

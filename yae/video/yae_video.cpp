@@ -520,6 +520,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // TVideoFrame::durationInSeconds
+  //
+  double
+  TVideoFrame::durationInSeconds() const
+  {
+    double dt =
+      traits_.frameRate_ > 0.0 ?
+      1.0 / traits_.frameRate_ :
+      0.0;
+    return dt;
+  }
+
+
+  //----------------------------------------------------------------
   // TAudioFrame::numSamples
   //
   std::size_t
@@ -537,6 +551,16 @@ namespace yae
     return samples;
   }
 
+  //----------------------------------------------------------------
+  // TAudioFrame::durationInSeconds
+  //
+  double
+  TAudioFrame::durationInSeconds() const
+  {
+    std::size_t samples = numSamples();
+    double sec = double(samples) / double(traits_.sampleRate_);
+    return sec;
+  }
 
   //----------------------------------------------------------------
   // TProgramInfo::TProgramInfo

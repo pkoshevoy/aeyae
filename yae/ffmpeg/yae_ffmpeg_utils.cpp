@@ -142,16 +142,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // dump_averror
-  //
-  std::ostream &
-  dump_averror(std::ostream & os, int err)
-  {
-    os << "AVERROR: " << yae::av_strerr(err) << std::endl;
-    return os;
-  }
-
-  //----------------------------------------------------------------
   // lookup_src
   //
   AVFilterContext *

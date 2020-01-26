@@ -56,11 +56,15 @@ namespace yae
 
   public:
     Private():
-      readerId_((unsigned int)~0)
+      readerId_((unsigned int)~0),
+      timeIn_(new TimePos(0.0)),
+      timeOut_(new TimePos(kMaxDouble))
     {}
 
     Movie movie_;
     unsigned int readerId_;
+    TTimePosPtr timeIn_;
+    TTimePosPtr timeOut_;
   };
 
   //----------------------------------------------------------------
@@ -410,7 +414,8 @@ namespace yae
   bool
   ReaderFFMPEG::seek(double seekTime)
   {
-    return private_->movie_.requestSeekTime(seekTime);
+    TTimePosPtr pos(new TimePos(seekTime));
+    return private_->movie_.requestSeek(pos);
   }
 
   //----------------------------------------------------------------
@@ -499,7 +504,8 @@ namespace yae
   void
   ReaderFFMPEG::getPlaybackInterval(double & timeIn, double & timeOut) const
   {
-    private_->movie_.getPlaybackInterval(timeIn, timeOut);
+    timeIn = private_->timeIn_->pos_;
+    timeOut = private_->timeOut_->pos_;
   }
 
   //----------------------------------------------------------------
@@ -508,7 +514,8 @@ namespace yae
   void
   ReaderFFMPEG::setPlaybackIntervalStart(double timeIn)
   {
-    private_->movie_.setPlaybackIntervalStart(timeIn);
+    private_->timeIn_.reset(new TimePos(timeIn));
+    private_->movie_.setPlaybackIntervalStart(private_->timeIn_);
   }
 
   //----------------------------------------------------------------
@@ -517,7 +524,8 @@ namespace yae
   void
   ReaderFFMPEG::setPlaybackIntervalEnd(double timeOut)
   {
-    private_->movie_.setPlaybackIntervalEnd(timeOut);
+    private_->timeOut_.reset(new TimePos(timeOut));
+    private_->movie_.setPlaybackIntervalEnd(private_->timeOut_);
   }
 
   //----------------------------------------------------------------
@@ -529,11 +537,11 @@ namespace yae
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
     if (enabled)
     {
-      std::cerr << "\nPLAYBACK ENABLED, framestep not possible" << std::endl;
+      yae_debug << "\nPLAYBACK ENABLED, framestep not possible\n";
     }
     else
     {
-      std::cerr << "\nPLAYBACK DISABLED (paused), framestep OK" << std::endl;
+      yae_debug << "\nPLAYBACK DISABLED (paused), framestep OK\n";
     }
 #endif
 

@@ -87,19 +87,18 @@ namespace yae
 
     bool isSeekable() const;
     bool hasDuration() const;
-    bool requestSeekTime(double seekTime);
+    bool requestSeek(const TSeekPosPtr & pos);
 
   protected:
-    int seekTo(double seekTime, bool dropPendingFrames);
+    int seekTo(const TSeekPosPtr & pos, bool dropPendingFrames);
 
   public:
     int rewind(const AudioTrackPtr & audioTrack,
                const VideoTrackPtr & videoTrack,
                bool seekToTimeIn = true);
 
-    void getPlaybackInterval(double & timeIn, double & timeOut) const;
-    void setPlaybackIntervalStart(double timeIn);
-    void setPlaybackIntervalEnd(double timeOut);
+    void setPlaybackIntervalStart(const TSeekPosPtr & posIn);
+    void setPlaybackIntervalEnd(const TSeekPosPtr & posOut);
     void setPlaybackEnabled(bool enabled);
     void setPlaybackLooping(bool enabled);
 
@@ -186,15 +185,15 @@ namespace yae
     int64_t dtsBytePos_;
     int64_t dts_;
 
-    double timeIn_;
-    double timeOut_;
+    TSeekPosPtr posIn_;
+    TSeekPosPtr posOut_;
     bool interruptDemuxer_;
     bool playbackEnabled_;
     bool looping_;
 
     bool mustStop_;
     bool mustSeek_;
-    double seekTime_;
+    TSeekPosPtr seekPos_;
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;

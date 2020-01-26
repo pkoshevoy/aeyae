@@ -342,7 +342,7 @@ namespace yae
   VideoTrack::decoderStartup()
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr << "\n\t\t\t\tVIDEO TRACK DECODER STARTUP" << std::endl;
+    yae_debug << "\n\t\t\t\tVIDEO TRACK DECODER STARTUP\n";
 #endif
 
     refreshTraits();
@@ -377,7 +377,7 @@ namespace yae
   VideoTrack::decoderShutdown()
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr << "\n\t\t\t\tVIDEO TRACK DECODER SHUTDOWN" << std::endl;
+    yae_debug << "\n\t\t\t\tVIDEO TRACK DECODER SHUTDOWN\n";
 #endif
 
     filterGraph_.reset();
@@ -471,11 +471,11 @@ namespace yae
 
         double fps = double(framesDecoded_) / (1e-6 * double(dt));
 
-        std::cerr
+        yae_debug
           << codecContext_->codec->name
           << ", frames decoded: " << framesDecoded_
           << ", elapsed time: " << dt << " usec, decoder fps: " << fps
-          << std::endl;
+          << "\n";
       }
 #endif
 
@@ -695,19 +695,18 @@ namespace yae
         {
           double ta = prevPTS_.sec();
           double tb = t.sec();
-          // std::cerr << "video pts: " << tb << std::endl;
+          // yae_debug << "video pts: " << tb << "\n";
           double dt = tb - ta;
           double fd = 1.0 / native_.frameRate_;
-          // std::cerr << ta << " ... " << tb << ", dt: " << dt << std::endl;
+          // yae_debug << ta << " ... " << tb << ", dt: " << dt << "\n";
           if (dt > 3.01 * fd)
           {
-            std::cerr
-              << "\nNOTE: detected large PTS jump: " << std::endl
-              << "frame\t:" << framesDecoded_ - 2 << " - " << ta << std::endl
-              << "frame\t:" << framesDecoded_ - 1 << " - " << tb << std::endl
-              << "difference " << dt << " seconds, equivalent to "
-              << dt / fd << " frames" << std::endl
-              << std::endl;
+            yae_debug
+              << "\nNOTE: detected large PTS jump: "
+              << "\nframe\t:" << framesDecoded_ - 2 << " - " << ta
+              << "\nframe\t:" << framesDecoded_ - 1 << " - " << tb
+              << "\ndifference " << dt << " seconds, equivalent to "
+              << dt / fd << " frames" << "\n\n";
           }
         }
 #endif
@@ -751,19 +750,19 @@ namespace yae
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)
         {
-          double t = vf.time_.sec();
           double dt = 1.0 / double(output_.frameRate_);
-          if (t > timeOut_ || (t + dt) < timeIn_)
+          bool after_out_point = posOut_->lt(vf);
+          bool before_in_point = posIn_->gt(vf, dt);
+          if (after_out_point || before_in_point)
           {
-            if (t > timeOut_)
+            if (after_out_point)
             {
               discarded_++;
             }
-
 #if 0
-            std::cerr << "discarding video frame: " << t
-                      << ", expecting [" << timeIn_ << ", " << timeOut_ << ")"
-                      << std::endl;
+            yae_debug << "discarding video frame: " << posIn_->to_str(vf)
+                      << ", expecting [" << posIn_->to_str()
+                      << ", " << posOut_->to_str() << ")\n";
 #endif
             return;
           }
@@ -875,18 +874,18 @@ namespace yae
         framesProduced_++;
         double fps = double(framesProduced_) / (1e-6 * double(dt));
 
-        std::cerr
+        yae_debug
           << Track::id_
           << ", frames produced: " << framesProduced_
           << ", elapsed time: " << dt << " usec, fps: " << fps
-          << std::endl;
+          << "\n";
       }
 #endif
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         {
           std::string ts = to_hhmmss_ms(vfPtr);
-          std::cerr << "push video frame: " << ts << std::endl;
+          yae_debug << "push video frame: " << ts << "\n";
         }
 #endif
 
@@ -899,7 +898,7 @@ namespace yae
           }
         }
 
-        // std::cerr << "V: " << vf.time_.sec() << std::endl;
+        // yae_debug << "V: " << vf.time_.sec() << "\n";
       }
     }
     catch (...)
@@ -913,7 +912,7 @@ namespace yae
   VideoTrack::threadStop()
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr << "\n\t\t\t\tVIDEO TRACK THREAD STOP" << std::endl;
+    yae_debug << "\n\t\t\t\tVIDEO TRACK THREAD STOP\n";
 #endif
 
     frameQueue_.close();
@@ -1070,7 +1069,7 @@ namespace yae
     if (alreadyDecoding && !sameTraits)
     {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      std::cerr << "\n\t\t\t\tSET TRAITS OVERRIDE" << std::endl;
+      yae_debug << "\n\t\t\t\tSET TRAITS OVERRIDE\n";
 #endif
 
       terminator_.stopWaiting(true);
@@ -1120,28 +1119,11 @@ namespace yae
       }
 
       // discard outlier frames:
-      double t = frame->time_.sec();
-      double dt = 1.0 / frame->traits_.frameRate_;
+      const TVideoFrame & vf = *frame;
+      double dt = vf.durationInSeconds();
 
-#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      static TTime prevTime(0, 1000);
-
-      std::string in = TTime(timeIn_).to_hhmmss_ms();
-      std::cerr << "\n\t\t\t\t\tTIME IN:          " << in << std::endl;
-
-      std::string ts = to_hhmmss_ms(frame);
-      std::cerr << "\t\t\t\t\tPOP video frame:  " << ts << std::endl;
-
-      std::string t0 = prevTime.to_hhmmss_ms();
-      std::cerr << "\t\t\t\t\tPREV video frame: " << t0 << std::endl;
-#endif
-
-      if ((!playbackEnabled_ || t < timeOut_) && (t + dt) > timeIn_)
+      if ((!playbackEnabled_ || posOut_->gt(vf)) && posIn_->lt(vf, dt))
       {
-#if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::cerr << "\t\t\t\t\tNEXT video frame: " << ts << std::endl;
-        prevTime = frame->time_;
-#endif
         break;
       }
     }
@@ -1153,17 +1135,16 @@ namespace yae
   // VideoTrack::setPlaybackInterval
   //
   void
-  VideoTrack::setPlaybackInterval(double timeIn, double timeOut, bool enabled)
+  VideoTrack::setPlaybackInterval(const TSeekPosPtr & posIn,
+                                  const TSeekPosPtr & posOut,
+                                  bool enabled)
   {
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-      std::string in = TTime(timeIn).to_hhmmss_ms();
-      std::cerr
-        << "SET VIDEO TRACK TIME IN: " << in
-        << std::endl;
+    yae_debug << "SET VIDEO TRACK TIME IN: " << posIn->to_str() << "\n";
 #endif
 
-    timeIn_ = timeIn;
-    timeOut_ = timeOut;
+    posIn_ = posIn;
+    posOut_ = posOut;
     playbackEnabled_ = enabled;
     discarded_ = 0;
   }
@@ -1172,7 +1153,8 @@ namespace yae
   // VideoTrack::resetTimeCounters
   //
   int
-  VideoTrack::resetTimeCounters(double seekTime, bool dropPendingFrames)
+  VideoTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
+                                bool dropPendingFrames)
   {
     packetQueue_.clear();
 
@@ -1188,9 +1170,8 @@ namespace yae
     }
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-    std::cerr
-      << "\n\tVIDEO TRACK reset time counter, start new sequence\n"
-      << std::endl;
+    yae_debug
+      << "\n\tVIDEO TRACK reset time counter, start new sequence\n\n";
 #endif
 
     // drop filtergraph contents:
@@ -1217,8 +1198,8 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekTime, timeOut_, playbackEnabled_);
-    startTime_ = 0; // int64_t(double(stream_->time_base.den) * seekTime);
+    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+    startTime_ = 0;
     hasPrevPTS_ = false;
     framesDecoded_ = 0;
     framesProduced_ = 0;

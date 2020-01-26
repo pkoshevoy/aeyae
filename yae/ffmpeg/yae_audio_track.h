@@ -69,11 +69,14 @@ namespace yae
     bool getNextFrame(TAudioFramePtr & frame, QueueWaitMgr * terminator);
 
     // adjust playback interval (used when seeking or looping):
-    void setPlaybackInterval(double timeIn, double timeOut, bool enabled);
+    void setPlaybackInterval(const TSeekPosPtr & posIn,
+                             const TSeekPosPtr & posOut,
+                             bool enabled);
 
     // reset time counters, setup to output frames
     // starting from a given time point:
-    int resetTimeCounters(double seekTime, bool dropPendingFrames);
+    int resetTimeCounters(const TSeekPosPtr & seekPos,
+                          bool dropPendingFrames);
 
     // adjust frame duration:
     bool setTempo(double tempo);

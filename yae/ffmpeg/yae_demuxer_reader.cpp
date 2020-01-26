@@ -321,7 +321,9 @@ namespace yae
     }
 
     const VideoTrackPtr & track = video_[selectedVideoTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+    track->setPlaybackInterval(TSeekPosPtr(new TimePos(timeIn_)),
+                               TSeekPosPtr(new TimePos(timeOut_)),
+                               playbackEnabled_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->enableClosedCaptions(enableClosedCaptions_);
@@ -357,7 +359,9 @@ namespace yae
     }
 
     const AudioTrackPtr & track = audio_[selectedAudioTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+    track->setPlaybackInterval(TSeekPosPtr(new TimePos(timeIn_)),
+                               TSeekPosPtr(new TimePos(timeOut_)),
+                               playbackEnabled_);
     track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
 
     return track->initTraits();
@@ -779,16 +783,19 @@ namespace yae
 
       timeIn_ = timeIn;
 
+      TSeekPosPtr posIn(new TimePos(timeIn_));
+      TSeekPosPtr posOut(new TimePos(timeOut_));
+
       VideoTrackPtr videoTrack = selectedVideoTrack();
       if (videoTrack)
       {
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        videoTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
       }
 
       AudioTrackPtr audioTrack = selectedAudioTrack();
       if (audioTrack)
       {
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        audioTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
       }
     }
     catch (...)
@@ -808,16 +815,19 @@ namespace yae
 
       timeOut_ = timeOut;
 
+      TSeekPosPtr posIn(new TimePos(timeIn_));
+      TSeekPosPtr posOut(new TimePos(timeOut_));
+
       VideoTrackPtr videoTrack = selectedVideoTrack();
       if (videoTrack)
       {
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        videoTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
       }
 
       AudioTrackPtr audioTrack = selectedAudioTrack();
       if (audioTrack)
       {
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        audioTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
       }
     }
     catch (...)
@@ -841,16 +851,19 @@ namespace yae
 
       if (playbackEnabled_ && looping_)
       {
+        TSeekPosPtr posIn(new TimePos(timeIn_));
+        TSeekPosPtr posOut(new TimePos(timeOut_));
+
         VideoTrackPtr videoTrack = selectedVideoTrack();
         if (videoTrack)
         {
-          videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+          videoTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
         }
 
         AudioTrackPtr audioTrack = selectedAudioTrack();
         if (audioTrack)
         {
-          audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+          audioTrack->setPlaybackInterval(posIn, posOut, playbackEnabled_);
         }
       }
     }
@@ -1202,14 +1215,16 @@ namespace yae
       return err;
     }
 
+    TSeekPosPtr seekPos(new TimePos(seekTime));
+
     if (videoTrack)
     {
-      err = videoTrack->resetTimeCounters(seekTime, dropPendingFrames);
+      err = videoTrack->resetTimeCounters(seekPos, dropPendingFrames);
     }
 
     if (!err && audioTrack)
     {
-      err = audioTrack->resetTimeCounters(seekTime, dropPendingFrames);
+      err = audioTrack->resetTimeCounters(seekPos, dropPendingFrames);
     }
 
     clock_.cancelWaitForOthers();

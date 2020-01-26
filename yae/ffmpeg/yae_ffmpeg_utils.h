@@ -39,7 +39,7 @@ extern "C"
   do {                                                  \
     if (err < 0)                                        \
     {                                                   \
-      dump_averror(std::cerr, err);                     \
+      yae_error << "AVERROR: " << yae::av_strerr(err);  \
       YAE_ASSERT(false);                                \
       return ret;                                       \
     }                                                   \
@@ -71,12 +71,6 @@ namespace yae
   // av_strerr
   //
   YAE_API std::string av_strerr(int errnum);
-
-  //----------------------------------------------------------------
-  // dump_averror
-  //
-  YAE_API std::ostream &
-  dump_averror(std::ostream & os, int err);
 
   //----------------------------------------------------------------
   // lookup_src

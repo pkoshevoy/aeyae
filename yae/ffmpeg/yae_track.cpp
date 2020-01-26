@@ -27,6 +27,162 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TimePos::TimePos
+  //
+  TimePos::TimePos(double pos):
+    pos_(pos)
+  {}
+
+  //----------------------------------------------------------------
+  // TimePos::to_str
+  //
+  std::string
+  TimePos::to_str() const
+  {
+    return TTime(pos_).to_hhmmss_ms();
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::lt
+  //
+  bool
+  TimePos::lt(const TFrameBase & f, double dur) const
+  {
+    double t = f.time_.sec() + dur;
+    return (pos_ < t);
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::gt
+  //
+  bool
+  TimePos::gt(const TFrameBase & f, double dur) const
+  {
+    double t = f.time_.sec() + dur;
+    return (t < pos_);
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::to_str
+  //
+  std::string
+  TimePos::to_str(const TFrameBase & f, double dur) const
+  {
+    return (f.time_ + dur).to_hhmmss_ms();
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::seek
+  //
+  int
+  TimePos::seek(AVFormatContext * context, const AVStream * stream) const
+  {
+    int64_t ts = int64_t(pos_ * double(AV_TIME_BASE));
+
+    if (stream)
+    {
+      AVRational tb;
+      tb.num = 1;
+      tb.den = AV_TIME_BASE;
+
+      ts = av_rescale_q(ts, tb, stream->time_base);
+    }
+
+    int streamIndex = stream ? stream->index : -1;
+    int seekFlags = 0;
+    int err = avformat_seek_file(context,
+                                 streamIndex,
+                                 kMinInt64,
+                                 ts,
+                                 ts, // kMaxInt64,
+                                 seekFlags);
+
+    if (err < 0)
+    {
+      if (!ts)
+      {
+        // must be trying to rewind a stream of undefined duration:
+        seekFlags |= AVSEEK_FLAG_BYTE;
+      }
+
+      err = avformat_seek_file(context,
+                               streamIndex,
+                               kMinInt64,
+                               ts,
+                               ts, // kMaxInt64,
+                               seekFlags | AVSEEK_FLAG_ANY);
+    }
+
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
+  // BytePos::BytePos
+  //
+  BytePos::BytePos(uint64_t pos):
+    pos_(pos)
+  {}
+
+  //----------------------------------------------------------------
+  // BytePos::to_str
+  //
+  std::string
+  BytePos::to_str() const
+  {
+    return yae::strfmt("byte %" PRIu64, pos_);
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::lt
+  //
+  bool
+  BytePos::lt(const TFrameBase & f, double dur) const
+  {
+    (void)dur;
+    return pos_ < f.pos_;
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::gt
+  //
+  bool
+  BytePos::gt(const TFrameBase & f, double dur) const
+  {
+    (void)dur;
+    return f.pos_ < pos_;
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::to_str
+  //
+  std::string
+  BytePos::to_str(const TFrameBase & f, double dur) const
+  {
+    (void)dur;
+    return yae::strfmt("byte %" PRIu64, f.pos_);
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::seek
+  //
+  int
+  BytePos::seek(AVFormatContext * context, const AVStream * stream) const
+  {
+    int streamIndex = stream ? stream->index : -1;
+    int seekFlags = AVSEEK_FLAG_BYTE;
+    // seekFlags |= AVSEEK_FLAG_ANY;
+    int err = avformat_seek_file(context,
+                                 streamIndex,
+                                 kMinInt64,
+                                 pos_,
+                                 pos_, // kMaxInt64,
+                                 seekFlags);
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
   // AvPkt::AvPkt
   //
   AvPkt::AvPkt(const AVPacket * pkt):
@@ -158,7 +314,7 @@ namespace yae
 #if 0
     if (ok && debugMessage)
     {
-      std::cerr << "PTS OK: "
+      yae_debug << "PTS OK: "
                 << nextPTS.time_ << "/" << nextPTS.base_
                 << " = " << nextPTS.to_hhmmss_frac(1000)
                 << ", " << debugMessage << std::endl;
@@ -187,8 +343,8 @@ namespace yae
     sent_(0),
     received_(0),
     errors_(0),
-    timeIn_(0.0),
-    timeOut_(kMaxDouble),
+    posIn_(new TimePos(0.0)),
+    posOut_(new TimePos(kMaxDouble)),
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
@@ -211,8 +367,8 @@ namespace yae
     sent_(0),
     received_(0),
     errors_(0),
-    timeIn_(0.0),
-    timeOut_(kMaxDouble),
+    posIn_(new TimePos(0.0)),
+    posOut_(new TimePos(kMaxDouble)),
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),

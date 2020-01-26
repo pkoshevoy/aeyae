@@ -39,14 +39,12 @@ namespace yae
     dtsStreamIndex_(-1),
     dtsBytePos_(0),
     dts_(AV_NOPTS_VALUE),
-    timeIn_(0.0),
-    timeOut_(kMaxDouble),
+    posIn_(new TimePos(0.0)),
+    posOut_(new TimePos(kMaxDouble)),
     interruptDemuxer_(false),
     playbackEnabled_(false),
     looping_(false),
     mustStop_(true),
-    mustSeek_(false),
-    seekTime_(0.0),
     videoQueueSize_("video_queue_size"),
     audioQueueSize_("audio_queue_size")
   {
@@ -446,7 +444,7 @@ namespace yae
     }
 
     VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+    track->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->enableClosedCaptions(enableClosedCaptions_);
@@ -477,7 +475,7 @@ namespace yae
     }
 
     AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
-    track->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+    track->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
     track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
 
     return track->initTraits();
@@ -547,11 +545,11 @@ namespace yae
             break;
           }
 
-          if (mustSeek_)
+          if (seekPos_)
           {
             bool dropPendingFrames = true;
-            err = seekTo(seekTime_, dropPendingFrames);
-            mustSeek_ = false;
+            err = seekTo(seekPos_, dropPendingFrames);
+            seekPos_.reset();
           }
 
           if (!err)
@@ -578,7 +576,7 @@ namespace yae
 #ifndef NDEBUG
           else
           {
-            dump_averror(std::cerr, err);
+            yae_debug << "AVERROR: " << yae::av_strerr(err);
           }
 #endif
 
@@ -846,24 +844,21 @@ namespace yae
     catch (const std::exception & e)
     {
 #ifndef NDEBUG
-      std::cerr
-        << "\nMovie::thread_loop caught exception: " << e.what()
-        << std::endl;
+      yae_debug
+        << "\nMovie::thread_loop caught exception: " << e.what() << "\n";
 #endif
     }
     catch (...)
     {
 #ifndef NDEBUG
-      std::cerr
-        << "\nMovie::thread_loop caught unexpected exception"
-        << std::endl;
+      yae_debug
+        << "\nMovie::thread_loop caught unexpected exception\n";
 #endif
     }
 
 #if 0 // ndef NDEBUG
-    std::cerr
-      << "\nMovie::thread_loop terminated"
-      << std::endl;
+    yae_debug
+      << "\nMovie::thread_loop terminated\n";
 #endif
   }
 
@@ -990,15 +985,14 @@ namespace yae
   // Movie::requestSeekTime
   //
   bool
-  Movie::requestSeekTime(double seekTime)
+  Movie::requestSeek(const TSeekPosPtr & seekPos)
   {
     try
     {
       boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
       requestMutex(lock);
 
-      mustSeek_ = true;
-      seekTime_ = seekTime;
+      seekPos_ = seekPos;
 
       VideoTrackPtr videoTrack;
       AudioTrackPtr audioTrack;
@@ -1012,9 +1006,8 @@ namespace yae
         videoTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::string ts = TTime(seekTime).to_hhmmss_ms();
-        std::cerr << "\n\tCLEAR VIDEO FRAME QUEUE for seek: "
-                  << ts << std::endl;
+       yae_debug << "\n\tCLEAR VIDEO FRAME QUEUE for seek: "
+                 << seekPos->to_str() << "\n";
 #endif
       }
 
@@ -1027,9 +1020,8 @@ namespace yae
         audioTrack->frameQueue_.clear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
-        std::string ts = TTime(seekTime).to_hhmmss_ms();
-        std::cerr << "\n\tCLEAR AUDIO FRAME QUEUE for seek: "
-                  << ts << std::endl;
+        yae_debug << "\n\tCLEAR AUDIO FRAME QUEUE for seek: "
+                  << seekPos->to_str() << "\n";
 #endif
       }
 
@@ -1045,7 +1037,7 @@ namespace yae
   // Movie::seekTo
   //
   int
-  Movie::seekTo(double seekTime, bool dropPendingFrames)
+  Movie::seekTo(const TSeekPosPtr & pos, bool dropPendingFrames)
   {
     if (!context_)
     {
@@ -1057,8 +1049,6 @@ namespace yae
       // don't bother attempting to seek an un-seekable stream:
       return 0;
     }
-
-    int streamIndex = -1;
 
     AudioTrackPtr audioTrack;
     if (selectedAudioTrack_ < audioTracks_.size())
@@ -1072,68 +1062,38 @@ namespace yae
       videoTrack = videoTracks_[selectedVideoTrack_];
     }
 
+    const AVStream * stream = NULL;
     if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
         strcmp(context_->iformat->name, "ogg") != 0 &&
         audioTrack)
     {
-      streamIndex = audioTrack->streamIndex();
-    }
-
-    int64_t ts = int64_t(seekTime * double(AV_TIME_BASE));
-    int seekFlags = 0;
-
-    if (streamIndex != -1)
-    {
-      AVRational tb;
-      tb.num = 1;
-      tb.den = AV_TIME_BASE;
-
-      const AVStream * s = context_->streams[streamIndex];
-      ts = av_rescale_q(ts, tb, s->time_base);
-    }
-
-    int err = avformat_seek_file(context_,
-                                 streamIndex,
-                                 kMinInt64,
-                                 ts,
-                                 ts, // kMaxInt64,
-                                 seekFlags);
-
-    if (err < 0)
-    {
-      if (!ts)
+      int streamIndex = audioTrack->streamIndex();
+      if (streamIndex >= 0)
       {
-        // must be trying to rewind a stream of undefined duration:
-        YAE_ASSERT(!hasDuration());
-        seekFlags |= AVSEEK_FLAG_BYTE;
+        stream = context_->streams[streamIndex];
       }
-
-      err = avformat_seek_file(context_,
-                               streamIndex,
-                               kMinInt64,
-                               ts,
-                               ts, // kMaxInt64,
-                               seekFlags | AVSEEK_FLAG_ANY);
     }
 
+    int err = pos->seek(context_, stream);
     if (err < 0)
     {
 #ifndef NDEBUG
-      std::cerr
-        << "avformat_seek_file (" << seekTime << ") returned " << err
-        << std::endl;
+      yae_debug
+        << "avformat_seek_file (" << pos->to_str() << ") returned "
+        << yae::av_strerr(err)
+        << "\n";
 #endif
       return err;
     }
 
     if (videoTrack)
     {
-      err = videoTrack->resetTimeCounters(seekTime, dropPendingFrames);
+      err = videoTrack->resetTimeCounters(pos, dropPendingFrames);
     }
 
     if (!err && audioTrack)
     {
-      err = audioTrack->resetTimeCounters(seekTime, dropPendingFrames);
+      err = audioTrack->resetTimeCounters(pos, dropPendingFrames);
     }
 
     clock_.cancelWaitForOthers();
@@ -1155,7 +1115,7 @@ namespace yae
   int
   Movie::rewind(const AudioTrackPtr & audioTrack,
                 const VideoTrackPtr & videoTrack,
-                bool seekToTimeIn)
+                bool seekToInPoint)
   {
     // wait for the the frame queues to empty out:
     if (audioTrack)
@@ -1185,44 +1145,35 @@ namespace yae
       return AVERROR(EAGAIN);
     }
 
-    double seekTime = seekToTimeIn ? timeIn_ : 0.0;
+    static const TSeekPosPtr zeroTime(new TimePos(0.0));
+    const TSeekPosPtr & seekPos = seekToInPoint ? posIn_ : zeroTime;
     bool dropPendingFrames = false;
-    return seekTo(seekTime, dropPendingFrames);
-  }
-
-  //----------------------------------------------------------------
-  // Movie::getPlaybackInterval
-  //
-  void
-  Movie::getPlaybackInterval(double & timeIn, double & timeOut) const
-  {
-    timeIn = timeIn_;
-    timeOut = timeOut_;
+    return seekTo(seekPos, dropPendingFrames);
   }
 
   //----------------------------------------------------------------
   // Movie::setPlaybackIntervalStart
   //
   void
-  Movie::setPlaybackIntervalStart(double timeIn)
+  Movie::setPlaybackIntervalStart(const TSeekPosPtr & posIn)
   {
     try
     {
       boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
       requestMutex(lock);
 
-      timeIn_ = timeIn;
+      posIn_ = posIn;
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
     }
     catch (...)
@@ -1233,25 +1184,25 @@ namespace yae
   // Movie::setPlaybackIntervalEnd
   //
   void
-  Movie::setPlaybackIntervalEnd(double timeOut)
+  Movie::setPlaybackIntervalEnd(const TSeekPosPtr & posOut)
   {
     try
     {
       boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
       requestMutex(lock);
 
-      timeOut_ = timeOut;
+      posOut_ = posOut;
 
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
 
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+        audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
     }
     catch (...)
@@ -1278,13 +1229,13 @@ namespace yae
         if (selectedVideoTrack_ < videoTracks_.size())
         {
           VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-          videoTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+          videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
         }
 
         if (selectedAudioTrack_ < audioTracks_.size())
         {
           AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
-          audioTrack->setPlaybackInterval(timeIn_, timeOut_, playbackEnabled_);
+          audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
         }
       }
     }
@@ -1584,7 +1535,7 @@ namespace yae
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
     if (blocked)
     {
-      std::cerr << "BLOCKED ON VIDEO" << std::endl;
+      yae_debug << "BLOCKED ON VIDEO\n";
     }
 #endif
 
@@ -1614,7 +1565,7 @@ namespace yae
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
     if (blocked)
     {
-      std::cerr << "BLOCKED ON AUDIO" << std::endl;
+      yae_debug << "BLOCKED ON AUDIO\n";
     }
 #endif
 
