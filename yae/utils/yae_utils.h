@@ -36,6 +36,7 @@
 
 // yae includes:
 #include "../api/yae_api.h"
+#include "../utils/yae_data.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
@@ -217,6 +218,8 @@ namespace yae
 
   //----------------------------------------------------------------
   // parse_file_name
+  //
+  // NOTE: passed back filename extension (if any) is ext, not .ext
   //
   YAE_API bool
   parse_file_name(const std::string & fileName,

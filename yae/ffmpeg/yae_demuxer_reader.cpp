@@ -23,7 +23,7 @@
 //----------------------------------------------------------------
 // YAE_DEMUXER_READER_GUID
 //
-#define YAE_DEMUXER_READER_GUID "5299E7BE-11B9-49D3-967D-5A15184A0AE9"
+#define YAE_DEMUXER_READER_GUID "343CCC39-0EDC-481A-B8C8-B4BEBFB747B5"
 
 
 namespace yae
