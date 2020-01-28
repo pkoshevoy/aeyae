@@ -33,6 +33,8 @@
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 #include <boost/thread/thread.hpp>
 #endif
 
@@ -47,6 +49,9 @@
 #include "yae_dvr.h"
 #include "yae_hdhomerun.h"
 #include "yae_signal_handler.h"
+
+// namespace shortcuts:
+namespace al = boost::algorithm;
 
 
 namespace yae
@@ -569,6 +574,13 @@ namespace yae
         parse_mpeg_ts(argv[i]);
         return 0;
       }
+#ifdef __APPLE__
+      else if (al::starts_with(argv[i], "-psn_"))
+      {
+        // ignore, OSX adds it when double-clicking on the app.
+        continue;
+      }
+#endif
       else
       {
         usage(argv, strfmt("unrecognized parameter: %s", argv[i]));
