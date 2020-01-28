@@ -114,6 +114,7 @@ namespace yae
         activity_(NULL),
         count_(0)
       {
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         NSProcessInfo * processInfo = [NSProcessInfo processInfo];
         if (!processInfo)
         {
@@ -133,10 +134,12 @@ namespace yae
                      reason:because];
         [activity_ retain];
         [because release];
+#endif
       }
 
       ~Activity()
       {
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (activity_)
         {
           NSProcessInfo * processInfo = [NSProcessInfo processInfo];
@@ -148,6 +151,7 @@ namespace yae
           [processInfo endActivity: activity_];
           [activity_ release];
         }
+#endif
       }
     };
 
