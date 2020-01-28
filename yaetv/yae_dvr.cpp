@@ -1853,6 +1853,10 @@ namespace yae
     // virtual:
     void execute(const yae::Worker & worker);
 
+    // helper:
+    void save_epg(const std::string & frequency,
+                  const yae::mpeg_ts::Context & ctx);
+
     DVR & dvr_;
   };
 
@@ -1975,35 +1979,7 @@ namespace yae
             }
           }
 
-          dvr_.save_epg(frequency, ctx);
-          dvr_.save_frequencies();
-
-          ctx.dump();
-
-          // also store it to disk, to help with post-mortem debugging:
-          yae::mpeg_ts::EPG epg;
-          ctx.get_epg_now(epg);
-
-          int64_t t = yae::TTime::now().get(1);
-          t -= t % 1800; // round-down to half-hour:
-
-          struct tm tm;
-          yae::unix_epoch_time_to_localtime(t, tm);
-
-          for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-                 i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
-          {
-            const yae::mpeg_ts::EPG::Channel & channel = i->second;
-            std::string fn = strfmt("epg-%02i.%02i-%02u%02u.json",
-                                    channel.major_,
-                                    channel.minor_,
-                                    tm.tm_hour,
-                                    tm.tm_min);
-
-            Json::Value json;
-            yae::mpeg_ts::save(json, channel);
-            yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
-          }
+          save_epg(frequency, ctx);
         }
         else
         {
@@ -2018,8 +1994,46 @@ namespace yae
         yae_ilog("skipping EPG update for channels %i.* (%s)",
                  major,
                  frequency.c_str());
-        continue;
+        save_epg(frequency, ctx);
       }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // UpdateProgramGuide::save_epg
+  //
+  void
+  UpdateProgramGuide::save_epg(const std::string & frequency,
+                               const yae::mpeg_ts::Context & ctx)
+  {
+    dvr_.save_epg(frequency, ctx);
+    dvr_.save_frequencies();
+
+    ctx.dump();
+
+    // also store it to disk, to help with post-mortem debugging:
+    yae::mpeg_ts::EPG epg;
+    ctx.get_epg_now(epg);
+
+    int64_t t = yae::TTime::now().get(1);
+    t -= t % 1800; // round-down to half-hour:
+
+    struct tm tm;
+    yae::unix_epoch_time_to_localtime(t, tm);
+
+    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+    {
+      const yae::mpeg_ts::EPG::Channel & channel = i->second;
+      std::string fn = strfmt("epg-%02i.%02i-%02u%02u.json",
+                              channel.major_,
+                              channel.minor_,
+                              tm.tm_hour,
+                              tm.tm_min);
+
+      Json::Value json;
+      yae::mpeg_ts::save(json, channel);
+      yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
     }
   }
 
