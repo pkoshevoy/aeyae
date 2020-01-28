@@ -301,27 +301,16 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     updateTimelinePositions();
 
-    uint64_t bytes = 0;
-    uint64_t seconds = 0;
-    for (std::size_t i = 0, n = segments_.size(); i < n; i++)
+    if (walltime_.empty())
     {
-      const Seg & segment = segments_[i];
-      bytes += segment.bytes(*this);
-      seconds += segment.seconds(*this);
+      start.reset(0, 0); // invalid time
+      duration.reset(0, 1); // zero duration
     }
-
-    // global average over all segments:
-    double bytes_per_sec = double(bytes) / double(seconds);
-
-    // approximate duration based on average bitrate and current file size:
-    uint64_t file_size = yae::stat_filesize(filepath_.c_str());
-    duration = TTime(double(file_size) / bytes_per_sec);
-
-    // extrapolate recording start time based on first walltime:filesize
-    // and average bitrate:
-    uint64_t first_time = walltime_.empty() ? 0 : walltime_.front();
-    uint64_t first_size = filesize_.empty() ? 0 : filesize_.front();
-    start = TTime(double(first_time) - double(first_size) / bytes_per_sec);
+    else
+    {
+      start = walltime_.front();
+      duration = walltime_.back() - walltime_.front();
+    }
 
     // FIXME: consider timespan of the Recording (as scheduled),
     // and possibly adjust the start time to the scheduled start time
@@ -337,15 +326,14 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
 
     // find the segment that corresponds to the given position:
-    uint64_t t0 = 0;
-
     for (std::size_t i = 0, n = segments_.size(); i < n; i++)
     {
       const Seg & segment = segments_[i];
-      uint64_t dt = segment.seconds(*this);
-      uint64_t t1 = t0 + dt;
+      uint64_t t0 = segment.t0(*this);
+      uint64_t t1 = segment.t1(*this);
+      uint64_t dt = t1 - t0;
 
-      if (t <= double(t1))
+      if (dt > 0 && t <= double(t1))
       {
         double s = std::max(0.0, t - double(t0)) / double(dt);
         double offset = double(segment.bytes(*this) * s);
@@ -356,8 +344,6 @@ namespace yae
         pos -= pos % 188;
         return pos;
       }
-
-      t0 = t1;
     }
 
     if (segments_.empty())
@@ -368,7 +354,8 @@ namespace yae
     // extrapolate beyond last segment:
     const Seg & segment = segments_.back();
     double byterate = segment.bytes_per_sec(*this);
-    double p = double(segment.p1(*this)) + (t - t0) * byterate;
+    double t1 = double(segment.t1(*this));
+    double p = double(segment.p1(*this)) + (t - t1) * byterate;
     p = std::min<double>(p, std::numeric_limits<uint64_t>::max());
 
     uint64_t pos = uint64_t(p);
