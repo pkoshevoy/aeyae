@@ -36,6 +36,8 @@ namespace yae
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     enableClosedCaptions_(0),
+    adjustTimestamps_(NULL),
+    adjustTimestampsCtx_(NULL),
     dtsStreamIndex_(-1),
     dtsBytePos_(0),
     dts_(AV_NOPTS_VALUE),
@@ -662,6 +664,11 @@ namespace yae
           break;
         }
 
+        if (adjustTimestamps_)
+        {
+          adjustTimestamps_(adjustTimestampsCtx_, context_, &packet);
+        }
+
         if (packet.dts != AV_NOPTS_VALUE)
         {
           // keep track of current DTS, so that we would know which way to seek
@@ -1031,6 +1038,16 @@ namespace yae
     {}
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::setAdjustTimestamps
+  //
+  void
+  Movie::setAdjustTimestamps(TAdjustTimestamps cb, void * context)
+  {
+    adjustTimestamps_ = cb;
+    adjustTimestampsCtx_ = context;
   }
 
   //----------------------------------------------------------------

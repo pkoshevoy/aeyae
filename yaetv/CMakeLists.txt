@@ -149,8 +149,8 @@ set(project_sources
   yae_dvr.h
   yae_hdhomerun.cpp
   yae_hdhomerun.h
-  yae_reader_live.cpp
-  yae_reader_live.h
+  yae_live_reader.cpp
+  yae_live_reader.h
   yae_signal_handler.cpp
   yae_signal_handler.h
 
@@ -691,7 +691,6 @@ if (WIN32)
     "-icon" "${NATIVE_PROGRAM_ICON}"
     "-url" "https://github.com/pkoshevoy/aeyae"
     "-deploy" $<TARGET_FILE:${PROGNAME}>
-    "-deploy" $<TARGET_FILE:yae_reader_ffmpeg>
     "-deploy" $<TARGET_FILE:aeyae>
     ${DEPLOY_QT_PLUGINS}
     DEPENDS ${PROGNAME} wixWrapper

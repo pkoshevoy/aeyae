@@ -29,8 +29,8 @@ namespace yae
   //----------------------------------------------------------------
   // TimePos::TimePos
   //
-  TimePos::TimePos(double pos):
-    pos_(pos)
+  TimePos::TimePos(double sec):
+    sec_(sec)
   {}
 
   //----------------------------------------------------------------
@@ -39,7 +39,7 @@ namespace yae
   std::string
   TimePos::to_str() const
   {
-    return TTime(pos_).to_hhmmss_ms();
+    return TTime(sec_).to_hhmmss_ms();
   }
 
   //----------------------------------------------------------------
@@ -49,7 +49,7 @@ namespace yae
   TimePos::lt(const TFrameBase & f, double dur) const
   {
     double t = f.time_.sec() + dur;
-    return (pos_ < t);
+    return (sec_ < t);
   }
 
   //----------------------------------------------------------------
@@ -59,7 +59,7 @@ namespace yae
   TimePos::gt(const TFrameBase & f, double dur) const
   {
     double t = f.time_.sec() + dur;
-    return (t < pos_);
+    return (t < sec_);
   }
 
   //----------------------------------------------------------------
@@ -77,7 +77,7 @@ namespace yae
   int
   TimePos::seek(AVFormatContext * context, const AVStream * stream) const
   {
-    int64_t ts = int64_t(pos_ * double(AV_TIME_BASE));
+    int64_t ts = int64_t(sec_ * double(AV_TIME_BASE));
 
     if (stream)
     {
@@ -113,71 +113,6 @@ namespace yae
                                seekFlags | AVSEEK_FLAG_ANY);
     }
 
-    return err;
-  }
-
-
-  //----------------------------------------------------------------
-  // BytePos::BytePos
-  //
-  BytePos::BytePos(uint64_t pos):
-    pos_(pos)
-  {}
-
-  //----------------------------------------------------------------
-  // BytePos::to_str
-  //
-  std::string
-  BytePos::to_str() const
-  {
-    return yae::strfmt("byte %" PRIu64, pos_);
-  }
-
-  //----------------------------------------------------------------
-  // BytePos::lt
-  //
-  bool
-  BytePos::lt(const TFrameBase & f, double dur) const
-  {
-    (void)dur;
-    return pos_ < f.pos_;
-  }
-
-  //----------------------------------------------------------------
-  // BytePos::gt
-  //
-  bool
-  BytePos::gt(const TFrameBase & f, double dur) const
-  {
-    (void)dur;
-    return f.pos_ < pos_;
-  }
-
-  //----------------------------------------------------------------
-  // BytePos::to_str
-  //
-  std::string
-  BytePos::to_str(const TFrameBase & f, double dur) const
-  {
-    (void)dur;
-    return yae::strfmt("byte %" PRIu64, f.pos_);
-  }
-
-  //----------------------------------------------------------------
-  // BytePos::seek
-  //
-  int
-  BytePos::seek(AVFormatContext * context, const AVStream * stream) const
-  {
-    int streamIndex = stream ? stream->index : -1;
-    int seekFlags = AVSEEK_FLAG_BYTE;
-    // seekFlags |= AVSEEK_FLAG_ANY;
-    int err = avformat_seek_file(context,
-                                 streamIndex,
-                                 kMinInt64,
-                                 pos_,
-                                 pos_, // kMaxInt64,
-                                 seekFlags);
     return err;
   }
 

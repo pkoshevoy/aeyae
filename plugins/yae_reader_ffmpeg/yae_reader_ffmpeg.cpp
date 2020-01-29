@@ -504,8 +504,8 @@ namespace yae
   void
   ReaderFFMPEG::getPlaybackInterval(double & timeIn, double & timeOut) const
   {
-    timeIn = private_->timeIn_->pos_;
-    timeOut = private_->timeOut_->pos_;
+    timeIn = private_->timeIn_->sec_;
+    timeOut = private_->timeOut_->sec_;
   }
 
   //----------------------------------------------------------------

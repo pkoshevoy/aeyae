@@ -89,6 +89,10 @@ namespace yae
     bool hasDuration() const;
     bool requestSeek(const TSeekPosPtr & pos);
 
+    // for adjusting DTS/PTS timestamps:
+    typedef void(*TAdjustTimestamps)(void *, AVFormatContext *, AVPacket *);
+    void setAdjustTimestamps(TAdjustTimestamps cb, void * context);
+
   protected:
     int seekTo(const TSeekPosPtr & pos, bool dropPendingFrames);
 
@@ -179,6 +183,10 @@ namespace yae
     // 3 - CC3
     // 4 - CC4
     unsigned int enableClosedCaptions_;
+
+    // allow packet DTS/PTS to be adjusted prior to being decoded:
+    TAdjustTimestamps adjustTimestamps_;
+    void * adjustTimestampsCtx_;
 
     // demuxer current position (DTS, stream index, and byte position):
     int dtsStreamIndex_;

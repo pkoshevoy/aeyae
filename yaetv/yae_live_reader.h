@@ -6,8 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_READER_LIVE_H_
-#define YAE_READER_LIVE_H_
+#ifndef YAE_LIVE_READER_H_
+#define YAE_LIVE_READER_H_
 
 // standard:
 #include <vector>
@@ -26,30 +26,30 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // ReaderLive
+  // LiveReader
   //
-  struct ReaderLive : public IReader
+  struct LiveReader : public IReader
   {
   private:
     //! intentionally disabled:
-    ReaderLive(const ReaderLive & f);
-    ReaderLive & operator = (const ReaderLive & f);
+    LiveReader(const LiveReader & f);
+    LiveReader & operator = (const LiveReader & f);
 
     //! private implementation details:
     class Private;
     Private * const private_;
 
   protected:
-    ReaderLive();
-    virtual ~ReaderLive();
+    LiveReader();
+    virtual ~LiveReader();
 
   public:
-    static ReaderLive * create();
+    static LiveReader * create();
     virtual void destroy();
 
-    //! prototype factory method that returns a new instance of ReaderLive,
+    //! prototype factory method that returns a new instance of LiveReader,
     //! not a deep copy:
-    virtual ReaderLive * clone() const;
+    virtual LiveReader * clone() const;
 
     //! return a human readable name for this reader (preferably unique):
     virtual const char * name() const;
@@ -166,4 +166,4 @@ namespace yae
 }
 
 
-#endif // YAE_READER_LIVE_H_
+#endif // YAE_LIVE_READER_H_

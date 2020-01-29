@@ -26,22 +26,124 @@
 
 // local:
 #include "yae_dvr.h"
-#include "yae_reader_live.h"
+#include "yae_live_reader.h"
 
 
 //----------------------------------------------------------------
-// YAE_READER_LIVE_GUID
+// YAE_LIVE_READER_GUID
 //
-#define YAE_READER_LIVE_GUID "4A16794E-FEF7-483D-BFC9-F03A1FBCB35C"
+#define YAE_LIVE_READER_GUID "4A16794E-FEF7-483D-BFC9-F03A1FBCB35C"
 
 
 namespace yae
 {
 
   //----------------------------------------------------------------
-  // ReaderLive::Private
+  // BytePos
   //
-  class ReaderLive::Private
+  struct BytePos : ISeekPos
+  {
+    BytePos(uint64_t pos, double sec);
+
+    // virtual:
+    std::string to_str() const;
+
+    // virtual:
+    bool lt(const TFrameBase & f, double dur = 0.0) const;
+    bool gt(const TFrameBase & f, double dur = 0.0) const;
+
+    // virtual:
+    std::string to_str(const TFrameBase & f, double dur) const;
+
+    // virtual:
+    int seek(AVFormatContext * ctx, const AVStream * s) const;
+
+    // bytes:
+    uint64_t pos_;
+
+    // seconds:
+    double sec_;
+  };
+
+  //----------------------------------------------------------------
+  // TBytePosPtr
+  //
+  typedef yae::shared_ptr<BytePos, ISeekPos> TBytePosPtr;
+
+
+  //----------------------------------------------------------------
+  // BytePos::BytePos
+  //
+  BytePos::BytePos(uint64_t pos, double sec):
+    pos_(pos),
+    sec_(sec)
+  {}
+
+  //----------------------------------------------------------------
+  // BytePos::to_str
+  //
+  std::string
+  BytePos::to_str() const
+  {
+    return yae::strfmt("offset %" PRIu64 " (%s)",
+                       pos_,
+                       TTime(sec_).to_hhmmss_ms().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::lt
+  //
+  bool
+  BytePos::lt(const TFrameBase & f, double dur) const
+  {
+    (void)dur;
+    return sec_ < f.time_.sec();
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::gt
+  //
+  bool
+  BytePos::gt(const TFrameBase & f, double dur) const
+  {
+    (void)dur;
+    return f.time_.sec() < sec_;
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::to_str
+  //
+  std::string
+  BytePos::to_str(const TFrameBase & f, double dur) const
+  {
+    return yae::strfmt("offset %" PRIu64 " (%s)",
+                       f.pos_,
+                       (f.time_ + dur).to_hhmmss_ms().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::seek
+  //
+  int
+  BytePos::seek(AVFormatContext * context, const AVStream * stream) const
+  {
+    int streamIndex = stream ? stream->index : -1;
+    int seekFlags = AVSEEK_FLAG_BYTE;
+    // seekFlags |= AVSEEK_FLAG_ANY;
+    int err = avformat_seek_file(context,
+                                 streamIndex,
+                                 kMinInt64,
+                                 pos_,
+                                 pos_, // kMaxInt64,
+                                 seekFlags);
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
+  // LiveReader::Private
+  //
+  class LiveReader::Private
   {
   private:
     // intentionally disabled:
@@ -56,9 +158,17 @@ namespace yae
     void calcTimeline(TTime & start, TTime & duration);
     uint64_t calcPosition(double t) const;
 
+    bool seek(double seekTime);
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
+
+    void adjustTimestamps(AVFormatContext * ctx, AVPacket * pkt);
+
+    static void
+    adjustTimestampsCallback(void * readerPrivate,
+                             AVFormatContext * ctx,
+                             AVPacket * pkt);
 
     Movie movie_;
     unsigned int readerId_;
@@ -111,22 +221,52 @@ namespace yae
     // disconts cause timeline gaps, so we'll be
     // keeping track of the contiguous segments:
     std::vector<Seg> segments_;
+
+    //----------------------------------------------------------------
+    // ByteRange
+    //
+    struct ByteRange
+    {
+      ByteRange(std::size_t index = 0,
+                uint64_t start_time = 0,
+                uint64_t start_pos = 0,
+                uint64_t end_pos = std::numeric_limits<uint64_t>::max()):
+        ix_(index),
+        t0_(start_time),
+        p0_(start_pos),
+        p1_(end_pos)
+      {}
+
+      std::size_t ix_;
+      uint64_t t0_;
+      uint64_t p0_;
+      uint64_t p1_;
+    };
+
+    yae::TTime walltimeOffset_;
+    std::vector<ByteRange> ranges_;
+    std::size_t currRange_;
   };
 
-  //----------------------------------------------------------------
-  // ReaderLive::Private::Private
-  //
-  ReaderLive::Private::Private():
-      readerId_((unsigned int)~0),
-      timeIn_(0.0),
-      timeOut_(kMaxDouble)
-  {}
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::Seg::bytes_per_sec
+  // LiveReader::Private::Private
+  //
+  LiveReader::Private::Private():
+      readerId_((unsigned int)~0),
+      timeIn_(0.0),
+      timeOut_(kMaxDouble),
+      walltimeOffset_(0, 1),
+      currRange_(std::numeric_limits<std::size_t>::max())
+  {
+    movie_.setAdjustTimestamps(&adjustTimestampsCallback, this);
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::Seg::bytes_per_sec
   //
   double
-  ReaderLive::Private::Seg::bytes_per_sec(const Private & ctx) const
+  LiveReader::Private::Seg::bytes_per_sec(const Private & ctx) const
   {
     if (n_ < 2)
     {
@@ -141,58 +281,55 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::open
+  // LiveReader::Private::open
   //
   bool
-  ReaderLive::Private::open(const std::string & filepath)
+  LiveReader::Private::open(const std::string & filepath)
   {
-    std::string folder;
-    std::string fn_ext;
-    if (!parse_file_path(filepath, folder, fn_ext))
-    {
-      return false;
-    }
-
-    std::string basename;
-    std::string suffix;
-    if (!parse_file_name(fn_ext, basename, suffix))
-    {
-      return false;
-    }
-
-    fs::path path(folder);
-    std::string fn_rec = (path / (basename + ".json")).string();
-    std::string fn_dat = (path / (basename + ".dat")).string();
-
-    try
-    {
-      Json::Value json;
-      yae::TOpenFile(fn_rec, "rb").load(json);
-      rec_.reset(new Recording());
-      yae::load(json, *rec_);
-    }
-    catch (...)
-    {
-      // return false;
-    }
-
-    dat_.reset(new TOpenFile(fn_dat, "rb"));
-    if (!dat_->is_open())
-    {
-      return false;
-    }
-
     filepath_ = filepath;
     segments_.clear();
+    ranges_.clear();
+
+    std::string folder;
+    std::string fn_ext;
+    if (parse_file_path(filepath, folder, fn_ext))
+    {
+      std::string basename;
+      std::string suffix;
+      if (parse_file_name(fn_ext, basename, suffix))
+      {
+        fs::path path(folder);
+        std::string fn_rec = (path / (basename + ".json")).string();
+        std::string fn_dat = (path / (basename + ".dat")).string();
+
+        try
+        {
+          Json::Value json;
+          yae::TOpenFile(fn_rec, "rb").load(json);
+          rec_.reset(new Recording());
+          yae::load(json, *rec_);
+        }
+        catch (...)
+        {
+          // return false;
+        }
+
+        dat_.reset(new TOpenFile(fn_dat, "rb"));
+        if (!dat_->is_open())
+        {
+          dat_.reset();
+        }
+      }
+    }
 
     return movie_.open(filepath.c_str());
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::updateTimelinePositions
+  // LiveReader::Private::updateTimelinePositions
   //
   bool
-  ReaderLive::Private::updateTimelinePositions()
+  LiveReader::Private::updateTimelinePositions()
   {
     if (!dat_)
     {
@@ -243,6 +380,7 @@ namespace yae
 
       if (segments_.empty())
       {
+        ranges_.push_back(ByteRange(0, walltime, filesize));
         segments_.push_back(Seg());
       }
 
@@ -274,6 +412,8 @@ namespace yae
           if (r > 0.5)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate:
+            ranges_.back().p1_ = filesize;
+            ranges_.push_back(ByteRange(ranges_.size(), walltime, filesize));
             segments_.push_back(Seg(walltime_.size()));
 
             // update the shortcut:
@@ -293,10 +433,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::calcTimeline
+  // LiveReader::Private::calcTimeline
   //
   void
-  ReaderLive::Private::calcTimeline(TTime & start, TTime & duration)
+  LiveReader::Private::calcTimeline(TTime & start, TTime & duration)
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
     updateTimelinePositions();
@@ -318,10 +458,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::calcPosition
+  // LiveReader::Private::calcPosition
   //
   uint64_t
-  ReaderLive::Private::calcPosition(double t) const
+  LiveReader::Private::calcPosition(double t) const
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
 
@@ -363,12 +503,21 @@ namespace yae
     return pos;
   }
 
+  //----------------------------------------------------------------
+  // LiveReader::Private::seek
+  //
+  bool
+  LiveReader::Private::seek(double seekTime)
+  {
+    TBytePosPtr pos(new BytePos(calcPosition(seekTime), seekTime));
+    return movie_.requestSeek(pos);
+  }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::getPlaybackInterval
+  // LiveReader::Private::getPlaybackInterval
   //
   void
-  ReaderLive::Private::getPlaybackInterval(double & timeIn,
+  LiveReader::Private::getPlaybackInterval(double & timeIn,
                                            double & timeOut) const
   {
     timeIn = timeIn_;
@@ -376,138 +525,239 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::setPlaybackIntervalEnd
+  // LiveReader::Private::setPlaybackIntervalEnd
   //
   void
-  ReaderLive::Private::setPlaybackIntervalStart(double timeIn)
+  LiveReader::Private::setPlaybackIntervalStart(double timeIn)
   {
     timeIn_ = timeIn;
 
-    TBytePosPtr pos(new BytePos(calcPosition(timeIn_)));
+    TBytePosPtr pos(new BytePos(calcPosition(timeIn_), timeIn_));
     movie_.setPlaybackIntervalStart(pos);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::Private::setPlaybackIntervalEnd
+  // LiveReader::Private::setPlaybackIntervalEnd
   //
   void
-  ReaderLive::Private::setPlaybackIntervalEnd(double timeOut)
+  LiveReader::Private::setPlaybackIntervalEnd(double timeOut)
   {
     timeOut_ = timeOut;
 
-    TBytePosPtr pos(new BytePos(calcPosition(timeOut_)));
+    TBytePosPtr pos(new BytePos(calcPosition(timeOut_), timeOut_));
     movie_.setPlaybackIntervalEnd(pos);
+  }
+
+  //----------------------------------------------------------------
+  // find_range
+  //
+  template <typename TByteRange>
+  static const TByteRange *
+  find_range(const TByteRange * r0, const TByteRange * r1, uint64_t pos)
+  {
+    if (r0 == r1)
+    {
+      YAE_ASSERT(pos < r1->p1_);
+      return r0;
+    }
+
+    std::size_t n = r1 - r0 + 1;
+    std::size_t i = n / 2;
+    const TByteRange * ri = r0 + i;
+
+    if (pos < ri->p1_)
+    {
+      return find_range<TByteRange>(r0, ri, pos);
+    }
+
+    return find_range<TByteRange>(ri, r1, pos);
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::adjustTimestamps
+  //
+  void
+  LiveReader::Private::adjustTimestamps(AVFormatContext * ctx, AVPacket * pkt)
+  {
+    if (ranges_.empty() || pkt->dts == AV_NOPTS_VALUE)
+    {
+      return;
+    }
+
+    const AVStream * stream =
+      pkt->stream_index < int(ctx->nb_streams) ?
+      ctx->streams[pkt->stream_index] :
+      NULL;
+
+    if (!stream)
+    {
+      return;
+    }
+
+    const ByteRange * range =
+      (currRange_ < ranges_.size()) ? &(ranges_.at(currRange_)) : NULL;
+
+    if (!range || pkt->pos < range->p0_ || range->p1_ <= pkt->pos)
+    {
+      const ByteRange * r0 = &(ranges_.front());
+      const ByteRange * r1 = &(ranges_.back());
+      range = find_range(r0, r1, pkt->pos);
+      currRange_ = range - r0;
+
+      const Seg & segment = segments_[range->ix_];
+      double byterate = segment.bytes_per_sec(*this);
+
+      TTime dts(stream->time_base.num * pkt->dts,
+                stream->time_base.den);
+
+      double posErr = double(pkt->pos - range->p0_);
+      double secErr = posErr / byterate;
+
+      TTime walltime(range->t0_, 1);
+      walltimeOffset_ = (dts - walltime) - TTime(secErr);
+    }
+
+    TTime dts(stream->time_base.num * pkt->dts,
+              stream->time_base.den);
+    dts -= walltimeOffset_;
+    pkt->dts = av_rescale_q(dts.time_,
+                            Rational(1, dts.base_),
+                            stream->time_base);
+
+    if (pkt->pts == AV_NOPTS_VALUE)
+    {
+      return;
+    }
+
+    TTime pts(stream->time_base.num * pkt->pts,
+              stream->time_base.den);
+    pts -= walltimeOffset_;
+    pkt->pts = av_rescale_q(pts.time_,
+                            Rational(1, pts.base_),
+                            stream->time_base);
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::adjustTimestampsCallback
+  //
+  void
+  LiveReader::Private::adjustTimestampsCallback(void * ctx,
+                                                AVFormatContext * fmt,
+                                                AVPacket * pkt)
+  {
+    LiveReader::Private * reader = (LiveReader::Private *)ctx;
+    reader->adjustTimestamps(fmt, pkt);
   }
 
 
   //----------------------------------------------------------------
-  // ReaderLive::ReaderLive
+  // LiveReader::LiveReader
   //
-  ReaderLive::ReaderLive():
+  LiveReader::LiveReader():
     IReader(),
-    private_(new ReaderLive::Private())
+    private_(new LiveReader::Private())
   {}
 
   //----------------------------------------------------------------
-  // ReaderLive::~ReaderLive
+  // LiveReader::~LiveReader
   //
-  ReaderLive::~ReaderLive()
+  LiveReader::~LiveReader()
   {
     delete private_;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::create
+  // LiveReader::create
   //
-  ReaderLive *
-  ReaderLive::create()
+  LiveReader *
+  LiveReader::create()
   {
-    return new ReaderLive();
+    return new LiveReader();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::destroy
+  // LiveReader::destroy
   //
   void
-  ReaderLive::destroy()
+  LiveReader::destroy()
   {
     delete this;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::clone
+  // LiveReader::clone
   //
-  ReaderLive *
-  ReaderLive::clone() const
+  LiveReader *
+  LiveReader::clone() const
   {
-    return ReaderLive::create();
+    return LiveReader::create();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::name
+  // LiveReader::name
   //
   const char *
-  ReaderLive::name() const
+  LiveReader::name() const
   {
     return typeid(*this).name();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::kGUID
+  // LiveReader::kGUID
   //
   const char *
-  ReaderLive::kGUID = YAE_READER_LIVE_GUID;
+  LiveReader::kGUID = YAE_LIVE_READER_GUID;
 
   //----------------------------------------------------------------
-  // ReaderLive::guid
+  // LiveReader::guid
   //
   const char *
-  ReaderLive::guid() const
+  LiveReader::guid() const
   {
-    return ReaderLive::kGUID;
+    return LiveReader::kGUID;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::settings
+  // LiveReader::settings
   //
   ISettingGroup *
-  ReaderLive::settings()
+  LiveReader::settings()
   {
     return private_->movie_.settings();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getUrlProtocols
+  // LiveReader::getUrlProtocols
   //
   bool
-  ReaderLive::getUrlProtocols(std::list<std::string> & protocols) const
+  LiveReader::getUrlProtocols(std::list<std::string> & protocols) const
   {
     return private_->movie_.getUrlProtocols(protocols);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::open
+  // LiveReader::open
   //
   bool
-  ReaderLive::open(const char * resourcePathUTF8)
+  LiveReader::open(const char * resourcePathUTF8)
   {
     return private_->open(std::string(resourcePathUTF8));
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::close
+  // LiveReader::close
   //
   void
-  ReaderLive::close()
+  LiveReader::close()
   {
     return private_->movie_.close();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getNumberOfPrograms
+  // LiveReader::getNumberOfPrograms
   //
   std::size_t
-  ReaderLive::getNumberOfPrograms() const
+  LiveReader::getNumberOfPrograms() const
   {
     // FIXME: pkoshevoy: use recording info .json
 
@@ -517,10 +767,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getProgramInfo
+  // LiveReader::getProgramInfo
   //
   bool
-  ReaderLive::getProgramInfo(std::size_t i, TProgramInfo & info) const
+  LiveReader::getProgramInfo(std::size_t i, TProgramInfo & info) const
   {
     // FIXME: pkoshevoy: use recording info .json
 
@@ -537,10 +787,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getNumberOfVideoTracks
+  // LiveReader::getNumberOfVideoTracks
   //
   std::size_t
-  ReaderLive::getNumberOfVideoTracks() const
+  LiveReader::getNumberOfVideoTracks() const
   {
     // FIXME: pkoshevoy: use recording info .json
 
@@ -548,10 +798,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getNumberOfAudioTracks
+  // LiveReader::getNumberOfAudioTracks
   //
   std::size_t
-  ReaderLive::getNumberOfAudioTracks() const
+  LiveReader::getNumberOfAudioTracks() const
   {
     // FIXME: pkoshevoy: use recording info .json
 
@@ -559,86 +809,110 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getSelectedVideoTrackIndex
+  // LiveReader::getSelectedVideoTrackIndex
   //
   std::size_t
-  ReaderLive::getSelectedVideoTrackIndex() const
+  LiveReader::getSelectedVideoTrackIndex() const
   {
     return private_->movie_.getSelectedVideoTrack();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getSelectedAudioTrackIndex
+  // LiveReader::getSelectedAudioTrackIndex
   //
   std::size_t
-  ReaderLive::getSelectedAudioTrackIndex() const
+  LiveReader::getSelectedAudioTrackIndex() const
   {
     return private_->movie_.getSelectedAudioTrack();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::selectVideoTrack
+  // LiveReader::selectVideoTrack
   //
   bool
-  ReaderLive::selectVideoTrack(std::size_t i)
+  LiveReader::selectVideoTrack(std::size_t i)
   {
     return private_->movie_.selectVideoTrack(i);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::selectAudioTrack
+  // LiveReader::selectAudioTrack
   //
   bool
-  ReaderLive::selectAudioTrack(std::size_t i)
+  LiveReader::selectAudioTrack(std::size_t i)
   {
     return private_->movie_.selectAudioTrack(i);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getSelectedVideoTrackName
+  // LiveReader::getSelectedVideoTrackName
   //
   void
-  ReaderLive::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  LiveReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     private_->movie_.getVideoTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getSelectedAudioTrackInfo
+  // LiveReader::getSelectedAudioTrackInfo
   //
   void
-  ReaderLive::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  LiveReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     private_->movie_.getAudioTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getVideoDuration
+  // LiveReader::getVideoDuration
   //
   bool
-  ReaderLive::getVideoDuration(TTime & start, TTime & duration) const
+  LiveReader::getVideoDuration(TTime & start, TTime & duration) const
   {
-    private_->calcTimeline(start, duration);
-    return true;
+    if (!private_->walltime_.empty())
+    {
+      private_->calcTimeline(start, duration);
+      return true;
+    }
+
+    std::size_t i = private_->movie_.getSelectedVideoTrack();
+    if (i < private_->movie_.getVideoTracks().size())
+    {
+      private_->movie_.getVideoTracks()[i]->getDuration(start, duration);
+      return true;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getAudioDuration
+  // LiveReader::getAudioDuration
   //
   bool
-  ReaderLive::getAudioDuration(TTime & start, TTime & duration) const
+  LiveReader::getAudioDuration(TTime & start, TTime & duration) const
   {
-    private_->calcTimeline(start, duration);
-    return true;
+    if (!private_->walltime_.empty())
+    {
+      private_->calcTimeline(start, duration);
+      return true;
+    }
+
+    std::size_t i = private_->movie_.getSelectedAudioTrack();
+    if (i < private_->movie_.getAudioTracks().size())
+    {
+      private_->movie_.getAudioTracks()[i]->getDuration(start, duration);
+      return true;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getVideoTraits
+  // LiveReader::getVideoTraits
   //
   bool
-  ReaderLive::getVideoTraits(VideoTraits & traits) const
+  LiveReader::getVideoTraits(VideoTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
@@ -650,10 +924,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getAudioTraits
+  // LiveReader::getAudioTraits
   //
   bool
-  ReaderLive::getAudioTraits(AudioTraits & traits) const
+  LiveReader::getAudioTraits(AudioTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
@@ -665,10 +939,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setAudioTraitsOverride
+  // LiveReader::setAudioTraitsOverride
   //
   bool
-  ReaderLive::setAudioTraitsOverride(const AudioTraits & override)
+  LiveReader::setAudioTraitsOverride(const AudioTraits & override)
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
@@ -681,10 +955,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setVideoTraitsOverride
+  // LiveReader::setVideoTraitsOverride
   //
   bool
-  ReaderLive::setVideoTraitsOverride(const VideoTraits & override)
+  LiveReader::setVideoTraitsOverride(const VideoTraits & override)
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
@@ -697,10 +971,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getAudioTraitsOverride
+  // LiveReader::getAudioTraitsOverride
   //
   bool
-  ReaderLive::getAudioTraitsOverride(AudioTraits & override) const
+  LiveReader::getAudioTraitsOverride(AudioTraits & override) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
@@ -713,10 +987,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getVideoTraitsOverride
+  // LiveReader::getVideoTraitsOverride
   //
   bool
-  ReaderLive::getVideoTraitsOverride(VideoTraits & override) const
+  LiveReader::getVideoTraitsOverride(VideoTraits & override) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
@@ -729,29 +1003,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::isSeekable
+  // LiveReader::isSeekable
   //
   bool
-  ReaderLive::isSeekable() const
+  LiveReader::isSeekable() const
   {
     return private_->movie_.isSeekable() && private_->movie_.hasDuration();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::seek
+  // LiveReader::seek
   //
   bool
-  ReaderLive::seek(double seekTime)
+  LiveReader::seek(double seekTime)
   {
-    TTimePosPtr pos(new TimePos(seekTime));
-    return private_->movie_.requestSeek(pos);
+    return private_->seek(seekTime);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::readVideo
+  // LiveReader::readVideo
   //
   bool
-  ReaderLive::readVideo(TVideoFramePtr & frame, QueueWaitMgr * terminator)
+  LiveReader::readVideo(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
     // FIXME: pkoshevoy: remap frame time
 
@@ -772,10 +1045,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::readAudio
+  // LiveReader::readAudio
   //
   bool
-  ReaderLive::readAudio(TAudioFramePtr & frame, QueueWaitMgr * terminator)
+  LiveReader::readAudio(TAudioFramePtr & frame, QueueWaitMgr * terminator)
   {
     // FIXME: pkoshevoy: remap frame time
 
@@ -796,208 +1069,208 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::blockedOnVideo
+  // LiveReader::blockedOnVideo
   //
   bool
-  ReaderLive::blockedOnVideo() const
+  LiveReader::blockedOnVideo() const
   {
     return private_->movie_.blockedOnVideo();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::blockedOnAudio
+  // LiveReader::blockedOnAudio
   //
   bool
-  ReaderLive::blockedOnAudio() const
+  LiveReader::blockedOnAudio() const
   {
     return private_->movie_.blockedOnAudio();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::threadStart
+  // LiveReader::threadStart
   //
   bool
-  ReaderLive::threadStart()
+  LiveReader::threadStart()
   {
     return private_->movie_.threadStart();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::threadStop
+  // LiveReader::threadStop
   //
   bool
-  ReaderLive::threadStop()
+  LiveReader::threadStop()
   {
     return private_->movie_.threadStop();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getPlaybackInterval
+  // LiveReader::getPlaybackInterval
   //
   void
-  ReaderLive::getPlaybackInterval(double & timeIn, double & timeOut) const
+  LiveReader::getPlaybackInterval(double & timeIn, double & timeOut) const
   {
     private_->getPlaybackInterval(timeIn, timeOut);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setPlaybackIntervalStart
+  // LiveReader::setPlaybackIntervalStart
   //
   void
-  ReaderLive::setPlaybackIntervalStart(double timeIn)
+  LiveReader::setPlaybackIntervalStart(double timeIn)
   {
     private_->setPlaybackIntervalStart(private_->timeIn_);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setPlaybackIntervalEnd
+  // LiveReader::setPlaybackIntervalEnd
   //
   void
-  ReaderLive::setPlaybackIntervalEnd(double timeOut)
+  LiveReader::setPlaybackIntervalEnd(double timeOut)
   {
     private_->setPlaybackIntervalEnd(private_->timeOut_);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setPlaybackEnabled
+  // LiveReader::setPlaybackEnabled
   //
   void
-  ReaderLive::setPlaybackEnabled(bool enabled)
+  LiveReader::setPlaybackEnabled(bool enabled)
   {
     private_->movie_.setPlaybackEnabled(enabled);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setPlaybackLooping
+  // LiveReader::setPlaybackLooping
   //
   void
-  ReaderLive::setPlaybackLooping(bool enabled)
+  LiveReader::setPlaybackLooping(bool enabled)
   {
     private_->movie_.setPlaybackLooping(enabled);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::skipLoopFilter
+  // LiveReader::skipLoopFilter
   //
   void
-  ReaderLive::skipLoopFilter(bool skip)
+  LiveReader::skipLoopFilter(bool skip)
   {
     private_->movie_.skipLoopFilter(skip);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::skipNonReferenceFrames
+  // LiveReader::skipNonReferenceFrames
   //
   void
-  ReaderLive::skipNonReferenceFrames(bool skip)
+  LiveReader::skipNonReferenceFrames(bool skip)
   {
     private_->movie_.skipNonReferenceFrames(skip);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setTempo
+  // LiveReader::setTempo
   //
   bool
-  ReaderLive::setTempo(double tempo)
+  LiveReader::setTempo(double tempo)
   {
     return private_->movie_.setTempo(tempo);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setDeinterlacing
+  // LiveReader::setDeinterlacing
   //
   bool
-  ReaderLive::setDeinterlacing(bool enabled)
+  LiveReader::setDeinterlacing(bool enabled)
   {
     return private_->movie_.setDeinterlacing(enabled);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setRenderCaptions
+  // LiveReader::setRenderCaptions
   //
   void
-  ReaderLive::setRenderCaptions(unsigned int cc)
+  LiveReader::setRenderCaptions(unsigned int cc)
   {
     private_->movie_.setRenderCaptions(cc);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getRenderCaptions
+  // LiveReader::getRenderCaptions
   //
   unsigned int
-  ReaderLive::getRenderCaptions() const
+  LiveReader::getRenderCaptions() const
   {
     return private_->movie_.getRenderCaptions();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::subsCount
+  // LiveReader::subsCount
   //
   std::size_t
-  ReaderLive::subsCount() const
+  LiveReader::subsCount() const
   {
     return private_->movie_.subsCount();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::subsInfo
+  // LiveReader::subsInfo
   //
   TSubsFormat
-  ReaderLive::subsInfo(std::size_t i, TTrackInfo & info) const
+  LiveReader::subsInfo(std::size_t i, TTrackInfo & info) const
   {
     return private_->movie_.subsInfo(i, info);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setSubsRender
+  // LiveReader::setSubsRender
   //
   void
-  ReaderLive::setSubsRender(std::size_t i, bool render)
+  LiveReader::setSubsRender(std::size_t i, bool render)
   {
     private_->movie_.setSubsRender(i, render);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getSubsRender
+  // LiveReader::getSubsRender
   //
   bool
-  ReaderLive::getSubsRender(std::size_t i) const
+  LiveReader::getSubsRender(std::size_t i) const
   {
     return private_->movie_.getSubsRender(i);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::countChapters
+  // LiveReader::countChapters
   //
   std::size_t
-  ReaderLive::countChapters() const
+  LiveReader::countChapters() const
   {
     return private_->movie_.countChapters();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getChapterInfo
+  // LiveReader::getChapterInfo
   //
   bool
-  ReaderLive::getChapterInfo(std::size_t i, TChapter & c) const
+  LiveReader::getChapterInfo(std::size_t i, TChapter & c) const
   {
     return private_->movie_.getChapterInfo(i, c);
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getNumberOfAttachments
+  // LiveReader::getNumberOfAttachments
   //
   std::size_t
-  ReaderLive::getNumberOfAttachments() const
+  LiveReader::getNumberOfAttachments() const
   {
     return private_->movie_.attachments().size();
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::getAttachmentInfo
+  // LiveReader::getAttachmentInfo
   //
   const TAttachment *
-  ReaderLive::getAttachmentInfo(std::size_t i) const
+  LiveReader::getAttachmentInfo(std::size_t i) const
   {
     if (i < private_->movie_.attachments().size())
     {
@@ -1008,19 +1281,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setReaderId
+  // LiveReader::setReaderId
   //
   void
-  ReaderLive::setReaderId(unsigned int readerId)
+  LiveReader::setReaderId(unsigned int readerId)
   {
     private_->readerId_ = readerId;
   }
 
   //----------------------------------------------------------------
-  // ReaderLive::setSharedClock
+  // LiveReader::setSharedClock
   //
   void
-  ReaderLive::setSharedClock(const SharedClock & clock)
+  LiveReader::setSharedClock(const SharedClock & clock)
   {
     private_->movie_.setSharedClock(clock);
   }
