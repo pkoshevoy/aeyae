@@ -556,7 +556,16 @@ namespace yae
     {
       dat_time_ = 0;
       mpg_size_ = yae::stat_filesize((basepath + ".mpg").c_str());
-      YAE_ASSERT(mpg_size_ % 188 == 0);
+
+      uint64_t misalignment = mpg_size_ % 188;
+      if (misalignment)
+      {
+        // realign to TS packet boundary:
+        std::size_t padding = 188 - misalignment;
+        std::vector<uint8_t> zeros(padding);
+        mpg_->write(zeros);
+        mpg_size_ += padding;
+      }
 
       Json::Value json;
       yae::save(json, *this);

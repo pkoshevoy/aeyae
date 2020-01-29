@@ -441,6 +441,9 @@ namespace yae
     inline bool write(const std::string & text)
     { return this->write(text.c_str(), text.size()); }
 
+    inline bool write(const std::vector<unsigned char> & data)
+    { return data.empty() ? true : this->write(&(data[0]), data.size()); }
+
     inline bool write(const char * text)
     { return text ? this->write(text, ::strlen(text)) : true; }
 
