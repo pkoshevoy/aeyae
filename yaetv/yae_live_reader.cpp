@@ -156,7 +156,7 @@ namespace yae
     bool open(const std::string & filepath);
     bool updateTimelinePositions();
     void calcTimeline(TTime & start, TTime & duration);
-    uint64_t calcPosition(double t) const;
+    TSeekPosPtr getPosition(double t);
 
     bool seek(double seekTime);
     void getPlaybackInterval(double & timeIn, double & timeOut) const;
@@ -319,6 +319,10 @@ namespace yae
         {
           dat_.reset();
         }
+        else
+        {
+          updateTimelinePositions();
+        }
       }
     }
 
@@ -458,12 +462,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // LiveReader::Private::calcPosition
+  // LiveReader::Private::getPosition
   //
-  uint64_t
-  LiveReader::Private::calcPosition(double t) const
+  TSeekPosPtr
+  LiveReader::Private::getPosition(double t)
   {
+    updateTimelinePositions();
+
     boost::unique_lock<boost::mutex> lock(mutex_);
+    if (segments_.empty())
+    {
+      return TSeekPosPtr(new TimePos(t));
+    }
 
     // find the segment that corresponds to the given position:
     for (std::size_t i = 0, n = segments_.size(); i < n; i++)
@@ -482,13 +492,8 @@ namespace yae
         // to maintain alignment with TS packet boundaries:
         uint64_t pos = segment.p0(*this) + uint64_t(offset);
         pos -= pos % 188;
-        return pos;
+        return TSeekPosPtr(new BytePos(pos, t));
       }
-    }
-
-    if (segments_.empty())
-    {
-      return 0;
     }
 
     // extrapolate beyond last segment:
@@ -500,7 +505,7 @@ namespace yae
 
     uint64_t pos = uint64_t(p);
     pos -= pos % 188;
-    return pos;
+    return TSeekPosPtr(new BytePos(pos, t));
   }
 
   //----------------------------------------------------------------
@@ -509,7 +514,7 @@ namespace yae
   bool
   LiveReader::Private::seek(double seekTime)
   {
-    TBytePosPtr pos(new BytePos(calcPosition(seekTime), seekTime));
+    TSeekPosPtr pos = getPosition(seekTime);
     return movie_.requestSeek(pos);
   }
 
@@ -532,7 +537,8 @@ namespace yae
   {
     timeIn_ = timeIn;
 
-    TBytePosPtr pos(new BytePos(calcPosition(timeIn_), timeIn_));
+    updateTimelinePositions();
+    TSeekPosPtr pos = getPosition(timeIn_);
     movie_.setPlaybackIntervalStart(pos);
   }
 
@@ -544,7 +550,7 @@ namespace yae
   {
     timeOut_ = timeOut;
 
-    TBytePosPtr pos(new BytePos(calcPosition(timeOut_), timeOut_));
+    TSeekPosPtr pos = getPosition(timeOut_);
     movie_.setPlaybackIntervalEnd(pos);
   }
 
@@ -565,9 +571,9 @@ namespace yae
     std::size_t i = n / 2;
     const TByteRange * ri = r0 + i;
 
-    if (pos < ri->p1_)
+    if (pos < ri->p0_)
     {
-      return find_range<TByteRange>(r0, ri, pos);
+      return find_range<TByteRange>(r0, ri - 1, pos);
     }
 
     return find_range<TByteRange>(ri, r1, pos);
@@ -597,7 +603,9 @@ namespace yae
     const ByteRange * range =
       (currRange_ < ranges_.size()) ? &(ranges_.at(currRange_)) : NULL;
 
-    if (!range || pkt->pos < range->p0_ || range->p1_ <= pkt->pos)
+    if (!range || (pkt->pos != -1 &&
+                   (pkt->pos < range->p0_ ||
+                    range->p1_ <= pkt->pos)))
     {
       const ByteRange * r0 = &(ranges_.front());
       const ByteRange * r1 = &(ranges_.back());
