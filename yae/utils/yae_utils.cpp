@@ -1864,7 +1864,11 @@ namespace yae
   {
     // make a backup copy of arglist for the 2nd call to vsnprintf:
     va_list args;
+#if defined(__GNUC__) || defined(__clang__) || defined(va_copy)
     va_copy(args, arglist);
+#else
+    args = arglist;
+#endif
 
     // Determine how big the buffer should be
     int len = vsnprintf(NULL, 0, format, arglist) + 1;
