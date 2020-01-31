@@ -521,6 +521,8 @@ namespace yae
 
     // instantiate the logger:
     {
+      cleanup_yaetv_logs(yaetv_dir);
+
       yae::TLog & logger = yae::logger();
 
       std::string ts =

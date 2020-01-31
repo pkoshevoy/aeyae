@@ -324,6 +324,9 @@ namespace yae
         const std::string & recordings_dir);
     ~DVR();
 
+    void cleanup_yaetv_dir();
+    void cleanup_explicitly_scheduled_items();
+
     void init_packet_handlers();
     void shutdown();
     void scan_channels();
@@ -464,6 +467,12 @@ namespace yae
     yae::mpeg_ts::EPG epg_;
     TTime epg_lastmod_;
   };
+
+
+  //----------------------------------------------------------------
+  // cleanup_yaetv_logs
+  //
+  void cleanup_yaetv_logs(const std::string & yaetv_dir);
 
 }
 

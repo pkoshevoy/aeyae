@@ -61,18 +61,33 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // yaetv_log_rx
+  //
+  static const char * yaetv_log_rx =
+    "^yaetv-\\d{8}-\\d{6}\\.log$";
+
+  //----------------------------------------------------------------
+  // rec_sched_rx
+  //
+  static const char * rec_sched_rx =
+    "^rec-\\d{1,2}\\.\\d{1,2}-\\d{8}-\\d{4}\\.json.*$";
+
+  //----------------------------------------------------------------
   // recording_rx
   //
   static const char * recording_rx =
     "^\\d{8}-\\d{4} \\d{1,2}\\.\\d{1,2} .+\\.mpg$";
 
   //----------------------------------------------------------------
-  // CollectRecordings
+  // CollectFiles
   //
-  struct CollectRecordings
+  struct CollectFiles
   {
-    CollectRecordings(std::map<std::string, std::string> & dst):
-      pattern_(recording_rx, boost::regex::icase),
+    CollectFiles(std::map<std::string, std::string> & dst,
+                 const char * filename_rx,
+                 boost::regex_constants::syntax_option_type opts =
+                 boost::regex::icase):
+      pattern_(filename_rx, opts),
       files_(dst)
     {}
 
@@ -93,6 +108,16 @@ namespace yae
 
     // files, indexed by filename:
     std::map<std::string, std::string> & files_;
+  };
+
+  //----------------------------------------------------------------
+  // CollectRecordings
+  //
+  struct CollectRecordings : CollectFiles
+  {
+    CollectRecordings(std::map<std::string, std::string> & dst):
+      CollectFiles(dst, recording_rx, boost::regex::icase)
+    {}
   };
 
 
@@ -1621,6 +1646,7 @@ namespace yae
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
+    cleanup_yaetv_dir();
 
     // load the blacklist:
     load_blacklist();
@@ -1690,6 +1716,75 @@ namespace yae
   DVR::~DVR()
   {
     shutdown();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::cleanup_yaetv_dir
+  //
+  void
+  DVR::cleanup_yaetv_dir()
+  {
+    // cleanup logs and expired/cancelled explicitly scheduled items:
+    cleanup_yaetv_logs(yaetv_.string());
+    cleanup_explicitly_scheduled_items();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::cleanup_explicitly_scheduled_items
+  //
+  void
+  DVR::cleanup_explicitly_scheduled_items()
+  {
+    std::map<std::string, std::string> recs;
+    {
+      CollectFiles collect_files(recs, rec_sched_rx);
+      for_each_file_at(yaetv_.string(), collect_files);
+    }
+
+    // remove cancelled/expired explicitly scheduled items:
+    int64_t now = TTime::now().get(1);
+
+    for (std::map<std::string, std::string>::const_iterator
+           i = recs.begin(); i != recs.end(); ++i)
+    {
+      const std::string & name = i->first;
+      const std::string & path = i->second;
+
+      const char * desc = "cancelled";
+      if (!al::ends_with(name, ".cancelled"))
+      {
+        desc = "expired";
+
+        Json::Value json;
+        yae::TOpenFile file;
+        if (!(file.open(path, "rb") && file.load(json)))
+        {
+          continue;
+        }
+
+        Wishlist::Item item;
+        yae::load(json, item);
+        file.close();
+
+        const struct tm & date = *(item.date_);
+        const Timespan & timespan = *(item.when_);
+
+        int64_t t1 = localtime_to_unix_epoch_time(date) + timespan.dt().get(1);
+        if (now < t1)
+        {
+          continue;
+        }
+      }
+
+      if (!yae::remove_utf8(path))
+      {
+        yae_wlog("failed to remove %s schedule: %s", desc, path.c_str());
+      }
+      else
+      {
+        yae_ilog("removed %s schedule: %s", desc, path.c_str());
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -2020,6 +2115,7 @@ namespace yae
 
     ctx.dump();
 
+#if 0
     // also store it to disk, to help with post-mortem debugging:
     yae::mpeg_ts::EPG epg;
     ctx.get_epg_now(epg);
@@ -2044,6 +2140,7 @@ namespace yae
       yae::mpeg_ts::save(json, channel);
       yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
     }
+#endif
   }
 
 
@@ -2753,7 +2850,9 @@ namespace yae
   bool
   DVR::make_room_for(const Recording & rec, uint64_t num_sec)
   {
-    // first, remove any existing old recordings beyond max recordings limit:
+    cleanup_yaetv_dir();
+
+    // remove any existing old recordings beyond max recordings limit:
     remove_excess_recordings(rec);
 
     // must accommodate max 19.39Mbps ATSC transport stream:
@@ -3016,6 +3115,37 @@ namespace yae
     }
 
     return false;
+  }
+
+
+  //----------------------------------------------------------------
+  // cleanup_yaetv_logs
+  //
+  void
+  cleanup_yaetv_logs(const std::string & yaetv_dir)
+  {
+    std::map<std::string, std::string> logs;
+    {
+      CollectFiles collect_files(logs, yaetv_log_rx);
+      for_each_file_at(yaetv_dir, collect_files);
+    }
+
+    // remove all logs except 3 most recent:
+    std::map<std::string, std::string>::reverse_iterator it = logs.rbegin();
+    for (int i = 0; i < 3 && it != logs.rend(); i++, ++it) {}
+
+    for (; it != logs.rend(); ++it)
+    {
+      const std::string & path = it->second;
+      if (!yae::remove_utf8(path))
+      {
+        yae_wlog("failed to remove %s", path.c_str());
+      }
+      else
+      {
+        yae_ilog("removed old log: %s", path.c_str());
+      }
+    }
   }
 
 }
