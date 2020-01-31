@@ -706,7 +706,6 @@ if (WIN32)
     "-icon" "${NATIVE_PROGRAM_ICON}"
     "-url" "https://github.com/pkoshevoy/aeyae"
     "-deploy" $<TARGET_FILE:${PROGNAME}>
-    "-deploy" $<TARGET_FILE:yae_reader_ffmpeg>
     "-deploy" $<TARGET_FILE:aeyae>
     ${DEPLOY_QT_PLUGINS}
     DEPENDS ${PROGNAME} wixWrapper
@@ -737,5 +736,3 @@ if (NOT (WIN32 OR APPLE))
     RENAME "${PROGNAME}.png"
     )
 endif ()
-
-add_dependencies(${PROGNAME} aeyae yae_reader_ffmpeg)

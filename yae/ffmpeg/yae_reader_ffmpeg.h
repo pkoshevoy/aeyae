@@ -10,12 +10,7 @@
 #define YAE_READER_FFMPEG_H_
 
 // system includes:
-#include <vector>
-
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
+#include <list>
 
 // yae includes:
 #include "yae/api/yae_api.h"
@@ -28,7 +23,7 @@ namespace yae
   //----------------------------------------------------------------
   // ReaderFFMPEG
   //
-  struct ReaderFFMPEG : public IReader
+  struct YAE_API ReaderFFMPEG : public IReader
   {
   private:
     //! intentionally disabled:

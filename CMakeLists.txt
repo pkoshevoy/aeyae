@@ -526,6 +526,8 @@ add_library(aeyae SHARED
   yae/ffmpeg/yae_ffmpeg_video_filter_graph.h
   yae/ffmpeg/yae_movie.cpp
   yae/ffmpeg/yae_movie.h
+  yae/ffmpeg/yae_reader_ffmpeg.cpp
+  yae/ffmpeg/yae_reader_ffmpeg.h
   yae/ffmpeg/yae_subtitles_track.cpp
   yae/ffmpeg/yae_subtitles_track.h
   yae/ffmpeg/yae_track.cpp
@@ -611,7 +613,6 @@ target_compile_definitions(aeyae PRIVATE
 
 target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
 
-add_subdirectory(plugins/yae_reader_ffmpeg)
 add_subdirectory(tests)
 add_subdirectory(apprenticevideo)
 add_subdirectory(yamka)

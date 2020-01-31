@@ -46,8 +46,7 @@
 #endif
 
 // yae includes:
-#include "yae/utils/yae_plugin_registry.h"
-#include "yae/video/yae_reader.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
 #include "yae/utils/yae_utils.h"
 
 // local includes:
@@ -123,11 +122,6 @@ namespace yae
     }
   };
 }
-
-//----------------------------------------------------------------
-// plugins
-//
-yae::TPluginRegistry plugins;
 
 //----------------------------------------------------------------
 // mainMayThrowException
@@ -291,28 +285,7 @@ mainMayThrowException(int argc, char ** argv)
   //----------------------------------------------------------------
   // readerPrototype
   //
-  yae::IReaderPtr readerPrototype;
-
-  // load plugins:
-  std::string pluginsFolderPath;
-  if (yae::get_current_executable_plugins_folder(pluginsFolderPath) &&
-      plugins.load(pluginsFolderPath.c_str()))
-  {
-    std::list<yae::IReaderPtr> readers;
-    if (plugins.find<yae::IReader>(readers))
-    {
-      readerPrototype = readers.front();
-    }
-  }
-
-  if (!readerPrototype)
-  {
-    std::cerr
-      << "ERROR: failed to find IReader plugin here: "
-      << pluginsFolderPath
-      << std::endl;
-    return -1;
-  }
+  yae::IReaderPtr readerPrototype(yae::ReaderFFMPEG::create());
 
   if (canary)
   {
