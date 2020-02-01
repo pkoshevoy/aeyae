@@ -134,6 +134,7 @@ namespace yae
   signals:
     void toggle_fullscreen();
     void confirm_delete(TRecordingPtr);
+    void playback(TRecordingPtr);
 
   public slots:
     void layoutChanged();
@@ -149,6 +150,7 @@ namespace yae
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
+    void playback_recording(const std::string & name);
 
   protected:
     // helpers:

@@ -3018,6 +3018,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::playback_recording
+  //
+  void
+  AppView::playback_recording(const std::string & name)
+  {
+    TRecordings::iterator found = recordings_.find(name);
+    YAE_ASSERT(found != recordings_.end());
+    if (found == recordings_.end())
+    {
+      return;
+    }
+
+    TRecordingPtr rec_ptr = found->second;
+    emit playback(rec_ptr);
+  }
+
+  //----------------------------------------------------------------
   // AppView::layout
   //
   void
