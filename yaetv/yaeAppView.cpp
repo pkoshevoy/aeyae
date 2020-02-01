@@ -103,53 +103,6 @@ namespace yae
     const std::string & id_;
   };
 
-  //----------------------------------------------------------------
-  // ShowPlayer
-  //
-  struct ShowPlayer : public TBoolExpr
-  {
-    ShowPlayer(const AppView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = view_.player_sel_;
-    }
-
-    const AppView & view_;
- };
-
-
-  //----------------------------------------------------------------
-  // IsPlaybackPaused
-  //
-  struct IsPlaybackPaused : public TBoolExpr
-  {
-    IsPlaybackPaused(const AppView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = view_.is_playback_paused();
-    }
-
-    const AppView & view_;
-  };
-
-  //----------------------------------------------------------------
-  // toggle_playback
-  //
-  static void
-  toggle_playback(void * context)
-  {
-    AppView * view = (AppView *)context;
-    view->toggle_playback();
-  }
-
 
   //----------------------------------------------------------------
   // SplitterPos
@@ -1414,32 +1367,6 @@ namespace yae
   AppView::setContext(const yae::shared_ptr<IOpenGLContext> & context)
   {
     ItemView::setContext(context);
-
-    player_.reset(new PlayerItem("player", context));
-    PlayerItem & player = *player_;
-    player.visible_ = player.addExpr(new IsSelected(sidebar_sel_, "player"));
-    player.visible_.disableCaching();
-
-    YAE_ASSERT(delegate_);
-    player.setCanvasDelegate(delegate_);
-
-    timeline_.reset(new TimelineItem("player_timeline",
-                                     *this,
-                                     player.timeline()));
-
-    TimelineItem & timeline = *timeline_;
-    timeline.is_playback_paused_ = timeline.addExpr
-      (new IsPlaybackPaused(*this));
-
-    timeline.is_fullscreen_ = timeline.addExpr
-      (new IsFullscreen(*this));
-
-    timeline.is_playlist_visible_ = BoolRef::constant(false);
-    timeline.is_timeline_visible_ = BoolRef::constant(false);
-    timeline.toggle_playback_.reset(&yae::toggle_playback, this);
-    timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
-    timeline.layout();
-
     sync_ui_.start(1000);
   }
 
@@ -1487,14 +1414,6 @@ namespace yae
     if (!this->isEnabled())
     {
       return false;
-    }
-
-    Item & root = *root_;
-    if (player_sel_)
-    {
-      Item & player = root["player"];
-      TimelineItem & timeline = player.get<TimelineItem>("timeline_item");
-      timeline.processMouseTracking(mousePt);
     }
 
     return true;
@@ -1606,36 +1525,6 @@ namespace yae
   {
     requestUncache();
     requestRepaint();
-  }
-
-  //----------------------------------------------------------------
-  // AppView::is_playback_paused
-  //
-  bool
-  AppView::is_playback_paused() const
-  {
-    return player_->paused();
-  }
-
-  //----------------------------------------------------------------
-  // AppView::toggle_playback
-  //
-  void
-  AppView::toggle_playback()
-  {
-    player_->toggle_playback();
-
-    timeline_->modelChanged();
-    timeline_->maybeAnimateOpacity();
-
-    if (!is_playback_paused())
-    {
-      timeline_->forceAnimateControls();
-    }
-    else
-    {
-      timeline_->maybeAnimateControls();
-    }
   }
 
   //----------------------------------------------------------------
@@ -3144,17 +3033,6 @@ namespace yae
 
     Item & overview = root.addNew<Item>("overview");
     overview.anchors_.fill(bg);
-#if 0
-    overview.visible_ = overview.
-      addInverse(new IsSelected(view.sidebar_sel_, "player"));
-    overview.visible_.disableCaching();
-#endif
-
-    PlayerItem & player = root.add(view.player_);
-    player.anchors_.fill(bg);
-
-    TimelineItem & timeline = player.add(view.timeline_);
-    timeline.anchors_.fill(player);
 
     sideview_.reset(new Item("sideview"));
     Item & sideview = overview.add<Item>(sideview_);

@@ -126,6 +126,7 @@ set(project_moc_hxx
   yaeAppView.h
   yaeConfirmView.h
   yaeMainWindow.h
+  yaePlayerView.h
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeItemView.h
@@ -141,6 +142,7 @@ set(project_moc_hxx
 set(project_uis
   yaeAbout.ui
   yaeMainWindow.ui
+  yaePlayerWindow.ui
   )
 
 set(project_sources
@@ -160,6 +162,8 @@ set(project_sources
   yaeConfirmView.h
   yaeMainWindow.cpp
   yaeMainWindow.h
+  yaePlayerView.cpp
+  yaePlayerView.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h

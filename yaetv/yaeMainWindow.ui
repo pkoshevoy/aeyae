@@ -14,7 +14,7 @@
    <string>yaetv</string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="yaetv.qrc">
     <normaloff>:/images/yaetv-logo.png</normaloff>:/images/yaetv-logo.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">

@@ -35,9 +35,7 @@
 #include "yaeItemViewStyle.h"
 #include "yaeRectangle.h"
 #include "yaeScrollview.h"
-#include "yaeTimelineItem.h"
 #include "yae_dvr.h"
-#include "yae_player_item.h"
 
 
 namespace yae
@@ -141,9 +139,6 @@ namespace yae
     void layoutChanged();
     void dataChanged();
 
-    bool is_playback_paused() const;
-    void toggle_playback();
-
     void sync_ui();
     void sync_ui_epg();
     void sync_ui_channels();
@@ -174,14 +169,11 @@ namespace yae
   public:
     // UI state:
     std::string sidebar_sel_;
-    TRecordingPtr player_sel_;
 
     // collapsed item groups:
     std::set<std::string> collapsed_;
 
     yae::shared_ptr<AppStyle, Item> style_;
-    yae::shared_ptr<PlayerItem, Item> player_;
-    yae::shared_ptr<TimelineItem, Item> timeline_;
     yae::shared_ptr<Item> sideview_;
     yae::shared_ptr<Item> mainview_;
     yae::shared_ptr<Item> epg_view_;

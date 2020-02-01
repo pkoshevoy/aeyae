@@ -6,7 +6,6 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-
 // yaeui:
 #include "yaeConfirmView.h"
 #include "yaeInputArea.h"
