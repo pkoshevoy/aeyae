@@ -104,6 +104,7 @@ namespace yae
   signals:
     void setInPoint();
     void setOutPoint();
+    void menuButtonPressed();
 
   public slots:
 

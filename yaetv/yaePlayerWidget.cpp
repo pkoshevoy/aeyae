@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// boost:
+#include <boost/interprocess/smart_ptr/unique_ptr.hpp>
+
 // Qt includes:
 #include <QActionGroup>
 #include <QApplication>
@@ -766,7 +769,7 @@ namespace yae
             }
             else
             {
-              togglePlayback();
+              view_.togglePlayback();
             }
           }
         }
@@ -776,18 +779,18 @@ namespace yae
           {
             if (rc->heldDown_)
             {
-              if (actionCropFrameAutoDetect->isChecked())
+              if (view_.actionCropFrameAutoDetect_->isChecked())
               {
-                actionCropFrameNone->trigger();
+                view_.actionCropFrameNone_->trigger();
               }
               else
               {
-                actionCropFrameAutoDetect->trigger();
+                view_.actionCropFrameAutoDetect_->trigger();
               }
             }
             else
             {
-              actionShowPlaylist->trigger();
+              emit menuButtonPressed();
             }
           }
         }
@@ -843,8 +846,8 @@ namespace yae
             double offset =
               (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
 
-            timelineModel_.seekFromCurrentTime(offset);
-            timelineView_.maybeAnimateOpacity();
+            view_.timeline_model().seekFromCurrentTime(offset);
+            view_.timeline_->maybeAnimateOpacity();
           }
         }
 
@@ -1021,5 +1024,37 @@ namespace yae
     playlistModel_.makeSureHighlightedItemIsVisible();
 #endif
   }
+
+#ifdef __APPLE__
+  //----------------------------------------------------------------
+  // appleRemoteControlObserver
+  //
+  void
+  PlayerWidget::appleRemoteControlObserver(void * observerContext,
+                                           TRemoteControlButtonId buttonId,
+                                           bool pressedDown,
+                                           unsigned int clickCount,
+                                           bool heldDown)
+  {
+    PlayerWidget * widget = (PlayerWidget *)observerContext;
+
+    boost::interprocess::unique_ptr<RemoteControlEvent>
+      rc(new RemoteControlEvent(buttonId,
+                                pressedDown,
+                                clickCount,
+                                heldDown));
+#ifndef NDEBUG
+    std::cerr
+      << "posting remote control event(" << rc.get()
+      << "), buttonId: " << buttonId
+      << ", down: " << pressedDown
+      << ", clicks: " << clickCount
+      << ", held down: " << heldDown
+      << std::endl;
+#endif
+
+    qApp->postEvent(widget, rc.release(), Qt::HighEventPriority);
+  }
+#endif
 
 }

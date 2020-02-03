@@ -262,12 +262,24 @@ if (Qt5_FOUND)
 endif ()
 
 if (APPLE)
+  include_directories(AFTER ../apprenticevideo/martinkahr-apple_remote_control)
+
   set(project_sources
     ${project_sources}
+    ../apprenticevideo/yaeAppleRemoteControl.h
+    ../apprenticevideo/yaeAppleRemoteControl.mm
     ../apprenticevideo/yaeAppleUtils.h
     ../apprenticevideo/yaeAppleUtils.mm
     ../apprenticevideo/yaeAudioUnitRenderer.h
     ../apprenticevideo/yaeAudioUnitRenderer.mm
+    ../apprenticevideo/martinkahr-apple_remote_control/AppleRemote.h
+    ../apprenticevideo/martinkahr-apple_remote_control/AppleRemote.m
+    ../apprenticevideo/martinkahr-apple_remote_control/HIDRemoteControlDevice.h
+    ../apprenticevideo/martinkahr-apple_remote_control/HIDRemoteControlDevice.m
+    ../apprenticevideo/martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
+    ../apprenticevideo/martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
+    ../apprenticevideo/martinkahr-apple_remote_control/RemoteControl.h
+    ../apprenticevideo/martinkahr-apple_remote_control/RemoteControl.m
     )
 else ()
   set(project_sources
