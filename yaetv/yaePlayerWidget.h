@@ -6,8 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_PLAYER_WINDOW_H_
-#define YAE_PLAYER_WINDOW_H_
+#ifndef YAE_PLAYER_WIDGET_H_
+#define YAE_PLAYER_WIDGET_H_
 
 // Qt:
 #include <QDialog>
@@ -89,7 +89,8 @@ namespace yae
     Q_OBJECT;
 
   public:
-    PlayerWidget();
+    PlayerWidget(QWidget * parent = NULL,
+                 Qt::WindowFlags f = Qt::WindowFlags());
     ~PlayerWidget();
 
     void initItemViews();
@@ -143,7 +144,6 @@ namespace yae
   protected:
     // virtual:
     bool event(QEvent * e);
-    void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
@@ -182,7 +182,7 @@ namespace yae
 
     QShortcut * shortcutRemove_;
 
-  protected:
+  public:
     // frame canvas:
     TCanvasWidget * canvas_;
 
@@ -193,6 +193,7 @@ namespace yae
     FrameCropView frameCropView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
+  protected:
     // remember most recently used full screen render mode:
     Canvas::TRenderMode renderMode_;
 
@@ -212,4 +213,4 @@ namespace yae
 }
 
 
-#endif // YAE_PLAYER_WINDOW_H_
+#endif // YAE_PLAYER_WIDGET_H_

@@ -72,11 +72,12 @@ namespace yae
   // Canvas::Canvas
   //
   Canvas::Canvas(const yae::shared_ptr<IOpenGLContext> & ctx):
+    glewInitialized_(false),
     eventReceiver_(*this),
     context_(ctx),
     private_(NULL),
     overlay_(NULL),
-    showTheGreeting_(true),
+    showTheGreeting_(false),
     subsInOverlay_(false),
     renderMode_(Canvas::kScaleToFit),
     devicePixelRatio_(1.0),
@@ -119,8 +120,16 @@ namespace yae
     TMakeCurrentContext currentContext(context());
 
 #ifndef YAE_USE_QOPENGL_WIDGET
-    // initialize OpenGL GLEW wrapper:
-    static bool initialized = initializeGlew();
+    if (!glewInitialized_)
+    {
+      // initialize OpenGL GLEW wrapper:
+      glewInitialized_ = initializeGlew();
+    }
+
+    if (!glewInitialized_)
+    {
+      return;
+    }
 #endif
 
     delete private_;
@@ -633,8 +642,16 @@ namespace yae
     TMakeCurrentContext lock(context());
 
 #ifndef YAE_USE_QOPENGL_WIDGET
-    // initialize OpenGL GLEW wrapper:
-    static bool initialized = initializeGlew();
+    if (!glewInitialized_)
+    {
+      // initialize OpenGL GLEW wrapper:
+      glewInitialized_ = initializeGlew();
+    }
+
+    if (!glewInitialized_)
+    {
+      return;
+    }
 #endif
 
     YAE_OPENGL_HERE();
@@ -1069,6 +1086,7 @@ namespace yae
       return updateGreeting();
     }
 
+    TMakeCurrentContext currentContext(context());
     double imageWidth = 0.0;
     double imageHeight = 0.0;
     int cameraRotation = 0;
@@ -1337,7 +1355,14 @@ namespace yae
   void
   Canvas::setGreeting(const QString & greeting)
   {
-    showTheGreeting_ = true;
+    bool ok = initialized();
+    YAE_ASSERT(ok);
+    if (!ok)
+    {
+      return;
+    }
+
+    showTheGreeting_ = !greeting.isEmpty();
     greeting_ = greeting;
     updateGreeting();
     refresh();
@@ -1352,11 +1377,12 @@ namespace yae
     double w = this->canvasWidth();
     double h = this->canvasHeight();
 
-    if (!(overlay_ && w && h))
+    if (!(overlay_ && w && h) || greeting_.isEmpty())
     {
       return false;
     }
 
+    TMakeCurrentContext currentContext(context());
     double max_w = 1920.0;
     double max_h = 1080.0;
 

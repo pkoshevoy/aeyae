@@ -799,6 +799,37 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PlaybackRecording
+  //
+  struct PlaybackRecording : public InputArea
+  {
+    PlaybackRecording(const char * id,
+                      AppView & view,
+                      const std::string & rec):
+      InputArea(id),
+      view_(view),
+      rec_(rec)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
+      view_.playback_recording(rec_);
+      return true;
+    }
+
+    AppView & view_;
+    std::string rec_;
+  };
+
+
+  //----------------------------------------------------------------
   // DeleteRecording
   //
   struct DeleteRecording : public InputArea
@@ -2962,6 +2993,10 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
         trashcan_bg.background_ = trashcan_bg.
           addExpr(style_color_ref(view, &AppStyle::fg_, 0.0));
+
+        PlaybackRecording & playback_ia =
+          row.add(new PlaybackRecording("playback_ia", view, name));
+        playback_ia.anchors_.fill(row);
 
         DeleteRecording & trashcan_ia =
           c4.add(new DeleteRecording("trashcan_ia", view, name));

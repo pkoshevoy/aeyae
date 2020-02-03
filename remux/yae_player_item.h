@@ -61,9 +61,6 @@ namespace yae
                   unsigned int cc = 0,
                   const TTime & seek_time = TTime(0, 0));
 
-  signals:
-    void maybe_animate_opacity();
-
   public slots:
     void user_is_seeking(bool seeking);
     void move_time_in(double seconds);

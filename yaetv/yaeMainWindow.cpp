@@ -183,6 +183,7 @@ namespace yae
                          const std::string & recordings_dir,
                          const IReaderPtr & reader_prototype):
     QMainWindow(NULL, 0),
+    playerWindow_(this),
     reader_prototype_(reader_prototype),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir)
@@ -210,8 +211,6 @@ namespace yae
     QString clickOrTap = tr("tap");
 #endif
 
-    QString greeting = tr("yaetv");
-
 #ifdef YAE_USE_QOPENGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
@@ -222,7 +221,6 @@ namespace yae
     contextFormat.setSampleBuffers(false);
     canvas_ = new TCanvasWidget(contextFormat, this, canvas_);
 #endif
-    canvas_->setGreeting(greeting);
 
     view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
     view_.query_fullscreen_.reset(&context_query_fullscreen, this);
@@ -279,9 +277,15 @@ namespace yae
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&view_, SIGNAL(playback(TRecordingPtr)),
+                 this, SLOT(playbackRecording(TRecordingPtr)));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(confirm_delete(TRecordingPtr)),
                  this, SLOT(confirmDelete(TRecordingPtr)));
     YAE_ASSERT(ok);
+
+    playerWindow_.show();
   }
 
   //----------------------------------------------------------------
@@ -305,6 +309,7 @@ namespace yae
     view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
 
     canvas_->initializePrivateBackend();
+    // canvas_->setGreeting(tr("yaetv"));
     canvas_->append(&view_);
 
     view_.setModel(&dvr_);
@@ -326,6 +331,10 @@ namespace yae
     canvas_->append(&spinner_);
     spinner_.setStyle(view_.style());
     spinner_.setEnabled(false);
+
+    // player window:
+    playerWindow_.playerWidget_->view_.setStyle(view_.style());
+    playerWindow_.playerWidget_->initItemViews();
 
     TAsyncTaskPtr t(new InitTuners(this, dvr_));
     tasks_.push_back(t);
@@ -490,6 +499,29 @@ namespace yae
     AppView & view_;
     TRecordingPtr rec_;
   };
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackRecording
+  //
+  void
+  MainWindow::playbackRecording(TRecordingPtr rec_ptr)
+  {
+    const Recording & rec = *rec_ptr;
+    std::string path = rec.get_filepath(dvr_.basedir_.string());
+
+    IReaderPtr reader = yae::openFile(reader_prototype_,
+                                      QString::fromUtf8(path.c_str()));
+    if (!reader)
+    {
+      return;
+    }
+
+    playerWindow_.show();
+    PlayerView & playerView = playerWindow_.playerWidget_->view_;
+    playerView.setEnabled(true);
+    playerView.player_->playback(reader);
+    playerView.adjustMenuActions();
+  }
 
   //----------------------------------------------------------------
   // MainWindow::confirmDelete

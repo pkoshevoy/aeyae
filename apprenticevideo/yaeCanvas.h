@@ -130,6 +130,10 @@ namespace yae
   //
   struct YAEUI_API Canvas : public IVideoCanvas
   {
+#ifndef YAE_USE_QOPENGL_WIDGET
+    bool glewInitialized_;
+#endif
+
     //----------------------------------------------------------------
     // IDelegate
     //
@@ -241,6 +245,9 @@ namespace yae
     // initialize private backend rendering object,
     // should not be called prior to initializing GLEW:
     void initializePrivateBackend();
+
+    inline bool initialized() const
+    { return private_ && overlay_; }
 
     inline CanvasRenderer * canvasRenderer() const
     { return private_; }

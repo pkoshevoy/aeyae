@@ -323,6 +323,7 @@ namespace yae
     menuAspectRatio_ = add_menu("menuAspectRatio");
     menuSubs_ = add_menu("menuSubs");
     menuChapters_ = add_menu("menuChapters");
+    contextMenu_ = add_menu("contextMenu");
 
     menuPlayback_->addAction(actionPlay_);
     menuPlayback_->addSeparator();
@@ -589,7 +590,7 @@ namespace yae
     ok = connect(actionPlay_, SIGNAL(triggered()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
-
+#if 0
     ok = connect(actionNext_, SIGNAL(triggered()),
                  this, SLOT(playbackNext()));
     YAE_ASSERT(ok);
@@ -597,29 +598,9 @@ namespace yae
     ok = connect(actionPrev_, SIGNAL(triggered()),
                  this, SLOT(playbackPrev()));
     YAE_ASSERT(ok);
-
+#endif
     ok = connect(actionLoop_, SIGNAL(triggered()),
                  this, SLOT(playbackLoop()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionSetInPoint_, SIGNAL(triggered()),
-                 this, SIGNAL(setInPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionSetOutPoint_, SIGNAL(triggered()),
-                 this, SIGNAL(setOutPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionFullScreen_, SIGNAL(triggered()),
-                 this, SLOT(enterFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionFillScreen_, SIGNAL(triggered()),
-                 this, SLOT(playbackFillScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionShrinkWrap_, SIGNAL(triggered()),
-                 this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
 
     ok = connect(actionShowTimeline_, SIGNAL(triggered()),
@@ -640,26 +621,6 @@ namespace yae
 
     ok = connect(actionDeinterlace_, SIGNAL(triggered()),
                  this, SLOT(playbackDeinterlace()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionHalfSize_, SIGNAL(triggered()),
-                 this, SLOT(windowHalfSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionFullSize_, SIGNAL(triggered()),
-                 this, SLOT(windowFullSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionDoubleSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDoubleSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionDecreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDecreaseSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionIncreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowIncreaseSize()));
     YAE_ASSERT(ok);
 
     ok = connect(actionDownmixToStereo_, SIGNAL(triggered()),
@@ -814,6 +775,92 @@ namespace yae
   PlayerView::PlayerView():
     ItemView("PlayerView"),
     style_(NULL),
+    actionShowTimeline_(NULL),
+
+    actionPlay_(NULL),
+    actionNextChapter_(NULL),
+    actionNext_(NULL),
+    actionPrev_(NULL),
+
+    actionLoop_(NULL),
+    actionSetInPoint_(NULL),
+    actionSetOutPoint_(NULL),
+
+    actionFullScreen_(NULL),
+    actionFillScreen_(NULL),
+
+    actionCropFrameNone_(NULL),
+    actionCropFrame1_33_(NULL),
+    actionCropFrame1_60_(NULL),
+    actionCropFrame1_78_(NULL),
+    actionCropFrame1_85_(NULL),
+    actionCropFrame2_40_(NULL),
+    actionCropFrame2_35_(NULL),
+    actionCropFrameAutoDetect_(NULL),
+    actionCropFrameOther_(NULL),
+
+    actionAspectRatioAuto_(NULL),
+    actionAspectRatio1_33_(NULL),
+    actionAspectRatio1_60_(NULL),
+    actionAspectRatio1_78_(NULL),
+    actionAspectRatio1_85_(NULL),
+    actionAspectRatio2_35_(NULL),
+    actionAspectRatio2_40_(NULL),
+    actionAspectRatioOther_(NULL),
+
+    actionHalfSize_(NULL),
+    actionFullSize_(NULL),
+    actionDoubleSize_(NULL),
+    actionDecreaseSize_(NULL),
+    actionIncreaseSize_(NULL),
+    actionShrinkWrap_(NULL),
+
+    actionVerticalScaling_(NULL),
+    actionDeinterlace_(NULL),
+    actionSkipColorConverter_(NULL),
+    actionSkipLoopFilter_(NULL),
+    actionSkipNonReferenceFrames_(NULL),
+    actionDownmixToStereo_(NULL),
+
+    actionTempo50_(NULL),
+    actionTempo60_(NULL),
+    actionTempo70_(NULL),
+    actionTempo80_(NULL),
+    actionTempo90_(NULL),
+    actionTempo100_(NULL),
+    actionTempo111_(NULL),
+    actionTempo125_(NULL),
+    actionTempo143_(NULL),
+    actionTempo167_(NULL),
+    actionTempo200_(NULL),
+
+    actionRemove_(NULL),
+
+    menuPlayback_(NULL),
+    menuPlaybackSpeed_(NULL),
+    menuAudio_(NULL),
+    menuVideo_(NULL),
+    menuWindowSize_(NULL),
+    menuCropFrame_(NULL),
+    menuAspectRatio_(NULL),
+    menuSubs_(NULL),
+    menuChapters_(NULL),
+
+    // context sensitive menu which includes most relevant actions:
+    contextMenu_(NULL),
+
+    // audio/video track selection widgets:
+    audioTrackGroup_(NULL),
+    videoTrackGroup_(NULL),
+    subsTrackGroup_(NULL),
+    chaptersGroup_(NULL),
+
+    playRateMapper_(NULL),
+    audioTrackMapper_(NULL),
+    videoTrackMapper_(NULL),
+    subsTrackMapper_(NULL),
+    chapterMapper_(NULL),
+
     timelineTimer_(this)
   {
     init_actions();
@@ -838,6 +885,7 @@ namespace yae
     delete menuAspectRatio_;
     delete menuSubs_;
     delete menuChapters_;
+    delete contextMenu_;
   }
 
   //----------------------------------------------------------------
@@ -881,6 +929,14 @@ namespace yae
     timeline.layout();
 
     bool ok = true;
+
+    ok = connect(actionSetInPoint_, SIGNAL(triggered()),
+                 &timeline_model(), SLOT(setInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSetOutPoint_, SIGNAL(triggered()),
+                 &timeline_model(), SLOT(setOutPoint()));
+    YAE_ASSERT(ok);
 
     ok = connect(&timeline_model(), SIGNAL(clockStopped(const SharedClock &)),
                  this, SLOT(playbackFinished(const SharedClock &)));

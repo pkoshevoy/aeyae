@@ -12,7 +12,6 @@
 // Qt includes:
 #include <QActionGroup>
 #include <QApplication>
-#include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDesktopWidget>
 #include <QDirIterator>
@@ -71,18 +70,10 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerWidget::PlayerWidget
   //
-  PlayerWidget::PlayerWidget():
-    QWidget(NULL, 0),
+  PlayerWidget::PlayerWidget(QWidget * parent, Qt::WindowFlags flags):
+    QWidget(parent, flags),
     canvas_(NULL)
   {
-    setWindowTitle(trUtf8("yaetv"));
-
-#if !defined(__APPLE__) && !defined(_WIN32)
-    QString fnIcon =
-      QString::fromUtf8(":/images/yaetv-logo.png");
-    this->setWindowIcon(QIcon(fnIcon));
-#endif
-
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
@@ -96,12 +87,44 @@ namespace yae
                  this, SLOT(playbackVerticalScaling()));
     YAE_ASSERT(ok);
 
+    ok = connect(view_.actionShrinkWrap_, SIGNAL(triggered()),
+                 this, SLOT(playbackShrinkWrap()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionFullScreen_, SIGNAL(triggered()),
+                 this, SLOT(playbackFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionFillScreen_, SIGNAL(triggered()),
+                 this, SLOT(playbackFillScreen()));
+    YAE_ASSERT(ok);
+
     ok = connect(view_.actionAspectRatioOther_, SIGNAL(triggered()),
                  this, SLOT(playbackAspectRatioOther()));
     YAE_ASSERT(ok);
 
     ok = connect(view_.actionCropFrameOther_, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameOther()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionHalfSize_, SIGNAL(triggered()),
+                 this, SLOT(windowHalfSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionFullSize_, SIGNAL(triggered()),
+                 this, SLOT(windowFullSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionDoubleSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDoubleSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionDecreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(view_.actionIncreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
     YAE_ASSERT(ok);
 
     shortcutFullScreen_ = new QShortcut(this);
@@ -230,6 +253,7 @@ namespace yae
                  view_.actionAspectRatio1_78_, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    shortcutRemove_ = new QShortcut(this);
     shortcutRemove_->setContext(Qt::ApplicationShortcut);
     shortcutRemove_->setKey(QKeySequence(QKeySequence::Delete));
 
@@ -238,8 +262,6 @@ namespace yae
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
-    QString greeting = tr("yaetv");
-
 #ifdef YAE_USE_QOPENGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
@@ -250,7 +272,6 @@ namespace yae
     contextFormat.setSampleBuffers(false);
     canvas_ = new TCanvasWidget(contextFormat, this, canvas_);
 #endif
-    canvas_->setGreeting(greeting);
 
     view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
@@ -278,9 +299,18 @@ namespace yae
   PlayerWidget::initItemViews()
   {
     canvas_->initializePrivateBackend();
+    canvas_->setGreeting(tr("yaetv"));
     canvas_->append(&view_);
-
     view_.setEnabled(true);
+
+    bool ok = true;
+    ok = connect(this, SIGNAL(setInPoint()),
+                 &view_.timeline_model(), SLOT(setInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(setOutPoint()),
+                 &view_.timeline_model(), SLOT(setOutPoint()));
+    YAE_ASSERT(ok);
 
     // action confirmation view:
     confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
@@ -860,37 +890,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::closeEvent
-  //
-  void
-  PlayerWidget::closeEvent(QCloseEvent * e)
-  {
-    e->ignore();
-    view_.stopPlayback();
-    hide();
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::keyPressEvent
   //
   void
   PlayerWidget::keyPressEvent(QKeyEvent * event)
   {
     int key = event->key();
+    event->ignore();
+
     if (key == Qt::Key_Escape)
     {
       if (isFullScreen())
       {
         exitFullScreen();
+        event->accept();
       }
     }
     else if (key == Qt::Key_I)
     {
       emit setInPoint();
+      event->accept();
     }
     else if (key == Qt::Key_O)
     {
       emit setOutPoint();
+      event->accept();
     }
     else
     {

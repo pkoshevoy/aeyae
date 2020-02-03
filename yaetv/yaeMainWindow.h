@@ -27,9 +27,9 @@
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
-#include "yaePlayerWidget.h"
 #include "yaeConfirmView.h"
 #include "yaeSpinnerView.h"
+#include "yaePlayerWindow.h"
 
 // uic:
 #include "ui_yaeAbout.h"
@@ -91,6 +91,7 @@ namespace yae
     void enterFullScreen();
     void exitFullScreen();
     void swapShortcuts();
+    void playbackRecording(TRecordingPtr);
     void confirmDelete(TRecordingPtr);
 
   protected:
@@ -100,7 +101,7 @@ namespace yae
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
-    PlayerWidget player_;
+    PlayerWindow playerWindow_;
 
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;

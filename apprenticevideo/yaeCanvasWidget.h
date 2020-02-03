@@ -367,6 +367,12 @@ namespace yae
     // virtual:
     void paintGL()
     {
+#if 0
+      if (!Canvas::initialized())
+      {
+        return;
+      }
+#endif
       QWidget * sw = TDelegate::get_screen_widget(this);
       double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
 

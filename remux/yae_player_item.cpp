@@ -1156,7 +1156,6 @@ namespace yae
   PlayerItem::skip_forward()
   {
     timeline_.seekFromCurrentTime(7.0);
-    emit maybe_animate_opacity();
   }
 
   //----------------------------------------------------------------
@@ -1166,7 +1165,6 @@ namespace yae
   PlayerItem::skip_back()
   {
     timeline_.seekFromCurrentTime(-3.0);
-    emit maybe_animate_opacity();
   }
 
   //----------------------------------------------------------------

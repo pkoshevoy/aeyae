@@ -128,6 +128,7 @@ set(project_moc_hxx
   yaeMainWindow.h
   yaePlayerView.h
   yaePlayerWidget.h
+  yaePlayerWindow.h
 
   ../apprenticevideo/yaeCanvasWidget.h
   ../apprenticevideo/yaeFrameCropView.h
@@ -144,6 +145,7 @@ set(project_moc_hxx
 set(project_uis
   yaeAbout.ui
   yaeMainWindow.ui
+  yaePlayerWindow.ui
   ../apprenticevideo/yaeAspectRatioDialog.ui
   )
 
@@ -168,6 +170,8 @@ set(project_sources
   yaePlayerView.h
   yaePlayerWidget.cpp
   yaePlayerWidget.h
+  yaePlayerWindow.cpp
+  yaePlayerWindow.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>yaePlayerWindow</class>
+ <widget class="QWidget" name="yaePlayerWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>814</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>yaetv player</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="yaetv.qrc">
+    <normaloff>:/images/yaetv-logo.png</normaloff>:/images/yaetv-logo.png</iconset>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <property name="spacing">
+    <number>0</number>
+   </property>
+   <property name="margin">
+    <number>0</number>
+   </property>
+   <item>
+    <widget class="QMenuBar" name="menubar">
+    </widget>
+   </item>
+   <item>
+    <widget class="QWidget" name="containerWidget" native="true">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="yaetv.qrc"/>
+ </resources>
+ <connections/>
+</ui>
