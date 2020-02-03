@@ -31,10 +31,10 @@ namespace yae
   public:
     SpinnerView();
 
-    void setStyle(const ItemViewStyle * style);
+    void setStyle(ItemViewStyle * style);
 
     // virtual:
-    const ItemViewStyle * style() const
+    ItemViewStyle * style() const
     { return style_; }
 
     // virtual:
@@ -49,8 +49,8 @@ namespace yae
     inline const QString & text() const
     { return text_; }
 
- protected:
-    const ItemViewStyle * style_;
+  protected:
+    ItemViewStyle * style_;
     TAnimatorPtr animator_;
     QString text_;
  };

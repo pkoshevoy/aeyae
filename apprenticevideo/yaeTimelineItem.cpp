@@ -782,4 +782,21 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // TimelineItem::showTimeline
+  //
+  void
+  TimelineItem::showTimeline(bool show_timeline)
+  {
+    if (is_timeline_visible_.get() == show_timeline)
+    {
+      return;
+    }
+
+    is_timeline_visible_ = BoolRef::constant(show_timeline);
+
+    uncache();
+    maybeAnimateOpacity();
+  }
+
 }

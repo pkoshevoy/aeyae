@@ -2308,15 +2308,15 @@ namespace yae
   void
   RemuxView::setContext(const yae::shared_ptr<IOpenGLContext> & context)
   {
+    YAE_ASSERT(delegate_);
     ItemView::setContext(context);
 
-    player_.reset(new PlayerItem("player", context));
+    player_.reset(new PlayerItem("player"));
     PlayerItem & player = *player_;
+    player.setCanvasDelegate(delegate_);
+    player.makePersonalCanvas(context);
     player.visible_ = player.addExpr(new In<RemuxView::kPlayerMode>(*this));
     player.visible_.disableCaching();
-
-    YAE_ASSERT(delegate_);
-    player.setCanvasDelegate(delegate_);
 
     timeline_.reset(new TimelineItem("timeline_item",
                                      *this,

@@ -112,7 +112,7 @@ namespace yae
     { return dvr_; }
 
     // virtual:
-    const AppStyle * style() const
+    AppStyle * style() const
     { return style_; }
 
     // virtual: returns false if size didn't change

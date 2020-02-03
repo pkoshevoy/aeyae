@@ -176,19 +176,6 @@ namespace yae
   {}
 
 
-  //----------------------------------------------------------------
-  // AutoCropEvent
-  //
-  struct AutoCropEvent : public QEvent
-  {
-    AutoCropEvent(const TCropFrame & cropFrame):
-      QEvent(QEvent::User),
-      cropFrame_(cropFrame)
-    {}
-
-    TCropFrame cropFrame_;
-  };
-
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
   //----------------------------------------------------------------
   // getCanvas

@@ -44,6 +44,19 @@ namespace yae
   struct Canvas;
 
   //----------------------------------------------------------------
+  // AutoCropEvent
+  //
+  struct AutoCropEvent : public QEvent
+  {
+    AutoCropEvent(const TCropFrame & cropFrame):
+      QEvent(QEvent::User),
+      cropFrame_(cropFrame)
+    {}
+
+    TCropFrame cropFrame_;
+  };
+
+  //----------------------------------------------------------------
   // BufferedEvent
   //
   struct BufferedEvent : public QEvent
@@ -124,6 +137,7 @@ namespace yae
     {
       virtual ~IDelegate() {}
 
+      virtual Canvas & windowCanvas() = 0;
       virtual bool isVisible() = 0;
       virtual void repaint() = 0;
       virtual void requestRepaint() = 0;
@@ -212,6 +226,9 @@ namespace yae
 
     inline int canvasHeight() const
     { return h_; }
+
+    inline const yae::shared_ptr<IOpenGLContext> & contextPtr() const
+    { return context_; }
 
     inline IOpenGLContext & context()
     { return *context_; }

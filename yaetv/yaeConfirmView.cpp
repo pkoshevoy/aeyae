@@ -31,7 +31,7 @@ namespace yae
   // ConfirmView::setStyle
   //
   void
-  ConfirmView::setStyle(const ItemViewStyle * style)
+  ConfirmView::setStyle(ItemViewStyle * style)
   {
     style_ = style;
   }

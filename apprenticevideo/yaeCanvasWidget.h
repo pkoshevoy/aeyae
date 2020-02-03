@@ -127,6 +127,11 @@ namespace yae
         canvas_(canvas)
       {}
 
+      virtual Canvas & windowCanvas()
+      {
+        return canvas_;
+      }
+
       virtual bool isVisible()
       {
         return canvas_.TWidget::isVisible();

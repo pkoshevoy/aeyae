@@ -27,6 +27,7 @@
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
+#include "yaePlayerWidget.h"
 #include "yaeConfirmView.h"
 #include "yaeSpinnerView.h"
 
@@ -98,6 +99,8 @@ namespace yae
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
+
+    PlayerWidget player_;
 
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;

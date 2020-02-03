@@ -40,11 +40,15 @@ namespace yae
     Q_OBJECT;
 
   public:
-    PlayerItem(const char * id, const yae::shared_ptr<IOpenGLContext> & ctx);
+    // NOTE: this will use the delegate windowCanvas by default:
+    PlayerItem(const char * id);
 
     // canvas delegate calls screensaver inhibitor,
     // so set it if you need it:
     void setCanvasDelegate(const yae::shared_ptr<Canvas::IDelegate> & d);
+
+    // NOTE: this will construct a separate personal canvas:
+    void makePersonalCanvas(const yae::shared_ptr<IOpenGLContext> & ctx);
 
     // virtual:
     void uncache();
@@ -57,6 +61,9 @@ namespace yae
                   unsigned int cc = 0,
                   const TTime & seek_time = TTime(0, 0));
 
+  signals:
+    void maybe_animate_opacity();
+
   public slots:
     void user_is_seeking(bool seeking);
     void move_time_in(double seconds);
@@ -65,14 +72,82 @@ namespace yae
 
   public:
     // accessors:
+    inline Canvas * get_window_canvas() const
+    { return canvas_delegate_ ? &(canvas_delegate_->windowCanvas()) : NULL; }
+
+    inline Canvas * get_personal_canvas() const
+    { return personal_canvas_ ? personal_canvas_.get() : NULL; }
+
+    inline Canvas * get_canvas() const
+    {
+      return
+        personal_canvas_ ? personal_canvas_.get() :
+        canvas_delegate_ ? &(canvas_delegate_->windowCanvas()) :
+        NULL;
+    }
+
+    inline const IReaderPtr & reader() const
+    { return reader_; }
+
+    inline const TimelineModel & timeline() const
+    { return timeline_; }
+
     inline TimelineModel & timeline()
     { return timeline_; }
+
+    inline const TAudioRendererPtr & audio() const
+    { return audio_; }
+
+    inline const TVideoRendererPtr & video() const
+    { return video_; }
 
     inline bool paused() const
     { return paused_; }
 
     void toggle_playback();
     void playback_stop();
+
+    void set_downmix_to_stereo(bool downmix);
+    void set_loop_playback(bool loop_playback);
+    void skip_color_converter(bool skip);
+    void skip_loopfilter(bool skip);
+    void skip_nonref_frames(bool skip);
+    void set_deinterlace(bool deint);
+    void set_playback_tempo(double tempo);
+
+    //----------------------------------------------------------------
+    // Tracks
+    //
+    struct Tracks
+    {
+      Tracks(std::size_t audio = 0,
+             std::size_t video = 0,
+             std::size_t subtt = 0):
+        audio_(audio),
+        video_(video),
+        subtt_(subtt)
+      {}
+
+      std::size_t audio_;
+      std::size_t video_;
+      std::size_t subtt_;
+    };
+
+    // select a track, pass back updated track selection.
+    //
+    // NOTE: track selection can change for other tracks
+    // if selected track belongs to a different program:
+    //
+    bool audio_select_track(std::size_t index, Tracks & curr_tracks);
+    bool video_select_track(std::size_t index, Tracks & curr_tracks);
+    bool subtt_select_track(std::size_t index, Tracks & curr_tracks);
+
+    std::size_t get_current_chapter() const;
+    bool skip_to_next_chapter();
+    void skip_to_chapter(std::size_t index);
+    void skip_to_next_frame();
+    void skip_forward();
+    void skip_back();
 
   protected:
     void stop_renderers();
@@ -84,7 +159,6 @@ namespace yae
 
     void adjust_audio_traits_override(IReader * reader);
     void resume_renderers(bool load_next_frame_if_paused = false);
-    void skip_to_next_frame();
 
     BoolRef downmix_to_stereo_;
     BoolRef loop_playback_;
@@ -95,12 +169,26 @@ namespace yae
     DataRef<double> playback_tempo_;
 
     IReaderPtr reader_;
+    uint64_t reader_id_;
+
     TimelineModel timeline_;
     TAudioRendererPtr audio_;
     TVideoRendererPtr video_;
-    mutable Canvas canvas_;
+
+    yae::shared_ptr<Canvas::IDelegate> canvas_delegate_;
+    yae::shared_ptr<Canvas> personal_canvas_;
     bool paused_;
-    uint64_t reader_id_;
+
+    // selected track info is used to select matching track(s)
+    // when loading next file:
+    TTrackInfo sel_video_;
+    VideoTraits sel_video_traits_;
+
+    TTrackInfo sel_audio_;
+    AudioTraits sel_audio_traits_;
+
+    TTrackInfo sel_subtt_;
+    TSubsFormat sel_subtt_format_;
   };
 
 }

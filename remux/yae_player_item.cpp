@@ -23,17 +23,13 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerItem::PlayerItem
   //
-  PlayerItem::PlayerItem(const char * id,
-                         const yae::shared_ptr<IOpenGLContext> & ctx):
+  PlayerItem::PlayerItem(const char * id):
     QObject(),
     Item(id),
-    canvas_(ctx),
-    paused_(false),
-    reader_id_(0)
+    reader_id_(0),
+    paused_(false)
   {
     bool ok = true;
-
-    canvas_.initializePrivateBackend();
 
 #ifdef __APPLE__
     audio_.reset(AudioUnitRenderer::create());
@@ -49,7 +45,15 @@ namespace yae
     skip_color_converter_ = BoolRef::constant(false);
     deinterlace_ = BoolRef::constant(false);
     playback_tempo_ = DataRef<double>::constant(1.0);
+#if 0
+    ok = connect(this, SIGNAL(set_in_point()),
+                 &timeline_, SLOT(setInPoint()));
+    YAE_ASSERT(ok);
 
+    ok = connect(this, SIGNAL(set_out_point()),
+                 &timeline_, SLOT(setOutPoint()));
+    YAE_ASSERT(ok);
+#endif
     ok = connect(&timeline_, SIGNAL(userIsSeeking(bool)),
                  this, SLOT(user_is_seeking(bool)));
     YAE_ASSERT(ok);
@@ -65,6 +69,11 @@ namespace yae
     ok = connect(&timeline_, SIGNAL(movePlayHead(double)),
                  this, SLOT(move_playhead(double)));
     YAE_ASSERT(ok);
+#if 0
+    ok = connect(&timeline_, SIGNAL(clockStopped(const SharedClock &)),
+                 this, SLOT(playback_finished(const SharedClock &)));
+    YAE_ASSERT(ok);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -73,7 +82,25 @@ namespace yae
   void
   PlayerItem::setCanvasDelegate(const yae::shared_ptr<Canvas::IDelegate> & d)
   {
-    canvas_.setDelegate(d);
+    canvas_delegate_ = d;
+
+    if (personal_canvas_)
+    {
+      Canvas & canvas = *personal_canvas_;
+      canvas.setDelegate(d);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::makePersonalCanvas
+  //
+  void
+  PlayerItem::makePersonalCanvas(const yae::shared_ptr<IOpenGLContext> & ctx)
+  {
+    personal_canvas_.reset(new Canvas(ctx));
+    Canvas & canvas = *personal_canvas_;
+    canvas.setDelegate(canvas_delegate_);
+    canvas.initializePrivateBackend();
   }
 
   //----------------------------------------------------------------
@@ -99,6 +126,12 @@ namespace yae
   void
   PlayerItem::paintContent() const
   {
+    if (!personal_canvas_)
+    {
+      return;
+    }
+
+    Canvas & canvas = *personal_canvas_;
     TGLSaveState restore_state(GL_ENABLE_BIT);
     TGLSaveClientState restore_client_state(GL_CLIENT_ALL_ATTRIB_BITS);
 
@@ -106,7 +139,7 @@ namespace yae
     double y = this->top();
     double w = this->width();
     double h = this->height();
-    canvas_.resize(1.0, w, h);
+    canvas.resize(1.0, w, h);
 
     if (reader_)
     {
@@ -120,12 +153,12 @@ namespace yae
         if (ptts && (ptts->flags_ & (pixelFormat::kAlpha |
                                      pixelFormat::kPaletted)))
         {
-          canvas_.paint_checkerboard(x, y, w, h);
+          canvas.paint_checkerboard(x, y, w, h);
         }
       }
     }
 
-    canvas_.paint_canvas(x, y, w, h);
+    canvas.paint_canvas(x, y, w, h);
   }
 
   //----------------------------------------------------------------
@@ -283,8 +316,12 @@ namespace yae
     ++reader_id_;
     reader->setReaderId(reader_id_);
 
-    // prevent Canvas from rendering any pending frames from previous reader:
-    canvas_.acceptFramesWithReaderId(reader_id_);
+    Canvas * canvas = get_canvas();
+    if (canvas)
+    {
+      // prevent Canvas from rendering any pending frames from previous reader:
+      canvas->acceptFramesWithReaderId(reader_id_);
+    }
 
     // disconnect timeline from renderers:
     timeline_.observe(SharedClock());
@@ -313,8 +350,11 @@ namespace yae
                        (strack < num_subtt_tracks) ? strack :
                        num_subtt_tracks + cc);
 
-    // reset overlay plane to clean state, reset libass wrapper:
-    canvas_.clearOverlay();
+    if (canvas)
+    {
+      // reset overlay plane to clean state, reset libass wrapper:
+      canvas->clearOverlay();
+    }
 
     // reset timeline start, duration, playhead, in/out points:
     timeline_.resetFor(reader.get());
@@ -359,7 +399,11 @@ namespace yae
         {
           if (mimetype == fontTypes[j])
           {
-            canvas_.libassAddFont(filename, att->data_, att->size_);
+            if (canvas)
+            {
+              canvas->libassAddFont(filename, att->data_, att->size_);
+            }
+
             break;
           }
         }
@@ -445,7 +489,11 @@ namespace yae
     reader_->seek(seconds);
 
     // this avoids weird non-rendering of subtitles:
-    canvas_.libassFlushTrack();
+    Canvas * canvas = get_canvas();
+    if (canvas)
+    {
+      canvas->libassFlushTrack();
+    }
 
     resume_renderers(true);
   }
@@ -494,8 +542,631 @@ namespace yae
     audio_->close();
 
     ++reader_id_;
-    canvas_.acceptFramesWithReaderId(reader_id_);
+
+    Canvas * canvas = get_canvas();
+    if (canvas)
+    {
+      canvas->acceptFramesWithReaderId(reader_id_);
+    }
+
     reader_.reset();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::set_downmix_to_stereo
+  //
+  void
+  PlayerItem::set_downmix_to_stereo(bool downmix)
+  {
+    if (downmix_to_stereo_.get() == downmix)
+    {
+      return;
+    }
+
+    downmix_to_stereo_ = BoolRef::constant(downmix);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    // reset reader:
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    reader->threadStop();
+
+    stop_renderers();
+    prepare_to_render(reader, paused_);
+
+    double t = timeline_.currentTime();
+    reader->seek(t);
+    reader->threadStart();
+
+    resume_renderers();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::set_loop_playback
+  //
+  void
+  PlayerItem::set_loop_playback(bool loop_playback)
+  {
+    if (loop_playback_.get() == loop_playback)
+    {
+      return;
+    }
+
+    loop_playback_ = BoolRef::constant(loop_playback);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    reader->setPlaybackLooping(loop_playback);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_color_converter
+  //
+  void
+  PlayerItem::skip_color_converter(bool skip)
+  {
+    if (skip_color_converter_.get() == skip)
+    {
+      return;
+    }
+
+    skip_color_converter_ = BoolRef::constant(skip);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    reader->threadStop();
+
+    stop_renderers();
+
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    select_video_track(reader, videoTrack);
+    prepare_to_render(reader, paused_);
+
+    double t = timeline_.currentTime();
+    reader->seek(t);
+    reader->threadStart();
+
+    resume_renderers(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_loopfilter
+  //
+  void
+  PlayerItem::skip_loopfilter(bool skip)
+  {
+    if (skip_loopfilter_.get() == skip)
+    {
+      return;
+    }
+
+    skip_loopfilter_ = BoolRef::constant(skip);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    reader->skipLoopFilter(skip);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_nonref_frames
+  //
+  void
+  PlayerItem::skip_nonref_frames(bool skip)
+  {
+    if (skip_nonref_frames_.get() == skip)
+    {
+      return;
+    }
+
+    skip_nonref_frames_ = BoolRef::constant(skip);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    reader->skipNonReferenceFrames(skip);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::set_deinterlace
+  //
+  void
+  PlayerItem::set_deinterlace(bool deint)
+  {
+    if (deinterlace_.get() == deint)
+    {
+      return;
+    }
+
+    deinterlace_ = BoolRef::constant(deint);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    reader->setDeinterlacing(deint);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::set_playback_tempo
+  //
+  void
+  PlayerItem::set_playback_tempo(double tempo)
+  {
+    if (playback_tempo_.get() == tempo)
+    {
+      return;
+    }
+
+    playback_tempo_ = DataRef<double>::constant(tempo);
+
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    reader->setTempo(tempo);
+  }
+
+  //----------------------------------------------------------------
+  // get_curr_program
+  //
+  static std::size_t
+  get_curr_program(IReader * reader,
+                   TTrackInfo & vinfo,
+                   TTrackInfo & ainfo,
+                   TTrackInfo & sinfo)
+  {
+    vinfo = TTrackInfo(0, 0);
+    ainfo = TTrackInfo(0, 0);
+    sinfo = TTrackInfo(0, 0);
+
+    std::size_t ix_vtrack = reader->getSelectedVideoTrackIndex();
+    std::size_t n_vtracks = reader->getNumberOfVideoTracks();
+    if (ix_vtrack < n_vtracks)
+    {
+      reader->getSelectedVideoTrackInfo(vinfo);
+    }
+
+    std::size_t ix_atrack = reader->getSelectedAudioTrackIndex();
+    std::size_t n_atracks = reader->getNumberOfAudioTracks();
+    if (ix_atrack < n_atracks)
+    {
+      reader->getSelectedAudioTrackInfo(ainfo);
+    }
+
+    std::size_t n_subs = reader->subsCount();
+    for (std::size_t i = 0; i < n_subs; i++)
+    {
+      if (reader->getSubsRender(i))
+      {
+        reader->subsInfo(i, sinfo);
+        break;
+      }
+    }
+
+    return (vinfo.isValid() ? vinfo.program_ :
+            ainfo.isValid() ? ainfo.program_ :
+            sinfo.isValid() ? sinfo.program_ :
+            0);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::audio_select_track
+  //
+  bool
+  PlayerItem::audio_select_track(std::size_t index, Tracks & curr_tracks)
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return false;
+    }
+
+    TTrackInfo vinfo(0, 0);
+    TTrackInfo ainfo(0, 0);
+    TTrackInfo sinfo(0, 0);
+    std::size_t prev_program = get_curr_program(reader, vinfo, ainfo, sinfo);
+
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    reader->threadStop();
+    stop_renderers();
+
+    select_audio_track(reader, index);
+    curr_tracks.audio_ = index;
+
+    reader->getSelectedAudioTrackInfo(sel_audio_);
+    reader->getAudioTraits(sel_audio_traits_);
+
+    // if the audio program is not the same as the video program
+    // then change the video track to a matching audio program:
+    if (sel_audio_.isValid() && sel_audio_.program_ != prev_program)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader->getProgramInfo(sel_audio_.program_, program));
+
+      if (vinfo.isValid())
+      {
+        // select another video track:
+        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        select_video_track(reader, i);
+        curr_tracks.video_ = i;
+
+        reader->getSelectedVideoTrackInfo(sel_video_);
+        reader->getVideoTraits(sel_video_traits_);
+      }
+
+      if (sinfo.isValid())
+      {
+        // select another subtitle track:
+        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        select_subtt_track(reader, i);
+        curr_tracks.subtt_ = i;
+        reader->subsInfo(i, sel_subtt_);
+      }
+    }
+
+    prepare_to_render(reader, paused_);
+
+    if (sel_audio_.isValid() && sel_audio_.program_ == prev_program)
+    {
+      double t = timeline_.currentTime();
+      reader->seek(t);
+    }
+    else
+    {
+      timeline_.resetFor(reader);
+    }
+
+    reader->threadStart();
+
+    resume_renderers();
+    return sel_audio_.isValid();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::video_select_track
+  //
+  bool
+  PlayerItem::video_select_track(std::size_t index, Tracks & curr_tracks)
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return false;
+    }
+
+    TTrackInfo vinfo(0, 0);
+    TTrackInfo ainfo(0, 0);
+    TTrackInfo sinfo(0, 0);
+    std::size_t prev_program = get_curr_program(reader, vinfo, ainfo, sinfo);
+
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    reader->threadStop();
+    stop_renderers();
+
+    select_video_track(reader, index);
+    curr_tracks.video_ = index;
+
+    reader->getSelectedVideoTrackInfo(sel_video_);
+    reader->getVideoTraits(sel_video_traits_);
+
+    // if the video program is not the same as the audio program
+    // then change the audio track to a matching video program:
+    if (sel_video_.isValid() && sel_video_.program_ != prev_program)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader->getProgramInfo(sel_video_.program_, program));
+
+      if (ainfo.isValid())
+      {
+        // select another audio track:
+        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        select_audio_track(reader, i);
+        curr_tracks.audio_ = i;
+
+        reader->getSelectedAudioTrackInfo(sel_audio_);
+        reader->getAudioTraits(sel_audio_traits_);
+      }
+
+      if (sinfo.isValid())
+      {
+        // select another subtitle track:
+        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        select_subtt_track(reader, i);
+        curr_tracks.subtt_ = i;
+        reader->subsInfo(i, sel_subtt_);
+      }
+    }
+
+    prepare_to_render(reader, paused_);
+
+    if (sel_video_.isValid() && sel_video_.program_ == prev_program)
+    {
+      double t = timeline_.currentTime();
+      reader->seek(t);
+    }
+    else
+    {
+      timeline_.resetFor(reader);
+    }
+
+    reader->threadStart();
+
+    resume_renderers(true);
+    return sel_video_.isValid();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::subtt_select_track
+  //
+  bool
+  PlayerItem::subtt_select_track(std::size_t index, Tracks & curr_tracks)
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return false;
+    }
+
+    TTrackInfo vinfo(0, 0);
+    TTrackInfo ainfo(0, 0);
+    TTrackInfo sinfo(0, 0);
+    std::size_t prev_program = get_curr_program(reader, vinfo, ainfo, sinfo);
+
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    reader->threadStop();
+    stop_renderers();
+
+    select_subtt_track(reader, index);
+    sel_subtt_format_ = reader->subsInfo(index, sel_subtt_);
+
+    // if the subtitles program is not the same as the audio/video program
+    // then change the audio/video track to a matching subtitles program:
+    if (sel_subtt_.isValid() && sel_subtt_.program_ != prev_program)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader->getProgramInfo(sel_subtt_.program_, program));
+
+      if (vinfo.isValid())
+      {
+        // select another video track:
+        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        select_video_track(reader, i);
+        curr_tracks.video_ = i;
+
+        reader->getSelectedVideoTrackInfo(sel_video_);
+        reader->getVideoTraits(sel_video_traits_);
+      }
+
+      if (ainfo.isValid())
+      {
+        // select another audio track:
+        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        select_audio_track(reader, i);
+        curr_tracks.audio_ = i;
+
+        reader->getSelectedAudioTrackInfo(sel_audio_);
+        reader->getAudioTraits(sel_audio_traits_);
+      }
+    }
+
+    prepare_to_render(reader, paused_);
+
+    if (sel_subtt_.isValid() && sel_subtt_.program_ == prev_program)
+    {
+      double t = timeline_.currentTime();
+      reader->seek(t);
+    }
+    else
+    {
+      timeline_.resetFor(reader);
+    }
+
+    reader->threadStart();
+
+    resume_renderers();
+    return sel_subtt_.isValid();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::get_current_chapter
+  //
+  std::size_t
+  PlayerItem::get_current_chapter() const
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return 0;
+    }
+
+    const double playheadInSeconds = timeline_.currentTime();
+    const std::size_t numChapters = reader->countChapters();
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      if (reader->getChapterInfo(i, ch))
+      {
+        double t0_sec = ch.t0_sec();
+        double t1_sec = ch.t1_sec();
+
+        if ((playheadInSeconds >= t0_sec &&
+             playheadInSeconds < t1_sec) ||
+            (playheadInSeconds < t0_sec && i > 0))
+        {
+          std::size_t index = (playheadInSeconds >= t0_sec) ? i : i - 1;
+          return index;
+        }
+      }
+      else
+      {
+        YAE_ASSERT(false);
+      }
+    }
+
+    return numChapters;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_to_next_chapter
+  //
+  bool
+  PlayerItem::skip_to_next_chapter()
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return false;
+    }
+
+    const double playheadInSeconds = timeline_.currentTime();
+    const std::size_t numChapters = reader->countChapters();
+
+    for (std::size_t i = 0; i < numChapters; i++)
+    {
+      TChapter ch;
+      if (reader->getChapterInfo(i, ch))
+      {
+        double t0_sec = ch.t0_sec();
+
+        if (playheadInSeconds < t0_sec)
+        {
+          timeline_.seekTo(t0_sec);
+          return true;
+        }
+      }
+      else
+      {
+        YAE_ASSERT(false);
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_to_chapter
+  //
+  void
+  PlayerItem::skip_to_chapter(std::size_t index)
+  {
+    IReader * reader = reader_.get();
+    if (!reader)
+    {
+      return;
+    }
+
+    TChapter ch;
+    bool ok = reader->getChapterInfo(index, ch);
+    YAE_ASSERT(ok);
+
+    double t0_sec = ch.t0_sec();
+    timeline_.seekTo(t0_sec);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_to_next_frame
+  //
+  void
+  PlayerItem::skip_to_next_frame()
+  {
+    if (!paused_ || !reader_)
+    {
+      return;
+    }
+
+    std::size_t num_video_tracks = reader_->getNumberOfVideoTracks();
+    std::size_t video_track_index = reader_->getSelectedVideoTrackIndex();
+
+    if (video_track_index >= num_video_tracks)
+    {
+      return;
+    }
+
+    std::size_t num_audio_tracks = reader_->getNumberOfAudioTracks();
+    std::size_t audio_track_index = reader_->getSelectedAudioTrackIndex();
+    bool hasAudio = audio_track_index < num_audio_tracks;
+
+    TIgnoreClockStop ignore_clock_stop(timeline_);
+    IReaderPtr reader = reader_;
+
+    QTime startTime = QTime::currentTime();
+    bool done = false;
+    while (!done && reader && reader == reader_)
+    {
+      if (hasAudio && reader_->blockedOnAudio())
+      {
+        // VFR source (a slide show) may require the audio output
+        // queues to be pulled in order to allow the demuxer
+        // to push new packets into audio/video queues:
+
+        TTime dt(1001, 60000);
+        audio_->skipForward(dt, reader_.get());
+      }
+
+      TTime t;
+      done = video_->skipToNextFrame(t);
+
+      if (!done)
+      {
+        if (startTime.elapsed() > 2000)
+        {
+          // avoid blocking the UI indefinitely:
+          break;
+        }
+
+        continue;
+      }
+
+      if (hasAudio)
+      {
+        // attempt to nudge the audio reader to the same position:
+        audio_->skipToTime(t, reader_.get());
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_forward
+  //
+  void
+  PlayerItem::skip_forward()
+  {
+    timeline_.seekFromCurrentTime(7.0);
+    emit maybe_animate_opacity();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::skip_back
+  //
+  void
+  PlayerItem::skip_back()
+  {
+    timeline_.seekFromCurrentTime(-3.0);
+    emit maybe_animate_opacity();
   }
 
   //----------------------------------------------------------------
@@ -576,7 +1247,8 @@ namespace yae
       }
     }
 
-    video_->open(&canvas_, reader);
+    Canvas * canvas = get_canvas();
+    video_->open(canvas, reader);
 
     if (!frame_stepping)
     {
@@ -616,17 +1288,19 @@ namespace yae
   void
   PlayerItem::select_video_track(IReader * reader, std::size_t video_track)
   {
+    Canvas * canvas = get_canvas();
+
     std::size_t num_video_tracks = reader->getNumberOfVideoTracks();
     reader->selectVideoTrack(video_track);
 
     VideoTraits vtts;
-    if (reader->getVideoTraits(vtts))
+    if (canvas && reader->getVideoTraits(vtts))
     {
       bool skip_color_converter = skip_color_converter_.get();
-      canvas_.skipColorConverter(skip_color_converter);
+      canvas->skipColorConverter(skip_color_converter);
 
       TPixelFormatId format = kInvalidPixelFormat;
-      if (canvas_.
+      if (canvas->
           canvasRenderer()->
           adjustPixelFormatForOpenGL(skip_color_converter, vtts, format))
       {
@@ -672,7 +1346,11 @@ namespace yae
       reader->setSubsRender(i, enable);
     }
 
-    canvas_.setSubs(std::list<TSubsFrame>());
+    Canvas * canvas = get_canvas();
+    if (canvas)
+    {
+      canvas->setSubs(std::list<TSubsFrame>());
+    }
   }
 
   //----------------------------------------------------------------
@@ -714,68 +1392,6 @@ namespace yae
     {
       // render the next video frame:
       skip_to_next_frame();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // PlayerItem::skip_to_next_frame
-  //
-  void
-  PlayerItem::skip_to_next_frame()
-  {
-    if (!paused_ || !reader_)
-    {
-      return;
-    }
-
-    std::size_t num_video_tracks = reader_->getNumberOfVideoTracks();
-    std::size_t video_track_index = reader_->getSelectedVideoTrackIndex();
-
-    if (video_track_index >= num_video_tracks)
-    {
-      return;
-    }
-
-    std::size_t num_audio_tracks = reader_->getNumberOfAudioTracks();
-    std::size_t audio_track_index = reader_->getSelectedAudioTrackIndex();
-    bool hasAudio = audio_track_index < num_audio_tracks;
-
-    TIgnoreClockStop ignore_clock_stop(timeline_);
-    IReaderPtr reader = reader_;
-
-    QTime startTime = QTime::currentTime();
-    bool done = false;
-    while (!done && reader && reader == reader_)
-    {
-      if (hasAudio && reader_->blockedOnAudio())
-      {
-        // VFR source (a slide show) may require the audio output
-        // queues to be pulled in order to allow the demuxer
-        // to push new packets into audio/video queues:
-
-        TTime dt(1001, 60000);
-        audio_->skipForward(dt, reader_.get());
-      }
-
-      TTime t;
-      done = video_->skipToNextFrame(t);
-
-      if (!done)
-      {
-        if (startTime.elapsed() > 2000)
-        {
-          // avoid blocking the UI indefinitely:
-          break;
-        }
-
-        continue;
-      }
-
-      if (hasAudio)
-      {
-        // attempt to nudge the audio reader to the same position:
-        audio_->skipToTime(t, reader_.get());
-      }
     }
   }
 }

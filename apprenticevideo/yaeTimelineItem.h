@@ -339,7 +339,7 @@ namespace yae
   // TimelineConfig
   //
   class YAEUI_API TimelineItem : public QObject,
-                               public Item
+                                 public Item
   {
     Q_OBJECT;
 
@@ -347,10 +347,13 @@ namespace yae
     TimelineItem(const char * name, ItemView & view, TimelineModel & model);
 
     void layout();
+
+  public slots:
     void maybeAnimateOpacity();
     void maybeAnimateControls();
     void forceAnimateControls();
 
+  public:
     // virtual:
     void uncache();
 
@@ -359,6 +362,7 @@ namespace yae
 
   public slots:
     void modelChanged();
+    void showTimeline(bool);
 
   public:
     ItemView & view_;

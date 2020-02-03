@@ -40,7 +40,7 @@ namespace yae
                TimelineModel * model);
 
     // virtual:
-    const ItemViewStyle * style() const;
+    ItemViewStyle * style() const;
 
     // virtual:
     void setEnabled(bool enable);

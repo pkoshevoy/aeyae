@@ -1892,7 +1892,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlaylistView::style
   //
-  const ItemViewStyle *
+  ItemViewStyle *
   PlaylistView::style() const
   {
     return &playlistViewStyle();

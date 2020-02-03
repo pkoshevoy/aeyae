@@ -127,8 +127,10 @@ set(project_moc_hxx
   yaeConfirmView.h
   yaeMainWindow.h
   yaePlayerView.h
+  yaePlayerWidget.h
 
   ../apprenticevideo/yaeCanvasWidget.h
+  ../apprenticevideo/yaeFrameCropView.h
   ../apprenticevideo/yaeItemView.h
   ../apprenticevideo/yaeScreenSaverInhibitor.h
   ../apprenticevideo/yaeTextInput.h
@@ -142,7 +144,7 @@ set(project_moc_hxx
 set(project_uis
   yaeAbout.ui
   yaeMainWindow.ui
-  yaePlayerWindow.ui
+  ../apprenticevideo/yaeAspectRatioDialog.ui
   )
 
 set(project_sources
@@ -164,6 +166,8 @@ set(project_sources
   yaeMainWindow.h
   yaePlayerView.cpp
   yaePlayerView.h
+  yaePlayerWidget.cpp
+  yaePlayerWidget.h
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
@@ -182,6 +186,8 @@ set(project_sources
   ../apprenticevideo/yaeExpression.h
   ../apprenticevideo/yaeFlickableArea.cpp
   ../apprenticevideo/yaeFlickableArea.h
+  ../apprenticevideo/yaeFrameCropView.cpp
+  ../apprenticevideo/yaeFrameCropView.h
   ../apprenticevideo/yaeGradient.cpp
   ../apprenticevideo/yaeGradient.h
   ../apprenticevideo/yaeImage.cpp

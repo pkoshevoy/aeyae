@@ -257,7 +257,7 @@ namespace yae
     { return model_; }
 
     // virtual:
-    const RemuxViewStyle * style() const
+    RemuxViewStyle * style() const
     { return style_; }
 
     // virtual:

@@ -177,7 +177,7 @@ namespace yae
     void restyle();
 
     // virtual:
-    const ItemViewStyle * style() const;
+    ItemViewStyle * style() const;
 
     // virtual:
     bool processEvent(Canvas * canvas, QEvent * event);

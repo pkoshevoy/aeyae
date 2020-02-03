@@ -179,7 +179,7 @@ namespace yae
   // SpinnerView::setStyle
   //
   void
-  SpinnerView::setStyle(const ItemViewStyle * style)
+  SpinnerView::setStyle(ItemViewStyle * style)
   {
     style_ = style;
   }

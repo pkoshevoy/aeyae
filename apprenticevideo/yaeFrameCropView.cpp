@@ -11,10 +11,9 @@
 #include "yaeDashedRect.h"
 #include "yaeDonutRect.h"
 #include "yaeFrameCropView.h"
+#include "yaeInputArea.h"
 #include "yaeItemRef.h"
-#include "yaeMainWindow.h"
-#include "yaePlaylistView.h"
-#include "yaePlaylistViewStyle.h"
+#include "yaeItemViewStyle.h"
 #include "yaeProperty.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -436,34 +435,34 @@ namespace yae
   //
   FrameCropView::FrameCropView():
     ItemView("frameCrop"),
-    playlist_(NULL)
+    mainView_(NULL)
   {}
 
   //----------------------------------------------------------------
   // FrameCropView::init
   //
   void
-  FrameCropView::init(PlaylistView * playlist)
+  FrameCropView::init(ItemView * mainView)
   {
-    playlist_ = playlist;
+    mainView_ = mainView;
     Item & root = *root_;
 
     ExpressionItem & titleHeight = root.
       addHidden(new ExpressionItem("style_title_height",
-                                   new StyleTitleHeight(*playlist)));
+                                   new StyleTitleHeight(*mainView)));
 
     ColorRef colorControlsBg = root.addExpr
-      (style_color_ref(*playlist, &ItemViewStyle::bg_controls_));
+      (style_color_ref(*mainView, &ItemViewStyle::bg_controls_));
 
     ColorRef colorTextBg = root.addExpr
-      (style_color_ref(*playlist, &ItemViewStyle::bg_timecode_));
+      (style_color_ref(*mainView, &ItemViewStyle::bg_timecode_));
 
     ColorRef colorTextFg = root.addExpr
-      (style_color_ref(*playlist, &ItemViewStyle::fg_timecode_));
+      (style_color_ref(*mainView, &ItemViewStyle::fg_timecode_));
 
-    const PlaylistViewStyle & style = playlist->playlistViewStyle();
+    ItemViewStyle & style = *(mainView->style());
 
-    // setup mouse trap to prevent unintended click-through to playlist:
+    // setup mouse trap to prevent unintended click-through to mainView:
     MouseTrap & mouseTrap = root.addNew<MouseTrap>("mouse_trap");
     mouseTrap.onScroll_ = false;
     mouseTrap.anchors_.fill(root);
@@ -598,10 +597,10 @@ namespace yae
   //----------------------------------------------------------------
   // FrameCropView::style
   //
-  const ItemViewStyle *
+  ItemViewStyle *
   FrameCropView::style() const
   {
-    return playlist_ ? playlist_->style() : NULL;
+    return mainView_ ? mainView_->style() : NULL;
   }
 
   //----------------------------------------------------------------
@@ -615,10 +614,10 @@ namespace yae
       return false;
     }
 
-    if (playlist_)
+    if (mainView_)
     {
-      PlaylistViewStyle & style = playlist_->playlistViewStyle();
-      requestUncache(&style);
+      ItemViewStyle * style = mainView_->style();
+      requestUncache(style);
     }
 
     return true;

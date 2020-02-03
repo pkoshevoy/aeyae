@@ -153,7 +153,7 @@ namespace yae
 
     void setRoot(const ItemPtr & root);
 
-    virtual const ItemViewStyle * style() const
+    virtual ItemViewStyle * style() const
     { return NULL; }
 
     // virtual:

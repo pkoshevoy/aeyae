@@ -31,10 +31,10 @@ namespace yae
   public:
     ConfirmView();
 
-    void setStyle(const ItemViewStyle * style);
+    void setStyle(ItemViewStyle * style);
 
     // virtual:
-    const ItemViewStyle * style() const
+    ItemViewStyle * style() const
     { return style_; }
 
     // virtual:
@@ -64,7 +64,7 @@ namespace yae
 
     void layout();
 
-    const ItemViewStyle * style_;
+    ItemViewStyle * style_;
   };
 
 }
