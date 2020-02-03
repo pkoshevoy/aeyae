@@ -295,6 +295,11 @@ namespace yae
       return false;
     }
 
+    if (basename.empty())
+    {
+      return false;
+    }
+
 #ifdef _WIN32
     if (al::ends_with(dirname, ":"))
     {
