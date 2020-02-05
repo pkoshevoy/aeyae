@@ -62,13 +62,11 @@ namespace yae
 
       PlayerView & view = playerWidget_->view_;
       view.setStyle(appView_->style());
-
       containerLayout->addWidget(playerWidget_);
 
       show();
-      QApplication::processEvents();
-
       playerWidget_->initItemViews();
+      QApplication::processEvents();
 
       menubar->addAction(view.menuPlayback_->menuAction());
       menubar->addAction(view.menuAudio_->menuAction());
@@ -78,7 +76,7 @@ namespace yae
     }
     else
     {
-      this->show();
+      show();
     }
 
     PlayerView & view = playerWidget_->view_;

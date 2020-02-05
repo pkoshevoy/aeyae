@@ -969,7 +969,8 @@ namespace yae
       return;
     }
 
-    QRect rectWindow = frameGeometry();
+    QWidget * window = QWidget::window();
+    QRect rectWindow = window->frameGeometry();
     int ww = rectWindow.width();
     int wh = rectWindow.height();
 
@@ -1039,16 +1040,11 @@ namespace yae
               << std::endl;
 #endif
 
-    resize(new_w - cdx, new_h - cdy);
+    window->resize(new_w - cdx, new_h - cdy);
     // move(new_x, new_y);
 
     // repaint the frame:
     canvas_->refresh();
-
-#if 0 // FIXME: write me!
-    // avoid hiding the highlighted item:
-    playlistModel_.makeSureHighlightedItemIsVisible();
-#endif
   }
 
 #ifdef __APPLE__

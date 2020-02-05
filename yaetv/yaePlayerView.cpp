@@ -767,6 +767,17 @@ namespace yae
 
     actionRemove_->setText(trUtf8("&Remove Selected"));
     actionRemove_->setShortcut(trUtf8("Delete"));
+
+
+    menuPlayback_->setTitle(trUtf8("&Playback"));
+    menuPlaybackSpeed_->setTitle(trUtf8("Playback Speed"));
+    menuAudio_->setTitle(trUtf8("&Audio"));
+    menuVideo_->setTitle(trUtf8("&Video"));
+    menuWindowSize_->setTitle(trUtf8("Window Size"));
+    menuCropFrame_->setTitle(trUtf8("Crop Frame"));
+    menuAspectRatio_->setTitle(trUtf8("Aspect Ratio"));
+    menuSubs_->setTitle(trUtf8("&Subtitles"));
+    menuChapters_->setTitle(trUtf8("Chap&ters"));
   }
 
   //----------------------------------------------------------------
@@ -2155,12 +2166,8 @@ namespace yae
     hidden.width_ = hidden.
       addExpr(style_item_ref(view, &AppStyle::unit_size_));
 
-    Rectangle & bg = root.addNew<Rectangle>("background");
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
-    bg.anchors_.fill(root);
-
     PlayerItem & player = root.add(view.player_);
-    player.anchors_.fill(bg);
+    player.anchors_.fill(root);
 
     TimelineItem & timeline = player.add(view.timeline_);
     timeline.anchors_.fill(player);

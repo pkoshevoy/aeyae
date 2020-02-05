@@ -26,6 +26,12 @@
    </property>
    <item>
     <widget class="QMenuBar" name="menubar">
+     <property name="minimumSize">
+      <size>
+       <width>0</width>
+       <height>22</height>
+      </size>
+     </property>
     </widget>
    </item>
    <item>
