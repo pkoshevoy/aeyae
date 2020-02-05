@@ -337,8 +337,6 @@ namespace yae
     video_->close();
     audio_->close();
 
-    std::size_t num_video_tracks = reader->getNumberOfVideoTracks();
-    std::size_t num_audio_tracks = reader->getNumberOfAudioTracks();
     std::size_t num_subtt_tracks = reader->subsCount();
 
     reader->threadStop();

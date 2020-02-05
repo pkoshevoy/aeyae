@@ -3233,7 +3233,7 @@ namespace yae
       // frames with width/height in excess of this value will be processed
       // using the legacy canvas renderer, which cuts frames into tiles
       // of supported size and renders them seamlessly:
-      GLsizei maxTexSize = getTextureEdgeMax();
+      unsigned int maxTexSize = getTextureEdgeMax();
 
       if (renderer_ == modern_)
       {

@@ -302,7 +302,6 @@ namespace yae
       ItemPtr itemPtr = target.item_.lock();
       if (itemPtr)
       {
-        Item & item = *itemPtr;
         return setFocus(target);
       }
     }
@@ -339,7 +338,6 @@ namespace yae
       ItemPtr itemPtr = target.item_.lock();
       if (itemPtr)
       {
-        Item & item = *itemPtr;
         return setFocus(target);
       }
     }

@@ -1126,7 +1126,6 @@ namespace yae
 
     TPainterWrapper wrapper((int)w, (int)h);
 
-    int textAlignment = Qt::TextWordWrap | Qt::AlignHCenter | Qt::AlignBottom;
     bool paintedSomeSubs = false;
     bool libassSameSubs = false;
 

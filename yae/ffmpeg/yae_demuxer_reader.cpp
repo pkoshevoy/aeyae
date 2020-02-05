@@ -1186,7 +1186,6 @@ namespace yae
       std::string();
 
     const DemuxerSummary & summary = demuxer_->summary();
-    const Timeline::Track & tt = summary.get_track_timeline(track_id);
 
     int seekFlags = 0;
     int err = demuxer_->seek(seekFlags, t, track_id);
@@ -1287,7 +1286,6 @@ namespace yae
   void
   DemuxerReader::thread_loop()
   {
-    const DemuxerSummary & summary = demuxer_->summary();
     VideoTrackPtr videoTrack = selectedVideoTrack();
     AudioTrackPtr audioTrack = selectedAudioTrack();
 

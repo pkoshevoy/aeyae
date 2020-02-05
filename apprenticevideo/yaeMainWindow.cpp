@@ -4542,7 +4542,6 @@ namespace yae
   void
   MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
   {
-    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     reader->selectVideoTrack(videoTrackIndex);
 
     VideoTraits vtts;
@@ -5012,7 +5011,6 @@ namespace yae
   {
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
-    std::size_t numSubtitles = reader->subsCount();
     std::size_t numChapters = reader->countChapters();
     std::size_t videoTrackIndex = reader->getSelectedVideoTrackIndex();
 

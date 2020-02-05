@@ -117,8 +117,8 @@ namespace yae
   //
   VideoFrameItem::VideoFrameItem(const char * id, std::size_t frame):
     Item(id),
-    frame_(frame),
-    opacity_(ItemRef::constant(1.0))
+    opacity_(ItemRef::constant(1.0)),
+    frame_(frame)
   {}
 
   //----------------------------------------------------------------
@@ -2272,8 +2272,6 @@ namespace yae
   {
     enable_focus_group();
 
-    Item & root = *root_;
-
     // add style to the root item, so it could be uncached automatically:
     style_.reset(new RemuxViewStyle("RemuxViewStyle", *this));
 
@@ -3959,7 +3957,6 @@ namespace yae
 
     Clip & clip = *(model.clips_[index]);
     const DemuxerSummary & summary = clip.demuxer_->summary();
-    const Timeline::Track & track = summary.get_track_timeline(clip.track_);
     const FramerateEstimator & fe = yae::at(summary.fps_, clip.track_);
     double fps = fe.best_guess();
     parse_time(clip.keep_.*field, text.c_str(), NULL, NULL, fps);
@@ -4182,11 +4179,6 @@ namespace yae
     {
       return;
     }
-
-    Item & root = *root_;
-    Item & sources = root["sources"];
-    Item & preview = root["preview"];
-    Item & player = root["player"];
 
     capture_playhead_position();
 

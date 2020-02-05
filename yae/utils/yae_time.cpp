@@ -388,7 +388,7 @@ namespace yae
     int64_t tsub_; // sub-seconds expressed in base_ timebase
     int64_t base_;
   };
-
+#if 0
   //----------------------------------------------------------------
   // operator <<
   //
@@ -398,7 +398,7 @@ namespace yae
     os << t.tsec_ << ".(" << t.tsub_ << "/" << t.base_ << ")";
     return os;
   }
-
+#endif
 
   //----------------------------------------------------------------
   // TTime::max_flicks
@@ -1025,8 +1025,6 @@ namespace yae
       {
         return false;
       }
-
-      static const char * mm_separators[] = { ":", NULL };
 
       sign_ = 0;
       hh_ = -1;
@@ -2037,7 +2035,6 @@ namespace yae
         for (; j1 != jend; ++j0, ++j1)
         {
           const TTime & t0 = j0->first;
-          const TTime & t1 = j1->first;
           std::size_t i0 = j0->second;
           std::size_t i1 = j1->second;
 

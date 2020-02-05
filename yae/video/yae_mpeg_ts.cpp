@@ -5544,10 +5544,10 @@ namespace yae
     Context::consume_eit(const EventInformationTable & eit, uint16_t pid)
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "consume_eit");
-      uint16_t table_version = eit.version_number_;
       uint8_t eit_index = yae::at(pid_eit_, pid);
 
 #if 0
+      uint16_t table_version = eit.version_number_;
       std::ostringstream oss;
       oss << "EIT-" << int(eit_index) << " (pid " << pid
           << ", version " << table_version << ", section "
@@ -5597,10 +5597,10 @@ namespace yae
       // GPS time rounded down to nearest 3 hours
       // (each EIT table spans 3 hours):
       uint32_t t_now = TTime::gps_now().get(1);
-      int64_t t_eit = t_now - t_now % 10800;
       int64_t t_min = t_now - t_now % (24 * 3600);
       int64_t t_max = t_min + 96 * 3600;
 #if 0
+      int64_t t_eit = t_now - t_now % 10800;
       yae_wlog("%sEIT-0 origin %s, EIT-%i time window [%s, %s]",
                log_prefix_.c_str(),
                unix_epoch_time_to_localtime_str(unix_epoch_gps_offset +
@@ -5724,7 +5724,6 @@ namespace yae
     Context::consume_ett(const ExtendedTextTable & ett, uint16_t pid)
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "consume_ett");
-      uint16_t table_version = ett.version_number_;
 
 #if 0
       std::ostringstream oss;
@@ -5738,6 +5737,7 @@ namespace yae
         oss << "ETT ";
       }
 
+      uint16_t table_version = ett.version_number_;
       oss << " (pid " << pid
           << ", version " << table_version << ", section "
           << int(1 + ett.section_number_) << "/"
@@ -5849,7 +5849,6 @@ namespace yae
                             const std::string & lang) const
     {
       yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg_nolock");
-      uint32_t gps_time = gps_time_now();
 
       for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
@@ -5996,4 +5995,5 @@ namespace yae
     }
 
   }
+
 }

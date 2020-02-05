@@ -83,7 +83,6 @@ namespace yae
     // helper:
     bool needToPause() const
     {
-      const TVec2D & pt = timeline_.view_.mousePt();
       bool shouldPause = timeline_.is_playlist_visible_.get();
       return shouldPause;
     }

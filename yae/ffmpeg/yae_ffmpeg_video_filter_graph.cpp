@@ -386,7 +386,7 @@ namespace yae
       AVHWFramesContext * hw_frames_ctx = hw_frames_.get<AVHWFramesContext>();
       AVBufferRef * device_ref = hw_frames_ctx->device_ref;
 
-      for (int i = 0; i < graph_->nb_filters; i++)
+      for (int i = 0; i < int(graph_->nb_filters); i++)
       {
         AVFilterContext * filter_ctx = graph_->filters[i];
         YAE_ASSERT(!filter_ctx->hw_device_ctx);
@@ -398,7 +398,7 @@ namespace yae
           break;
         }
 
-        for (int j = 0; j < filter_ctx->nb_outputs; j++)
+        for (int j = 0; j < int(filter_ctx->nb_outputs); j++)
         {
           AVFilterLink * link = filter_ctx->outputs[j];
           YAE_ASSERT(!link->hw_frames_ctx);

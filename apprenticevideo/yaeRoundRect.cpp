@@ -139,7 +139,6 @@ namespace yae
 
     // put origin at the center:
     int iw2 = iw_ / 2;
-    double w2 = iw2;
 
     // we'll be comparing against radius values,
     double cr = c - r;

@@ -436,6 +436,7 @@ namespace yae
            message);
   }
 
+#ifdef _WIN32
   //----------------------------------------------------------------
   // av_log_callback
   //
@@ -454,6 +455,7 @@ namespace yae
 #endif
     // YAE_BREAKPOINT_IF(level < AV_LOG_WARNING);
   }
+#endif
 
   //----------------------------------------------------------------
   // AvLog

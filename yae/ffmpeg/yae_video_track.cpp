@@ -1187,7 +1187,6 @@ namespace yae
     int err = 0;
     if (stream_ && codecContext_)
     {
-      const AVCodec * codec = codecContext_->codec;
       AVCodecContext * ctx = codecContext_.get();
 
       avcodec_flush_buffers(ctx);

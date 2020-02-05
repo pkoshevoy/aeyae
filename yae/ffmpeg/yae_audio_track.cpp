@@ -666,9 +666,6 @@ namespace yae
       const TAudioFrame & af = *frame;
       double dt = af.durationInSeconds();
 
-      bool after_out_point = posOut_->lt(af);
-      bool before_in_point = posIn_->gt(af, dt);
-
       if ((!playbackEnabled_ || posOut_->gt(af)) && posIn_->lt(af, dt))
       {
         break;

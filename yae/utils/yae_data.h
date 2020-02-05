@@ -451,7 +451,7 @@ namespace yae
     //----------------------------------------------------------------
     // Bits
     //
-    struct Bits
+    struct YAE_API Bits
     {
       inline explicit Bits(const uint64_t & data):
         data_(data)
@@ -665,7 +665,7 @@ namespace yae
   // Bit
   //
   template <std::size_t nbits, uint64_t default_value = 0>
-  struct Bit : bitstream::IPayload
+  struct YAE_API Bit : bitstream::IPayload
   {
     Bit(uint64_t value = default_value):
       data_(value)

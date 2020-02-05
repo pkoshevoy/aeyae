@@ -105,6 +105,8 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
   BOOST_CHECK(std::string::npos != found_b2);
   BOOST_CHECK(std::string::npos != found_a2);
 #else
+  (void)found_a1;
+  (void)found_a2;
   BOOST_CHECK_EQUAL(result, std::string());
 #endif
 

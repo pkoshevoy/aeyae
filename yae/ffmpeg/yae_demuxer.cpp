@@ -3028,7 +3028,6 @@ namespace yae
     }
 
     src_index = std::distance(t1.begin(), found);
-    const TTime & end_time = t1[src_index];
     const std::vector<TTime> & t0 = yae::at(t0_, prog_id);
 
     src = src_[src_index];
@@ -3260,7 +3259,6 @@ namespace yae
 
     std::string track_id = trackId.empty() ? track_ : trackId;
     const int program = src_summary_.find_program(track_id);
-    const Timeline::Track & track = src_summary_.get_track_timeline(track_id);
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
@@ -3399,7 +3397,6 @@ namespace yae
         YAE_ASSERT(tt.dts_.size() == tt.pts_.size() &&
                    tt.dts_.size() == tt.dur_.size());
 
-        const Trim & trim = yae::at(trim_, track_id);
         const Timeline::Track::Trim & x = yae::at(x_, track_id);
 
         // NOTE: starting from keyframe ka to avoid decoding artifacts,

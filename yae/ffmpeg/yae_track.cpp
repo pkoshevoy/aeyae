@@ -361,10 +361,10 @@ namespace yae
     }
 
     int err = 0;
-    int hw_config_index = 0;
     yae::AvBufferRef hw_device_ctx;
 
 #ifndef __APPLE__
+    int hw_config_index = 0;
     while (params.width > 640 && params.height > 360)
     {
       const AVCodecHWConfig * hw =
