@@ -284,8 +284,6 @@ namespace yae
     ok = connect(&view_, SIGNAL(confirm_delete(TRecordingPtr)),
                  this, SLOT(confirmDelete(TRecordingPtr)));
     YAE_ASSERT(ok);
-
-    playerWindow_.show();
   }
 
   //----------------------------------------------------------------
@@ -309,7 +307,7 @@ namespace yae
     view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
 
     canvas_->initializePrivateBackend();
-    // canvas_->setGreeting(tr("yaetv"));
+    canvas_->setGreeting(tr("yaetv"));
     canvas_->append(&view_);
 
     view_.setModel(&dvr_);

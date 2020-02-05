@@ -231,10 +231,10 @@ namespace yae
       // get position of the frame relative to the current time segment:
       double frameDurationScaled = frameDuration / tempo;
       double f0 = framePosition_.sec();
+      double f1 = f0 + frameDurationScaled;
       double df = f0 + frameDurationScaled - playheadPosition;
 
 #if YAE_DEBUG_VIDEO_RENDERER
-      double f1 = f0 + frameDurationScaled;
       std::cerr
         << "t:  " << TTime(playheadPosition) << std::endl
         << "dt: " << frameDurationScaled << std::endl

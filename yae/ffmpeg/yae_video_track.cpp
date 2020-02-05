@@ -119,6 +119,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // VideoTrack::~VideoTrack
+  //
+  VideoTrack::~VideoTrack()
+  {
+    frameQueue_.close();
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::initTraits
   //
   bool

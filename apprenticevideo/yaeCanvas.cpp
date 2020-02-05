@@ -57,9 +57,8 @@ namespace yae
     GLenum err = glewInit();
     if (err != GLEW_OK)
     {
-      std::cerr
-        << "GLEW init failed: " << glewGetErrorString(err)
-        << std::endl;
+      yae_error
+        << "GLEW init failed: " << glewGetErrorString(err);
       YAE_ASSERT(false);
     }
 
@@ -666,9 +665,8 @@ namespace yae
         // this happens on startup on the mac, where
         // QGLWidget::paintGL is called before the window
         // is actually created, just ignore it:
-        std::cerr
-          << "Canvas::paintCanvas: frambuffer incomplete, skipping..."
-          << std::endl;
+        yae_warn
+          << "Canvas::paintCanvas: frambuffer incomplete, skipping...";
 #endif
         return;
       }
@@ -1489,12 +1487,11 @@ namespace yae
     cropAutoDetectStop();
 
 #if 0
-    std::cerr << "\nCROP FRAME AUTO DETECTED: "
+    yae_debug << "\nCROP FRAME AUTO DETECTED: "
               << "x = " << crop.x_ << ", "
               << "y = " << crop.y_ << ", "
               << "w = " << crop.w_ << ", "
-              << "h = " << crop.h_
-              << std::endl;
+              << "h = " << crop.h_;
 #endif
 
     private_->cropFrame(crop);

@@ -40,6 +40,7 @@ namespace yae
   //
   AudioTrack::~AudioTrack()
   {
+    frameQueue_.close();
     delete tempoFilter_;
     tempoFilter_ = NULL;
   }

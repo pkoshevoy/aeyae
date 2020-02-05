@@ -299,9 +299,9 @@ namespace yae
   PlayerWidget::initItemViews()
   {
     canvas_->initializePrivateBackend();
-    canvas_->setGreeting(tr("yaetv"));
+    canvas_->setGreeting(tr("yaetv player"));
     canvas_->append(&view_);
-    view_.setEnabled(true);
+    view_.setEnabled(false);
 
     bool ok = true;
     ok = connect(this, SIGNAL(setInPoint()),

@@ -863,6 +863,8 @@ namespace yae
 
     timelineTimer_(this)
   {
+    ILayer::enabled_ = false;
+
     init_actions();
     translate_ui();
 

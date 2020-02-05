@@ -310,6 +310,19 @@ namespace yae
     }
 
     // virtual:
+    void initializeGL()
+    {
+      yae_dlog("initializeGL: QGLContext::currentContext(): %p",
+               QGLContext::currentContext());
+    }
+
+    // virtual:
+    void resizeGL(int width, int height)
+    {
+      yae_dlog("resizeGL(%i, %i)", width, height);
+    }
+
+    // virtual:
     bool event(QEvent * event)
     {
       try
@@ -350,15 +363,14 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr
+        yae_error
           << "ERROR: CanvasWidget::event(...) caught unexpected exception: "
-          << e.what() << std::endl;
+          << e.what();
       }
       catch (...)
       {
-        std::cerr
-          << "ERROR: CanvasWidget::event(...) caught unknown exception"
-          << std::endl;
+        yae_error
+          << "ERROR: CanvasWidget::event(...) caught unknown exception";
       }
 
       return false;
@@ -367,12 +379,6 @@ namespace yae
     // virtual:
     void paintGL()
     {
-#if 0
-      if (!Canvas::initialized())
-      {
-        return;
-      }
-#endif
       QWidget * sw = TDelegate::get_screen_widget(this);
       double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
 

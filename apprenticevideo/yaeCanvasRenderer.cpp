@@ -1088,9 +1088,11 @@ yae_assert_gl_no_error()
 
   do
   {
-    std::cerr << "glGetError: " << err << std::endl;
+    yae_elog("glGetError: %i", err);
     err = YAE_OGL_11(glGetError());
   } while (err != GL_NO_ERROR);
+
+  // NOTE: don't call yae_assert_gl_no_error between glBegin/glEnd
 
   YAE_ASSERT(false);
   // char *crash = NULL;
@@ -2451,6 +2453,7 @@ namespace yae
         YAE_OGL_11(glVertex2i(0, int(h)));
       }
       YAE_OGL_11(glEnd());
+      yae_assert_gl_no_error();
     }
 
     // un-bind the textures:
@@ -3132,6 +3135,7 @@ namespace yae
         YAE_OGL_11(glVertex2i(tile.x_.v0_, tile.y_.v1_));
       }
       YAE_OGL_11(glEnd());
+      yae_assert_gl_no_error();
     }
 
     // un-bind the textures:
