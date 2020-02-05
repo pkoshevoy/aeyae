@@ -13,6 +13,7 @@
 #include <QWidget>
 
 // local:
+#include "yaeAppView.h"
 #include "yaePlayerWidget.h"
 
 // uic:
@@ -34,13 +35,18 @@ namespace yae
     PlayerWindow(QWidget * parent = NULL,
                  Qt::WindowFlags f = Qt::WindowFlags());
 
+    void setAppView(AppView * appView);
+
+    PlayerView & playback(const IReaderPtr & reader,
+                          TCanvasWidget * shared_ctx = NULL);
+
   protected:
     // virtual:
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
 
-  public:
     PlayerWidget * playerWidget_;
+    AppView * appView_;
   };
 }
 

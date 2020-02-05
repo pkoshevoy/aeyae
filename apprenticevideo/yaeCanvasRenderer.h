@@ -119,6 +119,16 @@ namespace yae
                                                         const GLdouble *);
 
   //----------------------------------------------------------------
+  // TProgramLocalParameter4dARB
+  //
+  typedef void (APIENTRYP TProgramLocalParameter4dARB)(GLenum target,
+                                                       GLuint index,
+                                                       GLdouble x,
+                                                       GLdouble y,
+                                                       GLdouble z,
+                                                       GLdouble w);
+
+  //----------------------------------------------------------------
   // YAE_GL_FRAGMENT_PROGRAM_ARB
   //
   struct YAEUI_API OpenGLFunctionPointers : public QOpenGLFunctions
@@ -129,6 +139,7 @@ namespace yae
     TBindProgramARB glBindProgramARB;
     TGenProgramsARB glGenProgramsARB;
     TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB;
+    TProgramLocalParameter4dARB glProgramLocalParameter4dARB;
 
     OpenGLFunctionPointers();
 

@@ -70,7 +70,9 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerWidget::PlayerWidget
   //
-  PlayerWidget::PlayerWidget(QWidget * parent, Qt::WindowFlags flags):
+  PlayerWidget::PlayerWidget(QWidget * parent,
+                             TCanvasWidget * shared_ctx,
+                             Qt::WindowFlags flags):
     QWidget(parent, flags),
     canvas_(NULL)
   {
@@ -270,7 +272,7 @@ namespace yae
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
     contextFormat.setSampleBuffers(false);
-    canvas_ = new TCanvasWidget(contextFormat, this, canvas_);
+    canvas_ = new TCanvasWidget(contextFormat, this, shared_ctx);
 #endif
 
     view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);

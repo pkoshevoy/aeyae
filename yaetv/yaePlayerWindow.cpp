@@ -21,7 +21,9 @@ namespace yae
   // PlayerWindow::PlayerWindow
   //
   PlayerWindow::PlayerWindow(QWidget * parent, Qt::WindowFlags flags):
-    QWidget(parent, flags | Qt::Window)
+    QWidget(parent, flags | Qt::Window),
+    playerWidget_(NULL),
+    appView_(NULL)
   {
     setupUi(this);
     setAcceptDrops(false);
@@ -32,20 +34,58 @@ namespace yae
       QString::fromUtf8(":/images/yaetv-logo.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
+  }
 
-    QVBoxLayout * containerLayout = new QVBoxLayout(containerWidget);
-    containerLayout->setMargin(0);
-    containerLayout->setSpacing(0);
+  //----------------------------------------------------------------
+  // PlayerWindow::setAppView
+  //
+  void
+  PlayerWindow::setAppView(AppView * appView)
+  {
+    appView_ = appView;
+  }
 
-    playerWidget_ = new PlayerWidget();
-    containerLayout->addWidget(playerWidget_);
+  //----------------------------------------------------------------
+  // PlayerWindow::playback
+  //
+  PlayerView &
+  PlayerWindow::playback(const IReaderPtr & reader,
+                         TCanvasWidget * shared_ctx)
+  {
+    if (!playerWidget_)
+    {
+      QVBoxLayout * containerLayout = new QVBoxLayout(containerWidget);
+      containerLayout->setMargin(0);
+      containerLayout->setSpacing(0);
+
+      playerWidget_ = new PlayerWidget(this, shared_ctx);
+
+      PlayerView & view = playerWidget_->view_;
+      view.setStyle(appView_->style());
+
+      containerLayout->addWidget(playerWidget_);
+
+      show();
+      QApplication::processEvents();
+
+      playerWidget_->initItemViews();
+
+      menubar->addAction(view.menuPlayback_->menuAction());
+      menubar->addAction(view.menuAudio_->menuAction());
+      menubar->addAction(view.menuVideo_->menuAction());
+      menubar->addAction(view.menuSubs_->menuAction());
+      menubar->addAction(view.menuChapters_->menuAction());
+    }
+    else
+    {
+      this->show();
+    }
 
     PlayerView & view = playerWidget_->view_;
-    menubar->addAction(view.menuPlayback_->menuAction());
-    menubar->addAction(view.menuAudio_->menuAction());
-    menubar->addAction(view.menuVideo_->menuAction());
-    menubar->addAction(view.menuSubs_->menuAction());
-    menubar->addAction(view.menuChapters_->menuAction());
+    view.setEnabled(true);
+    view.playback(reader);
+
+    return view;
   }
 
   //----------------------------------------------------------------

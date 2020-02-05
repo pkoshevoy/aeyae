@@ -1128,6 +1128,9 @@ namespace yae
 
     this->glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
       opengl->getProcAddress("glProgramLocalParameter4dvARB");
+
+    this->glProgramLocalParameter4dARB = (TProgramLocalParameter4dARB)
+      opengl->getProcAddress("glProgramLocalParameter4dARB");
   }
 
   //----------------------------------------------------------------

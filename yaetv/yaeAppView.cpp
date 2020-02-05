@@ -1569,6 +1569,8 @@ namespace yae
       return;
     }
 
+    TMakeCurrentContext currentContext(*context());
+
     // check if model data has changed:
     {
       bool same_program_guide = !dvr_->get_cached_epg(epg_lastmod_, epg_);

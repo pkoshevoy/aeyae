@@ -90,6 +90,7 @@ namespace yae
 
   public:
     PlayerWidget(QWidget * parent = NULL,
+                 TCanvasWidget * shared_ctx = NULL,
                  Qt::WindowFlags f = Qt::WindowFlags());
     ~PlayerWidget();
 

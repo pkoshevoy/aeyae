@@ -331,8 +331,7 @@ namespace yae
     spinner_.setEnabled(false);
 
     // player window:
-    playerWindow_.playerWidget_->view_.setStyle(view_.style());
-    playerWindow_.playerWidget_->initItemViews();
+    playerWindow_.setAppView(&view_);
 
     TAsyncTaskPtr t(new InitTuners(this, dvr_));
     tasks_.push_back(t);
@@ -514,10 +513,7 @@ namespace yae
       return;
     }
 
-    playerWindow_.show();
-    PlayerView & playerView = playerWindow_.playerWidget_->view_;
-    playerView.setEnabled(true);
-    playerView.playback(reader);
+    playerWindow_.playback(reader, canvas_);
   }
 
   //----------------------------------------------------------------

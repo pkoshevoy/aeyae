@@ -71,7 +71,9 @@ namespace yae
   // Canvas::Canvas
   //
   Canvas::Canvas(const yae::shared_ptr<IOpenGLContext> & ctx):
+#ifndef YAE_USE_QOPENGL_WIDGET
     glewInitialized_(false),
+#endif
     eventReceiver_(*this),
     context_(ctx),
     private_(NULL),
