@@ -78,14 +78,13 @@ namespace yae
     min %= 60;
 
 #if 0
-    std::cerr << "frame: " << frameNo
+    yae_debug << "frame: " << frameNo
               << "\tseconds: " << seconds
               << ", remainder: " << remainder
               << ", fps " << frameRate
               << ", fps (whole): " << fpsWhole
               << ", " << frameRate * remainder
-              << ", " << frame
-              << std::endl;
+              << ", " << frame;
 #endif
 
     std::ostringstream os;
@@ -480,10 +479,9 @@ namespace yae
     {
       double seconds = std::max<double>(0.0, t0 + secOffset);
 #if 0
-      std::cerr << "seek from " << TTime(t0).to_hhmmss_ms()
+      yae_debug << "seek from " << TTime(t0).to_hhmmss_ms()
                 << " " << secOffset << " seconds to "
-                << TTime(seconds).to_hhmmss_ms()
-                << std::endl;
+                << TTime(seconds).to_hhmmss_ms();
 #endif
       seekTo(seconds);
     }
@@ -609,18 +607,14 @@ namespace yae
       if (sharedClock_.sharesCurrentTimeWith(c))
       {
 #ifndef NDEBUG
-        std::cerr
-          << "NOTE: clock stopped"
-          << std::endl;
+        yae_debug << "NOTE: clock stopped";
 #endif
         emit clockStopped(c);
       }
 #ifndef NDEBUG
       else
       {
-        std::cerr
-          << "NOTE: ignoring stale delayed stopped clock"
-          << std::endl;
+        yae_debug << "NOTE: ignoring stale delayed stopped clock";
       }
 #endif
 
@@ -672,7 +666,7 @@ namespace yae
                      slideshowTimer_.interval() * 2)
             {
 #ifndef NDEBUG
-              std::cerr << "STOPPED CLOCK TIMEOUT WAS LATE" << std::endl;
+              yae_debug << "STOPPED CLOCK TIMEOUT WAS LATE";
 #endif
               slideshowTimerExpired();
             }
@@ -686,9 +680,7 @@ namespace yae
         }
 
 #ifndef NDEBUG
-        std::cerr
-          << "NOTE: ignoring stale ClockStoppedEvent"
-          << std::endl;
+        yae_debug << "NOTE: ignoring stale ClockStoppedEvent";
 #endif
         return true;
       }

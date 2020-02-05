@@ -48,8 +48,6 @@ namespace yae
     PlayerView();
     ~PlayerView();
 
-    void setStyle(AppStyle * style);
-
     // accessors:
     inline Canvas & canvas()
     { return delegate_->windowCanvas(); }
@@ -59,6 +57,8 @@ namespace yae
 
     inline TimelineModel & timeline_model() const
     { return player_->timeline(); }
+
+    void setStyle(AppStyle * style);
 
     // virtual:
     AppStyle * style() const
@@ -89,6 +89,7 @@ namespace yae
 
   public:
     bool is_playback_paused() const;
+    void playback(const IReaderPtr & reader_ptr);
 
   public slots:
     // live timeline refresh:

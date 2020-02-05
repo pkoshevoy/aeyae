@@ -1161,6 +1161,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerView::playback
+  //
+  void
+  PlayerView::playback(const IReaderPtr & reader)
+  {
+    std::vector<TTrackInfo>  audioInfo;
+    std::vector<AudioTraits> audioTraits;
+    std::vector<TTrackInfo>  videoInfo;
+    std::vector<VideoTraits> videoTraits;
+    std::vector<TTrackInfo>  subsInfo;
+    std::vector<TSubsFormat> subsFormat;
+
+    adjustMenuActions(reader.get(),
+                      audioInfo,
+                      audioTraits,
+                      videoInfo,
+                      videoTraits,
+                      subsInfo,
+                      subsFormat);
+
+    player_->playback(reader);
+  }
+
+  //----------------------------------------------------------------
   // PlayerView::playbackAspectRatioAuto
   //
   void

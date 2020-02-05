@@ -315,6 +315,7 @@ namespace yae
 
     ++reader_id_;
     reader->setReaderId(reader_id_);
+    reader->threadStop();
 
     Canvas * canvas = get_canvas();
     if (canvas)

@@ -1352,15 +1352,15 @@ namespace yae
   void
   Canvas::setGreeting(const QString & greeting)
   {
+    showTheGreeting_ = !greeting.isEmpty();
+    greeting_ = greeting;
+
     bool ok = initialized();
-    YAE_ASSERT(ok);
     if (!ok)
     {
       return;
     }
 
-    showTheGreeting_ = !greeting.isEmpty();
-    greeting_ = greeting;
     updateGreeting();
     refresh();
   }

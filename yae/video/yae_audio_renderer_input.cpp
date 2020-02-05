@@ -52,6 +52,10 @@ namespace yae
     pause_ = true;
     reader_ = reader;
 
+#if YAE_DEBUG_AUDIO_RENDERER
+    yae_dlog("AudioRendererInput::open(reader = %p)", reader);
+#endif
+
     // avoid stale leftovers:
     audioFrame_ = TAudioFramePtr();
     audioFrameOffset_ = 0;
@@ -122,6 +126,10 @@ namespace yae
       // fetch the next audio frame from the reader:
       if (!reader->readAudio(audioFrame_, &terminator_))
       {
+#if YAE_DEBUG_AUDIO_RENDERER
+        yae_dlog("reader(%p) readAudio failed, RESET AUDIO TIME COUNTERS",
+                 reader);
+#endif
         if (clock_.allowsSettingTime())
         {
           clock_.noteTheClockHasStopped();
@@ -133,9 +141,7 @@ namespace yae
       if (resetTimeCountersIndicated(audioFrame_.get()))
       {
 #if YAE_DEBUG_AUDIO_RENDERER
-        std::cerr
-          << "\nRESET AUDIO TIME COUNTERS\n"
-          << std::endl;
+        yae_debug << "RESET AUDIO TIME COUNTERS";
 #endif
         clock_.resetCurrentTime();
         audioFrame_.reset();
@@ -166,9 +172,7 @@ namespace yae
     terminator_.stopWaiting(true);
 
 #if YAE_DEBUG_AUDIO_RENDERER
-    std::cerr
-      << "TRY TO SKIP AUDIO TO @ " << t
-      << std::endl;
+    yae_debug << "TRY TO SKIP AUDIO TO @ " << t;
 #endif
 
     TTime framePosition;
@@ -227,17 +231,13 @@ namespace yae
     if (audioFrame_)
     {
 #if YAE_DEBUG_AUDIO_RENDERER
-      std::cerr
-        << "SKIP AUDIO TO @ " << framePosition
-        << std::endl;
+      yae_debug << "SKIP AUDIO TO @ " << framePosition;
 #endif
 
       if (clock_.allowsSettingTime())
       {
 #if YAE_DEBUG_AUDIO_RENDERER
-        std::cerr
-          << "AUDIO (s) SET CLOCK: " << framePosition
-          << std::endl;
+        yae_debug << "AUDIO (s) SET CLOCK: " << framePosition;
 #endif
         clock_.setCurrentTime(framePosition, -0.016);
       }
@@ -365,10 +365,9 @@ namespace yae
       if (detectedStaleFrame)
       {
 #ifndef NDEBUG
-        std::cerr
+        yae_debug
           << "expected " << dstChannelCount
-          << " channels, received " << srcChannels
-          << std::endl;
+          << " channels, received " << srcChannels;
 #endif
 
         audioFrame_ = TAudioFramePtr();
@@ -449,9 +448,7 @@ namespace yae
     if (clock_.allowsSettingTime())
     {
 #if YAE_DEBUG_AUDIO_RENDERER
-      std::cerr
-        << "AUDIO (c) SET CLOCK: " << framePosition
-        << std::endl;
+      yae_debug << "AUDIO (c) SET CLOCK: " << framePosition;
 #endif
       clock_.setCurrentTime(framePosition, -0.016);
     }

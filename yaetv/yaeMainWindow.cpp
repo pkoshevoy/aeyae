@@ -517,8 +517,7 @@ namespace yae
     playerWindow_.show();
     PlayerView & playerView = playerWindow_.playerWidget_->view_;
     playerView.setEnabled(true);
-    playerView.player_->playback(reader);
-    playerView.adjustMenuActions();
+    playerView.playback(reader);
   }
 
   //----------------------------------------------------------------
