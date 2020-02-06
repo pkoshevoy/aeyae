@@ -537,7 +537,6 @@ namespace yae
   {
     timeIn_ = timeIn;
 
-    updateTimelinePositions();
     TSeekPosPtr pos = getPosition(timeIn_);
     movie_.setPlaybackIntervalStart(pos);
   }
@@ -1127,7 +1126,7 @@ namespace yae
   void
   LiveReader::setPlaybackIntervalStart(double timeIn)
   {
-    private_->setPlaybackIntervalStart(private_->timeIn_);
+    private_->setPlaybackIntervalStart(timeIn);
   }
 
   //----------------------------------------------------------------
@@ -1136,7 +1135,7 @@ namespace yae
   void
   LiveReader::setPlaybackIntervalEnd(double timeOut)
   {
-    private_->setPlaybackIntervalEnd(private_->timeOut_);
+    private_->setPlaybackIntervalEnd(timeOut);
   }
 
   //----------------------------------------------------------------
