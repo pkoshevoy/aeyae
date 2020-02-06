@@ -166,7 +166,7 @@ namespace yae
     //
     struct YAEUI_API ILayer
     {
-      ILayer(): enabled_(true) {}
+      ILayer(): enabled_(false) {}
       virtual ~ILayer() {}
 
       virtual void setContext(const yae::shared_ptr<IOpenGLContext> & context)

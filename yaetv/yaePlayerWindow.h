@@ -37,8 +37,7 @@ namespace yae
 
     void setAppView(AppView * appView);
 
-    PlayerView & playback(const IReaderPtr & reader,
-                          TCanvasWidget * shared_ctx = NULL);
+    void playback(const IReaderPtr & reader, TCanvasWidget * sharedCtx = NULL);
 
   protected:
     // virtual:

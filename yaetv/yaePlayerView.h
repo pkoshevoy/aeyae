@@ -142,6 +142,8 @@ namespace yae
     void stopPlayback();
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
+
+    void populateContextMenu();
     void adjustMenuActions();
 
   protected:

@@ -638,7 +638,7 @@ namespace yae
     actionShowTimeline_->setShortcut(trUtf8("Ctrl+T"));
 
 
-    actionPlay_->setText(trUtf8("Play"));
+    actionPlay_->setText(trUtf8("Pause"));
     actionPlay_->setShortcut(trUtf8("Space"));
 
     actionNextChapter_->setText(trUtf8("Skip To &Next Chapter"));
@@ -874,8 +874,6 @@ namespace yae
 
     timelineTimer_(this)
   {
-    ILayer::enabled_ = false;
-
     init_actions();
     translate_ui();
 
@@ -1114,12 +1112,9 @@ namespace yae
       return false;
     }
 
-    Item & root = *root_;
-    if (recording_)
+    if (timeline_)
     {
-      Item & player = root["player"];
-      TimelineItem & timeline = player.get<TimelineItem>("timeline_item");
-      timeline.processMouseTracking(mousePt);
+      timeline_->processMouseTracking(mousePt);
     }
 
     return true;
@@ -1193,6 +1188,8 @@ namespace yae
                       subsFormat);
 
     player_->playback(reader);
+    timeline_->forceAnimateControls();
+    actionPlay_->setText(tr("Pause"));
   }
 
   //----------------------------------------------------------------
@@ -1633,16 +1630,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerView::togglePlayback
+  // PlayerView::stopPlayback
   //
   void
   PlayerView::stopPlayback()
   {
     player_->playback_stop();
-
     timeline_->modelChanged();
     timeline_->maybeAnimateOpacity();
     timeline_->maybeAnimateControls();
+    actionPlay_->setText(tr("Play"));
   }
 
   //----------------------------------------------------------------
@@ -1659,10 +1656,12 @@ namespace yae
     if (!is_playback_paused())
     {
       timeline_->forceAnimateControls();
+      actionPlay_->setText(tr("Pause"));
     }
     else
     {
       timeline_->maybeAnimateControls();
+      actionPlay_->setText(tr("Play"));
     }
   }
 
@@ -1679,6 +1678,7 @@ namespace yae
     }
 
     bookmarkTimer_.stop();
+    actionPlay_->setText(tr("Play"));
 
     emit playback_finished();
   }
@@ -1706,6 +1706,78 @@ namespace yae
     }
 
     return std::string();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::populateContextMenu
+  //
+  void
+  PlayerView::populateContextMenu()
+  {
+    IReader * reader = get_reader();
+
+    std::size_t numVideoTracks =
+      reader ? reader->getNumberOfVideoTracks() : 0;
+
+    std::size_t numAudioTracks =
+      reader ? reader->getNumberOfAudioTracks() : 0;
+
+    std::size_t numSubtitles =
+      reader ? reader->subsCount() : 0;
+
+    std::size_t numChapters =
+      reader ? reader->countChapters() : 0;
+
+    // populate the context menu:
+    contextMenu_->clear();
+    contextMenu_->addAction(actionPlay_);
+
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(actionPrev_);
+    contextMenu_->addAction(actionNext_);
+
+    if (reader)
+    {
+      contextMenu_->addSeparator();
+      contextMenu_->addAction(actionRemove_);
+    }
+
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(actionLoop_);
+    contextMenu_->addAction(actionSetInPoint_);
+    contextMenu_->addAction(actionSetOutPoint_);
+    contextMenu_->addAction(actionShowTimeline_);
+
+    contextMenu_->addSeparator();
+    contextMenu_->addAction(actionShrinkWrap_);
+    contextMenu_->addAction(actionFullScreen_);
+    contextMenu_->addAction(actionFillScreen_);
+    addMenuCopyTo(contextMenu_, menuPlaybackSpeed_);
+
+    contextMenu_->addSeparator();
+
+    if (numVideoTracks || numAudioTracks)
+    {
+      if (numAudioTracks)
+      {
+        addMenuCopyTo(contextMenu_, menuAudio_);
+      }
+
+      if (numVideoTracks)
+      {
+        addMenuCopyTo(contextMenu_, menuVideo_);
+      }
+
+      if (numSubtitles || true)
+      {
+        addMenuCopyTo(contextMenu_, menuSubs_);
+      }
+
+      if (numChapters)
+      {
+        addMenuCopyTo(contextMenu_, menuChapters_);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -2103,57 +2175,6 @@ namespace yae
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
-
-    // populate the context menu:
-    contextMenu_->clear();
-    contextMenu_->addAction(actionPlay_);
-
-    contextMenu_->addSeparator();
-    contextMenu_->addAction(actionPrev_);
-    contextMenu_->addAction(actionNext_);
-
-    if (reader)
-    {
-      contextMenu_->addSeparator();
-      contextMenu_->addAction(actionRemove_);
-    }
-
-    contextMenu_->addSeparator();
-    contextMenu_->addAction(actionLoop_);
-    contextMenu_->addAction(actionSetInPoint_);
-    contextMenu_->addAction(actionSetOutPoint_);
-    contextMenu_->addAction(actionShowTimeline_);
-
-    contextMenu_->addSeparator();
-    contextMenu_->addAction(actionShrinkWrap_);
-    contextMenu_->addAction(actionFullScreen_);
-    contextMenu_->addAction(actionFillScreen_);
-    addMenuCopyTo(contextMenu_, menuPlaybackSpeed_);
-
-    contextMenu_->addSeparator();
-
-    if (numVideoTracks || numAudioTracks)
-    {
-      if (numAudioTracks)
-      {
-        addMenuCopyTo(contextMenu_, menuAudio_);
-      }
-
-      if (numVideoTracks)
-      {
-        addMenuCopyTo(contextMenu_, menuVideo_);
-      }
-
-      if (numSubtitles || true)
-      {
-        addMenuCopyTo(contextMenu_, menuSubs_);
-      }
-
-      if (numChapters)
-      {
-        addMenuCopyTo(contextMenu_, menuChapters_);
-      }
-    }
   }
 
   //----------------------------------------------------------------
@@ -2169,8 +2190,8 @@ namespace yae
     PlayerItem & player = root.add(view.player_);
     player.anchors_.fill(root);
 
-    TimelineItem & timeline = player.add(view.timeline_);
-    timeline.anchors_.fill(player);
+    TimelineItem & timeline = root.add(view.timeline_);
+    timeline.anchors_.fill(root);
   }
 
 }

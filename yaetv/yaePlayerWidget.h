@@ -96,12 +96,21 @@ namespace yae
 
     void initItemViews();
 
+    void playback(const IReaderPtr & reader);
+    void stop();
+
     // accessors:
     inline const TCanvasWidget & canvas() const
     { return *canvas_; }
 
     inline TCanvasWidget & canvas()
     { return *canvas_; }
+
+    inline const PlayerView & view() const
+    { return view_; }
+
+    inline PlayerView & view()
+    { return view_; }
 
   signals:
     void setInPoint();
@@ -189,9 +198,9 @@ namespace yae
 
     // player views:
     PlayerView view_;
-    ConfirmView confirm_;
     SpinnerView spinner_;
-    FrameCropView frameCropView_;
+    ConfirmView confirm_;
+    FrameCropView cropView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:

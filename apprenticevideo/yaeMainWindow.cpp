@@ -136,25 +136,6 @@ namespace yae
     Ui::AspectRatioDialog::setupUi(this);
   }
 
-  //----------------------------------------------------------------
-  // OnFrameLoaded
-  //
-  struct OnFrameLoaded : public Canvas::ILoadFrameObserver
-  {
-    OnFrameLoaded(CanvasRendererItem & rendererItem):
-      rendererItem_(rendererItem)
-    {}
-
-    // virtual:
-    void frameLoaded(Canvas * canvas, const TVideoFramePtr & frame)
-    {
-      rendererItem_.observe(canvas, frame);
-    }
-
-  protected:
-    CanvasRendererItem & rendererItem_;
-  };
-
 
   //----------------------------------------------------------------
   // OpenUrlDialog::OpenUrlDialog

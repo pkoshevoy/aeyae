@@ -48,7 +48,7 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerWindow::playback
   //
-  PlayerView &
+  void
   PlayerWindow::playback(const IReaderPtr & reader,
                          TCanvasWidget * shared_ctx)
   {
@@ -79,11 +79,7 @@ namespace yae
       show();
     }
 
-    PlayerView & view = playerWidget_->view_;
-    view.setEnabled(true);
-    view.playback(reader);
-
-    return view;
+    playerWidget_->playback(reader);
   }
 
   //----------------------------------------------------------------
@@ -93,8 +89,7 @@ namespace yae
   PlayerWindow::closeEvent(QCloseEvent * event)
   {
     event->ignore();
-    PlayerView & view = playerWidget_->view_;
-    view.stopPlayback();
+    playerWidget_->stop();
     hide();
   }
 

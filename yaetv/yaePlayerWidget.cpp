@@ -129,6 +129,16 @@ namespace yae
                  this, SLOT(windowIncreaseSize()));
     YAE_ASSERT(ok);
 
+    ok = connect(&cropView_, SIGNAL(cropped(const TVideoFramePtr &,
+                                            const TCropFrame &)),
+                 &view_, SLOT(cropped(const TVideoFramePtr &,
+                                      const TCropFrame &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&cropView_, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropView()));
+    YAE_ASSERT(ok);
+
     shortcutFullScreen_ = new QShortcut(this);
     shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
 
@@ -303,7 +313,28 @@ namespace yae
     canvas_->initializePrivateBackend();
     canvas_->setGreeting(tr("yaetv player"));
     canvas_->append(&view_);
-    view_.setEnabled(false);
+
+    canvas_->append(&spinner_);
+    canvas_->append(&confirm_);
+    canvas_->append(&cropView_);
+
+    spinner_.setStyle(view_.style());
+    confirm_.setStyle(view_.style());
+    cropView_.init(&view_);
+
+    spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+
+    spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
+
+    CanvasRendererItem & rendererItem =
+      cropView_.root()->get<CanvasRendererItem>("uncropped");
+
+    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
+    canvas_->addLoadFrameObserver(onLoadFrame_);
 
     bool ok = true;
     ok = connect(this, SIGNAL(setInPoint()),
@@ -313,22 +344,29 @@ namespace yae
     ok = connect(this, SIGNAL(setOutPoint()),
                  &view_.timeline_model(), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
+  }
 
-    // action confirmation view:
-    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
+  //----------------------------------------------------------------
+  // PlayerWidget::playback
+  //
+  void
+  PlayerWidget::playback(const IReaderPtr & reader)
+  {
+    view_.setEnabled(true);
+    view_.playback(reader);
+  }
 
-    canvas_->append(&confirm_);
-    confirm_.setStyle(view_.style());
+  //----------------------------------------------------------------
+  // PlayerWidget::stop
+  //
+  void
+  PlayerWidget::stop()
+  {
+    view_.stopPlayback();
+    view_.setEnabled(false);
     confirm_.setEnabled(false);
-
-    // spinner view:
-    spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
-
-    canvas_->append(&spinner_);
-    spinner_.setStyle(view_.style());
     spinner_.setEnabled(false);
+    cropView_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -631,12 +669,12 @@ namespace yae
       renderer->getCroppedFrame(crop);
 
       SignalBlocker blockSignals;
-      blockSignals << &frameCropView_;
-      frameCropView_.setCrop(frame, crop);
+      blockSignals << &cropView_;
+      cropView_.setCrop(frame, crop);
     }
 
     view_.setEnabled(false);
-    frameCropView_.setEnabled(true);
+    cropView_.setEnabled(true);
     onLoadFrame_->frameLoaded(canvas_, frame);
   }
 
@@ -646,7 +684,7 @@ namespace yae
   void
   PlayerWidget::dismissFrameCropView()
   {
-    frameCropView_.setEnabled(false);
+    cropView_.setEnabled(false);
     view_.setEnabled(true);
     adjustCanvasHeight();
   }
@@ -683,7 +721,7 @@ namespace yae
       }
     }
 
-    if (frameCropView_.isEnabled())
+    if (cropView_.isEnabled())
     {
       playbackCropFrameOther();
     }
@@ -935,7 +973,7 @@ namespace yae
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
 
-      view_.adjustMenuActions();
+      view_.populateContextMenu();
       view_.contextMenu_->popup(globalPt);
       e->accept();
       return;
