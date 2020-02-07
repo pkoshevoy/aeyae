@@ -119,6 +119,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ProgramTracks
+  //
+  struct ProgramTracks
+  {
+    std::map<int, std::list<VideoTrackPtr> > video_;
+    std::map<int, std::list<AudioTrackPtr> > audio_;
+    std::map<int, std::list<SubttTrackPtr> > subtt_;
+  };
+
+  //----------------------------------------------------------------
   // Movie::open
   //
   bool
@@ -210,6 +220,10 @@ namespace yae
       }
     }
 
+    // sort tracks by PID if applicable (AVStream.id):
+    typedef std::map<int, ProgramTracks> TPrograms;
+    TPrograms programs;
+
     for (unsigned int i = 0; i < context_->nb_streams; i++)
     {
       AVStream * stream = context_->streams[i];
@@ -225,6 +239,8 @@ namespace yae
           program = &programs_[found->second];
         }
       }
+
+      ProgramTracks & program_tracks = programs[program->id_];
 
       // extract attachments:
       if (stream->codecpar->codec_type == AVMEDIA_TYPE_ATTACHMENT)
@@ -283,10 +299,8 @@ namespace yae
             // avfilter does not support these pixel formats:
             traits.pixelFormat_ != kPixelFormatUYYVYY411)
         {
-          program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('v', videoTracks_.size()));
-          videoTracks_.push_back(track);
+          program_tracks.video_[stream->id].push_back(track);
         }
         else
         {
@@ -300,10 +314,8 @@ namespace yae
         AudioTraits traits;
         if (track->getTraits(traits))
         {
-          program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
-          track->setId(make_track_id('a', audioTracks_.size()));
-          audioTracks_.push_back(track);
+          program_tracks.audio_[stream->id].push_back(track);
         }
         else
         {
@@ -327,11 +339,92 @@ namespace yae
         if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
             stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
-          program->subs_.push_back(subs_.size());
-          subsIdx_[i] = subs_.size();
           SubttTrackPtr subsTrk(new SubtitlesTrack(stream));
-          subsTrk->setId(make_track_id('s', subs_.size()));
-          subs_.push_back(subsTrk);
+          program_tracks.subtt_[stream->id].push_back(subsTrk);
+        }
+      }
+    }
+
+    // flatten program tracks map:
+    for (TPrograms::iterator
+           i = programs.begin(); i != programs.end(); ++i)
+    {
+      const int program_id = i->first;
+      const ProgramTracks & program_tracks = i->second;
+
+      TProgramInfo * program = NULL;
+      for (std::size_t j = 0, n = programs_.size(); j < n; j++)
+      {
+        if (programs_[j].id_ == program_id)
+        {
+          program = &(programs_[j]);
+          break;
+        }
+      }
+
+      if (!program)
+      {
+        continue;
+      }
+
+      // video:
+      typedef std::map<int, std::list<VideoTrackPtr> > TVideoTracks;
+      const TVideoTracks & video_track_map = program_tracks.video_;
+
+      for (TVideoTracks::const_iterator
+             j = video_track_map.begin(); j != video_track_map.end(); ++j)
+      {
+        int pid = j->first;
+        const std::list<VideoTrackPtr> & video_tracks = j->second;
+
+        for (std::list<VideoTrackPtr>::const_iterator
+               k = video_tracks.begin(); k != video_tracks.end(); ++k)
+        {
+          const VideoTrackPtr & track = *k;
+          track->setId(make_track_id('v', videoTracks_.size()));
+          program->audio_.push_back(videoTracks_.size());
+          videoTracks_.push_back(track);
+        }
+      }
+
+      // audio:
+      typedef std::map<int, std::list<AudioTrackPtr> > TAudioTracks;
+      const TAudioTracks & audio_track_map = program_tracks.audio_;
+
+      for (TAudioTracks::const_iterator
+             j = audio_track_map.begin(); j != audio_track_map.end(); ++j)
+      {
+        int pid = j->first;
+        const std::list<AudioTrackPtr> & audio_tracks = j->second;
+
+        for (std::list<AudioTrackPtr>::const_iterator
+               k = audio_tracks.begin(); k != audio_tracks.end(); ++k)
+        {
+          const AudioTrackPtr & track = *k;
+          track->setId(make_track_id('a', audioTracks_.size()));
+          program->audio_.push_back(audioTracks_.size());
+          audioTracks_.push_back(track);
+        }
+      }
+
+      // subtt:
+      typedef std::map<int, std::list<SubttTrackPtr> > TSubttTracks;
+      const TSubttTracks & subtt_track_map = program_tracks.subtt_;
+
+      for (TSubttTracks::const_iterator
+             j = subtt_track_map.begin(); j != subtt_track_map.end(); ++j)
+      {
+        int pid = j->first;
+        const std::list<SubttTrackPtr> & subtt_tracks = j->second;
+
+        for (std::list<SubttTrackPtr>::const_iterator
+               k = subtt_tracks.begin(); k != subtt_tracks.end(); ++k)
+        {
+          const SubttTrackPtr & track = *k;
+          track->setId(make_track_id('s', subs_.size()));
+          program->subs_.push_back(subs_.size());
+          subsIdx_[track->streamIndex()] = subs_.size();
+          subs_.push_back(track);
         }
       }
     }
