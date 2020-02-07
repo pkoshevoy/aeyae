@@ -1,6 +1,6 @@
 [Desktop Entry]
 Comment=https://github.com/pkoshevoy/aeyae
-Exec=@CMAKE_INSTALL_PREFIX@/bin/yaetv %U
+Exec=@CMAKE_INSTALL_PREFIX@/bin/yaetv
 GenericName=yaetv
 Categories=Qt;AudioVideo;Video;
 Icon=@CMAKE_INSTALL_PREFIX@/share/icons/yaetv.png

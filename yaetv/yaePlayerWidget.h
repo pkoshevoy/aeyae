@@ -14,14 +14,14 @@
 #include <QWidget>
 
 // local:
-#include "yaePlayerView.h"
 #ifdef __APPLE__
 #include "yaeAppleRemoteControl.h"
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
-#include "yaeFrameCropView.h"
 #include "yaeConfirmView.h"
+#include "yaeFrameCropView.h"
+#include "yaePlayerView.h"
 #include "yaeSpinnerView.h"
 
 // uic:

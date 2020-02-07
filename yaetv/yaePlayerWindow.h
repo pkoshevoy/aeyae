@@ -35,8 +35,6 @@ namespace yae
     PlayerWindow(QWidget * parent = NULL,
                  Qt::WindowFlags f = Qt::WindowFlags());
 
-    void setAppView(AppView * appView);
-
     void playback(const IReaderPtr & reader, TCanvasWidget * sharedCtx = NULL);
 
   protected:
@@ -46,7 +44,6 @@ namespace yae
     void keyPressEvent(QKeyEvent * e);
 
     PlayerWidget * playerWidget_;
-    AppView * appView_;
   };
 }
 

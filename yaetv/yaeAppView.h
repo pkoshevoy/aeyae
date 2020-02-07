@@ -9,7 +9,6 @@
 #ifndef YAE_APP_VIEW_H_
 #define YAE_APP_VIEW_H_
 
-
 // standard:
 #include <vector>
 
@@ -27,6 +26,7 @@
 #include "yae/video/yae_video.h"
 
 // local:
+#include "yaeAppStyle.h"
 #include "yaeColor.h"
 #include "yaeGradient.h"
 #include "yaeInputArea.h"
@@ -40,39 +40,6 @@
 
 namespace yae
 {
-  // forward declarations:
-  class AppView;
-
-
-  //----------------------------------------------------------------
-  // AppStyle
-  //
-  struct AppStyle : public ItemViewStyle
-  {
-    AppStyle(const char * id, const AppView & view);
-
-    virtual void uncache();
-
-    ColorRef bg_sidebar_;
-    ColorRef bg_splitter_;
-    ColorRef bg_epg_;
-    ColorRef fg_epg_;
-    ColorRef fg_epg_chan_;
-    ColorRef bg_epg_tile_;
-    ColorRef bg_epg_scrollbar_;
-    ColorRef fg_epg_scrollbar_;
-    ColorRef bg_epg_cancelled_;
-    ColorRef bg_epg_rec_;
-    ColorRef bg_epg_sel_;
-
-    TGradientPtr bg_epg_header_;
-    TGradientPtr bg_epg_shadow_;
-    TGradientPtr bg_epg_channel_;
-
-    TTexturePtr collapsed_;
-    TTexturePtr expanded_;
-    TTexturePtr trashcan_;
-  };
 
   //----------------------------------------------------------------
   // Layout

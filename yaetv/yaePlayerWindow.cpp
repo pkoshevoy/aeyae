@@ -22,8 +22,7 @@ namespace yae
   //
   PlayerWindow::PlayerWindow(QWidget * parent, Qt::WindowFlags flags):
     QWidget(parent, flags | Qt::Window),
-    playerWidget_(NULL),
-    appView_(NULL)
+    playerWidget_(NULL)
   {
     setupUi(this);
     setAcceptDrops(false);
@@ -34,15 +33,6 @@ namespace yae
       QString::fromUtf8(":/images/yaetv-logo.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWindow::setAppView
-  //
-  void
-  PlayerWindow::setAppView(AppView * appView)
-  {
-    appView_ = appView;
   }
 
   //----------------------------------------------------------------
@@ -61,7 +51,6 @@ namespace yae
       playerWidget_ = new PlayerWidget(this, shared_ctx);
 
       PlayerView & view = playerWidget_->view_;
-      view.setStyle(appView_->style());
       containerLayout->addWidget(playerWidget_);
 
       show();

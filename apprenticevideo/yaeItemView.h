@@ -381,6 +381,35 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // UnitSize
+  //
+  struct YAEUI_API UnitSize : TDoubleExpr
+  {
+    UnitSize(const ItemView & view):
+      view_(view)
+    {}
+
+    void evaluate(double & result) const
+    {
+#if 0
+      if (view_.delegate())
+      {
+        const Canvas::IDelegate & d = *(view_.delegate());
+        double h = d.screen_height();
+        result = h / 28;
+      }
+      else
+#endif
+      {
+        result = 38.4;
+        // result = 114;
+      }
+    }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
   // CalcTitleHeight
   //
   struct YAEUI_API CalcTitleHeight : public TDoubleExpr

@@ -160,12 +160,16 @@ set(project_sources
   yae_signal_handler.cpp
   yae_signal_handler.h
 
+  yaeAppStyle.cpp
+  yaeAppStyle.h
   yaeAppView.cpp
   yaeAppView.h
   yaeConfirmView.cpp
   yaeConfirmView.h
   yaeMainWindow.cpp
   yaeMainWindow.h
+  yaePlayerStyle.cpp
+  yaePlayerStyle.h
   yaePlayerView.cpp
   yaePlayerView.h
   yaePlayerWidget.cpp

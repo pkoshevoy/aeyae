@@ -10,7 +10,7 @@
 #include <QApplication>
 
 // local:
-#include "yaeAppView.h"
+#include "yaePlayerStyle.h"
 #include "yaePlayerView.h"
 #include "yaeUtilsQt.h"
 
@@ -785,7 +785,6 @@ namespace yae
   //
   PlayerView::PlayerView():
     ItemView("PlayerView"),
-    style_(NULL),
     actionShowTimeline_(NULL),
 
     actionPlay_(NULL),
@@ -880,6 +879,8 @@ namespace yae
     bool ok = connect(&timelineTimer_, SIGNAL(timeout()),
                       this, SLOT(sync_ui()));
     YAE_ASSERT(ok);
+
+    style_.reset(new PlayerStyle("player_style", *this));
   }
 
   //----------------------------------------------------------------
@@ -903,7 +904,7 @@ namespace yae
   // PlayerView::setStyle
   //
   void
-  PlayerView::setStyle(AppStyle * style)
+  PlayerView::setStyle(const yae::shared_ptr<ItemViewStyle, Item> & style)
   {
     style_ = style;
   }
@@ -2183,11 +2184,17 @@ namespace yae
   // PlayerView::layout
   //
   void
-  PlayerView::layout(PlayerView & view, const AppStyle & style, Item & root)
+  PlayerView::layout(PlayerView & view,
+                     const ItemViewStyle & style,
+                     Item & root)
   {
     Item & hidden = root.addHidden(new Item("hidden"));
     hidden.width_ = hidden.
-      addExpr(style_item_ref(view, &AppStyle::unit_size_));
+      addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
+
+    // add style to root item, so that it could be uncached
+    // together with all the view:
+    root.addHidden(view.style_);
 
     PlayerItem & player = root.add(view.player_);
     player.anchors_.fill(root);

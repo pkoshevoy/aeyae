@@ -330,9 +330,6 @@ namespace yae
     spinner_.setStyle(view_.style());
     spinner_.setEnabled(false);
 
-    // player window:
-    playerWindow_.setAppView(&view_);
-
     TAsyncTaskPtr t(new InitTuners(this, dvr_));
     tasks_.push_back(t);
     async_.push_back(t);

@@ -39,8 +39,6 @@ namespace yae
   {
     Q_OBJECT;
 
-    AppStyle * style_;
-
     void init_actions();
     void translate_ui();
 
@@ -58,11 +56,11 @@ namespace yae
     inline TimelineModel & timeline_model() const
     { return player_->timeline(); }
 
-    void setStyle(AppStyle * style);
+    void setStyle(const yae::shared_ptr<ItemViewStyle, Item> & style);
 
     // virtual:
-    AppStyle * style() const
-    { return style_; }
+    ItemViewStyle * style() const
+    { return style_.get(); }
 
     // virtual:
     void setContext(const yae::shared_ptr<IOpenGLContext> & context);
@@ -154,7 +152,7 @@ namespace yae
                            std::vector<VideoTraits> & video_traits,
                            std::vector<TTrackInfo> & subs_info,
                            std::vector<TSubsFormat> & subs_sormat);
-    void layout(PlayerView & view, const AppStyle & style, Item & root);
+    void layout(PlayerView & view, const ItemViewStyle & style, Item & root);
 
   public:
     QAction * actionShowTimeline_;
@@ -262,6 +260,7 @@ namespace yae
     TRecordingPtr recording_;
 
     // items:
+    yae::shared_ptr<ItemViewStyle, Item> style_;
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
   };
