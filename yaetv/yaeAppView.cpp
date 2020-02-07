@@ -2719,6 +2719,9 @@ namespace yae
                                                         1.78));
         row.height_ = ItemRef::reference(hidden, kUnitSize, 1.78);
 
+        PlaybackRecording & playback_ia =
+          row.add(new PlaybackRecording("playback_ia", view, name));
+        playback_ia.anchors_.fill(row);
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
@@ -2876,10 +2879,6 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
         trashcan_bg.background_ = trashcan_bg.
           addExpr(style_color_ref(view, &AppStyle::fg_, 0.0));
-
-        PlaybackRecording & playback_ia =
-          row.add(new PlaybackRecording("playback_ia", view, name));
-        playback_ia.anchors_.fill(row);
 
         DeleteRecording & trashcan_ia =
           c4.add(new DeleteRecording("trashcan_ia", view, name));
