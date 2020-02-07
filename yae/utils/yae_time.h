@@ -28,6 +28,25 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kWeekdays
+  //
+  extern YAE_API const char * kWeekdays[7];
+
+  //----------------------------------------------------------------
+  // kMonths
+  //
+  extern YAE_API const char * kMonths[12];
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_localdate
+  //
+  YAE_API std::string
+  unix_epoch_time_to_localdate(int64_t ts,
+                               bool show_hour = false,
+                               bool show_ampm = false,
+                               bool show_date = true);
+
+  //----------------------------------------------------------------
   // unix_epoch_time_at_utc_date
   //
   YAE_API int64_t

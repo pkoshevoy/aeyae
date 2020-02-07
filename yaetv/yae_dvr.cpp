@@ -36,31 +36,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // kWeekdays
-  //
-  const char * kWeekdays[7] = {
-    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
-  };
-
-  //----------------------------------------------------------------
-  // kMonths
-  //
-  const char * kMonths[12] = {
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec"
-  };
-
-  //----------------------------------------------------------------
   // yaetv_log_rx
   //
   static const char * yaetv_log_rx =

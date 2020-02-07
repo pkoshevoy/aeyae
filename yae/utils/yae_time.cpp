@@ -31,6 +31,78 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // kWeekdays
+  //
+  const char * kWeekdays[7] = {
+    "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"
+  };
+
+  //----------------------------------------------------------------
+  // kMonths
+  //
+  const char * kMonths[12] = {
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec"
+  };
+
+  //----------------------------------------------------------------
+  // unix_epoch_time_to_localdate
+  //
+  std::string
+  unix_epoch_time_to_localdate(int64_t ts,
+                               bool show_hour,
+                               bool show_ampm,
+                               bool show_date)
+  {
+    struct tm t;
+    unix_epoch_time_to_localtime(ts, t);
+
+    const char * separator = "";
+    std::string t_str;
+
+    int hour =
+      (t.tm_hour > 12) ? t.tm_hour % 12 :
+      (t.tm_hour > 00) ? t.tm_hour : 12;
+
+    if (show_hour)
+    {
+      if (show_ampm)
+      {
+        const char * am_pm = (t.tm_hour < 12) ? "AM" : "PM";
+        t_str = strfmt("%i:00 %s", hour, am_pm);
+      }
+      else
+      {
+        t_str = strfmt("%02i:00", t.tm_hour);
+      }
+
+      separator = ", ";
+    }
+
+    if (show_date || !show_hour || (hour % 12 == 0))
+    {
+      t_str += strfmt("%s%s %s %i %04i",
+                      separator,
+                      yae::kWeekdays[t.tm_wday % 7],
+                      yae::kMonths[t.tm_mon % 12],
+                      t.tm_mday + 1,
+                      t.tm_year + 1900);
+    }
+
+    return t_str;
+  }
+
+  //----------------------------------------------------------------
   // unix_epoch_time_at_utc_time
   //
   int64_t

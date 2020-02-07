@@ -1770,25 +1770,6 @@ namespace yae
         tickmark.color_ = tickmark.
             addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.1));
 
-        struct tm t;
-        unix_epoch_time_to_localtime(ts, t);
-
-        int hour =
-          (t.tm_hour > 12) ? t.tm_hour % 12 :
-          (t.tm_hour > 00) ? t.tm_hour : 12;
-
-        const char * am_pm = (t.tm_hour < 12) ? "AM" : "PM";
-        std::string t_str = strfmt("%i:00 %s", hour, am_pm);
-
-        if (hour % 12 == 0)
-        {
-          t_str += strfmt(", %s %s %i %04i",
-                          yae::kWeekdays[t.tm_wday % 7],
-                          yae::kMonths[t.tm_mon % 12],
-                          t.tm_mday + 1,
-                          t.tm_year + 1900);
-        }
-
         Text & label = item.addNew<Text>("time");
         label.font_ = style.font_;
         label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
@@ -1801,6 +1782,9 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
         label.background_ = label.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+        std::string t_str =
+          yae::unix_epoch_time_to_localdate(ts, true, true, false);
         label.text_ = TVarRef::constant(TVar(t_str.c_str()));
       }
 

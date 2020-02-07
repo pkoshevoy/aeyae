@@ -73,10 +73,12 @@ namespace yae
     if (rec_ptr)
     {
       const Recording & rec = *rec_ptr;
-      std::string title = strfmt("yaetv: %i-%i %s",
+      std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
+      std::string title = strfmt("%i-%i %s, %s",
                                  rec.channel_major_,
                                  rec.channel_minor_,
-                                 rec.title_.c_str());
+                                 rec.title_.c_str(),
+                                 time_str.c_str());
       window()->setWindowTitle(QString::fromUtf8(title.c_str()));
     }
 

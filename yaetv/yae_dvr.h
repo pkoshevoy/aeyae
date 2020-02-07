@@ -42,17 +42,6 @@ namespace yae
   struct DVR;
 
   //----------------------------------------------------------------
-  // kWeekdays
-  //
-  extern YAE_API const char * kWeekdays[7];
-
-  //----------------------------------------------------------------
-  // kMonths
-  //
-  extern YAE_API const char * kMonths[12];
-
-
-  //----------------------------------------------------------------
   // Wishlist
   //
   struct Wishlist
