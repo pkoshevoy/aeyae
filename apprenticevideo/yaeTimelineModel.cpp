@@ -122,6 +122,8 @@ namespace yae
     timelineStart_(0.0),
     timelineDuration_(0.0),
     timelinePosition_(0.0),
+    startFromZero_(true),
+    localtimeOffset_(0),
     frameRate_(100.0),
     auxPlayhead_(kClockTemplate),
     auxDuration_(kUnknownDuration),
@@ -241,6 +243,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TimelineModel::startFromZero
+  //
+  void
+  TimelineModel::startFromZero(bool enable)
+  {
+    startFromZero_ = enable;
+  }
+
+  //----------------------------------------------------------------
   // TimelineModel::observe
   //
   void
@@ -306,6 +317,18 @@ namespace yae
       frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
+    if (!startFromZero_)
+    {
+      // assume timestamps are actually unix time
+      int64_t ts = start.get(1);
+      struct tm tm;
+      unix_epoch_time_to_localtime(ts, tm);
+      tm.tm_hour = 0;
+      tm.tm_min = 0;
+      tm.tm_sec = 0;
+      localtimeOffset_ = double(localtime_to_unix_epoch_time(tm));
+    }
+
     timelineStart_ = start.sec();
     timelinePosition_ = timelineStart_;
     unknownDuration_ =
@@ -327,9 +350,11 @@ namespace yae
 
     double T1 = (unknownDuration_ ?
                  std::numeric_limits<double>::max() :
-                 timelineDuration_);
+                 (startFromZero_ ? timelineDuration_ :
+                  timelineStart_ + timelineDuration_ - localtimeOffset_));
 
-    QString ts_p = getTimeStamp(0.0,
+    QString ts_p = getTimeStamp(startFromZero_ ? 0.0 :
+                                timelineStart_ - localtimeOffset_,
                                 frameRate_,
                                 frameNumberSeparator_);
     updateAuxPlayhead(ts_p);
@@ -366,12 +391,97 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    QString ts_p = getTimeStamp(t - timelineStart_,
+    QString ts_p = getTimeStamp(startFromZero_ ?
+                                t - timelineStart_ :
+                                t - localtimeOffset_,
                                 frameRate_,
                                 frameNumberSeparator_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(timelineDuration_,
+    QString ts_d = getTimeStamp(startFromZero_ ?
+                                timelineDuration_ :
+                                T1 - localtimeOffset_,
+                                frameRate_,
+                                frameNumberSeparator_);
+    updateAuxDuration(ts_d);
+
+    updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
+    updateMarkerTimeIn(unknownDuration_ ? 0.0 : (t0 - T0) / dT);
+    updateMarkerTimeOut(unknownDuration_ ? 1.0 : (t1 - T0) / dT);
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::updateDuration
+  //
+  void
+  TimelineModel::updateDuration(IReader * reader)
+  {
+    // get current in/out/playhead positions in seconds:
+    double t0 = timeIn();
+    double t1 = timeOut();
+    double t = currentTime();
+
+    TTime start;
+    TTime duration;
+    get_duration(reader, start, duration);
+
+    if (!startFromZero_)
+    {
+      // assume timestamps are actually unix time
+      int64_t ts = start.get(1);
+      struct tm tm;
+      unix_epoch_time_to_localtime(ts, tm);
+      tm.tm_hour = 0;
+      tm.tm_min = 0;
+      tm.tm_sec = 0;
+      localtimeOffset_ = double(localtime_to_unix_epoch_time(tm));
+    }
+
+    unknownDuration_ =
+      duration.time_ == std::numeric_limits<int64>::max() ||
+      !reader || !reader->isSeekable();
+
+    timelineDuration_ = (unknownDuration_ ?
+                         std::numeric_limits<double>::max() :
+                         duration.sec());
+
+    double dT = timelineDuration_;
+    double T0 = timelineStart_;
+    double T1 = (unknownDuration_ ?
+                 std::numeric_limits<double>::max() :
+                 T0 + dT);
+
+    if (reader)
+    {
+      double tIn = TTime::min_flicks_as_sec();
+      double tOut = TTime::max_flicks_as_sec();
+      reader->getPlaybackInterval(tIn, tOut);
+
+      if (tIn == TTime::min_flicks_as_sec())
+      {
+        t0 = T0;
+      }
+
+      if (tOut == TTime::max_flicks_as_sec())
+      {
+        t1 = T1;
+      }
+    }
+
+    t0 = std::max<double>(T0, std::min<double>(T1, t0));
+    t1 = std::max<double>(T0, std::min<double>(T1, t1));
+    t = std::max<double>(T0, std::min<double>(T1, t));
+
+    QString ts_p = getTimeStamp(startFromZero_ ?
+                                t - timelineStart_ :
+                                t - localtimeOffset_,
+                                frameRate_,
+                                frameNumberSeparator_);
+    updateAuxPlayhead(ts_p);
+
+    QString ts_d = getTimeStamp(startFromZero_ ?
+                                timelineDuration_ :
+                                T1 - localtimeOffset_,
                                 frameRate_,
                                 frameNumberSeparator_);
     updateAuxDuration(ts_d);
@@ -589,7 +699,11 @@ namespace yae
       return false;
     }
 
-    seekTo(timelineStart_ + t.sec());
+    double ts =
+      startFromZero_ ?
+      (timelineStart_ + t.sec()) :
+      (localtimeOffset_ + t.sec());
+    seekTo(ts);
 #endif
 
     return true;
@@ -774,7 +888,10 @@ namespace yae
     markerPlayhead_ = t;
     emit markerPlayheadChanged();
 
-    double seconds = markerPlayhead_ * timelineDuration_;
+    double seconds =
+      (markerPlayhead_ * timelineDuration_ +
+       (startFromZero_ ? 0.0 : timelineStart_ - localtimeOffset_));
+
     QString ts = getTimeStamp(seconds, frameRate_, frameNumberSeparator_);
     updateAuxPlayhead(ts);
 

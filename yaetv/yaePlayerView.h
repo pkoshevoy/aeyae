@@ -88,7 +88,8 @@ namespace yae
   public:
     bool is_playback_paused() const;
     void playback(const TRecordingPtr & rec_ptr,
-                  const IReaderPtr & reader_ptr);
+                  const IReaderPtr & reader_ptr,
+                  bool start_from_zero_time = false);
 
   public slots:
     // live timeline refresh:

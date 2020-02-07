@@ -1155,6 +1155,9 @@ namespace yae
   void
   PlayerView::sync_ui()
   {
+    IReader * reader = get_reader();
+    TimelineModel & timeline = timeline_model();
+    timeline.updateDuration(reader);
     requestRepaint();
   }
 
@@ -1172,8 +1175,12 @@ namespace yae
   //
   void
   PlayerView::playback(const TRecordingPtr & rec_ptr,
-                       const IReaderPtr & reader)
+                       const IReaderPtr & reader,
+                       bool start_from_zero_time)
   {
+    TimelineModel & timeline = timeline_model();
+    timeline.startFromZero(start_from_zero_time);
+
     std::vector<TTrackInfo>  audioInfo;
     std::vector<AudioTraits> audioTraits;
     std::vector<TTrackInfo>  videoInfo;

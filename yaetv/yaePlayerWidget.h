@@ -97,7 +97,8 @@ namespace yae
     void initItemViews();
 
     void playback(const TRecordingPtr & rec_ptr,
-                  const IReaderPtr & reader);
+                  const IReaderPtr & reader,
+                  bool start_from_zero_time = false);
     void stop();
 
     // accessors:

@@ -40,11 +40,6 @@ namespace yae
   struct PacketBuffer;
 
   //----------------------------------------------------------------
-  // kMaxDouble
-  //
-  static const double kMaxDouble = std::numeric_limits<double>::max();
-
-  //----------------------------------------------------------------
   // kMaxInt64
   //
   static const int64_t kMaxInt64 = std::numeric_limits<int64_t>::max();

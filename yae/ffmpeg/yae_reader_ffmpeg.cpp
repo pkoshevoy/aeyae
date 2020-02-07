@@ -57,8 +57,8 @@ namespace yae
   public:
     Private():
       readerId_((unsigned int)~0),
-      timeIn_(new TimePos(0.0)),
-      timeOut_(new TimePos(kMaxDouble))
+      timeIn_(new TimePos(TTime::min_flicks_as_sec())),
+      timeOut_(new TimePos(TTime::max_flicks_as_sec()))
     {}
 
     Movie movie_;

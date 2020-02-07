@@ -83,6 +83,8 @@ namespace yae
     TimelineModel();
     ~TimelineModel();
 
+    void startFromZero(bool enable);
+
     // NOTE: this instance of TimelineModel will register itself
     // as an observer of the given shared clock; it will unregister
     // itself as the observer of previous shared clock.
@@ -98,6 +100,7 @@ namespace yae
   public:
     void resetFor(IReader * reader);
     void adjustTo(IReader * reader);
+    void updateDuration(IReader * reader);
 
     // accessors:
     double timelineStart() const;
@@ -267,6 +270,10 @@ namespace yae
 
     // playback position delivered via most recent timeline event:
     double timelinePosition_;
+
+    // timeline is easier to read if it always starts from 00:00:00
+    bool startFromZero_;
+    double localtimeOffset_;
 
     // these are used to format the timecode text fields:
     double frameRate_;

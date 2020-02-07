@@ -13,7 +13,6 @@
 #include <QWidget>
 
 // local:
-#include "yaeAppView.h"
 #include "yaePlayerWidget.h"
 
 // uic:
@@ -37,7 +36,8 @@ namespace yae
 
     void playback(const TRecordingPtr & rec_ptr,
                   const IReaderPtr & reader,
-                  TCanvasWidget * sharedCtx = NULL);
+                  TCanvasWidget * sharedCtx = NULL,
+                  bool startFromZeroTime = false);
 
   protected:
     // virtual:

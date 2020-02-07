@@ -158,6 +158,8 @@ namespace yae
 
     static const TTime & max_flicks();
     static const TTime & min_flicks();
+    static double max_flicks_as_sec();
+    static double min_flicks_as_sec();
     static TTime now();
     static TTime gps_now();
 

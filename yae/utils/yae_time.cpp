@@ -421,6 +421,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::max_flicks_as_sec
+  //
+  double
+  TTime::max_flicks_as_sec()
+  {
+    static double t = TTime::max_flicks().sec();
+    return t;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::min_flicks_as_sec
+  //
+  double
+  TTime::min_flicks_as_sec()
+  {
+    static double t = TTime::min_flicks().sec();
+    return t;
+  }
+
+  //----------------------------------------------------------------
   // TTime::now
   //
   TTime

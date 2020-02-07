@@ -41,7 +41,8 @@ namespace yae
   void
   PlayerWindow::playback(const TRecordingPtr & rec_ptr,
                          const IReaderPtr & reader,
-                         TCanvasWidget * shared_ctx)
+                         TCanvasWidget * shared_ctx,
+                         bool start_from_zero_time)
   {
     if (!playerWidget_)
     {
@@ -79,7 +80,7 @@ namespace yae
       window()->setWindowTitle(QString::fromUtf8(title.c_str()));
     }
 
-    playerWidget_->playback(rec_ptr, reader);
+    playerWidget_->playback(rec_ptr, reader, start_from_zero_time);
   }
 
   //----------------------------------------------------------------

@@ -254,8 +254,8 @@ namespace yae
   //
   LiveReader::Private::Private():
       readerId_((unsigned int)~0),
-      timeIn_(0.0),
-      timeOut_(kMaxDouble),
+      timeIn_(TTime::min_flicks_as_sec()),
+      timeOut_(TTime::max_flicks_as_sec()),
       walltimeOffset_(0, 1),
       currRange_(std::numeric_limits<std::size_t>::max())
   {
