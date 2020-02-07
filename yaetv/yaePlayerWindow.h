@@ -41,6 +41,7 @@ namespace yae
 
   protected:
     // virtual:
+    void changeEvent(QEvent * e);
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
 

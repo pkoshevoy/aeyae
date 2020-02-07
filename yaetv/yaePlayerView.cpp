@@ -1190,6 +1190,8 @@ namespace yae
     player_->playback(reader);
     timeline_->forceAnimateControls();
     actionPlay_->setText(tr("Pause"));
+
+    QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
   }
 
   //----------------------------------------------------------------

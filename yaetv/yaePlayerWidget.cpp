@@ -63,7 +63,7 @@ namespace yae
   player_query_fullscreen(void * context, bool & fullscreen)
   {
     PlayerWidget * widget = (PlayerWidget *)context;
-    fullscreen = widget->isFullScreen();
+    fullscreen = widget->window()->isFullScreen();
     return true;
   }
 
@@ -74,7 +74,8 @@ namespace yae
                              TCanvasWidget * shared_ctx,
                              Qt::WindowFlags flags):
     QWidget(parent, flags),
-    canvas_(NULL)
+    canvas_(NULL),
+    renderMode_(Canvas::kScaleToFit)
   {
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -285,14 +286,25 @@ namespace yae
     canvas_ = new TCanvasWidget(contextFormat, this, shared_ctx);
 #endif
 
-    view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    view_.query_fullscreen_.reset(&player_query_fullscreen, this);
-
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
 
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+
+    view_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
   }
 
   //----------------------------------------------------------------
@@ -321,14 +333,6 @@ namespace yae
     spinner_.setStyle(view_.style());
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
-
-    spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-
-    spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
 
     CanvasRendererItem & rendererItem =
       cropView_.root()->get<CanvasRendererItem>("uncropped");
@@ -387,7 +391,7 @@ namespace yae
   void
   PlayerWidget::playbackShrinkWrap()
   {
-    if (isFullScreen())
+    if (window()->isFullScreen())
     {
       return;
     }
@@ -455,7 +459,7 @@ namespace yae
   void
   PlayerWidget::toggleFullScreen()
   {
-    if (isFullScreen())
+    if (window()->isFullScreen())
     {
       exitFullScreen();
     }
@@ -471,7 +475,8 @@ namespace yae
   void
   PlayerWidget::enterFullScreen(Canvas::TRenderMode renderMode)
   {
-    if (isFullScreen() && renderMode_ == renderMode)
+    bool is_fullscreen = window()->isFullScreen();
+    if (is_fullscreen && renderMode_ == renderMode)
     {
       exitFullScreen();
       return;
@@ -497,16 +502,15 @@ namespace yae
     canvas_->setRenderMode(renderMode);
     renderMode_ = renderMode;
 
-    if (isFullScreen())
+    if (is_fullscreen)
     {
       return;
     }
 
     // enter full screen rendering:
     view_.actionShrinkWrap_->setEnabled(false);
-    // menuBar()->hide();
 
-    showFullScreen();
+    window()->showFullScreen();
     swapShortcuts();
   }
 
@@ -516,7 +520,7 @@ namespace yae
   void
   PlayerWidget::exitFullScreen()
   {
-    if (!isFullScreen())
+    if (!window()->isFullScreen())
     {
       return;
     }
@@ -531,9 +535,7 @@ namespace yae
     view_.actionFillScreen_->setChecked(false);
     view_.actionShrinkWrap_->setEnabled(true);
 
-    // menuBar()->show();
-
-    showNormal();
+    window()->showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
 
@@ -708,7 +710,7 @@ namespace yae
       return;
     }
 
-    if (!isFullScreen())
+    if (!window()->isFullScreen())
     {
       double w = 1.0;
       double h = 1.0;
@@ -733,7 +735,7 @@ namespace yae
   void
   PlayerWidget::canvasSizeBackup()
   {
-    if (isFullScreen())
+    if (window()->isFullScreen())
     {
       return;
     }
@@ -940,7 +942,7 @@ namespace yae
 
     if (key == Qt::Key_Escape)
     {
-      if (isFullScreen())
+      if (window()->isFullScreen())
       {
         exitFullScreen();
         event->accept();
@@ -991,7 +993,7 @@ namespace yae
     xexpand_ = xexpand;
     yexpand_ = yexpand;
 
-    if (isFullScreen())
+    if (window()->isFullScreen())
     {
       return;
     }
@@ -1009,6 +1011,7 @@ namespace yae
 
     QWidget * window = QWidget::window();
     QRect rectWindow = window->frameGeometry();
+    QRect rectClient = window->geometry();
     int ww = rectWindow.width();
     int wh = rectWindow.height();
 
@@ -1020,66 +1023,40 @@ namespace yae
     int ox = ww - cw;
     int oy = wh - ch;
 
-    int ideal_w = ox + int(0.5 + vw * xexpand_);
-    int ideal_h = oy + int(0.5 + vh * yexpand_);
+    int ideal_w = int(0.5 + vw * xexpand_);
+    int ideal_h = int(0.5 + vh * yexpand_);
 
     QRect rectMax = QApplication::desktop()->availableGeometry(this);
-    int max_w = rectMax.width();
-    int max_h = rectMax.height();
+    int max_w = rectMax.width() - ox;
+    int max_h = rectMax.height() - oy;
 
     if (ideal_w > max_w || ideal_h > max_h)
     {
       // image won't fit on screen, scale it to the largest size that fits:
-      double vDAR = canvas_->imageWidth() / canvas_->imageHeight();
-      double cDAR = double(max_w - ox) / double(max_h - oy);
+      double vDAR = iw / ih;
+      double cDAR = double(max_w) / double(max_h);
 
       if (vDAR > cDAR)
       {
         ideal_w = max_w;
-        ideal_h = oy + int(0.5 + double(max_w - ox) / vDAR);
+        ideal_h = int(0.5 + double(max_w) / vDAR);
       }
       else
       {
         ideal_h = max_h;
-        ideal_w = ox + int(0.5 + double(max_h - oy) * vDAR);
+        ideal_w = int(0.5 + double(max_h) * vDAR);
       }
     }
 
     int new_w = std::min(ideal_w, max_w);
     int new_h = std::min(ideal_h, max_h);
 
+    int dx = new_w - cw;
+    int dy = new_h - ch;
+
     // apply the new window geometry:
-    QRect rectClient = geometry();
-    int cdx = rectWindow.width() - rectClient.width();
-    int cdy = rectWindow.height() - rectClient.height();
-
-#if 0
-    int max_x0 = rectMax.x();
-    int max_y0 = rectMax.y();
-    int max_x1 = max_x0 + max_w - 1;
-    int max_y1 = max_y0 + max_h - 1;
-
-    int new_x0 = rectWindow.x();
-    int new_y0 = rectWindow.y();
-    int new_x1 = new_x0 + new_w - 1;
-    int new_y1 = new_y0 + new_h - 1;
-
-    int shift_x = std::min(0, max_x1 - new_x1);
-    int shift_y = std::min(0, max_y1 - new_y1);
-
-    int new_x = new_x0 + shift_x;
-    int new_y = new_y0 + shift_y;
-
-    std::cerr << "\ncanvas size set: " << xexpand << ", " << yexpand
-              << std::endl
-              << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
-              << std::endl
-              << "canvas move to: " << new_x << ", " << new_y
-              << std::endl;
-#endif
-
-    window->resize(new_w - cdx, new_h - cdy);
-    // move(new_x, new_y);
+    window->resize(rectClient.width() + dx,
+                   rectClient.height() + dy);
 
     // repaint the frame:
     canvas_->refresh();
