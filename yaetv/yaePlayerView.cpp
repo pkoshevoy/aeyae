@@ -1022,7 +1022,7 @@ namespace yae
       }
     }
 
-    return QObject::event(e);
+    return ItemView::event(e);
   }
 
   //----------------------------------------------------------------
