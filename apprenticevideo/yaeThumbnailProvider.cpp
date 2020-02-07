@@ -510,11 +510,11 @@ namespace yae
       QString itemFilePath = get_file_path(id);
 
 #if 0
-      std::cerr
+      yae_debug
         << "\nFIXME: getThumbnail"
         << "\n item id: " << id.toUtf8().constData()
         << "\nfilepath: " << itemFilePath.toUtf8().constData()
-        << std::endl;
+        << "\n";
 #endif
 
       QImage image = getThumbnail(readerPrototype_,

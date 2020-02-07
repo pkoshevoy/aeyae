@@ -263,7 +263,7 @@ namespace yae
       }
     }
 
-    os << oss.str().c_str() << std::endl;
+    os << oss.str().c_str() << '\n';
   }
 
   //----------------------------------------------------------------
@@ -582,7 +582,7 @@ namespace yae
         << " usec avg\n";
     }
 
-    os << oss.str().c_str() << std::endl;
+    os << oss.str().c_str() << '\n';
   }
 
   //----------------------------------------------------------------
@@ -1003,7 +1003,7 @@ namespace yae
 
     oss << "Total footprint: " << total << "\n";
 
-    os << oss.str().c_str() << std::endl;
+    os << oss.str().c_str() << '\n';
   }
 
   //----------------------------------------------------------------

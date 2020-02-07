@@ -66,16 +66,16 @@ namespace yae
       cacheDir + QString::fromUtf8("/apprenticevideo-fontconfig-cache");
 
     std::ostringstream os;
-    os << "<?xml version=\"1.0\"?>" << std::endl
-       << "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">" << std::endl
-       << "<fontconfig>" << std::endl
+    os << "<?xml version=\"1.0\"?>\n"
+       << "<!DOCTYPE fontconfig SYSTEM \"fonts.dtd\">\n"
+       << "<fontconfig>\n"
        << "\t<dir>"
        << QDir::toNativeSeparators(fontsDir).toUtf8().constData()
-       << "</dir>" << std::endl;
+       << "</dir>\n";
 
 #ifdef __APPLE__
-    os << "\t<dir>/Library/Fonts</dir>" << std::endl
-       << "\t<dir>~/Library/Fonts</dir>" << std::endl;
+    os << "\t<dir>/Library/Fonts</dir>\n"
+       << "\t<dir>~/Library/Fonts</dir>\n";
 #endif
 
 #ifndef _WIN32
@@ -92,15 +92,15 @@ namespace yae
       QString path = QString::fromUtf8(fontdir[i]);
       if (QFileInfo(path).exists())
       {
-        os << "\t<dir>" << fontdir[i] << "</dir>" << std::endl;
+        os << "\t<dir>" << fontdir[i] << "</dir>\n";
       }
     }
 #endif
 
     os << "\t<cachedir>"
        << QDir::toNativeSeparators(fontconfigCache).toUtf8().constData()
-       << "</cachedir>" << std::endl
-       << "</fontconfig>" << std::endl;
+       << "</cachedir>\n"
+       << "</fontconfig>\n";
 
     QString fn =
       tempDir +
@@ -110,7 +110,7 @@ namespace yae
     fontsConf = QDir::toNativeSeparators(fn).toUtf8().constData();
 
 #if !defined(NDEBUG)
-    std::cerr << "fonts.conf: " << fontsConf << std::endl;
+    yae_debug << "fonts.conf: " << fontsConf;
 #endif
 
     std::string xml = os.str().c_str();
@@ -120,7 +120,7 @@ namespace yae
     {
       TOpenFile out(fontsConf.c_str(), "w");
 #if !defined(NDEBUG)
-      std::cerr << "fonts.conf content:\n" << xml << std::endl;
+      yae_debug << "fonts.conf content:\n" << xml;
 #endif
       nout = fwrite(xml.c_str(), 1, xml.size(), out.file_);
     }
@@ -161,7 +161,7 @@ namespace yae
       }
 
 #ifndef NDEBUG
-      std::cerr << "libass header:\n" << tmp << std::endl;
+      yae_debug << "libass header:\n" << tmp;
 #endif
       header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
 
@@ -206,13 +206,13 @@ namespace yae
     if (has(buffer_, line))
     {
 #if 0 // ndef NDEBUG
-      std::cerr << "DROPPING DUPLICATE: " << line.data_ << std::endl;
+      yae_debug << "DROPPING DUPLICATE: " << line.data_;
 #endif
       return;
     }
 
 #ifndef NDEBUG
-    std::cerr << "ass_process_data: " << line.data_ << std::endl;
+    yae_debug << "ass_process_data: " << line.data_;
 #endif
 
     if (!buffer_.empty())

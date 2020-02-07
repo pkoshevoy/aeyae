@@ -111,7 +111,7 @@ namespace yae
     os
       << ind
       << "--------------------------------------------------------------------"
-      << std::endl;
+      << "\n";
 
     if (object)
     {
@@ -143,7 +143,7 @@ namespace yae
         os
           << ind << p.name() << " (" << p.typeName() << "): "
           << p.read(object).toString().toUtf8().constData()
-          << std::endl;
+          << "\n";
       }
 
       QObjectList children = object->children();
@@ -156,7 +156,7 @@ namespace yae
     }
     else
     {
-      os << ind << "dump_object_tree_info(NULL)" << std::endl;
+      os << ind << "dump_object_tree_info(NULL)" << "\n";
     }
   }
 
@@ -168,7 +168,7 @@ namespace yae
   {
     std::ostringstream oss;
     yae::dump_object_tree_info(oss, object);
-    std::cerr << oss.str();
+    yae_debug << oss.str();
   }
 }
 

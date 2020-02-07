@@ -167,15 +167,10 @@ namespace yae
 #if 0 // ndef NDEBUG
     else
     {
-      std::cerr
-        << "TextInput::TPrivate::event: "
-        << yae::toString(et)
-        << std::endl;
+      yae_debug << "TextInput::TPrivate::event: " << yae::toString(et);
     }
 
-    std::cerr
-      << "FIXME: line edit: " << lineEdit_.text().toUtf8().constData()
-      << std::endl;
+    yae_debug << "FIXME: line edit: " << lineEdit_.text().toUtf8().constData();
 #endif
 
     if (beforeText != afterText ||

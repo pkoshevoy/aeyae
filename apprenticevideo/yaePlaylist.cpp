@@ -57,7 +57,7 @@ namespace yae
         << ", offset: " << group.offset_
         << ", size: " << group.items_.size()
         << ", name: " << group.name_.toUtf8().constData()
-        << std::endl;
+        << "\n";
 
       for (std::size_t j = 0; j < group.items_.size(); j++)
       {
@@ -71,11 +71,11 @@ namespace yae
           << ", selected: " << item.selected_
           << ", name: " << item.name_.toUtf8().constData()
           << ", ext: " << item.ext_.toUtf8().constData()
-          << std::endl;
+          << "\n";
       }
     }
 
-    std::cerr << oss.str();
+    yae_debug << oss.str();
   }
 
   //----------------------------------------------------------------
@@ -297,7 +297,7 @@ namespace yae
                 std::list<BookmarkHashInfo> * returnBookmarkHashList)
   {
 #if 0
-    std::cerr << "Playlist::add" << std::endl;
+    yae_debug << "Playlist::add";
 #endif
 
     std::size_t currentNow = current_;
@@ -344,7 +344,7 @@ namespace yae
       if (name.isEmpty())
       {
 #if 0
-        std::cerr << "IGNORING: " << i->toUtf8().constData() << std::endl;
+        yae_debug << "IGNORING: " << i->toUtf8().constData();
 #endif
         continue;
       }
@@ -867,7 +867,7 @@ namespace yae
   Playlist::removeSelected()
   {
 #if 0
-    std::cerr << "Playlist::removeSelected" << std::endl;
+    yae_debug << "Playlist::removeSelected";
 #endif
 
     int playingNow = playing_;
@@ -919,7 +919,7 @@ namespace yae
   Playlist::removeItems(int groupRow, int itemRow)
   {
 #if 0
-    std::cerr << "Playlist::removeItems" << std::endl;
+    yae_debug << "Playlist::removeItems";
 #endif
 
     int playingNow = playing_;
@@ -981,10 +981,7 @@ namespace yae
   Playlist::setCurrentItem(std::size_t index)
   {
 #if 0
-    std::cerr
-      << "Playlist::setCurrentItem: ("
-      << index << ")"
-      << std::endl;
+    yae_debug << "Playlist::setCurrentItem: (" << index << ")";
 
     if (index == current_)
     {
@@ -1115,7 +1112,7 @@ namespace yae
   Playlist::lookupGroup(std::size_t index) const
   {
 #if 0
-    std::cerr << "Playlist::lookupGroup: " << index << std::endl;
+    yae_debug << "Playlist::lookupGroup: " << index;
 #endif
 
     if (groups_.empty())
@@ -1173,7 +1170,7 @@ namespace yae
   Playlist::lookup(std::size_t index, TPlaylistGroupPtr * returnGroup) const
   {
 #if 0
-    std::cerr << "Playlist::lookup: " << index << std::endl;
+    yae_debug << "Playlist::lookup: " << index;
 #endif
 
     TPlaylistGroupPtr group = lookupGroup(index);
@@ -1333,7 +1330,7 @@ namespace yae
   Playlist::updateOffsets()
   {
 #if 0
-    std::cerr << "Playlist::updateOffsets" << std::endl;
+    yae_debug << "Playlist::updateOffsets";
 #endif
 
     std::size_t offset = 0;
@@ -1368,7 +1365,7 @@ namespace yae
   Playlist::setPlayingItem(std::size_t index, const TPlaylistItemPtr & prev)
   {
 #if 0
-    std::cerr << "Playlist::setPlayingItem: " << index << std::endl;
+    yae_debug << "Playlist::setPlayingItem: " << index;
 #endif
 
     std::size_t indexOld = playing_;

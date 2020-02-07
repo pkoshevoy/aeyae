@@ -69,7 +69,7 @@ yae_show_program_listing(std::ostream & ostr,
 
   if (errorMessage)
   {
-    ostr << '\n' << errorMessage << std::endl;
+    ostr << '\n' << errorMessage << '\n';
   }
 }
 
@@ -1282,7 +1282,9 @@ load_arb_program_natively(GLenum target, const char * prog)
   if (errorPos < (GLint)len && errorPos >= 0)
   {
     const GLubyte * err = YAE_OGL_11(glGetString(GL_PROGRAM_ERROR_STRING_ARB));
-    yae_show_program_listing(std::cerr, prog, len, (const char *)err);
+    std::ostringstream oss;
+    yae_show_program_listing(oss, prog, len, (const char *)err);
+    yae_debug << oss.str();
   }
 #endif
 
@@ -1847,17 +1849,21 @@ namespace yae
     // for debugging only:
     {
       const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
-      std::cerr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
+      std::ostringstream oss;
+      ossr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
+
       if (found != shaders_.end())
       {
-        std::cerr << '\n';
-        yae_show_program_listing(std::cerr, found->second.program_->code_);
-        std::cerr << std::endl;
+        oss << '\n';
+        yae_show_program_listing(oss, found->second.program_->code_);
+        oss << '\n';
       }
       else
       {
-        std::cerr << " NOT FOUND" << std::endl;
+        oss << " NOT FOUND\n";
       }
+
+      yae_debug << oss.str();
     }
 #endif
 
@@ -1880,7 +1886,7 @@ namespace yae
     {
       shader = &builtinShader_;
 #if 0 // !defined(NDEBUG)
-      std::cerr << "WILL USE PASS-THROUGH SHADER" << std::endl;
+      yae_debug << "WILL USE PASS-THROUGH SHADER\n";
 #endif
     }
 

@@ -2237,12 +2237,11 @@ namespace yae
       if (rc && playbackPaused)
       {
 #if 0 // ndef NDEBUG
-        std::cerr
+        yae_debug
           << "remote control: " << rc->buttonId_
           << ", down: " << rc->pressedDown_
           << ", clicks: " << rc->clickCount_
-          << ", held down: " << rc->heldDown_
-          << std::endl;
+          << ", held down: " << rc->heldDown_;
 #endif
         SelectionFlags selectionFlags = QItemSelectionModel::ClearAndSelect;
 
@@ -2506,10 +2505,9 @@ namespace yae
                             const QModelIndex & bottomRight)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    yae_debug
       << "PlaylistView::dataChanged, topLeft: " << toString(topLeft)
-      << ", bottomRight: " << toString(bottomRight)
-      << std::endl;
+      << ", bottomRight: " << toString(bottomRight);
 #endif
 
     requestUncache();
@@ -2523,7 +2521,7 @@ namespace yae
   PlaylistView::layoutAboutToBeChanged()
   {
 #if 0 // ndef NDEBUG
-    std::cerr << "PlaylistView::layoutAboutToBeChanged" << std::endl;
+    yae_debug << "PlaylistView::layoutAboutToBeChanged"
 #endif
   }
 
@@ -2534,7 +2532,7 @@ namespace yae
   PlaylistView::layoutChanged()
   {
 #if 0 // ndef NDEBUG
-    std::cerr << "PlaylistView::layoutChanged" << std::endl;
+    yae_debug << "PlaylistView::layoutChanged";
 #endif
 
     TMakeCurrentContext currentContext(*context());
@@ -2581,7 +2579,7 @@ namespace yae
     style.layout_root_->layout(groups, *this, *model_, rootIndex, style);
 
 #if 0 // ndef NDEBUG
-    root.dump(std::cerr);
+    root.dump(yae_debug);
 #endif
   }
 
@@ -2592,7 +2590,7 @@ namespace yae
   PlaylistView::modelAboutToBeReset()
   {
 #if 0 // ndef NDEBUG
-    std::cerr << "PlaylistView::modelAboutToBeReset" << std::endl;
+    yae_debug << "PlaylistView::modelAboutToBeReset";
 #endif
   }
 
@@ -2603,7 +2601,7 @@ namespace yae
   PlaylistView::modelReset()
   {
 #if 0 // ndef NDEBUG
-    std::cerr << "PlaylistView::modelReset" << std::endl;
+    yae_debug << "PlaylistView::modelReset";
 #endif
     layoutChanged();
   }
@@ -2616,10 +2614,9 @@ namespace yae
                                       int start, int end)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    yae_debug
       << "PlaylistView::rowsAboutToBeInserted, parent: " << toString(parent)
-      << ", start: " << start << ", end: " << end
-      << std::endl;
+      << ", start: " << start << ", end: " << end;
 #endif
   }
 
@@ -2630,10 +2627,9 @@ namespace yae
   PlaylistView::rowsInserted(const QModelIndex & parent, int start, int end)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    yae_debug
       << "PlaylistView::rowsInserted, parent: " << toString(parent)
-      << ", start: " << start << ", end: " << end
-      << std::endl;
+      << ", start: " << start << ", end: " << end;
 #endif
 
     TMakeCurrentContext currentContext(*context());
@@ -2711,10 +2707,9 @@ namespace yae
                                      int start, int end)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    yae_debug
       << "PlaylistView::rowsAboutToBeRemoved, parent: " << toString(parent)
-      << ", start: " << start << ", end: " << end
-      << std::endl;
+      << ", start: " << start << ", end: " << end;
 #endif
 
     TMakeCurrentContext currentContext(*context());
@@ -2762,10 +2757,9 @@ namespace yae
   PlaylistView::rowsRemoved(const QModelIndex & parent, int start, int end)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    yae_debug
       << "PlaylistView::rowsRemoved, parent: " << toString(parent)
-      << ", start: " << start << ", end: " << end
-      << std::endl;
+      << ", start: " << start << ", end: " << end;
 #endif
 
     requestUncache();

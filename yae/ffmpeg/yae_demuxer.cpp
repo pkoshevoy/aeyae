@@ -1611,12 +1611,11 @@ namespace yae
       bool keyframe =
         al::starts_with(pkt.trackId_, "v:") &&
         (packet.flags & AV_PKT_FLAG_KEY);
-      std::cout
+      yae_debug
         << "PacketBuffer::populate: " << pkt.trackId_
         << ", dts: " << Timespan(dts, dts + dur)
         << ", pts: " << Timespan(pts, pts + dur)
-        << (keyframe ? ", keyframe" : "")
-        << std::endl;
+        << (keyframe ? ", keyframe" : "");
 #endif
     }
 
@@ -2005,7 +2004,7 @@ namespace yae
     if (!summary.metadata_.empty())
     {
       oss << "global metadata: " << summary.metadata_.size()
-          << '\n' << summary.metadata_ << std::endl;
+          << '\n' << summary.metadata_ << '\n';
     }
 
     for (std::map<std::string, TDictionary>::const_iterator
@@ -2019,7 +2018,7 @@ namespace yae
       }
 
       oss << track_id << " metadata: " << summary.metadata_.size()
-          << '\n' << metadata << std::endl;
+          << '\n' << metadata << '\n';
     }
 
     for (std::map<TTime, TChapter>::const_iterator j =
@@ -2034,10 +2033,10 @@ namespace yae
       if (!ch.metadata_.empty())
       {
         oss << ", metadata: " << ch.metadata_.size()
-            << '\n' << ch.metadata_ << std::endl;
+            << '\n' << ch.metadata_ << '\n';
       }
 
-      oss << std::endl;
+      oss << '\n';
     }
 
     for (std::map<int, Timeline>::const_iterator
@@ -2055,10 +2054,10 @@ namespace yae
       }
 
       oss << "program " << std::setw(3) << prog_id << ", " << timeline
-          << std::endl;
+          << '\n';
     }
 
-    oss << std::endl;
+    oss << '\n';
 
     for (std::map<std::string, FramerateEstimator>::const_iterator
            i = summary.fps_.begin(); i != summary.fps_.end(); ++i)
@@ -2072,12 +2071,12 @@ namespace yae
       const FramerateEstimator & estimator = i->second;
       oss << i->first << "\n"
           << estimator
-          << std::endl;
+          << '\n';
     }
 
     oss << "rewind: " << summary.rewind_.first
         << " to " << summary.rewind_.second
-        << std::endl;
+        << '\n';
 
     return oss;
   }
@@ -2223,12 +2222,11 @@ namespace yae
             TTime pts(packet.pts * src->time_base.num, src->time_base.den);
             TTime dur(packet.duration * src->time_base.num, src->time_base.den);
             bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
-            std::cout
+            yae_debug
               << "DemuxerBuffer::peek: " << pkt.trackId_
               << ", dts: " << Timespan(dts, dts + dur)
               << ", pts: " << Timespan(pts, pts + dur)
-              << (keyframe ? ", keyframe" : "")
-              << std::endl;
+              << (keyframe ? ", keyframe" : "");
 #endif
             return packet_ptr;
           }
@@ -3312,10 +3310,9 @@ namespace yae
                  end.to_hhmmss_ms().c_str());
         }
 #if 0
-        std::cout
+        yae_debug
           << "TrimmedDemuxer::peek: packet too old: "
-          << t1 << " <= " << trim.a_
-          << std::endl;
+          << t1 << " <= " << trim.a_;
 #endif
         src_->get(src);
         continue;
@@ -3324,10 +3321,9 @@ namespace yae
       if (trim.d_ <= t0)
       {
 #if 0
-        std::cout
+        yae_debug
           << "TrimmedDemuxer::peek: packet beyond trim end: "
-          << trim.d_ << " <= " << t0
-          << std::endl;
+          << trim.d_ << " <= " << t0;
 #endif
         if (pkt.trackId_ == track_)
         {
@@ -3349,12 +3345,11 @@ namespace yae
       TTime pts(packet.pts * src->time_base.num, src->time_base.den);
       TTime dur(packet.duration * src->time_base.num, src->time_base.den);
 
-      std::cout
+      yae_debug
         << "TrimmedDemuxer::peek: out: " << pkt.trackId_
         << ", dts: " << Timespan(dts, dts + dur)
         << ", pts: " << Timespan(pts, pts + dur)
-        << (keyframe ? ", keyframe" : "")
-        << std::endl;
+        << (keyframe ? ", keyframe" : "");
 #endif
       break;
     }

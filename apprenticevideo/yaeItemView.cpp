@@ -173,8 +173,8 @@ namespace yae
   ItemView::setEnabled(bool enable)
   {
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    std::cerr << "FIXME: ItemView::setEnabled " << root_->id_
-              << " " << enable << std::endl;
+    yae_debug << "FIXME: ItemView::setEnabled " << root_->id_
+              << " " << enable;
 #endif
 
     if (!enable)
@@ -222,8 +222,7 @@ namespace yae
         // YAE_BENCHMARK(benchmark, "ItemView::event repaintEvent");
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-        std::cerr << "FIXME: ItemView::repaintEvent " << root_->id_
-                  << std::endl;
+        yae_debug << "FIXME: ItemView::repaintEvent " << root_->id_;
 #endif
 
         Canvas::ILayer::delegate_->requestRepaint();
@@ -255,8 +254,8 @@ namespace yae
     bool alreadyRequested = repaintTimer_.isActive();
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    std::cerr << "FIXME: ItemView::requestRepaint " << root_->id_
-              << " " << !alreadyRequested << std::endl;
+    yae_debug << "FIXME: ItemView::requestRepaint " << root_->id_
+              << " " << !alreadyRequested;
 #endif
 
     if (!alreadyRequested)
@@ -274,8 +273,8 @@ namespace yae
     bool postThePayload = requestRepaintEvent_.setDelivered(false);
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    std::cerr << "FIXME: ItemView::repaint " << root_->id_
-              << " " << postThePayload << std::endl;
+    yae_debug << "FIXME: ItemView::repaint " << root_->id_
+              << " " << postThePayload;
 #endif
 
     if (postThePayload)
@@ -345,7 +344,7 @@ namespace yae
     }
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    std::cerr << "FIXME: ItemView::paint " << root_->id_ << std::endl;
+    yae_debug << "FIXME: ItemView::paint " << root_->id_;
 #endif
 
     double x = 0.0;
@@ -478,10 +477,9 @@ namespace yae
         et != QEvent::ShortcutOverride)
     {
 #if 0 // ndef NDEBUG
-      std::cerr
+      yae_debug
         << "ItemView::processEvent: "
-        << yae::toString(et)
-        << std::endl;
+        << yae::toString(et);
 #endif
     }
 
@@ -508,13 +506,12 @@ namespace yae
 #if 0 // ndef NDEBUG
       if (et != QEvent::MouseMove)
       {
-        std::cerr
+        yae_debug
           << root_->id_ << ": "
           << "processed mouse event == " << processed << ", "
           << e->button() << " button, "
           << e->buttons() << " buttons, "
-          << yae::toString(et)
-          << std::endl;
+          << yae::toString(et);
       }
 #endif
 
@@ -843,10 +840,9 @@ namespace yae
     double degrees = double(delta) * 0.125;
 
 #if 0
-    std::cerr
+    yae_debug
       << "FIXME: wheel: delta: " << delta
-      << ", degrees: " << degrees
-      << std::endl;
+      << ", degrees: " << degrees;
 #endif
 
     bool processed = false;

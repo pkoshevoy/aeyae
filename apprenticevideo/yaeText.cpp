@@ -180,9 +180,10 @@ namespace yae
 #if 0
       if (text != textElided)
       {
-        std::cerr
-          << "original: " << text.toUtf8().constData() << std::endl
-          << "  elided: " << textElided.toUtf8().constData() << std::endl;
+        yae_debug
+          << "\noriginal: " << text.toUtf8().constData()
+          << "\n  elided: " << textElided.toUtf8().constData()
+          << "\n";
         YAE_ASSERT(false);
       }
 #endif

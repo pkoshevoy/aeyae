@@ -358,19 +358,17 @@ namespace yae
     catch (const std::exception & e)
     {
 #ifndef NDEBUG
-      std::cerr
+      yae_debug
         << "AudioUnitRenderer::TPrivate::callback: "
-        << "abort due to exception: " << e.what()
-        << std::endl;
+        << "abort due to exception: " << e.what();
 #endif
     }
     catch (...)
     {
 #ifndef NDEBUG
-      std::cerr
+      yae_debug
         << "AudioUnitRenderer::TPrivate::callback: "
-        << "abort due to unexpected exception"
-        << std::endl;
+        << "abort due to unexpected exception";
 #endif
     }
 

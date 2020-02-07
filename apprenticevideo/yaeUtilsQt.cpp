@@ -1857,7 +1857,6 @@ namespace yae
       QString fullpath = fi.absoluteFilePath();
       QString filename = fi.fileName();
       QString ext = fi.suffix();
-      // std::cerr << "FN: " << fullpath.toUtf8().constData() << std::endl;
 
       if (!shouldIgnore(filename, ext, fi))
       {

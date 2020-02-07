@@ -398,7 +398,7 @@ namespace yae
     PlaylistNode * node = getNode(index, parentNode);
     PlaylistGroup * group = dynamic_cast<PlaylistGroup *>(node);
 
-    // std::cerr << "PlaylistModel::setData, role: " << role << std::endl;
+    // yae_debug << "PlaylistModel::setData, role: " << role;
 
     if (group)
     {
@@ -517,11 +517,10 @@ namespace yae
   {
     // YAE_BENCHMARK(benchmark, "... Model::setItemFilter");
 
-    std::cerr
+    yae_debug
       << "PlaylistModel::setItemFilter("
       << filter.toUtf8().constData()
-      << ")"
-      << std::endl;
+      << ")";
   }
 
   //----------------------------------------------------------------
@@ -848,9 +847,7 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onAddingGroup");
 
 #if 0
-    std::cerr
-      << "PlaylistModel::onAddingGroup, groupRow: " << groupRow
-      << std::endl;
+    yae_debug << "PlaylistModel::onAddingGroup, groupRow: " << groupRow;
 #endif
     QModelIndex parent = makeModelIndex(-1, -1);
     beginInsertRows(parent, groupRow, groupRow);
@@ -865,9 +862,7 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onAddedGroup");
 
 #if 0
-    std::cerr
-      << "PlaylistModel::onAddedGroup, groupRow: " << groupRow
-      << std::endl;
+    yae_debug << "PlaylistModel::onAddedGroup, groupRow: " << groupRow;
 #endif
     endInsertRows();
   }
@@ -881,10 +876,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onAddingItem");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onAddingItem, groupRow: " << groupRow
-      << ", itemRow: " << itemRow
-      << std::endl;
+      << ", itemRow: " << itemRow;
 #endif
     QModelIndex parent = makeModelIndex(groupRow, -1);
     beginInsertRows(parent, itemRow, itemRow);
@@ -899,10 +893,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onAddedItem");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onAddedItem, groupRow: " << groupRow
-      << ", itemRow: " << itemRow
-      << std::endl;
+      << ", itemRow: " << itemRow;
 #endif
     endInsertRows();
   }
@@ -916,9 +909,7 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onRemovingGroup");
 
 #if 0
-    std::cerr
-      << "PlaylistModel::onRemovingGroup, groupRow: " << groupRow
-      << std::endl;
+    yae_debug << "PlaylistModel::onRemovingGroup, groupRow: " << groupRow;
 #endif
     QModelIndex parent = makeModelIndex(-1, -1);
     beginRemoveRows(parent, groupRow, groupRow);
@@ -933,9 +924,7 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onRemovedGroup");
 
 #if 0
-    std::cerr
-      << "PlaylistModel::onRemovedGroup, groupRow: " << groupRow
-      << std::endl;
+    yae_debug << "PlaylistModel::onRemovedGroup, groupRow: " << groupRow;
 #endif
     endRemoveRows();
   }
@@ -949,10 +938,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onRemovingItem");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onRemovingItem, groupRow: " << groupRow
-      << ", itemRow: " << itemRow
-      << std::endl;
+      << ", itemRow: " << itemRow;
 #endif
     QModelIndex parent = makeModelIndex(groupRow, -1);
     beginRemoveRows(parent, itemRow, itemRow);
@@ -967,10 +955,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onRemovedItem");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onRemovedItem, groupRow: " << groupRow
-      << ", itemRow: " << itemRow
-      << std::endl;
+      << ", itemRow: " << itemRow;
 #endif
     endRemoveRows();
   }
@@ -984,10 +971,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onPlayingChanged");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onPlayingChanged: " << now
-      << ", prev " << prev
-      << std::endl;
+      << ", prev " << prev;
 #endif
     QModelIndex ix0 = mapToModelIndex(prev);
     QModelIndex ix1 = mapToModelIndex(now);
@@ -1005,10 +991,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onCurrentChanged");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onCurrentChanged: ("
-      << groupRow << ", " << itemRow << ")"
-      << std::endl;
+      << groupRow << ", " << itemRow << ")";
 #endif
     emit currentItemChanged(groupRow, itemRow);
   }
@@ -1022,10 +1007,9 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "... Model::onSelectedChanged");
 
 #if 0
-    std::cerr
+    yae_debug
       << "PlaylistModel::onSelectedChanged: ("
-      << groupRow << ", " << itemRow << ")"
-      << std::endl;
+      << groupRow << ", " << itemRow << ")";
 #endif
     QModelIndex index = makeModelIndex(groupRow, itemRow);
     emitDataChanged(kRoleSelected, index);

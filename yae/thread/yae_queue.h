@@ -221,7 +221,7 @@ namespace yae
         }
 
 #if 0 // ndef NDEBUG
-        std::cerr << this << " close " << std::endl;
+        yae_debug << this << " close";
 #endif
         closed_ = true;
       }
@@ -243,7 +243,7 @@ namespace yae
         }
 
 #if 0 // ndef NDEBUG
-        std::cerr << this << " open " << std::endl;
+        yae_debug << this << " open";
 #endif
         sequences_.clear();
         size_ = 0;
@@ -288,7 +288,7 @@ namespace yae
           while (!closed_ && size_ >= maxSize_ && terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
-            std::cerr << this << " push wait, size " << size_ << std::endl;
+            yae_debug << this << " push wait, size " << size_;
 #endif
             TemporaryValueOverride<bool> temp(producerIsBlocked_, true);
             cond_.wait(lock);
@@ -303,7 +303,7 @@ namespace yae
           size_++;
 
 #if 0 // ndef NDEBUG
-          std::cerr << this << " push done" << size_ << std::endl;
+          yae_debug << this << " push done" << size_;
 #endif
         }
 
@@ -331,7 +331,7 @@ namespace yae
           while (!closed_ && !size_ && waitForData && terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
-            std::cerr << this << " pop wait, size " << size_ << std::endl;
+            yae_debug << this << " pop wait, size " << size_;
 #endif
             TemporaryValueOverride<bool> temp(consumerIsBlocked_, true);
             cond_.notify_all();
@@ -341,8 +341,7 @@ namespace yae
           if (!size_)
           {
 #if 0 // ndef NDEBUG
-            std::cerr << this << " queue is empty, closed: "
-                      << closed_ << std::endl;
+            yae_debug << this << " queue is empty, closed: " << closed_;
 #endif
             return false;
           }
@@ -363,7 +362,7 @@ namespace yae
           }
 
 #if 0 // ndef NDEBUG
-          std::cerr << this << " pop done, size " << std::endl;
+          yae_debug << this << " pop done, size";
 #endif
         }
 

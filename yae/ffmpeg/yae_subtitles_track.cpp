@@ -499,10 +499,9 @@ namespace yae
       if (s0 < v1 && v0 < s1)
       {
 #if 0
-        std::cerr
+        yae_debug
           << "FIXME: subs(" << s0 << ", " << s1 << ") = " << s1 - s0
-          << " overlaps frame (" << v0 << ", " << v1 << ")"
-          << std::endl;
+          << " overlaps frame (" << v0 << ", " << v1 << ")";
 #endif
         subs.push_back(sf);
       }
@@ -516,7 +515,8 @@ namespace yae
   SubtitlesTrack::push(const TSubsFrame & sf, QueueWaitMgr * terminator)
   {
 #if 0 // ndef NDEBUG
-    std::cerr
+    std::ostringstream oss;
+    oss
       << "SubtitlesTrack::push -- ["
       << sf.time_.to_hhmmss_frac(1000) << ", "
       << sf.tEnd_.to_hhmmss_frac(1000) << ")";
@@ -528,14 +528,14 @@ namespace yae
         TSubsFrame::TRect r;
         sf.private_->getRect(i, r);
 
-        std::cerr
+        oss
           << ", r("<< i << ") = "
           << (r.assa_ ? r.getAssScript(sf).c_str() :
               r.text_ ? r.text_ : "BITMAP");
       }
     }
 
-    std::cerr << std::endl;
+    yae_debug << oss.str();
 #endif
 
     queue_.push(sf, terminator);

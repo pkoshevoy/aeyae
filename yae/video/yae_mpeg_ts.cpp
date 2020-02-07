@@ -4715,7 +4715,7 @@ namespace yae
           oss << "    " << program.description_ << '\n';
         }
 
-        oss << std::endl;
+        oss << '\n';
       }
     }
 

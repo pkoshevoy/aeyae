@@ -44,13 +44,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Threadable::operator(): " << e.what()
-                  << std::endl;
+        yae_debug << "Threadable::operator(): " << e.what();
       }
       catch (...)
       {
-        std::cerr << "Threadable::operator(): unexpected exception"
-                  << std::endl;
+        yae_debug << "Threadable::operator(): unexpected exception";
       }
     }
 
@@ -106,11 +104,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Thread::run: " << e.what() << std::endl;
+        yae_debug << "Thread::run: " << e.what();
       }
       catch (...)
       {
-        std::cerr << "Thread::run: unexpected exception" << std::endl;
+        yae_debug << "Thread::run: unexpected exception";
       }
 
       delete thread_;
@@ -129,11 +127,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Thread::interrupt: " << e.what() << std::endl;
+        yae_debug << "Thread::interrupt: " << e.what();
       }
       catch (...)
       {
-        std::cerr << "Thread::interrupt: unexpected exception" << std::endl;
+        yae_debug << "Thread::interrupt: unexpected exception";
       }
     }
 
@@ -152,11 +150,11 @@ namespace yae
       }
       catch (const std::exception & e)
       {
-        std::cerr << "Thread::wait: " << e.what() << std::endl;
+        yae_debug << "Thread::wait: " << e.what();
       }
       catch (...)
       {
-        std::cerr << "Thread::wait: unexpected exception" << std::endl;
+        yae_debug << "Thread::wait: unexpected exception";
       }
 
       return false;

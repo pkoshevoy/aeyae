@@ -1795,7 +1795,7 @@ namespace yae
   {
     os << indent
        << "id: " << id_
-       << std::endl;
+       << "\n";
 
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)

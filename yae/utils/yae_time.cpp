@@ -2502,7 +2502,7 @@ namespace yae
       oss << std::setw(6) << dt.time_ << " msec: " << occurrences
           << (occurrences == 1 ? " occurrence" : " occurrences")
           << ", " << double(occurrences) / double(total_occurrences)
-          << std::endl;
+          << '\n';
     }
 
     FramerateEstimator::Framerate stats;
@@ -2516,7 +2516,7 @@ namespace yae
         << " inlier fps: " << stats.inlier_ << '\n'
         << "outlier fps: " << stats.outlier_ << '\n'
         << " window avg: " << window_avg_fps << '\n'
-        << " best guess: " << best_guess_fps << std::endl;
+        << " best guess: " << best_guess_fps << '\n';
 
     return oss;
   }

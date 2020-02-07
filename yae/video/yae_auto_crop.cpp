@@ -189,8 +189,7 @@ namespace yae
 
     static int findex = 0;
     std::string fn = std::string("/tmp/") + toText(++findex) + ".pgm";
-    std::cerr << "SAVING " << fn << ", original was " << ptts->name_
-              << std::endl;
+    yae_debug << "SAVING " << fn << ", original was " << ptts->name_;
     std::FILE * fout = fopenUtf8(fn.c_str(), "wb");
     std::string header;
     header += "P5\n";
@@ -253,14 +252,13 @@ namespace yae
           double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
-          std::cerr << std::setw(4) << y << ", left offset "
+          yae_debug << std::setw(4) << y << ", left offset "
                     << std::setw(3) << x + 1 - positive.size()
                     << ", " << std::setw(11) << mp
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
-                    << ", max = " << best << " @ " << offset
-                    << std::endl;
+                    << ", max = " << best << " @ " << offset;
 #endif
           if (best < response)
           {
@@ -303,14 +301,13 @@ namespace yae
           double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
-          std::cerr << std::setw(4) << y << ", right offset "
+          yae_debug << std::setw(4) << y << ", right offset "
                     << std::setw(3) << x + 1 - positive.size()
                     << ", " << std::setw(11) << mp
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
-                    << ", max = " << best << " @ " << offset
-                    << std::endl;
+                    << ", max = " << best << " @ " << offset;
 #endif
           if (best < response)
           {
@@ -358,14 +355,13 @@ namespace yae
           double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
-          std::cerr << std::setw(4) << x << ", top offset "
+          yae_debug << std::setw(4) << x << ", top offset "
                     << std::setw(3) << y + 1 - positive.size()
                     << ", " << std::setw(11) << mp
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
-                    << ", max = " << best << " @ " << offset
-                    << std::endl;
+                    << ", max = " << best << " @ " << offset;
 #endif
           if (best < response)
           {
@@ -408,14 +404,13 @@ namespace yae
           double response = (mp + 0.1) / (mn + 0.1);
           double improved = (response + epsilon) / (best + epsilon);
 #if 0
-          std::cerr << std::setw(4) << x << ", bottom offset "
+          yae_debug << std::setw(4) << x << ", bottom offset "
                     << std::setw(3) << y + 1 - positive.size()
                     << ", " << std::setw(11) << mp
                     << " / " << std::setw(11) << mn
                     << ", r = " << std::setw(11) << response
                     << ", q = " << std::setw(11) << improved
-                    << ", max = " << best << " @ " << offset
-                    << std::endl;
+                    << ", max = " << best << " @ " << offset;
 #endif
           if (best < response)
           {
@@ -432,43 +427,41 @@ namespace yae
     }
 
 #if 0
-    std::cerr << "\nLEFT EDGE:" << std::endl;
+    std::ostringstream oss;
+
+    oss << "\nLEFT EDGE:\n";
     for (std::size_t i = 0; i < ny; i++)
     {
       unsigned int y = y0 + i * step;
-      std::cerr << "response(" << offsetLeft[i] << ", " << y << ") = "
-                << responseLeft[i] << std::endl;
+      oss << "response(" << offsetLeft[i] << ", " << y << ") = "
+          << responseLeft[i] << "\n";
     }
-#endif
 
-#if 0
-    std::cerr << "\nRIGHT EDGE:" << std::endl;
+    oss << "\nRIGHT EDGE:\n";
     for (std::size_t i = 0; i < ny; i++)
     {
       unsigned int y = y0 + i * step;
-      std::cerr << "response(" << offsetRight[i] << ", " << y << ") = "
-                << responseRight[i] << std::endl;
+      oss << "response(" << offsetRight[i] << ", " << y << ") = "
+          << responseRight[i] << "\n";
     }
-#endif
 
-#if 0
-    std::cerr << "\nTOP EDGE:" << std::endl;
+    oss << "\nTOP EDGE:\n";
     for (std::size_t i = 0; i < nx; i++)
     {
       unsigned int x = x0 + i * step;
-      std::cerr << "response(" << x << ", " << offsetTop[i] << ") = "
-                << responseTop[i] << std::endl;
+      oss << "response(" << x << ", " << offsetTop[i] << ") = "
+          << responseTop[i] << "\n";
     }
-#endif
 
-#if 0
-    std::cerr << "\nBOTTOM EDGE:" << std::endl;
+    oss << "\nBOTTOM EDGE:\n";
     for (std::size_t i = 0; i < nx; i++)
     {
       unsigned int x = x0 + i * step;
-      std::cerr << "response(" << x << ", " << offsetBottom[i] << ") = "
-                << responseBottom[i] << std::endl;
+      oss << "response(" << x << ", " << offsetBottom[i] << ") = "
+          << responseBottom[i] << "\n";
     }
+
+    yae_debug << oss.str();
 #endif
 
     std::map<int, TBin> leftHistogram;
@@ -494,9 +487,9 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "left(" << i->first << "): "
+      yae_debug << "left(" << i->first << "): "
                 << double(bin.sum_) / double(bin.size_)
-                << " -> " << bin.size_ << std::endl;
+                << " -> " << bin.size_;
 #endif
       if (lbest.size_ < bin.size_)
       {
@@ -510,9 +503,9 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "right(" << i->first << "): "
+      yae_debug << "right(" << i->first << "): "
                 << double(bin.sum_) / double(bin.size_)
-                << " -> " << bin.size_ << std::endl;
+                << " -> " << bin.size_;
 #endif
       if (rbest.size_ < bin.size_)
       {
@@ -526,9 +519,9 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "top(" << i->first << "): "
+      yae_debug << "top(" << i->first << "): "
                 << double(bin.sum_) / double(bin.size_)
-                << " -> " << bin.size_ << std::endl;
+                << " -> " << bin.size_;
 #endif
       if (tbest.size_ < bin.size_)
       {
@@ -542,9 +535,9 @@ namespace yae
     {
       const TBin & bin = i->second;
 #if 0
-      std::cerr << "bottom(" << i->first << "): "
+      yae_debug << "bottom(" << i->first << "): "
                 << double(bin.sum_) / double(bin.size_)
-                << " -> " << bin.size_ << std::endl;
+                << " -> " << bin.size_;
 #endif
       if (bbest.size_ < bin.size_)
       {
@@ -578,7 +571,7 @@ namespace yae
     crop.h_ = (int)(h - y0 - bOffset - tOffset + 0.5);
 
 #if 0
-    std::cerr
+    yae_debug
       << "\ncrop margins:\n"
       << "  left " << lOffset
       << " group(" << lbest.size_ << "), " << leftHistogram.size() << "\n"
@@ -588,7 +581,7 @@ namespace yae
       << " group(" << tbest.size_ << "), " << topHistogram.size() << "\n"
       << "bottom " << bOffset
       << " group(" << bbest.size_ << "), " << bottomHistogram.size() << "\n"
-      << std::endl;
+      << "\n";
 #endif
 
     return true;

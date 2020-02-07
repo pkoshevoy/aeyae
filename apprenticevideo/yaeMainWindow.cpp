@@ -1512,9 +1512,8 @@ namespace yae
     if (!reader)
     {
 #if 0
-      std::cerr
-        << "ERROR: could not open file: " << path.toUtf8().constData()
-        << std::endl;
+      yae_debug
+        << "ERROR: could not open file: " << path.toUtf8().constData();
 #endif
       return false;
     }
@@ -1545,11 +1544,11 @@ namespace yae
     reader->setPlaybackEnabled(!playbackPaused_);
 
 #if 0
-    std::cerr << std::endl
-              << "yae: " << filename << std::endl
-              << "yae: video tracks: " << numVideoTracks << std::endl
-              << "yae: audio tracks: " << numAudioTracks << std::endl
-              << "yae: subs tracks: " << subsCount << std::endl;
+    yae_debug
+      << "\nyae: " << filename
+      << "\nyae: video tracks: " << numVideoTracks
+      << "\nyae: audio tracks: " << numAudioTracks
+      << "\nyae: subs tracks: " << subsCount;
 #endif
 
     std::vector<TTrackInfo>  audioInfo;
@@ -1755,15 +1754,13 @@ namespace yae
 #if 0
       else
       {
-        std::cerr << "attachment: " << att->size_ << " bytes" << std::endl;
+        yae_debug << "attachment: " << att->size_ << " bytes";
 
         for (std::map<std::string, std::string>::const_iterator
                j = att->metadata_.begin(); j != att->metadata_.end(); ++j)
         {
-          std::cerr << "  " << j->first << ": " << j->second << std::endl;
+          yae_debug << "  " << j->first << ": " << j->second;
         }
-
-        std::cerr << std::endl;
       }
 #endif
     }
@@ -2385,7 +2382,7 @@ namespace yae
   MainWindow::playbackColorConverter()
   {
 #if 0
-    std::cerr << "playbackColorConverter" << std::endl;
+    yae_debug << "playbackColorConverter";
 #endif
 
     bool skipColorConverter = actionSkipColorConverter->isChecked();
@@ -2413,7 +2410,7 @@ namespace yae
   MainWindow::playbackLoopFilter()
   {
 #if 0
-    std::cerr << "playbackLoopFilter" << std::endl;
+    yae_debug << "playbackLoopFilter";
 #endif
 
     bool skipLoopFilter = actionSkipLoopFilter->isChecked();
@@ -2429,7 +2426,7 @@ namespace yae
   MainWindow::playbackNonReferenceFrames()
   {
 #if 0
-    std::cerr << "playbackNonReferenceFrames" << std::endl;
+    yae_debug << "playbackNonReferenceFrames";
 #endif
 
     bool skipNonReferenceFrames = actionSkipNonReferenceFrames->isChecked();
@@ -2748,10 +2745,9 @@ namespace yae
   MainWindow::togglePlayback()
   {
 #if 0
-    std::cerr << "togglePlayback: "
+    yae_debug << "togglePlayback: "
               << !playbackPaused_ << " -> "
-              << playbackPaused_
-              << std::endl;
+              << playbackPaused_;
 #endif
 
     reader_->setPlaybackEnabled(playbackPaused_);
@@ -2899,7 +2895,7 @@ namespace yae
   MainWindow::audioSelectTrack(int index)
   {
 #if 0
-    std::cerr << "audioSelectTrack: " << index << std::endl;
+    yae_debug << "audioSelectTrack: " << index;
 #endif
     TTrackInfo vinfo(0, 0);
     TTrackInfo ainfo(0, 0);
@@ -2970,7 +2966,7 @@ namespace yae
   MainWindow::videoSelectTrack(int index)
   {
 #if 0
-    std::cerr << "videoSelectTrack: " << index << std::endl;
+    yae_debug << "videoSelectTrack: " << index;
 #endif
     TTrackInfo vinfo(0, 0);
     TTrackInfo ainfo(0, 0);
@@ -3042,7 +3038,7 @@ namespace yae
   MainWindow::subsSelectTrack(int index)
   {
 #if 0
-    std::cerr << "subsSelectTrack: " << index << std::endl;
+    yae_debug << "subsSelectTrack: " << index;
 #endif
     TTrackInfo vinfo(0, 0);
     TTrackInfo ainfo(0, 0);
@@ -3379,9 +3375,8 @@ namespace yae
   MainWindow::movePlayHead(double seconds)
   {
 #ifndef NDEBUG
-    std::cerr
-      << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_ms(":")
-      << std::endl;
+    yae_debug
+      << "MOVE PLAYHEAD TO: " << TTime(seconds).to_hhmmss_ms(":");
 #endif
 
     videoRenderer_->pause();
@@ -3402,13 +3397,15 @@ namespace yae
   MainWindow::focusChanged(QWidget * prev, QWidget * curr)
   {
 #if 0
-    std::cerr << "focus changed: " << prev << " -> " << curr;
+    std::ostringstream oss;
+    oss << "focus changed: " << prev << " -> " << curr;
     if (curr)
     {
-      std::cerr << ", " << curr->objectName().toUtf8().constData()
-                << " (" << curr->metaObject()->className() << ")";
+      oss << ", " << curr->objectName().toUtf8().constData()
+          << " (" << curr->metaObject()->className() << ")";
     }
-    std::cerr << std::endl;
+
+    yae_debug << oss.str();
 #endif
 
 #ifdef __APPLE__
@@ -3438,9 +3435,7 @@ namespace yae
     if (!timelineModel_.sharedClock().sharesCurrentTimeWith(c))
     {
 #ifndef NDEBUG
-      std::cerr
-        << "NOTE: ignoring stale playbackFinished"
-        << std::endl;
+      yae_debug << "NOTE: ignoring stale playbackFinished";
 #endif
       return;
     }
@@ -3837,13 +3832,12 @@ namespace yae
       if (rc)
       {
 #ifndef NDEBUG
-        std::cerr
+        yae_debug
           << "received remote control event(" << rc
           << "), buttonId: " << rc->buttonId_
           << ", down: " << rc->pressedDown_
           << ", clicks: " << rc->clickCount_
-          << ", held down: " << rc->heldDown_
-          << std::endl;
+          << ", held down: " << rc->heldDown_;
 #endif
         rc->accept();
 
@@ -4246,8 +4240,7 @@ namespace yae
     yexpand_ = double(ch) / double(vh);
 
 #if 0
-    std::cerr << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_
-              << std::endl;
+    yae_debug << "\ncanvas size backup: " << xexpand_ << ", " << yexpand_;
 #endif
   }
 
@@ -4347,12 +4340,10 @@ namespace yae
     int new_x = new_x0 + shift_x;
     int new_y = new_y0 + shift_y;
 
-    std::cerr << "\ncanvas size set: " << xexpand << ", " << yexpand
-              << std::endl
-              << "canvas resize: " << new_w - cdx << ", " << new_h - cdy
-              << std::endl
-              << "canvas move to: " << new_x << ", " << new_y
-              << std::endl;
+    yae_debug << "\ncanvas size set: " << xexpand << ", " << yexpand
+              << "\ncanvas resize: " << new_w - cdx << ", " << new_h - cdy
+              << "\ncanvas move to: " << new_x << ", " << new_y
+              << "\n";
 #endif
 
     resize(new_w - cdx, new_h - cdy);
@@ -4533,16 +4524,8 @@ namespace yae
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-      std::cerr << "yae: native format: ";
-      if (ptts)
-      {
-        std::cerr << ptts->name_;
-      }
-      else
-      {
-        std::cerr << "unsupported" << std::endl;
-      }
-      std::cerr << std::endl;
+      yae_debug << "yae: native format: "
+                << (pts ? ptts->name_.c_str() : "unsupported");
 #endif
 
 #if 1
@@ -5100,8 +5083,9 @@ namespace yae
       audioRenderer_->match(native, supported);
 
 #if 0
-      std::cerr << "supported: " << supported.channelLayout_ << std::endl
-                << "required:  " << native.channelLayout_ << std::endl;
+      yae_debug << "\nsupported: " << supported.channelLayout_
+                << "\nrequired:  " << native.channelLayout_
+                << "\n";
 #endif
 
       reader->setAudioTraitsOverride(supported);
@@ -5157,13 +5141,12 @@ namespace yae
                                 clickCount,
                                 heldDown));
 #ifndef NDEBUG
-    std::cerr
+    yae_debug
       << "posting remote control event(" << rc.get()
       << "), buttonId: " << buttonId
       << ", down: " << pressedDown
       << ", clicks: " << clickCount
-      << ", held down: " << heldDown
-      << std::endl;
+      << ", held down: " << heldDown;
 #endif
 
     qApp->postEvent(mainWindow->playerWidget_,

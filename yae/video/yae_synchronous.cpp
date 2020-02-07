@@ -128,10 +128,9 @@ namespace yae
     if (!copied_)
     {
 #if YAE_DEBUG_SHARED_CLOCK
-      std::cerr
+      yae_debug
         << "\nNOTE: master clock realtime enabled: " << enabled
-        << std::endl
-        << std::endl;
+        << "\n\n";
 #endif
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       timeSegment.realtime_ = enabled;
@@ -153,9 +152,7 @@ namespace yae
     if (!copied_)
     {
 #if YAE_DEBUG_SHARED_CLOCK
-      std::cerr
-        << "\nNOTE: master clock reset\n"
-        << std::endl;
+      yae_debug << "\nNOTE: master clock reset\n\n\n";
 #endif
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       timeSegment.origin_ = boost::get_system_time();
@@ -197,12 +194,11 @@ namespace yae
         if (hasTime && dt > 0.5)
         {
 #if YAE_DEBUG_SHARED_CLOCK
-          std::cerr
-            << "\nNOTE: badly muxed file?\n"
-            << "rollback denied: " << t << std::endl
-            << "current time at: " << ct << std::endl
-            << "dt: " << dt << std::endl
-            << std::endl;
+          yae_debug
+            << "\nNOTE: badly muxed file?"
+            << "\nrollback denied: " << t
+            << "\ncurrent time at: " << ct
+            << "\ndt: " << dt << "\n\n";
 #endif
           return false;
         }
@@ -225,7 +221,7 @@ namespace yae
       if (timeSegment.observer_)
       {
 #ifdef YAE_DEBUG_SHARED_CLOCK
-        std::cerr << "MASTER CLOCK IS NOT ACCURATE" << std::endl;
+        yae_debug << "MASTER CLOCK IS NOT ACCURATE\n";
 #endif
         timeSegment.observer_->noteCurrentTimeChanged(*this, t);
       }
@@ -297,10 +293,10 @@ namespace yae
       waitingFor_ = timeSegment.waitForMe_;
 
 #if YAE_DEBUG_SHARED_CLOCK
-      std::cerr
+      yae_debug
         << "waitFor: " << to_simple_string(timeSegment.waitForMe_)
         << ", " << TTime(delayInSeconds)
-        << std::endl;
+        << "\n";
 #endif
     }
   }
@@ -318,7 +314,7 @@ namespace yae
       stopped_(false)
     {
 #if YAE_DEBUG_SHARED_CLOCK
-      std::cerr << "STOP TIME, begin" << std::endl;
+      yae_debug << "STOP TIME, begin\n";
 #endif
 
       if (stop)
@@ -347,9 +343,9 @@ namespace yae
       boost::posix_time::time_duration delta = now - startTime_;
       double elapsedTime = double(delta.total_milliseconds()) * 1e-3;
 
-      std::cerr
+      yae_debug
         << "STOP TIME, end: " << TTime(elapsedTime)
-        << std::endl;
+        << "\n";
 #endif
     }
 
@@ -391,11 +387,10 @@ namespace yae
     }
 
 #if YAE_DEBUG_SHARED_CLOCK
-    std::cerr
+    yae_debug
       << "\nWAITING FOR: " << to_simple_string(waitingFor_)
       << ", " << TTime(1e-3 * msecToWait)
-      << std::endl
-      << std::endl;
+      << "\n\n";
 #endif
 
     TStopTime stopTime(timeSegment, allowsSettingTime());
@@ -408,11 +403,10 @@ namespace yae
       if (msecElapsed >= msecToWait)
       {
 #if YAE_DEBUG_SHARED_CLOCK
-        std::cerr
+        yae_debug
           << "\nWAIT FINISHED: " << to_simple_string(waitingFor_)
           << ", " << TTime(1e-3 * msecToWait)
-          << std::endl
-          << std::endl;
+          << "\n\n";
 #endif
         return;
       }
@@ -427,11 +421,10 @@ namespace yae
         {
           // nothing to do:
 #if YAE_DEBUG_SHARED_CLOCK
-          std::cerr
+          yae_debug
             << "\nWAIT CANCELLED: " << to_simple_string(waitingFor_)
             << ", " << TTime(1e-3 * msecToWait)
-            << std::endl
-            << std::endl;
+            << "\n\n";
 #endif
           return;
         }
@@ -452,12 +445,11 @@ namespace yae
       if (!timeSegment.waitForMe_.is_not_a_date_time())
       {
 #if YAE_DEBUG_SHARED_CLOCK
-        std::cerr
+        yae_debug
           << "\nCANCEL WAIT REQUEST: "
           << to_simple_string(timeSegment.waitForMe_)
           << ", " << TTime(timeSegment.delayInSeconds_)
-          << std::endl
-          << std::endl;
+          << "\n\n";
 #endif
         timeSegment.waitForMe_ = boost::system_time();
         timeSegment.delayInSeconds_ = 0.0;

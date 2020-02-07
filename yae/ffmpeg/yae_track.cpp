@@ -252,7 +252,7 @@ namespace yae
       yae_debug << "PTS OK: "
                 << nextPTS.time_ << "/" << nextPTS.base_
                 << " = " << nextPTS.to_hhmmss_frac(1000)
-                << ", " << debugMessage << std::endl;
+                << ", " << debugMessage << "\n";
     }
 #else
     (void)debugMessage;

@@ -116,7 +116,7 @@ namespace yae
           return 0.0;
         }
 #if 0
-        std::cerr << "FIXME: estimateVelocity, dt: " << dt << std::endl;
+        yae_debug << "FIXME: estimateVelocity, dt: " << dt;
 #endif
       }
 
@@ -327,7 +327,7 @@ namespace yae
     double k = vi / p_->v0_.norm();
 
 #if 0
-    std::cerr << "FIXME: v0: " << p_->v0_ << ", k: " << k << std::endl;
+    yae_debug << "FIXME: v0: " << p_->v0_ << ", k: " << k;
 #endif
 
     if (k > 0.1)
@@ -400,11 +400,10 @@ namespace yae
     hsv.set_position_x(p1.x());
     vsv.set_position_y(p1.y());
 #if 0
-    std::cerr
+    yae_debug
       << "FIXME: pos: " << p1
       << ", xrange: " << xRange
-      << ", yrange: " << yRange
-      << std::endl;
+      << ", yrange: " << yRange;
 #endif
 
     p_->tStart_ = tNow;
@@ -434,10 +433,10 @@ namespace yae
     TVec2D v1 = p_->v0_ * t;
 
 #if 0
-    std::cerr
+    yae_debug
       << "FIXME: v0: " << p_->v0_
       << ", v1: " << v1
-      << ", dv: " << v1 - p_->v0_ << std::endl;
+      << ", dv: " << v1 - p_->v0_;
 #endif
 
     YAE_ASSERT(v1.normSqrd() < p_->v0_.normSqrd());

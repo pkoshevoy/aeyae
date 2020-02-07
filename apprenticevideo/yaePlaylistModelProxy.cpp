@@ -602,7 +602,7 @@ namespace yae
     }
 
 #if 0
-    std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
+    yae_debug << "KEYWORDS MATCH: " << text.toUtf8().constData();
 #endif
     return true;
   }

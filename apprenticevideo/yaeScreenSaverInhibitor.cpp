@@ -164,7 +164,7 @@ namespace yae
     if (!done)
     {
       // FIXME: not sure how to do this yet
-      std::cerr << "screenSaverInhibit" << std::endl;
+      yae_debug << "screenSaverInhibit";
     }
 #endif
   }
