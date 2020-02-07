@@ -1171,7 +1171,8 @@ namespace yae
   // PlayerView::playback
   //
   void
-  PlayerView::playback(const IReaderPtr & reader)
+  PlayerView::playback(const TRecordingPtr & rec_ptr,
+                       const IReaderPtr & reader)
   {
     std::vector<TTrackInfo>  audioInfo;
     std::vector<AudioTraits> audioTraits;
@@ -1188,6 +1189,7 @@ namespace yae
                       subsInfo,
                       subsFormat);
 
+    recording_ = rec_ptr;
     player_->playback(reader);
     timeline_->forceAnimateControls();
     actionPlay_->setText(tr("Pause"));
@@ -1638,6 +1640,7 @@ namespace yae
   void
   PlayerView::stopPlayback()
   {
+    recording_.reset();
     player_->playback_stop();
     timeline_->modelChanged();
     timeline_->maybeAnimateOpacity();

@@ -354,10 +354,11 @@ namespace yae
   // PlayerWidget::playback
   //
   void
-  PlayerWidget::playback(const IReaderPtr & reader)
+  PlayerWidget::playback(const TRecordingPtr & rec_ptr,
+                         const IReaderPtr & reader)
   {
     view_.setEnabled(true);
-    view_.playback(reader);
+    view_.playback(rec_ptr, reader);
   }
 
   //----------------------------------------------------------------

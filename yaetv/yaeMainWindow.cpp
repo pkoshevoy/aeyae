@@ -510,7 +510,7 @@ namespace yae
       return;
     }
 
-    playerWindow_.playback(reader, canvas_);
+    playerWindow_.playback(rec_ptr, reader, canvas_);
   }
 
   //----------------------------------------------------------------

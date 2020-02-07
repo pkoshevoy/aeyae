@@ -96,7 +96,8 @@ namespace yae
 
     void initItemViews();
 
-    void playback(const IReaderPtr & reader);
+    void playback(const TRecordingPtr & rec_ptr,
+                  const IReaderPtr & reader);
     void stop();
 
     // accessors:

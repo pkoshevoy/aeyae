@@ -39,7 +39,8 @@ namespace yae
   // PlayerWindow::playback
   //
   void
-  PlayerWindow::playback(const IReaderPtr & reader,
+  PlayerWindow::playback(const TRecordingPtr & rec_ptr,
+                         const IReaderPtr & reader,
                          TCanvasWidget * shared_ctx)
   {
     if (!playerWidget_)
@@ -68,7 +69,17 @@ namespace yae
       show();
     }
 
-    playerWidget_->playback(reader);
+    if (rec_ptr)
+    {
+      const Recording & rec = *rec_ptr;
+      std::string title = strfmt("yaetv: %i-%i %s",
+                                 rec.channel_major_,
+                                 rec.channel_minor_,
+                                 rec.title_.c_str());
+      window()->setWindowTitle(QString::fromUtf8(title.c_str()));
+    }
+
+    playerWidget_->playback(rec_ptr, reader);
   }
 
   //----------------------------------------------------------------
