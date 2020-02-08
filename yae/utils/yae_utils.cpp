@@ -1189,7 +1189,7 @@ namespace yae
 
       boost::system::error_code err;
       iter_ = fs::directory_iterator(path_, err);
-      return !err;
+      return !err && iter_ != fs::directory_iterator();
     }
 
     bool parse_next_item()

@@ -306,9 +306,9 @@ namespace yae
   static void
   for_each_file_at(const std::string & path_utf8, TVisitor & callback)
   {
-    try
+    TOpenFolder folder;
+    if (folder.open(path_utf8))
     {
-      TOpenFolder folder(path_utf8);
       do
       {
         std::string name = folder.item_name();
@@ -335,7 +335,7 @@ namespace yae
       }
       while (folder.parse_next_item());
     }
-    catch (...)
+    else
     {
       std::string name = fs::path(path_utf8).filename().string();
       callback(false, name, path_utf8);

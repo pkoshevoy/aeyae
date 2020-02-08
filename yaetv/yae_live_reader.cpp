@@ -190,8 +190,8 @@ namespace yae
     struct Seg
     {
       Seg(std::size_t i = 0, std::size_t n = 0):
-        i_(0),
-        n_(0)
+        i_(i),
+        n_(n)
       {}
 
       inline uint64_t t0(const Private & ctx) const
@@ -221,6 +221,9 @@ namespace yae
     // disconts cause timeline gaps, so we'll be
     // keeping track of the contiguous segments:
     std::vector<Seg> segments_;
+
+    uint64_t sumTime_;
+    uint64_t sumSize_;
 
     //----------------------------------------------------------------
     // ByteRange
@@ -256,6 +259,8 @@ namespace yae
       readerId_((unsigned int)~0),
       timeIn_(TTime::min_flicks_as_sec()),
       timeOut_(TTime::max_flicks_as_sec()),
+      sumTime_(0),
+      sumSize_(0),
       walltimeOffset_(0, 1),
       currRange_(std::numeric_limits<std::size_t>::max())
   {
@@ -289,6 +294,8 @@ namespace yae
     filepath_ = filepath;
     segments_.clear();
     ranges_.clear();
+    sumTime_ = 0;
+    sumSize_ = 0;
 
     std::string folder;
     std::string fn_ext;
@@ -403,22 +410,26 @@ namespace yae
         }
 
         // check for disconts:
-        double avg_bytes_per_sec = segment->bytes_per_sec(*this);
+        uint64_t seg_sz = filesize - segment->p0(*this);
+        uint64_t seg_dt = walltime - segment->t0(*this);
+
+        double avg_bytes_per_sec =
+          double(sumSize_ + seg_sz) /
+          double(sumTime_ + seg_dt);
 
         if (avg_bytes_per_sec > 0.0)
         {
           double bytes_per_sec = double(dv) / double(dt);
+          double r = bytes_per_sec / avg_bytes_per_sec;
 
-          double r =
-            (1.0 + avg_bytes_per_sec - bytes_per_sec) /
-            (1.0 + avg_bytes_per_sec);
-
-          if (r > 0.5)
+          if (r < 0.01 && dt > 3)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate:
             ranges_.back().p1_ = filesize;
             ranges_.push_back(ByteRange(ranges_.size(), walltime, filesize));
             segments_.push_back(Seg(walltime_.size()));
+            sumTime_ += seg_dt;
+            sumSize_ += seg_sz;
 
             // update the shortcut:
             segment = &(segments_.back());
@@ -622,6 +633,28 @@ namespace yae
 
       TTime walltime(range->t0_, 1);
       walltimeOffset_ = (dts - walltime) - TTime(secErr);
+
+#if 0
+      yae_wlog
+        ("LiveReader"
+         ": pkt = (%s, %12" PRIu64 ")"
+         ", r0: r[%i] = (%s, %12" PRIu64 ")"
+         ", r1: r[%i] = (%s, %12" PRIu64 ")"
+         ", range: r[%i] = (%s, %12" PRIu64 ")"
+         ", byterate %.3f"
+         ", posErr %13.1f"
+         ", secErr %.3f"
+         ", walltimeOffset %s",
+         dts.to_hhmmss_ms().c_str(),
+         pkt->pos,
+         r0 - r0, TTime(r0->t0_, 1).to_hhmmss_ms().c_str(), r0->p0_,
+         r1 - r0, TTime(r1->t0_, 1).to_hhmmss_ms().c_str(), r1->p0_,
+         range - r0, TTime(range->t0_, 1).to_hhmmss_ms().c_str(), range->p0_,
+         byterate,
+         posErr,
+         secErr,
+         walltimeOffset_.to_hhmmss_ms().c_str());
+#endif
     }
 
     TTime dts(stream->time_base.num * pkt->dts,
