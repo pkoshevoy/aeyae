@@ -1153,6 +1153,7 @@ namespace yae
                                    imageProvider);
 
     timelineView_.setup(this, &playlistView_, &timelineModel_);
+    timelineView_.setEnabled(true);
     frameCropView_.setEnabled(false);
     frameCropView_.init(&playlistView_);
 
