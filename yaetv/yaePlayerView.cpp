@@ -880,6 +880,14 @@ namespace yae
                       this, SLOT(sync_ui()));
     YAE_ASSERT(ok);
 
+    // for scroll-wheel event buffering,
+    // used to avoid frequent seeking by small distances:
+    scrollWheelTimer_.setSingleShot(true);
+
+    ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
+                 this, SLOT(scrollWheelTimerExpired()));
+    YAE_ASSERT(ok);
+
     style_.reset(new PlayerStyle("player_style", *this));
   }
 
