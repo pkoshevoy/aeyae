@@ -592,15 +592,19 @@ namespace yae
     ok = connect(actionPlay_, SIGNAL(triggered()),
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
-#if 0
+
     ok = connect(actionNext_, SIGNAL(triggered()),
-                 this, SLOT(playbackNext()));
+                 this, SIGNAL(playback_next()));
     YAE_ASSERT(ok);
 
     ok = connect(actionPrev_, SIGNAL(triggered()),
-                 this, SLOT(playbackPrev()));
+                 this, SIGNAL(playback_prev()));
     YAE_ASSERT(ok);
-#endif
+
+    ok = connect(actionRemove_, SIGNAL(triggered()),
+                 this, SIGNAL(playback_remove()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionLoop_, SIGNAL(triggered()),
                  this, SLOT(playbackLoop()));
     YAE_ASSERT(ok);
@@ -1185,7 +1189,7 @@ namespace yae
   //
   void
   PlayerView::playback(const TRecordingPtr & rec_ptr,
-                       const IReaderPtr & reader,
+                       const IReaderPtr & reader_ptr,
                        bool start_from_zero_time)
   {
     TimelineModel & timeline = timeline_model();
@@ -1198,7 +1202,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader.get(),
+    adjustMenuActions(reader_ptr,
                       audioInfo,
                       audioTraits,
                       videoInfo,
@@ -1207,11 +1211,56 @@ namespace yae
                       subsFormat);
 
     recording_ = rec_ptr;
-    player_->playback(reader);
+    player_->playback(reader_ptr,
+                      audioInfo,
+                      audioTraits,
+                      videoInfo,
+                      videoTraits,
+                      subsInfo,
+                      subsFormat);
     timeline_->forceAnimateControls();
     actionPlay_->setText(tr("Pause"));
 
+    if (reader_ptr)
+    {
+      IReader & reader = *reader_ptr;
+
+      int ai = int(reader.getSelectedAudioTrackIndex());
+      audioTrackGroup_->actions().at(ai)->setChecked(true);
+
+
+      int vi = int(reader.getSelectedVideoTrackIndex());
+      videoTrackGroup_->actions().at(vi)->setChecked(true);
+
+      int nsubs = int(reader.subsCount());
+      unsigned int cc = reader.getRenderCaptions();
+
+      if (cc)
+      {
+        int index = (int)nsubs + cc - 1;
+        subsTrackGroup_->actions().at(index)->setChecked(true);
+      }
+      else
+      {
+        int si = 0;
+        for (; si < nsubs && !reader.getSubsRender(si); si++)
+        {}
+
+        if (si < nsubs)
+        {
+          subsTrackGroup_->actions().at(si)->setChecked(true);
+        }
+        else
+        {
+          int index = subsTrackGroup_->actions().size() - 1;
+          subsTrackGroup_->actions().at(index)->setChecked(true);
+        }
+      }
+    }
+
     QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+
+    emit fixup_next_prev();
   }
 
   //----------------------------------------------------------------
@@ -1755,6 +1804,7 @@ namespace yae
     contextMenu_->clear();
     contextMenu_->addAction(actionPlay_);
 
+#if 0
     contextMenu_->addSeparator();
     contextMenu_->addAction(actionPrev_);
     contextMenu_->addAction(actionNext_);
@@ -1764,6 +1814,7 @@ namespace yae
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionRemove_);
     }
+#endif
 
     contextMenu_->addSeparator();
     contextMenu_->addAction(actionLoop_);

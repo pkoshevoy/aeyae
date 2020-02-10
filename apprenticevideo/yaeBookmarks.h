@@ -22,17 +22,10 @@ namespace yae
   //----------------------------------------------------------------
   // TBookmark
   //
-  struct YAEUI_API TBookmark
+  struct YAEUI_API TBookmark : IBookmark
   {
-    TBookmark();
-
     std::string groupHash_;
     std::string itemHash_;
-    std::size_t atrack_;
-    std::size_t vtrack_;
-    std::list<std::size_t> subs_;
-    unsigned int cc_;
-    double positionInSeconds_;
   };
 
   //----------------------------------------------------------------

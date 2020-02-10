@@ -659,6 +659,21 @@ namespace yae
   YAE_API std::string
   make_track_id(const char track_type, std::size_t track_index);
 
+  //----------------------------------------------------------------
+  // IBookmark
+  //
+  struct YAE_API IBookmark
+  {
+    IBookmark();
+    virtual ~IBookmark() {}
+
+    std::size_t atrack_;
+    std::size_t vtrack_;
+    std::list<std::size_t> subs_;
+    unsigned int cc_;
+    double positionInSeconds_;
+  };
+
 }
 
 

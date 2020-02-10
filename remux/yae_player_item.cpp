@@ -162,6 +162,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // find_matching_program
+  //
+  static std::size_t
+  find_matching_program(const std::vector<TTrackInfo> & track_info,
+                        const TTrackInfo & target)
+  {
+    std::size_t program = std::numeric_limits<std::size_t>::max();
+    for (std::size_t i = 0, n = track_info.size(); i < n; i++)
+    {
+      const TTrackInfo & info = track_info[i];
+      if (target.nprograms_ == info.nprograms_ &&
+          target.program_ == info.program_ &&
+          target.ntracks_ == n)
+      {
+        return target.program_;
+      }
+
+      program = std::min(program, info.program_);
+    }
+
+    return track_info.empty() ? 0 : program;
+  }
+
+  //----------------------------------------------------------------
   // find_matching_track
   //
   template <typename TTraits>
@@ -169,7 +193,8 @@ namespace yae
   find_matching_track(const std::vector<TTrackInfo> & trackInfo,
                       const std::vector<TTraits> & trackTraits,
                       const TTrackInfo & selInfo,
-                      const TTraits & selTraits)
+                      const TTraits & selTraits,
+                      std::size_t program)
   {
     std::size_t n = trackInfo.size();
 
@@ -201,6 +226,11 @@ namespace yae
       for (std::size_t i = 0; i < n; i++)
       {
         const TTrackInfo & info = trkInfo[i];
+        if (program != info.program_)
+        {
+          continue;
+        }
+
         const TTraits & traits = trkTraits[i];
         if (info.hasLang() && strcmp(info.lang(), selLang) == 0)
         {
@@ -235,6 +265,12 @@ namespace yae
       {
         const TTrackInfo & info = trkInfo[i];
         const TTraits & traits = trkTraits[i];
+
+        if (program != info.program_)
+        {
+          continue;
+        }
+
         if (info.hasName() && strcmp(info.name(), selName) == 0)
         {
           tmpInfo.push_back(info);
@@ -264,6 +300,12 @@ namespace yae
     {
       const TTrackInfo & info = trkInfo[i];
       const TTraits & traits = trkTraits[i];
+
+      if (program != info.program_)
+      {
+        continue;
+      }
+
       if (selTraits == traits)
       {
         tmpInfo.push_back(info);
@@ -284,17 +326,161 @@ namespace yae
     {
       // only one candidate is available:
       const TTrackInfo & info = trkInfo.front();
-      return info.index_;
+      if (program == info.program_)
+      {
+        return info.index_;
+      }
     }
 
     // try to match track index:
-    if (trackInfo.size() == selInfo.ntracks_)
+    if (trackInfo.size() == selInfo.ntracks_ &&
+        trackInfo[selInfo.index_].program_ == program)
     {
       return selInfo.index_;
     }
 
-    // default to first track:
-    return 0;
+    // try to find the first track of the matching program:
+    n = trackInfo.size();
+    for (std::size_t i = 0; i < n; i++)
+    {
+      const TTrackInfo & info = trackInfo[i];
+      if (info.program_ == program)
+      {
+        return i;
+      }
+    }
+
+    // disable track:
+    return n;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerItem::playback
+  //
+  void
+  PlayerItem::playback(const IReaderPtr & reader,
+                       const std::vector<TTrackInfo> & audioInfo,
+                       const std::vector<AudioTraits> & audioTraits,
+                       const std::vector<TTrackInfo> & videoInfo,
+                       const std::vector<VideoTraits> & videoTraits,
+                       const std::vector<TTrackInfo> & subsInfo,
+                       const std::vector<TSubsFormat> & subsFormat,
+                       const TBookmark * bookmark,
+                       const TTime & seekTime)
+  {
+    if (!reader)
+    {
+      return;
+    }
+
+    // keep track of current closed caption selection:
+    unsigned int cc = reader_ ? reader_->getRenderCaptions() : 0;
+
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t numSubttTracks = reader->subsCount();
+
+    bool rememberSelectedVideoTrack = !reader_;
+
+    std::size_t program = find_matching_program(videoInfo, sel_video_);
+    std::size_t vtrack = !reader_ ? 0 :
+      find_matching_track<VideoTraits>(videoInfo,
+                                       videoTraits,
+                                       sel_video_,
+                                       sel_video_traits_,
+                                       program);
+
+    if (bookmark && bookmark->vtrack_ <= numVideoTracks)
+    {
+      vtrack = bookmark->vtrack_;
+      rememberSelectedVideoTrack = numVideoTracks > 0;
+    }
+
+    if (vtrack < numVideoTracks)
+    {
+      program = videoInfo[vtrack].program_;
+    }
+
+    bool rememberSelectedAudioTrack = !reader_;
+    std::size_t atrack = !reader_ ? 0 :
+      find_matching_track<AudioTraits>(audioInfo,
+                                       audioTraits,
+                                       sel_audio_,
+                                       sel_audio_traits_,
+                                       program);
+
+    if (bookmark && bookmark->atrack_ <= numAudioTracks)
+    {
+      atrack = bookmark->atrack_;
+      rememberSelectedAudioTrack = numAudioTracks > 0;
+    }
+
+    if (atrack < numAudioTracks)
+    {
+      YAE_ASSERT(program == audioInfo[vtrack].program_);
+      program = audioInfo[vtrack].program_;
+    }
+
+    if (vtrack >= numVideoTracks &&
+        atrack >= numAudioTracks)
+    {
+      // avoid disabling both audio and video due to
+      // previous custom or bookmarked track selections:
+
+      if (numVideoTracks)
+      {
+        vtrack = 0;
+      }
+      else if (numAudioTracks)
+      {
+        atrack = 0;
+      }
+    }
+
+    bool rememberSelectedSubtitlesTrack = !reader_;
+    std::size_t strack = !reader_ ? numSubttTracks :
+      find_matching_track<TSubsFormat>(subsInfo,
+                                       subsFormat,
+                                       sel_subtt_,
+                                       sel_subtt_format_,
+                                       program);
+    if (bookmark)
+    {
+      if (!bookmark->subs_.empty() && bookmark->subs_.front() < numSubttTracks)
+      {
+        strack = bookmark->subs_.front();
+        rememberSelectedSubtitlesTrack = true;
+      }
+      else if (bookmark->subs_.empty())
+      {
+        strack = numSubttTracks;
+        rememberSelectedSubtitlesTrack = true;
+      }
+
+      if (bookmark->cc_)
+      {
+        cc = bookmark->cc_;
+      }
+    }
+
+    playback(reader, vtrack, atrack, strack, cc, seekTime);
+
+    if (rememberSelectedVideoTrack)
+    {
+      reader->getSelectedVideoTrackInfo(sel_video_);
+      reader->getVideoTraits(sel_video_traits_);
+    }
+
+    if (rememberSelectedAudioTrack)
+    {
+      reader->getSelectedAudioTrackInfo(sel_audio_);
+      reader->getAudioTraits(sel_audio_traits_);
+    }
+
+    if (rememberSelectedSubtitlesTrack)
+    {
+      sel_subtt_format_ = reader->subsInfo(strack, sel_subtt_);
+    }
   }
 
   //----------------------------------------------------------------

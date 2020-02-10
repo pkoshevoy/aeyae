@@ -33,17 +33,6 @@ namespace yae
     return QString::fromUtf8(bookmark.c_str());
   }
 
-
-  //----------------------------------------------------------------
-  // TBookmark::TBookmark
-  //
-  TBookmark::TBookmark():
-    atrack_(std::numeric_limits<std::size_t>::max()),
-    vtrack_(std::numeric_limits<std::size_t>::max()),
-    cc_(0),
-    positionInSeconds_(0)
-  {}
-
   //----------------------------------------------------------------
   // kBookmarkTag
   //

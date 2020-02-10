@@ -55,6 +55,16 @@ namespace yae
     void paintContent() const;
 
     void playback(const IReaderPtr & reader,
+                  const std::vector<TTrackInfo> & audioInfo,
+                  const std::vector<AudioTraits> & audioTraits,
+                  const std::vector<TTrackInfo> & videoInfo,
+                  const std::vector<VideoTraits> & videoTraits,
+                  const std::vector<TTrackInfo> & subsInfo,
+                  const std::vector<TSubsFormat> & subsFormat,
+                  const TBookmark * bookmark = NULL,
+                  const TTime & seekTime = TTime(0, 0));
+
+    void playback(const IReaderPtr & reader,
                   std::size_t vtrack = 0,
                   std::size_t atrack = 0,
                   std::size_t strack = 0,

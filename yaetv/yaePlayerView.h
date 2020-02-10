@@ -83,7 +83,9 @@ namespace yae
   signals:
     void adjust_canvas_height();
     void playback_next();
+    void playback_prev();
     void playback_finished();
+    void playback_remove();
     void fixup_next_prev();
 
   public:
@@ -266,6 +268,10 @@ namespace yae
     yae::shared_ptr<ItemViewStyle, Item> style_;
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
+
+    // property indicating whether Go Back and Skip should be included
+    // in the Playback menu for playlist navigation:
+    BoolRef showNextPrev_;
   };
 
 }

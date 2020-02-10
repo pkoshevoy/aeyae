@@ -691,4 +691,15 @@ namespace yae
     return oss.str();
   }
 
+
+  //----------------------------------------------------------------
+  // IBookmark::IBookmark
+  //
+  IBookmark::IBookmark():
+    atrack_(std::numeric_limits<std::size_t>::max()),
+    vtrack_(std::numeric_limits<std::size_t>::max()),
+    cc_(0),
+    positionInSeconds_(0)
+  {}
+
 }
