@@ -59,11 +59,17 @@ namespace yae
       playerWidget_->initItemViews();
       QApplication::processEvents();
 
+      menubar->clear();
       menubar->addAction(view.menuPlayback_->menuAction());
       menubar->addAction(view.menuAudio_->menuAction());
       menubar->addAction(view.menuVideo_->menuAction());
       menubar->addAction(view.menuSubs_->menuAction());
-      menubar->addAction(view.menuChapters_->menuAction());
+
+      std::size_t numChapters = reader ? reader->countChapters() : 0;
+      if (numChapters)
+      {
+        menubar->addAction(view.menuChapters_->menuAction());
+      }
     }
     else
     {

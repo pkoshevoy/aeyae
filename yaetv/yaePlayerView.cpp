@@ -327,9 +327,11 @@ namespace yae
 
     menuPlayback_->addAction(actionPlay_);
     menuPlayback_->addSeparator();
+#if 0
     menuPlayback_->addAction(actionPrev_);
     menuPlayback_->addAction(actionNext_);
     menuPlayback_->addSeparator();
+#endif
     menuPlayback_->addAction(actionLoop_);
     menuPlayback_->addAction(actionSetInPoint_);
     menuPlayback_->addAction(actionSetOutPoint_);

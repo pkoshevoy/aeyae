@@ -84,6 +84,7 @@ namespace yae
     void adjust_canvas_height();
     void playback_next();
     void playback_finished();
+    void fixup_next_prev();
 
   public:
     bool is_playback_paused() const;
