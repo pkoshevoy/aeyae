@@ -282,37 +282,10 @@ namespace yae
   bool
   mkdir_p(const std::string & path_utf8)
   {
-    TOpenFolder folder;
-    if (folder.open(path_utf8))
-    {
-      return true;
-    }
-
-    std::string dirname;
-    std::string basename;
-    if (!parse_file_path(path_utf8, dirname, basename))
-    {
-      return false;
-    }
-
-    if (basename.empty())
-    {
-      return false;
-    }
-
-#ifdef _WIN32
-    if (al::ends_with(dirname, ":"))
-    {
-      dirname += "\\";
-    }
-#endif
-
-    if (!mkdir_p(dirname))
-    {
-      return false;
-    }
-
-    return mkdir_utf8(path_utf8.c_str());
+    fs::path path(path_utf8);
+    fs::create_directories(path);
+    bool exists = fs::is_directory(path);
+    return exists;
   }
 
   //----------------------------------------------------------------
