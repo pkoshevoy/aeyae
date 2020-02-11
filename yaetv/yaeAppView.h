@@ -162,6 +162,23 @@ namespace yae
     // all recordings, indexed by playlist:
     std::map<std::string, TRecordings> playlists_;
 
+    struct Playback
+    {
+      Playback(const std::string & playlist = std::string(),
+               const std::string & filename = std::string(),
+               const std::string & basepath = std::string()):
+        playlist_(playlist),
+        filename_(filename),
+        basepath_(basepath)
+      {}
+
+      std::string playlist_;
+      std::string filename_;
+      std::string basepath_;
+    };
+
+    yae::shared_ptr<Playback> now_playing_;
+
     std::map<uint32_t, std::size_t> ch_index_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
     std::map<uint32_t, yae::shared_ptr<Item> > ch_row_;

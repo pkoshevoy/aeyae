@@ -478,9 +478,9 @@ namespace yae
   TSeekPosPtr
   LiveReader::Private::getPosition(double t)
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     updateTimelinePositions();
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
     if (segments_.empty())
     {
       return TSeekPosPtr(new TimePos(t));
@@ -595,6 +595,7 @@ namespace yae
   void
   LiveReader::Private::adjustTimestamps(AVFormatContext * ctx, AVPacket * pkt)
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     if (ranges_.empty() || pkt->dts == AV_NOPTS_VALUE)
     {
       return;

@@ -240,6 +240,11 @@ namespace yae
         }
       }
 
+      if (!program)
+      {
+        continue;
+      }
+
       ProgramTracks & program_tracks = programs[program->id_];
 
       // extract attachments:

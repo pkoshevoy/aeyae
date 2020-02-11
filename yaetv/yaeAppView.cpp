@@ -982,6 +982,80 @@ namespace yae
     std::string path_;
   };
 
+  //----------------------------------------------------------------
+  // get_rec_attrs
+  //
+  static bool
+  is_now_playing(const AppView & view, const std::string & basepath)
+  {
+    if (view.now_playing_)
+    {
+      const AppView::Playback & now_playing = *(view.now_playing_);
+      return (now_playing.basepath_ == basepath);
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // has_not_watched
+  //
+  static bool
+  has_not_watched(const AppView & view, const std::string & basepath)
+  {
+    return !fs::exists(basepath + ".seen");
+  }
+
+  //----------------------------------------------------------------
+  // GetBadgeText
+  //
+  struct GetBadgeText : public TVarExpr
+  {
+    GetBadgeText(const AppView & view, const std::string & basepath):
+      view_(view),
+      basepath_(basepath)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (is_now_playing(view_, basepath_))
+      {
+        result = QVariant(QString::fromUtf8("NOW PLAYING"));
+        return;
+      }
+
+      if (has_not_watched(view_, basepath_))
+      {
+        result = QVariant(QString::fromUtf8("NEW"));
+        return;
+      }
+    }
+
+    const AppView & view_;
+    std::string basepath_;
+  };
+
+  //----------------------------------------------------------------
+  // ShowBadge
+  //
+  struct ShowBadge : public TBoolExpr
+  {
+    ShowBadge(const AppView & view, const std::string & basepath):
+      view_(view),
+      basepath_(basepath)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = (is_now_playing(view_, basepath_) ||
+                has_not_watched(view_, basepath_));
+    }
+
+    const AppView & view_;
+    std::string basepath_;
+  };
 
   //----------------------------------------------------------------
   // GetTexTrashcan
@@ -2680,7 +2754,9 @@ namespace yae
            i = playlist_recs.begin(); i != playlist_recs.end(); ++i)
     {
       const std::string & name = i->first;
-      const Recording & rec = *(i->second);
+      const TRecordingPtr & rec_ptr = i->second;
+      const Recording & rec = *rec_ptr;
+      std::string basepath = rec.get_filepath(dvr_->basedir_, "");
 
       layout.index_[name] = layout.names_.size();
       layout.names_.push_back(name);
@@ -2758,6 +2834,35 @@ namespace yae
         std::string path = rec.get_filepath(dvr_->basedir_, ".mpg");
         std::string url = "image://thumbnails/" + path;
         thumbnail.url_ = TVarRef::constant(QString::fromUtf8(url.c_str()));
+
+        Rectangle & badge_bg = inner.addNew<Rectangle>("badge_bg");
+        Text & badge = inner.addNew<Text>("badge");
+        badge.anchors_.bottom_ = ItemRef::offset(inner, kPropertyBottom);
+        badge.anchors_.left_ = ItemRef::offset(inner, kPropertyLeft);
+        badge.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.1));
+        badge.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.1));
+        badge.font_ = style.font_large_;
+        badge.font_.setWeight(62);
+        badge.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+        badge.elide_ = Qt::ElideRight;
+        badge.color_ = badge.
+          // addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+        badge.background_ = badge.
+          addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+          // addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+        badge.text_ = badge.addExpr(new GetBadgeText(view, basepath));
+        badge.visible_ = badge.addExpr(new ShowBadge(view, basepath));
+
+        badge_bg.anchors_.fill(badge);
+        badge_bg.margins_.
+          set_left(ItemRef::reference(hidden, kUnitSize, -0.1));
+        badge_bg.margins_.
+          set_right(ItemRef::reference(hidden, kUnitSize, -0.1));
+        badge_bg.visible_ = BoolRef::reference(badge, kPropertyVisible);
+        badge_bg.color_ = badge_bg.
+          // addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+          addExpr(style_color_ref(view, &AppStyle::cursor_));
 
         Text & title = c1.addNew<Text>("title");
         title.anchors_.vcenter(c1);
@@ -2931,8 +3036,14 @@ namespace yae
       return;
     }
 
-    TRecordingPtr rec_ptr = found->second;
+    const TRecordingPtr & rec_ptr = found->second;
+    const Recording & rec = *rec_ptr;
+    std::string basepath = rec.get_filepath(dvr_->basedir_, "");
+    now_playing_.reset(new Playback(sidebar_sel_, name, basepath));
+    TOpenFile(basepath + ".seen", "ab").close();
+
     emit playback(rec_ptr);
+    dataChanged();
   }
 
   //----------------------------------------------------------------
