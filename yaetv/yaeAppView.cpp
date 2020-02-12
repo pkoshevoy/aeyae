@@ -155,12 +155,14 @@ namespace yae
     Splitter(const char * id,
              const ItemRef & lowerBound,
              const ItemRef & upperBound,
+             const ItemRef & unitSize,
              Orientation orientation,
              double initialPos = 0.0):
       InputArea(id, true),
       orientation_(orientation),
       lowerBound_(lowerBound),
       upperBound_(upperBound),
+      unitSize_(unitSize),
       posAnchor_(0),
       posOffset_(0)
     {
@@ -168,7 +170,8 @@ namespace yae
 
       double v_min = lowerBound_.get();
       double v_max = upperBound_.get();
-      posAnchor_ = initialPos * (v_max - v_min);
+      double unit_size = unitSize_.get();
+      posAnchor_ = initialPos * (v_max - v_min) / unit_size;
     }
 
     // virtual:
@@ -176,6 +179,7 @@ namespace yae
     {
       lowerBound_.uncache();
       upperBound_.uncache();
+      unitSize_.uncache();
       pos_.uncache();
       InputArea::uncache();
     }
@@ -184,7 +188,8 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      posAnchor_ = pos_.get();
+      double unit_size = unitSize_.get();
+      posAnchor_ = pos_.get() / unit_size;
       posOffset_ = 0;
       return true;
     }
@@ -196,7 +201,8 @@ namespace yae
     {
       TVec2D delta = rootCSysDragEnd - rootCSysDragStart;
       double d = (orientation_ == kHorizontal) ? delta.x() : delta.y();
-      posOffset_ = d;
+      double unit_size = unitSize_.get();
+      posOffset_ = d / unit_size;
       pos_.uncache();
 
 #if 0
@@ -214,6 +220,7 @@ namespace yae
     Orientation orientation_;
     ItemRef lowerBound_;
     ItemRef upperBound_;
+    ItemRef unitSize_;
 
     //----------------------------------------------------------------
     // Pos
@@ -229,7 +236,8 @@ namespace yae
       {
         double v_min = splitter_.lowerBound_.get();
         double v_max = splitter_.upperBound_.get();
-        double v = splitter_.posAnchor_ + splitter_.posOffset_;
+        double unit_size = splitter_.unitSize_.get();
+        double v = (splitter_.posAnchor_ + splitter_.posOffset_) * unit_size;
         result = std::min(v_max, std::max(v_min, v));
       }
 
@@ -1373,7 +1381,28 @@ namespace yae
     dvr_ = dvr;
   }
 
-  // bool AppView::resizeTo(const Canvas * canvas);
+  //----------------------------------------------------------------
+  // AppView::resizeTo
+  //
+  bool
+  AppView::resizeTo(const Canvas * canvas)
+  {
+    if (!ItemView::resizeTo(canvas))
+    {
+      return false;
+    }
+
+    if (epg_view_)
+    {
+      Item & epg_view = *epg_view_;
+      Scrollview & vsv = epg_view.get<Scrollview>("vsv");
+      Item & vsv_content = *(vsv.content_);
+      Scrollview & hsv = vsv_content.get<Scrollview>("hsv");
+      requestUncache(hsv.content_);
+    }
+
+    return true;
+  }
 
   //----------------------------------------------------------------
   // AppView::processKeyEvent
@@ -3080,6 +3109,8 @@ namespace yae
                        // upper bound:
                        hidden.addExpr
                        (new SplitterPos(view, overview, SplitterPos::kRight)),
+                       // unit size:
+                       ItemRef::reference(style.unit_size_),
                        // orientation:
                        Splitter::kHorizontal,
                        // initial position:

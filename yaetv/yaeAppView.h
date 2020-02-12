@@ -82,8 +82,8 @@ namespace yae
     AppStyle * style() const
     { return style_; }
 
-    // virtual: returns false if size didn't change
-    // bool resizeTo(const Canvas * canvas);
+    // virtual:
+    bool resizeTo(const Canvas * canvas);
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
