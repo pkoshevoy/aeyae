@@ -511,7 +511,7 @@ namespace yae
         std::size_t j0 = segment.i_;
         std::size_t j1 = segment.n_ + j0 - 1;
         uint64_t z = uint64_t(t);
-        while (j0 != j1)
+        while (j0 + 1 < j1)
         {
           std::size_t j = (j0 + j1) >> 1;
           if (z <= walltime_[j])
@@ -520,11 +520,13 @@ namespace yae
           }
           else
           {
-            j0 = j + 1;
+            j0 = j;
           }
         }
 
-        return TSeekPosPtr(new BytePos(filesize_[j0], t));
+        return (z == walltime_[j1] ?
+                TSeekPosPtr(new BytePos(filesize_[j1], t)) :
+                TSeekPosPtr(new BytePos(filesize_[j0], t)));
 #endif
       }
     }
