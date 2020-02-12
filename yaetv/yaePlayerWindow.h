@@ -34,10 +34,21 @@ namespace yae
     PlayerWindow(QWidget * parent = NULL,
                  Qt::WindowFlags f = Qt::WindowFlags());
 
-    void playback(const TRecordingPtr & rec_ptr,
-                  const IReaderPtr & reader,
+    void playback(const IReaderPtr & reader,
                   TCanvasWidget * sharedCtx = NULL,
                   bool startFromZeroTime = false);
+
+    void stopPlayback();
+
+    inline PlayerWidget * playerWidget() const
+    { return playerWidget_; }
+
+  signals:
+    void playbackNext();
+    void playbackPrev();
+    void playbackFinished();
+    void playbackRemove();
+    void fixupNextPrev();
 
   protected:
     // virtual:

@@ -183,8 +183,11 @@ namespace yae
                          const std::string & recordings_dir,
                          const IReaderPtr & reader_prototype):
     QMainWindow(NULL, 0),
+    contextMenu_(NULL),
+    shortcutExit_(NULL),
+    shortcutFullScreen_(NULL),
     playerWindow_(this),
-    reader_prototype_(reader_prototype),
+    readerPrototype_(reader_prototype),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir)
   {
@@ -284,6 +287,10 @@ namespace yae
     ok = connect(&view_, SIGNAL(confirm_delete(TRecordingPtr)),
                  this, SLOT(confirmDelete(TRecordingPtr)));
     YAE_ASSERT(ok);
+
+    ok = connect(&playerWindow_, SIGNAL(playbackFinished()),
+                 this, SLOT(playbackFinished()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -303,7 +310,7 @@ namespace yae
   {
     // add image://thumbnails/... provider:
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
-      image_provider(new ThumbnailProvider(reader_prototype_));
+      image_provider(new ThumbnailProvider(readerPrototype_));
     view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
 
     canvas_->initializePrivateBackend();
@@ -472,29 +479,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ConfirmDeleteRecording
-  //
-  struct ConfirmDeleteRecording : ConfirmView::Action
-  {
-    ConfirmDeleteRecording(AppView & view, const TRecordingPtr & rec):
-      view_(view),
-      rec_(rec)
-    {}
-
-    // virtual:
-    void operator()() const
-    {
-      const Recording & rec = *rec_;
-      view_.model()->delete_recording(rec);
-      view_.sync_ui();
-      view_.requestRepaint();
-    }
-
-    AppView & view_;
-    TRecordingPtr rec_;
-  };
-
-  //----------------------------------------------------------------
   // MainWindow::playbackRecording
   //
   void
@@ -503,15 +487,57 @@ namespace yae
     const Recording & rec = *rec_ptr;
     std::string path = rec.get_filepath(dvr_.basedir_.string());
 
-    IReaderPtr reader = yae::openFile(reader_prototype_,
+    IReaderPtr reader = yae::openFile(readerPrototype_,
                                       QString::fromUtf8(path.c_str()));
     if (!reader)
     {
       return;
     }
 
-    playerWindow_.playback(rec_ptr, reader, canvas_, false);
+    nowPlaying_ = rec_ptr;
+
+    std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
+    std::string title = strfmt("%i-%i %s, %s",
+                               rec.channel_major_,
+                               rec.channel_minor_,
+                               rec.title_.c_str(),
+                               time_str.c_str());
+    playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
+    playerWindow_.playback(reader, canvas_, false);
   }
+
+  //----------------------------------------------------------------
+  // ConfirmDeleteRecording
+  //
+  struct ConfirmDeleteRecording : ConfirmView::Action
+  {
+    ConfirmDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+      mainWindow_(mainWindow),
+      rec_(rec)
+    {}
+
+    // virtual:
+    void operator()() const
+    {
+      if (rec_ == mainWindow_.nowPlaying_)
+      {
+        mainWindow_.playerWindow_.stopPlayback();
+        mainWindow_.playerWindow_.hide();
+        mainWindow_.nowPlaying_.reset();
+      }
+
+      const Recording & rec = *rec_;
+      DVR & dvr = mainWindow_.dvr_;
+      dvr.delete_recording(rec);
+
+      AppView & appView = mainWindow_.view_;
+      appView.sync_ui();
+      appView.requestRepaint();
+    }
+
+    MainWindow & mainWindow_;
+    TRecordingPtr rec_;
+  };
 
   //----------------------------------------------------------------
   // MainWindow::confirmDelete
@@ -527,7 +553,7 @@ namespace yae
     confirm_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
     confirm_.fg_ = style.bg_;
 
-    confirm_.affirmative_.reset(new ConfirmDeleteRecording(view_, rec_ptr));
+    confirm_.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
     ConfirmView::Action & aff = *confirm_.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
@@ -543,6 +569,67 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DeclineDeleteRecording
+  //
+  struct DeclineDeleteRecording : ConfirmView::Action
+  {
+    DeclineDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+      mainWindow_(mainWindow),
+      rec_(rec)
+    {}
+
+    // virtual:
+    void operator()() const
+    {
+      if (rec_ == mainWindow_.nowPlaying_)
+      {
+        mainWindow_.playerWindow_.hide();
+        mainWindow_.nowPlaying_.reset();
+      }
+
+      AppView & appView = mainWindow_.view_;
+      appView.sync_ui();
+      appView.requestRepaint();
+    }
+
+    MainWindow & mainWindow_;
+    TRecordingPtr rec_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackFinished
+  //
+  void
+  MainWindow::playbackFinished()
+  {
+    TRecordingPtr rec_ptr = nowPlaying_;
+
+    // shortcuts:
+    const Recording & rec = *rec_ptr;
+    const AppStyle & style = *(view_.style());
+    ConfirmView & confirm = playerWindow_.playerWidget()->confirm_;
+
+    std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
+    confirm.message_ = TVarRef::constant(TVar(msg));
+    confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm.fg_ = style.bg_;
+
+    confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
+    ConfirmView::Action & aff = *confirm.affirmative_;
+    aff.message_ = TVarRef::constant(TVar("Delete"));
+    aff.bg_ = style.cursor_;
+    aff.fg_ = style.fg_;
+
+    confirm.negative_.reset(new DeclineDeleteRecording(*this, rec_ptr));
+    ConfirmView::Action & neg = *confirm.negative_;
+    neg.message_ = TVarRef::constant(TVar("Close"));
+    neg.bg_ = style.fg_;
+    neg.fg_ = style.bg_;
+
+    confirm.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::event
   //
   bool
@@ -554,6 +641,11 @@ namespace yae
         dynamic_cast<InitTuners::Discover *>(e);
       if (discover_tuners)
       {
+        const AppStyle & style = *(view_.style());
+        spinner_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+        spinner_.fg_ = style.bg_;
+        spinner_.text_color_ = style.bg_;
+
         spinner_.setEnabled(true);
         spinner_.setText(tr("looking for available tuners"));
         discover_tuners->accept();

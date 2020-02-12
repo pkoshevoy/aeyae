@@ -68,8 +68,20 @@ namespace yae
   {
     Rectangle & spinner = root.addNew<Rectangle>("spinner");
     spinner.anchors_.fill(root);
-    spinner.color_ = spinner.
-      addExpr(style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75));
+
+    ColorRef bg =
+      view.bg_.isValid() ? view.bg_ : spinner.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75));
+
+    ColorRef fg =
+      view.fg_.isValid() ? view.fg_ : spinner.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_));
+
+    ColorRef text_color =
+      view.text_color_.isValid() ? view.text_color_ : spinner.addExpr
+      (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
+
+    spinner.color_ = bg;
 
     typedef Transition::Polyline TPolyline;
     TransitionItem & transition = root.
@@ -131,12 +143,10 @@ namespace yae
       r9.anchors_.right_ =
         ItemRef::reference(root, kPropertyHeight, -0.04);
 
-      r0.color_ = r0.
-        addExpr(style_color_ref(view, &ItemViewStyle::fg_));
-
-      r3.color_ = ColorRef::reference(r0, kPropertyColor);
-      r6.color_ = ColorRef::reference(r0, kPropertyColor);
-      r9.color_ = ColorRef::reference(r0, kPropertyColor);
+      r0.color_ = fg;
+      r3.color_ = fg;
+      r6.color_ = fg;
+      r9.color_ = fg;
 
       r0.opacity_ = r0.addExpr
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(12 - i)));
@@ -153,11 +163,10 @@ namespace yae
 
     Text & text = root.addNew<Text>("text");
     text.anchors_.hcenter_ = ItemRef::reference(spinner, kPropertyHCenter);
-    text.anchors_.vcenter_ = ItemRef::reference(spinner, kPropertyHeight, 0.25);
+    text.anchors_.vcenter_ = ItemRef::scale(spinner, kPropertyHeight, 0.25);
     text.width_ = ItemRef::reference(spinner, kPropertyWidth, 0.9);
     text.background_ = ColorRef::transparent(spinner, kPropertyColor);
-    text.color_ = text.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
+    text.color_ = text_color;
     text.text_ = text.addExpr(new GetSpinnerText(view));
     text.fontSize_ = ItemRef::reference(style.title_height_, 0.625);
     text.elide_ = Qt::ElideMiddle;

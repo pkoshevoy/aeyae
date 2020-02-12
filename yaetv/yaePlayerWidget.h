@@ -96,8 +96,7 @@ namespace yae
 
     void initItemViews();
 
-    void playback(const TRecordingPtr & rec_ptr,
-                  const IReaderPtr & reader,
+    void playback(const IReaderPtr & reader,
                   bool start_from_zero_time = false);
     void stop();
 
@@ -118,6 +117,7 @@ namespace yae
     void setInPoint();
     void setOutPoint();
     void menuButtonPressed();
+    void playbackFinished();
 
   public slots:
 

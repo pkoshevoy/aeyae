@@ -39,8 +39,7 @@ namespace yae
   // PlayerWindow::playback
   //
   void
-  PlayerWindow::playback(const TRecordingPtr & rec_ptr,
-                         const IReaderPtr & reader,
+  PlayerWindow::playback(const IReaderPtr & reader,
                          TCanvasWidget * shared_ctx,
                          bool start_from_zero_time)
   {
@@ -70,25 +69,47 @@ namespace yae
       {
         menubar->addAction(view.menuChapters_->menuAction());
       }
+
+      bool ok = true;
+
+      ok = connect(&view, SIGNAL(playback_next()),
+                   this, SIGNAL(playbackNext()));
+      YAE_ASSERT(ok);
+
+      ok = connect(&view, SIGNAL(playback_prev()),
+                   this, SIGNAL(playbackPrev()));
+      YAE_ASSERT(ok);
+
+      ok = connect(&view, SIGNAL(playback_finished()),
+                   this, SIGNAL(playbackFinished()));
+      YAE_ASSERT(ok);
+
+      ok = connect(&view, SIGNAL(playback_remove()),
+                   this, SIGNAL(playbackRemove()));
+      YAE_ASSERT(ok);
+
+      ok = connect(&view, SIGNAL(fixup_next_prev()),
+                   this, SIGNAL(fixupNextPrev()));
+      YAE_ASSERT(ok);
     }
     else
     {
       show();
     }
 
-    if (rec_ptr)
-    {
-      const Recording & rec = *rec_ptr;
-      std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
-      std::string title = strfmt("%i-%i %s, %s",
-                                 rec.channel_major_,
-                                 rec.channel_minor_,
-                                 rec.title_.c_str(),
-                                 time_str.c_str());
-      window()->setWindowTitle(QString::fromUtf8(title.c_str()));
-    }
+    playerWidget_->playback(reader, start_from_zero_time);
+  }
 
-    playerWidget_->playback(rec_ptr, reader, start_from_zero_time);
+  //----------------------------------------------------------------
+  // PlayerWindow::stopPlayback
+  //
+  void
+  PlayerWindow::stopPlayback()
+  {
+    if (playerWidget_)
+    {
+      playerWidget_->stop();
+    }
   }
 
   //----------------------------------------------------------------
@@ -119,7 +140,7 @@ namespace yae
   PlayerWindow::closeEvent(QCloseEvent * event)
   {
     event->ignore();
-    playerWidget_->stop();
+    stopPlayback();
     hide();
   }
 
@@ -135,8 +156,7 @@ namespace yae
     if (key == Qt::Key_Escape)
     {
       event->accept();
-      PlayerView & view = playerWidget_->view_;
-      view.stopPlayback();
+      stopPlayback();
       hide();
     }
   }

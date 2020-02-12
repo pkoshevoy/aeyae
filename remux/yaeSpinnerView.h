@@ -49,11 +49,15 @@ namespace yae
     inline const QString & text() const
     { return text_; }
 
+    ColorRef fg_;
+    ColorRef bg_;
+    ColorRef text_color_;
+
   protected:
     ItemViewStyle * style_;
     TAnimatorPtr animator_;
     QString text_;
- };
+  };
 
 }
 

@@ -354,12 +354,11 @@ namespace yae
   // PlayerWidget::playback
   //
   void
-  PlayerWidget::playback(const TRecordingPtr & rec_ptr,
-                         const IReaderPtr & reader,
+  PlayerWidget::playback(const IReaderPtr & reader,
                          bool start_from_zero_time)
   {
     view_.setEnabled(true);
-    view_.playback(rec_ptr, reader, start_from_zero_time);
+    view_.playback(reader, start_from_zero_time);
   }
 
   //----------------------------------------------------------------
@@ -370,8 +369,6 @@ namespace yae
   {
     view_.stopPlayback();
     view_.setEnabled(false);
-    confirm_.setEnabled(false);
-    spinner_.setEnabled(false);
     cropView_.setEnabled(false);
   }
 

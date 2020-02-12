@@ -24,10 +24,6 @@
 #include "yaeTimelineItem.h"
 #include "yae_player_item.h"
 
-// local:
-#include "yaeAppView.h"
-#include "yae_dvr.h"
-
 
 namespace yae
 {
@@ -90,8 +86,7 @@ namespace yae
 
   public:
     bool is_playback_paused() const;
-    void playback(const TRecordingPtr & rec_ptr,
-                  const IReaderPtr & reader_ptr,
+    void playback(const IReaderPtr & reader_ptr,
                   bool start_from_zero_time = false);
 
   public slots:
@@ -260,9 +255,6 @@ namespace yae
     QTimer scrollWheelTimer_;
     double scrollStart_;
     double scrollOffset_;
-
-    // model:
-    TRecordingPtr recording_;
 
     // items:
     yae::shared_ptr<ItemViewStyle, Item> style_;

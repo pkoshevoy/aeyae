@@ -143,7 +143,7 @@ namespace yae
 
     bg_yes.anchors_.fill(tx_yes, -7.0);
     bg_yes.color_ = affirmative.bg_;
-    bg_yes.background_ = bg_;
+    bg_yes.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
     bg_yes.radius_ = ItemRef::scale(bg_yes, kPropertyHeight, 0.1);
 
     OnAction & on_yes = bg_yes.
@@ -164,7 +164,7 @@ namespace yae
     bg_no.anchors_.fill(tx_no, -7.0);
     bg_no.color_ = negative.bg_;
     // bg_no.colorBorder_ = negative.fg_;
-    bg_no.background_ = bg_;
+    bg_no.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
     bg_no.radius_ = ItemRef::scale(bg_no, kPropertyHeight, 0.1);
     // bg_no.border_ = ItemRef::constant(0.25);
 

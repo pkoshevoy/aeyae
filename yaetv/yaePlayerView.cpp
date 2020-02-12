@@ -56,25 +56,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ShowPlayer
-  //
-  struct ShowPlayer : public TBoolExpr
-  {
-    ShowPlayer(const PlayerView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = view_.recording_;
-    }
-
-    const PlayerView & view_;
-  };
-
-
-  //----------------------------------------------------------------
   // IsPlaybackPaused
   //
   struct IsPlaybackPaused : public TBoolExpr
@@ -973,6 +954,9 @@ namespace yae
     YAE_ASSERT(ok);
 #endif
 
+    // apply default settings:
+    playbackLoop();
+
     // apply saved settings:
     playbackColorConverter();
     playbackLoopFilter();
@@ -1188,8 +1172,7 @@ namespace yae
   // PlayerView::playback
   //
   void
-  PlayerView::playback(const TRecordingPtr & rec_ptr,
-                       const IReaderPtr & reader_ptr,
+  PlayerView::playback(const IReaderPtr & reader_ptr,
                        bool start_from_zero_time)
   {
     TimelineModel & timeline = timeline_model();
@@ -1210,7 +1193,6 @@ namespace yae
                       subsInfo,
                       subsFormat);
 
-    recording_ = rec_ptr;
     player_->playback(reader_ptr,
                       audioInfo,
                       audioTraits,
@@ -1706,7 +1688,7 @@ namespace yae
   void
   PlayerView::stopPlayback()
   {
-    recording_.reset();
+    bookmarkTimer_.stop();
     player_->playback_stop();
     timeline_->modelChanged();
     timeline_->maybeAnimateOpacity();
@@ -1749,8 +1731,7 @@ namespace yae
       return;
     }
 
-    bookmarkTimer_.stop();
-    actionPlay_->setText(tr("Play"));
+    stopPlayback();
 
     emit playback_finished();
   }

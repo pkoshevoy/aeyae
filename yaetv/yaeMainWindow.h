@@ -93,6 +93,7 @@ namespace yae
     void swapShortcuts();
     void playbackRecording(TRecordingPtr);
     void confirmDelete(TRecordingPtr);
+    void playbackFinished();
 
   protected:
     // virtual:
@@ -101,8 +102,6 @@ namespace yae
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
-    PlayerWindow playerWindow_;
-
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;
 
@@ -110,8 +109,11 @@ namespace yae
     QShortcut * shortcutExit_;
     QShortcut * shortcutFullScreen_;
 
+  public:
+    PlayerWindow playerWindow_;
+
     // file reader prototype factory instance:
-    IReaderPtr reader_prototype_;
+    IReaderPtr readerPrototype_;
 
     // frame canvas:
     TCanvasWidget * canvas_;
@@ -120,7 +122,9 @@ namespace yae
     AppView view_;
     ConfirmView confirm_;
     SpinnerView spinner_;
+    TRecordingPtr nowPlaying_;
 
+  protected:
     // background thread, etc...
     std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
