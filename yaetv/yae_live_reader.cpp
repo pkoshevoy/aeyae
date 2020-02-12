@@ -496,6 +496,8 @@ namespace yae
 
       if (dt > 0 && t <= double(t1))
       {
+#if 0
+        // linear approximation:
         double s = std::max(0.0, t - double(t0)) / double(dt);
         double offset = double(segment.bytes(*this) * s);
 
@@ -504,6 +506,26 @@ namespace yae
         uint64_t pos = segment.p0(*this) + uint64_t(offset);
         pos -= pos % 188;
         return TSeekPosPtr(new BytePos(pos, t));
+#else
+        // binary search through walltime:
+        std::size_t j0 = segment.i_;
+        std::size_t j1 = segment.n_ + j0 - 1;
+        uint64_t z = uint64_t(t);
+        while (j0 != j1)
+        {
+          std::size_t j = (j0 + j1) >> 1;
+          if (z <= walltime_[j])
+          {
+            j1 = j;
+          }
+          else
+          {
+            j0 = j + 1;
+          }
+        }
+
+        return TSeekPosPtr(new BytePos(filesize_[j0], t));
+#endif
       }
     }
 
