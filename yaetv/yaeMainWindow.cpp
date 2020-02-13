@@ -613,9 +613,11 @@ namespace yae
   MainWindow::playbackFinished()
   {
     TRecordingPtr rec_ptr = nowPlaying_;
+    const Recording & rec = *rec_ptr;
+    std::string rec_filepath = rec.get_filepath(dvr_.basedir_.string());
+    yae::remove_bookmark(rec_filepath);
 
     // shortcuts:
-    const Recording & rec = *rec_ptr;
     const AppStyle & style = *(view_.style());
     ConfirmView & confirm = playerWindow_.playerWidget()->confirm_;
 

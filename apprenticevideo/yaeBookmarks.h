@@ -61,10 +61,33 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // find_folder_bookmark
+  //
+  bool
+  find_folder_bookmark(const std::string & filepath,
+                       TBookmark & bookmark);
+
+  //----------------------------------------------------------------
+  // save_folder_bookmark
+  //
+  bool
+  save_folder_bookmark(const std::string & filepath,
+                       const IReader * reader,
+                       const double & positionInSeconds);
+
+  //----------------------------------------------------------------
+  // remove_folder_bookmark
+  //
+  bool
+  remove_folder_bookmark(const std::string & filepath);
+
+
+  //----------------------------------------------------------------
   // find_bookmark
   //
   bool
-  find_bookmark(const std::string & filepath, TBookmark & bookmark);
+  find_bookmark(const std::string & filepath,
+                TBookmark & bookmark);
 
   //----------------------------------------------------------------
   // save_bookmark

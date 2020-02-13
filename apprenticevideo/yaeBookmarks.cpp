@@ -254,10 +254,10 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // find_bookmark
+  // find_folder_bookmark
   //
   bool
-  find_bookmark(const std::string & filepath, TBookmark & bookmark)
+  find_folder_bookmark(const std::string & filepath, TBookmark & bookmark)
   {
     QString path = QString::fromUtf8(filepath.c_str());
 
@@ -285,12 +285,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // save_bookmark
+  // save_folder_bookmark
   //
   bool
-  save_bookmark(const std::string & filepath,
-                const IReader * reader,
-                const double & positionInSeconds)
+  save_folder_bookmark(const std::string & filepath,
+                       const IReader * reader,
+                       const double & positionInSeconds)
   {
     QString path = QString::fromUtf8(filepath.c_str());
 
@@ -311,10 +311,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // remove_bookmark
+  // remove_folder_bookmark
   //
   bool
-  remove_bookmark(const std::string & filepath)
+  remove_folder_bookmark(const std::string & filepath)
   {
     QString path = QString::fromUtf8(filepath.c_str());
 
@@ -329,6 +329,60 @@ namespace yae
     keys.pop_back();
     std::string groupHash = yae::getKeyPathHash(keys);
     return removeBookmark(groupHash);
+  }
+
+
+  //----------------------------------------------------------------
+  // find_bookmark
+  //
+  bool
+  find_bookmark(const std::string & filepath, TBookmark & bookmark)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    if (keys.empty())
+    {
+      return false;
+    }
+
+    std::string pathHash = yae::getKeyPathHash(keys);
+    bool found = loadBookmark(pathHash, bookmark);
+    return found;
+  }
+
+  //----------------------------------------------------------------
+  // save_bookmark
+  //
+  bool
+  save_bookmark(const std::string & filepath,
+                const IReader * reader,
+                const double & positionInSeconds)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    std::string pathHash = yae::getKeyPathHash(keys);
+    return saveBookmark(pathHash, pathHash, reader, positionInSeconds);
+  }
+
+  //----------------------------------------------------------------
+  // remove_bookmark
+  //
+  bool
+  remove_bookmark(const std::string & filepath)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    std::string pathHash = yae::getKeyPathHash(keys);
+    return removeBookmark(pathHash);
   }
 
 }
