@@ -625,8 +625,10 @@ namespace yae
       return 0;
     }
 
-    yae::Application::setApplicationName("yaetv");
-    yae::Application::setOrganizationName("PavelKoshevoy");
+    yae::kApplication = QString::fromUtf8("yaetv");
+    yae::kOrganization = QString::fromUtf8("PavelKoshevoy");
+    yae::Application::setApplicationName(yae::kApplication);
+    yae::Application::setOrganizationName(yae::kOrganization);
     yae::Application::setOrganizationDomain("sourceforge.net");
 
 #ifdef YAE_USE_QT5

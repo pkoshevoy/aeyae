@@ -68,6 +68,20 @@ namespace yae
   extern YAEUI_API const QString kExtEyetv;
 
   //----------------------------------------------------------------
+  // kOrganization
+  //
+  // default: PavelKoshevoy, except on mac it's sourceforge.net
+  //
+  extern YAEUI_API QString kOrganization;
+
+  //----------------------------------------------------------------
+  // kApplication
+  //
+  // default: ApprenticeVideo
+  //
+  extern YAEUI_API QString kApplication;
+
+  //----------------------------------------------------------------
   // toQString
   //
   YAEUI_API QString

@@ -863,13 +863,29 @@ namespace yae
     init_actions();
     translate_ui();
 
-    bool ok = connect(&timelineTimer_, SIGNAL(timeout()),
-                      this, SLOT(sync_ui()));
-    YAE_ASSERT(ok);
-
     // for scroll-wheel event buffering,
     // used to avoid frequent seeking by small distances:
     scrollWheelTimer_.setSingleShot(true);
+
+    // for re-running auto-crop soon after loading next file in the playlist:
+    autocropTimer_.setSingleShot(true);
+
+    // update a bookmark every 3 minutes during playback:
+    bookmarkTimer_.setInterval(180000);
+
+    bool ok = true;
+
+    ok = connect(&autocropTimer_, SIGNAL(timeout()),
+                 this, SLOT(playbackCropFrameAutoDetect()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&bookmarkTimer_, SIGNAL(timeout()),
+                 this, SIGNAL(save_bookmark()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&timelineTimer_, SIGNAL(timeout()),
+                 this, SLOT(sync_ui()));
+    YAE_ASSERT(ok);
 
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
                  this, SLOT(scrollWheelTimerExpired()));
@@ -1173,6 +1189,7 @@ namespace yae
   //
   void
   PlayerView::playback(const IReaderPtr & reader_ptr,
+                       const IBookmark * bookmark,
                        bool start_from_zero_time)
   {
     TimelineModel & timeline = timeline_model();
@@ -1199,9 +1216,8 @@ namespace yae
                       videoInfo,
                       videoTraits,
                       subsInfo,
-                      subsFormat);
-    timeline_->forceAnimateControls();
-    actionPlay_->setText(tr("Pause"));
+                      subsFormat,
+                      bookmark);
 
     if (reader_ptr)
     {
@@ -1240,7 +1256,32 @@ namespace yae
       }
     }
 
-    QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+    if (actionCropFrameAutoDetect_->isChecked())
+    {
+      autocropTimer_.start(1900);
+    }
+    else
+    {
+      QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+    }
+
+    timeline_->modelChanged();
+    timeline_->maybeAnimateOpacity();
+
+    if (!is_playback_paused())
+    {
+      timeline_->forceAnimateControls();
+      actionPlay_->setText(tr("Pause"));
+
+      bookmarkTimer_.start();
+    }
+    else
+    {
+      timeline_->maybeAnimateControls();
+      actionPlay_->setText(tr("Play"));
+
+      bookmarkTimer_.stop();
+    }
 
     emit fixup_next_prev();
   }
@@ -1711,11 +1752,16 @@ namespace yae
     {
       timeline_->forceAnimateControls();
       actionPlay_->setText(tr("Pause"));
+
+      bookmarkTimer_.start();
     }
     else
     {
       timeline_->maybeAnimateControls();
       actionPlay_->setText(tr("Play"));
+
+      bookmarkTimer_.stop();
+      emit save_bookmark();
     }
   }
 

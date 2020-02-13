@@ -97,6 +97,7 @@ namespace yae
     void initItemViews();
 
     void playback(const IReaderPtr & reader,
+                  const IBookmark * bookmark = NULL,
                   bool start_from_zero_time = false);
     void stop();
 

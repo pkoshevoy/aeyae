@@ -94,6 +94,7 @@ namespace yae
     void playbackRecording(TRecordingPtr);
     void confirmDelete(TRecordingPtr);
     void playbackFinished();
+    void saveBookmark();
 
   protected:
     // virtual:

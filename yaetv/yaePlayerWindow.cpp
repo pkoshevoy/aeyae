@@ -40,6 +40,7 @@ namespace yae
   //
   void
   PlayerWindow::playback(const IReaderPtr & reader,
+                         const IBookmark * bookmark,
                          TCanvasWidget * shared_ctx,
                          bool start_from_zero_time)
   {
@@ -91,13 +92,17 @@ namespace yae
       ok = connect(&view, SIGNAL(fixup_next_prev()),
                    this, SIGNAL(fixupNextPrev()));
       YAE_ASSERT(ok);
+
+      ok = connect(&view, SIGNAL(save_bookmark()),
+                   this, SIGNAL(saveBookmark()));
+      YAE_ASSERT(ok);
     }
     else
     {
       show();
     }
 
-    playerWidget_->playback(reader, start_from_zero_time);
+    playerWidget_->playback(reader, bookmark, start_from_zero_time);
   }
 
   //----------------------------------------------------------------

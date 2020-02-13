@@ -83,10 +83,12 @@ namespace yae
     void playback_finished();
     void playback_remove();
     void fixup_next_prev();
+    void save_bookmark();
 
   public:
     bool is_playback_paused() const;
     void playback(const IReaderPtr & reader_ptr,
+                  const IBookmark * bookmark = NULL,
                   bool start_from_zero_time = false);
 
   public slots:

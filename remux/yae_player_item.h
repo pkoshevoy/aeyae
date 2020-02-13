@@ -61,7 +61,7 @@ namespace yae
                   const std::vector<VideoTraits> & videoTraits,
                   const std::vector<TTrackInfo> & subsInfo,
                   const std::vector<TSubsFormat> & subsFormat,
-                  const TBookmark * bookmark = NULL,
+                  const IBookmark * bookmark = NULL,
                   const TTime & seekTime = TTime(0, 0));
 
     void playback(const IReaderPtr & reader,

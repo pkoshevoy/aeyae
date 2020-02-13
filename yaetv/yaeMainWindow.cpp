@@ -291,6 +291,10 @@ namespace yae
     ok = connect(&playerWindow_, SIGNAL(playbackFinished()),
                  this, SLOT(playbackFinished()));
     YAE_ASSERT(ok);
+
+    ok = connect(&playerWindow_, SIGNAL(saveBookmark()),
+                 this, SLOT(saveBookmark()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -503,7 +507,13 @@ namespace yae
                                rec.title_.c_str(),
                                time_str.c_str());
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
-    playerWindow_.playback(reader, canvas_, false);
+
+    TBookmark bookmark;
+    bool found_bookmark = yae::find_bookmark(path, bookmark);
+    playerWindow_.playback(reader,
+                           found_bookmark ? &bookmark : NULL,
+                           canvas_,
+                           false);
   }
 
   //----------------------------------------------------------------
@@ -627,6 +637,33 @@ namespace yae
     neg.fg_ = style.bg_;
 
     confirm.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::saveBookmark
+  //
+  void
+  MainWindow::saveBookmark()
+  {
+    PlayerWidget * playerWidget = playerWindow_.playerWidget();
+    if (!playerWidget)
+    {
+      return;
+    }
+
+    if (!nowPlaying_)
+    {
+      return;
+    }
+
+    const Recording & rec = *nowPlaying_;
+    std::string rec_filepath = rec.get_filepath(dvr_.basedir_.string());
+
+    PlayerView & view = playerWidget->view();
+    IReader * reader = view.get_reader();
+    TimelineModel & timeline = view.timeline_model();
+    double positionInSeconds = timeline.currentTime();
+    yae::save_bookmark(rec_filepath, reader, positionInSeconds);
   }
 
   //----------------------------------------------------------------

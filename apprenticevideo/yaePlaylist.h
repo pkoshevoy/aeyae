@@ -25,26 +25,11 @@
 
 // local includes:
 #include "yaeBookmarks.h"
+#include "yaePlaylistKey.h"
 
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // PlaylistKey
-  //
-  struct PlaylistKey
-  {
-    PlaylistKey(const QString & key = QString(),
-                const QString & ext = QString());
-
-    bool operator == (const PlaylistKey & k) const;
-    bool operator < (const PlaylistKey & k) const;
-    bool operator > (const PlaylistKey & k) const;
-
-    QString key_;
-    QString ext_;
-  };
 
   //----------------------------------------------------------------
   // TPlaylistTree

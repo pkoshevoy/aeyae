@@ -179,6 +179,8 @@ set(project_sources
 
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
+  ../apprenticevideo/yaeBookmarks.cpp
+  ../apprenticevideo/yaeBookmarks.h
   ../apprenticevideo/yaeCanvas.h
   ../apprenticevideo/yaeCanvas.cpp
   ../apprenticevideo/yaeCanvasWidget.h
@@ -213,6 +215,8 @@ set(project_sources
   ../apprenticevideo/yaeItemView.h
   ../apprenticevideo/yaeItemViewStyle.cpp
   ../apprenticevideo/yaeItemViewStyle.h
+  ../apprenticevideo/yaePlaylistKey.cpp
+  ../apprenticevideo/yaePlaylistKey.h
   ../apprenticevideo/yaeProperty.h
   ../apprenticevideo/yaeRectangle.cpp
   ../apprenticevideo/yaeRectangle.h

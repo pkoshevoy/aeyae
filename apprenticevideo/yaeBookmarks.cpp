@@ -14,9 +14,10 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>
 
-// yae includes:
-#include <yaeBookmarks.h>
-#include <yaeUtilsQt.h>
+// local:
+#include "yaeBookmarks.h"
+#include "yaePlaylistKey.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -249,6 +250,85 @@ namespace yae
   {
     bool ok = removeSetting(getBookmarkHash(groupHash));
     return ok;
+  }
+
+
+  //----------------------------------------------------------------
+  // find_bookmark
+  //
+  bool
+  find_bookmark(const std::string & filepath, TBookmark & bookmark)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    if (keys.empty())
+    {
+      return false;
+    }
+
+    PlaylistKey nameKey = keys.back();
+    std::string nameHash = yae::getKeyHash(nameKey);
+    keys.pop_back();
+
+    std::string groupHash = yae::getKeyPathHash(keys);
+
+    if (!loadBookmark(groupHash, bookmark))
+    {
+      return false;
+    }
+
+    bool found = (bookmark.itemHash_ == nameHash);
+    return found;
+  }
+
+  //----------------------------------------------------------------
+  // save_bookmark
+  //
+  bool
+  save_bookmark(const std::string & filepath,
+                const IReader * reader,
+                const double & positionInSeconds)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    if (keys.empty())
+    {
+      return false;
+    }
+
+    PlaylistKey nameKey = keys.back();
+    std::string nameHash = yae::getKeyHash(nameKey);
+    keys.pop_back();
+
+    std::string groupHash = yae::getKeyPathHash(keys);
+    return saveBookmark(groupHash, nameHash, reader, positionInSeconds);
+  }
+
+  //----------------------------------------------------------------
+  // remove_bookmark
+  //
+  bool
+  remove_bookmark(const std::string & filepath)
+  {
+    QString path = QString::fromUtf8(filepath.c_str());
+
+    std::list<PlaylistKey> keys;
+    getKeyPath(keys, path);
+
+    if (keys.empty())
+    {
+      return false;
+    }
+
+    keys.pop_back();
+    std::string groupHash = yae::getKeyPathHash(keys);
+    return removeBookmark(groupHash);
   }
 
 }

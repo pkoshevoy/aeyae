@@ -355,10 +355,11 @@ namespace yae
   //
   void
   PlayerWidget::playback(const IReaderPtr & reader,
+                         const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
     view_.setEnabled(true);
-    view_.playback(reader, start_from_zero_time);
+    view_.playback(reader, bookmark, start_from_zero_time);
   }
 
   //----------------------------------------------------------------

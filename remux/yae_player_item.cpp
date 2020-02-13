@@ -365,7 +365,7 @@ namespace yae
                        const std::vector<VideoTraits> & videoTraits,
                        const std::vector<TTrackInfo> & subsInfo,
                        const std::vector<TSubsFormat> & subsFormat,
-                       const TBookmark * bookmark,
+                       const IBookmark * bookmark,
                        const TTime & seekTime)
   {
     if (!reader)
@@ -463,7 +463,13 @@ namespace yae
       }
     }
 
-    playback(reader, vtrack, atrack, strack, cc, seekTime);
+    TTime startHere = seekTime;
+    if (startHere.invalid() && bookmark)
+    {
+      startHere = TTime(bookmark->positionInSeconds_);
+    }
+
+    playback(reader, vtrack, atrack, strack, cc, startHere);
 
     if (rememberSelectedVideoTrack)
     {

@@ -35,6 +35,7 @@ namespace yae
                  Qt::WindowFlags f = Qt::WindowFlags());
 
     void playback(const IReaderPtr & reader,
+                  const IBookmark * bookmark = NULL,
                   TCanvasWidget * sharedCtx = NULL,
                   bool startFromZeroTime = false);
 
@@ -49,6 +50,7 @@ namespace yae
     void playbackFinished();
     void playbackRemove();
     void fixupNextPrev();
+    void saveBookmark();
 
   protected:
     // virtual:

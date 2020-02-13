@@ -59,6 +59,27 @@ namespace yae
     std::list<std::string> itemHash_;
   };
 
+
+  //----------------------------------------------------------------
+  // find_bookmark
+  //
+  bool
+  find_bookmark(const std::string & filepath, TBookmark & bookmark);
+
+  //----------------------------------------------------------------
+  // save_bookmark
+  //
+  bool
+  save_bookmark(const std::string & filepath,
+                const IReader * reader,
+                const double & positionInSeconds);
+
+  //----------------------------------------------------------------
+  // remove_bookmark
+  //
+  bool
+  remove_bookmark(const std::string & filepath);
+
 }
 
 

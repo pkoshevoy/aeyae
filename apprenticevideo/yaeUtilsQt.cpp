@@ -48,11 +48,11 @@ namespace yae
   const QString kWebKitCache = QString::fromUtf8("WebKitCache");
 
 #ifdef __APPLE__
-  static QString kOrganization = QString::fromUtf8("sourceforge.net");
-  static QString kApplication = QString::fromUtf8("apprenticevideo");
+  QString kOrganization = QString::fromUtf8("sourceforge.net");
+  QString kApplication = QString::fromUtf8("apprenticevideo");
 #else
-  static QString kOrganization = QString::fromUtf8("PavelKoshevoy");
-  static QString kApplication = QString::fromUtf8("ApprenticeVideo");
+  QString kOrganization = QString::fromUtf8("PavelKoshevoy");
+  QString kApplication = QString::fromUtf8("ApprenticeVideo");
 #endif
 
 

@@ -166,6 +166,8 @@ set(project_sources
   yaeMainWindow.cpp
   yaePlaylist.h
   yaePlaylist.cpp
+  yaePlaylistKey.h
+  yaePlaylistKey.cpp
   yaePlaylistModel.h
   yaePlaylistModel.cpp
   yaePlaylistModelProxy.h
