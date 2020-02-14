@@ -58,6 +58,82 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // save_bookmark
+  //
+  static void
+  save_bookmark(const DVR & dvr,
+                const Recording & rec,
+                const IReader * reader,
+                double position_in_sec)
+  {
+    Json::Value seen;
+    Json::Value & bookmark = seen["bookmark"];
+
+    bookmark["sel_audio"] = Json::UInt64(reader->getSelectedAudioTrackIndex());
+    bookmark["sel_video"] = Json::UInt64(reader->getSelectedVideoTrackIndex());
+
+    Json::Value & sel_subtt = bookmark["sel_subtt"];
+    sel_subtt = Json::Value(Json::arrayValue);
+
+    Json::UInt64 nsubs = reader->subsCount();
+    for (Json::UInt64 i = 0; i < nsubs; i++)
+    {
+      if (reader->getSubsRender(i))
+      {
+        sel_subtt.append(i);
+      }
+    }
+
+    unsigned int cc = reader->getRenderCaptions();
+    if (cc)
+    {
+      bookmark["cc"] = cc;
+    }
+
+    bookmark["position_in_sec"] = position_in_sec;
+
+    std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
+    TOpenFile(filepath, "wb").save(seen);
+  }
+
+  //----------------------------------------------------------------
+  // load_bookmark
+  //
+  yae::shared_ptr<IBookmark>
+  load_bookmark(const DVR & dvr, const Recording & rec)
+  {
+    yae::shared_ptr<IBookmark> bookmark_ptr;
+    std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
+    Json::Value seen;
+
+    if (TOpenFile(filepath, "rb").load(seen))
+    {
+      const Json::Value & jv = seen["bookmark"];
+
+      bookmark_ptr.reset(new IBookmark());
+      IBookmark & bookmark = *bookmark_ptr;
+
+      bookmark.atrack_ = jv.get("sel_audio", 0).asUInt64();
+      bookmark.vtrack_ = jv.get("sel_video", 0).asUInt64();
+
+      const Json::Value & sel_subtt = jv["sel_subtt"];
+      for (Json::Value::const_iterator
+             k = sel_subtt.begin(); k != sel_subtt.end(); ++k)
+      {
+        bookmark.subs_.push_back(std::size_t((*k).asUInt64()));
+      }
+
+      bookmark.cc_ = jv.get("cc", 0).asUInt();
+
+      bookmark.positionInSeconds_ =
+        jv.get("position_in_sec", 0.0).asDouble();
+    }
+
+    return bookmark_ptr;
+  }
+
+
+  //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   //
   AboutDialog::AboutDialog(QWidget * parent):
@@ -508,12 +584,8 @@ namespace yae
                                time_str.c_str());
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 
-    TBookmark bookmark;
-    bool found_bookmark = yae::find_bookmark(path, bookmark);
-    playerWindow_.playback(reader,
-                           found_bookmark ? &bookmark : NULL,
-                           canvas_,
-                           false);
+    yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
+    playerWindow_.playback(reader, bookmark.get(), canvas_, false);
   }
 
   //----------------------------------------------------------------
@@ -614,8 +686,15 @@ namespace yae
   {
     TRecordingPtr rec_ptr = nowPlaying_;
     const Recording & rec = *rec_ptr;
-    std::string rec_filepath = rec.get_filepath(dvr_.basedir_.string());
-    yae::remove_bookmark(rec_filepath);
+
+    PlayerWidget * playerWidget = playerWindow_.playerWidget();
+    if (playerWidget)
+    {
+      const PlayerView & view = playerWidget->view();
+      const IReader * reader = view.get_reader();
+      const TimelineModel & timeline = view.timeline_model();
+      save_bookmark(dvr_, rec, reader, timeline.timelineStart());
+    }
 
     // shortcuts:
     const AppStyle & style = *(view_.style());
@@ -659,13 +738,10 @@ namespace yae
     }
 
     const Recording & rec = *nowPlaying_;
-    std::string rec_filepath = rec.get_filepath(dvr_.basedir_.string());
-
-    PlayerView & view = playerWidget->view();
-    IReader * reader = view.get_reader();
-    TimelineModel & timeline = view.timeline_model();
-    double positionInSeconds = timeline.currentTime();
-    yae::save_bookmark(rec_filepath, reader, positionInSeconds);
+    const PlayerView & view = playerWidget->view();
+    const IReader * reader = view.get_reader();
+    const TimelineModel & timeline = view.timeline_model();
+    save_bookmark(dvr_, rec, reader, timeline.currentTime());
   }
 
   //----------------------------------------------------------------

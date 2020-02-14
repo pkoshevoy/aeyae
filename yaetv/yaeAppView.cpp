@@ -3069,7 +3069,6 @@ namespace yae
     const Recording & rec = *rec_ptr;
     std::string basepath = rec.get_filepath(dvr_->basedir_, "");
     now_playing_.reset(new Playback(sidebar_sel_, name, basepath));
-    TOpenFile(basepath + ".seen", "ab").close();
 
     emit playback(rec_ptr);
     dataChanged();

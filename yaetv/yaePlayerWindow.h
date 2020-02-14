@@ -44,6 +44,9 @@ namespace yae
     inline PlayerWidget * playerWidget() const
     { return playerWidget_; }
 
+    inline IReader * reader() const
+    { return playerWidget_ ? playerWidget_->view().get_reader() : NULL; }
+
   signals:
     void playbackNext();
     void playbackPrev();

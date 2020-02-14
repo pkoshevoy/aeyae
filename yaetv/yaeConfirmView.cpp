@@ -116,11 +116,11 @@ namespace yae
     Text & text = root.addNew<Text>("text");
     text.anchors_.top_ = ItemRef::scale(root, kPropertyHeight, 0.33);
     text.anchors_.hcenter_ = ItemRef::reference(root, kPropertyHCenter);
-    text.width_ = ItemRef::scale(root, kPropertyWidth, 0.5);
+    text.width_ = ItemRef::scale(root, kPropertyWidth, 0.67);
     text.text_ = message_;
     text.color_ = fg_;
     text.background_ = bg_;
-    text.fontSize_ = ItemRef::reference(style.unit_size_, 0.625);
+    text.fontSize_ = ItemRef::reference(style.title_height_);
     text.elide_ = Qt::ElideNone;
     text.setAttr("linewrap", true);
 

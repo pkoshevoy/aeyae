@@ -870,8 +870,8 @@ namespace yae
     // for re-running auto-crop soon after loading next file in the playlist:
     autocropTimer_.setSingleShot(true);
 
-    // update a bookmark every 3 minutes during playback:
-    bookmarkTimer_.setInterval(180000);
+    // update a bookmark every 10 seconds during playback:
+    bookmarkTimer_.setInterval(10000);
 
     bool ok = true;
 
@@ -1777,9 +1777,9 @@ namespace yae
       return;
     }
 
-    stopPlayback();
-
     emit playback_finished();
+
+    stopPlayback();
   }
 
   //----------------------------------------------------------------
