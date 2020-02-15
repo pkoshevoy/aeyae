@@ -152,6 +152,7 @@ namespace yae
 
   public:
     Private();
+    ~Private();
 
     bool open(const std::string & filepath);
     bool updateTimelinePositions();
@@ -265,6 +266,14 @@ namespace yae
       currRange_(std::numeric_limits<std::size_t>::max())
   {
     movie_.setAdjustTimestamps(&adjustTimestampsCallback, this);
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::~Private
+  //
+  LiveReader::Private::~Private()
+  {
+    movie_.close();
   }
 
   //----------------------------------------------------------------

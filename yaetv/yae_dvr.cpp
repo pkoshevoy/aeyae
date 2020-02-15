@@ -619,7 +619,7 @@ namespace yae
     open_dat(basedir);
     write_dat();
 
-    YAE_ASSERT(mpg_->write(data.get(), data.size()));
+    YAE_EXPECT(mpg_->write(data.get(), data.size()));
     mpg_size_ += data.size();
   }
 
