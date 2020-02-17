@@ -133,7 +133,7 @@ namespace yae
     tx_yes.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
     tx_yes.anchors_.right_ = ItemRef::reference(text, kPropertyHCenter);
     tx_yes.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_yes.margins_.set_right(ItemRef::reference(style.unit_size_));
+    tx_yes.margins_.set_right(ItemRef::reference(style.title_height_));
     tx_yes.text_ = affirmative.message_;
     tx_yes.color_ = affirmative.fg_;
     tx_yes.background_ = affirmative.bg_;
@@ -153,7 +153,7 @@ namespace yae
     tx_no.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
     tx_no.anchors_.left_ = ItemRef::reference(text, kPropertyHCenter);
     tx_no.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_no.margins_.set_left(ItemRef::reference(style.unit_size_));
+    tx_no.margins_.set_left(ItemRef::reference(style.title_height_));
     tx_no.text_ = negative.message_;
     tx_no.color_ = negative.fg_;
     tx_no.background_ = negative.bg_;

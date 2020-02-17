@@ -394,9 +394,15 @@ namespace yae
       uint64_t walltime = bs.read_bits(64);
       uint64_t filesize = bs.read_bits(64);
 
-      YAE_ASSERT(walltime_.empty() ||
-                 (walltime_.back() < walltime &&
-                  filesize_.back() <= filesize));
+      // make sure walltime and filesize are monotonically increasing:
+      if (!walltime_.empty() &&
+          (walltime <= walltime_.back() ||
+           filesize < filesize_.back()))
+      {
+        YAE_EXPECT(walltime_.back() < walltime);
+        YAE_EXPECT(filesize_.back() < filesize);
+        continue;
+      }
 
       if (segments_.empty())
       {
