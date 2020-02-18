@@ -218,8 +218,6 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
-    root.uncache();
-    uncache_.clear();
 
     if (enable)
     {
@@ -228,6 +226,9 @@ namespace yae
       animator_.reset(new SpinnerAnimator(*this));
       addAnimator(animator_);
     }
+
+    root.uncache();
+    uncache_.clear();
 
     ItemView::setEnabled(enable);
   }

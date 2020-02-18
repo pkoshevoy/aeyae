@@ -95,10 +95,14 @@ namespace yae
     void confirmDelete(TRecordingPtr);
     void playbackFinished();
     void saveBookmark();
+    void playerWindowClosed();
+    void playerEnteringFullScreen();
+    void playerExitingFullScreen();
 
   protected:
     // virtual:
     bool event(QEvent * e);
+    void changeEvent(QEvent * e);
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
@@ -108,9 +112,9 @@ namespace yae
 
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;
-    QShortcut * shortcutFullScreen_;
 
   public:
+    PlayerWidget * playerWidget_;
     PlayerWindow playerWindow_;
 
     // file reader prototype factory instance:

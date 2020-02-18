@@ -1001,8 +1001,6 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
-    root.uncache();
-    uncache_.clear();
 
     if (enable)
     {
@@ -1013,6 +1011,9 @@ namespace yae
     {
       timelineTimer_.stop();
     }
+
+    root.uncache();
+    uncache_.clear();
 
     ItemView::setEnabled(enable);
   }
@@ -1133,6 +1134,26 @@ namespace yae
     }
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::insert_menus
+  //
+  void
+  PlayerView::insert_menus(const IReaderPtr & reader,
+                           QMenuBar * menubar,
+                           QAction * before)
+  {
+    menubar->insertAction(before, menuPlayback_->menuAction());
+    menubar->insertAction(before, menuAudio_->menuAction());
+    menubar->insertAction(before, menuVideo_->menuAction());
+    menubar->insertAction(before, menuSubs_->menuAction());
+
+    std::size_t numChapters = reader ? reader->countChapters() : 0;
+    if (numChapters)
+    {
+      menubar->insertAction(before, menuChapters_->menuAction());
+    }
   }
 
   //----------------------------------------------------------------
@@ -1761,7 +1782,11 @@ namespace yae
       actionPlay_->setText(tr("Play"));
 
       bookmarkTimer_.stop();
-      emit save_bookmark();
+
+      if (get_reader())
+      {
+        emit save_bookmark();
+      }
     }
   }
 

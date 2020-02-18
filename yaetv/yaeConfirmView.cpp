@@ -17,8 +17,6 @@
 namespace yae
 {
 
-
-
   //----------------------------------------------------------------
   // ConfirmView::ConfirmView
   //
@@ -55,13 +53,14 @@ namespace yae
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = ItemRef::constant(w_);
     root.height_ = ItemRef::constant(h_);
-    root.uncache();
-    uncache_.clear();
 
     if (enable)
     {
       layout();
     }
+
+    root.uncache();
+    uncache_.clear();
 
     ItemView::setEnabled(enable);
   }
@@ -109,6 +108,10 @@ namespace yae
     const Action & affirmative = *affirmative_;
     const Action & negative = *negative_;
 
+    // setup mouse trap to prevent unintended click-through:
+    MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
+    mouse_trap.anchors_.fill(root);
+
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
     bg.color_ = bg_;
@@ -133,7 +136,7 @@ namespace yae
     tx_yes.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
     tx_yes.anchors_.right_ = ItemRef::reference(text, kPropertyHCenter);
     tx_yes.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_yes.margins_.set_right(ItemRef::reference(style.title_height_));
+    tx_yes.margins_.set_right(ItemRef::reference(style.title_height_, 2.0));
     tx_yes.text_ = affirmative.message_;
     tx_yes.color_ = affirmative.fg_;
     tx_yes.background_ = affirmative.bg_;
@@ -142,6 +145,8 @@ namespace yae
     tx_yes.setAttr("oneline", true);
 
     bg_yes.anchors_.fill(tx_yes, -7.0);
+    bg_yes.margins_.set_left(ItemRef::reference(style.title_height_, -1));
+    bg_yes.margins_.set_right(ItemRef::reference(style.title_height_, -1));
     bg_yes.color_ = affirmative.bg_;
     bg_yes.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
     bg_yes.radius_ = ItemRef::scale(bg_yes, kPropertyHeight, 0.1);
@@ -153,7 +158,7 @@ namespace yae
     tx_no.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
     tx_no.anchors_.left_ = ItemRef::reference(text, kPropertyHCenter);
     tx_no.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_no.margins_.set_left(ItemRef::reference(style.title_height_));
+    tx_no.margins_.set_left(ItemRef::reference(style.title_height_, 2.0));
     tx_no.text_ = negative.message_;
     tx_no.color_ = negative.fg_;
     tx_no.background_ = negative.bg_;
@@ -162,6 +167,8 @@ namespace yae
     tx_no.setAttr("oneline", true);
 
     bg_no.anchors_.fill(tx_no, -7.0);
+    bg_no.margins_.set_left(ItemRef::reference(style.title_height_, -1));
+    bg_no.margins_.set_right(ItemRef::reference(style.title_height_, -1));
     bg_no.color_ = negative.bg_;
     // bg_no.colorBorder_ = negative.fg_;
     bg_no.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));

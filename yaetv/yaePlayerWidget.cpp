@@ -482,6 +482,8 @@ namespace yae
       return;
     }
 
+    emit enteringFullScreen();
+
     SignalBlocker blockSignals;
     blockSignals
       << view_.actionFullScreen_
@@ -540,6 +542,8 @@ namespace yae
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
 
     swapShortcuts();
+
+    emit exitingFullScreen();
   }
 
   //----------------------------------------------------------------

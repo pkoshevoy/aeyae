@@ -100,6 +100,11 @@ namespace yae
     typedef TWidget TOpenGLWidget;
 
     //----------------------------------------------------------------
+    // TCanvasWidget
+    //
+    typedef CanvasWidget<TWidget> TCanvasWidget;
+
+    //----------------------------------------------------------------
     // OpenGLContext
     //
     struct OpenGLContext : public IOpenGLContext
@@ -337,13 +342,7 @@ namespace yae
         else if (et == QEvent::Resize)
         {
           TWidget::resizeEvent((QResizeEvent *)event);
-
-          QWidget * sw = TDelegate::get_screen_widget(this);
-          double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
-
-          Canvas::resize(devicePixelRatio,
-                         TWidget::width(),
-                         TWidget::height());
+          TCanvasWidget::updateCanvasSize();
           return true;
         }
 
@@ -391,6 +390,17 @@ namespace yae
     }
 
   public:
+    // helper:
+    void updateCanvasSize()
+    {
+      QWidget * sw = TDelegate::get_screen_widget(this);
+      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
+
+      Canvas::resize(devicePixelRatio,
+                     TWidget::width(),
+                     TWidget::height());
+    }
+
     CanvasWidgetSignalsSlots sigs_;
   };
 

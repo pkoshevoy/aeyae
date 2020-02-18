@@ -119,6 +119,8 @@ namespace yae
     void setOutPoint();
     void menuButtonPressed();
     void playbackFinished();
+    void enteringFullScreen();
+    void exitingFullScreen();
 
   public slots:
 

@@ -34,26 +34,18 @@ namespace yae
     PlayerWindow(QWidget * parent = NULL,
                  Qt::WindowFlags f = Qt::WindowFlags());
 
-    void playback(const IReaderPtr & reader,
+    void playback(PlayerWidget * playerWidget,
+                  const IReaderPtr & reader,
                   const IBookmark * bookmark = NULL,
-                  TCanvasWidget * sharedCtx = NULL,
                   bool startFromZeroTime = false);
 
     void stopPlayback();
 
-    inline PlayerWidget * playerWidget() const
-    { return playerWidget_; }
-
-    inline IReader * reader() const
-    { return playerWidget_ ? playerWidget_->view().get_reader() : NULL; }
+  public slots:
+    void stopAndHide();
 
   signals:
-    void playbackNext();
-    void playbackPrev();
-    void playbackFinished();
-    void playbackRemove();
-    void fixupNextPrev();
-    void saveBookmark();
+    void windowClosed();
 
   protected:
     // virtual:
@@ -61,6 +53,8 @@ namespace yae
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
 
+  public:
+    QVBoxLayout * containerLayout_;
     PlayerWidget * playerWidget_;
   };
 }

@@ -13,6 +13,7 @@
 #include <QAction>
 #include <QObject>
 #include <QMenu>
+#include <QMenuBar>
 #include <QSignalMapper>
 #include <QShortcut>
 #include <QString>
@@ -71,6 +72,11 @@ namespace yae
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
+
+    // helper:
+    void insert_menus(const IReaderPtr & reader,
+                      QMenuBar * menubar,
+                      QAction * before = NULL);
 
     // helper:
     static TVideoFramePtr autocrop_cb(void * context,

@@ -22,6 +22,7 @@ namespace yae
   //
   PlayerWindow::PlayerWindow(QWidget * parent, Qt::WindowFlags flags):
     QWidget(parent, flags | Qt::Window),
+    containerLayout_(NULL),
     playerWidget_(NULL)
   {
     setupUi(this);
@@ -33,76 +34,27 @@ namespace yae
       QString::fromUtf8(":/images/yaetv-logo.png");
     this->setWindowIcon(QIcon(fnIcon));
 #endif
+
+    containerLayout_ = new QVBoxLayout(containerWidget);
+    containerLayout_->setMargin(0);
+    containerLayout_->setSpacing(0);
   }
 
   //----------------------------------------------------------------
   // PlayerWindow::playback
   //
   void
-  PlayerWindow::playback(const IReaderPtr & reader,
+  PlayerWindow::playback(PlayerWidget * playerWidget,
+                         const IReaderPtr & reader,
                          const IBookmark * bookmark,
-                         TCanvasWidget * shared_ctx,
                          bool start_from_zero_time)
   {
-    if (!playerWidget_)
-    {
-      QVBoxLayout * containerLayout = new QVBoxLayout(containerWidget);
-      containerLayout->setMargin(0);
-      containerLayout->setSpacing(0);
+    playerWidget_ = playerWidget;
 
-      playerWidget_ = new PlayerWidget(this, shared_ctx);
+    PlayerView & view = playerWidget->view();
+    view.insert_menus(reader, menubar);
 
-      PlayerView & view = playerWidget_->view_;
-      containerLayout->addWidget(playerWidget_);
-
-      show();
-      playerWidget_->initItemViews();
-      QApplication::processEvents();
-
-      menubar->clear();
-      menubar->addAction(view.menuPlayback_->menuAction());
-      menubar->addAction(view.menuAudio_->menuAction());
-      menubar->addAction(view.menuVideo_->menuAction());
-      menubar->addAction(view.menuSubs_->menuAction());
-
-      std::size_t numChapters = reader ? reader->countChapters() : 0;
-      if (numChapters)
-      {
-        menubar->addAction(view.menuChapters_->menuAction());
-      }
-
-      bool ok = true;
-
-      ok = connect(&view, SIGNAL(playback_next()),
-                   this, SIGNAL(playbackNext()));
-      YAE_ASSERT(ok);
-
-      ok = connect(&view, SIGNAL(playback_prev()),
-                   this, SIGNAL(playbackPrev()));
-      YAE_ASSERT(ok);
-
-      ok = connect(&view, SIGNAL(playback_finished()),
-                   this, SIGNAL(playbackFinished()));
-      YAE_ASSERT(ok);
-
-      ok = connect(&view, SIGNAL(playback_remove()),
-                   this, SIGNAL(playbackRemove()));
-      YAE_ASSERT(ok);
-
-      ok = connect(&view, SIGNAL(fixup_next_prev()),
-                   this, SIGNAL(fixupNextPrev()));
-      YAE_ASSERT(ok);
-
-      ok = connect(&view, SIGNAL(save_bookmark()),
-                   this, SIGNAL(saveBookmark()));
-      YAE_ASSERT(ok);
-    }
-    else
-    {
-      show();
-    }
-
-    playerWidget_->playback(reader, bookmark, start_from_zero_time);
+    playerWidget->playback(reader, bookmark, start_from_zero_time);
   }
 
   //----------------------------------------------------------------
@@ -114,7 +66,20 @@ namespace yae
     if (playerWidget_)
     {
       playerWidget_->stop();
+      playerWidget_ = NULL;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Playerwindow::stopAndHide
+  //
+  void
+  PlayerWindow::stopAndHide()
+  {
+    stopPlayback();
+    hide();
+
+    emit windowClosed();
   }
 
   //----------------------------------------------------------------
@@ -125,7 +90,7 @@ namespace yae
   {
     if (event->type() == QEvent::WindowStateChange)
     {
-      if (window()->isFullScreen())
+      if (isFullScreen())
       {
         menubar->hide();
       }
@@ -145,8 +110,7 @@ namespace yae
   PlayerWindow::closeEvent(QCloseEvent * event)
   {
     event->ignore();
-    stopPlayback();
-    hide();
+    stopAndHide();
   }
 
   //----------------------------------------------------------------
@@ -161,8 +125,7 @@ namespace yae
     if (key == Qt::Key_Escape)
     {
       event->accept();
-      stopPlayback();
-      hide();
+      stopAndHide();
     }
   }
 

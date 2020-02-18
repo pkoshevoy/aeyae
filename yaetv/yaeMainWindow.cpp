@@ -66,6 +66,11 @@ namespace yae
                 const IReader * reader,
                 double position_in_sec)
   {
+    if (!reader)
+    {
+      return;
+    }
+
     Json::Value seen;
     Json::Value & bookmark = seen["bookmark"];
 
@@ -261,7 +266,7 @@ namespace yae
     QMainWindow(NULL, 0),
     contextMenu_(NULL),
     shortcutExit_(NULL),
-    shortcutFullScreen_(NULL),
+    playerWidget_(NULL),
     playerWindow_(this),
     readerPrototype_(reader_prototype),
     canvas_(NULL),
@@ -277,17 +282,6 @@ namespace yae
     QString fnIcon =
       QString::fromUtf8(":/images/yaetv-logo.png");
     this->setWindowIcon(QIcon(fnIcon));
-#endif
-
-    QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
-    canvasLayout->setMargin(0);
-    canvasLayout->setSpacing(0);
-
-    // setup the canvas widget (QML quick widget):
-#ifdef __APPLE__
-    QString clickOrTap = tr("click");
-#else
-    QString clickOrTap = tr("tap");
 #endif
 
 #ifdef YAE_USE_QOPENGL_WIDGET
@@ -308,28 +302,25 @@ namespace yae
     canvas_->setAcceptDrops(true);
 
     // insert canvas widget into the main window layout:
-    canvasLayout->addWidget(canvas_);
+    canvasContainer_->addWidget(canvas_);
 
-#if 1
-    actionFullScreen->setShortcut(tr("Ctrl+F"));
-#elif defined(__APPLE__)
-    actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
-#else
-    actionFullScreen->setShortcut(tr("F11"));
-#endif
+    playerWidget_ = new PlayerWidget(this, canvas_);
+    canvasContainer_->addWidget(playerWidget_);
+    canvasContainer_->setCurrentWidget(canvas_);
+
+    // shortcut:
+    PlayerView & playerView = playerWidget_->view();
+    playerView.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     shortcutExit_ = new QShortcut(this);
-    shortcutFullScreen_ = new QShortcut(this);
-
     shortcutExit_->setContext(Qt::ApplicationShortcut);
-    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
-    // so I am creating these shortcuts as a workaround:
+    // so I am creating some shortcuts as a workaround.
     bool ok = true;
 
     ok = connect(actionExit, SIGNAL(triggered()),
@@ -338,14 +329,6 @@ namespace yae
 
     ok = connect(shortcutExit_, SIGNAL(activated()),
                  actionExit, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionFullScreen, SIGNAL(triggered()),
-                 this, SLOT(enterFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 actionFullScreen, SLOT(trigger()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAbout, SIGNAL(triggered()),
@@ -364,11 +347,23 @@ namespace yae
                  this, SLOT(confirmDelete(TRecordingPtr)));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerWindow_, SIGNAL(playbackFinished()),
+    ok = connect(&playerWindow_, SIGNAL(windowClosed()),
+                 this, SLOT(playerWindowClosed()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerWidget_, SIGNAL(enteringFullScreen()),
+                 this, SLOT(playerEnteringFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerWidget_, SIGNAL(exitingFullScreen()),
+                 this, SLOT(playerExitingFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playerView, SIGNAL(playback_finished()),
                  this, SLOT(playbackFinished()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerWindow_, SIGNAL(saveBookmark()),
+    ok = connect(&playerView, SIGNAL(save_bookmark()),
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
   }
@@ -420,6 +415,8 @@ namespace yae
     TAsyncTaskPtr t(new InitTuners(this, dvr_));
     tasks_.push_back(t);
     async_.push_back(t);
+
+    playerWidget_->initItemViews();
   }
 
   //----------------------------------------------------------------
@@ -497,10 +494,6 @@ namespace yae
       return;
     }
 
-    SignalBlocker blockSignals;
-    blockSignals << actionFullScreen;
-
-    actionFullScreen->setChecked(true);
     canvas_->setRenderMode(Canvas::kScaleToFit);
 
     if (isFullScreen())
@@ -509,7 +502,7 @@ namespace yae
     }
 
     // enter full screen rendering:
-    menuBar()->hide();
+    playerEnteringFullScreen();
     showFullScreen();
 
     this->swapShortcuts();
@@ -527,11 +520,8 @@ namespace yae
     }
 
     // exit full screen rendering:
-    SignalBlocker blockSignals;
-    blockSignals << actionFullScreen;
+    playerExitingFullScreen();
 
-    actionFullScreen->setChecked(false);
-    menuBar()->show();
     showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
     this->swapShortcuts();
@@ -555,7 +545,6 @@ namespace yae
   MainWindow::swapShortcuts()
   {
     yae::swapShortcuts(shortcutExit_, actionExit);
-    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
   }
 
   //----------------------------------------------------------------
@@ -584,8 +573,25 @@ namespace yae
                                time_str.c_str());
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 
+    PlayerView & playerView = playerWidget_->view();
+    playerView.insert_menus(reader, menuBar(), menuHelp->menuAction());
+
+    if (window()->isFullScreen())
+    {
+      canvasContainer_->addWidget(playerWidget_);
+      canvasContainer_->setCurrentWidget(playerWidget_);
+    }
+    else
+    {
+      canvasContainer_->setCurrentWidget(canvas_);
+      playerWindow_.show();
+      playerWindow_.containerLayout_->addWidget(playerWidget_);
+    }
+
+    playerWidget_->show();
+
     yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
-    playerWindow_.playback(reader, bookmark.get(), canvas_, false);
+    playerWindow_.playback(playerWidget_, reader, bookmark.get());
   }
 
   //----------------------------------------------------------------
@@ -603,8 +609,7 @@ namespace yae
     {
       if (rec_ == mainWindow_.nowPlaying_)
       {
-        mainWindow_.playerWindow_.stopPlayback();
-        mainWindow_.playerWindow_.hide();
+        mainWindow_.playerWindow_.stopAndHide();
         mainWindow_.nowPlaying_.reset();
       }
 
@@ -665,7 +670,7 @@ namespace yae
     {
       if (rec_ == mainWindow_.nowPlaying_)
       {
-        mainWindow_.playerWindow_.hide();
+        mainWindow_.playerWindow_.stopAndHide();
         mainWindow_.nowPlaying_.reset();
       }
 
@@ -687,18 +692,14 @@ namespace yae
     TRecordingPtr rec_ptr = nowPlaying_;
     const Recording & rec = *rec_ptr;
 
-    PlayerWidget * playerWidget = playerWindow_.playerWidget();
-    if (playerWidget)
-    {
-      const PlayerView & view = playerWidget->view();
-      const IReader * reader = view.get_reader();
-      const TimelineModel & timeline = view.timeline_model();
-      save_bookmark(dvr_, rec, reader, timeline.timelineStart());
-    }
+    PlayerView & view = playerWidget_->view();
+    const IReader * reader = view.get_reader();
+    const TimelineModel & timeline = view.timeline_model();
+    save_bookmark(dvr_, rec, reader, timeline.timelineStart());
 
     // shortcuts:
     const AppStyle & style = *(view_.style());
-    ConfirmView & confirm = playerWindow_.playerWidget()->confirm_;
+    ConfirmView & confirm = playerWidget_->confirm_;
 
     std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
     confirm.message_ = TVarRef::constant(TVar(msg));
@@ -717,6 +718,7 @@ namespace yae
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
 
+    view.setEnabled(false);
     confirm.setEnabled(true);
   }
 
@@ -726,22 +728,59 @@ namespace yae
   void
   MainWindow::saveBookmark()
   {
-    PlayerWidget * playerWidget = playerWindow_.playerWidget();
-    if (!playerWidget)
-    {
-      return;
-    }
-
     if (!nowPlaying_)
     {
       return;
     }
 
     const Recording & rec = *nowPlaying_;
-    const PlayerView & view = playerWidget->view();
+    const PlayerView & view = playerWidget_->view();
     const IReader * reader = view.get_reader();
     const TimelineModel & timeline = view.timeline_model();
     save_bookmark(dvr_, rec, reader, timeline.currentTime());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playerWindowClosed
+  //
+  void
+  MainWindow::playerWindowClosed()
+  {
+    canvasContainer_->setCurrentWidget(canvas_);
+    nowPlaying_.reset();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playerEnteringFullScreen
+  //
+  void
+  MainWindow::playerEnteringFullScreen()
+  {
+    if (nowPlaying_)
+    {
+      playerWindow_.hide();
+      canvasContainer_->addWidget(playerWidget_);
+      canvasContainer_->setCurrentWidget(playerWidget_);
+      playerWidget_->show();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playerExitingFullScreen
+  //
+  void
+  MainWindow::playerExitingFullScreen()
+  {
+    if (nowPlaying_)
+    {
+      QApplication::processEvents();
+
+      canvasContainer_->setCurrentWidget(canvas_);
+      playerWindow_.show();
+      playerWindow_.containerLayout_->addWidget(playerWidget_);
+      playerWidget_->show();
+      playerWindow_.raise();
+    }
   }
 
   //----------------------------------------------------------------
@@ -809,6 +848,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::changeEvent
+  //
+  void
+  MainWindow::changeEvent(QEvent * event)
+  {
+    if (event->type() == QEvent::WindowStateChange)
+    {
+      if (isFullScreen())
+      {
+        menuBar()->hide();
+      }
+      else
+      {
+        menuBar()->show();
+      }
+    }
+
+    event->ignore();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::closeEvent
   //
   void
@@ -832,16 +892,6 @@ namespace yae
         exitFullScreen();
       }
     }
-#if 0
-    else if (key == Qt::Key_I)
-    {
-      emit setInPoint();
-    }
-    else if (key == Qt::Key_O)
-    {
-      emit setOutPoint();
-    }
-#endif
     else
     {
       QMainWindow::keyPressEvent(event);
@@ -854,6 +904,7 @@ namespace yae
   void
   MainWindow::mousePressEvent(QMouseEvent * e)
   {
+#if 0
     if (e->button() == Qt::RightButton)
     {
       QPoint localPt = e->pos();
@@ -868,9 +919,9 @@ namespace yae
         contextMenu_->addSeparator();
       }
 
-      contextMenu_->addAction(actionFullScreen);
       contextMenu_->popup(globalPt);
     }
+#endif
   }
 
 }
