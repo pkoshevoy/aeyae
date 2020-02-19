@@ -742,6 +742,40 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ToggleProgramDetails
+  //
+  struct ToggleProgramDetails : public InputArea
+  {
+    ToggleProgramDetails(const char * id,
+                         AppView & view,
+                         uint32_t ch_num,
+                         uint32_t gps_time):
+      InputArea(id),
+      view_(view),
+      ch_num_(ch_num),
+      gps_time_(gps_time)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
+      view_.show_program_details(ch_num_, gps_time_);
+      return true;
+    }
+
+    AppView & view_;
+    uint32_t ch_num_;
+    uint32_t gps_time_;
+  };
+
+
+  //----------------------------------------------------------------
   // ToggleRecording
   //
   struct ToggleRecording : public InputArea
@@ -1836,6 +1870,14 @@ namespace yae
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
           // FIXME: this should be an expression:
           title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
+
+           ToggleProgramDetails & details_ia = body.add<ToggleProgramDetails>
+             (new ToggleProgramDetails("details_ia",
+                                       view,
+                                       ch_num,
+                                       program.gps_time_));
+           details_ia.anchors_.fill(prog);
+           details_ia.margins_.set(ItemRef::scale(hidden, kUnitSize, 0.03));
 
            ToggleRecording & toggle = body.add<ToggleRecording>
              (new ToggleRecording("toggle", view, ch_num, program.gps_time_));
@@ -3023,6 +3065,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::show_program_details
+  //
+  void
+  AppView::show_program_details(uint32_t ch_num, uint32_t gps_time)
+  {
+    
+  }
+
+  //----------------------------------------------------------------
   // AppView::toggle_recording
   //
   void
@@ -3136,6 +3187,9 @@ namespace yae
 
     // layout Scheduled Recordings panel:
     layout_schedule(view, style, mainview);
+
+    // FIXME: pkoshevoy:
+    layout_program_details(view, style, mainview);
   }
 
   //----------------------------------------------------------------
@@ -3456,6 +3510,286 @@ namespace yae
       addExpr(new NowMarkerPos(view, epg_header, hsv));
     now_marker.anchors_.left_.disableCaching();
     now_marker.xExtentDisableCaching();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::layout_program_details
+  //
+  void
+  AppView::layout_program_details(AppView & view,
+                                  AppStyle & style,
+                                  Item & mainview)
+  {
+    // shortcuts:
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+    Layout & layout = pd_layout_;
+
+    layout.item_.reset(new Item("program_details_view"));
+    Item & panel = mainview.add<Item>(layout.item_);
+
+    panel.anchors_.fill(mainview);
+    // panel.visible_ = BoolRef::constant(true); // FIXME: pkoshevoy: false
+    panel.visible_ = BoolRef::constant(false);
+
+    // FIXME: pkoshevoy: add a MouseTrap to prevent click-through
+
+    Rectangle & bg = panel.addNew<Rectangle>("bg");
+    bg.anchors_.fill(panel);
+    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+
+    Item & body = panel.addNew<Item>("body");
+    body.anchors_.fill(panel);
+    body.margins_.set(ItemRef::reference(hidden, kUnitSize, 1));
+
+
+    Item & r1 = body.addNew<Item>("r1");
+    r1.anchors_.fill(body);
+    r1.anchors_.bottom_.reset();
+    r1.height_ = ItemRef::reference(hidden, kUnitSize, 1.6);
+
+    Item & r2 = body.addNew<Item>("r2");
+    r2.anchors_.fill(body);
+    r2.anchors_.top_ = ItemRef::reference(r1, kPropertyBottom);
+    r2.anchors_.bottom_.reset();
+    r2.height_ = ItemRef::reference(hidden, kUnitSize, 0.8);
+
+    Item & r3 = body.addNew<Item>("r3");
+    r3.anchors_.fill(body);
+    r3.anchors_.top_ = ItemRef::reference(r2, kPropertyBottom);
+    r3.anchors_.bottom_.reset();
+    r3.height_ = ItemRef::reference(hidden, kUnitSize, 0.4125);
+
+    RoundRect & head_bg = body.addNew<RoundRect>("head_bg");
+    head_bg.anchors_.top_ = ItemRef::reference(r1, kPropertyTop);
+    head_bg.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    head_bg.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    head_bg.anchors_.bottom_ = ItemRef::reference(r3, kPropertyBottom);
+    // head_bg.width_ = ItemRef::reference(hidden, kUnitSize, 5.0);
+    head_bg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
+    head_bg.background_ = head_bg.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+    head_bg.color_ = head_bg.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+    Item & ch_item = head_bg.addNew<Item>("ch_item");
+    ch_item.anchors_.left_ = ItemRef::reference(head_bg, kPropertyLeft);
+
+    Text & maj_min = ch_item.addNew<Text>("maj_min");
+    maj_min.font_ = style.font_;
+    maj_min.fontSize_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+    maj_min.anchors_.left_ = ItemRef::reference(ch_item, kPropertyLeft);
+    maj_min.anchors_.bottom_ = ItemRef::reference(r1, kPropertyBottom);
+    maj_min.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+    maj_min.alignment_ = Qt::AlignLeft;
+    maj_min.elide_ = Qt::ElideRight;
+    maj_min.color_ = maj_min.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    maj_min.background_ = maj_min.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    maj_min.text_ = TVarRef::constant(TVar(QString::fromUtf8("X-Y")));
+
+    Item & sp1 = ch_item.addNew<Item>("sp1");
+    sp1.anchors_.left_ = ItemRef::reference(maj_min, kPropertyRight);
+    sp1.anchors_.bottom_ = ItemRef::reference(maj_min, kPropertyBottom);
+    sp1.height_ = ItemRef::reference(maj_min, kPropertyHeight);
+    sp1.width_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+
+    Text & ch_name = ch_item.addNew<Text>("ch_name");
+    ch_name.font_ = style.font_;
+    ch_name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    ch_name.anchors_.left_ = ItemRef::reference(ch_item, kPropertyLeft);
+    ch_name.anchors_.bottom_ = ItemRef::reference(r2, kPropertyBottom);
+    ch_name.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+    ch_name.alignment_ = Qt::AlignLeft;
+    ch_name.elide_ = Qt::ElideRight;
+    ch_name.color_ = ch_name.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    ch_name.background_ = ch_name.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    ch_name.text_ = TVarRef::constant(TVar(QString::fromUtf8("YAE TV")));
+
+    Item & sp2 = ch_item.addNew<Item>("sp2");
+    sp2.anchors_.left_ = ItemRef::reference(ch_name, kPropertyRight);
+    sp2.anchors_.bottom_ = ItemRef::reference(ch_name, kPropertyBottom);
+    sp2.height_ = ItemRef::reference(ch_name, kPropertyHeight);
+    sp2.width_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+
+    Rectangle & ch_sep = head_bg.addNew<Rectangle>("ch_sep");
+    ch_sep.anchors_.left_ = ItemRef::reference(ch_item, kPropertyRight);
+    ch_sep.anchors_.top_ = ItemRef::reference(ch_item, kPropertyTop);
+    ch_sep.anchors_.bottom_ = ItemRef::reference(ch_item, kPropertyBottom);
+    ch_sep.width_ = ItemRef::reference(hidden, kUnitSize, 0.03, 1);
+    ch_sep.color_ = ch_sep.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+
+    Text & title = head_bg.addNew<Text>("title");
+    title.font_ = style.font_;
+    title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+    title.anchors_.left_ = ItemRef::reference(ch_sep, kPropertyRight);
+    title.anchors_.right_ = ItemRef::reference(head_bg, kPropertyRight);
+    title.anchors_.bottom_ = ItemRef::reference(r1, kPropertyBottom);
+    title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+    title.alignment_ = Qt::AlignLeft;
+    title.elide_ = Qt::ElideRight;
+    title.color_ = title.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    title.background_ = title.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    title.text_ = TVarRef::constant(TVar(QString::fromUtf8("Program Title")));
+
+    Text & timing = head_bg.addNew<Text>("timing");
+    timing.font_ = style.font_;
+    timing.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    timing.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
+    timing.anchors_.right_ = ItemRef::reference(head_bg, kPropertyRight);
+    timing.anchors_.bottom_ = ItemRef::reference(r2, kPropertyBottom);
+    // timing.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+    timing.alignment_ = Qt::AlignLeft;
+    timing.elide_ = Qt::ElideRight;
+    timing.color_ = timing.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    timing.background_ = timing.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    timing.text_ = TVarRef::constant
+      (TVar(QString::fromUtf8("Fri Feb 28 2020, 10:00 PM, 2 hr 30 min")));
+
+    Item & paragraphs = body.addNew<Item>("paragraphs");
+    paragraphs.anchors_.fill(body);
+    paragraphs.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+    paragraphs.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
+
+    Item & r4 = body.addNew<Item>("r4");
+    r4.anchors_.fill(body);
+    r4.anchors_.top_ = ItemRef::reference(head_bg, kPropertyBottom);
+    r4.anchors_.bottom_.reset();
+    r4.height_ = ItemRef::reference(hidden, kUnitSize, 1.2);
+
+    Text & rating = body.addNew<Text>("rating");
+    rating.font_ = style.font_;
+    rating.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    rating.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
+    rating.anchors_.bottom_ = ItemRef::reference(r4, kPropertyBottom);
+    rating.alignment_ = Qt::AlignLeft;
+    rating.elide_ = Qt::ElideRight;
+    rating.color_ = rating.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    rating.background_ = rating.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    rating.text_ = TVarRef::constant(TVar(QString::fromUtf8("Rating: PG-13")));
+
+    Text & desc = body.addNew<Text>("desc");
+    desc.font_ = style.font_;
+    desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    desc.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
+    desc.anchors_.right_ = ItemRef::reference(paragraphs, kPropertyRight);
+    desc.anchors_.top_ = ItemRef::reference(r4, kPropertyBottom);
+    // desc.anchors_.bottom_ = ItemRef::reference(body, kPropertyBottom);
+    desc.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.3));
+    // desc.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, 2.0));
+    desc.alignment_ = Qt::AlignLeft;
+    desc.elide_ = Qt::ElideNone;
+    desc.color_ = desc.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    desc.background_ = desc.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    const char * description = "Once upon a time in a galaxy far away "
+      "a fox jumped over a box ... or something like that, idk... "
+      "I just need some filler text to fill out the description "
+      "for evaluation purposes.  This ought to be enough";
+    desc.text_ = TVarRef::constant(TVar(QString::fromUtf8(description)));
+
+    Item & r5 = body.addNew<Item>("r5");
+    r5.anchors_.fill(body);
+    r5.anchors_.top_ = ItemRef::reference(desc, kPropertyBottom);
+    r5.anchors_.bottom_.reset();
+    r5.height_ = ItemRef::reference(hidden, kUnitSize, 1.2);
+
+    Text & status = body.addNew<Text>("status");
+    status.font_ = style.font_;
+    status.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    status.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
+    status.anchors_.right_ = ItemRef::reference(paragraphs, kPropertyRight);
+    status.anchors_.bottom_ = ItemRef::reference(r5, kPropertyBottom);
+    status.alignment_ = Qt::AlignLeft;
+    status.elide_ = Qt::ElideRight;
+    status.color_ = status.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    status.background_ = status.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    const char * status_txt = "Not scheduled to record.";
+    status.text_ = TVarRef::constant(TVar(QString::fromUtf8(status_txt)));
+
+    Item & r6 = body.addNew<Item>("r6");
+    r6.anchors_.fill(body);
+    r6.anchors_.top_ = ItemRef::reference(r5, kPropertyBottom);
+    r6.anchors_.bottom_.reset();
+    r6.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.4));
+    r6.height_ = ItemRef::reference(hidden, kUnitSize, 1.2);
+
+    RoundRect & bg_toggle = body.addNew<RoundRect>("bg_toggle");
+    RoundRect & bg_close = body.addNew<RoundRect>("bg_close");
+
+    Text & tx_toggle = body.addNew<Text>("tx_toggle");
+    Text & tx_close = body.addNew<Text>("tx_close");
+
+    tx_toggle.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
+    tx_toggle.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
+    tx_toggle.text_ = TVarRef::constant(TVar(QString::fromUtf8("Record")));
+    tx_toggle.color_ = tx_toggle.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+    tx_toggle.background_ = tx_toggle.
+      addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+    tx_toggle.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+    tx_toggle.elide_ = Qt::ElideNone;
+    tx_toggle.setAttr("oneline", true);
+
+    bg_toggle.anchors_.fill(tx_toggle);
+    bg_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_toggle.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_toggle.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_toggle.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_toggle.color_ = bg_toggle.
+      addExpr(style_color_ref(view, &AppStyle::cursor_));
+    bg_toggle.background_ = bg_toggle.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_toggle.radius_ = ItemRef::scale(bg_toggle, kPropertyHeight, 0.1);
+
+#if 0
+    OnAction & on_toggle = bg_toggle.
+      add(new OnAction("on_toggle", *this, affirmative_));
+    on_toggle.anchors_.fill(bg_toggle);
+#endif
+
+    tx_close.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
+    tx_close.anchors_.left_ = ItemRef::reference(tx_toggle, kPropertyRight);
+    tx_close.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 1.6));
+    tx_close.text_ = TVarRef::constant(TVar(QString::fromUtf8("Close")));;
+    tx_close.color_ = tx_close.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    tx_close.background_ = tx_close.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    tx_close.fontSize_ = tx_toggle.fontSize_;
+    tx_close.elide_ = Qt::ElideNone;
+    tx_close.setAttr("oneline", true);
+
+    bg_close.anchors_.fill(tx_close);
+    bg_close.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_close.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_close.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_close.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_close.color_ = bg_close.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+    bg_close.background_ = bg_close.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_close.radius_ = ItemRef::scale(bg_close, kPropertyHeight, 0.1);
+
+#if 0
+    OnAction & on_close = bg_close.
+      add(new OnAction("on_close", *this, negative_));
+    on_close.anchors_.fill(bg_close);
+#endif
+
   }
 
   //----------------------------------------------------------------

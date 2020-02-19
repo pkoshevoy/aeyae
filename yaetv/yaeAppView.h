@@ -115,6 +115,7 @@ namespace yae
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);
 
+    void show_program_details(uint32_t ch_num, uint32_t gps_time);
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
@@ -124,6 +125,7 @@ namespace yae
     void layout(AppView & view, AppStyle & style, Item & root);
     void layout_sidebar(AppView & view, AppStyle & style, Item & sideview);
     void layout_epg(AppView & view, AppStyle & style, Item & mainview);
+    void layout_program_details(AppView & view, AppStyle & s, Item & mainview);
     void layout_channels(AppView & view, AppStyle & style, Item & mainview);
     void layout_schedule(AppView & view, AppStyle & style, Item & mainview);
 
@@ -185,6 +187,9 @@ namespace yae
     std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<Item> > > ch_prog_;
     std::map<uint32_t, yae::shared_ptr<Item> > tickmark_;
     std::map<uint32_t, yae::shared_ptr<Rectangle, Item> > rec_highlight_;
+
+    // program details:
+    Layout pd_layout_;
 
     // channel list stuff:
     Layout ch_layout_;
