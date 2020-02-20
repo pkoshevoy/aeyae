@@ -333,8 +333,22 @@ namespace yae
   //----------------------------------------------------------------
   // to_short_txt
   //
+  // return the shortest form of hh:mm:ss.msec
+  // omitting leading zeros and trailing factional zeros
+  //
   YAE_API std::string
   to_short_txt(double seconds);
+
+  //----------------------------------------------------------------
+  // short_hours_mins
+  //
+  // return the shorts form of X hr Y min
+  // omitting 0 hr and 0 min
+  //
+  YAE_API std::string
+  short_hours_minutes(int64_t sec,
+                      const char * hour_suffix = " hr",
+                      const char * min_suffix = " min");
 
 
   //----------------------------------------------------------------

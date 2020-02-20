@@ -95,7 +95,7 @@ namespace yae
                       separator,
                       yae::kWeekdays[t.tm_wday % 7],
                       yae::kMonths[t.tm_mon % 12],
-                      t.tm_mday + 1,
+                      t.tm_mday,
                       t.tm_year + 1900);
     }
 
@@ -970,7 +970,44 @@ namespace yae
       oss << '.' << std::setw(3) << std::setfill('0') << ms;
     }
 
-    std::string txt = oss.str();
+    std::string txt = oss.str().c_str();
+    return txt;
+  }
+
+  //----------------------------------------------------------------
+  // short_hours_minutes
+  //
+  std::string
+  short_hours_minutes(int64_t sec,
+                      const char * hour_suffix,
+                      const char * min_suffix)
+  {
+    std::ostringstream oss;
+
+    bool negative = sec < 0;
+    int64_t t = sec < 0 ? -sec : sec;
+    int64_t min = (t + 29) / 60;
+    int64_t hr = min / 60;
+    min %= 60;
+
+    if (negative)
+    {
+      oss << '-';
+    }
+
+    const char * sep = "";
+    if (hr)
+    {
+      oss << hr << hour_suffix;
+      sep = " ";
+    }
+
+    if (min || !hr)
+    {
+      oss << sep << min << min_suffix;
+    }
+
+    std::string txt = oss.str().c_str();
     return txt;
   }
 

@@ -164,6 +164,9 @@ namespace yae
     // all recordings, indexed by playlist:
     std::map<std::string, TRecordings> playlists_;
 
+    //----------------------------------------------------------------
+    // Playback
+    //
     struct Playback
     {
       Playback(const std::string & playlist = std::string(),
@@ -180,6 +183,22 @@ namespace yae
     };
 
     yae::shared_ptr<Playback> now_playing_;
+
+    //----------------------------------------------------------------
+    // ChanTime
+    //
+    struct ChanTime
+    {
+      ChanTime(uint32_t ch_num, uint32_t gps_time):
+        ch_num_(ch_num),
+        gps_time_(gps_time)
+      {}
+
+      uint32_t ch_num_;
+      uint32_t gps_time_;
+    };
+
+    yae::shared_ptr<ChanTime> program_sel_;
 
     std::map<uint32_t, std::size_t> ch_index_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;

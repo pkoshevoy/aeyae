@@ -2392,7 +2392,7 @@ namespace yae
         std::list<EPG::Program> programs_;
       };
 
-      // helper:
+      // returns true if both channel and program were found:
       bool find(uint32_t ch_num,
                 uint32_t gps_time,
                 const Channel *& channel,

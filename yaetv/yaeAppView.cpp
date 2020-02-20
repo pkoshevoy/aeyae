@@ -742,14 +742,135 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ToggleProgramDetails
+  // ProgramDetailsVisible
   //
-  struct ToggleProgramDetails : public InputArea
+  struct ProgramDetailsVisible : TBoolExpr
   {
-    ToggleProgramDetails(const char * id,
-                         AppView & view,
-                         uint32_t ch_num,
-                         uint32_t gps_time):
+    ProgramDetailsVisible(const AppView & view):
+      view_(view)
+    {}
+
+     // virtual:
+    void evaluate(bool & result) const
+    {
+      result = (view_.sidebar_sel_ == "view_mode_program_guide" &&
+                view_.program_sel_);
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetProgramDetailsStatus
+  //
+  struct GetProgramDetailsStatus : public TVarExpr
+  {
+    GetProgramDetailsStatus(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.program_sel_)
+      {
+        // shortcuts:
+        uint32_t ch_num = view_.program_sel_->ch_num_;
+        uint32_t gps_time = view_.program_sel_->gps_time_;
+
+        const yae::mpeg_ts::EPG::Channel * channel = NULL;
+        const yae::mpeg_ts::EPG::Program * program = NULL;
+
+        if (view_.epg_.find(ch_num, gps_time, channel, program))
+        {
+          std::map<uint32_t, TScheduledRecordings>::const_iterator
+            found_ch = view_.schedule_.find(ch_num);
+
+          if (found_ch != view_.schedule_.end())
+          {
+            const TScheduledRecordings & sched = found_ch->second;
+            TScheduledRecordings::const_iterator found = sched.find(gps_time);
+
+            if (found != sched.end())
+            {
+              TRecordingPtr rec_ptr = found->second;
+              const Recording & rec = *rec_ptr;
+              if (!rec.cancelled_)
+              {
+                result = TVar(std::string("Scheduled to record."));
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      result = TVar(std::string("Not scheduled to record."));
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetProgramDetailsToggleText
+  //
+  struct GetProgramDetailsToggleText : public TVarExpr
+  {
+    GetProgramDetailsToggleText(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.program_sel_)
+      {
+        // shortcuts:
+        uint32_t ch_num = view_.program_sel_->ch_num_;
+        uint32_t gps_time = view_.program_sel_->gps_time_;
+
+        const yae::mpeg_ts::EPG::Channel * channel = NULL;
+        const yae::mpeg_ts::EPG::Program * program = NULL;
+
+        if (view_.epg_.find(ch_num, gps_time, channel, program))
+        {
+          std::map<uint32_t, TScheduledRecordings>::const_iterator
+            found_ch = view_.schedule_.find(ch_num);
+
+          if (found_ch != view_.schedule_.end())
+          {
+            const TScheduledRecordings & sched = found_ch->second;
+            TScheduledRecordings::const_iterator found = sched.find(gps_time);
+
+            if (found != sched.end())
+            {
+              TRecordingPtr rec_ptr = found->second;
+              const Recording & rec = *rec_ptr;
+              if (!rec.cancelled_)
+              {
+                result = TVar(std::string("Cancel"));
+                return;
+              }
+            }
+          }
+        }
+      }
+
+      result = TVar(std::string("Record"));
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // ShowProgramDetails
+  //
+  struct ShowProgramDetails : public InputArea
+  {
+    ShowProgramDetails(const char * id,
+                       AppView & view,
+                       uint32_t ch_num,
+                       uint32_t gps_time):
       InputArea(id),
       view_(view),
       ch_num_(ch_num),
@@ -772,6 +893,69 @@ namespace yae
     AppView & view_;
     uint32_t ch_num_;
     uint32_t gps_time_;
+  };
+
+  //----------------------------------------------------------------
+  // ProgramDetailsToggleRecording
+  //
+  struct ProgramDetailsToggleRecording : public InputArea
+  {
+    ProgramDetailsToggleRecording(const char * id, AppView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      YAE_ASSERT(view_.program_sel_);
+      if (!view_.program_sel_)
+      {
+        return false;
+      }
+
+      const AppView::ChanTime & program_details = *(view_.program_sel_);
+      view_.toggle_recording(program_details.ch_num_,
+                             program_details.gps_time_);
+      parent_->uncache();
+      return true;
+    }
+
+    AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // CloseProgramDetails
+  //
+  struct CloseProgramDetails : public InputArea
+  {
+    CloseProgramDetails(const char * id, AppView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.program_sel_.reset();
+      view_.requestUncache(view_.pd_layout_.item_.get());
+      view_.requestRepaint();
+     return true;
+    }
+
+    AppView & view_;
   };
 
 
@@ -1871,17 +2055,17 @@ namespace yae
           // FIXME: this should be an expression:
           title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
 
-           ToggleProgramDetails & details_ia = body.add<ToggleProgramDetails>
-             (new ToggleProgramDetails("details_ia",
-                                       view,
-                                       ch_num,
-                                       program.gps_time_));
-           details_ia.anchors_.fill(prog);
-           details_ia.margins_.set(ItemRef::scale(hidden, kUnitSize, 0.03));
+          ShowProgramDetails & details_ia = body.add<ShowProgramDetails>
+            (new ShowProgramDetails("details_ia",
+                                    view,
+                                    ch_num,
+                                    program.gps_time_));
+          details_ia.anchors_.fill(prog);
+          details_ia.margins_.set(ItemRef::scale(hidden, kUnitSize, 0.03));
 
-           ToggleRecording & toggle = body.add<ToggleRecording>
-             (new ToggleRecording("toggle", view, ch_num, program.gps_time_));
-           toggle.anchors_.fill(rec);
+          ToggleRecording & toggle = body.add<ToggleRecording>
+            (new ToggleRecording("toggle", view, ch_num, program.gps_time_));
+          toggle.anchors_.fill(rec);
         }
 
         progs_v1[program.gps_time_] = prog_ptr;
@@ -3070,7 +3254,67 @@ namespace yae
   void
   AppView::show_program_details(uint32_t ch_num, uint32_t gps_time)
   {
-    
+    const yae::mpeg_ts::EPG::Channel * channel = NULL;
+    const yae::mpeg_ts::EPG::Program * program = NULL;
+
+    if (!epg_.find(ch_num, gps_time, channel, program))
+    {
+      return;
+    }
+
+    program_sel_.reset(new ChanTime(ch_num, gps_time));
+
+    // shortcuts:
+    Item & panel = *(pd_layout_.item_);
+    Item & body = panel.Item::get<Item>("body");
+    RoundRect & head_bg = body.Item::get<RoundRect>("head_bg");
+    Item & ch_item = head_bg.Item::get<Item>("ch_item");
+
+    Text & maj_min = ch_item.Item::get<Text>("maj_min");
+    maj_min.text_ = TVarRef::constant
+      (TVar(yae::strfmt("%i-%i", channel->major_, channel->minor_)));
+
+    Text & ch_name = ch_item.Item::get<Text>("ch_name");
+    ch_name.text_ = TVarRef::constant(TVar(channel->name_));
+
+    Text & title = head_bg.Item::get<Text>("title");
+    title.text_ = TVarRef::constant(TVar(program->title_));
+
+    Text & rating = body.Item::get<Text>("rating");
+    rating.text_ = TVarRef::constant(TVar("Rating: " + program->rating_));
+
+    Text & desc = body.Item::get<Text>("desc");
+    desc.text_ = TVarRef::constant(TVar(program->description_));
+
+    // round to closest minute:
+    Text & timing = head_bg.Item::get<Text>("timing");
+    int64_t ts = yae::gps_time_to_unix_epoch_time(program->gps_time_);
+    ts = 60 * ((ts + 29) / 60);
+
+    struct tm t;
+    unix_epoch_time_to_localtime(ts, t);
+
+    const char * am_pm = (t.tm_hour < 12) ? "AM" : "PM";
+    int hour =
+      (t.tm_hour > 12) ? t.tm_hour % 12 :
+      (t.tm_hour > 00) ? t.tm_hour : 12;
+
+    std::string duration =
+      yae::short_hours_minutes(program->duration_, "hr", "min");
+
+    timing.text_ = TVarRef::constant
+      (TVar(yae::strfmt("%s %s %i %i, %i:%02i %s, %s",
+                        yae::kWeekdays[t.tm_wday],
+                        yae::kMonths[t.tm_mon],
+                        t.tm_mday,
+                        t.tm_year + 1900,
+                        hour,
+                        t.tm_min,
+                        am_pm,
+                        duration.c_str())));
+
+    requestUncache(&panel);
+    requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -3081,7 +3325,16 @@ namespace yae
   {
     dvr_->toggle_recording(ch_num, gps_time);
     schedule_.clear();
-    sync_ui();
+
+    Item & epg_view = *epg_view_;
+    Scrollview & vsv = epg_view.get<Scrollview>("vsv");
+    Item & vsv_content = *(vsv.content_);
+    Scrollview & hsv = vsv_content.get<Scrollview>("hsv");
+    Item & hsv_content = *(hsv.content_);
+    hsv_content.uncache();
+
+    sync_ui_epg();
+    requestUncache();
     requestRepaint();
   }
 
@@ -3188,7 +3441,9 @@ namespace yae
     // layout Scheduled Recordings panel:
     layout_schedule(view, style, mainview);
 
-    // FIXME: pkoshevoy:
+    // activated by double-clicking on an EPG item
+    // useful for very short programs where neither
+    // the program title doesn't fit in the EPG tile:
     layout_program_details(view, style, mainview);
   }
 
@@ -3529,10 +3784,11 @@ namespace yae
     Item & panel = mainview.add<Item>(layout.item_);
 
     panel.anchors_.fill(mainview);
-    // panel.visible_ = BoolRef::constant(true); // FIXME: pkoshevoy: false
-    panel.visible_ = BoolRef::constant(false);
+    panel.visible_ = panel.addExpr(new ProgramDetailsVisible(view));
 
-    // FIXME: pkoshevoy: add a MouseTrap to prevent click-through
+    // setup a mouse trap to prevent unintended click-through:
+    MouseTrap & mouse_trap = panel.addNew<MouseTrap>("mouse_trap");
+    mouse_trap.anchors_.fill(panel);
 
     Rectangle & bg = panel.addNew<Rectangle>("bg");
     bg.anchors_.fill(panel);
@@ -3565,7 +3821,6 @@ namespace yae
     head_bg.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
     head_bg.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
     head_bg.anchors_.bottom_ = ItemRef::reference(r3, kPropertyBottom);
-    // head_bg.width_ = ItemRef::reference(hidden, kUnitSize, 5.0);
     head_bg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
     head_bg.background_ = head_bg.
       addExpr(style_color_ref(view, &AppStyle::bg_epg_));
@@ -3644,7 +3899,6 @@ namespace yae
     timing.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
     timing.anchors_.right_ = ItemRef::reference(head_bg, kPropertyRight);
     timing.anchors_.bottom_ = ItemRef::reference(r2, kPropertyBottom);
-    // timing.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     timing.alignment_ = Qt::AlignLeft;
     timing.elide_ = Qt::ElideRight;
     timing.color_ = timing.
@@ -3652,7 +3906,7 @@ namespace yae
     timing.background_ = timing.
       addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
     timing.text_ = TVarRef::constant
-      (TVar(QString::fromUtf8("Fri Feb 28 2020, 10:00 PM, 2 hr 30 min")));
+      (TVar(QString::fromUtf8("Fri Feb 28 2020, 10:00 PM, 2hr 30min")));
 
     Item & paragraphs = body.addNew<Item>("paragraphs");
     paragraphs.anchors_.fill(body);
@@ -3684,9 +3938,7 @@ namespace yae
     desc.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
     desc.anchors_.right_ = ItemRef::reference(paragraphs, kPropertyRight);
     desc.anchors_.top_ = ItemRef::reference(r4, kPropertyBottom);
-    // desc.anchors_.bottom_ = ItemRef::reference(body, kPropertyBottom);
     desc.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.3));
-    // desc.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, 2.0));
     desc.alignment_ = Qt::AlignLeft;
     desc.elide_ = Qt::ElideNone;
     desc.color_ = desc.
@@ -3717,8 +3969,7 @@ namespace yae
       addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
     status.background_ = status.
       addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-    const char * status_txt = "Not scheduled to record.";
-    status.text_ = TVarRef::constant(TVar(QString::fromUtf8(status_txt)));
+    status.text_ = status.addExpr(new GetProgramDetailsStatus(view));
 
     Item & r6 = body.addNew<Item>("r6");
     r6.anchors_.fill(body);
@@ -3735,7 +3986,7 @@ namespace yae
 
     tx_toggle.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
     tx_toggle.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
-    tx_toggle.text_ = TVarRef::constant(TVar(QString::fromUtf8("Record")));
+    tx_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     tx_toggle.color_ = tx_toggle.
       addExpr(style_color_ref(view, &AppStyle::bg_epg_));
     tx_toggle.background_ = tx_toggle.
@@ -3743,6 +3994,7 @@ namespace yae
     tx_toggle.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
     tx_toggle.elide_ = Qt::ElideNone;
     tx_toggle.setAttr("oneline", true);
+    tx_toggle.text_ = tx_toggle.addExpr(new GetProgramDetailsToggleText(view));
 
     bg_toggle.anchors_.fill(tx_toggle);
     bg_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
@@ -3755,11 +4007,9 @@ namespace yae
       addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
     bg_toggle.radius_ = ItemRef::scale(bg_toggle, kPropertyHeight, 0.1);
 
-#if 0
-    OnAction & on_toggle = bg_toggle.
-      add(new OnAction("on_toggle", *this, affirmative_));
+    ProgramDetailsToggleRecording & on_toggle = bg_toggle.
+      add(new ProgramDetailsToggleRecording("on_toggle", *this));
     on_toggle.anchors_.fill(bg_toggle);
-#endif
 
     tx_close.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
     tx_close.anchors_.left_ = ItemRef::reference(tx_toggle, kPropertyRight);
@@ -3784,12 +4034,9 @@ namespace yae
       addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
     bg_close.radius_ = ItemRef::scale(bg_close, kPropertyHeight, 0.1);
 
-#if 0
-    OnAction & on_close = bg_close.
-      add(new OnAction("on_close", *this, negative_));
+    CloseProgramDetails & on_close = bg_close.
+      add(new CloseProgramDetails("on_close", *this));
     on_close.anchors_.fill(bg_close);
-#endif
-
   }
 
   //----------------------------------------------------------------
