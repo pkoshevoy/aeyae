@@ -513,7 +513,7 @@ namespace yae
     view_.actionShrinkWrap_->setEnabled(false);
 
     window()->showFullScreen();
-    swapShortcuts();
+    // swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -541,7 +541,7 @@ namespace yae
     canvas_->setRenderMode(Canvas::kScaleToFit);
     QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
 
-    swapShortcuts();
+    // swapShortcuts();
 
     emit exitingFullScreen();
   }

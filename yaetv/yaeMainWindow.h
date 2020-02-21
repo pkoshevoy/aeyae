@@ -86,10 +86,6 @@ namespace yae
     void helpAbout();
 
     // helpers:
-    void requestToggleFullScreen();
-    void toggleFullScreen();
-    void enterFullScreen();
-    void exitFullScreen();
     void swapShortcuts();
     void playbackRecording(TRecordingPtr);
     void confirmDelete(TRecordingPtr);

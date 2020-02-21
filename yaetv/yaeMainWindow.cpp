@@ -241,7 +241,7 @@ namespace yae
   context_toggle_fullscreen(void * context)
   {
     MainWindow * mainWindow = (MainWindow *)context;
-    mainWindow->requestToggleFullScreen();
+    mainWindow->playerWidget_->requestToggleFullScreen();
   }
 
 
@@ -300,6 +300,7 @@ namespace yae
 
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(true);
+    canvas_->setRenderMode(Canvas::kScaleToFit);
 
     // insert canvas widget into the main window layout:
     canvasContainer_->addWidget(canvas_);
@@ -336,7 +337,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
-                 this, SLOT(requestToggleFullScreen()));
+                 playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
     ok = connect(&view_, SIGNAL(playback(TRecordingPtr)),
@@ -446,85 +447,6 @@ namespace yae
     }
 
     about->show();
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::requestToggleFullScreen
-  //
-  void
-  MainWindow::requestToggleFullScreen()
-  {
-    // all this to work-around apparent QML bug where
-    // toggling full-screen on double-click leaves Flickable in
-    // a state where it never receives the button-up event
-    // and ends up interpreting all mouse movement as dragging,
-    // very annoying...
-    //
-    // The workaround is to delay fullscreen toggle to allow
-    // Flickable time to receive the button-up event
-
-    QTimer::singleShot(178, this, SLOT(toggleFullScreen()));
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::toggleFullScreen
-  //
-  void
-  MainWindow::toggleFullScreen()
-  {
-    if (isFullScreen())
-    {
-      exitFullScreen();
-    }
-    else
-    {
-      enterFullScreen();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::enterFullScreen
-  //
-  void
-  MainWindow::enterFullScreen()
-  {
-    if (isFullScreen())
-    {
-      exitFullScreen();
-      return;
-    }
-
-    canvas_->setRenderMode(Canvas::kScaleToFit);
-
-    if (isFullScreen())
-    {
-      return;
-    }
-
-    // enter full screen rendering:
-    playerEnteringFullScreen();
-    showFullScreen();
-
-    this->swapShortcuts();
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::exitFullScreen
-  //
-  void
-  MainWindow::exitFullScreen()
-  {
-    if (!isFullScreen())
-    {
-      return;
-    }
-
-    // exit full screen rendering:
-    playerExitingFullScreen();
-
-    showNormal();
-    canvas_->setRenderMode(Canvas::kScaleToFit);
-    this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -768,6 +690,8 @@ namespace yae
     {
       canvasContainer_->setCurrentWidget(canvas_);
     }
+
+    // this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -790,6 +714,8 @@ namespace yae
     {
       canvasContainer_->setCurrentWidget(canvas_);
     }
+
+    // this->swapShortcuts();
   }
 
   //----------------------------------------------------------------
@@ -842,7 +768,7 @@ namespace yae
         {
           yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
           task.reset(new DVR::ServiceLoop(dvr_));
-          DVR::ServiceLoop & service_loop = *task;
+          // DVR::ServiceLoop & service_loop = *task;
           service_loop_worker.add(task);
         }
 
@@ -898,7 +824,7 @@ namespace yae
     {
       if (isFullScreen())
       {
-        exitFullScreen();
+        playerWidget_->exitFullScreen();
       }
     }
     else
