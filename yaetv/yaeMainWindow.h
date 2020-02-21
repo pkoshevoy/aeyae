@@ -94,6 +94,7 @@ namespace yae
     void playerWindowClosed();
     void playerEnteringFullScreen();
     void playerExitingFullScreen();
+    void backToPlaylist();
 
   protected:
     // virtual:

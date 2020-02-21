@@ -164,6 +164,8 @@ set(project_sources
   yaeAppStyle.h
   yaeAppView.cpp
   yaeAppView.h
+  yaeArrowItem.cpp
+  yaeArrowItem.h
   yaeConfirmView.cpp
   yaeConfirmView.h
   yaeMainWindow.cpp

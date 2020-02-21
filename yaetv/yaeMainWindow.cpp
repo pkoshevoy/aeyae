@@ -367,6 +367,10 @@ namespace yae
     ok = connect(&playerView, SIGNAL(save_bookmark()),
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
+
+    ok = connect(&playerView, SIGNAL(toggle_playlist()),
+                 this, SLOT(backToPlaylist()));
+    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -716,6 +720,15 @@ namespace yae
     }
 
     // this->swapShortcuts();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::backToPlaylist
+  //
+  void
+  MainWindow::backToPlaylist()
+  {
+    playerWindow_.stopAndHide();
   }
 
   //----------------------------------------------------------------

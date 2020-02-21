@@ -84,6 +84,7 @@ namespace yae
                                       bool detectionFinished);
   signals:
     void adjust_canvas_height();
+    void toggle_playlist();
     void playback_next();
     void playback_prev();
     void playback_finished();
@@ -148,6 +149,7 @@ namespace yae
     void stopPlayback();
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
+    void togglePlaylist();
 
     void populateContextMenu();
     void adjustMenuActions();
