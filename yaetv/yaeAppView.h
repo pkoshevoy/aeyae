@@ -95,8 +95,8 @@ namespace yae
     // virtual:
     bool processRightClick();
 
-    // accessor:
-    void set_sidebar_selection(const std::string & sel);
+    // helper:
+    TRecordingPtr now_playing() const;
 
   signals:
     void toggle_fullscreen();

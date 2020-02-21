@@ -1761,6 +1761,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::now_playing
+  //
+  TRecordingPtr
+  AppView::now_playing() const
+  {
+    if (now_playing_)
+    {
+      TRecordings::const_iterator found =
+        recordings_.find(now_playing_->filename_);
+      if (found != recordings_.end())
+      {
+        const TRecordingPtr & rec_ptr = found->second;
+        return rec_ptr;
+      }
+    }
+
+    return TRecordingPtr();
+  }
+
+  //----------------------------------------------------------------
   // AppView::sync_ui
   //
   void

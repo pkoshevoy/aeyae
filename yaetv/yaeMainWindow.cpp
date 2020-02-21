@@ -563,8 +563,6 @@ namespace yae
       return;
     }
 
-    nowPlaying_ = rec_ptr;
-
     std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
     std::string title = strfmt("%i-%i %s, %s",
                                rec.channel_major_,
@@ -607,10 +605,10 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      if (rec_ == mainWindow_.nowPlaying_)
+      if (rec_ == mainWindow_.view_.now_playing())
       {
         mainWindow_.playerWindow_.stopAndHide();
-        mainWindow_.nowPlaying_.reset();
+        mainWindow_.view_.now_playing_.reset();
       }
 
       const Recording & rec = *rec_;
@@ -668,10 +666,10 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      if (rec_ == mainWindow_.nowPlaying_)
+      if (rec_ == mainWindow_.view_.now_playing())
       {
         mainWindow_.playerWindow_.stopAndHide();
-        mainWindow_.nowPlaying_.reset();
+        mainWindow_.view_.now_playing_.reset();
       }
 
       AppView & appView = mainWindow_.view_;
@@ -689,7 +687,8 @@ namespace yae
   void
   MainWindow::playbackFinished()
   {
-    TRecordingPtr rec_ptr = nowPlaying_;
+    TRecordingPtr rec_ptr = view_.now_playing();
+    YAE_ASSERT(rec_ptr);
     const Recording & rec = *rec_ptr;
 
     PlayerView & view = playerWidget_->view();
@@ -728,12 +727,13 @@ namespace yae
   void
   MainWindow::saveBookmark()
   {
-    if (!nowPlaying_)
+    TRecordingPtr now_playing = view_.now_playing();
+    if (!now_playing)
     {
       return;
     }
 
-    const Recording & rec = *nowPlaying_;
+    const Recording & rec = *now_playing;
     const PlayerView & view = playerWidget_->view();
     const IReader * reader = view.get_reader();
     const TimelineModel & timeline = view.timeline_model();
@@ -746,8 +746,9 @@ namespace yae
   void
   MainWindow::playerWindowClosed()
   {
+    canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
-    nowPlaying_.reset();
+    view_.now_playing_.reset();
   }
 
   //----------------------------------------------------------------
@@ -756,12 +757,16 @@ namespace yae
   void
   MainWindow::playerEnteringFullScreen()
   {
-    if (nowPlaying_)
+    if (view_.now_playing_)
     {
       playerWindow_.hide();
       canvasContainer_->addWidget(playerWidget_);
       canvasContainer_->setCurrentWidget(playerWidget_);
       playerWidget_->show();
+    }
+    else
+    {
+      canvasContainer_->setCurrentWidget(canvas_);
     }
   }
 
@@ -771,7 +776,7 @@ namespace yae
   void
   MainWindow::playerExitingFullScreen()
   {
-    if (nowPlaying_)
+    if (view_.now_playing_)
     {
       QApplication::processEvents();
 
@@ -780,6 +785,10 @@ namespace yae
       playerWindow_.containerLayout_->addWidget(playerWidget_);
       playerWidget_->show();
       playerWindow_.raise();
+    }
+    else
+    {
+      canvasContainer_->setCurrentWidget(canvas_);
     }
   }
 

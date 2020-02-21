@@ -127,7 +127,6 @@ namespace yae
     AppView view_;
     ConfirmView confirm_;
     SpinnerView spinner_;
-    TRecordingPtr nowPlaying_;
 
   protected:
     // background thread, etc...
