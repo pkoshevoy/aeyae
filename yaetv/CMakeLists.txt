@@ -164,8 +164,6 @@ set(project_sources
   yaeAppStyle.h
   yaeAppView.cpp
   yaeAppView.h
-  yaeArrowItem.cpp
-  yaeArrowItem.h
   yaeConfirmView.cpp
   yaeConfirmView.h
   yaeMainWindow.cpp
@@ -179,6 +177,8 @@ set(project_sources
   yaePlayerWindow.cpp
   yaePlayerWindow.h
 
+  ../apprenticevideo/yaeArrowItem.cpp
+  ../apprenticevideo/yaeArrowItem.h
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
   ../apprenticevideo/yaeBookmarks.cpp

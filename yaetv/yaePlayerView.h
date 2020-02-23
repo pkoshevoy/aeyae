@@ -91,6 +91,7 @@ namespace yae
     void playback_remove();
     void fixup_next_prev();
     void save_bookmark();
+    void on_back_arrow();
 
   public:
     bool is_playback_paused() const;
@@ -150,6 +151,7 @@ namespace yae
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
     void togglePlaylist();
+    void onBackArrow();
 
     void populateContextMenu();
     void adjustMenuActions();

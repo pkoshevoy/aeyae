@@ -10,6 +10,7 @@
 #include <QObject>
 
 // local interfaces:
+#include "yaeArrowItem.h"
 #include "yaeItemFocus.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -536,6 +537,41 @@ namespace yae
       gridOff.opacity_ = shadow.opacity_;
 
       playlistToggle.anchors_.fill(playlistButton);
+    }
+
+    Item & arrow_btn = this->addNew<Item>("arrow_btn");
+    arrow_btn.visible_ = BoolRef::constant(!back_arrow_cb_.is_null());
+    arrow_btn.anchors_.top_ = ItemRef::offset(*this, kPropertyTop, 2);
+    arrow_btn.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+    arrow_btn.width_ = ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
+    arrow_btn.height_ = arrow_btn.width_;
+    arrow_btn.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    arrow_btn.margins_.set_left
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+    CallOnClick<ContextCallback> & arrow_btn_ia =
+      this->add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
+                                                 this->back_arrow_cb_));
+    {
+      RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
+      bg.anchors_.fill(arrow_btn);
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+      // bg.visible_ = BoolRef::inverse(this->is_playlist_visible_);
+      bg.visible_ = BoolRef::constant(true);
+
+      ArrowItem & arrow = arrow_btn.add<ArrowItem>
+        (new ArrowItem("arrow", ArrowItem::kLeft));
+      arrow.anchors_.fill(bg);
+      arrow.margins_.set
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
+      arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.25);
+      arrow.color_ = colorFullscreenToggleFg;
+      arrow.opacity_ = shadow.opacity_;
+
+      arrow_btn_ia.anchors_.fill(arrow_btn);
     }
 
     TransitionItem & opacityForControls = this->

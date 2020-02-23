@@ -368,7 +368,7 @@ namespace yae
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(toggle_playlist()),
+    ok = connect(&playerView, SIGNAL(on_back_arrow()),
                  this, SLOT(backToPlaylist()));
     YAE_ASSERT(ok);
   }
@@ -531,11 +531,8 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      if (rec_ == mainWindow_.view_.now_playing())
-      {
-        mainWindow_.playerWindow_.stopAndHide();
-        mainWindow_.view_.now_playing_.reset();
-      }
+      mainWindow_.playerWindow_.stopAndHide();
+      mainWindow_.view_.now_playing_.reset();
 
       const Recording & rec = *rec_;
       DVR & dvr = mainWindow_.dvr_;
@@ -592,11 +589,8 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      if (rec_ == mainWindow_.view_.now_playing())
-      {
-        mainWindow_.playerWindow_.stopAndHide();
-        mainWindow_.view_.now_playing_.reset();
-      }
+      mainWindow_.playerWindow_.stopAndHide();
+      mainWindow_.view_.now_playing_.reset();
 
       AppView & appView = mainWindow_.view_;
       appView.sync_ui();

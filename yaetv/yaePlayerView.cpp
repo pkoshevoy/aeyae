@@ -93,6 +93,16 @@ namespace yae
     view->togglePlaylist();
   }
 
+  //----------------------------------------------------------------
+  // back_arrow_cb
+  //
+  static void
+  back_arrow_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->onBackArrow();
+  }
+
 
   //----------------------------------------------------------------
   // new_qaction
@@ -957,8 +967,9 @@ namespace yae
 
     timeline.is_playlist_visible_ = BoolRef::constant(false);
     timeline.is_timeline_visible_ = BoolRef::constant(false);
-    timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
+    // timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
+    timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
     timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
     timeline.layout();
 
@@ -1825,6 +1836,15 @@ namespace yae
   PlayerView::togglePlaylist()
   {
     emit toggle_playlist();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::onBackArrow
+  //
+  void
+  PlayerView::onBackArrow()
+  {
+    emit on_back_arrow();
   }
 
   //----------------------------------------------------------------

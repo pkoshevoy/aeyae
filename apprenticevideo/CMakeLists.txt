@@ -115,6 +115,8 @@ set(project_uis
   )
 
 set(project_sources
+  yaeArrowItem.cpp
+  yaeArrowItem.h
   yaeBBox.cpp
   yaeBBox.h
   yaeBookmarks.h

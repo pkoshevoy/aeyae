@@ -377,6 +377,7 @@ namespace yae
     ContextCallback toggle_playback_;
     ContextCallback toggle_fullscreen_;
     ContextCallback toggle_playlist_;
+    ContextCallback back_arrow_cb_;
 
     ItemView::TAnimatorPtr opacity_animator_;
     ItemView::TAnimatorPtr controls_animator_;

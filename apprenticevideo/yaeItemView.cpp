@@ -179,6 +179,15 @@ namespace yae
 
     if (!enable)
     {
+      mouseOverItems_.clear();
+      mousePt_.set_x(std::numeric_limits<double>::max());
+      mousePt_.set_y(std::numeric_limits<double>::max());
+
+      inputHandlers_.clear();
+      startPt_ = mousePt_;
+      pressed_ = NULL;
+      dragged_ = NULL;
+
       // remove item focus for this view:
       const ItemFocus::Target * focus = ItemFocus::singleton().focus();
 

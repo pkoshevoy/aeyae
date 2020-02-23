@@ -123,6 +123,8 @@ set(project_sources
   yae_tab_rect.cpp
   yae_tab_rect.h
 
+  ../apprenticevideo/yaeArrowItem.cpp
+  ../apprenticevideo/yaeArrowItem.h
   ../apprenticevideo/yaeBBox.cpp
   ../apprenticevideo/yaeBBox.h
   ../apprenticevideo/yaeCanvas.h
