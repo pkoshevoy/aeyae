@@ -491,6 +491,7 @@ namespace yae
   void
   MainWindow::watchLive(uint32_t ch_num)
   {
+    view_.now_playing_.reset();
     dvr_.watch_live(ch_num);
 
     // open the player window
@@ -545,18 +546,14 @@ namespace yae
     {
       return IReaderPtr();
     }
-    else
+
+    // check if we are switching away from a live channel playback,
+    // in which case we should stop live channel recording:
+    if (live_rec_ &&
+        live_rec_ != rec_ptr &&
+        live_rec_->get_basename() != rec.get_basename())
     {
-      uint32_t live_ch = dvr_.schedule_.get_live_channel();
-      if (live_ch)
-      {
-        uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
-                                                       rec.channel_minor_);
-        if (ch_num != live_ch)
-        {
-          dvr_.close_live();
-        }
-      }
+      stopLivePlayback();
     }
 
     std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
@@ -680,7 +677,7 @@ namespace yae
   MainWindow::playbackFinished()
   {
     TRecordingPtr rec_ptr = view_.now_playing();
-    if (!rec_ptr)
+    if (live_rec_ || !rec_ptr)
     {
       uint32_t live_ch = dvr_.schedule_.get_live_channel();
       if (live_ch)
@@ -751,7 +748,7 @@ namespace yae
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
     view_.now_playing_.reset();
-    dvr_.close_live();
+    stopLivePlayback();
   }
 
   //----------------------------------------------------------------
@@ -816,14 +813,31 @@ namespace yae
   {
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
     uint64_t gps_now = TTime::gps_now().get(1);
-    TRecordingPtr rec = dvr_.schedule_.get(live_ch, gps_now);
-    IReaderPtr reader = playbackRecording(rec);
+    live_rec_ = dvr_.schedule_.get(live_ch, gps_now);
 
+    IReaderPtr reader = playbackRecording(live_rec_);
     if (reader)
     {
       start_live_playback_.stop();
       reader->seek(double(start_live_utc_t0_ - 7));
+
+      const Recording & rec = *live_rec_;
+      std::string basepath = rec.get_filepath(dvr_.basedir_, "");
+      std::string filename = rec.get_basename() + ".mpg";
+      view_.now_playing_.reset(new AppView::Playback(view_.sidebar_sel_,
+                                                     filename,
+                                                     basepath));
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::stopLivePlayback
+  //
+  void
+  MainWindow::stopLivePlayback()
+  {
+    dvr_.close_live();
+    live_rec_.reset();
   }
 
   //----------------------------------------------------------------

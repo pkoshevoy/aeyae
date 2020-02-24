@@ -171,6 +171,8 @@ namespace yae
   //----------------------------------------------------------------
   // TRecordings
   //
+  // indexed by filename.mpg
+  //
   typedef std::map<std::string, TRecordingPtr> TRecordings;
 
   //----------------------------------------------------------------

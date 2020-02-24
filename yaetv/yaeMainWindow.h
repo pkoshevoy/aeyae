@@ -102,6 +102,7 @@ namespace yae
 
   protected slots:
     void startLivePlayback();
+    void stopLivePlayback();
 
   protected:
     // virtual:
@@ -139,6 +140,7 @@ namespace yae
 
     QTimer start_live_playback_;
     uint64_t start_live_utc_t0_;
+    TRecordingPtr live_rec_;
   };
 }
 
