@@ -545,6 +545,19 @@ namespace yae
     {
       return IReaderPtr();
     }
+    else
+    {
+      uint32_t live_ch = dvr_.schedule_.get_live_channel();
+      if (live_ch)
+      {
+        uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
+                                                       rec.channel_minor_);
+        if (ch_num != live_ch)
+        {
+          dvr_.close_live();
+        }
+      }
+    }
 
     std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
     std::string title = strfmt("%i-%i %s, %s",
