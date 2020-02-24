@@ -82,6 +82,35 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // WatchLive
+  //
+  struct WatchLive : public InputArea
+  {
+    WatchLive(const char * id, AppView & view, uint32_t ch_num):
+      InputArea(id),
+      view_(view),
+      ch_num_(ch_num)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onDoubleClick(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint)
+    {
+      view_.on_watch_live(ch_num_);
+      return true;
+    }
+
+    AppView & view_;
+    const uint32_t ch_num_;
+  };
+
+
+  //----------------------------------------------------------------
   // IsOddRow
   //
   struct IsOddRow : public TBoolExpr
@@ -1961,6 +1990,10 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
         ch_name.background_ = ch_name.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+        WatchLive & live_ia = tile.add<WatchLive>
+          (new WatchLive("live_ia", view, ch_num));
+        live_ia.anchors_.fill(tile);
       }
 
       ch_tiles[ch_num] = tile_ptr;
@@ -3266,6 +3299,15 @@ namespace yae
 
     layout.items_.swap(rows);
     table.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_watch_live
+  //
+  void
+  AppView::on_watch_live(uint32_t ch_num)
+  {
+    emit watch_live(ch_num);
   }
 
   //----------------------------------------------------------------

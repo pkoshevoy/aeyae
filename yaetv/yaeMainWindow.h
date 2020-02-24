@@ -87,14 +87,21 @@ namespace yae
 
     // helpers:
     void swapShortcuts();
-    void playbackRecording(TRecordingPtr);
-    void confirmDelete(TRecordingPtr);
+    void watchLive(uint32_t ch_num);
+
+    // returns NULL reader if playback failed to start:
+    IReaderPtr playbackRecording(TRecordingPtr rec);
+
+    void confirmDelete(TRecordingPtr rec);
     void playbackFinished();
     void saveBookmark();
     void playerWindowClosed();
     void playerEnteringFullScreen();
     void playerExitingFullScreen();
     void backToPlaylist();
+
+  protected slots:
+    void startLivePlayback();
 
   protected:
     // virtual:
@@ -129,6 +136,9 @@ namespace yae
     // background thread, etc...
     std::list<TAsyncTaskPtr> tasks_;
     AsyncTaskQueue async_;
+
+    QTimer start_live_playback_;
+    uint64_t start_live_utc_t0_;
   };
 }
 

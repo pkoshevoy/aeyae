@@ -419,6 +419,7 @@ namespace yae
   // Recording::Recording
   //
   Recording::Recording():
+    made_by_(Recording::kUnspecified),
     cancelled_(false),
     utc_t0_(0),
     gps_t0_(0),
@@ -433,6 +434,7 @@ namespace yae
   //
   Recording::Recording(const yae::mpeg_ts::EPG::Channel & channel,
                        const yae::mpeg_ts::EPG::Program & program):
+    made_by_(Recording::kUnspecified),
     cancelled_(false),
     utc_t0_(localtime_to_unix_epoch_time(program.tm_)),
     gps_t0_(program.gps_time_),
@@ -707,6 +709,41 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Schedule::enable_live
+  //
+  uint32_t
+  Schedule::enable_live(uint32_t ch_num)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    uint32_t prev_ch = live_ch_ ? *live_ch_ : 0;
+    live_ch_ = ch_num;
+    return prev_ch;
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::disable_live
+  //
+  uint32_t
+  Schedule::disable_live()
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    uint32_t prev_ch = live_ch_ ? *live_ch_ : 0;
+    live_ch_.reset();
+    return prev_ch;
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::get_live_channel
+  //
+  uint32_t
+  Schedule::get_live_channel() const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    uint32_t live_ch = live_ch_ ? *live_ch_ : 0;
+    return live_ch;
+  }
+
+  //----------------------------------------------------------------
   // Schedule::update
   //
   void
@@ -735,9 +772,19 @@ namespace yae
         yae::shared_ptr<Wishlist::Item> want =
           dvr.explicitly_scheduled(channel, program);
 
+        Recording::MadeBy rec_cause =
+          want ? Recording::kExplicitlyScheduled : Recording::kUnspecified;
+
+        if (!want && live_ch_ && *live_ch_ == ch_num)
+        {
+          want.reset(new Wishlist::Item());
+          rec_cause = Recording::kLiveChannel;
+        }
+
         if (!want)
         {
           want = dvr.wishlist_.matches(channel, program);
+          rec_cause = Recording::kWishlistItem;
         }
 
         if (!want)
@@ -760,12 +807,14 @@ namespace yae
 
         boost::unique_lock<boost::mutex> lock(mutex_);
         TRecordingPtr & rec_ptr = recordings_[ch_num][program.gps_time_];
+
         if (!rec_ptr)
         {
           rec_ptr.reset(new Recording());
         }
 
         Recording & rec = *rec_ptr;
+        rec.made_by_ = rec_cause;
         rec.utc_t0_ = localtime_to_unix_epoch_time(program.tm_);
         rec.gps_t0_ = program.gps_time_;
         rec.gps_t1_ = gps_t1;
@@ -809,6 +858,13 @@ namespace yae
         if (rec.gps_t1_ < gps_now)
         {
           // it's in the past:
+          continue;
+        }
+
+        if (rec.made_by_ == Recording::kLiveChannel &&
+            !(live_ch_ && *live_ch_ == ch_num))
+        {
+          // schedule for a different live channel:
           continue;
         }
 
@@ -1002,7 +1058,32 @@ namespace yae
   Schedule::save(Json::Value & json) const
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
-    yae::save(json["recordings"], recordings_);
+
+    Json::Value & recordings = json["recordings"];
+    recordings = Json::Value(Json::objectValue);
+
+    for (std::map<uint32_t, TScheduledRecordings>::const_iterator
+           i = recordings_.begin(); i != recordings_.end(); ++i)
+    {
+      std::string ch_num = boost::lexical_cast<std::string>(i->first);
+      const TScheduledRecordings & scheduled = i->second;
+
+      Json::Value & channel = json[ch_num];
+      channel = Json::Value(Json::objectValue);
+
+      for (TScheduledRecordings::const_iterator
+             j = scheduled.begin(); j != scheduled.end(); ++j)
+      {
+        std::string gps_start = boost::lexical_cast<std::string>(j->first);
+        const TRecordingPtr & rec_ptr = j->second;
+
+        // skip explicitly scheduled recordings and live recordings:
+        if (rec_ptr && rec_ptr->made_by_ == Recording::kWishlistItem)
+        {
+          yae::save(channel[gps_start], *rec_ptr);
+        }
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -1213,10 +1294,10 @@ namespace yae
   DVR::PacketHandler::handle_backlog(const yae::mpeg_ts::Bucket & bucket,
                                      uint32_t gps_time)
   {
-    static boost::random::mt11213b prng;
     static const double prng_max =
       std::numeric_limits<boost::random::mt11213b::result_type>::max();
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
     if (recordings_update_gps_time_ < gps_time)
     {
       yae::Timesheet::Probe probe(ctx_.timesheet_,
@@ -1224,7 +1305,7 @@ namespace yae
                                   "dvr_.schedule_.get");
 
       // wait 8..15s before re-caching scheduled recordings:
-      uint32_t r = uint32_t(8.0 * (double(prng()) / prng_max));
+      uint32_t r = uint32_t(8.0 * (double(prng_()) / prng_max));
       recordings_update_gps_time_ = gps_time + 8 + r;
       recordings_.clear();
 
@@ -1282,6 +1363,16 @@ namespace yae
         }
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::PacketHandler::refresh_cached_recordings
+  //
+  void
+  DVR::PacketHandler::refresh_cached_recordings()
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    recordings_update_gps_time_ = 0;
   }
 
 
@@ -2995,6 +3086,64 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::watch_live
+  //
+  void
+  DVR::watch_live(uint32_t ch_num)
+  {
+    uint32_t prev_ch = schedule_.enable_live(ch_num);
+    if (prev_ch)
+    {
+      std::map<uint32_t, std::string> frequencies;
+      hdhr_.get_channels(frequencies);
+      std::string frequency = yae::at(frequencies, prev_ch);
+
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      TStreamPtr stream = stream_[frequency].lock();
+      if (stream)
+      {
+        stream->packet_handler_->refresh_cached_recordings();
+      }
+    }
+
+    TTime lastmod;
+    yae::mpeg_ts::EPG epg;
+    if (get_cached_epg(lastmod, epg))
+    {
+      DVR::evaluate(epg);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::close_live
+  //
+  void
+  DVR::close_live()
+  {
+    uint32_t live_ch = schedule_.disable_live();
+    if (live_ch)
+    {
+      std::map<uint32_t, std::string> frequencies;
+      hdhr_.get_channels(frequencies);
+      std::string frequency = yae::at(frequencies, live_ch);
+
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      TStreamPtr stream = stream_[frequency].lock();
+      if (stream)
+      {
+        stream->packet_handler_->refresh_cached_recordings();
+      }
+    }
+
+    TTime lastmod;
+    yae::mpeg_ts::EPG epg;
+    if (get_cached_epg(lastmod, epg))
+    {
+      DVR::evaluate(epg);
+    }
+  }
+
+  //----------------------------------------------------------------
   // DVR::evaluate
   //
   void
@@ -3059,6 +3208,8 @@ namespace yae
           yae_ilog("%sstarting stream: %s",
                    stream->packet_handler_->ctx_.log_prefix_.c_str(),
                    rec.get_basename().c_str());
+
+          stream->packet_handler_->refresh_cached_recordings();
 
           // FIXME: there is probably a better place for this:
           save_schedule();

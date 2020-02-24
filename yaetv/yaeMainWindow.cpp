@@ -270,10 +270,14 @@ namespace yae
     playerWindow_(this),
     readerPrototype_(reader_prototype),
     canvas_(NULL),
-    dvr_(yaetv_dir, recordings_dir)
+    dvr_(yaetv_dir, recordings_dir),
+    start_live_playback_(this),
+    start_live_utc_t0_(0)
   {
     setupUi(this);
     setAcceptDrops(false);
+
+    start_live_playback_.setInterval(1000);
 
     contextMenu_ = new QMenu(this);
     contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
@@ -340,6 +344,10 @@ namespace yae
                  playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&view_, SIGNAL(watch_live(uint32_t)),
+                 this, SLOT(watchLive(uint32_t)));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(playback(TRecordingPtr)),
                  this, SLOT(playbackRecording(TRecordingPtr)));
     YAE_ASSERT(ok);
@@ -370,6 +378,10 @@ namespace yae
 
     ok = connect(&playerView, SIGNAL(on_back_arrow()),
                  this, SLOT(backToPlaylist()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&start_live_playback_, SIGNAL(timeout()),
+                 this, SLOT(startLivePlayback()));
     YAE_ASSERT(ok);
   }
 
@@ -474,11 +486,56 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::playbackRecording
+  // MainWindow::watchLive
   //
   void
+  MainWindow::watchLive(uint32_t ch_num)
+  {
+    dvr_.watch_live(ch_num);
+
+    // open the player window
+    uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+    uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+
+    std::string title = strfmt("%i-%i, live",
+                               major,
+                               minor);
+
+    playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
+
+    PlayerView & playerView = playerWidget_->view();
+    playerView.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
+
+    if (window()->isFullScreen())
+    {
+      canvasContainer_->addWidget(playerWidget_);
+      canvasContainer_->setCurrentWidget(playerWidget_);
+    }
+    else
+    {
+      canvasContainer_->setCurrentWidget(canvas_);
+      playerWindow_.show();
+      playerWindow_.containerLayout_->addWidget(playerWidget_);
+    }
+
+    playerWidget_->show();
+
+    // start a timer to attempt to play the live recording:
+    start_live_playback_.start();
+    start_live_utc_t0_ = TTime::now().get(1);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::playbackRecording
+  //
+  IReaderPtr
   MainWindow::playbackRecording(TRecordingPtr rec_ptr)
   {
+    if (!rec_ptr)
+    {
+      return IReaderPtr();
+    }
+
     const Recording & rec = *rec_ptr;
     std::string path = rec.get_filepath(dvr_.basedir_.string());
 
@@ -486,7 +543,7 @@ namespace yae
                                       QString::fromUtf8(path.c_str()));
     if (!reader)
     {
-      return;
+      return IReaderPtr();
     }
 
     std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
@@ -516,6 +573,8 @@ namespace yae
 
     yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
     playerWindow_.playback(playerWidget_, reader, bookmark.get());
+
+    return reader;
   }
 
   //----------------------------------------------------------------
@@ -608,7 +667,17 @@ namespace yae
   MainWindow::playbackFinished()
   {
     TRecordingPtr rec_ptr = view_.now_playing();
-    YAE_ASSERT(rec_ptr);
+    if (!rec_ptr)
+    {
+      uint32_t live_ch = dvr_.schedule_.get_live_channel();
+      if (live_ch)
+      {
+        watchLive(live_ch);
+      }
+
+      return;
+    }
+
     const Recording & rec = *rec_ptr;
 
     PlayerView & view = playerWidget_->view();
@@ -669,6 +738,7 @@ namespace yae
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
     view_.now_playing_.reset();
+    dvr_.close_live();
   }
 
   //----------------------------------------------------------------
@@ -723,6 +793,24 @@ namespace yae
   MainWindow::backToPlaylist()
   {
     playerWindow_.stopAndHide();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::startLivePlayback
+  //
+  void
+  MainWindow::startLivePlayback()
+  {
+    uint32_t live_ch = dvr_.schedule_.get_live_channel();
+    uint64_t gps_now = TTime::gps_now().get(1);
+    TRecordingPtr rec = dvr_.schedule_.get(live_ch, gps_now);
+    IReaderPtr reader = playbackRecording(rec);
+
+    if (reader)
+    {
+      start_live_playback_.stop();
+      reader->seek(double(start_live_utc_t0_ - 7));
+    }
   }
 
   //----------------------------------------------------------------
@@ -846,24 +934,19 @@ namespace yae
   void
   MainWindow::mousePressEvent(QMouseEvent * e)
   {
-#if 0
     if (e->button() == Qt::RightButton)
     {
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
 
-      // populate the context menu:
-      contextMenu_->clear();
-
-      std::size_t items = 0;
-      if (items)
-      {
-        contextMenu_->addSeparator();
-      }
-
-      contextMenu_->popup(globalPt);
+      PlayerView & playerView = playerWidget_->view();
+      playerView.populateContextMenu();
+      playerView.contextMenu_->popup(globalPt);
+      e->accept();
+      return;
     }
-#endif
+
+    QWidget::mousePressEvent(e);
   }
 
 }

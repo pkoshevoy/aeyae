@@ -102,6 +102,7 @@ namespace yae
     void toggle_fullscreen();
     void confirm_delete(TRecordingPtr);
     void playback(TRecordingPtr);
+    void watch_live(uint32_t ch_num);
 
   public slots:
     void layoutChanged();
@@ -115,6 +116,7 @@ namespace yae
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);
 
+    void on_watch_live(uint32_t ch_num);
     void show_program_details(uint32_t ch_num, uint32_t gps_time);
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);

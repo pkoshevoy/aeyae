@@ -17,6 +17,7 @@
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/filesystem.hpp>
+#include <boost/random/mersenne_twister.hpp>
 #include <boost/thread.hpp>
 #endif
 
@@ -57,7 +58,7 @@ namespace yae
       void save(Json::Value & json) const;
       void load(const Json::Value & json);
 
-      inline bool max_recordings() const
+      inline uint16_t max_recordings() const
       { return max_recordings_ ? *max_recordings_ : 0; }
 
       inline bool skip_duplicates() const
@@ -129,6 +130,16 @@ namespace yae
     inline uint32_t ch_num() const
     { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
 
+    enum MadeBy
+    {
+      kUnspecified = 0,
+      kWishlistItem = 1,
+      kExplicitlyScheduled = 2,
+      kLiveChannel = 3
+    };
+
+    MadeBy made_by_;
+
     bool cancelled_;
     uint64_t utc_t0_;
     uint32_t gps_t0_;
@@ -174,6 +185,13 @@ namespace yae
   //
   struct Schedule
   {
+    // return previous live channel number, set new live channel number:
+    uint32_t enable_live(uint32_t ch_num);
+    uint32_t disable_live();
+
+    // returns 0 is live channel is disabled:
+    uint32_t get_live_channel() const;
+
     // given a wishlist and current epg
     // create program recording schedule
     void update(DVR & dvr, const yae::mpeg_ts::EPG & epg);
@@ -204,6 +222,10 @@ namespace yae
 
     // indexed by channel number:
     std::map<uint32_t, TScheduledRecordings> recordings_;
+
+    // while watching a channel live -- treat everything
+    // on the channel as if scheduled to record:
+    yae::optional<uint32_t> live_ch_;
   };
 
 
@@ -240,6 +262,8 @@ namespace yae
       void handle_backlog(const yae::mpeg_ts::Bucket & bucket,
                           uint32_t gps_time);
 
+      void refresh_cached_recordings();
+
       DVR & dvr_;
       yae::Worker worker_;
       yae::mpeg_ts::Context ctx_;
@@ -250,6 +274,8 @@ namespace yae
       yae::fifo<Packet> packets_;
 
       // cache scheduled recordings to avoid lock contention:
+      mutable boost::mutex mutex_;
+      boost::random::mt11213b prng_;
       std::map<uint32_t, std::set<TRecordingPtr> > recordings_;
       uint32_t recordings_update_gps_time_;
     };
@@ -374,6 +400,9 @@ namespace yae
     void
     get_recordings(TRecordings & by_filename,
                    std::map<std::string, TRecordings> & by_playlist) const;
+
+    void watch_live(uint32_t ch_num);
+    void close_live();
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 

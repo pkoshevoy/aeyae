@@ -403,7 +403,7 @@ namespace yae
       {
         double w = view_.width();
         double h = view_.height();
-        double s = std::max(1.0, std::min(w / 1920.0, h / 1080.0));
+        double s = std::max(1.0, std::min(w / 1280.0, h / 720.0));
         result = 38.4 * s;
       }
     }
