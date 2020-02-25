@@ -890,23 +890,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Schedule::get
+  // find
   //
   TRecordingPtr
-  Schedule::get(uint32_t ch_num, uint32_t gps_time) const
+  find(const std::map<uint32_t, TScheduledRecordings> & recordings,
+       uint32_t ch_num,
+       uint32_t gps_time)
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-
     std::map<uint32_t, TScheduledRecordings>::const_iterator
-      ch_found = recordings_.find(ch_num);
+      ch_found = recordings.find(ch_num);
 
-    if (ch_found == recordings_.end())
+    if (ch_found == recordings.end())
     {
       // nothing scheduled for this channel:
       return TRecordingPtr();
     }
 
-    // recordings are indexed by GPS end time:
+    // recordings are indexed by GPS start time:
     const TScheduledRecordings & schedule = ch_found->second;
     if (schedule.empty())
     {
@@ -952,6 +952,16 @@ namespace yae
     }
 
     return rec_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // Schedule::get
+  //
+  TRecordingPtr
+  Schedule::get(uint32_t ch_num, uint32_t gps_time) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    return yae::find(recordings_, ch_num, gps_time);
   }
 
   //----------------------------------------------------------------
@@ -3043,7 +3053,8 @@ namespace yae
   //
   void
   DVR::get_recordings(TRecordings & by_filename,
-                      std::map<std::string, TRecordings> & by_playlist) const
+                      std::map<std::string, TRecordings> & by_playlist,
+                      std::map<uint32_t, TScheduledRecordings> & by_chan) const
   {
     std::map<std::string, std::string> recordings;
     {
@@ -3053,6 +3064,7 @@ namespace yae
 
     TRecordings rec_by_fn;
     std::map<std::string, TRecordings> rec_by_pl;
+    std::map<uint32_t, TScheduledRecordings> rec_by_channel;
 
     for (std::map<std::string, std::string>::iterator
            i = recordings.begin(); i != recordings.end(); ++i)
@@ -3079,10 +3091,15 @@ namespace yae
 
       rec_by_fn[filename] = rec_ptr;
       rec_by_pl[playlist][filename] = rec_ptr;
+
+      uint32_t ch_num = yae::mpeg_ts::channel_number(recorded.channel_major_,
+                                                     recorded.channel_minor_);
+      rec_by_channel[ch_num][recorded.gps_t0_] = rec_ptr;
     }
 
     by_filename.swap(rec_by_fn);
     by_playlist.swap(rec_by_pl);
+    by_chan.swap(rec_by_channel);
   }
 
   //----------------------------------------------------------------

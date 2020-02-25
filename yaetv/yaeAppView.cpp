@@ -1840,13 +1840,15 @@ namespace yae
 
       TRecordings recordings;
       std::map<std::string, TRecordings> playlists;
-      dvr_->get_recordings(recordings, playlists);
+      std::map<uint32_t, TScheduledRecordings> rec_by_channel;
+      dvr_->get_recordings(recordings, playlists, rec_by_channel);
       bool same_recordings = (recordings == recordings_);
 
       if (!same_recordings)
       {
         recordings_.swap(recordings);
         playlists_.swap(playlists);
+        rec_by_channel_.swap(rec_by_channel);
         sync_ui_playlists();
       }
 
@@ -3307,7 +3309,8 @@ namespace yae
   void
   AppView::on_watch_live(uint32_t ch_num)
   {
-    emit watch_live(ch_num);
+    TTime seek_pos = TTime::now();
+    emit watch_live(ch_num, seek_pos);
   }
 
   //----------------------------------------------------------------

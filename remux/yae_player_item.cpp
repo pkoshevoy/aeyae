@@ -417,8 +417,8 @@ namespace yae
 
     if (atrack < numAudioTracks)
     {
-      YAE_ASSERT(program == audioInfo[vtrack].program_);
-      program = audioInfo[vtrack].program_;
+      YAE_ASSERT(program == audioInfo[atrack].program_);
+      program = audioInfo[atrack].program_;
     }
 
     if (vtrack >= numVideoTracks &&

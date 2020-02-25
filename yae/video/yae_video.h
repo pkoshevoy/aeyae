@@ -30,6 +30,16 @@
 
 namespace yae
 {
+  // forward declarations:
+  struct YAE_API IReader;
+
+  //----------------------------------------------------------------
+  // get_timeline
+  //
+  YAE_API bool
+  get_timeline(const IReader * reader,
+               TTime & t0,
+               TTime & t1);
 
   //----------------------------------------------------------------
   // TAudioSampleFormat

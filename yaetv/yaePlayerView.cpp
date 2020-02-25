@@ -1824,7 +1824,12 @@ namespace yae
       return;
     }
 
-    emit playback_finished();
+    TTime t0(0, 0);
+    TTime t1(0, 0);
+    IReader * reader = get_reader();
+    yae::get_timeline(reader, t0, t1);
+
+    emit playback_finished(t1);
 
     stopPlayback();
   }

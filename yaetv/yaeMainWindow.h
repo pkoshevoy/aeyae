@@ -87,13 +87,13 @@ namespace yae
 
     // helpers:
     void swapShortcuts();
-    void watchLive(uint32_t ch_num);
+    void watchLive(uint32_t ch_num, TTime seekPos);
 
     // returns NULL reader if playback failed to start:
     IReaderPtr playbackRecording(TRecordingPtr rec);
 
     void confirmDelete(TRecordingPtr rec);
-    void playbackFinished();
+    void playbackFinished(TTime playheadPos);
     void saveBookmark();
     void playerWindowClosed();
     void playerEnteringFullScreen();
@@ -139,7 +139,7 @@ namespace yae
     AsyncTaskQueue async_;
 
     QTimer start_live_playback_;
-    uint64_t start_live_utc_t0_;
+    TTime start_live_seek_pos_;
     TRecordingPtr live_rec_;
   };
 }

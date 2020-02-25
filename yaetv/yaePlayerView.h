@@ -87,7 +87,7 @@ namespace yae
     void toggle_playlist();
     void playback_next();
     void playback_prev();
-    void playback_finished();
+    void playback_finished(TTime playhead_pos);
     void playback_remove();
     void fixup_next_prev();
     void save_bookmark();

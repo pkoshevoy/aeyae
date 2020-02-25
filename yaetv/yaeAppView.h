@@ -102,7 +102,7 @@ namespace yae
     void toggle_fullscreen();
     void confirm_delete(TRecordingPtr);
     void playback(TRecordingPtr);
-    void watch_live(uint32_t ch_num);
+    void watch_live(uint32_t ch_num, TTime seek_pos);
 
   public slots:
     void layoutChanged();
@@ -165,6 +165,9 @@ namespace yae
 
     // all recordings, indexed by playlist:
     std::map<std::string, TRecordings> playlists_;
+
+    // all recordings, indexed by channel and gps start time:
+    std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
 
     //----------------------------------------------------------------
     // Playback

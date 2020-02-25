@@ -271,8 +271,7 @@ namespace yae
     readerPrototype_(reader_prototype),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir),
-    start_live_playback_(this),
-    start_live_utc_t0_(0)
+    start_live_playback_(this)
   {
     setupUi(this);
     setAcceptDrops(false);
@@ -344,8 +343,8 @@ namespace yae
                  playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(watch_live(uint32_t)),
-                 this, SLOT(watchLive(uint32_t)));
+    ok = connect(&view_, SIGNAL(watch_live(uint32_t, TTime)),
+                 this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);
 
     ok = connect(&view_, SIGNAL(playback(TRecordingPtr)),
@@ -368,8 +367,8 @@ namespace yae
                  this, SLOT(playerExitingFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(playback_finished()),
-                 this, SLOT(playbackFinished()));
+    ok = connect(&playerView, SIGNAL(playback_finished(TTime)),
+                 this, SLOT(playbackFinished(TTime)));
     YAE_ASSERT(ok);
 
     ok = connect(&playerView, SIGNAL(save_bookmark()),
@@ -489,7 +488,7 @@ namespace yae
   // MainWindow::watchLive
   //
   void
-  MainWindow::watchLive(uint32_t ch_num)
+  MainWindow::watchLive(uint32_t ch_num, TTime seekPos)
   {
     view_.now_playing_.reset();
     dvr_.watch_live(ch_num);
@@ -522,8 +521,8 @@ namespace yae
     playerWidget_->show();
 
     // start a timer to attempt to play the live recording:
+    start_live_seek_pos_ = seekPos;
     start_live_playback_.start();
-    start_live_utc_t0_ = TTime::now().get(1);
   }
 
   //----------------------------------------------------------------
@@ -674,7 +673,7 @@ namespace yae
   // MainWindow::playbackFinished
   //
   void
-  MainWindow::playbackFinished()
+  MainWindow::playbackFinished(TTime playheadPos)
   {
     TRecordingPtr rec_ptr = view_.now_playing();
     if (live_rec_ || !rec_ptr)
@@ -682,7 +681,7 @@ namespace yae
       uint32_t live_ch = dvr_.schedule_.get_live_channel();
       if (live_ch)
       {
-        watchLive(live_ch);
+        watchLive(live_ch, playheadPos);
       }
 
       return;
@@ -812,14 +811,25 @@ namespace yae
   MainWindow::startLivePlayback()
   {
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
-    uint64_t gps_now = TTime::gps_now().get(1);
-    live_rec_ = dvr_.schedule_.get(live_ch, gps_now);
+    uint64_t t_gps = unix_epoch_time_to_gps_time(start_live_seek_pos_.get(1));
+    live_rec_ = yae::find(view_.rec_by_channel_, live_ch, t_gps + 1);
 
     IReaderPtr reader = playbackRecording(live_rec_);
     if (reader)
     {
       start_live_playback_.stop();
-      reader->seek(double(start_live_utc_t0_ - 7));
+
+      TTime t0(0, 0);
+      TTime t1(0, 0);
+      if (yae::get_timeline(reader.get(), t0, t1))
+      {
+        double seek_pos =
+          start_live_seek_pos_.valid() ?
+          std::min(start_live_seek_pos_.sec(), t1.sec() - 7.0) :
+          t1.sec() - 7.0;
+
+        reader->seek(seek_pos);
+      }
 
       const Recording & rec = *live_rec_;
       std::string basepath = rec.get_filepath(dvr_.basedir_, "");

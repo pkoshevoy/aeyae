@@ -182,6 +182,16 @@ namespace yae
   //
   typedef std::map<uint32_t, TRecordingPtr> TScheduledRecordings;
 
+
+  //----------------------------------------------------------------
+  // find
+  //
+  TRecordingPtr
+  find(const std::map<uint32_t, TScheduledRecordings> & recordings,
+       uint32_t ch_num,
+       uint32_t gpt_time);
+
+
   //----------------------------------------------------------------
   // Schedule
   //
@@ -401,7 +411,8 @@ namespace yae
 
     void
     get_recordings(TRecordings & by_filename,
-                   std::map<std::string, TRecordings> & by_playlist) const;
+                   std::map<std::string, TRecordings> & by_playlist,
+                   std::map<uint32_t, TScheduledRecordings> & by_chan) const;
 
     void watch_live(uint32_t ch_num);
     void close_live();

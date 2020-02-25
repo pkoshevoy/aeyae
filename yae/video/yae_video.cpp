@@ -18,10 +18,48 @@
 
 // yae includes:
 #include "yae_video.h"
+#include "yae_reader.h"
 
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // get_timeline
+  //
+  bool
+  get_timeline(const IReader * reader, TTime & t0, TTime & t1)
+  {
+    t0 = TTime(0, 0);
+    t1 = TTime(0, 0);
+
+    if (reader)
+    {
+      TTime duration(0, 0);
+
+      std::size_t nv = reader->getNumberOfVideoTracks();
+      std::size_t na = reader->getNumberOfAudioTracks();
+
+      std::size_t iv = reader->getSelectedVideoTrackIndex();
+      std::size_t ia = reader->getSelectedAudioTrackIndex();
+
+      if (ia < na)
+      {
+        reader->getAudioDuration(t0, duration);
+      }
+      else if (iv < nv)
+      {
+        reader->getVideoDuration(t0, duration);
+      }
+
+      if (t0.valid() && duration.valid())
+      {
+        t1 = t0 + duration;
+      }
+    }
+
+    return t0.valid() && t1.valid();
+  }
 
   //----------------------------------------------------------------
   // getBitsPerSample
