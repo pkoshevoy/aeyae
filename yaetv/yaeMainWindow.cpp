@@ -555,7 +555,11 @@ namespace yae
       stopLivePlayback();
     }
 
-    std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_);
+    bool show_hour = true;
+    bool show_ampm = true;
+    std::string time_str = yae::unix_epoch_time_to_localdate(rec.utc_t0_,
+                                                             show_hour,
+                                                             show_ampm);
     std::string title = strfmt("%i-%i %s, %s",
                                rec.channel_major_,
                                rec.channel_minor_,
@@ -812,7 +816,7 @@ namespace yae
   {
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
     uint64_t t_gps = unix_epoch_time_to_gps_time(start_live_seek_pos_.get(1));
-    live_rec_ = yae::find(view_.rec_by_channel_, live_ch, t_gps + 1);
+    live_rec_ = yae::find(view_.rec_by_channel_, live_ch, t_gps + 10);
 
     IReaderPtr reader = playbackRecording(live_rec_);
     if (reader)
