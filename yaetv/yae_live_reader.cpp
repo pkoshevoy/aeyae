@@ -547,11 +547,15 @@ namespace yae
     }
 
     // extrapolate beyond last segment:
-    const Seg & segment = segments_.back();
-    double byterate = segment.bytes_per_sec(*this);
-    double t1 = double(segment.t1(*this));
-    double p = double(segment.p1(*this)) + (t - t1) * byterate;
-    p = std::min<double>(p, std::numeric_limits<uint64_t>::max());
+    double p = 0.0;
+    if (sumTime_)
+    {
+      const Seg & segment = segments_.back();
+      double byterate = double(sumSize_) / double(sumTime_);
+      double t1 = double(segment.t1(*this));
+      p = double(segment.p1(*this)) + (t - t1) * byterate;
+      p = std::min<double>(p, std::numeric_limits<uint64_t>::max());
+    }
 
     uint64_t pos = uint64_t(p);
     pos -= pos % 188;

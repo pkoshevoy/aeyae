@@ -96,6 +96,20 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TunerRef
+  //
+  struct TunerRef
+  {
+    TunerRef(uint32_t device_index = 0, uint32_t tuner_index = 0):
+      device_(device_index),
+      tuner_(tuner_index)
+    {}
+
+    uint32_t device_;
+    uint32_t tuner_;
+  };
+
+  //----------------------------------------------------------------
   // LockTuner
   //
   struct LockTuner
@@ -315,7 +329,7 @@ namespace yae
 
     mutable boost::mutex mutex_;
     std::vector<struct hdhomerun_discover_device_t> devices_;
-    std::map<std::string, hdhomerun_devptr_t> tuners_;
+    std::map<std::string, TunerRef> tuners_;
     Json::Value tuner_cache_;
     std::string cache_dir_;
 
@@ -377,29 +391,8 @@ namespace yae
 
       for (int tuner = 0; tuner < found.tuner_count; tuner++)
       {
-        hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(found.device_id,
-                                                          found.ip_addr,
-                                                          tuner,
-                                                          NULL));
-
-        if (!hd_ptr)
-        {
-          continue;
-        }
-
-        hdhomerun_device_t & hd = *hd_ptr;
-        std::string name = hdhomerun_device_get_name(&hd);
-        tuners_[name] = hd_ptr;
-
-        std::string model = hdhomerun_device_get_model_str(&hd);
-        uint32_t target_addr = hdhomerun_device_get_local_machine_addr(&hd);
-        yae_ilog("%s, id: %s, target addr: %u.%u.%u.%u",
-                 model.c_str(),
-                 name.c_str(),
-                 (unsigned int)(target_addr >> 24) & 0x0FF,
-                 (unsigned int)(target_addr >> 16) & 0x0FF,
-                 (unsigned int)(target_addr >> 8) & 0x0FF,
-                 (unsigned int)(target_addr >> 0) & 0x0FF);
+        std::string name = yae::strfmt("%08X-%u", found.device_id, tuner);
+        tuners_[name] = TunerRef(i, tuner);
         tuners.push_back(name);
       }
     }
@@ -411,7 +404,7 @@ namespace yae
   bool
   HDHomeRun::Private::init(const std::string & tuner_name)
   {
-    std::map<std::string, hdhomerun_devptr_t>::const_iterator
+    std::map<std::string, TunerRef>::const_iterator
       found = tuners_.find(tuner_name);
     YAE_THROW_IF(found == tuners_.end());
 
@@ -424,7 +417,18 @@ namespace yae
       return true;
     }
 
-    const hdhomerun_devptr_t & hd_ptr = found->second;
+    const TunerRef & tuner = found->second;
+    const hdhomerun_discover_device_t & device = devices_[tuner.device_];
+    hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
+                                                      device.ip_addr,
+                                                      tuner.tuner_,
+                                                      // FIXME: dbg_.get()
+                                                      NULL));
+    if (!hd_ptr)
+    {
+      return false;
+    }
+
     HDHomeRun::TSessionPtr session_ptr = open_session(tuner_name, hd_ptr);
     DontStop dont_stop;
     return scan_channels(session_ptr, dont_stop);
@@ -604,12 +608,20 @@ namespace yae
   HDHomeRun::Private::open_session()
   {
     HDHomeRun::TSessionPtr session;
-    for (std::map<std::string, hdhomerun_devptr_t>::reverse_iterator
+    for (std::map<std::string, TunerRef>::reverse_iterator
            i = tuners_.rbegin(); i != tuners_.rend() && !session; ++i)
     {
       const std::string & tuner_name = i->first;
-      const hdhomerun_devptr_t & hd_ptr = i->second;
-      session = open_session(tuner_name, hd_ptr);
+      const TunerRef & tuner = i->second;
+      const hdhomerun_discover_device_t & device = devices_[tuner.device_];
+      hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
+                                                        device.ip_addr,
+                                                        tuner.tuner_,
+                                                        NULL));
+      if (hd_ptr)
+      {
+        session = open_session(tuner_name, hd_ptr);
+      }
     }
     return session;
   }
@@ -621,12 +633,20 @@ namespace yae
   HDHomeRun::Private::open_session(const std::string & tuner_name)
   {
     HDHomeRun::TSessionPtr session;
-    std::map<std::string, hdhomerun_devptr_t>::const_iterator
+    std::map<std::string, TunerRef>::const_iterator
       found = tuners_.find(tuner_name);
     if (found != tuners_.end())
     {
-      const hdhomerun_devptr_t & hd_ptr = found->second;
-      session = open_session(tuner_name, hd_ptr);
+      const TunerRef & tuner = found->second;
+      const hdhomerun_discover_device_t & device = devices_[tuner.device_];
+      hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
+                                                        device.ip_addr,
+                                                        tuner.tuner_,
+                                                        NULL));
+      if (hd_ptr)
+      {
+        session = open_session(tuner_name, hd_ptr);
+      }
     }
     return session;
   }
@@ -1057,6 +1077,7 @@ namespace yae
                frequency.c_str(),
                channels_txt.c_str());
 
+      TTime time_of_last_pkt = TTime::now();
       while (true)
       {
         yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
@@ -1089,6 +1110,7 @@ namespace yae
                                                 &buffer_size);
         }
 
+        TTime now = TTime::now();
         if (buffer)
         {
           yae::Timesheet::Probe probe(session.timesheet_,
@@ -1099,6 +1121,8 @@ namespace yae
           {
             return;
           }
+
+          time_of_last_pkt = now;
         }
 
         if (session.expired())
@@ -1108,6 +1132,17 @@ namespace yae
 
         if (!buffer)
         {
+          double time_since_last_pkt = (TTime::now() - time_of_last_pkt).sec();
+
+          if (time_since_last_pkt > 1.0)
+          {
+            yae_elog("%s %sHz: no data received within %f sec, giving up now",
+                     tuner_name.c_str(),
+                     frequency.c_str(),
+                     time_since_last_pkt);
+            break;
+          }
+
           msleep_approx(64);
         }
       }

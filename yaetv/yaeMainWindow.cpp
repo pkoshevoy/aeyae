@@ -829,8 +829,9 @@ namespace yae
       {
         double seek_pos =
           start_live_seek_pos_.valid() ?
-          std::min(start_live_seek_pos_.sec(), t1.sec() - 7.0) :
-          t1.sec() - 7.0;
+          std::min(start_live_seek_pos_.sec(), t1.sec() - 10.0) :
+          t1.sec() - 10.0;
+        seek_pos = std::max(t0.sec(), seek_pos);
 
         reader->seek(seek_pos);
       }
