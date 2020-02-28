@@ -104,6 +104,75 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // Wishlist::Item::to_str
+  //
+  std::string
+  Wishlist::Item::to_str() const
+  {
+    const char * sep = "";
+    std::ostringstream oss;
+
+    if (!title_.empty())
+    {
+      oss << sep << title_;
+      sep = ", ";
+    }
+
+    if (weekday_mask_ && *weekday_mask_)
+    {
+      const char * s = sep;
+      uint16_t weekdays = *weekday_mask_;
+      uint16_t wday = 1;
+      for (int i = 0; i < 7; i++)
+      {
+        if ((weekdays & wday) == wday)
+        {
+          oss << s << kWeekdays[i];
+          s = " ";
+        }
+
+        wday <<= 1;
+      }
+
+      sep = ", ";
+    }
+
+    if (date_)
+    {
+      const struct tm & tm = *date_;
+      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
+      oss << sep << yae::unix_epoch_time_to_localdate(ts);
+      sep = ", ";
+    }
+
+    if (when_)
+    {
+      const Timespan & when = *when_;
+      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
+      sep = ", ";
+    }
+
+    if (channel_)
+    {
+      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
+      oss << sep << "channel " << ch_num.first << '-' << ch_num.second;
+      sep = ", ";
+    }
+    else
+    {
+      oss << sep << "any channel";
+    }
+
+    if (!description_.empty())
+    {
+      oss << sep << description_;
+      sep = ", ";
+    }
+
+    return std::string(oss.str().c_str());
+  }
+
+  //----------------------------------------------------------------
   // Wishlist::Item::matches
   //
   bool
@@ -356,6 +425,28 @@ namespace yae
     yae::load(json, "description", description_);
     yae::load(json, "max_recordings", max_recordings_);
     yae::load(json, "skip_duplicates", skip_duplicates_);
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::get
+  //
+  void
+  Wishlist::get(std::map<std::string, Item> & wishlist) const
+  {
+    for (std::list<Item>::const_iterator
+           i = items_.begin(); i != items_.end(); ++i)
+    {
+      const Item & item = *i;
+      std::string key = item.to_str();
+
+      YAE_ASSERT(!key.empty());
+      if (key.empty())
+      {
+        continue;
+      }
+
+      wishlist[key] = item;
+    }
   }
 
   //----------------------------------------------------------------
@@ -2307,10 +2398,10 @@ namespace yae
   // DVR::get
   //
   void
-  DVR::get(Wishlist & wishlist) const
+  DVR::get(std::map<std::string, Wishlist::Item> & wishlist) const
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
-    wishlist = wishlist_;
+    wishlist_.get(wishlist);
   }
 
   //----------------------------------------------------------------

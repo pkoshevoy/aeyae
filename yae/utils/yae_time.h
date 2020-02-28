@@ -66,6 +66,12 @@ namespace yae
   extern const int64_t YAE_API unix_epoch_gps_offset;
 
   //----------------------------------------------------------------
+  // same_localtime
+  //
+  YAE_API bool
+  same_localtime(const struct tm & a, const struct tm & b);
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime
   //
   YAE_API void
@@ -240,6 +246,9 @@ namespace yae
       return time_ ? double(base_) / double(time_) : 0.0;
     }
 
+    void to_hhmm(std::string & ts,
+                 const char * separator = ":") const;
+
     void to_hhmmss(std::string & ts,
                    const char * separator = ":") const;
 
@@ -253,7 +262,15 @@ namespace yae
                          const char * mm_separator = ":",
                          const char * ff_separator = ":") const;
 
-    // return timestamp in hhmmss format
+    // return timestamp in hhmm format, rounded away from zero:
+    inline std::string to_hhmm(const char * mm_separator = ":") const
+    {
+      std::string ts;
+      to_hhmm(ts, mm_separator);
+      return ts;
+    }
+
+    // return timestamp in hhmmss format, rounded away from zero:
     inline std::string to_hhmmss(const char * mm_separator = ":") const
     {
       std::string ts;
@@ -369,6 +386,9 @@ namespace yae
 
     inline Timespan operator - (const TTime & offset) const
     { return this->operator + (-offset); }
+
+    inline bool operator == (const Timespan & other) const
+    { return t0_ == other.t0_ && t1_ == other.t1_; }
 
     inline Timespan overlap(const Timespan & s) const
     { return Timespan(std::max(t0_, s.t0_), std::min(t1_, s.t1_)); }

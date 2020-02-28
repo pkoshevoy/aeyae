@@ -112,6 +112,7 @@ namespace yae
     void sync_ui_epg();
     void sync_ui_channels();
     void sync_ui_schedule();
+    void sync_ui_wishlist();
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);
@@ -156,6 +157,8 @@ namespace yae
 
     DVR::Blacklist blacklist_;
     std::map<std::string, TChannels> channels_;
+
+    std::map<std::string, Wishlist::Item> wishlist_;
 
     // scheduled recordings, indexed by channel number:
     std::map<uint32_t, TScheduledRecordings> schedule_;
@@ -226,9 +229,9 @@ namespace yae
     std::map<std::string, yae::shared_ptr<Item> > pl_sidebar_;
     std::map<std::string, yae::shared_ptr<Layout> > pl_layout_;
 
-    // sidebar wishlist stuff:
-    std::map<std::string, std::size_t> wl_index_;
-    std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
+    // wishlist stuff:
+    Layout wl_sidebar_;
+    std::map<std::string, yae::shared_ptr<Layout> > wl_layout_;
   };
 
 }

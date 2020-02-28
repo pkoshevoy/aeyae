@@ -131,6 +131,17 @@ namespace yae
     yae::unix_epoch_time_at_utc_time(1980, 01, 06, 00, 00, 00);
 
   //----------------------------------------------------------------
+  // same_localtime
+  //
+  bool
+  same_localtime(const struct tm & a, const struct tm & b)
+  {
+    int64_t ta = localtime_to_unix_epoch_time(a);
+    int64_t tb = localtime_to_unix_epoch_time(b);
+    return ta == tb;
+  }
+
+  //----------------------------------------------------------------
   // unix_epoch_time_to_localtime
   //
   void
@@ -757,6 +768,52 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // to_hhmm
+  //
+  static bool
+  to_hhmm(int64_t time,
+          uint64_t base,
+          std::string & ts,
+          const char * separator,
+          bool includeNegativeSign = false)
+  {
+    bool negative = (time < 0);
+    int64_t t = negative ? -time : time;
+
+    // convert to seconds, round up:
+    t = (t + (base >> 1) - 1) / base;
+
+    // convert to minutes, round up:
+    t = (t + 29) / 60;
+
+    int64_t minutes = t % 60;
+    int64_t hours = t / 60;
+
+    std::ostringstream os;
+
+    if (negative && includeNegativeSign && (minutes || hours))
+    {
+      os << '-';
+    }
+
+    os << std::setw(2) << std::setfill('0') << (int64_t)(hours) << separator
+       << std::setw(2) << std::setfill('0') << (int)(minutes);
+
+    ts = std::string(os.str().c_str());
+
+    return negative;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::to_hhmm
+  //
+  void
+  TTime::to_hhmm(std::string & ts, const char * separator) const
+  {
+    yae::to_hhmm(time_, base_, ts, separator, true);
+  }
+
+  //----------------------------------------------------------------
   // to_hhmmss
   //
   static bool
@@ -767,9 +824,10 @@ namespace yae
             bool includeNegativeSign = false)
   {
     bool negative = (time < 0);
-
     int64_t t = negative ? -time : time;
-    t /= base;
+
+    // convert to seconds, round up:
+    t = (t + (base >> 1) - 1) / base;
 
     int64_t seconds = t % 60;
     t /= 60;

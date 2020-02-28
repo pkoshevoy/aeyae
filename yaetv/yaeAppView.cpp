@@ -1826,6 +1826,10 @@ namespace yae
     {
       bool same_program_guide = !dvr_->get_cached_epg(epg_lastmod_, epg_);
 
+      std::map<std::string, Wishlist::Item> wishlist;
+      dvr_->get(wishlist);
+      bool same_wishlist = (wishlist == wishlist_);
+
       DVR::Blacklist blacklist;
       dvr_->get(blacklist);
       bool same_blacklist = (blacklist.channels_ == blacklist_.channels_);
@@ -1865,6 +1869,12 @@ namespace yae
         sync_ui_schedule();
       }
 
+      if (!same_wishlist)
+      {
+        wishlist_.swap(wishlist);
+        sync_ui_wishlist();
+      }
+
       // when EPG layout origin jumps -- uncache EPG layout
       // so that all the programs would be redrawn
       // at the correct coordinates:
@@ -1883,6 +1893,7 @@ namespace yae
 
       if (same_program_guide &&
           same_blacklist &&
+          same_wishlist &&
           same_schedule)
       {
         requestRepaint();
@@ -2725,6 +2736,148 @@ namespace yae
 
     sch_layout_.items_.swap(rows);
     sch_layout_.item_->uncache();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::sync_ui_wishlist
+  //
+  void
+  AppView::sync_ui_wishlist()
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+
+    Item & panel = *sideview_;
+    Scrollview & sv = panel.get<Scrollview>("sideview.scrollview");
+    Item & sidebar = *(sv.content_);
+    Item & group = sidebar.get<Item>("wishlist_group");
+    Item & body = group.get<Item>("body");
+
+    std::map<std::string, yae::shared_ptr<Layout> > rows;
+    wl_sidebar_.index_.clear();
+    std::size_t num_rows = 0;
+
+    for (std::map<std::string, Wishlist::Item>::const_iterator
+           i = wishlist_.begin(); i != wishlist_.end(); ++i)
+    {
+      const std::string & summary = i->first;
+      const Wishlist::Item & wi = i->second;
+
+      std::string row_id = "wl: " + summary;
+      wl_sidebar_.index_[row_id] = num_rows;
+      num_rows++;
+
+      yae::shared_ptr<Layout> & row_layout_ptr = wl_sidebar_.items_[row_id];
+      if (!row_layout_ptr)
+      {
+        row_layout_ptr.reset(new Layout());
+        Layout & row_layout = *row_layout_ptr;
+
+        row_layout.item_.reset(new Select(row_id.c_str(),
+                                          view,
+                                          view.sidebar_sel_));
+
+        Item & row = body.add<Item>(row_layout.item_);
+        row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+        row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+        row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+        row.anchors_.top_ = row.
+          addExpr(new ListItemTop(view, body, wl_sidebar_.index_, row.id_));
+
+        Rectangle & bg = row.addNew<Rectangle>("bg");
+        bg.anchors_.fill(row);
+        bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
+        bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
+        bg.color_ = bg.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+        bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
+
+        RoundRect & icon = row.addNew<RoundRect>("icon");
+        icon.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        icon.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+        icon.width_ = ItemRef::reference(hidden, kUnitSize, 0.9);
+        icon.height_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+        icon.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
+        icon.background_ = icon.
+           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        icon.color_ = icon.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
+
+        RoundRect & dot = row.addNew<RoundRect>("dot");
+        dot.radius_ = ItemRef::reference(dot, kPropertyHeight, 0.5);
+        dot.anchors_.left_ = ItemRef::offset(icon, kPropertyLeft, 1);
+        dot.anchors_.bottom_ = ItemRef::offset(icon, kPropertyBottom, 1);
+        dot.width_ = dot.addExpr(new OddRoundUp(icon, kPropertyHeight, 0.33));
+        dot.height_ = dot.width_;
+        dot.margins_.
+          set_left(ItemRef::reference(icon, kPropertyHeight, 0.167));
+        dot.margins_.
+          set_bottom(ItemRef::reference(icon, kPropertyHeight, 0.167));
+        dot.background_ = icon.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
+        dot.color_ = icon.
+          addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+
+        Text & title = row.addNew<Text>("title");
+        title.font_ = style.font_;
+        title.font_.setWeight(62);
+        title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        title.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        title.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+        title.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+        title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+        title.elide_ = Qt::ElideRight;
+        title.color_ = title.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+        title.background_ = title.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        title.text_ = TVarRef::constant
+          (TVar(QString::fromUtf8(summary.c_str())));
+      }
+
+      rows[row_id] = row_layout_ptr;
+
+      // FIXME: pkoshevoy: write me:
+      // sync_ui_wishlist(row_id, wi);
+    }
+
+    // unreferenced wishlist items must be removed:
+    std::string sidebar_sel = view.sidebar_sel_;
+    std::string prev_wishlist;
+
+    for (std::map<std::string, yae::shared_ptr<Layout> >::const_iterator
+           i = wl_sidebar_.items_.begin(); i != wl_sidebar_.items_.end(); ++i)
+    {
+      const std::string & row_id = i->first;
+      if (!yae::has(rows, row_id))
+      {
+        const Layout & row_layout = *(i->second);
+        YAE_ASSERT(body.remove(row_layout.item_));
+        wl_layout_.erase(row_id);
+
+        if (view.sidebar_sel_ == row_id)
+        {
+          sidebar_sel = prev_wishlist;
+        }
+      }
+      else
+      {
+        prev_wishlist = row_id;
+      }
+    }
+
+    if (sidebar_sel.empty())
+    {
+      sidebar_sel = "view_mode_recordings";
+    }
+
+    view.sidebar_sel_ = sidebar_sel;
+    wl_sidebar_.items_.swap(rows);
+    dataChanged();
   }
 
   //----------------------------------------------------------------

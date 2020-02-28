@@ -52,6 +52,8 @@ namespace yae
     //
     struct Item
     {
+      std::string to_str() const;
+
       bool matches(const yae::mpeg_ts::EPG::Channel & channel,
                    const yae::mpeg_ts::EPG::Program & program) const;
 
@@ -63,6 +65,20 @@ namespace yae
 
       inline bool skip_duplicates() const
       { return skip_duplicates_ ? *skip_duplicates_ : false; }
+
+      inline bool operator == (const Wishlist::Item & other) const
+      {
+        return (skip_duplicates_ == other.skip_duplicates_ &&
+                max_recordings_ == other.max_recordings_ &&
+                channel_ == other.channel_ &&
+                ((!date_ && !other.date_) ||
+                 (date_ && other.date_ &&
+                  same_localtime(*date_, *other.date_))) &&
+                when_ == other.when_ &&
+                weekday_mask_ == other.weekday_mask_ &&
+                title_ == other.title_ &&
+                description_ == other.description_);
+      }
 
       enum Weekday
       {
@@ -90,6 +106,9 @@ namespace yae
     };
 
     Wishlist();
+
+    // store wishlist in a map, indexed by Item::to_str summary:
+    void get(std::map<std::string, Item> & wishlist) const;
 
     yae::shared_ptr<Item>
     matches(const yae::mpeg_ts::EPG::Channel & channel,
@@ -366,7 +385,7 @@ namespace yae
 
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
     void get(Blacklist & blacklist) const;
-    void get(Wishlist & wishlist) const;
+    void get(std::map<std::string, Wishlist::Item> & wishlist) const;
 
     void get_epg(yae::mpeg_ts::EPG & epg,
                  const std::string & lang = std::string("eng")) const;
