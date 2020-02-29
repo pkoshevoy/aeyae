@@ -2756,8 +2756,8 @@ namespace yae
     Item & group = sidebar.get<Item>("wishlist_group");
     Item & body = group.get<Item>("body");
 
-    std::map<std::string, yae::shared_ptr<Layout> > rows;
-    wl_sidebar_.index_.clear();
+    std::map<std::string, yae::shared_ptr<Item> > rows;
+    wl_index_.clear();
     std::size_t num_rows = 0;
 
     for (std::map<std::string, Wishlist::Item>::const_iterator
@@ -2767,25 +2767,22 @@ namespace yae
       const Wishlist::Item & wi = i->second;
 
       std::string row_id = "wl: " + summary;
-      wl_sidebar_.index_[row_id] = num_rows;
+      wl_index_[row_id] = num_rows;
       num_rows++;
 
-      yae::shared_ptr<Layout> & row_layout_ptr = wl_sidebar_.items_[row_id];
-      if (!row_layout_ptr)
+      yae::shared_ptr<Item> & row_ptr = wl_sidebar_[row_id];
+      if (!row_ptr)
       {
-        row_layout_ptr.reset(new Layout());
-        Layout & row_layout = *row_layout_ptr;
+        row_ptr.reset(new Select(row_id.c_str(),
+                                 view,
+                                 view.sidebar_sel_));
 
-        row_layout.item_.reset(new Select(row_id.c_str(),
-                                          view,
-                                          view.sidebar_sel_));
-
-        Item & row = body.add<Item>(row_layout.item_);
+        Item & row = body.add<Item>(row_ptr);
         row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
         row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
         row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
         row.anchors_.top_ = row.
-          addExpr(new ListItemTop(view, body, wl_sidebar_.index_, row.id_));
+          addExpr(new ListItemTop(view, body, wl_index_, row.id_));
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
@@ -2795,6 +2792,7 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
+#if 0
         RoundRect & icon = row.addNew<RoundRect>("icon");
         icon.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         icon.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
@@ -2820,13 +2818,15 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
         dot.color_ = icon.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+#endif
 
         Text & title = row.addNew<Text>("title");
         title.font_ = style.font_;
         title.font_.setWeight(62);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         title.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-        title.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+        // title.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+        title.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
         title.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
         title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
@@ -2839,7 +2839,7 @@ namespace yae
           (TVar(QString::fromUtf8(summary.c_str())));
       }
 
-      rows[row_id] = row_layout_ptr;
+      rows[row_id] = row_ptr;
 
       // FIXME: pkoshevoy: write me:
       // sync_ui_wishlist(row_id, wi);
@@ -2849,14 +2849,14 @@ namespace yae
     std::string sidebar_sel = view.sidebar_sel_;
     std::string prev_wishlist;
 
-    for (std::map<std::string, yae::shared_ptr<Layout> >::const_iterator
-           i = wl_sidebar_.items_.begin(); i != wl_sidebar_.items_.end(); ++i)
+    for (std::map<std::string, yae::shared_ptr<Item> >::const_iterator
+           i = wl_sidebar_.begin(); i != wl_sidebar_.end(); ++i)
     {
       const std::string & row_id = i->first;
       if (!yae::has(rows, row_id))
       {
-        const Layout & row_layout = *(i->second);
-        YAE_ASSERT(body.remove(row_layout.item_));
+        yae::shared_ptr<Item> row_ptr = i->second;
+        YAE_ASSERT(body.remove(row_ptr));
         wl_layout_.erase(row_id);
 
         if (view.sidebar_sel_ == row_id)
@@ -2876,7 +2876,7 @@ namespace yae
     }
 
     view.sidebar_sel_ = sidebar_sel;
-    wl_sidebar_.items_.swap(rows);
+    wl_sidebar_.swap(rows);
     dataChanged();
   }
 

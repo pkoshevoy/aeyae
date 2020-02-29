@@ -1036,7 +1036,14 @@ namespace yae
       unsigned int tuner = hdhomerun_device_get_tuner(hd);
       std::string param = yae::strfmt("/tuner%i/channel", tuner);
       char * error = NULL;
-
+#if 0
+      static bool failed_once = false;
+      if (frequency == "557000000" && !failed_once)
+      {
+        failed_once = true;
+        YAE_THROW("FIXME: pkoshevoy: simulating a tuner lock failure, once");
+      }
+#endif
       if (hdhomerun_device_set_var(hd,
                                    param.c_str(),
                                    channel.c_str(),

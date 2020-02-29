@@ -230,7 +230,8 @@ namespace yae
     std::map<std::string, yae::shared_ptr<Layout> > pl_layout_;
 
     // wishlist stuff:
-    Layout wl_sidebar_;
+    std::map<std::string, std::size_t> wl_index_;
+    std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
     std::map<std::string, yae::shared_ptr<Layout> > wl_layout_;
   };
 

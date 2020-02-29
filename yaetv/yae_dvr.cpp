@@ -1609,6 +1609,9 @@ namespace yae
 
     // it's as ready as it's going to be:
     epg_ready_.notify_all();
+
+    // get rid of the session so we don't end up with a stale tuner lock:
+    session_.reset();
   }
 
   //----------------------------------------------------------------
@@ -1757,7 +1760,6 @@ namespace yae
 #endif
 
         dvr_.evaluate(epg);
-        continue;
       }
 
       if (dvr_.worker_.is_idle())
@@ -1766,16 +1768,14 @@ namespace yae
 
         if (blacklist_changed || dvr_.next_epg_refresh() <= now)
         {
-          dvr_.set_next_epg_refresh(now + dvr_.epg_refresh_period_);
+          dvr_.set_next_epg_refresh(now + dvr_.schedule_refresh_period_ * 2.0);
           dvr_.update_epg();
-          continue;
         }
 
         if (dvr_.next_channel_scan() <= now)
         {
           dvr_.set_next_channel_scan(now + dvr_.channel_scan_period_);
           dvr_.scan_channels();
-          continue;
         }
       }
 
@@ -1808,7 +1808,7 @@ namespace yae
     yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     channel_scan_period_(24 * 60 * 60, 1),
-    epg_refresh_period_(60, 1),
+    epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
     margin_(60, 1)
   {
@@ -2209,7 +2209,14 @@ namespace yae
       TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
       YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
 
-      if (dvr_.epg_refresh_period_ <= elapsed_time_since_mgt)
+      if (elapsed_time_since_mgt < dvr_.epg_refresh_period_)
+      {
+        yae_ilog("skipping EPG update for channels %i.* (%s)",
+                 major,
+                 frequency.c_str());
+        // save_epg(frequency, ctx);
+      }
+      else
       {
         DVR::TStreamPtr stream_ptr =
           dvr_.capture_stream(frequency, sample_dur);
@@ -2259,13 +2266,6 @@ namespace yae
                    frequency.c_str());
           continue;
         }
-      }
-      else
-      {
-        yae_ilog("skipping EPG update for channels %i.* (%s)",
-                 major,
-                 frequency.c_str());
-        save_epg(frequency, ctx);
       }
     }
   }
@@ -2332,7 +2332,7 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     TStreamPtr stream_ptr = stream_[frequency].lock();
 
-    if (!stream_ptr)
+    if (!stream_ptr || !stream_ptr->session_)
     {
       // start a new session:
       HDHomeRun::TSessionPtr session_ptr = hdhr_.open_session();
