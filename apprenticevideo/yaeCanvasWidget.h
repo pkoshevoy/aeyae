@@ -58,12 +58,13 @@ namespace yae
 
       bool ok = true;
       ok = connect(&timerHideCursor_, SIGNAL(timeout()),
-                   this, SLOT(hideCursor()));
+                   this, SIGNAL(maybeHideCursor()));
       YAE_ASSERT(ok);
     }
 
   signals:
     void toggleFullScreen();
+    void maybeHideCursor();
 
   public slots:
     void hideCursor()

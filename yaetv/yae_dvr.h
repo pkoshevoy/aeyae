@@ -52,7 +52,10 @@ namespace yae
     //
     struct Item
     {
-      std::string to_str() const;
+      // helpers:
+      std::string ch_txt() const;
+      std::string to_txt() const;
+      std::string to_key() const;
 
       bool matches(const yae::mpeg_ts::EPG::Channel & channel,
                    const yae::mpeg_ts::EPG::Program & program) const;

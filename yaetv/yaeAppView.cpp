@@ -2763,10 +2763,10 @@ namespace yae
     for (std::map<std::string, Wishlist::Item>::const_iterator
            i = wishlist_.begin(); i != wishlist_.end(); ++i)
     {
-      const std::string & summary = i->first;
+      const std::string & wi_key = i->first;
       const Wishlist::Item & wi = i->second;
 
-      std::string row_id = "wl: " + summary;
+      std::string row_id = "wl: " + wi_key;
       wl_index_[row_id] = num_rows;
       num_rows++;
 
@@ -2792,7 +2792,6 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
-#if 0
         RoundRect & icon = row.addNew<RoundRect>("icon");
         icon.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         icon.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
@@ -2803,40 +2802,52 @@ namespace yae
            addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
         icon.color_ = icon.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
-
+#if 0
         RoundRect & dot = row.addNew<RoundRect>("dot");
         dot.radius_ = ItemRef::reference(dot, kPropertyHeight, 0.5);
-        dot.anchors_.left_ = ItemRef::offset(icon, kPropertyLeft, 1);
-        dot.anchors_.bottom_ = ItemRef::offset(icon, kPropertyBottom, 1);
-        dot.width_ = dot.addExpr(new OddRoundUp(icon, kPropertyHeight, 0.33));
+        dot.anchors_.left_ = ItemRef::offset(icon, kPropertyLeft);
+        dot.anchors_.bottom_ = ItemRef::offset(icon, kPropertyBottom);
+        dot.width_ = dot.addExpr(new OddRoundUp(icon, kPropertyHeight, 0.2));
         dot.height_ = dot.width_;
         dot.margins_.
-          set_left(ItemRef::reference(icon, kPropertyHeight, 0.167));
+          set_left(ItemRef::reference(icon, kPropertyHeight, 0.1));
         dot.margins_.
-          set_bottom(ItemRef::reference(icon, kPropertyHeight, 0.167));
+          set_bottom(ItemRef::reference(icon, kPropertyHeight, 0.1));
         dot.background_ = icon.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
         dot.color_ = icon.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
 #endif
-
-        Text & title = row.addNew<Text>("title");
-        title.font_ = style.font_;
-        title.font_.setWeight(62);
-        title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-        title.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-        // title.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
-        title.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
-        title.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
-        title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
-        title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
-        title.elide_ = Qt::ElideRight;
-        title.color_ = title.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-        title.background_ = title.
+        Text & chan = row.addNew<Text>("chan");
+        chan.font_ = style.font_;
+        chan.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        chan.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        chan.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+        chan.width_ = ItemRef::reference(hidden, kUnitSize, 0.9);
+        chan.height_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+        chan.alignment_ = Qt::AlignHCenter;
+        chan.elide_ = Qt::ElideRight;
+        chan.text_ = TVarRef::constant(TVar(wi.ch_txt()));
+        chan.color_ = chan.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+        chan.background_ = chan.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-        title.text_ = TVarRef::constant
-          (TVar(QString::fromUtf8(summary.c_str())));
+
+        Text & desc = row.addNew<Text>("desc");
+        desc.font_ = style.font_;
+        desc.font_.setWeight(62);
+        desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+        desc.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
+        desc.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
+        desc.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+        desc.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
+        desc.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
+        desc.elide_ = Qt::ElideRight;
+        desc.text_ = TVarRef::constant(TVar(wi.to_txt()));
+        desc.color_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+        desc.background_ = desc.
+          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       }
 
       rows[row_id] = row_ptr;

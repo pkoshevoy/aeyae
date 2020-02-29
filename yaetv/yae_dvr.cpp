@@ -104,17 +104,39 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
-  // Wishlist::Item::to_str
+  // Wishlist::Item::ch_txt
   //
   std::string
-  Wishlist::Item::to_str() const
+  Wishlist::Item::ch_txt() const
+  {
+    std::ostringstream oss;
+
+    if (channel_)
+    {
+      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
+      oss << ch_num.first << '-' << ch_num.second;
+    }
+    else
+    {
+      oss << "*";
+    }
+
+    return std::string(oss.str().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::Item::to_txt
+  //
+  std::string
+  Wishlist::Item::to_txt() const
   {
     const char * sep = "";
     std::ostringstream oss;
 
-    if (!title_.empty())
+    if (when_)
     {
-      oss << sep << title_;
+      const Timespan & when = *when_;
+      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
       sep = ", ";
     }
 
@@ -145,6 +167,30 @@ namespace yae
       sep = ", ";
     }
 
+    if (!title_.empty())
+    {
+      oss << sep << title_;
+      sep = ", ";
+    }
+
+    if (!description_.empty())
+    {
+      oss << sep << description_;
+      sep = ", ";
+    }
+
+    return std::string(oss.str().c_str());
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::Item::to_key
+  //
+  std::string
+  Wishlist::Item::to_key() const
+  {
+    const char * sep = "";
+    std::ostringstream oss;
+
     if (when_)
     {
       const Timespan & when = *when_;
@@ -152,20 +198,54 @@ namespace yae
       sep = ", ";
     }
 
-    if (channel_)
+    if (weekday_mask_ && *weekday_mask_)
     {
-      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
-      oss << sep << "channel " << ch_num.first << '-' << ch_num.second;
+      const char * s = sep;
+      uint16_t weekdays = *weekday_mask_;
+      uint16_t wday = 1;
+      for (int i = 0; i < 7; i++)
+      {
+        if ((weekdays & wday) == wday)
+        {
+          oss << s << kWeekdays[i];
+          s = " ";
+        }
+
+        wday <<= 1;
+      }
+
       sep = ", ";
     }
-    else
+
+    if (date_)
     {
-      oss << sep << "any channel";
+      const struct tm & tm = *date_;
+      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
+      oss << sep << yae::unix_epoch_time_to_localdate(ts);
+      sep = ", ";
+    }
+
+    if (!title_.empty())
+    {
+      oss << sep << title_;
+      sep = ", ";
     }
 
     if (!description_.empty())
     {
       oss << sep << description_;
+      sep = ", ";
+    }
+
+    if (channel_)
+    {
+      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
+      oss << sep << strfmt("%02i.%02i", ch_num.first, ch_num.second);
+      sep = ", ";
+    }
+    else
+    {
+      oss << sep << "00.00";
       sep = ", ";
     }
 
@@ -437,7 +517,7 @@ namespace yae
            i = items_.begin(); i != items_.end(); ++i)
     {
       const Item & item = *i;
-      std::string key = item.to_str();
+      std::string key = item.to_key();
 
       YAE_ASSERT(!key.empty());
       if (key.empty())
