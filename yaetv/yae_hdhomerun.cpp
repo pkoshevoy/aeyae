@@ -1160,6 +1160,12 @@ namespace yae
                tuner_name.c_str(),
                frequency.c_str());
     }
+
+    yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
+    if (stream_ptr)
+    {
+      stream_ptr->close();
+    }
   }
 
 

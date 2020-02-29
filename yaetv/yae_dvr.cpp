@@ -1808,7 +1808,7 @@ namespace yae
     yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     channel_scan_period_(24 * 60 * 60, 1),
-    epg_refresh_period_(30 * 60, 1),
+    epg_refresh_period_(60, 1),
     schedule_refresh_period_(30, 1),
     margin_(60, 1)
   {
