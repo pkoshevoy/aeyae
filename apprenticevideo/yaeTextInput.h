@@ -151,8 +151,7 @@ namespace yae
     ColorRef bgNoFocus_;
     ColorRef bgOnFocus_;
     TVarRef placeholder_;
-
-    bool copyViewToEdit_;
+    BoolRef copyViewToEdit_;
   };
 
 }

@@ -1226,7 +1226,7 @@ namespace yae
       add(new TextInputProxy(str("focus_", focus_index).c_str(), text, edit));
 
     focus.anchors_.fill(text_bg);
-    focus.copyViewToEdit_ = true;
+    focus.copyViewToEdit_ = BoolRef::constant(true);
     focus.bgNoFocus_ = ColorRef::constant(Color(0, 0.0));
     focus.bgOnFocus_ = ColorRef::constant(Color(0, 0.3));
 

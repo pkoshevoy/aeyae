@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// standard:
+#include <utility>
+
 // aeyae:
 #include "yae/utils/yae_utils.h"
 
@@ -78,6 +81,53 @@ namespace yae
 
     AppView & view_;
     std::string & sel_;
+  };
+
+  //----------------------------------------------------------------
+  // EditWishlist
+  //
+  struct EditWishlist : public InputArea
+  {
+    EditWishlist(const char * id, AppView & view, std::string & sel):
+      InputArea(id),
+      view_(view),
+      sel_(sel)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      sel_ = Item::id_;
+      view_.edit_wishlist(Item::id_);
+      view_.dataChanged();
+      return true;
+    }
+
+    AppView & view_;
+    std::string & sel_;
+  };
+
+  //----------------------------------------------------------------
+  // IsWishlistSelected
+  //
+  struct IsWishlistSelected : public TBoolExpr
+  {
+    IsWishlistSelected(const std::string & sel):
+      sel_(sel)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    { result = al::starts_with(sel_, "wl: "); }
+
+    const std::string & sel_;
+    std::string key_;
   };
 
 
@@ -1602,6 +1652,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::setEnabled
+  //
+  void
+  AppView::setEnabled(bool enable)
+  {
+    if (isEnabled() == enable)
+    {
+      return;
+    }
+
+    ItemFocus::singleton().enable("wishlist_ui", enable);
+    ItemView::setEnabled(enable);
+  }
+
+  //----------------------------------------------------------------
   // AppView::setContext
   //
   void
@@ -2773,9 +2838,9 @@ namespace yae
       yae::shared_ptr<Item> & row_ptr = wl_sidebar_[row_id];
       if (!row_ptr)
       {
-        row_ptr.reset(new Select(row_id.c_str(),
-                                 view,
-                                 view.sidebar_sel_));
+        row_ptr.reset(new EditWishlist(row_id.c_str(),
+                                       view,
+                                       view.sidebar_sel_));
 
         Item & row = body.add<Item>(row_ptr);
         row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
@@ -2813,9 +2878,9 @@ namespace yae
           set_left(ItemRef::reference(icon, kPropertyHeight, 0.1));
         dot.margins_.
           set_bottom(ItemRef::reference(icon, kPropertyHeight, 0.1));
-        dot.background_ = icon.
+        dot.background_ = dot.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
-        dot.color_ = icon.
+        dot.color_ = dot.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
 #endif
         Text & chan = row.addNew<Text>("chan");
@@ -2851,8 +2916,6 @@ namespace yae
       }
 
       rows[row_id] = row_ptr;
-
-      sync_ui_wishlist_item(row_id, wi);
     }
 
     // unreferenced wishlist items must be removed:
@@ -2867,7 +2930,6 @@ namespace yae
       {
         yae::shared_ptr<Item> row_ptr = i->second;
         YAE_ASSERT(body.remove(row_ptr));
-        wl_layout_.erase(row_id);
 
         if (view.sidebar_sel_ == row_id)
         {
@@ -2888,34 +2950,6 @@ namespace yae
     view.sidebar_sel_ = sidebar_sel;
     wl_sidebar_.swap(rows);
     dataChanged();
-  }
-
-  //----------------------------------------------------------------
-  // AppView::sync_ui_wishlist_item
-  //
-  void
-  AppView::sync_ui_wishlist_item(const std::string & row_id,
-                                 const Wishlist::Item & wi)
-  {
-    // shortcuts:
-    AppView & view = *this;
-    AppStyle & style = *style_;
-    Item & root = *root_;
-    Item & hidden = root.get<Item>("hidden");
-    Item & mainview = *mainview_;
-
-    yae::shared_ptr<Layout> & layout_ptr = wl_layout_[row_id];
-    if (!layout_ptr)
-    {
-      layout_ptr.reset(new Layout());
-      Layout & layout = *layout_ptr;
-
-      layout.item_.reset(new Item(row_id.c_str()));
-      Item & panel = mainview.add<Item>(layout.item_);
-      panel.anchors_.fill(mainview);
-      panel.visible_ = panel.
-        addExpr(new IsSelected(sidebar_sel_, row_id));
-    }
   }
 
   //----------------------------------------------------------------
@@ -3635,6 +3669,128 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::edit_wishlist
+  //
+  void
+  AppView::edit_wishlist(const std::string & row_id)
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+
+    // FIXME: populate wishlist item UI fields:
+    std::string wi_key = row_id.substr(4);
+    std::map<std::string, Wishlist::Item>::const_iterator found =
+      wishlist_.find(wi_key);
+
+    if (found != wishlist_.end())
+    {
+      wi_edit_.reset(new std::pair<std::string, Wishlist::Item>
+                     (wi_key, found->second));
+    }
+    else
+    {
+      wi_edit_.reset(new std::pair<std::string, Wishlist::Item>
+                     (std::string(), Wishlist::Item()));
+    }
+
+    Wishlist::Item & wi = wi_edit_->second;
+
+    Item & panel = *wishlist_ui_;
+    Item & body = panel.Item::get<Item>("body");
+
+    // channel number:
+    {
+      Item & row = body.Item::get<Item>("r1");
+      std::string ch_num = wi.channel_ ? wi.ch_txt() : "";
+      Text & text = row.Item::get<Text>("text");
+      text.text_ = TVarRef::constant(TVar(ch_num));
+
+      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_channel");
+      focus.copyViewToEdit_ = BoolRef::constant(!!wi.channel_);
+    }
+
+    // title/regex:
+    {
+      Item & row = body.Item::get<Item>("r2");
+      Text & text = row.Item::get<Text>("text");
+      text.text_ = TVarRef::constant(TVar(wi.title_));
+
+      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_title_rx");
+      focus.copyViewToEdit_ = BoolRef::constant(!!wi.title_.empty());
+    }
+
+    // description/regex:
+    {
+      Item & row = body.Item::get<Item>("r3");
+      Text & text = row.Item::get<Text>("text");
+      text.text_ = TVarRef::constant(TVar(wi.description_));
+
+      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_desc_rx");
+      focus.copyViewToEdit_ = BoolRef::constant(!!wi.description_.empty());
+    }
+
+    // timespan:
+    {
+      Item & row = body.Item::get<Item>("r4");
+      std::string t0 = wi.when_ ? wi.when_->t0_.to_hhmm() : "";
+      std::string t1 = wi.when_ ? wi.when_->t1_.to_hhmm() : "";
+
+      Text & text_t0 = row.Item::get<Text>("text_t0");
+      text_t0.text_ = TVarRef::constant(TVar(t0));
+
+      Text & text_t1 = row.Item::get<Text>("text_t1");
+      text_t1.text_ = TVarRef::constant(TVar(t1));
+
+      TextInputProxy & focus_t0 = row.Item::get<TextInputProxy>("focus_t0");
+      focus_t0.copyViewToEdit_ = BoolRef::constant(!!wi.when_);
+
+      TextInputProxy & focus_t1 = row.Item::get<TextInputProxy>("focus_t1");
+      focus_t1.copyViewToEdit_ = BoolRef::constant(!!wi.when_);
+    }
+
+    // date:
+    {
+      Item & row = body.Item::get<Item>("r6");
+      std::string date;
+
+      if (wi.date_)
+      {
+        const struct tm & tm = *wi.date_;
+        date = yae::to_yyyymmdd(tm);
+      }
+
+      Text & text = row.Item::get<Text>("text");
+      text.text_ = TVarRef::constant(TVar(date));
+
+      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_date");
+      focus.copyViewToEdit_ = BoolRef::constant(!!wi.date_);
+    }
+
+    // max recordings:
+    {
+      Item & row = body.Item::get<Item>("r7");
+      std::string max_rec =
+        wi.max_recordings_ ? strfmt("%i", *wi.max_recordings_) : "";
+
+      Text & text = row.Item::get<Text>("text");
+      text.text_ = TVarRef::constant(TVar(max_rec));
+
+      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_max_rec");
+      focus.copyViewToEdit_ = BoolRef::constant(!!wi.max_recordings_);
+    }
+
+    // skip duplicates:
+    {
+      Item & row = body.Item::get<Item>("r8");
+      CheckboxItem & cbox = row.Item::get<CheckboxItem>("cbox");
+
+      bool skip = wi.skip_duplicates_ ? *wi.skip_duplicates_ : false;
+      cbox.checked_ = BoolRef::constant(skip);
+    }
+  }
+
+  //----------------------------------------------------------------
   // AppView::layout
   //
   void
@@ -3701,6 +3857,9 @@ namespace yae
     // useful for very short programs where neither
     // the program title doesn't fit in the EPG tile:
     layout_program_details(view, style, mainview);
+
+    // layout Wishlist::Item editor panel:
+    layout_wishlist(view, style, mainview);
   }
 
   //----------------------------------------------------------------
@@ -4423,5 +4582,761 @@ namespace yae
     layout_scrollview(kScrollbarVertical, view, style, container,
                       ItemRef::reference(hidden, kUnitSize, 0.33));
   }
+
+  //----------------------------------------------------------------
+  // AppView::layout_wishlist
+  //
+  void
+  AppView::layout_wishlist(AppView & view, AppStyle & style, Item & mainview)
+  {
+    // shortcuts:
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+
+    wishlist_ui_.reset(new Item("wishlist_ui"));
+    Item & panel = mainview.add<Item>(wishlist_ui_);
+    panel.anchors_.fill(mainview);
+    panel.visible_ = panel.addExpr(new IsWishlistSelected(sidebar_sel_));
+
+    Item & body = panel.addNew<Item>("body");
+    body.anchors_.fill(panel);
+    body.margins_.set(ItemRef::reference(hidden, kUnitSize, 1.0));
+
+    Item & c1 = body.addNew<Item>("c1");
+    Item & c2 = body.addNew<Item>("c2");
+    Item & c3 = body.addNew<Item>("c3");
+
+    c1.anchors_.fill(body);
+    c1.anchors_.right_ = ItemRef::reference(c2, kPropertyLeft);
+
+    c2.anchors_.fill(body);
+    c2.anchors_.left_.reset();
+    c2.anchors_.right_ = ItemRef::reference(c3, kPropertyLeft);
+    c2.width_ = ItemRef::reference(hidden, kUnitSize, 0.3);
+
+    c3.anchors_.fill(body);
+    c3.anchors_.left_.reset();
+    c3.anchors_.right_ = c3.addExpr(new OddRoundUp(body, kPropertyRight));
+    c3.width_ = c3.addExpr(new OddRoundUp(body, kPropertyWidth, 0.75), 1, -1);
+
+    Item & r1 = body.addNew<Item>("r1");
+    r1.anchors_.fill(body);
+    r1.anchors_.bottom_.reset();
+    r1.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the channel number row:
+    {
+      // shortcut:
+      Item & row = r1;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Channel"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_channel", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 0);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = TVarRef::constant(TVar(""));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.set_right(ItemRef::scale(edit,
+                                             kPropertyCursorWidth,
+                                             -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional, M-N format"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r2 = body.addNew<Item>("r2");
+    r2.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r2.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r2.anchors_.top_ = ItemRef::reference(r1, kPropertyBottom);
+    r2.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the program title/regex row:
+    {
+      // shortcut:
+      Item & row = r2;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Program Title"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_title_rx", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 1);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = TVarRef::constant(TVar(""));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.set_right(ItemRef::scale(edit,
+                                             kPropertyCursorWidth,
+                                             -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional, exact title or a regex"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r3 = body.addNew<Item>("r3");
+    r3.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r3.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r3.anchors_.top_ = ItemRef::reference(r2, kPropertyBottom);
+    r3.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the program description/regex row:
+    {
+      // shortcut:
+      Item & row = r3;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Program Description"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_desc_rx", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 2);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = TVarRef::constant(TVar(""));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.set_right(ItemRef::scale(edit,
+                                             kPropertyCursorWidth,
+                                             -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, exact description or a regex"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r4 = body.addNew<Item>("r4");
+    r4.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r4.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r4.anchors_.top_ = ItemRef::reference(r3, kPropertyBottom);
+    r4.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the time span row:
+    {
+      // shortcut:
+      Item & row = r4;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Program(s) Time Span"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_t0_bg = row.
+        addNew<Rectangle>("text_t0_bg");
+
+      Text & text_t0 = row.
+        addNew<Text>("text_t0");
+
+      TextInput & edit_t0 = row.
+        addNew<TextInput>("edit_t0");
+
+      TextInputProxy & focus_t0 = row.
+        add(new TextInputProxy("focus_t0", text_t0, edit_t0));
+
+      focus_t0.anchors_.fill(text_t0_bg);
+      focus_t0.bgNoFocus_ = focus_t0.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus_t0.bgOnFocus_ = focus_t0.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus_t0, "wishlist_ui", 3);
+
+      text_t0.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text_t0.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text_t0.width_ = ItemRef::reference(hidden, kUnitSize, 1.25);
+      text_t0.visible_ = text_t0.addExpr(new ShowWhenFocused(focus_t0, false));
+      text_t0.color_ = text_t0.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text_t0.background_ = text_t0.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text_t0.text_ = TVarRef::constant(TVar(""));
+      text_t0.font_ = style.font_;
+      text_t0.font_.setWeight(62);
+      text_t0.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_t0_bg.anchors_.offset(text_t0, -3, 3, -3, 1);
+      text_t0_bg.margins_.
+        set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_t0_bg.color_ = text_t0_bg.addExpr(new ColorWhenFocused(focus_t0));
+      text_t0_bg.color_.disableCaching();
+
+      edit_t0.anchors_.fill(text_t0);
+      edit_t0.margins_.
+        set_right(ItemRef::scale(edit_t0, kPropertyCursorWidth, -1.0));
+      edit_t0.visible_ = edit_t0.
+        addExpr(new ShowWhenFocused(focus_t0, true));
+      edit_t0.color_ = edit_t0.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit_t0.background_ =
+        ColorRef::transparent(focus_t0, kPropertyColorOnFocusBg);
+      edit_t0.cursorColor_ = edit_t0.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit_t0.font_ = text_t0.font_;
+      edit_t0.fontSize_ = text_t0.fontSize_;
+
+      edit_t0.selectionBg_ = edit_t0.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit_t0.selectionFg_ = edit_t0.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Rectangle & text_t1_bg = row.
+        addNew<Rectangle>("text_t1_bg");
+
+      Text & text_t1 = row.
+        addNew<Text>("text_t1");
+
+      TextInput & edit_t1 = row.
+        addNew<TextInput>("edit_t1");
+
+      TextInputProxy & focus_t1 = row.
+        add(new TextInputProxy("focus_t1", text_t1, edit_t1));
+
+      focus_t1.anchors_.fill(text_t1_bg);
+      focus_t1.bgNoFocus_ = focus_t1.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus_t1.bgOnFocus_ = focus_t1.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus_t1, "wishlist_ui", 4);
+
+      text_t1.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text_t1.anchors_.left_ = text_t1.
+        addExpr(new OddRoundUp(text_t0_bg, kPropertyRight, 1, -3));
+      text_t1.margins_.
+        set_left(text_t1.addExpr(new OddRoundUp(hidden, kUnitSize, 0.5)));
+      text_t1.width_ = ItemRef::reference(hidden, kUnitSize, 1.25);
+      text_t1.visible_ = text_t1.addExpr(new ShowWhenFocused(focus_t1, false));
+      text_t1.color_ = text_t1.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text_t1.background_ = text_t1.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text_t1.text_ = TVarRef::constant(TVar(""));
+      text_t1.font_ = style.font_;
+      text_t1.font_.setWeight(62);
+      text_t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_t1_bg.anchors_.offset(text_t1, -3, 3, -3, 1);
+      text_t1_bg.margins_.
+        set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_t1_bg.color_ = text_t1_bg.addExpr(new ColorWhenFocused(focus_t1));
+      text_t1_bg.color_.disableCaching();
+
+      edit_t1.anchors_.fill(text_t1);
+      edit_t1.margins_.
+        set_right(ItemRef::scale(edit_t1, kPropertyCursorWidth, -1.0));
+      edit_t1.visible_ = edit_t1.
+        addExpr(new ShowWhenFocused(focus_t1, true));
+      edit_t1.color_ = edit_t1.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit_t1.background_ =
+        ColorRef::transparent(focus_t1, kPropertyColorOnFocusBg);
+      edit_t1.cursorColor_ = edit_t1.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit_t1.font_ = text_t1.font_;
+      edit_t1.fontSize_ = text_t1.fontSize_;
+
+      edit_t1.selectionBg_ = edit_t1.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit_t1.selectionFg_ = edit_t1.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_t0_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, 24h hh:mm - hh:mm, end time can be greater than 24"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r5 = body.addNew<Item>("r5");
+    r5.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r5.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r5.anchors_.top_ = ItemRef::reference(r4, kPropertyBottom);
+    r5.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    Text & t5 = body.addNew<Text>("t5");
+    t5.font_ = style.font_;
+    t5.font_.setWeight(62);
+    t5.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+    t5.anchors_.bottom_ = ItemRef::reference(r5, kPropertyVCenter);
+    t5.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+    t5.elide_ = Qt::ElideNone;
+    t5.text_ = TVarRef::constant(TVar("Weekdays"));
+    t5.color_ = t5.addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+    t5.background_ = t5.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+    Item & r6 = body.addNew<Item>("r6");
+    r6.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r6.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r6.anchors_.top_ = ItemRef::reference(r5, kPropertyBottom);
+    r6.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the date row:
+    {
+      // shortcut:
+      Item & row = r6;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Exact Date"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_date", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 5);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = TVarRef::constant(TVar(""));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.
+        set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional, YYYY/MM/DD format"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r7 = body.addNew<Item>("r7");
+    r7.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r7.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r7.anchors_.top_ = ItemRef::reference(r6, kPropertyBottom);
+    r7.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the channel number row:
+    {
+      // shortcut:
+      Item & row = r7;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Max. Recordings"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_max_rec", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 6);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = TVarRef::constant(TVar(""));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.
+        set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r8 = body.addNew<Item>("r8");
+    r8.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r8.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r8.anchors_.top_ = ItemRef::reference(r7, kPropertyBottom);
+    r8.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the skip duplicates row:
+    {
+      // shortcut:
+      Item & row = r8;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Skip Duplicates"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+      cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      cbox.height_ = cbox.
+        addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.width_ = cbox.height_;
+#if 0
+      cbox.checked_ = cbox.
+        addInverse(new IsBlacklisted(view, ch_major, ch_minor));
+      cbox.on_toggle_.
+        reset(new OnToggleBlacklist(view, ch_major, ch_minor));
+#endif
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+ }
 
 }

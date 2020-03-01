@@ -70,6 +70,9 @@ namespace yae
     AppView();
 
     // virtual:
+    void setEnabled(bool enable);
+
+    // virtual:
     void setContext(const yae::shared_ptr<IOpenGLContext> & context);
 
     // data source:
@@ -113,8 +116,6 @@ namespace yae
     void sync_ui_channels();
     void sync_ui_schedule();
     void sync_ui_wishlist();
-    void sync_ui_wishlist_item(const std::string & row_id,
-                               const Wishlist::Item & wi);
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);
@@ -124,6 +125,7 @@ namespace yae
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
+    void edit_wishlist(const std::string & row_id);
 
   protected:
     // helpers:
@@ -133,6 +135,7 @@ namespace yae
     void layout_program_details(AppView & view, AppStyle & s, Item & mainview);
     void layout_channels(AppView & view, AppStyle & style, Item & mainview);
     void layout_schedule(AppView & view, AppStyle & style, Item & mainview);
+    void layout_wishlist(AppView & view, AppStyle & style, Item & mainview);
 
     // model:
     yae::DVR * dvr_;
@@ -234,7 +237,8 @@ namespace yae
     // wishlist stuff:
     std::map<std::string, std::size_t> wl_index_;
     std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
-    std::map<std::string, yae::shared_ptr<Layout> > wl_layout_;
+    yae::shared_ptr<Item> wishlist_ui_;
+    yae::shared_ptr<std::pair<std::string, Wishlist::Item> > wi_edit_;
   };
 
 }
