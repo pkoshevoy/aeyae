@@ -2852,8 +2852,7 @@ namespace yae
 
       rows[row_id] = row_ptr;
 
-      // FIXME: pkoshevoy: write me:
-      // sync_ui_wishlist(row_id, wi);
+      sync_ui_wishlist_item(row_id, wi);
     }
 
     // unreferenced wishlist items must be removed:
@@ -2889,6 +2888,34 @@ namespace yae
     view.sidebar_sel_ = sidebar_sel;
     wl_sidebar_.swap(rows);
     dataChanged();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::sync_ui_wishlist_item
+  //
+  void
+  AppView::sync_ui_wishlist_item(const std::string & row_id,
+                                 const Wishlist::Item & wi)
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+    Item & root = *root_;
+    Item & hidden = root.get<Item>("hidden");
+    Item & mainview = *mainview_;
+
+    yae::shared_ptr<Layout> & layout_ptr = wl_layout_[row_id];
+    if (!layout_ptr)
+    {
+      layout_ptr.reset(new Layout());
+      Layout & layout = *layout_ptr;
+
+      layout.item_.reset(new Item(row_id.c_str()));
+      Item & panel = mainview.add<Item>(layout.item_);
+      panel.anchors_.fill(mainview);
+      panel.visible_ = panel.
+        addExpr(new IsSelected(sidebar_sel_, row_id));
+    }
   }
 
   //----------------------------------------------------------------

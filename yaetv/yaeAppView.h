@@ -113,6 +113,8 @@ namespace yae
     void sync_ui_channels();
     void sync_ui_schedule();
     void sync_ui_wishlist();
+    void sync_ui_wishlist_item(const std::string & row_id,
+                               const Wishlist::Item & wi);
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecordings & playlist_recs);

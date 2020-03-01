@@ -513,18 +513,13 @@ namespace yae
   void
   Wishlist::get(std::map<std::string, Item> & wishlist) const
   {
+    unsigned int index = 0;
+
     for (std::list<Item>::const_iterator
-           i = items_.begin(); i != items_.end(); ++i)
+           i = items_.begin(); i != items_.end(); ++i, ++index)
     {
       const Item & item = *i;
-      std::string key = item.to_key();
-
-      YAE_ASSERT(!key.empty());
-      if (key.empty())
-      {
-        continue;
-      }
-
+      std::string key = item.to_key() + strfmt(", index %03u", index);
       wishlist[key] = item;
     }
   }
