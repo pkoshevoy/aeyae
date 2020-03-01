@@ -126,6 +126,8 @@ namespace yae
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
     void edit_wishlist(const std::string & row_id);
+    void remove_wishlist_item(const std::string & wi_key);
+    void save_wishlist_item();
 
   protected:
     // helpers:

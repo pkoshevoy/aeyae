@@ -130,6 +130,71 @@ namespace yae
     std::string key_;
   };
 
+  //----------------------------------------------------------------
+  // RemoveWishlistItem
+  //
+  struct RemoveWishlistItem : public InputArea
+  {
+    RemoveWishlistItem(const char * id, AppView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      YAE_ASSERT(view_.wi_edit_);
+
+      if (view_.wi_edit_ && !view_.wi_edit_->first.empty())
+      {
+        std::string wi_key = view_.wi_edit_->first;
+        view_.remove_wishlist_item(wi_key);
+      }
+
+      view_.wi_edit_.reset();
+      view_.sidebar_sel_ = "view_mode_program_guide";
+      parent_->uncache();
+      return true;
+    }
+
+    AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // SaveWishlistItem
+  //
+  struct SaveWishlistItem : public InputArea
+  {
+    SaveWishlistItem(const char * id, AppView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.save_wishlist_item();
+      view_.wi_edit_.reset();
+      view_.sidebar_sel_ = "view_mode_program_guide";
+      parent_->uncache();
+      return true;
+    }
+
+    AppView & view_;
+  };
+
 
   //----------------------------------------------------------------
   // WatchLive
@@ -1031,7 +1096,7 @@ namespace yae
       view_.program_sel_.reset();
       view_.requestUncache(view_.pd_layout_.item_.get());
       view_.requestRepaint();
-     return true;
+      return true;
     }
 
     AppView & view_;
@@ -3791,6 +3856,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::remove_wishlist_item
+  //
+  void
+  AppView::remove_wishlist_item(const std::string & wi_key)
+  {}
+
+  //----------------------------------------------------------------
+  // AppView::save_wishlist_item
+  //
+  void
+  AppView::save_wishlist_item()
+  {}
+
+  //----------------------------------------------------------------
   // AppView::layout
   //
   void
@@ -4429,7 +4508,7 @@ namespace yae
     tx_close.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
     tx_close.anchors_.left_ = ItemRef::reference(tx_toggle, kPropertyRight);
     tx_close.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 1.6));
-    tx_close.text_ = TVarRef::constant(TVar(QString::fromUtf8("Close")));;
+    tx_close.text_ = TVarRef::constant(TVar("Close"));
     tx_close.color_ = tx_close.
       addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
     tx_close.background_ = tx_close.
@@ -5337,6 +5416,82 @@ namespace yae
       note.background_ = note.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
     }
- }
+
+    Item & r9 = body.addNew<Item>("r9");
+    r9.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r9.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r9.anchors_.top_ = ItemRef::reference(r8, kPropertyBottom);
+    r9.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the buttons:
+    {
+      // shortcut:
+      Item & row = r9;
+
+      RoundRect & bg_remove = body.addNew<RoundRect>("bg_remove");
+      RoundRect & bg_save = body.addNew<RoundRect>("bg_save");
+
+      Text & tx_remove = body.addNew<Text>("tx_remove");
+      Text & tx_save = body.addNew<Text>("tx_save");
+
+      tx_remove.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+      tx_remove.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      tx_remove.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
+      tx_remove.color_ = tx_remove.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+      tx_remove.background_ = tx_remove.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+      tx_remove.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+      tx_remove.elide_ = Qt::ElideNone;
+      tx_remove.setAttr("oneline", true);
+      tx_remove.text_ = TVarRef::constant(TVar("Remove"));
+
+      bg_remove.anchors_.fill(tx_remove);
+      bg_remove.margins_.
+        set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_remove.margins_.
+        set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_remove.margins_.
+        set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_remove.margins_.
+        set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_remove.color_ = bg_remove.
+        addExpr(style_color_ref(view, &AppStyle::cursor_));
+      bg_remove.background_ = bg_remove.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_remove.radius_ = ItemRef::scale(bg_remove, kPropertyHeight, 0.1);
+
+      RemoveWishlistItem & on_remove = bg_remove.
+        add(new RemoveWishlistItem("on_remove", *this));
+      on_remove.anchors_.fill(bg_remove);
+
+      tx_save.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+      tx_save.anchors_.left_ = ItemRef::reference(tx_remove, kPropertyRight);
+      tx_save.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 1.6));
+      tx_save.text_ = TVarRef::constant(TVar("Save"));
+      tx_save.color_ = tx_save.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      tx_save.background_ = tx_save.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      tx_save.fontSize_ = tx_remove.fontSize_;
+      tx_save.elide_ = Qt::ElideNone;
+      tx_save.setAttr("oneline", true);
+
+      bg_save.anchors_.fill(tx_save);
+      bg_save.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_save.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_save.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_save.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_save.color_ = bg_save.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      bg_save.background_ = bg_save.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_save.radius_ = ItemRef::scale(bg_save, kPropertyHeight, 0.1);
+
+      SaveWishlistItem & on_save = bg_save.
+        add(new SaveWishlistItem("on_save", *this));
+      on_save.anchors_.fill(bg_save);
+    }
+  }
 
 }
