@@ -144,16 +144,15 @@ namespace yae
     {
       const char * s = sep;
       uint16_t weekdays = *weekday_mask_;
-      uint16_t wday = 1;
-      for (int i = 0; i < 7; i++)
+      for (uint8_t i = 0; i < 7; i++)
       {
+        uint8_t j = (i + 1) % 7;
+        uint16_t wday = 1 << j;
         if ((weekdays & wday) == wday)
         {
-          oss << s << kWeekdays[i];
+          oss << s << kWeekdays[j];
           s = " ";
         }
-
-        wday <<= 1;
       }
 
       sep = ", ";

@@ -2944,7 +2944,7 @@ namespace yae
 
     if (sidebar_sel.empty())
     {
-      sidebar_sel = "view_mode_recordings";
+      sidebar_sel = "view_mode_program_guide";
     }
 
     view.sidebar_sel_ = sidebar_sel;
