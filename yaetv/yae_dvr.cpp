@@ -549,16 +549,19 @@ namespace yae
   bool
   Wishlist::remove(const std::string & wi_key)
   {
-    unsigned int index = 0;
-    for (std::list<Item>::iterator
-           i = items_.begin(); i != items_.end(); ++i, ++index)
+    if (!wi_key.empty())
     {
-      Item & item = *i;
-      std::string item_key = item.to_key() + strfmt(", index %03u", index);
-      if (item_key == wi_key)
+      unsigned int index = 0;
+      for (std::list<Item>::iterator
+             i = items_.begin(); i != items_.end(); ++i, ++index)
       {
-        i = items_.erase(i);
-        return true;
+        Item & item = *i;
+        std::string item_key = item.to_key() + strfmt(", index %03u", index);
+        if (item_key == wi_key)
+        {
+          i = items_.erase(i);
+          return true;
+        }
       }
     }
 
@@ -571,16 +574,19 @@ namespace yae
   void
   Wishlist::update(const std::string & wi_key, const Wishlist::Item & new_item)
   {
-    unsigned int index = 0;
-    for (std::list<Item>::iterator
-           i = items_.begin(); i != items_.end(); ++i, ++index)
+    if (!wi_key.empty())
     {
-      Item & item = *i;
-      std::string item_key = item.to_key() + strfmt(", index %03u", index);
-      if (item_key == wi_key)
+      unsigned int index = 0;
+      for (std::list<Item>::iterator
+             i = items_.begin(); i != items_.end(); ++i, ++index)
       {
-        item = new_item;
-        return;
+        Item & item = *i;
+        std::string item_key = item.to_key() + strfmt(", index %03u", index);
+        if (item_key == wi_key)
+        {
+          item = new_item;
+          return;
+        }
       }
     }
 

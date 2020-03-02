@@ -125,7 +125,8 @@ namespace yae
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
-    void edit_wishlist(const std::string & row_id);
+    void add_wishlist_item();
+    void edit_wishlist_item(const std::string & row_id);
     void remove_wishlist_item(const std::string & wi_key);
     void save_wishlist_item();
 
