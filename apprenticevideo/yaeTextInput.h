@@ -152,6 +152,7 @@ namespace yae
     ColorRef bgOnFocus_;
     TVarRef placeholder_;
     BoolRef copyViewToEdit_;
+    BoolRef editingFinishedOnFocusOut_;
   };
 
 }

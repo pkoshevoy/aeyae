@@ -52,6 +52,9 @@ namespace yae
     //
     struct Item
     {
+      void set_title(const std::string & title_rx);
+      void set_description(const std::string & desc_rx);
+
       // helpers:
       std::string ch_txt() const;
       std::string to_txt() const;
@@ -112,6 +115,9 @@ namespace yae
 
     // store wishlist in a map, indexed by Item::to_str summary:
     void get(std::map<std::string, Item> & wishlist) const;
+
+    bool remove(const std::string & wi_key);
+    void update(const std::string & wi_key, const Wishlist::Item & new_item);
 
     yae::shared_ptr<Item>
     matches(const yae::mpeg_ts::EPG::Channel & channel,
@@ -389,6 +395,10 @@ namespace yae
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
     void get(Blacklist & blacklist) const;
     void get(std::map<std::string, Wishlist::Item> & wishlist) const;
+
+    bool wishlist_remove(const std::string & wi_key);
+    void wishlist_update(const std::string & wi_key,
+                         const Wishlist::Item & new_item);
 
     void get_epg(yae::mpeg_ts::EPG & epg,
                  const std::string & lang = std::string("eng")) const;

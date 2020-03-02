@@ -693,7 +693,8 @@ namespace yae
     InputArea(id),
     view_(view),
     edit_(edit),
-    copyViewToEdit_(BoolRef::constant(false))
+    copyViewToEdit_(BoolRef::constant(false)),
+    editingFinishedOnFocusOut_(BoolRef::constant(false))
   {
     edit_.setFocusProxy(this);
     placeholder_ = TVarRef::constant(TVar(QObject::tr("")));
@@ -717,6 +718,7 @@ namespace yae
     bgOnFocus_.uncache();
     placeholder_.uncache();
     copyViewToEdit_.uncache();
+    editingFinishedOnFocusOut_.uncache();
     InputArea::uncache();
   }
 
@@ -789,6 +791,11 @@ namespace yae
   void
   TextInputProxy::onFocusOut()
   {
+    if (editingFinishedOnFocusOut_.get())
+    {
+      edit_.onEditingFinished();
+    }
+
     view_.uncache();
     edit_.uncache();
     edit_.onFocusOut();

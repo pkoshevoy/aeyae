@@ -104,6 +104,26 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // Wishlist::Item::set_title
+  //
+  void
+  Wishlist::Item::set_title(const std::string & title_rx)
+  {
+    title_ = title_rx;
+    rx_title_.reset();
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::Item::set_description
+  //
+  void
+  Wishlist::Item::set_description(const std::string & desc_rx)
+  {
+    description_ = desc_rx;
+    rx_description_.reset();
+  }
+
+  //----------------------------------------------------------------
   // Wishlist::Item::ch_txt
   //
   std::string
@@ -521,6 +541,50 @@ namespace yae
       std::string key = item.to_key() + strfmt(", index %03u", index);
       wishlist[key] = item;
     }
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::remove
+  //
+  bool
+  Wishlist::remove(const std::string & wi_key)
+  {
+    unsigned int index = 0;
+    for (std::list<Item>::iterator
+           i = items_.begin(); i != items_.end(); ++i, ++index)
+    {
+      Item & item = *i;
+      std::string item_key = item.to_key() + strfmt(", index %03u", index);
+      if (item_key == wi_key)
+      {
+        i = items_.erase(i);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::update
+  //
+  void
+  Wishlist::update(const std::string & wi_key, const Wishlist::Item & new_item)
+  {
+    unsigned int index = 0;
+    for (std::list<Item>::iterator
+           i = items_.begin(); i != items_.end(); ++i, ++index)
+    {
+      Item & item = *i;
+      std::string item_key = item.to_key() + strfmt(", index %03u", index);
+      if (item_key == wi_key)
+      {
+        item = new_item;
+        return;
+      }
+    }
+
+    items_.push_back(new_item);
   }
 
   //----------------------------------------------------------------
@@ -2476,6 +2540,37 @@ namespace yae
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
     wishlist_.get(wishlist);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::wishlist_remove
+  //
+  bool
+  DVR::wishlist_remove(const std::string & wi_key)
+  {
+    // update the wishlist:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return wishlist_.remove(wi_key);
+    }
+
+    save_wishlist();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::wishlist_update
+  //
+  void
+  DVR::wishlist_update(const std::string & wi_key,
+                       const Wishlist::Item & new_item)
+  {
+    // update the wishlist:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      wishlist_.update(wi_key, new_item);
+    }
+
+    save_wishlist();
   }
 
   //----------------------------------------------------------------

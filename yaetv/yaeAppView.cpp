@@ -9,6 +9,11 @@
 // standard:
 #include <utility>
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/lexical_cast.hpp>
+#endif
+
 // aeyae:
 #include "yae/utils/yae_utils.h"
 
@@ -128,6 +133,361 @@ namespace yae
 
     const std::string & sel_;
     std::string key_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemChannel
+  //
+  struct GetWishlistItemChannel : public TVarExpr
+  {
+    GetWishlistItemChannel(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        std::string ch_num = wi.channel_ ? wi.ch_txt() : "";
+        result = TVar(ch_num);
+        return;
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemTitle
+  //
+  struct GetWishlistItemTitle : public TVarExpr
+  {
+    GetWishlistItemTitle(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        result = TVar(wi.title_);
+        return;
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemDescription
+  //
+  struct GetWishlistItemDescription : public TVarExpr
+  {
+    GetWishlistItemDescription(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        result = TVar(wi.description_);
+        return;
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemStart
+  //
+  struct GetWishlistItemStart : public TVarExpr
+  {
+    GetWishlistItemStart(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.when_)
+        {
+          std::string hhmm = wi.when_->t0_.to_hhmm();
+          result = TVar(hhmm);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemEnd
+  //
+  struct GetWishlistItemEnd : public TVarExpr
+  {
+    GetWishlistItemEnd(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.when_)
+        {
+          std::string hhmm = wi.when_->t1_.to_hhmm();
+          result = TVar(hhmm);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemDate
+  //
+  struct GetWishlistItemDate : public TVarExpr
+  {
+    GetWishlistItemDate(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.date_)
+        {
+          const struct tm & tm = *wi.date_;
+          std::string yyyymmdd = yae::to_yyyymmdd(tm);
+          result = TVar(yyyymmdd);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // WishlistWeekdayBtnColor
+  //
+  struct WishlistWeekdayBtnColor : TColorExpr
+  {
+    WishlistWeekdayBtnColor(const AppView & view, uint16_t wday):
+      view_(view),
+      wday_(wday)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const AppStyle & style = *(view_.style_);
+      if (view_.wi_edit_)
+      {
+        const Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.weekday_mask_)
+        {
+          uint16_t mask = *wi.weekday_mask_;
+          if ((mask & wday_) == wday_)
+          {
+            result = style.cursor_.get();
+            return;
+          }
+        }
+      }
+
+      result = style.bg_epg_tile_.get().a_scaled(0.5);
+    }
+
+    const AppView & view_;
+    const uint16_t wday_;
+  };
+
+  //----------------------------------------------------------------
+  // WishlistWeekdayTxtColor
+  //
+  struct WishlistWeekdayTxtColor : TColorExpr
+  {
+    WishlistWeekdayTxtColor(const AppView & view, uint16_t wday):
+      view_(view),
+      wday_(wday)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const AppStyle & style = *(view_.style_);
+      if (view_.wi_edit_)
+      {
+        const Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.weekday_mask_)
+        {
+          uint16_t mask = *wi.weekday_mask_;
+          if ((mask & wday_) == wday_)
+          {
+            result = style.bg_epg_.get();
+            return;
+          }
+        }
+      }
+
+      result = style.fg_epg_.get().a_scaled(0.5);
+    }
+
+    const AppView & view_;
+    const uint16_t wday_;
+  };
+
+  //----------------------------------------------------------------
+  // WishlistWeekdayToggle
+  //
+  struct WishlistWeekdayToggle : public InputArea
+  {
+    WishlistWeekdayToggle(const char * id, AppView & view, uint16_t wday):
+      InputArea(id),
+      view_(view),
+      wday_(wday)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        uint16_t mask = wi.weekday_mask_ ? *wi.weekday_mask_ : 0;
+        mask ^= wday_;
+        wi.weekday_mask_ = mask;
+      }
+
+      parent_->uncache();
+      view_.requestRepaint();
+      return true;
+    }
+
+    AppView & view_;
+    const uint16_t wday_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemMax
+  //
+  struct GetWishlistItemMax : public TVarExpr
+  {
+    GetWishlistItemMax(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.max_recordings_)
+        {
+          uint16_t n = *wi.max_recordings_;
+          std::string txt = boost::lexical_cast<std::string>(n);
+          result = TVar(txt);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemSkipDuplicates
+  //
+  struct GetWishlistItemSkipDuplicates : public TBoolExpr
+  {
+    GetWishlistItemSkipDuplicates(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        result = (wi.skip_duplicates_ && *wi.skip_duplicates_);
+        return;
+      }
+
+      result = false;
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleSkipDuplicates
+  //
+  struct OnToggleSkipDuplicates : public CheckboxItem::Action
+  {
+    OnToggleSkipDuplicates(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem & cbox) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (cbox.checked_.get())
+        {
+          wi.skip_duplicates_.reset();
+        }
+        else
+        {
+          wi.skip_duplicates_ = true;
+        }
+      }
+    }
+
+    const AppView & view_;
   };
 
   //----------------------------------------------------------------
@@ -3759,100 +4119,8 @@ namespace yae
                      (std::string(), Wishlist::Item()));
     }
 
-    Wishlist::Item & wi = wi_edit_->second;
-
-    Item & panel = *wishlist_ui_;
-    Item & body = panel.Item::get<Item>("body");
-
-    // channel number:
-    {
-      Item & row = body.Item::get<Item>("r1");
-      std::string ch_num = wi.channel_ ? wi.ch_txt() : "";
-      Text & text = row.Item::get<Text>("text");
-      text.text_ = TVarRef::constant(TVar(ch_num));
-
-      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_channel");
-      focus.copyViewToEdit_ = BoolRef::constant(!!wi.channel_);
-    }
-
-    // title/regex:
-    {
-      Item & row = body.Item::get<Item>("r2");
-      Text & text = row.Item::get<Text>("text");
-      text.text_ = TVarRef::constant(TVar(wi.title_));
-
-      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_title_rx");
-      focus.copyViewToEdit_ = BoolRef::constant(!!wi.title_.empty());
-    }
-
-    // description/regex:
-    {
-      Item & row = body.Item::get<Item>("r3");
-      Text & text = row.Item::get<Text>("text");
-      text.text_ = TVarRef::constant(TVar(wi.description_));
-
-      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_desc_rx");
-      focus.copyViewToEdit_ = BoolRef::constant(!!wi.description_.empty());
-    }
-
-    // timespan:
-    {
-      Item & row = body.Item::get<Item>("r4");
-      std::string t0 = wi.when_ ? wi.when_->t0_.to_hhmm() : "";
-      std::string t1 = wi.when_ ? wi.when_->t1_.to_hhmm() : "";
-
-      Text & text_t0 = row.Item::get<Text>("text_t0");
-      text_t0.text_ = TVarRef::constant(TVar(t0));
-
-      Text & text_t1 = row.Item::get<Text>("text_t1");
-      text_t1.text_ = TVarRef::constant(TVar(t1));
-
-      TextInputProxy & focus_t0 = row.Item::get<TextInputProxy>("focus_t0");
-      focus_t0.copyViewToEdit_ = BoolRef::constant(!!wi.when_);
-
-      TextInputProxy & focus_t1 = row.Item::get<TextInputProxy>("focus_t1");
-      focus_t1.copyViewToEdit_ = BoolRef::constant(!!wi.when_);
-    }
-
-    // date:
-    {
-      Item & row = body.Item::get<Item>("r6");
-      std::string date;
-
-      if (wi.date_)
-      {
-        const struct tm & tm = *wi.date_;
-        date = yae::to_yyyymmdd(tm);
-      }
-
-      Text & text = row.Item::get<Text>("text");
-      text.text_ = TVarRef::constant(TVar(date));
-
-      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_date");
-      focus.copyViewToEdit_ = BoolRef::constant(!!wi.date_);
-    }
-
-    // max recordings:
-    {
-      Item & row = body.Item::get<Item>("r7");
-      std::string max_rec =
-        wi.max_recordings_ ? strfmt("%i", *wi.max_recordings_) : "";
-
-      Text & text = row.Item::get<Text>("text");
-      text.text_ = TVarRef::constant(TVar(max_rec));
-
-      TextInputProxy & focus = row.Item::get<TextInputProxy>("focus_max_rec");
-      focus.copyViewToEdit_ = BoolRef::constant(!!wi.max_recordings_);
-    }
-
-    // skip duplicates:
-    {
-      Item & row = body.Item::get<Item>("r8");
-      CheckboxItem & cbox = row.Item::get<CheckboxItem>("cbox");
-
-      bool skip = wi.skip_duplicates_ ? *wi.skip_duplicates_ : false;
-      cbox.checked_ = BoolRef::constant(skip);
-    }
+    wishlist_ui_->uncache();
+    requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -3860,14 +4128,228 @@ namespace yae
   //
   void
   AppView::remove_wishlist_item(const std::string & wi_key)
-  {}
+  {
+    dvr_->wishlist_remove(wi_key);
+    dataChanged();
+  }
 
   //----------------------------------------------------------------
   // AppView::save_wishlist_item
   //
   void
   AppView::save_wishlist_item()
-  {}
+  {
+    if (wi_edit_)
+    {
+      const std::string & wi_key = wi_edit_->first;
+      const Wishlist::Item & wi = wi_edit_->second;
+      dvr_->wishlist_update(wi_key, wi);
+      dataChanged();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_channel
+  //
+  void
+  AppView::update_wi_channel(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      const char * src = txt.empty() ? "" : &(txt[0]);
+
+      // hh mm
+      std::vector<std::string> tokens;
+      std::size_t n = yae::split(tokens, ":;,/.- ", src);
+
+      if (n == 2)
+      {
+        uint16_t major = boost::lexical_cast<uint16_t>(tokens[0]);
+        uint16_t minor = boost::lexical_cast<uint16_t>(tokens[1]);
+        wi.channel_ = std::make_pair(major, minor);
+      }
+      else
+      {
+        wi.channel_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_title
+  //
+  void
+  AppView::update_wi_title(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      wi.set_title(txt);
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_desc
+  //
+  void
+  AppView::update_wi_desc(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      wi.set_description(txt);
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_time_start
+  //
+  void
+  AppView::update_wi_time_start(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      const char * src = txt.empty() ? "" : &(txt[0]);
+
+      // hh mm
+      std::vector<std::string> tokens;
+      std::size_t n = yae::split(tokens, ":;,/.- ", src);
+
+      if (n > 1)
+      {
+        int hh = boost::lexical_cast<int>(tokens[0]);
+        int mm = boost::lexical_cast<int>(tokens[1]);
+        TTime t(hh * 60 + mm, 1);
+
+        Timespan when = wi.when_ ? *wi.when_ : Timespan(t, t);
+        when.t0_ = t;
+        wi.when_ = when;
+      }
+      else
+      {
+        wi.when_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_time_end
+  //
+  void
+  AppView::update_wi_time_end(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      const char * src = txt.empty() ? "" : &(txt[0]);
+
+      // hh mm
+      std::vector<std::string> tokens;
+      std::size_t n = yae::split(tokens, ":;,/.- ", src);
+
+      if (n > 1)
+      {
+        int hh = boost::lexical_cast<int>(tokens[0]);
+        int mm = boost::lexical_cast<int>(tokens[1]);
+        TTime t(hh * 60 + mm, 1);
+
+        Timespan when = wi.when_ ? *wi.when_ : Timespan(t, t);
+        when.t1_ = t;
+        wi.when_ = when;
+      }
+      else
+      {
+        wi.when_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_date
+  //
+  void
+  AppView::update_wi_date(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      const char * src = txt.empty() ? "" : &(txt[0]);
+
+      // yyyy mm dd
+      std::vector<std::string> tokens;
+      std::size_t n = yae::split(tokens, "/.- ", src);
+
+      if (n == 3)
+      {
+        int yyyy = boost::lexical_cast<int>(tokens[0]);
+        int mm = boost::lexical_cast<int>(tokens[1]);
+        int dd = boost::lexical_cast<int>(tokens[2]);
+
+        struct tm tm;
+        memset(&tm, 0, sizeof(tm));
+
+        tm.tm_year = yyyy < 100 ? yyyy + 100 : yyyy - 1900;
+        tm.tm_mon = mm - 1;
+        tm.tm_mday = dd;
+
+        wi.date_ = tm;
+      }
+      else
+      {
+        wi.date_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_max
+  //
+  void
+  AppView::update_wi_max(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      uint16_t n = boost::lexical_cast<uint16_t>(txt);
+
+      if (n)
+      {
+        wi.max_recordings_ = n;
+      }
+      else
+      {
+        wi.max_recordings_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
 
   //----------------------------------------------------------------
   // AppView::layout
@@ -4669,6 +5151,7 @@ namespace yae
   AppView::layout_wishlist(AppView & view, AppStyle & style, Item & mainview)
   {
     // shortcuts:
+    bool ok = true;
     Item & root = *root_;
     Item & hidden = root.get<Item>("hidden");
 
@@ -4686,17 +5169,18 @@ namespace yae
     Item & c3 = body.addNew<Item>("c3");
 
     c1.anchors_.fill(body);
-    c1.anchors_.right_ = ItemRef::reference(c2, kPropertyLeft);
+    c1.anchors_.right_.reset();
+    c1.width_ = ItemRef::reference(hidden, kUnitSize, 3);
 
     c2.anchors_.fill(body);
-    c2.anchors_.left_.reset();
-    c2.anchors_.right_ = ItemRef::reference(c3, kPropertyLeft);
+    c2.anchors_.left_ = ItemRef::reference(c1, kPropertyRight);
+    c2.anchors_.right_.reset();
     c2.width_ = ItemRef::reference(hidden, kUnitSize, 0.3);
 
     c3.anchors_.fill(body);
-    c3.anchors_.left_.reset();
-    c3.anchors_.right_ = c3.addExpr(new OddRoundUp(body, kPropertyRight));
-    c3.width_ = c3.addExpr(new OddRoundUp(body, kPropertyWidth, 0.75), 1, -1);
+    c3.anchors_.left_ = c3.addExpr(new RoundUp(c2, kPropertyRight));
+    c3.anchors_.right_ = c3.addExpr(new RoundUp(body, kPropertyRight));
+    c3.width_ = c3.addExpr(new RoundUp(body, kPropertyWidth, 0.75));
 
     Item & r1 = body.addNew<Item>("r1");
     r1.anchors_.fill(body);
@@ -4713,7 +5197,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Channel"));
@@ -4739,6 +5223,8 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus.bgOnFocus_ = focus.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus, "wishlist_ui", 0);
@@ -4751,7 +5237,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = TVarRef::constant(TVar(""));
+      text.text_ = text.addExpr(new GetWishlistItemChannel(view));
       text.font_ = style.font_;
       text.font_.setWeight(62);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -4780,6 +5266,10 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
       edit.selectionFg_ = edit.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_channel(const QString &)));
+      YAE_ASSERT(ok);
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
@@ -4811,7 +5301,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Title"));
@@ -4837,6 +5327,8 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus.bgOnFocus_ = focus.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus, "wishlist_ui", 1);
@@ -4849,7 +5341,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = TVarRef::constant(TVar(""));
+      text.text_ = text.addExpr(new GetWishlistItemTitle(view));
       text.font_ = style.font_;
       text.font_.setWeight(62);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -4878,6 +5370,10 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
       edit.selectionFg_ = edit.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_title(const QString &)));
+      YAE_ASSERT(ok);
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
@@ -4909,7 +5405,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Description"));
@@ -4935,6 +5431,8 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus.bgOnFocus_ = focus.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus, "wishlist_ui", 2);
@@ -4947,7 +5445,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = TVarRef::constant(TVar(""));
+      text.text_ = text.addExpr(new GetWishlistItemDescription(view));
       text.font_ = style.font_;
       text.font_.setWeight(62);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -4976,6 +5474,10 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
       edit.selectionFg_ = edit.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_desc(const QString &)));
+      YAE_ASSERT(ok);
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
@@ -5008,7 +5510,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program(s) Time Span"));
@@ -5034,28 +5536,37 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus_t0.bgOnFocus_ = focus_t0.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus_t0.copyViewToEdit_ = BoolRef::constant(true);
+      focus_t0.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus_t0, "wishlist_ui", 3);
 
+      text_t0_bg.anchors_.left_ =
+        ItemRef::offset(text_t0, kPropertyLeft, -3);
+      text_t0_bg.anchors_.top_ =
+        ItemRef::offset(text_t0, kPropertyTop, -3);
+      text_t0_bg.anchors_.bottom_ =
+        ItemRef::offset(text_t0, kPropertyBottom, 1);
+      text_t0_bg.width_ =
+        ItemRef::reference(hidden, kUnitSize, 1.475, 3);
+      text_t0_bg.margins_.
+        set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_t0_bg.color_ = text_t0_bg.addExpr(new ColorWhenFocused(focus_t0));
+      text_t0_bg.color_.disableCaching();
+
       text_t0.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text_t0.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
-      text_t0.width_ = ItemRef::reference(hidden, kUnitSize, 1.25);
+      text_t0.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
       text_t0.visible_ = text_t0.addExpr(new ShowWhenFocused(focus_t0, false));
       text_t0.color_ = text_t0.
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text_t0.background_ = text_t0.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text_t0.text_ = TVarRef::constant(TVar(""));
+      text_t0.text_ = text_t0.addExpr(new GetWishlistItemStart(view));
       text_t0.font_ = style.font_;
       text_t0.font_.setWeight(62);
       text_t0.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-
-      text_t0_bg.anchors_.offset(text_t0, -3, 3, -3, 1);
-      text_t0_bg.margins_.
-        set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_t0_bg.color_ = text_t0_bg.addExpr(new ColorWhenFocused(focus_t0));
-      text_t0_bg.color_.disableCaching();
 
       edit_t0.anchors_.fill(text_t0);
       edit_t0.margins_.
@@ -5076,6 +5587,10 @@ namespace yae
       edit_t0.selectionFg_ = edit_t0.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
 
+      ok = connect(&edit_t0, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_time_start(const QString &)));
+      YAE_ASSERT(ok);
+
       Rectangle & text_t1_bg = row.
         addNew<Rectangle>("text_t1_bg");
 
@@ -5093,31 +5608,37 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus_t1.bgOnFocus_ = focus_t1.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus_t1.copyViewToEdit_ = BoolRef::constant(true);
+      focus_t1.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus_t1, "wishlist_ui", 4);
 
+      text_t1_bg.anchors_.left_ = text_t1_bg.
+        addExpr(new RoundUp(text_t0_bg, kPropertyRight));
+      text_t1_bg.anchors_.top_ =
+        ItemRef::reference(text_t0_bg, kPropertyTop);
+      text_t1_bg.anchors_.bottom_ =
+        ItemRef::reference(text_t0_bg, kPropertyBottom);
+      text_t1_bg.width_ =
+        ItemRef::reference(hidden, kUnitSize, 1.475, 3);
+      text_t1_bg.margins_.
+        set_left(text_t1_bg.addExpr(new RoundUp(hidden, kUnitSize, 0.05)));
+      text_t1_bg.color_ = text_t1_bg.addExpr(new ColorWhenFocused(focus_t1));
+      text_t1_bg.color_.disableCaching();
+
       text_t1.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
-      text_t1.anchors_.left_ = text_t1.
-        addExpr(new OddRoundUp(text_t0_bg, kPropertyRight, 1, -3));
-      text_t1.margins_.
-        set_left(text_t1.addExpr(new OddRoundUp(hidden, kUnitSize, 0.5)));
-      text_t1.width_ = ItemRef::reference(hidden, kUnitSize, 1.25);
+      text_t1.anchors_.left_ = ItemRef::offset(text_t1_bg, kPropertyLeft, 3);
+      text_t1.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
       text_t1.visible_ = text_t1.addExpr(new ShowWhenFocused(focus_t1, false));
       text_t1.color_ = text_t1.
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text_t1.background_ = text_t1.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text_t1.text_ = TVarRef::constant(TVar(""));
+      text_t1.text_ = text_t1.addExpr(new GetWishlistItemEnd(view));
       text_t1.font_ = style.font_;
       text_t1.font_.setWeight(62);
       text_t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-
-      text_t1_bg.anchors_.offset(text_t1, -3, 3, -3, 1);
-      text_t1_bg.margins_.
-        set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_t1_bg.color_ = text_t1_bg.addExpr(new ColorWhenFocused(focus_t1));
-      text_t1_bg.color_.disableCaching();
 
       edit_t1.anchors_.fill(text_t1);
       edit_t1.margins_.
@@ -5137,6 +5658,10 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
       edit_t1.selectionFg_ = edit_t1.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit_t1, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_time_end(const QString &)));
+      YAE_ASSERT(ok);
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
@@ -5159,17 +5684,83 @@ namespace yae
     r5.anchors_.top_ = ItemRef::reference(r4, kPropertyBottom);
     r5.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    Text & t5 = body.addNew<Text>("t5");
-    t5.font_ = style.font_;
-    t5.font_.setWeight(62);
-    t5.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-    t5.anchors_.bottom_ = ItemRef::reference(r5, kPropertyVCenter);
-    t5.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
-    t5.elide_ = Qt::ElideNone;
-    t5.text_ = TVarRef::constant(TVar("Weekdays"));
-    t5.color_ = t5.addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-    t5.background_ = t5.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    // layout the date row:
+    {
+      // shortcut:
+      Item & row = r5;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Weekdays"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Item * prev = &c2;
+      for (uint8_t i = 0; i < 7; i++)
+      {
+        uint8_t j = (i + 1) % 7;
+        uint16_t wday = 1 << j;
+        const char * name = kWeekdays[j];
+
+        Rectangle & btn = row.addNew<Rectangle>(name);
+        btn.margins_.
+          set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+        btn.anchors_.top_ =
+          ItemRef::offset(label, kPropertyTop, -3);
+        btn.anchors_.bottom_ =
+          ItemRef::offset(label, kPropertyBottom, 1);
+        btn.anchors_.left_ =
+          ItemRef::offset(*prev, kPropertyRight, i ? 0 : -3);
+        btn.width_ = ItemRef::reference(hidden, kUnitSize, 0.9667, 1.667);
+        btn.color_ = btn.
+          addExpr(new WishlistWeekdayBtnColor(view, wday));
+
+        if (i > 0)
+        {
+          btn.margins_.
+            set_left(btn.addExpr(new RoundUp(hidden, kUnitSize, 0.05)));
+        }
+
+        Text & text = btn.addNew<Text>("text");
+        text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+        text.anchors_.hcenter_ = ItemRef::reference(btn, kPropertyHCenter);
+        text.color_ = text.
+          addExpr(new WishlistWeekdayTxtColor(view, wday));
+        text.background_ = text.
+          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+        text.text_ = TVarRef::constant(TVar(name));
+        text.font_ = style.font_;
+        text.font_.setWeight(62);
+        text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+        WishlistWeekdayToggle & btn_ia =
+          btn.add(new WishlistWeekdayToggle("toggle", view, wday));
+        btn_ia.anchors_.fill(btn);
+
+        prev = &btn;
+      }
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::offset(row, kPropertyVCenter, 1);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant(TVar("optional"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
 
     Item & r6 = body.addNew<Item>("r6");
     r6.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
@@ -5187,7 +5778,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Exact Date"));
@@ -5213,6 +5804,8 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus.bgOnFocus_ = focus.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus, "wishlist_ui", 5);
@@ -5225,7 +5818,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = TVarRef::constant(TVar(""));
+      text.text_ = text.addExpr(new GetWishlistItemDate(view));
       text.font_ = style.font_;
       text.font_.setWeight(62);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -5254,6 +5847,10 @@ namespace yae
       edit.selectionFg_ = edit.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
 
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_date(const QString &)));
+      YAE_ASSERT(ok);
+
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
       note.font_.setWeight(62);
@@ -5274,7 +5871,7 @@ namespace yae
     r7.anchors_.top_ = ItemRef::reference(r6, kPropertyBottom);
     r7.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    // layout the channel number row:
+    // layout the max recordings row:
     {
       // shortcut:
       Item & row = r7;
@@ -5284,7 +5881,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Max. Recordings"));
@@ -5310,6 +5907,8 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
       focus.bgOnFocus_ = focus.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
         setFocusable(view, focus, "wishlist_ui", 6);
@@ -5322,7 +5921,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::fg_epg_));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = TVarRef::constant(TVar(""));
+      text.text_ = text.addExpr(new GetWishlistItemMax(view));
       text.font_ = style.font_;
       text.font_.setWeight(62);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -5350,6 +5949,10 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
       edit.selectionFg_ = edit.
         addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_max(const QString &)));
+      YAE_ASSERT(ok);
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
@@ -5381,7 +5984,7 @@ namespace yae
       label.font_.setWeight(62);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
-        addExpr(new OddRoundUp(row, kPropertyVCenter), 1.0, -1);
+        addExpr(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Skip Duplicates"));
@@ -5393,15 +5996,10 @@ namespace yae
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
-      cbox.height_ = cbox.
-        addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
       cbox.width_ = cbox.height_;
-#if 0
-      cbox.checked_ = cbox.
-        addInverse(new IsBlacklisted(view, ch_major, ch_minor));
-      cbox.on_toggle_.
-        reset(new OnToggleBlacklist(view, ch_major, ch_minor));
-#endif
+      cbox.checked_ = cbox.addExpr(new GetWishlistItemSkipDuplicates(view));
+      cbox.on_toggle_.reset(new OnToggleSkipDuplicates(view));
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;

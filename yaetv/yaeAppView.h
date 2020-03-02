@@ -129,6 +129,15 @@ namespace yae
     void remove_wishlist_item(const std::string & wi_key);
     void save_wishlist_item();
 
+  protected slots:
+    void update_wi_channel(const QString &);
+    void update_wi_title(const QString &);
+    void update_wi_desc(const QString &);
+    void update_wi_time_start(const QString &);
+    void update_wi_time_end(const QString &);
+    void update_wi_date(const QString &);
+    void update_wi_max(const QString &);
+
   protected:
     // helpers:
     void layout(AppView & view, AppStyle & style, Item & root);

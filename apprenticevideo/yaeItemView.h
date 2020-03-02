@@ -534,6 +534,38 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // RoundUp
+  //
+  struct YAEUI_API RoundUp : public TDoubleExpr
+  {
+    RoundUp(const Item & item,
+            Property property,
+            double scale = 1.0,
+            double translate = 0.0):
+      item_(item),
+      property_(property),
+      scale_(scale),
+      translate_(translate)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      double v = 0.0;
+      item_.get(property_, v);
+      v *= scale_;
+
+      int i = int(ceil(v));
+      result = double(i) + translate_;
+    }
+
+    const Item & item_;
+    Property property_;
+    double scale_;
+    double translate_;
+  };
+
+  //----------------------------------------------------------------
   // Repaint
   //
   struct YAEUI_API Repaint : public Item::Observer
