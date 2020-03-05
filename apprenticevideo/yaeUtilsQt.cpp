@@ -1306,6 +1306,7 @@ namespace yae
         "texi",
         "txt",
         "text",
+        "seen",
         "srt",
         "ass",
         "ssa",
