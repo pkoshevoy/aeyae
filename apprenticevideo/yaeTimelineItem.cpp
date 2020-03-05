@@ -499,9 +499,9 @@ namespace yae
     Item & playlistButton = this->addNew<Item>("playlistButton");
     playlistButton.visible_ = BoolRef::constant(!toggle_playlist_.is_null());
 
-    CallOnClick<ContextCallback> & playlistToggle =
-      this->add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
-                                                 this->toggle_playlist_));
+    CallOnClick<ContextCallback> & playlistToggle = playlistButton.
+      add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
+                                           this->toggle_playlist_));
     {
       playlistButton.anchors_.top_ =
         ItemRef::offset(*this, kPropertyTop, 2);
@@ -550,9 +550,9 @@ namespace yae
     arrow_btn.margins_.set_left
       (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-    CallOnClick<ContextCallback> & arrow_btn_ia =
-      this->add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
-                                                 this->back_arrow_cb_));
+    CallOnClick<ContextCallback> & arrow_btn_ia = arrow_btn.
+      add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
+                                           this->back_arrow_cb_));
     {
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
       bg.anchors_.fill(arrow_btn);
