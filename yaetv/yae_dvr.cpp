@@ -2174,10 +2174,11 @@ namespace yae
         // save timesheet to disk:
         yae::mpeg_ts::Context & ctx = ph.ctx_;
         std::string timesheet = ctx.timesheet_.to_str();
-        std::string fn = strfmt("timesheet.%s.log", ctx.log_prefix_.c_str());
+        std::string fn = strfmt("timesheet-dvr.%s.log",
+                                ctx.log_prefix_.c_str());
         fn = sanitize_filename_utf8(fn);
         fn = (fs::path(yae::get_temp_dir_utf8()) / fn).string();
-        yae::TOpenFile(fn, "wb").write(timesheet);
+        yae::TOpenFile(fn, "ab").write(timesheet);
       }
 
       TStreamPtr stream_ptr = stream_[frequency].lock();

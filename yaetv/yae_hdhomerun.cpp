@@ -210,7 +210,7 @@ namespace yae
     {
       std::string timesheet = timesheet_.to_str();
       TTime t = TTime::now();
-      std::string fn = strfmt("timesheet.%s.log", tuner_name_.c_str());
+      std::string fn = strfmt("timesheet-hdhr.%s.log", tuner_name_.c_str());
       fn = sanitize_filename_utf8(fn);
       fn = (fs::path(yae::get_temp_dir_utf8()) / fn).string();
       yae::TOpenFile(fn, "ab").write(timesheet);
