@@ -4658,16 +4658,18 @@ namespace yae
       container.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
 
       RoundRect & btn = container.addNew<RoundRect>("btn");
-      btn.radius_ = ItemRef::reference(btn, kPropertyHeight, 0.2);
+      btn.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
+      btn.border_ = ItemRef::reference(hidden, kUnitSize, 0.01, 0.5);
       btn.anchors_.vcenter_ = ItemRef::reference(container, kPropertyVCenter);
       btn.anchors_.left_ = ItemRef::reference(container, kPropertyLeft);
-      btn.margins_.set_left(ItemRef::reference(hidden, kUnitSize));
       btn.height_ = ItemRef::reference(container, kPropertyHeight);
-      btn.width_ = btn.height_;
+      btn.width_ = ItemRef::reference(hidden, kUnitSize, 0.9);
       btn.background_ = btn.
         addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       btn.color_ = btn.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
+        addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+      btn.colorBorder_ = btn.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
 
       Text & text = btn.addNew<Text>("text");
       text.anchors_.center(btn);
@@ -4677,7 +4679,7 @@ namespace yae
       text.elide_ = Qt::ElideNone;
       text.text_ = TVarRef::constant(TVar("+"));
       text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
       text.background_ = text.
         addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 0.0));
 
