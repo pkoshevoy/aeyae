@@ -422,8 +422,7 @@ namespace yae
     hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
                                                       device.ip_addr,
                                                       tuner.tuner_,
-                                                      // FIXME: dbg_.get()
-                                                      NULL));
+                                                      dbg_.get()));
     if (!hd_ptr)
     {
       return false;
@@ -617,7 +616,7 @@ namespace yae
       hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
                                                         device.ip_addr,
                                                         tuner.tuner_,
-                                                        NULL));
+                                                        dbg_.get()));
       if (hd_ptr)
       {
         session = open_session(tuner_name, hd_ptr);
@@ -642,7 +641,7 @@ namespace yae
       hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
                                                         device.ip_addr,
                                                         tuner.tuner_,
-                                                        NULL));
+                                                        dbg_.get()));
       if (hd_ptr)
       {
         session = open_session(tuner_name, hd_ptr);
