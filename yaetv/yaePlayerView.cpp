@@ -1786,6 +1786,11 @@ namespace yae
   void
   PlayerView::togglePlayback()
   {
+    if (!isEnabled())
+    {
+      return;
+    }
+
     player_->toggle_playback();
 
     timeline_->modelChanged();
