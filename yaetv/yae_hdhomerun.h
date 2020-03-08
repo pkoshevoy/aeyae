@@ -128,8 +128,8 @@ namespace yae
     //
     typedef yae::shared_ptr<Session> TSessionPtr;
 
-    // grab any tuner, if available:
-    TSessionPtr open_session();
+    // grab any tuner (if available), capable of tuning to a given frequency:
+    TSessionPtr open_session(uint32_t frequency = 0);
 
     // grab a specific tuner, if available:
     TSessionPtr open_session(const std::string & tuner);

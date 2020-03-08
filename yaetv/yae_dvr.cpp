@@ -2480,7 +2480,8 @@ namespace yae
     if (!stream_ptr || !stream_ptr->session_)
     {
       // start a new session:
-      HDHomeRun::TSessionPtr session_ptr = hdhr_.open_session();
+      uint32_t freq_hz = boost::lexical_cast<uint32_t>(frequency);
+      HDHomeRun::TSessionPtr session_ptr = hdhr_.open_session(freq_hz);
       if (!session_ptr)
       {
         // no tuners available:
@@ -3020,20 +3021,26 @@ namespace yae
     yae_ilog("removing %s", mpg.c_str());
 
     uint64_t size_mpg = yae::stat_filesize(mpg.c_str());
-    if (!yae::remove_utf8(mpg))
+    if (fs::exists(mpg) && !yae::remove_utf8(mpg))
     {
       yae_wlog("failed to remove %s", mpg.c_str());
       return 0;
     }
 
     std::string dat = mpg.substr(0, mpg.size() - 4) + ".dat";
-    if (!yae::remove_utf8(dat))
+    if (fs::exists(dat) && !yae::remove_utf8(dat))
     {
       yae_wlog("failed to remove %s", dat.c_str());
     }
 
+    std::string seen = mpg.substr(0, mpg.size() - 4) + ".seen";
+    if (fs::exists(seen) && !yae::remove_utf8(seen))
+    {
+      yae_wlog("failed to remove %s", seen.c_str());
+    }
+
     std::string json = mpg.substr(0, mpg.size() - 4) + ".json";
-    if (!yae::remove_utf8(json))
+    if (fs::exists(json) && !yae::remove_utf8(json))
     {
       yae_wlog("failed to remove %s", json.c_str());
     }

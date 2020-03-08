@@ -312,10 +312,11 @@ namespace yae
     bool get_channels(std::map<std::string, TChannels> & freq_channels) const;
     uint16_t get_channel_major(const std::string & frequency) const;
 
-    HDHomeRun::TSessionPtr open_session();
+    HDHomeRun::TSessionPtr open_session(uint32_t frequency = 0);
     HDHomeRun::TSessionPtr open_session(const std::string & tuner_name);
     HDHomeRun::TSessionPtr open_session(const std::string & tuner_name,
-                                        const hdhomerun_devptr_t & hd_ptr);
+                                        const hdhomerun_devptr_t & hd_ptr,
+                                        uint32_t frequency = 0);
 
     bool scan_channels(const HDHomeRun::TSessionPtr & session_ptr,
                        const IAssert & keep_going);
@@ -604,7 +605,7 @@ namespace yae
   // HDHomeRun::Private::open_session
   //
   HDHomeRun::TSessionPtr
-  HDHomeRun::Private::open_session()
+  HDHomeRun::Private::open_session(uint32_t frequency)
   {
     HDHomeRun::TSessionPtr session;
     for (std::map<std::string, TunerRef>::reverse_iterator
@@ -619,7 +620,7 @@ namespace yae
                                                         dbg_.get()));
       if (hd_ptr)
       {
-        session = open_session(tuner_name, hd_ptr);
+        session = open_session(tuner_name, hd_ptr, frequency);
       }
     }
     return session;
@@ -655,7 +656,8 @@ namespace yae
   //
   HDHomeRun::TSessionPtr
   HDHomeRun::Private::open_session(const std::string & tuner_name,
-                                   const hdhomerun_devptr_t & hd_ptr)
+                                   const hdhomerun_devptr_t & hd_ptr,
+                                   uint32_t frequency)
   {
     HDHomeRun::TSessionPtr session_ptr;
     {
@@ -710,6 +712,12 @@ namespace yae
       session.lock_tuner_.lock(hd_ptr, cache_dir_);
       session.tuner_name_ = tuner_name;
       session.hd_ptr_ = hd_ptr;
+
+      if (frequency)
+      {
+        tune_to(session_ptr, frequency);
+      }
+
       return session_ptr;
     }
     catch (const std::exception & e)
@@ -1212,9 +1220,9 @@ namespace yae
   // HDHomeRun::open_session
   //
   HDHomeRun::TSessionPtr
-  HDHomeRun::open_session()
+  HDHomeRun::open_session(uint32_t frequency)
   {
-    return private_->open_session();
+    return private_->open_session(frequency);
   }
 
   //----------------------------------------------------------------
