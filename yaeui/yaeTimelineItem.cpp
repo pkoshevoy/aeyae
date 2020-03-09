@@ -554,17 +554,16 @@ namespace yae
       add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
                                            this->back_arrow_cb_));
     {
+#if 0
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
       bg.anchors_.fill(arrow_btn);
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
-      // bg.visible_ = BoolRef::inverse(this->is_playlist_visible_);
-      bg.visible_ = BoolRef::constant(true);
-
+#endif
       ArrowItem & arrow = arrow_btn.add<ArrowItem>
         (new ArrowItem("arrow", ArrowItem::kLeft));
-      arrow.anchors_.fill(bg);
+      arrow.anchors_.fill(arrow_btn);
       arrow.margins_.set
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
       arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.25);
