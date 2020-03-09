@@ -52,7 +52,7 @@ endif ()
 include_directories(AFTER
   .
   ..
-  ../apprenticevideo
+  ../yaeui
   ${PROJECT_BINARY_DIR}
   ${PROJECT_BINARY_DIR}/../apprenticevideo
   ${Boost_INCLUDE_DIR}
@@ -79,16 +79,6 @@ set(project_moc_hxx
 
   yaeDemuxerView.h
   yaeMainWindow.h
-  yaeSpinnerView.h
-
-  yae_player_item.h
-
-  ../apprenticevideo/yaeCanvasWidget.h
-  ../apprenticevideo/yaeItemView.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.h
-  ../apprenticevideo/yaeTextInput.h
-  ../apprenticevideo/yaeTimelineItem.h
-  ../apprenticevideo/yaeTimelineModel.h
   )
 
 set(project_uis
@@ -104,87 +94,6 @@ set(project_sources
   yaeMainWindow.h
   yaeRemux.cpp
   yaeRemux.h
-  yaeSpinnerView.cpp
-  yaeSpinnerView.h
-
-  yae_player_item.cpp
-  yae_player_item.h
-
-  yae_axis_item.cpp
-  yae_axis_item.h
-  yae_checkbox_item.cpp
-  yae_checkbox_item.h
-  yae_input_proxy_item.cpp
-  yae_input_proxy_item.h
-  yae_lshape.cpp
-  yae_lshape.h
-  yae_plot_item.cpp
-  yae_plot_item.h
-  yae_tab_rect.cpp
-  yae_tab_rect.h
-
-  ../apprenticevideo/yaeArrowItem.cpp
-  ../apprenticevideo/yaeArrowItem.h
-  ../apprenticevideo/yaeBBox.cpp
-  ../apprenticevideo/yaeBBox.h
-  ../apprenticevideo/yaeCanvas.h
-  ../apprenticevideo/yaeCanvas.cpp
-  ../apprenticevideo/yaeCanvasWidget.h
-  ../apprenticevideo/yaeCanvasQPainterUtils.h
-  ../apprenticevideo/yaeCanvasQPainterUtils.cpp
-  ../apprenticevideo/yaeCanvasRenderer.h
-  ../apprenticevideo/yaeCanvasRenderer.cpp
-  ../apprenticevideo/yaeColor.h
-  ../apprenticevideo/yaeDashedRect.cpp
-  ../apprenticevideo/yaeDashedRect.h
-  ../apprenticevideo/yaeDonutRect.cpp
-  ../apprenticevideo/yaeDonutRect.h
-  ../apprenticevideo/yaeExpression.h
-  ../apprenticevideo/yaeFlickableArea.cpp
-  ../apprenticevideo/yaeFlickableArea.h
-  ../apprenticevideo/yaeGradient.cpp
-  ../apprenticevideo/yaeGradient.h
-  ../apprenticevideo/yaeImageProvider.cpp
-  ../apprenticevideo/yaeImageProvider.h
-  ../apprenticevideo/yaeInputArea.cpp
-  ../apprenticevideo/yaeInputArea.h
-  ../apprenticevideo/yaeItem.cpp
-  ../apprenticevideo/yaeItem.h
-  ../apprenticevideo/yaeItemFocus.cpp
-  ../apprenticevideo/yaeItemFocus.h
-  ../apprenticevideo/yaeItemRef.h
-  ../apprenticevideo/yaeItemView.cpp
-  ../apprenticevideo/yaeItemView.h
-  ../apprenticevideo/yaeItemViewStyle.cpp
-  ../apprenticevideo/yaeItemViewStyle.h
-  ../apprenticevideo/yaeProperty.h
-  ../apprenticevideo/yaeRectangle.cpp
-  ../apprenticevideo/yaeRectangle.h
-  ../apprenticevideo/yaeRoundRect.cpp
-  ../apprenticevideo/yaeRoundRect.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.cpp
-  ../apprenticevideo/yaeScrollview.cpp
-  ../apprenticevideo/yaeScrollview.h
-  ../apprenticevideo/yaeSegment.cpp
-  ../apprenticevideo/yaeSegment.h
-  ../apprenticevideo/yaeText.cpp
-  ../apprenticevideo/yaeText.h
-  ../apprenticevideo/yaeTextInput.cpp
-  ../apprenticevideo/yaeTextInput.h
-  ../apprenticevideo/yaeTexture.cpp
-  ../apprenticevideo/yaeTexture.h
-  ../apprenticevideo/yaeTexturedRect.cpp
-  ../apprenticevideo/yaeTexturedRect.h
-  ../apprenticevideo/yaeTimelineItem.h
-  ../apprenticevideo/yaeTimelineItem.cpp
-  ../apprenticevideo/yaeTimelineModel.h
-  ../apprenticevideo/yaeTimelineModel.cpp
-  ../apprenticevideo/yaeTransform.cpp
-  ../apprenticevideo/yaeTransform.h
-  ../apprenticevideo/yaeUtilsQt.h
-  ../apprenticevideo/yaeUtilsQt.cpp
-  ../apprenticevideo/yaeVec.h
   )
 
 if (QT4_FOUND)
@@ -196,22 +105,6 @@ if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
-
-if (APPLE)
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaeAppleUtils.h
-    ../apprenticevideo/yaeAppleUtils.mm
-    ../apprenticevideo/yaeAudioUnitRenderer.h
-    ../apprenticevideo/yaeAudioUnitRenderer.mm
-    )
-else ()
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaePortaudioRenderer.h
-    ../apprenticevideo/yaePortaudioRenderer.cpp)
-endif ()
-
 
 find_path(LIBASS_INCLUDE_DIR
   ass/ass.h
@@ -228,11 +121,6 @@ endif ()
 
 if (LIBASS_LIBRARY)
   add_definitions(-DYAE_USE_LIBASS)
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaeLibass.h
-    ../apprenticevideo/yaeLibass.cpp
-    )
 endif ()
 
 
@@ -345,6 +233,7 @@ add_dependencies(${PROGNAME} "update_resource_files_aeyaeremux")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  yaeui
   ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
@@ -657,4 +546,4 @@ if (NOT (WIN32 OR APPLE))
     )
 endif ()
 
-add_dependencies(${PROGNAME} aeyae)
+add_dependencies(${PROGNAME} aeyae yaeui)

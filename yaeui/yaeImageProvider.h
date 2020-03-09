@@ -24,9 +24,6 @@
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/video/yae_reader.h"
 
-// local includes:
-#include "yaePlaylistModelProxy.h"
-
 
 namespace yae
 {

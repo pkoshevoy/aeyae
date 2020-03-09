@@ -13,7 +13,6 @@
 // local interfaces:
 #include "yaeCanvasRenderer.h"
 #include "yaeImage.h"
-#include "yaePlaylistView.h"
 #include "yaeTexture.h"
 #include "yaeThumbnailProvider.h"
 

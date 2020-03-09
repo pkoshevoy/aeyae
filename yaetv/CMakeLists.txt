@@ -68,9 +68,8 @@ endif ()
 include_directories(AFTER
   .
   ..
-  ../apprenticevideo
+  ../yaeui
   ../jsoncpp/include
-  ../remux
   ${PROJECT_BINARY_DIR}
   ${PROJECT_BINARY_DIR}/../apprenticevideo
   ${Boost_INCLUDE_DIR}
@@ -124,22 +123,8 @@ endif ()
 set(project_moc_hxx
 
   yaeAppView.h
-  yaeConfirmView.h
   yaeMainWindow.h
-  yaePlayerView.h
-  yaePlayerWidget.h
   yaePlayerWindow.h
-
-  ../apprenticevideo/yaeCanvasWidget.h
-  ../apprenticevideo/yaeFrameCropView.h
-  ../apprenticevideo/yaeItemView.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.h
-  ../apprenticevideo/yaeTextInput.h
-  ../apprenticevideo/yaeTimelineItem.h
-  ../apprenticevideo/yaeTimelineModel.h
-
-  ../remux/yaeSpinnerView.h
-  ../remux/yae_player_item.h
   )
 
 set(project_uis
@@ -164,105 +149,10 @@ set(project_sources
   yaeAppStyle.h
   yaeAppView.cpp
   yaeAppView.h
-  yaeConfirmView.cpp
-  yaeConfirmView.h
   yaeMainWindow.cpp
   yaeMainWindow.h
-  yaePlayerStyle.cpp
-  yaePlayerStyle.h
-  yaePlayerView.cpp
-  yaePlayerView.h
-  yaePlayerWidget.cpp
-  yaePlayerWidget.h
   yaePlayerWindow.cpp
   yaePlayerWindow.h
-
-  ../apprenticevideo/yaeArrowItem.cpp
-  ../apprenticevideo/yaeArrowItem.h
-  ../apprenticevideo/yaeBBox.cpp
-  ../apprenticevideo/yaeBBox.h
-  ../apprenticevideo/yaeBookmarks.cpp
-  ../apprenticevideo/yaeBookmarks.h
-  ../apprenticevideo/yaeCanvas.h
-  ../apprenticevideo/yaeCanvas.cpp
-  ../apprenticevideo/yaeCanvasWidget.h
-  ../apprenticevideo/yaeCanvasQPainterUtils.h
-  ../apprenticevideo/yaeCanvasQPainterUtils.cpp
-  ../apprenticevideo/yaeCanvasRenderer.h
-  ../apprenticevideo/yaeCanvasRenderer.cpp
-  ../apprenticevideo/yaeColor.h
-  ../apprenticevideo/yaeDashedRect.cpp
-  ../apprenticevideo/yaeDashedRect.h
-  ../apprenticevideo/yaeDonutRect.cpp
-  ../apprenticevideo/yaeDonutRect.h
-  ../apprenticevideo/yaeExpression.h
-  ../apprenticevideo/yaeFlickableArea.cpp
-  ../apprenticevideo/yaeFlickableArea.h
-  ../apprenticevideo/yaeFrameCropView.cpp
-  ../apprenticevideo/yaeFrameCropView.h
-  ../apprenticevideo/yaeGradient.cpp
-  ../apprenticevideo/yaeGradient.h
-  ../apprenticevideo/yaeImage.cpp
-  ../apprenticevideo/yaeImage.h
-  ../apprenticevideo/yaeImageProvider.cpp
-  ../apprenticevideo/yaeImageProvider.h
-  ../apprenticevideo/yaeInputArea.cpp
-  ../apprenticevideo/yaeInputArea.h
-  ../apprenticevideo/yaeItem.cpp
-  ../apprenticevideo/yaeItem.h
-  ../apprenticevideo/yaeItemFocus.cpp
-  ../apprenticevideo/yaeItemFocus.h
-  ../apprenticevideo/yaeItemRef.h
-  ../apprenticevideo/yaeItemView.cpp
-  ../apprenticevideo/yaeItemView.h
-  ../apprenticevideo/yaeItemViewStyle.cpp
-  ../apprenticevideo/yaeItemViewStyle.h
-  ../apprenticevideo/yaePlaylistKey.cpp
-  ../apprenticevideo/yaePlaylistKey.h
-  ../apprenticevideo/yaeProperty.h
-  ../apprenticevideo/yaeRectangle.cpp
-  ../apprenticevideo/yaeRectangle.h
-  ../apprenticevideo/yaeRoundRect.cpp
-  ../apprenticevideo/yaeRoundRect.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.h
-  ../apprenticevideo/yaeScreenSaverInhibitor.cpp
-  ../apprenticevideo/yaeScrollview.cpp
-  ../apprenticevideo/yaeScrollview.h
-  ../apprenticevideo/yaeSegment.cpp
-  ../apprenticevideo/yaeSegment.h
-  ../apprenticevideo/yaeText.cpp
-  ../apprenticevideo/yaeText.h
-  ../apprenticevideo/yaeTextInput.cpp
-  ../apprenticevideo/yaeTextInput.h
-  ../apprenticevideo/yaeTexture.cpp
-  ../apprenticevideo/yaeTexture.h
-  ../apprenticevideo/yaeTexturedRect.cpp
-  ../apprenticevideo/yaeTexturedRect.h
-  ../apprenticevideo/yaeThumbnailProvider.h
-  ../apprenticevideo/yaeThumbnailProvider.cpp
-  ../apprenticevideo/yaeTimelineItem.h
-  ../apprenticevideo/yaeTimelineItem.cpp
-  ../apprenticevideo/yaeTimelineModel.h
-  ../apprenticevideo/yaeTimelineModel.cpp
-  ../apprenticevideo/yaeTransform.cpp
-  ../apprenticevideo/yaeTransform.h
-  ../apprenticevideo/yaeUtilsQt.h
-  ../apprenticevideo/yaeUtilsQt.cpp
-  ../apprenticevideo/yaeVec.h
-
-  ../remux/yaeSpinnerView.cpp
-  ../remux/yaeSpinnerView.h
-
-  ../remux/yae_checkbox_item.cpp
-  ../remux/yae_checkbox_item.h
-  ../remux/yae_input_proxy_item.cpp
-  ../remux/yae_input_proxy_item.h
-  ../remux/yae_lshape.cpp
-  ../remux/yae_lshape.h
-  ../remux/yae_player_item.cpp
-  ../remux/yae_player_item.h
-  ../remux/yae_tab_rect.cpp
-  ../remux/yae_tab_rect.h
   )
 
 if (QT4_FOUND)
@@ -274,34 +164,6 @@ if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
-
-if (APPLE)
-  include_directories(AFTER ../apprenticevideo/martinkahr-apple_remote_control)
-
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaeAppleRemoteControl.h
-    ../apprenticevideo/yaeAppleRemoteControl.mm
-    ../apprenticevideo/yaeAppleUtils.h
-    ../apprenticevideo/yaeAppleUtils.mm
-    ../apprenticevideo/yaeAudioUnitRenderer.h
-    ../apprenticevideo/yaeAudioUnitRenderer.mm
-    ../apprenticevideo/martinkahr-apple_remote_control/AppleRemote.h
-    ../apprenticevideo/martinkahr-apple_remote_control/AppleRemote.m
-    ../apprenticevideo/martinkahr-apple_remote_control/HIDRemoteControlDevice.h
-    ../apprenticevideo/martinkahr-apple_remote_control/HIDRemoteControlDevice.m
-    ../apprenticevideo/martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
-    ../apprenticevideo/martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
-    ../apprenticevideo/martinkahr-apple_remote_control/RemoteControl.h
-    ../apprenticevideo/martinkahr-apple_remote_control/RemoteControl.m
-    )
-else ()
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaePortaudioRenderer.h
-    ../apprenticevideo/yaePortaudioRenderer.cpp)
-endif ()
-
 
 find_path(LIBASS_INCLUDE_DIR
   ass/ass.h
@@ -318,11 +180,6 @@ endif ()
 
 if (LIBASS_LIBRARY)
   add_definitions(-DYAE_USE_LIBASS)
-  set(project_sources
-    ${project_sources}
-    ../apprenticevideo/yaeLibass.h
-    ../apprenticevideo/yaeLibass.cpp
-    )
 endif ()
 
 
@@ -444,6 +301,7 @@ add_dependencies(${PROGNAME} "update_resource_files_yaetv")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  yaeui
   ${Boost_LIBRARIES}
   ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
@@ -758,4 +616,4 @@ if (NOT (WIN32 OR APPLE))
     )
 endif ()
 
-add_dependencies(${PROGNAME} aeyae)
+add_dependencies(${PROGNAME} aeyae yaeui)

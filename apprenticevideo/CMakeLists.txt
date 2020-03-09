@@ -62,6 +62,7 @@ endif ()
 include_directories(AFTER
   .
   ..
+  ../yaeui
   ${PROJECT_BINARY_DIR}
   ${Boost_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
@@ -83,18 +84,11 @@ find_library(GLEW_LIBRARY GLEW
   DOC "GLEW library")
 
 set(project_moc_hxx
-  yaeCanvasWidget.h
-  yaeFrameCropView.h
-  yaeItemView.h
   yaeMainWindow.h
   yaePlaylist.h
   yaePlaylistModel.h
   yaePlaylistModelProxy.h
   yaePlaylistView.h
-  yaeScreenSaverInhibitor.h
-  yaeTextInput.h
-  yaeTimelineItem.h
-  yaeTimelineModel.h
   yaeTimelineView.h
   )
 
@@ -115,52 +109,10 @@ set(project_uis
   )
 
 set(project_sources
-  yaeArrowItem.cpp
-  yaeArrowItem.h
-  yaeBBox.cpp
-  yaeBBox.h
   yaeBookmarks.h
   yaeBookmarks.cpp
-  yaeCanvas.h
-  yaeCanvas.cpp
-  yaeCanvasWidget.h
-  yaeCanvasQPainterUtils.h
-  yaeCanvasQPainterUtils.cpp
-  yaeCanvasRenderer.h
-  yaeCanvasRenderer.cpp
-  yaeColor.h
-  yaeDashedRect.cpp
-  yaeDashedRect.h
-  yaeDonutRect.cpp
-  yaeDonutRect.h
-  yaeExpression.h
-  yaeFlickableArea.cpp
-  yaeFlickableArea.h
-  yaeFrameCropView.cpp
-  yaeFrameCropView.h
-  yaeGradient.cpp
-  yaeGradient.h
   yaeGridViewStyle.h
   yaeGridViewStyle.cpp
-  yaeImage.cpp
-  yaeImage.h
-  yaeImageLive.cpp
-  yaeImageLive.h
-  yaeImageProvider.cpp
-  yaeImageProvider.h
-  yaeInputArea.cpp
-  yaeInputArea.h
-  yaeItem.cpp
-  yaeItem.h
-  yaeItemFocus.cpp
-  yaeItemFocus.h
-  yaeItemRef.h
-  yaeItemView.cpp
-  yaeItemView.h
-  yaeItemViewStyle.cpp
-  yaeItemViewStyle.h
-  yaeLibass.h
-  yaeLibass.cpp
   yaeListViewStyle.h
   yaeListViewStyle.cpp
   yaeMain.cpp
@@ -178,38 +130,8 @@ set(project_sources
   yaePlaylistView.cpp
   yaePlaylistViewStyle.h
   yaePlaylistViewStyle.cpp
-  yaeProperty.h
-  yaeRectangle.cpp
-  yaeRectangle.h
-  yaeRoundRect.cpp
-  yaeRoundRect.h
-  yaeScreenSaverInhibitor.h
-  yaeScreenSaverInhibitor.cpp
-  yaeScrollview.cpp
-  yaeScrollview.h
-  yaeSegment.cpp
-  yaeSegment.h
-  yaeText.cpp
-  yaeText.h
-  yaeTextInput.cpp
-  yaeTextInput.h
-  yaeTexture.cpp
-  yaeTexture.h
-  yaeTexturedRect.cpp
-  yaeTexturedRect.h
-  yaeThumbnailProvider.h
-  yaeThumbnailProvider.cpp
-  yaeTimelineItem.h
-  yaeTimelineItem.cpp
-  yaeTimelineModel.h
-  yaeTimelineModel.cpp
   yaeTimelineView.h
   yaeTimelineView.cpp
-  yaeTransform.cpp
-  yaeTransform.h
-  yaeUtilsQt.h
-  yaeUtilsQt.cpp
-  yaeVec.h
   )
 
 if (QT4_FOUND)
@@ -240,32 +162,6 @@ if (Qt5_FOUND)
     yaeUtilsQml.h
     yaeUtilsQml.cpp
     )
-endif ()
-
-if (APPLE)
-  include_directories(AFTER martinkahr-apple_remote_control)
-
-  set(project_sources
-    ${project_sources}
-    yaeAppleRemoteControl.h
-    yaeAppleRemoteControl.mm
-    yaeAppleUtils.h
-    yaeAppleUtils.mm
-    yaeAudioUnitRenderer.h
-    yaeAudioUnitRenderer.mm
-    martinkahr-apple_remote_control/AppleRemote.h
-    martinkahr-apple_remote_control/AppleRemote.m
-    martinkahr-apple_remote_control/HIDRemoteControlDevice.h
-    martinkahr-apple_remote_control/HIDRemoteControlDevice.m
-    martinkahr-apple_remote_control/MultiClickRemoteBehavior.h
-    martinkahr-apple_remote_control/MultiClickRemoteBehavior.m
-    martinkahr-apple_remote_control/RemoteControl.h
-    martinkahr-apple_remote_control/RemoteControl.m)
-else ()
-  set(project_sources
-    ${project_sources}
-    yaePortaudioRenderer.h
-    yaePortaudioRenderer.cpp)
 endif ()
 
 find_path(LIBASS_INCLUDE_DIR
@@ -389,6 +285,7 @@ add_dependencies(${PROGNAME} "update_resource_files_apprenticevideo")
 set(TARGET_LIBS
   ${TARGET_LIBS}
   aeyae
+  yaeui
   ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
@@ -740,3 +637,5 @@ if (NOT (WIN32 OR APPLE))
     RENAME "${PROGNAME}.png"
     )
 endif ()
+
+add_dependencies(${PROGNAME} aeyae yaeui)

@@ -490,7 +490,7 @@ set(jsoncpp_sources
   jsoncpp/src/lib_json/json_writer.cpp
   )
 
-add_library(aeyae SHARED
+add_library(${PROGNAME} SHARED
 
   ${jsoncpp_sources}
 
@@ -614,6 +614,7 @@ target_compile_definitions(aeyae PRIVATE
 target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
 
 add_subdirectory(tests)
+add_subdirectory(yaeui)
 add_subdirectory(apprenticevideo)
 add_subdirectory(yamka)
 add_subdirectory(remux)

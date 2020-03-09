@@ -25,7 +25,6 @@
 #include "yae/video/yae_pixel_format_traits.h"
 
 // local includes:
-#include "yaePlaylist.h"
 #include "yaeImageProvider.h"
 #include "yaeUtilsQt.h"
 
