@@ -104,6 +104,7 @@ set(project_moc_hxx
   yae_player_item.h
 
   # yaetv:
+  yaeAspectRatioView.h
   yaeConfirmView.h
   yaePlayerView.h
   yaePlayerWidget.h
@@ -216,6 +217,8 @@ set(project_sources
   yaeSpinnerView.h
 
   # yaetv:
+  yaeAspectRatioView.cpp
+  yaeAspectRatioView.h
   yaeConfirmView.cpp
   yaeConfirmView.h
   yaePlayerStyle.cpp

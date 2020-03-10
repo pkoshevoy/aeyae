@@ -554,7 +554,7 @@ namespace yae
       add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
                                            this->back_arrow_cb_));
     {
-#if 0
+#if 1
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
       bg.anchors_.fill(arrow_btn);
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);

@@ -289,6 +289,44 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // GetViewWidth
+  //
+  struct YAEUI_API GetViewWidth : TDoubleExpr
+  {
+    GetViewWidth(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = view_.width();
+    }
+
+    const ItemView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // GetViewHeight
+  //
+  struct YAEUI_API GetViewHeight : TDoubleExpr
+  {
+    GetViewHeight(const ItemView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = view_.height();
+    }
+
+    const ItemView & view_;
+  };
+
+
+  //----------------------------------------------------------------
   // ViewDpi
   //
   struct YAEUI_API ViewDpi : TDoubleExpr
