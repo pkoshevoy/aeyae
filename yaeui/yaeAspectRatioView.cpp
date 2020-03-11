@@ -349,8 +349,6 @@ namespace yae
   //
   AspectRatioView::AspectRatioView():
     ItemView("AspectRatioView"),
-    bg_(ColorRef::constant(Color(0xFFFFFF, 0.9))),
-    fg_(ColorRef::constant(Color(0x000000, 0.5))),
     style_(NULL),
     sel_(num_ar_choices - 2),
     current_(1.0),
@@ -368,9 +366,6 @@ namespace yae
     Item & root = *root_;
     const ItemViewStyle & style = *style_;
 
-    bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
-    fg_ = style.bg_;
-
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
     root.width_ = root.addExpr(new GetViewWidth(*this));
@@ -382,7 +377,7 @@ namespace yae
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
-    bg.color_ = bg_;
+    bg.color_ = bg.addExpr(style_color_ref(*this, &ItemViewStyle::fg_, 0.9));
 
     Item & grid = root.addNew<Item>("grid");
     grid.anchors_.fill(root);
@@ -404,6 +399,7 @@ namespace yae
 
     for (std::size_t i = 0; i < num_ar_choices; i++)
     {
+      bool custom = (i == num_ar_choices - 1);
       Item & item = grid.addNew<Item>(str("cell_", i).c_str());
       item.anchors_.left_ = item.addExpr(new CellPosX(grid,
                                                       grid_rows,
@@ -419,18 +415,23 @@ namespace yae
       item.height_ = cell_size;
 
       RoundRect & circle = item.addNew<RoundRect>("circle");
+      circle.margins_.set(ItemRef::reference(item, kPropertyHeight, 0.05));
       circle.anchors_.fill(item);
       circle.radius_ = ItemRef::reference(circle, kPropertyHeight, 0.5);
       circle.background_ = ColorRef::transparent(bg, kPropertyColor);
       circle.color_ = ColorRef::transparent(bg, kPropertyColor);
-      circle.colorBorder_ = fg_;
-      circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.01, 1);
+      circle.colorBorder_ = circle.
+        addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.3));
+      circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.005, 1);
 
       Rectangle & frame = item.addNew<Rectangle>("frame");
       frame.anchors_.center(circle);
-      frame.border_ = circle.border_;
+      // frame.border_ = circle.border_;
       // frame.color_ = circle.color_;
-      frame.color_ = circle.colorBorder_;
+      frame.color_ = custom ?
+        frame.addExpr(style_color_ref(*this, &ItemViewStyle::cursor_)) :
+        circle.colorBorder_;
+
       // frame.colorBorder_ = circle.colorBorder_;
       frame.width_ = frame.addExpr(new GetFrameWidth(*this, circle, i));
       frame.height_ = frame.addExpr(new GetFrameHeight(*this, circle, i));
@@ -438,8 +439,9 @@ namespace yae
       Text & text = item.addNew<Text>("text");
       text.anchors_.center(item);
       text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
-      // text.color_ = fg_;
-      text.color_ = bg_;
+      text.color_ =
+        text.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
       text.fontSize_ = ItemRef::reference(item, kPropertyHeight, 0.2);
       text.elide_ = Qt::ElideNone;

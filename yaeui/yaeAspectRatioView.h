@@ -54,10 +54,6 @@ namespace yae
     void setNativeAspectRatio(double ar);
     void setAspectRatio(double ar);
 
-  public:
-    ColorRef fg_;
-    ColorRef bg_;
-
   protected:
     ItemViewStyle * style_;
 
