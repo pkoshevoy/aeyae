@@ -120,7 +120,7 @@ if (YAE_USE_PLAYER_QUICK_WIDGET)
 endif ()
 
 set(project_uis
-  ../apprenticevideo/yaeAspectRatioDialog.ui
+  # ../apprenticevideo/yaeAspectRatioDialog.ui
   )
 
 set(project_sources

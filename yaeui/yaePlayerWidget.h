@@ -18,14 +18,12 @@
 #include "yaeAppleRemoteControl.h"
 #include "yaeAppleUtils.h"
 #endif
+#include "yaeAspectRatioView.h"
 #include "yaeCanvasWidget.h"
 #include "yaeConfirmView.h"
 #include "yaeFrameCropView.h"
 #include "yaePlayerView.h"
 #include "yaeSpinnerView.h"
-
-// uic:
-#include "ui_yaeAspectRatioDialog.h"
 
 
 namespace yae
@@ -41,19 +39,6 @@ namespace yae
 #else
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
 #endif
-
-
-  //----------------------------------------------------------------
-  // AspectRatioDialog
-  //
-  class AspectRatioDialog : public QDialog,
-                            public Ui::AspectRatioDialog
-  {
-    Q_OBJECT;
-
-  public:
-    AspectRatioDialog(QWidget * parent = 0);
-  };
 
 
 #ifdef __APPLE__
@@ -134,10 +119,11 @@ namespace yae
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
 
-    // prompt user for aspect ratio via a dialog:
-    //
-    // FIXME: this could be done with an ItemView/TextEdit instead
+    // prompt to override output aspect ratio:
     void playbackAspectRatioOther();
+
+    // callback from aspect ratio view reflecting current selection:
+    void selectAspectRatio(double ar);
 
     // window menu:
     void windowHalfSize();
@@ -206,6 +192,7 @@ namespace yae
     SpinnerView spinner_;
     ConfirmView confirm_;
     FrameCropView cropView_;
+    AspectRatioView arView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:

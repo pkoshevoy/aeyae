@@ -518,6 +518,18 @@ namespace yae
 #endif
 
   //----------------------------------------------------------------
+  // close_enough
+  //
+  inline static bool
+  close_enough(const double & ref,
+               const double & given,
+               const double tolerance = 1e-6)
+  {
+    double err = fabs(given - ref);
+    return err < tolerance;
+  }
+
+  //----------------------------------------------------------------
   // at
   //
   template <typename TValue>

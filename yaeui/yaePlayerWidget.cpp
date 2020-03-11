@@ -35,17 +35,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // AspectRatioDialog::AspectRatioDialog
-  //
-  AspectRatioDialog::AspectRatioDialog(QWidget * parent):
-    QDialog(parent),
-    Ui::AspectRatioDialog()
-  {
-    Ui::AspectRatioDialog::setupUi(this);
-  }
-
-
-  //----------------------------------------------------------------
   // player_toggle_fullscreen
   //
   static void
@@ -138,6 +127,14 @@ namespace yae
 
     ok = connect(&cropView_, SIGNAL(done()),
                  this, SLOT(dismissFrameCropView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&arView_, SIGNAL(aspectRatio(double)),
+                 this, SLOT(selectAspectRatio(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&arView_, SIGNAL(done()),
+                 this, SLOT(adjustCanvasHeight()));
     YAE_ASSERT(ok);
 
     shortcutFullScreen_ = new QShortcut(this);
@@ -300,11 +297,13 @@ namespace yae
     spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    arView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
 
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
     spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
     confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
     cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    arView_.query_fullscreen_.reset(&player_query_fullscreen, this);
   }
 
   //----------------------------------------------------------------
@@ -329,10 +328,12 @@ namespace yae
     canvas_->append(&spinner_);
     canvas_->append(&confirm_);
     canvas_->append(&cropView_);
+    canvas_->append(&arView_);
 
     spinner_.setStyle(view_.style());
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
+    arView_.setStyle(view_.style());
 
     CanvasRendererItem & rendererItem =
       cropView_.root()->get<CanvasRendererItem>("uncropped");
@@ -371,6 +372,7 @@ namespace yae
     view_.stopPlayback();
     view_.setEnabled(false);
     cropView_.setEnabled(false);
+    arView_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -552,27 +554,80 @@ namespace yae
   void
   PlayerWidget::playbackAspectRatioOther()
   {
-    static AspectRatioDialog * aspectRatioDialog = NULL;
-    if (!aspectRatioDialog)
-    {
-      aspectRatioDialog = new AspectRatioDialog(this);
-    }
+    int rotate = 0;
+    double native_ar = canvas().nativeAspectRatioRotated(rotate);
+    native_ar = native_ar ? native_ar : 1.0;
+    arView_.setNativeAspectRatio(native_ar);
 
     double w = 0.0;
     double h = 0.0;
-    double dar = canvas().imageAspectRatio(w, h);
-    dar = dar != 0.0 ? dar : 1.777777;
-    aspectRatioDialog->doubleSpinBox->setValue(dar);
+    double current_ar = canvas().imageAspectRatio(w, h);
 
-    int r = aspectRatioDialog->exec();
-    if (r != QDialog::Accepted)
+    if (view_.actionAspectRatioAuto_->isChecked())
     {
-      return;
+      arView_.setAspectRatio(0.0);
+    }
+    else
+    {
+      current_ar = current_ar ? current_ar : 1.0;
+      arView_.setAspectRatio(current_ar);
     }
 
-    dar = aspectRatioDialog->doubleSpinBox->value();
-    canvas().overrideDisplayAspectRatio(dar);
-    adjustCanvasHeight();
+    arView_.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::selectAspectRatio
+  //
+  void
+  PlayerWidget::selectAspectRatio(double ar)
+  {
+    // update Aspect Ratio menu item selection
+    SignalBlocker blockSignals;
+    blockSignals
+      << view_.actionAspectRatioAuto_
+      << view_.actionAspectRatio1_33_
+      << view_.actionAspectRatio1_60_
+      << view_.actionAspectRatio1_78_
+      << view_.actionAspectRatio1_85_
+      << view_.actionAspectRatio2_35_
+      << view_.actionAspectRatio2_40_
+      << view_.actionAspectRatioOther_;
+
+    if (!ar)
+    {
+      view_.actionAspectRatioAuto_->setChecked(true);
+    }
+    else if (close_enough(ar, 4.0 / 3.0))
+    {
+      view_.actionAspectRatio1_33_->setChecked(true);
+    }
+    else if (close_enough(ar, 1.6))
+    {
+      view_.actionAspectRatio1_60_->setChecked(true);
+    }
+    else if (close_enough(ar, 16.0 / 9.0))
+    {
+      view_.actionAspectRatio1_78_->setChecked(true);
+    }
+    else if (close_enough(ar, 1.85))
+    {
+      view_.actionAspectRatio1_85_->setChecked(true);
+    }
+    else if (close_enough(ar, 2.35))
+    {
+      view_.actionAspectRatio2_35_->setChecked(true);
+    }
+    else if (close_enough(ar, 2.4))
+    {
+      view_.actionAspectRatio2_40_->setChecked(true);
+    }
+    else
+    {
+      view_.actionAspectRatioOther_->setChecked(true);
+    }
+
+    canvas().overrideDisplayAspectRatio(ar);
   }
 
   //----------------------------------------------------------------

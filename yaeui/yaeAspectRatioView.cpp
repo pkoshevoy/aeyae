@@ -25,11 +25,14 @@ namespace yae
   //
   struct AspectRatio
   {
-    AspectRatio(double ar = 0.0, const char * label = "auto"):
-      ar_(ar),
-      label_(label)
+    AspectRatio(double ar = 0.0, const char * label = NULL):
+      ar_(ar)
     {
-      if (ar && !(label && *label))
+      if (label && *label)
+      {
+        label_ = label;
+      }
+      else if (ar)
       {
         label_ = strfmt("%.2f", ar);
       }
@@ -55,8 +58,8 @@ namespace yae
 
     AspectRatio(3.0 / 4.0, "3:4"),
     AspectRatio(9.0 / 16.0, "9:16"),
-    AspectRatio(1.0, "auto"),
-    AspectRatio(1.0, "custom"),
+    AspectRatio(0.0, "auto"),
+    AspectRatio(-1.0, "custom"),
   };
 
   //----------------------------------------------------------------
@@ -183,7 +186,7 @@ namespace yae
       }
 
       double offset = padding * 0.5;
-      result = offset + (h * col) / cols;
+      result = offset + size * col;
     }
 
     const Item & grid_;
@@ -223,7 +226,7 @@ namespace yae
 
       double padding = h - size * rows;
       double offset = padding * 0.5;
-      result = offset + (h * row) / rows;
+      result = offset + size * row;
     }
 
     const Item & grid_;
@@ -251,7 +254,7 @@ namespace yae
     {
       double a = view_.getAspectRatio(index_);
       double d = circle_.width(); // diameter
-      result = d / sqrt(1 + a * a);
+      result = (d * a) / sqrt(1 + a * a);
     }
 
     const AspectRatioView & view_;
@@ -277,7 +280,7 @@ namespace yae
     {
       double a = view_.getAspectRatio(index_);
       double d = circle_.width(); // diameter
-      result = (d * a) / sqrt(1 + a * a);
+      result = d / sqrt(1 + a * a);
     }
 
     const AspectRatioView & view_;
@@ -307,7 +310,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      view_.select_std_ar(index_);
+      view_.selectAspectRatio(index_);
       return true;
     }
 
@@ -346,12 +349,27 @@ namespace yae
   //
   AspectRatioView::AspectRatioView():
     ItemView("AspectRatioView"),
+    bg_(ColorRef::constant(Color(0xFFFFFF, 0.9))),
+    fg_(ColorRef::constant(Color(0x000000, 0.5))),
     style_(NULL),
-    sel_(num_ar_choices - 1),
-    custom_ar_(1.0)
+    sel_(num_ar_choices - 2),
+    current_(1.0),
+    native_(1.0)
+  {}
+
+  //----------------------------------------------------------------
+  // AspectRatioView::setStyle
+  //
+  void
+  AspectRatioView::setStyle(ItemViewStyle * new_style)
   {
+    style_ = new_style;
+
     Item & root = *root_;
     const ItemViewStyle & style = *style_;
+
+    bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    fg_ = style.bg_;
 
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
@@ -367,11 +385,22 @@ namespace yae
     bg.color_ = bg_;
 
     Item & grid = root.addNew<Item>("grid");
-    ItemRef grid_cols = grid.addExpr(new GridCols(grid));
-    ItemRef grid_rows = grid.addExpr(new GridRows(grid_cols));
-    ItemRef cell_size = grid.addExpr(new CellSize(grid,
-                                                  grid_rows,
-                                                  grid_cols));
+    grid.anchors_.fill(root);
+    // grid.anchors_.bottom_.reset();
+
+    // dirty hacks to cache grid properties:
+    Item & hidden = root.addHidden(new Item("hidden_grid_props"));
+
+    hidden.anchors_.top_ = hidden.addExpr(new GridCols(grid));
+    ItemRef & grid_cols = hidden.anchors_.top_;
+
+    hidden.anchors_.left_ = hidden.addExpr(new GridRows(grid_cols));
+    ItemRef & grid_rows = hidden.anchors_.left_;
+
+    hidden.anchors_.right_ = hidden.addExpr(new CellSize(grid,
+                                                         grid_rows,
+                                                         grid_cols));
+    ItemRef & cell_size = hidden.anchors_.right_;
 
     for (std::size_t i = 0; i < num_ar_choices; i++)
     {
@@ -395,20 +424,22 @@ namespace yae
       circle.background_ = ColorRef::transparent(bg, kPropertyColor);
       circle.color_ = ColorRef::transparent(bg, kPropertyColor);
       circle.colorBorder_ = fg_;
-      circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.03, 1);
+      circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.01, 1);
 
       Rectangle & frame = item.addNew<Rectangle>("frame");
       frame.anchors_.center(circle);
       frame.border_ = circle.border_;
-      frame.color_ = circle.color_;
-      frame.colorBorder_ = circle.colorBorder_;
+      // frame.color_ = circle.color_;
+      frame.color_ = circle.colorBorder_;
+      // frame.colorBorder_ = circle.colorBorder_;
       frame.width_ = frame.addExpr(new GetFrameWidth(*this, circle, i));
       frame.height_ = frame.addExpr(new GetFrameHeight(*this, circle, i));
 
       Text & text = item.addNew<Text>("text");
       text.anchors_.center(item);
       text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
-      text.color_ = fg_;
+      // text.color_ = fg_;
+      text.color_ = bg_;
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
       text.fontSize_ = ItemRef::reference(item, kPropertyHeight, 0.2);
       text.elide_ = Qt::ElideNone;
@@ -443,15 +474,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AspectRatioView::setStyle
-  //
-  void
-  AspectRatioView::setStyle(ItemViewStyle * style)
-  {
-    style_ = style;
-  }
-
-  //----------------------------------------------------------------
   // AspectRatioView::setEnabled
   //
   void
@@ -482,37 +504,70 @@ namespace yae
   double
   AspectRatioView::getAspectRatio(std::size_t index) const
   {
-    if (index < num_ar_choices)
+    if (index < num_ar_choices - 2)
     {
       return ar_choices[index].ar_;
+    }
+
+    if (index == num_ar_choices - 2)
+    {
+      return native_;
+    }
+
+    if (index == num_ar_choices - 1)
+    {
+      return current_;
     }
 
     return -1.0;
   }
 
   //----------------------------------------------------------------
-  // AspectRatioView::select_std_ar
+  // AspectRatioView::selectAspectRatio
   //
   void
-  AspectRatioView::select_std_ar(std::size_t index)
+  AspectRatioView::selectAspectRatio(std::size_t index)
   {
     if (index < num_ar_choices)
     {
       sel_ = index;
-      emit aspectRatio(ar_choices[index].ar_);
+      double ar = ((index < num_ar_choices - 2) ? ar_choices[index].ar_ :
+                   (index == num_ar_choices - 2) ? 0.0 : // auto
+                   current_);
+      emit aspectRatio(ar);
     }
   }
 
   //----------------------------------------------------------------
-  // AspectRatioView::select_custom
+  // AspectRatioView::setNativeAspectRatio
   //
   void
-  AspectRatioView::select_custom(double ar)
+  AspectRatioView::setNativeAspectRatio(double ar)
+  {
+    native_ = ar;
+  }
+
+  //----------------------------------------------------------------
+  // AspectRatioView::setAspectRatio
+  //
+  void
+  AspectRatioView::setAspectRatio(double ar)
   {
     if (ar > 0.0)
     {
+      for (std::size_t i = 0; i < num_ar_choices - 1; i++)
+      {
+        if (close_enough(ar_choices[i].ar_, ar))
+        {
+          sel_ = i;
+          current_ = ar_choices[i].ar_;
+          emit aspectRatio(ar);
+          break;
+        }
+      }
+
       sel_ = num_ar_choices - 1;
-      custom_ar_ = ar;
+      current_ = ar;
       emit aspectRatio(ar);
     }
   }

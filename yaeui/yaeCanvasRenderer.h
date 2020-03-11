@@ -449,6 +449,9 @@ namespace yae
     bool imageWidthHeight(double & w, double & h) const;
     bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
 
+    double nativeAspectRatio() const;
+    double nativeAspectRatioRotated(int & rotate) const;
+
     void overrideDisplayAspectRatio(double dar);
 
     inline double overrideDisplayAspectRatio() const
@@ -632,6 +635,9 @@ namespace yae
 
     bool imageWidthHeight(double & w, double & h) const;
     bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
+
+    double nativeAspectRatio() const;
+    double nativeAspectRatioRotated(int & rotate) const;
 
     void overrideDisplayAspectRatio(double dar);
 

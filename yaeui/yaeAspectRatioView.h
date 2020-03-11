@@ -42,12 +42,17 @@ namespace yae
 
     double getAspectRatio(std::size_t index) const;
 
+    inline double nativeAspectRatio() const
+    { return native_; }
+
   signals:
     void aspectRatio(double ar);
+    void done();
 
   public slots:
-    void select_std_ar(std::size_t index);
-    void select_custom(double ar);
+    void selectAspectRatio(std::size_t index);
+    void setNativeAspectRatio(double ar);
+    void setAspectRatio(double ar);
 
   public:
     ColorRef fg_;
@@ -58,7 +63,8 @@ namespace yae
 
     // current selection:
     std::size_t sel_;
-    double custom_ar_;
+    double current_;
+    double native_;
   };
 
 }

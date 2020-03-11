@@ -1563,6 +1563,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::nativeAspectRatio
+  //
+  double
+  Canvas::nativeAspectRatio() const
+  {
+    double dar = private_ ? private_->nativeAspectRatio() : 0.0;
+    return dar;
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::nativeAspectRatioRotated
+  //
+  double
+  Canvas::nativeAspectRatioRotated(int & rotate) const
+  {
+    double dar = private_ ? private_->nativeAspectRatioRotated(rotate) : 0.0;
+    return dar;
+  }
+
+  //----------------------------------------------------------------
   // Canvas::setRenderMode
   //
   void

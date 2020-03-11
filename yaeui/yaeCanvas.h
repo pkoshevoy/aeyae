@@ -364,6 +364,9 @@ namespace yae
     //
     double imageAspectRatio(double & w, double & h) const;
 
+    double nativeAspectRatio() const;
+    double nativeAspectRatioRotated(int & rotate) const;
+
     enum TRenderMode
     {
       // this will result in letterbox bars or pillars rendering, the

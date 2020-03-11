@@ -1777,6 +1777,80 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TBaseCanvas::nativeAspectRatio
+  //
+  double
+  TBaseCanvas::nativeAspectRatio() const
+  {
+    TCropFrame crop;
+    if (getCroppedFrame(crop))
+    {
+      // video traits shortcut:
+      const VideoTraits & vtts = frame_->traits_;
+
+      double w = crop.w_;
+      double h = crop.h_;
+
+      if (!verticalScalingEnabled_)
+      {
+        if (vtts.pixelAspectRatio_ != 0.0)
+        {
+          w = floor(0.5 + w * vtts.pixelAspectRatio_);
+        }
+      }
+      else
+      {
+        if (vtts.pixelAspectRatio_ > 1.0)
+        {
+          w = floor(0.5 + w * vtts.pixelAspectRatio_);
+        }
+        else if (vtts.pixelAspectRatio_ < 1.0)
+        {
+          h = floor(0.5 + h / vtts.pixelAspectRatio_);
+        }
+      }
+
+      double dar = h ? (w / h) : 0.0;
+      return dar;
+    }
+
+    return 0.0;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::nativeAspectRatio
+  //
+  double
+  TBaseCanvas::nativeAspectRatioRotated(int & rotate) const
+  {
+    double dar = nativeAspectRatio();
+
+    if (dar)
+    {
+      // video traits shortcut:
+      const VideoTraits & vtts = frame_->traits_;
+
+      if (vtts.cameraRotation_ % 90 == 0)
+      {
+        // must be a camera phone video that needs to be
+        // rotated for viewing:
+        if (vtts.cameraRotation_ % 180 != 0)
+        {
+          dar = 1.0 / dar;
+        }
+
+        rotate = vtts.cameraRotation_;
+      }
+      else
+      {
+        rotate = 0;
+      }
+    }
+
+    return dar;
+  }
+
+  //----------------------------------------------------------------
   // TBaseCanvas::overrideDisplayAspectRatio
   //
   void
@@ -3365,6 +3439,24 @@ namespace yae
                                           int & rotate) const
   {
     return renderer_->imageWidthHeightRotated(w, h, rotate);
+  }
+
+  //----------------------------------------------------------------
+  // CanvasRenderer::nativeAspectRatio
+  //
+  double
+  CanvasRenderer::nativeAspectRatio() const
+  {
+    return renderer_->nativeAspectRatio();
+  }
+
+  //----------------------------------------------------------------
+  // CanvasRenderer::nativeAspectRatioRotated
+  //
+  double
+  CanvasRenderer::nativeAspectRatioRotated(int & rotate) const
+  {
+    return renderer_->nativeAspectRatioRotated(rotate);
   }
 
   //----------------------------------------------------------------
