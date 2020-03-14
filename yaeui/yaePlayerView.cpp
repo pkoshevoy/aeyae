@@ -723,6 +723,7 @@ namespace yae
     actionAspectRatio2_40_->setText(trUtf8("2.40"));
 
     actionAspectRatioOther_->setText(trUtf8("Other"));
+    actionAspectRatioOther_->setShortcut(trUtf8("Ctrl+Alt+Z"));
     actionAspectRatioOther_->
       setToolTip(trUtf8("Specify custom frame aspect ratio"));
 

@@ -738,6 +738,31 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AspectRatioView::processKeyEvent
+  //
+  bool
+  AspectRatioView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
+  {
+    e->ignore();
+
+    QEvent::Type et = e->type();
+    if (et == QEvent::KeyPress)
+    {
+      int key = e->key();
+
+      if (key == Qt::Key_Return ||
+          key == Qt::Key_Enter ||
+          key == Qt::Key_Escape)
+      {
+        emit done();
+        e->accept();
+      }
+    }
+
+    return e->isAccepted();
+  }
+
+  //----------------------------------------------------------------
   // AspectRatioView::setEnabled
   //
   void
