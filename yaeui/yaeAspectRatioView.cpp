@@ -517,11 +517,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // Done
+  // OnDone
   //
-  struct Done : public InputArea
+  struct OnDone : public InputArea
   {
-    Done(const char * id, ItemView & view):
+    OnDone(const char * id, ItemView & view):
       InputArea(id),
       view_(view)
     {}
@@ -569,17 +569,23 @@ namespace yae
     root.width_ = root.addExpr(new GetViewWidth(*this));
     root.height_ = root.addExpr(new GetViewHeight(*this));
 
+#if 0
     // setup mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
     mouse_trap.anchors_.fill(root);
+#endif
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
     bg.color_ = bg.addExpr(style_color_ref(*this, &ItemViewStyle::fg_, 0.9));
 
     Item & grid = root.addNew<Item>("grid");
+    Item & footer = root.addNew<Item>("footer");
     grid.anchors_.fill(root);
-    // grid.anchors_.bottom_.reset();
+    grid.anchors_.bottom_ = ItemRef::reference(footer, kPropertyTop);
+    footer.anchors_.fill(root);
+    footer.anchors_.top_.reset();
+    footer.height_ = ItemRef::reference(style.title_height_, 3.0);
 
     // dirty hacks to cache grid properties:
     Item & hidden = root.addHidden(new Item("hidden_grid_props"));
@@ -626,66 +632,63 @@ namespace yae
         add(new SelectAspectRatio("sel", *this, i));
       sel.anchors_.fill(circle);
 
-      Item * frame = NULL;
+      Rectangle & rect = item.addNew<Rectangle>("frame");
+      rect.anchors_.center(circle);
+      rect.color_ = rect.addExpr(new LetterBoxColor(*this, i));
+      rect.width_ = rect.addExpr(new GetFrameWidth(*this, circle, i));
+      rect.height_ = rect.addExpr(new GetFrameHeight(*this, circle, i));
+
       if (custom)
       {
-        DashedRect & rect = item.addNew<DashedRect>("frame");
-        rect.anchors_.center(circle);
-        rect.fg_ = rect.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
-        rect.bg_ = rect.addExpr(new LetterBoxColor(*this, i));
-        rect.border_ = circle.border_;
-        frame = &rect;
+        DashedRect & stripes = item.addNew<DashedRect>("stripes");
+        stripes.anchors_.fill(rect);
+        stripes.fg_ = stripes.
+          addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+        stripes.bg_ = stripes.addExpr(new LetterBoxColor(*this, i));
+        stripes.border_ = circle.border_;
 
         Item & d01 = item.addNew<Item>("d01");
-        d01.anchors_.left_ = ItemRef::reference(rect, kPropertyLeft);
-        d01.anchors_.right_ = ItemRef::reference(rect, kPropertyRight);
-        d01.anchors_.bottom_ = ItemRef::reference(rect, kPropertyTop);
-        d01.margins_.set_bottom(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d01.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
+        d01.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
+        d01.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyTop);
         d01.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+        d01.margins_.
+          set_bottom(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
 
         Item & d10 = item.addNew<Item>("d10");
-        d10.anchors_.top_ = ItemRef::reference(rect, kPropertyTop);
-        d10.anchors_.bottom_ = ItemRef::reference(rect, kPropertyBottom);
-        d10.anchors_.right_ = ItemRef::reference(rect, kPropertyLeft);
-        d10.margins_.set_right(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d10.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
+        d10.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
+        d10.anchors_.right_ = ItemRef::reference(stripes, kPropertyLeft);
         d10.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+        d10.margins_.
+          set_right(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
 
         Item & d12 = item.addNew<Item>("d12");
-        d12.anchors_.top_ = ItemRef::reference(rect, kPropertyTop);
-        d12.anchors_.bottom_ = ItemRef::reference(rect, kPropertyBottom);
-        d12.anchors_.left_ = ItemRef::reference(rect, kPropertyRight);
-        d12.margins_.set_left(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d12.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
+        d12.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
+        d12.anchors_.left_ = ItemRef::reference(stripes, kPropertyRight);
         d12.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+        d12.margins_.
+          set_left(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
 
         Item & d21 = item.addNew<Item>("d21");
-        d21.anchors_.left_ = ItemRef::reference(rect, kPropertyLeft);
-        d21.anchors_.right_ = ItemRef::reference(rect, kPropertyRight);
-        d21.anchors_.top_ = ItemRef::reference(rect, kPropertyBottom);
-        d21.margins_.set_top(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d21.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
+        d21.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
+        d21.anchors_.top_ = ItemRef::reference(stripes, kPropertyBottom);
         d21.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+        d21.margins_.
+          set_top(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
 
         ReshapeFrame & reshaper = item.add(new ReshapeFrame("reshaper",
                                                             *this,
                                                             circle,
-                                                            rect,
+                                                            stripes,
                                                             d01,
                                                             d10,
                                                             d12,
                                                             d21));
         reshaper.anchors_.fill(item);
       }
-      else
-      {
-        Rectangle & rect = item.addNew<Rectangle>("frame");
-        rect.anchors_.center(circle);
-        // rect.border_ = circle.border_;
-        rect.color_ = rect.addExpr(new LetterBoxColor(*this, i));
-        frame = &rect;
-      }
-
-      // frame->colorBorder_ = circle.colorBorder_;
-      frame->width_ = frame->addExpr(new GetFrameWidth(*this, circle, i));
-      frame->height_ = frame->addExpr(new GetFrameHeight(*this, circle, i));
 
       Text & text = item.addNew<Text>("text");
       text.anchors_.center(item);
@@ -693,42 +696,40 @@ namespace yae
       if (custom)
       {
         text.text_ = text.addExpr(new LetterBoxText(*this, i));
-        text.color_ = text.
-          addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.7));
       }
       else
       {
         text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
-        text.color_ = text.
-          addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
       }
 
+      text.color_ = text.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
-      text.fontSize_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+      text.fontSize_ = ItemRef::reference(style.title_height_);
       text.elide_ = Qt::ElideNone;
       text.setAttr("oneline", true);
     }
 
-#if 0
-    RoundRect & bg_done = root.addNew<RoundRect>("bg_done");
-    Text & tx_done = root.addNew<Text>("tx_done");
+#if 1
+    RoundRect & bg_done = footer.addNew<RoundRect>("bg_done");
+    Text & tx_done = footer.addNew<Text>("tx_done");
 
-    tx_done.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
-    tx_done.anchors_.right_ = ItemRef::reference(text, kPropertyHCenter);
-    tx_done.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_done.margins_.set_right(ItemRef::reference(style.title_height_, 2.0));
+    tx_done.anchors_.center(footer);
     tx_done.text_ = TVarRef::constant(TVar("Done"));
-    tx_done.color_ = affirmative.fg_;
-    tx_done.background_ = affirmative.bg_;
-    tx_done.fontSize_ = text.fontSize_;
+    tx_done.color_ = tx_done.
+      addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+    tx_done.background_ = tx_done.
+      addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.0));
+    tx_done.fontSize_ = ItemRef::reference(style.title_height_);
     tx_done.elide_ = Qt::ElideNone;
     tx_done.setAttr("oneline", true);
 
     bg_done.anchors_.fill(tx_done, -7.0);
     bg_done.margins_.set_left(ItemRef::reference(style.title_height_, -1));
     bg_done.margins_.set_right(ItemRef::reference(style.title_height_, -1));
-    bg_done.color_ = affirmative.bg_;
-    bg_done.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
+    bg_done.color_ = bg_done.
+      addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.3));
+    bg_done.background_ = bg_done.
+      addExpr(style_color_ref(*this, &ItemViewStyle::fg_, 0.0));
     bg_done.radius_ = ItemRef::scale(bg_done, kPropertyHeight, 0.1);
 
     OnDone & on_done = bg_done.add(new OnDone("on_done", *this));
@@ -759,6 +760,11 @@ namespace yae
     uncache_.clear();
 
     ItemView::setEnabled(enable);
+
+    if (!enable)
+    {
+      emit done();
+    }
   }
 
   //----------------------------------------------------------------
@@ -821,6 +827,9 @@ namespace yae
   {
     if (ar > 0.0)
     {
+      requestUncache();
+      requestRepaint();
+
       for (std::size_t i = 0; i < num_ar_choices - 1; i++)
       {
         if (close_enough(ar_choices[i].ar_, ar, 1e-2))
@@ -828,7 +837,7 @@ namespace yae
           sel_ = i;
           current_ = ar_choices[i].ar_;
           emit aspectRatio(ar);
-          break;
+          return;
         }
       }
 

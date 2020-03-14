@@ -134,7 +134,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(&arView_, SIGNAL(done()),
-                 this, SLOT(adjustCanvasHeight()));
+                 this, SLOT(dismissAspectRatioView()));
     YAE_ASSERT(ok);
 
     shortcutFullScreen_ = new QShortcut(this);
@@ -578,6 +578,8 @@ namespace yae
       arView_.setAspectRatio(current_ar);
     }
 
+    view_.setEnabled(false);
+    cropView_.setEnabled(false);
     arView_.setEnabled(true);
   }
 
@@ -742,6 +744,7 @@ namespace yae
     }
 
     view_.setEnabled(false);
+    arView_.setEnabled(false);
     cropView_.setEnabled(true);
     onLoadFrame_->frameLoaded(canvas_, frame);
   }
@@ -753,6 +756,17 @@ namespace yae
   PlayerWidget::dismissFrameCropView()
   {
     cropView_.setEnabled(false);
+    view_.setEnabled(true);
+    adjustCanvasHeight();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::dismissAspectRatioView
+  //
+  void
+  PlayerWidget::dismissAspectRatioView()
+  {
+    arView_.setEnabled(false);
     view_.setEnabled(true);
     adjustCanvasHeight();
   }

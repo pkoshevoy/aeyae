@@ -137,6 +137,7 @@ namespace yae
     void playbackCropFrameOther();
 
     void dismissFrameCropView();
+    void dismissAspectRatioView();
     void adjustCanvasHeight();
     void canvasSizeBackup();
     void canvasSizeRestore();
