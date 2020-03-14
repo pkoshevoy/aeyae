@@ -379,6 +379,11 @@ namespace yae
     ContextCallback toggle_playlist_;
     ContextCallback back_arrow_cb_;
 
+    ContextCallback frame_crop_cb_;
+    ContextCallback aspect_ratio_cb_;
+    ContextCallback audio_track_cb_;
+    ContextCallback subtt_track_cb_;
+
     ItemView::TAnimatorPtr opacity_animator_;
     ItemView::TAnimatorPtr controls_animator_;
     Item::TObserverPtr animate_opacity_;
