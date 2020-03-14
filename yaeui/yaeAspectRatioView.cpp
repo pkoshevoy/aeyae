@@ -11,6 +11,7 @@
 
 // yaeui:
 #include "yaeAspectRatioView.h"
+#include "yaeDashedRect.h"
 #include "yaeInputArea.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -289,13 +290,13 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // FixedAspectRatio
+  // SelectAspectRatio
   //
-  struct FixedAspectRatio : public InputArea
+  struct SelectAspectRatio : public InputArea
   {
-    FixedAspectRatio(const char * id,
-                     AspectRatioView & view,
-                     std::size_t index):
+    SelectAspectRatio(const char * id,
+                      AspectRatioView & view,
+                      std::size_t index):
       InputArea(id),
       view_(view),
       index_(index)
@@ -316,6 +317,203 @@ namespace yae
 
     AspectRatioView & view_;
     std::size_t index_;
+  };
+
+  //----------------------------------------------------------------
+  // LetterBoxColor
+  //
+  struct LetterBoxColor : TColorExpr
+  {
+    LetterBoxColor(const AspectRatioView & view, std::size_t index):
+      view_(view),
+      index_(index)
+    {}
+
+    // virtual:
+    void evaluate(Color & result) const
+    {
+      const ItemViewStyle & style = *(view_.style());
+      if (view_.currentSelection() == index_)
+      {
+        result = style.cursor_.get();
+        return;
+      }
+
+      result = style.bg_.get().a_scaled(0.3);
+    }
+
+    const AspectRatioView & view_;
+    std::size_t index_;
+  };
+
+  //----------------------------------------------------------------
+  // LetterBoxText
+  //
+  struct LetterBoxText : TVarExpr
+  {
+    LetterBoxText(const AspectRatioView & view, std::size_t index):
+      view_(view),
+      index_(index)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (index_ == num_ar_choices - 1)
+      {
+        double ar = view_.getAspectRatio(index_);
+        result = TVar(yae::strfmt("%.2f", ar));
+      }
+      else if (index_ < num_ar_choices)
+      {
+        result = TVar(ar_choices[index_].label_);
+      }
+    }
+
+    const AspectRatioView & view_;
+    std::size_t index_;
+  };
+
+  //----------------------------------------------------------------
+  // ReshapeFrame
+  //
+  // d00 d01 d02
+  // d10     d12
+  // d20 d21 d22
+  //
+  struct ReshapeFrame : public InputArea
+  {
+    ReshapeFrame(const char * id,
+                 AspectRatioView & view,
+                 const Item & circle,
+                 const Item & rect,
+                 Item & d01,
+                 Item & d10,
+                 Item & d12,
+                 Item & d21):
+      InputArea(id),
+      view_(view),
+      circle_(circle),
+      rect_(rect),
+      d01_(d01),
+      d10_(d10),
+      d12_(d12),
+      d21_(d21)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      TVec2D itemCSysPoint = rootCSysPoint - itemCSysOrigin;
+      if (d12_.overlaps(itemCSysPoint))
+      {
+        dragging_ = &d12_;
+      }
+      else if (d10_.overlaps(itemCSysPoint))
+      {
+        dragging_ = &d10_;
+      }
+      else if (d21_.overlaps(itemCSysPoint))
+      {
+        dragging_ = &d21_;
+      }
+      else if (d01_.overlaps(itemCSysPoint))
+      {
+        dragging_ = &d01_;
+      }
+      else
+      {
+        dragging_ = NULL;
+      }
+
+      if (dragging_)
+      {
+        rect_.Item::get(kPropertyBBox, anchor_);
+        std::cerr << "FIXME: pkoshevoy: select: " << dragging_->id_
+                  << ", anchor: { x: " << anchor_.x_ << ", y: " << anchor_.y_
+                  << ", w: " << anchor_.w_ << ", h: " << anchor_.h_ << " }"
+                  << std::endl;
+      }
+
+      return dragging_ != NULL;
+    }
+
+    // virtual:
+    bool onDrag(const TVec2D & itemCSysOrigin,
+                const TVec2D & rootCSysDragStart,
+                const TVec2D & rootCSysDragEnd)
+    {
+      if (!dragging_)
+      {
+        return false;
+      }
+
+      TVec2D drag = rootCSysDragEnd - rootCSysDragStart;
+      std::cerr << "FIXME: pkoshevoy: dragging: " << dragging_->id_
+                << ", drag: " << drag
+                << std::endl;
+
+      double r = circle_.height() * 0.5;
+
+      if (dragging_ == &d21_ || dragging_ == &d01_)
+      {
+        double h = anchor_.h_ * 0.5;
+        if (dragging_ == &d21_)
+        {
+          h += drag.y();
+        }
+        else
+        {
+          h -= drag.y();
+        }
+
+        h = std::max(1.0, std::min(r - 1.0, h));
+        double w = sqrt(r * r - h * h);
+        double ar = w / h;
+        view_.setAspectRatio(ar);
+      }
+      else
+      {
+        double w = anchor_.w_ * 0.5;
+        if (dragging_ == &d12_)
+        {
+          w += drag.x();
+        }
+        else
+        {
+          w -= drag.x();
+        }
+
+        w = std::max(1.0, std::min(r - 1.0, w));
+        double h = sqrt(r * r - w * w);
+        double ar = w / h;
+        view_.setAspectRatio(ar);
+      }
+
+      view_.requestUncache(parent_);
+      view_.requestRepaint();
+      return true;
+    }
+
+    AspectRatioView & view_;
+    const Item & circle_;
+    const Item & rect_;
+
+    // d00 d01 d02
+    // d10     d12
+    // d20 d21 d22
+    //
+    Item & d01_;
+    Item & d10_;
+    Item & d12_;
+    Item & d21_;
+
+    // a pointer to the dragged handle:
+    Item * dragging_;
+
+    // bounding box of the donut hole at the time of drag start:
+    BBox anchor_;
   };
 
   //----------------------------------------------------------------
@@ -424,23 +622,86 @@ namespace yae
         addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.3));
       circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.005, 1);
 
-      Rectangle & frame = item.addNew<Rectangle>("frame");
-      frame.anchors_.center(circle);
-      // frame.border_ = circle.border_;
-      // frame.color_ = circle.color_;
-      frame.color_ = custom ?
-        frame.addExpr(style_color_ref(*this, &ItemViewStyle::cursor_)) :
-        circle.colorBorder_;
+      SelectAspectRatio & sel = circle.
+        add(new SelectAspectRatio("sel", *this, i));
+      sel.anchors_.fill(circle);
 
-      // frame.colorBorder_ = circle.colorBorder_;
-      frame.width_ = frame.addExpr(new GetFrameWidth(*this, circle, i));
-      frame.height_ = frame.addExpr(new GetFrameHeight(*this, circle, i));
+      Item * frame = NULL;
+      if (custom)
+      {
+        DashedRect & rect = item.addNew<DashedRect>("frame");
+        rect.anchors_.center(circle);
+        rect.fg_ = rect.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+        rect.bg_ = rect.addExpr(new LetterBoxColor(*this, i));
+        rect.border_ = circle.border_;
+        frame = &rect;
+
+        Item & d01 = item.addNew<Item>("d01");
+        d01.anchors_.left_ = ItemRef::reference(rect, kPropertyLeft);
+        d01.anchors_.right_ = ItemRef::reference(rect, kPropertyRight);
+        d01.anchors_.bottom_ = ItemRef::reference(rect, kPropertyTop);
+        d01.margins_.set_bottom(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d01.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+
+        Item & d10 = item.addNew<Item>("d10");
+        d10.anchors_.top_ = ItemRef::reference(rect, kPropertyTop);
+        d10.anchors_.bottom_ = ItemRef::reference(rect, kPropertyBottom);
+        d10.anchors_.right_ = ItemRef::reference(rect, kPropertyLeft);
+        d10.margins_.set_right(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d10.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+
+        Item & d12 = item.addNew<Item>("d12");
+        d12.anchors_.top_ = ItemRef::reference(rect, kPropertyTop);
+        d12.anchors_.bottom_ = ItemRef::reference(rect, kPropertyBottom);
+        d12.anchors_.left_ = ItemRef::reference(rect, kPropertyRight);
+        d12.margins_.set_left(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d12.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+
+        Item & d21 = item.addNew<Item>("d21");
+        d21.anchors_.left_ = ItemRef::reference(rect, kPropertyLeft);
+        d21.anchors_.right_ = ItemRef::reference(rect, kPropertyRight);
+        d21.anchors_.top_ = ItemRef::reference(rect, kPropertyBottom);
+        d21.margins_.set_top(ItemRef::scale(rect, kPropertyBorderWidth, -1));
+        d21.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+
+        ReshapeFrame & reshaper = item.add(new ReshapeFrame("reshaper",
+                                                            *this,
+                                                            circle,
+                                                            rect,
+                                                            d01,
+                                                            d10,
+                                                            d12,
+                                                            d21));
+        reshaper.anchors_.fill(item);
+      }
+      else
+      {
+        Rectangle & rect = item.addNew<Rectangle>("frame");
+        rect.anchors_.center(circle);
+        // rect.border_ = circle.border_;
+        rect.color_ = rect.addExpr(new LetterBoxColor(*this, i));
+        frame = &rect;
+      }
+
+      // frame->colorBorder_ = circle.colorBorder_;
+      frame->width_ = frame->addExpr(new GetFrameWidth(*this, circle, i));
+      frame->height_ = frame->addExpr(new GetFrameHeight(*this, circle, i));
 
       Text & text = item.addNew<Text>("text");
       text.anchors_.center(item);
-      text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
-      text.color_ =
-        text.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+
+      if (custom)
+      {
+        text.text_ = text.addExpr(new LetterBoxText(*this, i));
+        text.color_ = text.
+          addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.7));
+      }
+      else
+      {
+        text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
+        text.color_ = text.
+          addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+      }
 
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
       text.fontSize_ = ItemRef::reference(item, kPropertyHeight, 0.2);
@@ -537,6 +798,9 @@ namespace yae
                    (index == num_ar_choices - 2) ? 0.0 : // auto
                    current_);
       emit aspectRatio(ar);
+
+      requestUncache();
+      requestRepaint();
     }
   }
 
@@ -559,7 +823,7 @@ namespace yae
     {
       for (std::size_t i = 0; i < num_ar_choices - 1; i++)
       {
-        if (close_enough(ar_choices[i].ar_, ar))
+        if (close_enough(ar_choices[i].ar_, ar, 1e-2))
         {
           sel_ = i;
           current_ = ar_choices[i].ar_;

@@ -554,6 +554,11 @@ namespace yae
   void
   PlayerWidget::playbackAspectRatioOther()
   {
+    if (arView_.isEnabled())
+    {
+      return;
+    }
+
     int rotate = 0;
     double native_ar = canvas().nativeAspectRatioRotated(rotate);
     native_ar = native_ar ? native_ar : 1.0;
@@ -583,6 +588,7 @@ namespace yae
   PlayerWidget::selectAspectRatio(double ar)
   {
     // update Aspect Ratio menu item selection
+#if 0
     SignalBlocker blockSignals;
     blockSignals
       << view_.actionAspectRatioAuto_
@@ -593,32 +599,33 @@ namespace yae
       << view_.actionAspectRatio2_35_
       << view_.actionAspectRatio2_40_
       << view_.actionAspectRatioOther_;
+#endif
 
     if (!ar)
     {
       view_.actionAspectRatioAuto_->setChecked(true);
     }
-    else if (close_enough(ar, 4.0 / 3.0))
+    else if (close_enough(ar, 4.0 / 3.0, 1e-2))
     {
       view_.actionAspectRatio1_33_->setChecked(true);
     }
-    else if (close_enough(ar, 1.6))
+    else if (close_enough(ar, 1.6, 1e-2))
     {
       view_.actionAspectRatio1_60_->setChecked(true);
     }
-    else if (close_enough(ar, 16.0 / 9.0))
+    else if (close_enough(ar, 16.0 / 9.0, 1e-2))
     {
       view_.actionAspectRatio1_78_->setChecked(true);
     }
-    else if (close_enough(ar, 1.85))
+    else if (close_enough(ar, 1.85, 1e-2))
     {
       view_.actionAspectRatio1_85_->setChecked(true);
     }
-    else if (close_enough(ar, 2.35))
+    else if (close_enough(ar, 2.35, 1e-2))
     {
       view_.actionAspectRatio2_35_->setChecked(true);
     }
-    else if (close_enough(ar, 2.4))
+    else if (close_enough(ar, 2.4, 1e-2))
     {
       view_.actionAspectRatio2_40_->setChecked(true);
     }

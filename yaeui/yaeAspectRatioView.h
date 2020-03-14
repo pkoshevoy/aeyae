@@ -42,6 +42,9 @@ namespace yae
 
     double getAspectRatio(std::size_t index) const;
 
+    inline std::size_t currentSelection() const
+    { return sel_; }
+
     inline double nativeAspectRatio() const
     { return native_; }
 
