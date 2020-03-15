@@ -71,6 +71,22 @@ namespace yae
     // so I am creating these shortcuts as a workaround:
     bool ok = true;
 
+    ok = connect(&view_, SIGNAL(select_frame_crop()),
+                 this, SLOT(showFrameCropSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(select_aspect_ratio()),
+                 this, SLOT(showAspectRatioSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(select_audio_track()),
+                 this, SLOT(showAudioTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(select_subtt_track()),
+                 this, SLOT(showSubttTrackSelectionView()));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(adjust_canvas_height()),
                  this, SLOT(adjustCanvasHeight()));
     YAE_ASSERT(ok);
@@ -92,10 +108,6 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(view_.actionAspectRatioOther_, SIGNAL(triggered()),
-                 this, SLOT(playbackAspectRatioOther()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(on_aspect_ratio()),
                  this, SLOT(playbackAspectRatioOther()));
     YAE_ASSERT(ok);
 
@@ -133,12 +145,30 @@ namespace yae
                  this, SLOT(dismissFrameCropView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&arView_, SIGNAL(aspectRatio(double)),
-                 this, SLOT(selectAspectRatio(double)));
+    ok = connect(&frameCropSelectionView_,
+                 SIGNAL(selected(const AspectRatio &)),
+                 this,
+                 SLOT(selectFrameCrop(const AspectRatio &)));
     YAE_ASSERT(ok);
 
-    ok = connect(&arView_, SIGNAL(done()),
-                 this, SLOT(dismissAspectRatioView()));
+    ok = connect(&frameCropSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_,
+                 SIGNAL(selected(const AspectRatio &)),
+                 this,
+                 SLOT(selectAspectRatio(const AspectRatio &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_,
+                 SIGNAL(aspectRatio(double)),
+                 this,
+                 SLOT(setAspectRatio(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissAspectRatioSelectionView()));
     YAE_ASSERT(ok);
 
     shortcutFullScreen_ = new QShortcut(this);
@@ -301,13 +331,19 @@ namespace yae
     spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    arView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
+    frameCropSelectionView_.toggle_fullscreen_.
+      reset(&player_toggle_fullscreen, this);
+    aspectRatioSelectionView_.toggle_fullscreen_.
+      reset(&player_toggle_fullscreen, this);
 
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
     spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
     confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
     cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    arView_.query_fullscreen_.reset(&player_query_fullscreen, this);
+    frameCropSelectionView_.query_fullscreen_.
+      reset(&player_query_fullscreen, this);
+    aspectRatioSelectionView_.query_fullscreen_.
+      reset(&player_query_fullscreen, this);
   }
 
   //----------------------------------------------------------------
@@ -332,12 +368,60 @@ namespace yae
     canvas_->append(&spinner_);
     canvas_->append(&confirm_);
     canvas_->append(&cropView_);
-    canvas_->append(&arView_);
+    canvas_->append(&frameCropSelectionView_);
+    canvas_->append(&aspectRatioSelectionView_);
 
     spinner_.setStyle(view_.style());
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
-    arView_.setStyle(view_.style());
+
+    // initialize frame crop selection view:
+    static const AspectRatio crop_choices[] = {
+      AspectRatio(4.0 / 3.0, "4:3"),
+      AspectRatio(16.0 / 10.0, "16:10"),
+      AspectRatio(16.0 / 9.0, "16:9"),
+
+      AspectRatio(1.85),
+      AspectRatio(2.35),
+      AspectRatio(2.40),
+
+      AspectRatio(0.0, "none", AspectRatio::kNone),
+      AspectRatio(-1.0, "auto", AspectRatio::kAuto),
+      AspectRatio(1e+6, "other", AspectRatio::kOther, "CropFrameOther"),
+    };
+
+    static const std::size_t num_crop_choices =
+      sizeof(crop_choices) / sizeof(crop_choices[0]);
+
+    frameCropSelectionView_.init(view_.style(),
+                                 crop_choices,
+                                 num_crop_choices);
+
+    // initialize aspect ratio selection view:
+    static const AspectRatio ar_choices[] = {
+      AspectRatio(1.0, "1:1"),
+      AspectRatio(4.0 / 3.0, "4:3"),
+      AspectRatio(16.0 / 10.0, "16:10"),
+      AspectRatio(16.0 / 9.0, "16:9"),
+
+      AspectRatio(1.85),
+      AspectRatio(2.35),
+      AspectRatio(2.40),
+      AspectRatio(8.0 / 3.0, "8:3"),
+
+      AspectRatio(3.0 / 4.0, "3:4"),
+      AspectRatio(9.0 / 16.0, "9:16"),
+      AspectRatio(0.0, "auto", AspectRatio::kNone),
+      AspectRatio(-1.0, "custom", AspectRatio::kOther),
+    };
+
+    static const std::size_t num_ar_choices =
+      sizeof(ar_choices) / sizeof(ar_choices[0]);
+
+    aspectRatioSelectionView_.init(view_.style(),
+                                   ar_choices,
+                                   num_ar_choices);
+
 
     CanvasRendererItem & rendererItem =
       cropView_.root()->get<CanvasRendererItem>("uncropped");
@@ -376,7 +460,8 @@ namespace yae
     view_.stopPlayback();
     view_.setEnabled(false);
     cropView_.setEnabled(false);
-    arView_.setEnabled(false);
+    frameCropSelectionView_.setEnabled(false);
+    aspectRatioSelectionView_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -558,7 +643,7 @@ namespace yae
   void
   PlayerWidget::playbackAspectRatioOther()
   {
-    if (arView_.isEnabled())
+    if (aspectRatioSelectionView_.isEnabled())
     {
       return;
     }
@@ -566,80 +651,84 @@ namespace yae
     int rotate = 0;
     double native_ar = canvas().nativeAspectRatioRotated(rotate);
     native_ar = native_ar ? native_ar : 1.0;
-    arView_.setNativeAspectRatio(native_ar);
+    aspectRatioSelectionView_.setNativeAspectRatio(native_ar);
 
     double w = 0.0;
     double h = 0.0;
     double current_ar = canvas().imageAspectRatio(w, h);
 
+    // avoid creating an infinite signal loop:
+    SignalBlocker blockSignals;
+    blockSignals << &aspectRatioSelectionView_;
+
+    current_ar = current_ar ? current_ar : 1.0;
+    aspectRatioSelectionView_.setAspectRatio(current_ar);
+
     if (view_.actionAspectRatioAuto_->isChecked())
     {
-      arView_.setAspectRatio(0.0);
-    }
-    else
-    {
-      current_ar = current_ar ? current_ar : 1.0;
-      arView_.setAspectRatio(current_ar);
+      aspectRatioSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
     }
 
     view_.setEnabled(false);
     cropView_.setEnabled(false);
-    arView_.setEnabled(true);
+    aspectRatioSelectionView_.setEnabled(true);
   }
 
   //----------------------------------------------------------------
   // PlayerWidget::selectAspectRatio
   //
   void
-  PlayerWidget::selectAspectRatio(double ar)
+  PlayerWidget::selectAspectRatio(const AspectRatio & option)
   {
     // update Aspect Ratio menu item selection
-#if 0
-    SignalBlocker blockSignals;
-    blockSignals
-      << view_.actionAspectRatioAuto_
-      << view_.actionAspectRatio1_33_
-      << view_.actionAspectRatio1_60_
-      << view_.actionAspectRatio1_78_
-      << view_.actionAspectRatio1_85_
-      << view_.actionAspectRatio2_35_
-      << view_.actionAspectRatio2_40_
-      << view_.actionAspectRatioOther_;
-#endif
+    double ar = option.ar_;
 
-    if (!ar)
+    if (option.category_ == AspectRatio::kNone)
     {
-      view_.actionAspectRatioAuto_->setChecked(true);
+      ar = 0.0;
+      view_.actionAspectRatioAuto_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 4.0 / 3.0, 1e-2))
+    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
     {
-      view_.actionAspectRatio1_33_->setChecked(true);
+      view_.actionAspectRatio1_33_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 1.6, 1e-2))
+    else if (close_enough(option.ar_, 1.6, 1e-2))
     {
-      view_.actionAspectRatio1_60_->setChecked(true);
+      view_.actionAspectRatio1_60_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 16.0 / 9.0, 1e-2))
+    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
     {
-      view_.actionAspectRatio1_78_->setChecked(true);
+      view_.actionAspectRatio1_78_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 1.85, 1e-2))
+    else if (close_enough(option.ar_, 1.85, 1e-2))
     {
-      view_.actionAspectRatio1_85_->setChecked(true);
+      view_.actionAspectRatio1_85_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 2.35, 1e-2))
+    else if (close_enough(option.ar_, 2.35, 1e-2))
     {
-      view_.actionAspectRatio2_35_->setChecked(true);
+      view_.actionAspectRatio2_35_->activate(QAction::Trigger);
     }
-    else if (close_enough(ar, 2.4, 1e-2))
+    else if (close_enough(option.ar_, 2.4, 1e-2))
     {
-      view_.actionAspectRatio2_40_->setChecked(true);
+      view_.actionAspectRatio2_40_->activate(QAction::Trigger);
     }
-    else
+    else if (option.category_ == AspectRatio::kOther)
     {
-      view_.actionAspectRatioOther_->setChecked(true);
+      ar = aspectRatioSelectionView_.currentAspectRatio();
+      view_.actionAspectRatioOther_->activate(QAction::Trigger);
     }
 
+    canvas().overrideDisplayAspectRatio(ar);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::setAspectRatio
+  //
+  void
+  PlayerWidget::setAspectRatio(double ar)
+  {
+    // update Aspect Ratio menu item selection
+    view_.actionAspectRatioOther_->activate(QAction::Trigger);
     canvas().overrideDisplayAspectRatio(ar);
   }
 
@@ -686,6 +775,117 @@ namespace yae
   PlayerWidget::windowIncreaseSize()
   {
     canvasSizeSet(xexpand_ * 2.0, yexpand_ * 2.0);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::selectFrameCropAspectRatio
+  //
+  void
+  PlayerWidget::selectFrameCrop(const AspectRatio & option)
+  {
+    // update Crop menu item selection
+    if (option.category_ == AspectRatio::kNone)
+    {
+      view_.actionCropFrameNone_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
+    {
+      view_.actionCropFrame1_33_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.6, 1e-2))
+    {
+      view_.actionCropFrame1_60_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
+    {
+      view_.actionCropFrame1_78_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.85, 1e-2))
+    {
+      view_.actionCropFrame1_85_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.35, 1e-2))
+    {
+      view_.actionCropFrame2_35_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.4, 1e-2))
+    {
+      view_.actionCropFrame2_40_->activate(QAction::Trigger);
+    }
+    else if (option.category_ == AspectRatio::kAuto)
+    {
+      view_.actionCropFrameAutoDetect_->activate(QAction::Trigger);
+    }
+    else if (option.category_ == AspectRatio::kOther)
+    {
+      view_.actionCropFrameOther_->activate(QAction::Trigger);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::showFrameCropSelectionView
+  //
+  void
+  PlayerWidget::showFrameCropSelectionView()
+  {
+    if (frameCropSelectionView_.isEnabled())
+    {
+      return;
+    }
+
+    int rotate = 0;
+    double native_ar = canvas().nativeAspectRatioUncroppedRotated(rotate);
+    double current_ar = canvas().nativeAspectRatioRotated(rotate);
+
+    native_ar = native_ar ? native_ar : 1.0;
+    frameCropSelectionView_.setNativeAspectRatio(native_ar);
+
+    // avoid creating an infinite signal loop:
+    SignalBlocker blockSignals;
+    blockSignals << &frameCropSelectionView_;
+
+    current_ar = current_ar ? current_ar : 1.0;
+    frameCropSelectionView_.setAspectRatio(current_ar);
+
+    if (view_.actionCropFrameNone_->isChecked())
+    {
+      frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
+    }
+    else if (view_.actionCropFrameAutoDetect_->isChecked())
+    {
+      frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kAuto);
+    }
+
+    view_.setEnabled(false);
+    cropView_.setEnabled(false);
+    frameCropSelectionView_.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::showAspectRatioSelectionView
+  //
+  void
+  PlayerWidget::showAspectRatioSelectionView()
+  {
+    playbackAspectRatioOther();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::showAudioTrackSelectionView
+  //
+  void
+  PlayerWidget::showAudioTrackSelectionView()
+  {
+    std::cerr << "FIXME: pkoshevoy: showAudioTrackSelectionView\n";
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::showSubttTrackSelectionView
+  //
+  void
+  PlayerWidget::showSubttTrackSelectionView()
+  {
+    std::cerr << "FIXME: pkoshevoy: showSubttTrackSelectionView\n";
   }
 
   //----------------------------------------------------------------
@@ -748,7 +948,8 @@ namespace yae
     }
 
     view_.setEnabled(false);
-    arView_.setEnabled(false);
+    frameCropSelectionView_.setEnabled(false);
+    aspectRatioSelectionView_.setEnabled(false);
     cropView_.setEnabled(true);
     onLoadFrame_->frameLoaded(canvas_, frame);
   }
@@ -765,14 +966,47 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::dismissAspectRatioView
+  // PlayerWidget::dismissFrameCropSelectionView
   //
   void
-  PlayerWidget::dismissAspectRatioView()
+  PlayerWidget::dismissFrameCropSelectionView()
   {
-    arView_.setEnabled(false);
+    frameCropSelectionView_.setEnabled(false);
     view_.setEnabled(true);
     adjustCanvasHeight();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::dismissAspectRatioSelectionView
+  //
+  void
+  PlayerWidget::dismissAspectRatioSelectionView()
+  {
+    aspectRatioSelectionView_.setEnabled(false);
+    view_.setEnabled(true);
+    adjustCanvasHeight();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::dismissAudioTrackSelectionView
+  //
+  void
+  PlayerWidget::dismissAudioTrackSelectionView()
+  {
+    // audView_.setEnabled(false);
+    view_.setEnabled(true);
+    // adjustCanvasHeight();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::dismissSubttTrackSelectionView
+  //
+  void
+  PlayerWidget::dismissSubttTrackSelectionView()
+  {
+    // txtView_.setEnabled(false);
+    view_.setEnabled(true);
+    // adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------

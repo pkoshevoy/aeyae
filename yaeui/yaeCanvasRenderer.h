@@ -449,6 +449,9 @@ namespace yae
     bool imageWidthHeight(double & w, double & h) const;
     bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
 
+    double nativeAspectRatioUncropped() const;
+    double nativeAspectRatioUncroppedRotated(int & rotate) const;
+
     double nativeAspectRatio() const;
     double nativeAspectRatioRotated(int & rotate) const;
 
@@ -635,6 +638,9 @@ namespace yae
 
     bool imageWidthHeight(double & w, double & h) const;
     bool imageWidthHeightRotated(double & w, double & h, int & rotate) const;
+
+    double nativeAspectRatioUncropped() const;
+    double nativeAspectRatioUncroppedRotated(int & rotate) const;
 
     double nativeAspectRatio() const;
     double nativeAspectRatioRotated(int & rotate) const;

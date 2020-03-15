@@ -364,6 +364,9 @@ namespace yae
     //
     double imageAspectRatio(double & w, double & h) const;
 
+    double nativeAspectRatioUncropped() const;
+    double nativeAspectRatioUncroppedRotated(int & rotate) const;
+
     double nativeAspectRatio() const;
     double nativeAspectRatioRotated(int & rotate) const;
 

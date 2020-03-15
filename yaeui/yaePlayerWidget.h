@@ -123,7 +123,8 @@ namespace yae
     void playbackAspectRatioOther();
 
     // callback from aspect ratio view reflecting current selection:
-    void selectAspectRatio(double ar);
+    void selectAspectRatio(const AspectRatio & ar);
+    void setAspectRatio(double ar);
 
     // window menu:
     void windowHalfSize();
@@ -133,11 +134,21 @@ namespace yae
     void windowIncreaseSize();
 
     // helpers:
+    void selectFrameCrop(const AspectRatio & ar);
+    void showFrameCropSelectionView();
+    void showAspectRatioSelectionView();
+    void showAudioTrackSelectionView();
+    void showSubttTrackSelectionView();
+
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackCropFrameOther();
 
     void dismissFrameCropView();
-    void dismissAspectRatioView();
+    void dismissFrameCropSelectionView();
+    void dismissAspectRatioSelectionView();
+    void dismissAudioTrackSelectionView();
+    void dismissSubttTrackSelectionView();
+
     void adjustCanvasHeight();
     void canvasSizeBackup();
     void canvasSizeRestore();
@@ -193,7 +204,8 @@ namespace yae
     SpinnerView spinner_;
     ConfirmView confirm_;
     FrameCropView cropView_;
-    AspectRatioView arView_;
+    AspectRatioView frameCropSelectionView_;
+    AspectRatioView aspectRatioSelectionView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:

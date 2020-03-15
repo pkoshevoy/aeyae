@@ -22,82 +22,52 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // AspectRatio
+  // AspectRatio::AspectRatio
   //
-  struct AspectRatio
+  AspectRatio::AspectRatio(double ar,
+                           const char * label,
+                           AspectRatio::Category category,
+                           const char * select_subview):
+    ar_(ar),
+    category_(category)
   {
-    AspectRatio(double ar = 0.0, const char * label = NULL):
-      ar_(ar)
+    if (label && *label)
     {
-      if (label && *label)
-      {
-        label_ = label;
-      }
-      else if (ar)
-      {
-        label_ = strfmt("%.2f", ar);
-      }
+      label_ = label;
+    }
+    else if (ar)
+    {
+      label_ = strfmt("%.2f", ar);
     }
 
-    double ar_;
-    std::string label_;
-  };
-
-  //----------------------------------------------------------------
-  // ar_choices
-  //
-  static const AspectRatio ar_choices[] = {
-    AspectRatio(1.0, "1:1"),
-    AspectRatio(4.0 / 3.0, "4:3"),
-    AspectRatio(16.0 / 10.0, "16:10"),
-    AspectRatio(16.0 / 9.0, "16:9"),
-
-    AspectRatio(1.85),
-    AspectRatio(2.35),
-    AspectRatio(2.40),
-    AspectRatio(8.0 / 3.0, "8:3"),
-
-    AspectRatio(3.0 / 4.0, "3:4"),
-    AspectRatio(9.0 / 16.0, "9:16"),
-    AspectRatio(0.0, "auto"),
-    AspectRatio(-1.0, "custom"),
-  };
-
-  //----------------------------------------------------------------
-  // num_ar_choices
-  //
-  static const std::size_t num_ar_choices =
-    sizeof(ar_choices) / sizeof(ar_choices[0]);
-
-  //----------------------------------------------------------------
-  // calc_ar_cols
-  //
-  static const std::size_t
-  calc_ar_cols(double w, double h)
-  {
-    double n = num_ar_choices;
-    double cols = sqrt((n * w) / h);
-    return std::max<std::size_t>(1, cols);
+    if (select_subview && *select_subview)
+    {
+      subview_ = select_subview;
+    }
   }
+
 
   //----------------------------------------------------------------
   // CellSize
   //
   struct GridCols : TDoubleExpr
   {
-    GridCols(const Item & grid):
+    GridCols(const AspectRatioView & view, const Item & grid):
+      view_(view),
       grid_(grid)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
+      std::size_t n = view_.options().size();
       double w = grid_.width();
       double h = grid_.height();
-      double cols = sqrt((num_ar_choices * w) / h);
+      double cols = sqrt((n * w) / h);
       result = std::max<double>(1.0, floor(cols));
     }
 
+    const AspectRatioView & view_;
     const Item & grid_;
   };
 
@@ -106,17 +76,20 @@ namespace yae
   //
   struct GridRows : TDoubleExpr
   {
-    GridRows(const ItemRef & cols):
+    GridRows(const AspectRatioView & view, const ItemRef & cols):
+      view_(view),
       cols_(cols)
     {}
 
     // virtual:
     void evaluate(double & result) const
     {
+      std::size_t n = view_.options().size();
       std::size_t cols = cols_.get();
-      result = double((num_ar_choices + cols - 1) / cols);
+      result = double((n + cols - 1) / cols);
     }
 
+    const AspectRatioView & view_;
     const ItemRef & cols_;
   };
 
@@ -156,11 +129,13 @@ namespace yae
   //
   struct CellPosX : TDoubleExpr
   {
-    CellPosX(const Item & grid,
+    CellPosX(const AspectRatioView & view,
+             const Item & grid,
              const ItemRef & rows,
              const ItemRef & cols,
              const ItemRef & size,
              std::size_t index):
+      view_(view),
       grid_(grid),
       rows_(rows),
       cols_(cols),
@@ -171,6 +146,7 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
+      std::size_t n = view_.options().size();
       double w = grid_.width();
       double h = grid_.height();
       std::size_t rows = std::size_t(rows_.get());
@@ -183,13 +159,14 @@ namespace yae
       double padding = w - size * cols;
       if (row + 1 == rows)
       {
-        padding += size * (cols * rows - num_ar_choices);
+        padding += size * (cols * rows - n);
       }
 
       double offset = padding * 0.5;
       result = offset + size * col;
     }
 
+    const AspectRatioView & view_;
     const Item & grid_;
     const ItemRef & rows_;
     const ItemRef & cols_;
@@ -359,14 +336,21 @@ namespace yae
     // virtual:
     void evaluate(TVar & result) const
     {
-      if (index_ == num_ar_choices - 1)
+      std::size_t n = view_.options().size();
+      if (index_ < n)
       {
-        double ar = view_.getAspectRatio(index_);
-        result = TVar(yae::strfmt("%.2f", ar));
-      }
-      else if (index_ < num_ar_choices)
-      {
-        result = TVar(ar_choices[index_].label_);
+        const AspectRatio & option = view_.options().at(index_);
+
+        if (option.category_ == AspectRatio::kOther &&
+            option.subview_.empty())
+        {
+          double ar = view_.getAspectRatio(index_);
+          result = TVar(yae::strfmt("%.2f", ar));
+        }
+        else
+        {
+          result = TVar(option.label_);
+        }
       }
     }
 
@@ -430,10 +414,6 @@ namespace yae
       if (dragging_)
       {
         rect_.Item::get(kPropertyBBox, anchor_);
-        std::cerr << "FIXME: pkoshevoy: select: " << dragging_->id_
-                  << ", anchor: { x: " << anchor_.x_ << ", y: " << anchor_.y_
-                  << ", w: " << anchor_.w_ << ", h: " << anchor_.h_ << " }"
-                  << std::endl;
       }
 
       return dragging_ != NULL;
@@ -450,9 +430,6 @@ namespace yae
       }
 
       TVec2D drag = rootCSysDragEnd - rootCSysDragStart;
-      std::cerr << "FIXME: pkoshevoy: dragging: " << dragging_->id_
-                << ", drag: " << drag
-                << std::endl;
 
       double r = circle_.height() * 0.5;
 
@@ -548,26 +525,34 @@ namespace yae
   AspectRatioView::AspectRatioView():
     ItemView("AspectRatioView"),
     style_(NULL),
-    sel_(num_ar_choices - 2),
+    sel_(0),
     current_(1.0),
     native_(1.0)
   {}
 
   //----------------------------------------------------------------
-  // AspectRatioView::setStyle
+  // AspectRatioView::init
   //
   void
-  AspectRatioView::setStyle(ItemViewStyle * new_style)
+  AspectRatioView::init(ItemViewStyle * new_style,
+                        const AspectRatio * options,
+                        std::size_t num_options)
   {
     style_ = new_style;
 
+    if (options && num_options)
+    {
+      options_.assign(options, options + num_options);
+    }
+
+    AspectRatioView & view = *this;
     Item & root = *root_;
     const ItemViewStyle & style = *style_;
 
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = root.addExpr(new GetViewWidth(*this));
-    root.height_ = root.addExpr(new GetViewHeight(*this));
+    root.width_ = root.addExpr(new GetViewWidth(view));
+    root.height_ = root.addExpr(new GetViewHeight(view));
 
 #if 0
     // setup mouse trap to prevent unintended click-through:
@@ -577,7 +562,7 @@ namespace yae
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
-    bg.color_ = bg.addExpr(style_color_ref(*this, &ItemViewStyle::fg_, 0.9));
+    bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::fg_, 0.9));
 
     Item & grid = root.addNew<Item>("grid");
     Item & footer = root.addNew<Item>("footer");
@@ -590,10 +575,10 @@ namespace yae
     // dirty hacks to cache grid properties:
     Item & hidden = root.addHidden(new Item("hidden_grid_props"));
 
-    hidden.anchors_.top_ = hidden.addExpr(new GridCols(grid));
+    hidden.anchors_.top_ = hidden.addExpr(new GridCols(view, grid));
     ItemRef & grid_cols = hidden.anchors_.top_;
 
-    hidden.anchors_.left_ = hidden.addExpr(new GridRows(grid_cols));
+    hidden.anchors_.left_ = hidden.addExpr(new GridRows(view, grid_cols));
     ItemRef & grid_rows = hidden.anchors_.left_;
 
     hidden.anchors_.right_ = hidden.addExpr(new CellSize(grid,
@@ -601,11 +586,16 @@ namespace yae
                                                          grid_cols));
     ItemRef & cell_size = hidden.anchors_.right_;
 
+    std::size_t num_ar_choices = options_.size();
     for (std::size_t i = 0; i < num_ar_choices; i++)
     {
-      bool custom = (i == num_ar_choices - 1);
+      const AspectRatio & option = options_[i];
+
+      bool custom_option = (option.category_ == AspectRatio::kOther);
+
       Item & item = grid.addNew<Item>(str("cell_", i).c_str());
-      item.anchors_.left_ = item.addExpr(new CellPosX(grid,
+      item.anchors_.left_ = item.addExpr(new CellPosX(view,
+                                                      grid,
                                                       grid_rows,
                                                       grid_cols,
                                                       cell_size,
@@ -625,100 +615,106 @@ namespace yae
       circle.background_ = ColorRef::transparent(bg, kPropertyColor);
       circle.color_ = ColorRef::transparent(bg, kPropertyColor);
       circle.colorBorder_ = circle.
-        addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.3));
+        addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
       circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.005, 1);
 
       SelectAspectRatio & sel = circle.
-        add(new SelectAspectRatio("sel", *this, i));
+        add(new SelectAspectRatio("sel", view, i));
       sel.anchors_.fill(circle);
 
       Rectangle & rect = item.addNew<Rectangle>("frame");
       rect.anchors_.center(circle);
-      rect.color_ = rect.addExpr(new LetterBoxColor(*this, i));
-      rect.width_ = rect.addExpr(new GetFrameWidth(*this, circle, i));
-      rect.height_ = rect.addExpr(new GetFrameHeight(*this, circle, i));
+      rect.color_ = rect.addExpr(new LetterBoxColor(view, i));
+      rect.width_ = rect.addExpr(new GetFrameWidth(view, circle, i));
+      rect.height_ = rect.addExpr(new GetFrameHeight(view, circle, i));
 
-      if (custom)
+      if (custom_option)
       {
         DashedRect & stripes = item.addNew<DashedRect>("stripes");
         stripes.anchors_.fill(rect);
         stripes.fg_ = stripes.
-          addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
-        stripes.bg_ = stripes.addExpr(new LetterBoxColor(*this, i));
+          addExpr(style_color_ref(view, &ItemViewStyle::fg_));
+        stripes.bg_ = stripes.addExpr(new LetterBoxColor(view, i));
         stripes.border_ = circle.border_;
 
-        Item & d01 = item.addNew<Item>("d01");
-        d01.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
-        d01.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
-        d01.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyTop);
-        d01.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
-        d01.margins_.
-          set_bottom(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
+        if (option.subview_.empty())
+        {
+          Item & d01 = item.addNew<Item>("d01");
+          d01.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
+          d01.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
+          d01.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyTop);
+          d01.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+          d01.margins_.set_bottom(ItemRef::reference(stripes,
+                                                     kPropertyBorderWidth,
+                                                     -1, -1));
 
-        Item & d10 = item.addNew<Item>("d10");
-        d10.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
-        d10.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
-        d10.anchors_.right_ = ItemRef::reference(stripes, kPropertyLeft);
-        d10.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
-        d10.margins_.
-          set_right(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
+          Item & d10 = item.addNew<Item>("d10");
+          d10.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
+          d10.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
+          d10.anchors_.right_ = ItemRef::reference(stripes, kPropertyLeft);
+          d10.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+          d10.margins_.set_right(ItemRef::reference(stripes,
+                                                    kPropertyBorderWidth,
+                                                    -1, -1));
 
-        Item & d12 = item.addNew<Item>("d12");
-        d12.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
-        d12.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
-        d12.anchors_.left_ = ItemRef::reference(stripes, kPropertyRight);
-        d12.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
-        d12.margins_.
-          set_left(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
+          Item & d12 = item.addNew<Item>("d12");
+          d12.anchors_.top_ = ItemRef::reference(stripes, kPropertyTop);
+          d12.anchors_.bottom_ = ItemRef::reference(stripes, kPropertyBottom);
+          d12.anchors_.left_ = ItemRef::reference(stripes, kPropertyRight);
+          d12.width_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+          d12.margins_.set_left(ItemRef::reference(stripes,
+                                                   kPropertyBorderWidth,
+                                                   -1, -1));
 
-        Item & d21 = item.addNew<Item>("d21");
-        d21.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
-        d21.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
-        d21.anchors_.top_ = ItemRef::reference(stripes, kPropertyBottom);
-        d21.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
-        d21.margins_.
-          set_top(ItemRef::reference(stripes, kPropertyBorderWidth, -1, -1));
+          Item & d21 = item.addNew<Item>("d21");
+          d21.anchors_.left_ = ItemRef::reference(stripes, kPropertyLeft);
+          d21.anchors_.right_ = ItemRef::reference(stripes, kPropertyRight);
+          d21.anchors_.top_ = ItemRef::reference(stripes, kPropertyBottom);
+          d21.height_ = ItemRef::reference(item, kPropertyHeight, 0.2);
+          d21.margins_.set_top(ItemRef::reference(stripes,
+                                                  kPropertyBorderWidth,
+                                                  -1, -1));
 
-        ReshapeFrame & reshaper = item.add(new ReshapeFrame("reshaper",
-                                                            *this,
-                                                            circle,
-                                                            stripes,
-                                                            d01,
-                                                            d10,
-                                                            d12,
-                                                            d21));
-        reshaper.anchors_.fill(item);
+          ReshapeFrame & reshaper = item.add(new ReshapeFrame("reshaper",
+                                                              view,
+                                                              circle,
+                                                              stripes,
+                                                              d01,
+                                                              d10,
+                                                              d12,
+                                                              d21));
+          reshaper.anchors_.fill(item);
+        }
       }
 
       Text & text = item.addNew<Text>("text");
       text.anchors_.center(item);
 
-      if (custom)
+      if (custom_option)
       {
-        text.text_ = text.addExpr(new LetterBoxText(*this, i));
+        text.text_ = text.addExpr(new LetterBoxText(view, i));
       }
       else
       {
-        text.text_ = TVarRef::constant(TVar(ar_choices[i].label_));
+        text.text_ = TVarRef::constant(TVar(option.label_));
       }
 
-      text.color_ = text.addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+      text.color_ = text.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
       text.fontSize_ = ItemRef::reference(style.title_height_);
       text.elide_ = Qt::ElideNone;
       text.setAttr("oneline", true);
     }
 
-#if 1
     RoundRect & bg_done = footer.addNew<RoundRect>("bg_done");
     Text & tx_done = footer.addNew<Text>("tx_done");
 
     tx_done.anchors_.center(footer);
     tx_done.text_ = TVarRef::constant(TVar("Done"));
     tx_done.color_ = tx_done.
-      addExpr(style_color_ref(*this, &ItemViewStyle::fg_));
+      addExpr(style_color_ref(view, &ItemViewStyle::fg_));
     tx_done.background_ = tx_done.
-      addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.0));
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.0));
     tx_done.fontSize_ = ItemRef::reference(style.title_height_);
     tx_done.elide_ = Qt::ElideNone;
     tx_done.setAttr("oneline", true);
@@ -727,14 +723,13 @@ namespace yae
     bg_done.margins_.set_left(ItemRef::reference(style.title_height_, -1));
     bg_done.margins_.set_right(ItemRef::reference(style.title_height_, -1));
     bg_done.color_ = bg_done.
-      addExpr(style_color_ref(*this, &ItemViewStyle::bg_, 0.3));
+      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
     bg_done.background_ = bg_done.
-      addExpr(style_color_ref(*this, &ItemViewStyle::fg_, 0.0));
+      addExpr(style_color_ref(view, &ItemViewStyle::fg_, 0.0));
     bg_done.radius_ = ItemRef::scale(bg_done, kPropertyHeight, 0.1);
 
-    OnDone & on_done = bg_done.add(new OnDone("on_done", *this));
+    OnDone & on_done = bg_done.add(new OnDone("on_done", view));
     on_done.anchors_.fill(bg_done);
-#endif
   }
 
   //----------------------------------------------------------------
@@ -798,22 +793,49 @@ namespace yae
   double
   AspectRatioView::getAspectRatio(std::size_t index) const
   {
-    if (index < num_ar_choices - 2)
+    std::size_t num_ar_choices = options_.size();
+    if (index < num_ar_choices)
     {
-      return ar_choices[index].ar_;
-    }
+      const AspectRatio & option = options_.at(index);
 
-    if (index == num_ar_choices - 2)
-    {
-      return native_;
-    }
+      if (option.category_ == AspectRatio::kNone ||
+          option.category_ == AspectRatio::kAuto)
+      {
+        return native_;
+      }
 
-    if (index == num_ar_choices - 1)
-    {
-      return current_;
+      if (option.category_ == AspectRatio::kOther)
+      {
+        return current_;
+      }
+
+      return option.ar_;
     }
 
     return -1.0;
+  }
+
+  //----------------------------------------------------------------
+  // AspectRatioView::selectAspectRatioCategory
+  //
+  void
+  AspectRatioView::selectAspectRatioCategory(AspectRatio::Category category)
+  {
+    std::size_t num_ar_choices = options_.size();
+    for (std::size_t i = 0; i < num_ar_choices; i++)
+    {
+      const AspectRatio & option = options_.at(i);
+      if (option.category_ == category)
+      {
+        sel_ = i;
+        emit selected(option);
+
+        requestUncache();
+        requestRepaint();
+
+        return;
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -822,13 +844,13 @@ namespace yae
   void
   AspectRatioView::selectAspectRatio(std::size_t index)
   {
+    std::size_t num_ar_choices = options_.size();
     if (index < num_ar_choices)
     {
+      const AspectRatio & option = options_.at(index);
+
       sel_ = index;
-      double ar = ((index < num_ar_choices - 2) ? ar_choices[index].ar_ :
-                   (index == num_ar_choices - 2) ? 0.0 : // auto
-                   current_);
-      emit aspectRatio(ar);
+      emit selected(option);
 
       requestUncache();
       requestRepaint();
@@ -850,23 +872,37 @@ namespace yae
   void
   AspectRatioView::setAspectRatio(double ar)
   {
-    if (ar > 0.0)
-    {
-      requestUncache();
-      requestRepaint();
+    requestUncache();
+    requestRepaint();
 
-      for (std::size_t i = 0; i < num_ar_choices - 1; i++)
+    std::size_t num_ar_choices = options_.size();
+    std::size_t custom_choice = num_ar_choices;
+
+    for (std::size_t i = 0; i < num_ar_choices; i++)
+    {
+      const AspectRatio & option = options_.at(i);
+
+      if (option.category_ == AspectRatio::kOther)
       {
-        if (close_enough(ar_choices[i].ar_, ar, 1e-2))
+        // there should be only one:
+        YAE_ASSERT(custom_choice == num_ar_choices);
+        if (custom_choice == num_ar_choices)
         {
-          sel_ = i;
-          current_ = ar_choices[i].ar_;
-          emit aspectRatio(ar);
-          return;
+          custom_choice = i;
         }
       }
+      else if (close_enough(option.ar_, ar, 1e-2))
+      {
+        sel_ = i;
+        current_ = option.ar_ ? option.ar_ : native_;
+        emit aspectRatio(ar);
+        return;
+      }
+    }
 
-      sel_ = num_ar_choices - 1;
+    if (ar > 0.0)
+    {
+      sel_ = custom_choice;
       current_ = ar;
       emit aspectRatio(ar);
     }
