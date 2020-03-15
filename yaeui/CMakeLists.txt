@@ -101,7 +101,7 @@ set(project_moc_hxx
 
   # remux:
   yaeSpinnerView.h
-  yae_player_item.h
+  yaePlayerItem.h
 
   # yaetv:
   yaeAspectRatioView.h
@@ -198,23 +198,22 @@ set(project_sources
   yaeVec.h
 
   # remux:
-  yae_axis_item.cpp
-  yae_axis_item.h
-  yae_checkbox_item.cpp
-  yae_checkbox_item.h
-  yae_input_proxy_item.cpp
-  yae_input_proxy_item.h
-  yae_lshape.cpp
-  yae_lshape.h
-  yae_player_item.cpp
-  yae_player_item.h
-  yae_plot_item.cpp
-  yae_plot_item.h
-  yae_tab_rect.cpp
-  yae_tab_rect.h
-
+  yaeAxisItem.cpp
+  yaeAxisItem.h
+  yaeCheckboxItem.cpp
+  yaeCheckboxItem.h
+  yaeInputProxyItem.cpp
+  yaeInputProxyItem.h
+  yaeLShape.cpp
+  yaeLShape.h
+  yaePlayerItem.cpp
+  yaePlayerItem.h
+  yaePlotItem.cpp
+  yaePlotItem.h
   yaeSpinnerView.cpp
   yaeSpinnerView.h
+  yaeTabRect.cpp
+  yaeTabRect.h
 
   # yaetv:
   yaeAspectRatioView.cpp

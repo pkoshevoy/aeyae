@@ -14,7 +14,7 @@
 #include <boost/random/mersenne_twister.hpp>
 
 // local:
-#include "yae_plot_item.h"
+#include "yaePlotItem.h"
 
 
 namespace yae

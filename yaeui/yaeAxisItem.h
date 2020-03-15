@@ -9,10 +9,10 @@
 #ifndef YAE_AXIS_ITEM_H_
 #define YAE_AXIS_ITEM_H_
 
-// local:
+// yaeui:
 #include "yaeItem.h"
+#include "yaePlotItem.h"
 #include "yaeText.h"
-#include "yae_plot_item.h"
 
 
 namespace yae

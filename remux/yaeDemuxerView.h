@@ -25,14 +25,16 @@
 #include "yae/utils/yae_lru_cache.h"
 #include "yae/video/yae_video.h"
 
-// local:
-#include "yae_player_item.h"
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
-#include "yaeRemux.h"
+#include "yaePlayerItem.h"
 #include "yaeScrollview.h"
 #include "yaeTimelineItem.h"
+
+// local:
+#include "yaeRemux.h"
 
 
 namespace yae

@@ -12,18 +12,20 @@
 // aeyae:
 #include "yae/utils/yae_utils.h"
 
-// local:
-#include "yaeDemuxerView.h"
+// yaeui:
+#include "yaeAxisItem.h"
+#include "yaeCheckboxItem.h"
 #include "yaeFlickableArea.h"
+#include "yaeInputProxyItem.h"
 #include "yaeItemFocus.h"
+#include "yaePlotItem.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
+#include "yaeTabRect.h"
 #include "yaeTextInput.h"
-#include "yae_axis_item.h"
-#include "yae_checkbox_item.h"
-#include "yae_input_proxy_item.h"
-#include "yae_plot_item.h"
-#include "yae_tab_rect.h"
+
+// local:
+#include "yaeDemuxerView.h"
 
 
 namespace yae

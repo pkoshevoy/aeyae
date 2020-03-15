@@ -10,9 +10,9 @@
 #include "yae/api/yae_log.h"
 
 // local:
-#include "yae_checkbox_item.h"
-#include "yae_lshape.h"
+#include "yaeCheckboxItem.h"
 #include "yaeItemViewStyle.h"
+#include "yaeLShape.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeTransform.h"

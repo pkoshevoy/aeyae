@@ -22,8 +22,8 @@
 // yaeui:
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
+#include "yaePlayerItem.h"
 #include "yaeTimelineItem.h"
-#include "yae_player_item.h"
 
 
 namespace yae

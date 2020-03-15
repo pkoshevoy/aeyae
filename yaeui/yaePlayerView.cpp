@@ -9,7 +9,7 @@
 // Qt:
 #include <QApplication>
 
-// local:
+// yaeui:
 #include "yaePlayerStyle.h"
 #include "yaePlayerView.h"
 #include "yaeUtilsQt.h"

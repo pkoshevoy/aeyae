@@ -25,8 +25,7 @@
 #include "yae/utils/yae_lru_cache.h"
 #include "yae/video/yae_video.h"
 
-// local:
-#include "yaeAppStyle.h"
+// yaeui:
 #include "yaeColor.h"
 #include "yaeGradient.h"
 #include "yaeInputArea.h"
@@ -35,6 +34,9 @@
 #include "yaeItemViewStyle.h"
 #include "yaeRectangle.h"
 #include "yaeScrollview.h"
+
+// local:
+#include "yaeAppStyle.h"
 #include "yae_dvr.h"
 
 

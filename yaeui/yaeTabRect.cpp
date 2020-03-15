@@ -13,7 +13,7 @@
 #include "yae/api/yae_log.h"
 
 // local interfaces:
-#include "yae_tab_rect.h"
+#include "yaeTabRect.h"
 #include "yaeTexture.h"
 
 

@@ -9,8 +9,8 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 
-// local:
-#include "yae_input_proxy_item.h"
+// yaeui:
+#include "yaeInputProxyItem.h"
 
 
 namespace yae

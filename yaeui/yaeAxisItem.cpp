@@ -12,7 +12,7 @@
 #include <math.h>
 
 // local:
-#include "yae_axis_item.h"
+#include "yaeAxisItem.h"
 
 
 namespace yae

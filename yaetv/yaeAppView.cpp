@@ -17,8 +17,9 @@
 // aeyae:
 #include "yae/utils/yae_utils.h"
 
-// local:
-#include "yaeAppView.h"
+// yaeui:
+#include "yaeAxisItem.h"
+#include "yaeCheckboxItem.h"
 #include "yaeFlickableArea.h"
 #include "yaeImage.h"
 #include "yaeItemFocus.h"
@@ -26,11 +27,9 @@
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
 #include "yaeTexturedRect.h"
-#include "yae_axis_item.h"
-#include "yae_checkbox_item.h"
-#include "yae_input_proxy_item.h"
-#include "yae_plot_item.h"
-#include "yae_tab_rect.h"
+
+// local:
+#include "yaeAppView.h"
 
 
 namespace yae
