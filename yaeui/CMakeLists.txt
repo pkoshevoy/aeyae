@@ -108,6 +108,7 @@ set(project_moc_hxx
   yaeConfirmView.h
   yaePlayerView.h
   yaePlayerWidget.h
+  yaeTrackSelectionView.h
   )
 
 if (YAE_USE_PLAYER_QUICK_WIDGET)
@@ -226,6 +227,8 @@ set(project_sources
   yaePlayerView.h
   yaePlayerWidget.cpp
   yaePlayerWidget.h
+  yaeTrackSelectionView.cpp
+  yaeTrackSelectionView.h
   )
 
 if (LIBASS_LIBRARY)

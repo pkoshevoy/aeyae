@@ -381,6 +381,7 @@ namespace yae
 
     ContextCallback frame_crop_cb_;
     ContextCallback aspect_ratio_cb_;
+    ContextCallback video_track_cb_;
     ContextCallback audio_track_cb_;
     ContextCallback subtt_track_cb_;
 

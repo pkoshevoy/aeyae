@@ -111,6 +111,23 @@ namespace yae
     Item & controlsContainer_;
   };
 
+  //----------------------------------------------------------------
+  // IsValidCallback
+  //
+  struct IsValid : public TBoolExpr
+  {
+    IsValid(const ContextCallback & cb):
+      cb_(cb)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = !cb_.is_null();
+    }
+
+    const ContextCallback & cb_;
+  };
 
   //----------------------------------------------------------------
   // TimelineItem::TimelineItem
@@ -588,146 +605,193 @@ namespace yae
 
     // crop:
     Item & frame_crop = this->addNew<Item>("frame_crop");
-    frame_crop.visible_ = BoolRef::constant(!frame_crop_cb_.is_null());
     frame_crop.anchors_.top_ = arrow_btn.anchors_.top_;
     frame_crop.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
-    frame_crop.width_ = arrow_btn.width_;
-    frame_crop.height_ = arrow_btn.width_;
-    frame_crop.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    frame_crop.margins_.set_right
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-
-    CallOnClick<ContextCallback> & frame_crop_ia = frame_crop.
-      add(new CallOnClick<ContextCallback>("frame_crop_on_click",
-                                           this->frame_crop_cb_));
+    frame_crop.visible_ = frame_crop.addExpr(new IsValid(frame_crop_cb_));
+    frame_crop.height_ = frame_crop.
+      addExpr(new InvisibleItemZeroHeight(frame_crop));
     {
-      frame_crop_ia.anchors_.fill(frame_crop);
-
       RoundRect & bg = frame_crop.addNew<RoundRect>("bg");
-      bg.anchors_.fill(frame_crop);
+      bg.width_ = arrow_btn.width_;
+      bg.height_ = arrow_btn.width_;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(frame_crop, kPropertyTop);
+      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_right
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-      Text & txt = frame_crop.addNew<Text>("txt");
+      Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
       txt.font_.setWeight(57);
-      txt.fontSize_ = ItemRef::reference(frame_crop, kPropertyHeight, 0.33);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("CROP"));
       txt.elide_ = Qt::ElideNone;
       txt.color_ = colorControlsFg;
       txt.background_ = colorControlsBgTransparent;
       txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & frame_crop_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("frame_crop_on_click", *this, &TimelineItem::frame_crop_cb_));
+      frame_crop_ia.anchors_.fill(bg);
     }
 
     // aspect ratio:
     Item & aspect_ratio = this->addNew<Item>("aspect_ratio");
-    aspect_ratio.visible_ = BoolRef::constant(!aspect_ratio_cb_.is_null());
     aspect_ratio.anchors_.top_ = ItemRef::offset(frame_crop, kPropertyBottom);
     aspect_ratio.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
-    aspect_ratio.width_ = frame_crop.width_;
-    aspect_ratio.height_ = frame_crop.width_;
-    aspect_ratio.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    aspect_ratio.margins_.set_right
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-
-    CallOnClick<ContextCallback> & aspect_ratio_ia = aspect_ratio.
-      add(new CallOnClick<ContextCallback>("aspect_ratio_on_click",
-                                           this->aspect_ratio_cb_));
+    aspect_ratio.visible_ = aspect_ratio.
+      addExpr(new IsValid(aspect_ratio_cb_));
+    aspect_ratio.height_ = aspect_ratio.
+      addExpr(new InvisibleItemZeroHeight(aspect_ratio));
     {
-      aspect_ratio_ia.anchors_.fill(aspect_ratio);
-
       RoundRect & bg = aspect_ratio.addNew<RoundRect>("bg");
-      bg.anchors_.fill(aspect_ratio);
+      bg.width_ = arrow_btn.width_;
+      bg.height_ = arrow_btn.width_;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(aspect_ratio, kPropertyTop);
+      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_right
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-      Text & txt = aspect_ratio.addNew<Text>("txt");
+      Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
       txt.font_.setWeight(57);
-      txt.fontSize_ = ItemRef::reference(aspect_ratio, kPropertyHeight, 0.33);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("DAR"));
       txt.elide_ = Qt::ElideNone;
       txt.color_ = colorControlsFg;
       txt.background_ = colorControlsBgTransparent;
       txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & aspect_ratio_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("aspect_ratio_on_click", *this, &TimelineItem::aspect_ratio_cb_));
+      aspect_ratio_ia.anchors_.fill(bg);
+    }
+
+    // video track selection:
+    Item & video_track = this->addNew<Item>("video_track");
+    video_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
+    video_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    video_track.visible_ = video_track.addExpr(new IsValid(video_track_cb_));
+    video_track.height_ = video_track.
+      addExpr(new InvisibleItemZeroHeight(video_track));
+    {
+      RoundRect & bg = video_track.addNew<RoundRect>("bg");
+      bg.width_ = arrow_btn.width_;
+      bg.height_ = arrow_btn.width_;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(video_track, kPropertyTop);
+      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_right
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      Text & txt = bg.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("VID"));
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & video_track_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("video_track_on_click", *this, &TimelineItem::video_track_cb_));
+      video_track_ia.anchors_.fill(bg);
     }
 
     // audio track selection:
     Item & audio_track = this->addNew<Item>("audio_track");
-    audio_track.visible_ = BoolRef::constant(!audio_track_cb_.is_null());
     audio_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
     audio_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
-    audio_track.width_ = frame_crop.width_;
-    audio_track.height_ = frame_crop.width_;
-    audio_track.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    audio_track.margins_.set_right
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-
-    CallOnClick<ContextCallback> & audio_track_ia = audio_track.
-      add(new CallOnClick<ContextCallback>("audio_track_on_click",
-                                           this->audio_track_cb_));
+    audio_track.visible_ = audio_track.addExpr(new IsValid(audio_track_cb_));
+    audio_track.height_ = audio_track.
+      addExpr(new InvisibleItemZeroHeight(audio_track));
     {
-      audio_track_ia.anchors_.fill(audio_track);
-
       RoundRect & bg = audio_track.addNew<RoundRect>("bg");
-      bg.anchors_.fill(audio_track);
+      bg.width_ = arrow_btn.width_;
+      bg.height_ = arrow_btn.width_;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(audio_track, kPropertyTop);
+      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_right
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-      Text & txt = audio_track.addNew<Text>("txt");
+      Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
       txt.font_.setWeight(57);
-      txt.fontSize_ = ItemRef::reference(audio_track, kPropertyHeight, 0.33);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("AUD"));
       txt.elide_ = Qt::ElideNone;
       txt.color_ = colorControlsFg;
       txt.background_ = colorControlsBgTransparent;
       txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & audio_track_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("audio_track_on_click", *this, &TimelineItem::audio_track_cb_));
+      audio_track_ia.anchors_.fill(bg);
     }
 
     // subtitles/captions selection:
     Item & subtt_track = this->addNew<Item>("subtt_track");
-    subtt_track.visible_ = BoolRef::constant(!subtt_track_cb_.is_null());
     subtt_track.anchors_.top_ = ItemRef::offset(audio_track, kPropertyBottom);
     subtt_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
-    subtt_track.width_ = frame_crop.width_;
-    subtt_track.height_ = frame_crop.width_;
-    subtt_track.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    subtt_track.margins_.set_right
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-
-    CallOnClick<ContextCallback> & subtt_track_ia = subtt_track.
-      add(new CallOnClick<ContextCallback>("subtt_track_on_click",
-                                           this->subtt_track_cb_));
+    subtt_track.visible_ = subtt_track.addExpr(new IsValid(subtt_track_cb_));
+    subtt_track.height_ = subtt_track.
+      addExpr(new InvisibleItemZeroHeight(subtt_track));
     {
-      subtt_track_ia.anchors_.fill(subtt_track);
-
       RoundRect & bg = subtt_track.addNew<RoundRect>("bg");
-      bg.anchors_.fill(subtt_track);
+      bg.width_ = arrow_btn.width_;
+      bg.height_ = arrow_btn.width_;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(subtt_track, kPropertyTop);
+      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_right
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-      Text & txt = subtt_track.addNew<Text>("txt");
+      Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
       txt.font_.setWeight(57);
-      txt.fontSize_ = ItemRef::reference(subtt_track, kPropertyHeight, 0.33);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("TXT"));
       txt.elide_ = Qt::ElideNone;
       txt.color_ = colorControlsFg;
       txt.background_ = colorControlsBgTransparent;
       txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & subtt_track_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("subtt_track_on_click", *this, &TimelineItem::subtt_track_cb_));
+      subtt_track_ia.anchors_.fill(bg);
     }
 
 

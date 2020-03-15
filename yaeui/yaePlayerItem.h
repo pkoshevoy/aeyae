@@ -79,6 +79,24 @@ namespace yae
 
   public:
     // accessors:
+    inline const std::vector<TTrackInfo> & audio_tracks_info() const
+    { return audio_info_; }
+
+    inline const std::vector<AudioTraits> & audio_tracks_traits() const
+    { return audio_traits_; }
+
+    inline const std::vector<TTrackInfo> & video_tracks_info() const
+    { return video_info_; }
+
+    inline const std::vector<VideoTraits> & video_tracks_traits() const
+    { return video_traits_; }
+
+    inline const std::vector<TTrackInfo> & subtt_tracks_info() const
+    { return subtt_info_; }
+
+    inline const std::vector<TSubsFormat> & subtt_tracks_format() const
+    { return subtt_format_; }
+
     inline Canvas * get_window_canvas() const
     { return canvas_delegate_ ? &(canvas_delegate_->windowCanvas()) : NULL; }
 
@@ -196,6 +214,16 @@ namespace yae
 
     TTrackInfo sel_subtt_;
     TSubsFormat sel_subtt_format_;
+
+    // track info:
+    std::vector<TTrackInfo>  audio_info_;
+    std::vector<AudioTraits> audio_traits_;
+
+    std::vector<TTrackInfo>  video_info_;
+    std::vector<VideoTraits> video_traits_;
+
+    std::vector<TTrackInfo>  subtt_info_;
+    std::vector<TSubsFormat> subtt_format_;
   };
 
 }

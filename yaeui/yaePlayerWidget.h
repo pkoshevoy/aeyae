@@ -24,7 +24,7 @@
 #include "yaeFrameCropView.h"
 #include "yaePlayerView.h"
 #include "yaeSpinnerView.h"
-
+#include "yaeTrackSelectionView.h"
 
 namespace yae
 {
@@ -137,6 +137,7 @@ namespace yae
     void selectFrameCrop(const AspectRatio & ar);
     void showFrameCropSelectionView();
     void showAspectRatioSelectionView();
+    void showVideoTrackSelectionView();
     void showAudioTrackSelectionView();
     void showSubttTrackSelectionView();
 
@@ -146,6 +147,7 @@ namespace yae
     void dismissFrameCropView();
     void dismissFrameCropSelectionView();
     void dismissAspectRatioSelectionView();
+    void dismissVideoTrackSelectionView();
     void dismissAudioTrackSelectionView();
     void dismissSubttTrackSelectionView();
 
@@ -206,6 +208,9 @@ namespace yae
     FrameCropView cropView_;
     AspectRatioView frameCropSelectionView_;
     AspectRatioView aspectRatioSelectionView_;
+    TrackSelectionView videoTrackSelectionView_;
+    TrackSelectionView audioTrackSelectionView_;
+    TrackSelectionView subttTrackSelectionView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:

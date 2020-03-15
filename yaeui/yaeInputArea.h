@@ -345,6 +345,33 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Call
+  //
+  template <typename TObject, typename TCallable>
+  struct Call : public ClickableItem
+  {
+    Call(const char * name,
+         const TObject & object,
+         TCallable TObject::* const callable):
+      ClickableItem(name),
+      object_(object),
+      callable_(callable)
+    {}
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      (object_.*callable_)();
+      return true;
+    }
+
+    const TObject & object_;
+    TCallable TObject::* const callable_;
+  };
+
+
+  //----------------------------------------------------------------
   // InvokeMethod
   //
   struct YAEUI_API InvokeMethodOnClick : public InputArea

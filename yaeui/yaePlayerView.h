@@ -95,6 +95,7 @@ namespace yae
 
     void select_frame_crop();
     void select_aspect_ratio();
+    void select_video_track();
     void select_audio_track();
     void select_subtt_track();
 
@@ -160,6 +161,7 @@ namespace yae
     void onBackArrow();
     void triggerSelectFrameCrop();
     void triggerSelectAspectRatio();
+    void triggerSelectVideoTrack();
     void triggerSelectAudioTrack();
     void triggerSelectSubttTrack();
 

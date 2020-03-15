@@ -937,6 +937,24 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Layout
+  //
+  struct YAEUI_API Layout
+  {
+    yae::shared_ptr<Item> item_;
+
+    // index -> id
+    std::vector<std::string> names_;
+
+    // id -> index
+    std::map<std::string, std::size_t> index_;
+
+    // id -> layout
+    std::map<std::string, yae::shared_ptr<Layout> > items_;
+  };
+
+
+  //----------------------------------------------------------------
   // ModelItem
   //
   template <typename Model>

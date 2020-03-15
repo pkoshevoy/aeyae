@@ -372,6 +372,15 @@ namespace yae
       return;
     }
 
+    audio_info_ = audioInfo;
+    audio_traits_ = audioTraits;
+
+    video_info_ = videoInfo;
+    video_traits_ = videoTraits;
+
+    subtt_info_ = subsInfo;
+    subtt_format_ =  subsFormat;
+
     // keep track of current closed caption selection:
     unsigned int cc = reader_ ? reader_->getRenderCaptions() : 0;
 

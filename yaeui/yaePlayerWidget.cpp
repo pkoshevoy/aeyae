@@ -79,6 +79,10 @@ namespace yae
                  this, SLOT(showAspectRatioSelectionView()));
     YAE_ASSERT(ok);
 
+    ok = connect(&view_, SIGNAL(select_video_track()),
+                 this, SLOT(showVideoTrackSelectionView()));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(select_audio_track()),
                  this, SLOT(showAudioTrackSelectionView()));
     YAE_ASSERT(ok);
@@ -169,6 +173,18 @@ namespace yae
 
     ok = connect(&aspectRatioSelectionView_, SIGNAL(done()),
                  this, SLOT(dismissAspectRatioSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&videoTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissVideoTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&audioTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissAudioTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&subttTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissSubttTrackSelectionView()));
     YAE_ASSERT(ok);
 
     shortcutFullScreen_ = new QShortcut(this);
@@ -335,6 +351,12 @@ namespace yae
       reset(&player_toggle_fullscreen, this);
     aspectRatioSelectionView_.toggle_fullscreen_.
       reset(&player_toggle_fullscreen, this);
+    videoTrackSelectionView_.toggle_fullscreen_.
+      reset(&player_toggle_fullscreen, this);
+    audioTrackSelectionView_.toggle_fullscreen_.
+      reset(&player_toggle_fullscreen, this);
+    subttTrackSelectionView_.toggle_fullscreen_.
+      reset(&player_toggle_fullscreen, this);
 
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
     spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
@@ -343,6 +365,12 @@ namespace yae
     frameCropSelectionView_.query_fullscreen_.
       reset(&player_query_fullscreen, this);
     aspectRatioSelectionView_.query_fullscreen_.
+      reset(&player_query_fullscreen, this);
+    videoTrackSelectionView_.query_fullscreen_.
+      reset(&player_query_fullscreen, this);
+    audioTrackSelectionView_.query_fullscreen_.
+      reset(&player_query_fullscreen, this);
+    subttTrackSelectionView_.query_fullscreen_.
       reset(&player_query_fullscreen, this);
   }
 
@@ -370,6 +398,9 @@ namespace yae
     canvas_->append(&cropView_);
     canvas_->append(&frameCropSelectionView_);
     canvas_->append(&aspectRatioSelectionView_);
+    canvas_->append(&videoTrackSelectionView_);
+    canvas_->append(&audioTrackSelectionView_);
+    canvas_->append(&subttTrackSelectionView_);
 
     spinner_.setStyle(view_.style());
     confirm_.setStyle(view_.style());
@@ -425,6 +456,9 @@ namespace yae
                                    ar_choices,
                                    num_ar_choices);
 
+    videoTrackSelectionView_.setStyle(view_.style());
+    audioTrackSelectionView_.setStyle(view_.style());
+    subttTrackSelectionView_.setStyle(view_.style());
 
     CanvasRendererItem & rendererItem =
       cropView_.root()->get<CanvasRendererItem>("uncropped");
@@ -465,6 +499,9 @@ namespace yae
     cropView_.setEnabled(false);
     frameCropSelectionView_.setEnabled(false);
     aspectRatioSelectionView_.setEnabled(false);
+    videoTrackSelectionView_.setEnabled(false);
+    audioTrackSelectionView_.setEnabled(false);
+    subttTrackSelectionView_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -893,12 +930,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerWidget::showVideoTrackSelectionView
+  //
+  void
+  PlayerWidget::showVideoTrackSelectionView()
+  {
+    const PlayerItem & player = *(view_.player_);
+    std::vector<TTrackInfo> tracks = player.video_tracks_info();
+    videoTrackSelectionView_.setTracks(tracks);
+    videoTrackSelectionView_.setEnabled(true);
+    view_.setEnabled(false);
+  }
+
+  //----------------------------------------------------------------
   // PlayerWidget::showAudioTrackSelectionView
   //
   void
   PlayerWidget::showAudioTrackSelectionView()
   {
-    std::cerr << "FIXME: pkoshevoy: showAudioTrackSelectionView\n";
+    const PlayerItem & player = *(view_.player_);
+    std::vector<TTrackInfo> tracks = player.audio_tracks_info();
+    audioTrackSelectionView_.setTracks(tracks);
+    audioTrackSelectionView_.setEnabled(true);
+    view_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -907,7 +961,11 @@ namespace yae
   void
   PlayerWidget::showSubttTrackSelectionView()
   {
-    std::cerr << "FIXME: pkoshevoy: showSubttTrackSelectionView\n";
+    const PlayerItem & player = *(view_.player_);
+    std::vector<TTrackInfo> tracks = player.subtt_tracks_info();
+    subttTrackSelectionView_.setTracks(tracks);
+    subttTrackSelectionView_.setEnabled(true);
+    view_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -972,6 +1030,9 @@ namespace yae
     view_.setEnabled(false);
     frameCropSelectionView_.setEnabled(false);
     aspectRatioSelectionView_.setEnabled(false);
+    videoTrackSelectionView_.setEnabled(false);
+    audioTrackSelectionView_.setEnabled(false);
+    subttTrackSelectionView_.setEnabled(false);
     cropView_.setEnabled(true);
     onLoadFrame_->frameLoaded(canvas_, frame);
   }
@@ -1010,14 +1071,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerWidget::dismissVideoTrackSelectionView
+  //
+  void
+  PlayerWidget::dismissVideoTrackSelectionView()
+  {
+    videoTrackSelectionView_.setEnabled(false);
+    view_.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
   // PlayerWidget::dismissAudioTrackSelectionView
   //
   void
   PlayerWidget::dismissAudioTrackSelectionView()
   {
-    // audView_.setEnabled(false);
+    audioTrackSelectionView_.setEnabled(false);
     view_.setEnabled(true);
-    // adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1026,9 +1096,8 @@ namespace yae
   void
   PlayerWidget::dismissSubttTrackSelectionView()
   {
-    // txtView_.setEnabled(false);
+    subttTrackSelectionView_.setEnabled(false);
     view_.setEnabled(true);
-    // adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------

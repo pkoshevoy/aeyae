@@ -124,6 +124,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // select_video_track_cb
+  //
+  static void
+  select_video_track_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->triggerSelectVideoTrack();
+  }
+
+  //----------------------------------------------------------------
   // select_audio_track_cb
   //
   static void
@@ -1010,10 +1020,6 @@ namespace yae
     // timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
     timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
-    timeline.frame_crop_cb_.reset(&yae::select_frame_crop_cb, this);
-    timeline.aspect_ratio_cb_.reset(&yae::select_aspect_ratio_cb, this);
-    timeline.audio_track_cb_.reset(&yae::select_audio_track_cb, this);
-    timeline.subtt_track_cb_.reset(&yae::select_subtt_track_cb, this);
     timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
     timeline.layout();
 
@@ -1340,6 +1346,38 @@ namespace yae
           int index = subsTrackGroup_->actions().size() - 1;
           subsTrackGroup_->actions().at(index)->setChecked(true);
         }
+      }
+
+      TimelineItem & timeline = *timeline_;
+      if (videoInfo.empty())
+      {
+        timeline.frame_crop_cb_.reset();
+        timeline.aspect_ratio_cb_.reset();
+        timeline.subtt_track_cb_.reset();
+      }
+      else
+      {
+        timeline.frame_crop_cb_.reset(&yae::select_frame_crop_cb, this);
+        timeline.aspect_ratio_cb_.reset(&yae::select_aspect_ratio_cb, this);
+        timeline.subtt_track_cb_.reset(&yae::select_subtt_track_cb, this);
+      }
+
+      if (videoInfo.size() < 2)
+      {
+        timeline.video_track_cb_.reset();
+      }
+      else
+      {
+        timeline.video_track_cb_.reset(&yae::select_video_track_cb, this);
+      }
+
+      if (audioInfo.size() < 2)
+      {
+        timeline.audio_track_cb_.reset();
+      }
+      else
+      {
+        timeline.audio_track_cb_.reset(&yae::select_audio_track_cb, this);
       }
     }
 
@@ -1917,6 +1955,15 @@ namespace yae
   PlayerView::triggerSelectAspectRatio()
   {
     emit select_aspect_ratio();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::triggerSelectVideoTrack
+  //
+  void
+  PlayerView::triggerSelectVideoTrack()
+  {
+    emit select_video_track();
   }
 
   //----------------------------------------------------------------
