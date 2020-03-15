@@ -92,6 +92,10 @@ namespace yae
     void fixup_next_prev();
     void save_bookmark();
     void on_back_arrow();
+    void on_frame_crop();
+    void on_aspect_ratio();
+    void on_audio_track();
+    void on_subtt_track();
 
   public:
     bool is_playback_paused() const;
@@ -151,7 +155,12 @@ namespace yae
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
     void togglePlaylist();
+
     void onBackArrow();
+    void onFrameCrop();
+    void onAspectRatio();
+    void onAudioTrack();
+    void onSubttTrack();
 
     void populateContextMenu();
     void adjustMenuActions();

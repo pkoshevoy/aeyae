@@ -95,6 +95,10 @@ namespace yae
                  this, SLOT(playbackAspectRatioOther()));
     YAE_ASSERT(ok);
 
+    ok = connect(&view_, SIGNAL(on_aspect_ratio()),
+                 this, SLOT(playbackAspectRatioOther()));
+    YAE_ASSERT(ok);
+
     ok = connect(view_.actionCropFrameOther_, SIGNAL(triggered()),
                  this, SLOT(playbackCropFrameOther()));
     YAE_ASSERT(ok);

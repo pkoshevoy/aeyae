@@ -226,6 +226,21 @@ namespace yae
     ColorRef colorFullscreenToggleFg = timeline.addExpr
       (style_color_ref(view_, &ItemViewStyle::fg_timecode_));
 
+    ColorRef colorFg = timeline.addExpr
+      (style_color_ref(view_, &ItemViewStyle::fg_));
+
+    ColorRef colorBg = timeline.addExpr
+      (style_color_ref(view_, &ItemViewStyle::bg_));
+
+    ColorRef colorControlsFg = timeline.addExpr
+      (style_color_ref(view_, &ItemViewStyle::fg_controls_));
+
+    ColorRef colorControlsBg = this->addExpr
+      (style_color_ref(view_, &ItemViewStyle::bg_controls_));
+
+    ColorRef colorControlsBgTransparent = this->addExpr
+      (style_color_ref(view_, &ItemViewStyle::bg_controls_, 0.0));
+
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
     timelineIn.anchors_.right_ =
@@ -493,9 +508,6 @@ namespace yae
     }
 
     // add other player controls:
-    ColorRef colorControlsBg = this->addExpr
-      (style_color_ref(view_, &ItemViewStyle::bg_controls_));
-
     Item & playlistButton = this->addNew<Item>("playlistButton");
     playlistButton.visible_ = BoolRef::constant(!toggle_playlist_.is_null());
 
@@ -554,24 +566,170 @@ namespace yae
       add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
                                            this->back_arrow_cb_));
     {
-#if 1
+      arrow_btn_ia.anchors_.fill(arrow_btn);
+
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
       bg.anchors_.fill(arrow_btn);
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
-#endif
+
       ArrowItem & arrow = arrow_btn.add<ArrowItem>
         (new ArrowItem("arrow", ArrowItem::kLeft));
       arrow.anchors_.fill(arrow_btn);
       arrow.margins_.set
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
       arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.25);
-      arrow.color_ = colorFullscreenToggleFg;
+      arrow.color_ = colorControlsFg;
       arrow.opacity_ = shadow.opacity_;
-
-      arrow_btn_ia.anchors_.fill(arrow_btn);
     }
+
+    // other on-screen controls:
+
+    // crop:
+    Item & frame_crop = this->addNew<Item>("frame_crop");
+    frame_crop.visible_ = BoolRef::constant(!frame_crop_cb_.is_null());
+    frame_crop.anchors_.top_ = arrow_btn.anchors_.top_;
+    frame_crop.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    frame_crop.width_ = arrow_btn.width_;
+    frame_crop.height_ = arrow_btn.width_;
+    frame_crop.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    frame_crop.margins_.set_right
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+    CallOnClick<ContextCallback> & frame_crop_ia = frame_crop.
+      add(new CallOnClick<ContextCallback>("frame_crop_on_click",
+                                           this->frame_crop_cb_));
+    {
+      frame_crop_ia.anchors_.fill(frame_crop);
+
+      RoundRect & bg = frame_crop.addNew<RoundRect>("bg");
+      bg.anchors_.fill(frame_crop);
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+
+      Text & txt = frame_crop.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(frame_crop, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("CROP"));
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+    }
+
+    // aspect ratio:
+    Item & aspect_ratio = this->addNew<Item>("aspect_ratio");
+    aspect_ratio.visible_ = BoolRef::constant(!aspect_ratio_cb_.is_null());
+    aspect_ratio.anchors_.top_ = ItemRef::offset(frame_crop, kPropertyBottom);
+    aspect_ratio.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    aspect_ratio.width_ = frame_crop.width_;
+    aspect_ratio.height_ = frame_crop.width_;
+    aspect_ratio.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    aspect_ratio.margins_.set_right
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+    CallOnClick<ContextCallback> & aspect_ratio_ia = aspect_ratio.
+      add(new CallOnClick<ContextCallback>("aspect_ratio_on_click",
+                                           this->aspect_ratio_cb_));
+    {
+      aspect_ratio_ia.anchors_.fill(aspect_ratio);
+
+      RoundRect & bg = aspect_ratio.addNew<RoundRect>("bg");
+      bg.anchors_.fill(aspect_ratio);
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+
+      Text & txt = aspect_ratio.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(aspect_ratio, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("DAR"));
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+    }
+
+    // audio track selection:
+    Item & audio_track = this->addNew<Item>("audio_track");
+    audio_track.visible_ = BoolRef::constant(!audio_track_cb_.is_null());
+    audio_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
+    audio_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    audio_track.width_ = frame_crop.width_;
+    audio_track.height_ = frame_crop.width_;
+    audio_track.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    audio_track.margins_.set_right
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+    CallOnClick<ContextCallback> & audio_track_ia = audio_track.
+      add(new CallOnClick<ContextCallback>("audio_track_on_click",
+                                           this->audio_track_cb_));
+    {
+      audio_track_ia.anchors_.fill(audio_track);
+
+      RoundRect & bg = audio_track.addNew<RoundRect>("bg");
+      bg.anchors_.fill(audio_track);
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+
+      Text & txt = audio_track.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(audio_track, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("AUD"));
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+    }
+
+    // subtitles/captions selection:
+    Item & subtt_track = this->addNew<Item>("subtt_track");
+    subtt_track.visible_ = BoolRef::constant(!subtt_track_cb_.is_null());
+    subtt_track.anchors_.top_ = ItemRef::offset(audio_track, kPropertyBottom);
+    subtt_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    subtt_track.width_ = frame_crop.width_;
+    subtt_track.height_ = frame_crop.width_;
+    subtt_track.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    subtt_track.margins_.set_right
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+    CallOnClick<ContextCallback> & subtt_track_ia = subtt_track.
+      add(new CallOnClick<ContextCallback>("subtt_track_on_click",
+                                           this->subtt_track_cb_));
+    {
+      subtt_track_ia.anchors_.fill(subtt_track);
+
+      RoundRect & bg = subtt_track.addNew<RoundRect>("bg");
+      bg.anchors_.fill(subtt_track);
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+
+      Text & txt = subtt_track.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(subtt_track, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("TXT"));
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+    }
+
 
     TransitionItem & opacityForControls = this->
       addHidden(new TransitionItem("opacity_for_controls",

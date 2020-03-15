@@ -103,6 +103,45 @@ namespace yae
     view->onBackArrow();
   }
 
+  //----------------------------------------------------------------
+  // frame_crop_cb
+  //
+  static void
+  frame_crop_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->onFrameCrop();
+  }
+
+  //----------------------------------------------------------------
+  // aspect_ratio_cb
+  //
+  static void
+  aspect_ratio_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->onAspectRatio();
+  }
+
+  //----------------------------------------------------------------
+  // audio_track_cb
+  //
+  static void
+  audio_track_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->onAudioTrack();
+  }
+
+  //----------------------------------------------------------------
+  // subtt_track_cb
+  //
+  static void
+  subtt_track_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->onSubttTrack();
+  }
 
   //----------------------------------------------------------------
   // new_qaction
@@ -971,6 +1010,10 @@ namespace yae
     // timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
     timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
+    timeline.frame_crop_cb_.reset(&yae::frame_crop_cb, this);
+    timeline.aspect_ratio_cb_.reset(&yae::aspect_ratio_cb, this);
+    timeline.audio_track_cb_.reset(&yae::audio_track_cb, this);
+    timeline.subtt_track_cb_.reset(&yae::subtt_track_cb, this);
     timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
     timeline.layout();
 
@@ -1856,6 +1899,42 @@ namespace yae
   PlayerView::onBackArrow()
   {
     emit on_back_arrow();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::onFrameCrop
+  //
+  void
+  PlayerView::onFrameCrop()
+  {
+    emit on_frame_crop();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::onAspectRatio
+  //
+  void
+  PlayerView::onAspectRatio()
+  {
+    emit on_aspect_ratio();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::onAudioTrack
+  //
+  void
+  PlayerView::onAudioTrack()
+  {
+    emit on_audio_track();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::onSubttTrack
+  //
+  void
+  PlayerView::onSubttTrack()
+  {
+    emit on_subtt_track();
   }
 
   //----------------------------------------------------------------
