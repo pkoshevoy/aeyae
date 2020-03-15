@@ -64,6 +64,8 @@ namespace yae
       double w = grid_.width();
       double h = grid_.height();
       double cols = sqrt((n * w) / h);
+      double rows = double((n + cols - 1) / cols);
+      cols = double((n + rows - 1) / rows);
       result = std::max<double>(1.0, floor(cols));
     }
 
