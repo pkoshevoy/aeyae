@@ -377,6 +377,7 @@ namespace yae
 
     // initialize frame crop selection view:
     static const AspectRatio crop_choices[] = {
+      AspectRatio(0.0, "none", AspectRatio::kNone),
       AspectRatio(4.0 / 3.0, "4:3"),
       AspectRatio(16.0 / 10.0, "16:10"),
       AspectRatio(16.0 / 9.0, "16:9"),
@@ -384,8 +385,10 @@ namespace yae
       AspectRatio(1.85),
       AspectRatio(2.35),
       AspectRatio(2.40),
+      AspectRatio(8.0 / 3.0, "8:3"),
 
-      AspectRatio(0.0, "none", AspectRatio::kNone),
+      AspectRatio(3.0 / 4.0, "3:4"),
+      AspectRatio(9.0 / 16.0, "9:16"),
       AspectRatio(-1.0, "auto", AspectRatio::kAuto),
       AspectRatio(1e+6, "other", AspectRatio::kOther, "CropFrameOther"),
     };
@@ -717,6 +720,10 @@ namespace yae
       ar = aspectRatioSelectionView_.currentAspectRatio();
       view_.actionAspectRatioOther_->activate(QAction::Trigger);
     }
+    else
+    {
+      view_.actionAspectRatioOther_->activate(QAction::Trigger);
+    }
 
     canvas().overrideDisplayAspectRatio(ar);
   }
@@ -819,6 +826,21 @@ namespace yae
     else if (option.category_ == AspectRatio::kOther)
     {
       view_.actionCropFrameOther_->activate(QAction::Trigger);
+    }
+    else
+    {
+      bool ok = true;
+
+      ok = disconnect(view_.actionCropFrameOther_, SIGNAL(triggered()),
+                      this, SLOT(playbackCropFrameOther()));
+      YAE_ASSERT(ok);
+
+      view_.canvas().cropFrame(option.ar_);
+      view_.actionCropFrameOther_->activate(QAction::Trigger);
+
+      ok = connect(view_.actionCropFrameOther_, SIGNAL(triggered()),
+                   this, SLOT(playbackCropFrameOther()));
+      YAE_ASSERT(ok);
     }
   }
 
