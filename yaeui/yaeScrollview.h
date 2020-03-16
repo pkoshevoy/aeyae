@@ -20,6 +20,8 @@
 namespace yae
 {
   // forward declarations:
+  class ItemView;
+  struct ItemViewStyle;
   struct Scrollview;
 
 

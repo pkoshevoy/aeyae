@@ -22,9 +22,9 @@
 #include "yaeCanvasWidget.h"
 #include "yaeConfirmView.h"
 #include "yaeFrameCropView.h"
+#include "yaeOptionView.h"
 #include "yaePlayerView.h"
 #include "yaeSpinnerView.h"
-#include "yaeTrackSelectionView.h"
 
 namespace yae
 {
@@ -208,9 +208,9 @@ namespace yae
     FrameCropView cropView_;
     AspectRatioView frameCropSelectionView_;
     AspectRatioView aspectRatioSelectionView_;
-    TrackSelectionView videoTrackSelectionView_;
-    TrackSelectionView audioTrackSelectionView_;
-    TrackSelectionView subttTrackSelectionView_;
+    OptionView videoTrackSelectionView_;
+    OptionView audioTrackSelectionView_;
+    OptionView subttTrackSelectionView_;
     yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:

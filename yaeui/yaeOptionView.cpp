@@ -11,10 +11,11 @@
 
 // yaeui:
 #include "yaeInputArea.h"
+#include "yaeOptionView.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
+#include "yaeScrollview.h"
 #include "yaeText.h"
-#include "yaeTrackSelectionView.h"
 
 
 namespace yae
@@ -48,25 +49,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TrackSelectionView::TrackSelectionView
+  // OptionView::OptionView
   //
-  TrackSelectionView::TrackSelectionView():
-    ItemView("TrackSelectionView"),
+  OptionView::OptionView():
+    ItemView("OptionView"),
     style_(NULL)
   {}
 
   //----------------------------------------------------------------
-  // TrackSelectionView::setStyle
+  // OptionView::setStyle
   //
   void
-  TrackSelectionView::setStyle(ItemViewStyle * new_style)
+  OptionView::setStyle(ItemViewStyle * new_style)
   {
     style_ = new_style;
 
     // basic layout:
-    TrackSelectionView & view = *this;
+    OptionView & view = *this;
     const ItemViewStyle & style = *style_;
     Item & root = *root_;
+
+    hidden_.reset(new Item("hidden"));
+    Item & hidden = root.addHidden<Item>(hidden_);
+    hidden.width_ = hidden.
+      addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
 
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
@@ -83,59 +89,34 @@ namespace yae
     bg.anchors_.fill(root);
     bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::fg_, 0.9));
 
-    Item & grid = root.addNew<Item>("grid");
-    Item & footer = root.addNew<Item>("footer");
-    grid.anchors_.fill(root);
-    grid.anchors_.bottom_ = ItemRef::reference(footer, kPropertyTop);
-    footer.anchors_.fill(root);
-    footer.anchors_.top_.reset();
-    footer.height_ = ItemRef::reference(style.title_height_, 3.0);
+    Scrollview & sv =
+      layout_scrollview(kScrollbarVertical, view, style, root,
+                        ItemRef::reference(hidden, kUnitSize, 0.33));
 
-#if 0
-    // dirty hacks to cache grid properties:
-    Item & hidden = root.addHidden(new Item("hidden_grid_props"));
-#endif
+    Item & mainview = *(sv.content_);
 
-    RoundRect & bg_done = footer.addNew<RoundRect>("bg_done");
-    Text & tx_done = footer.addNew<Text>("tx_done");
-
-    tx_done.anchors_.center(footer);
-    tx_done.text_ = TVarRef::constant(TVar("Done"));
-    tx_done.color_ = tx_done.
-      addExpr(style_color_ref(view, &ItemViewStyle::fg_));
-    tx_done.background_ = tx_done.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.0));
-    tx_done.fontSize_ = ItemRef::reference(style.title_height_);
-    tx_done.elide_ = Qt::ElideNone;
-    tx_done.setAttr("oneline", true);
-
-    bg_done.anchors_.fill(tx_done, -7.0);
-    bg_done.margins_.set_left(ItemRef::reference(style.title_height_, -1));
-    bg_done.margins_.set_right(ItemRef::reference(style.title_height_, -1));
-    bg_done.color_ = bg_done.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
-    bg_done.background_ = bg_done.
-      addExpr(style_color_ref(view, &ItemViewStyle::fg_, 0.0));
-    bg_done.radius_ = ItemRef::scale(bg_done, kPropertyHeight, 0.1);
-
-    OnDone & on_done = bg_done.add(new OnDone("on_done", view));
-    on_done.anchors_.fill(bg_done);
+    panel_.reset(new Item("panel"));
+    Item & panel = mainview.add<Item>(panel_);
+    panel.anchors_.top_ = ItemRef::reference(mainview, kPropertyTop);
+    panel.anchors_.left_ = ItemRef::reference(mainview, kPropertyLeft);
+    panel.anchors_.right_ = ItemRef::reference(mainview, kPropertyRight);
   }
 
   //----------------------------------------------------------------
-  // TrackSelectionView::setTracks
+  // OptionView::setTracks
   //
   void
-  TrackSelectionView::setTracks(const std::vector<TTrackInfo> & tracks)
+  OptionView::setOptions
+  (const std::vector<OptionView::Option> & options)
   {
-    tracks_ = tracks;
+    options_ = options;
   }
 
   //----------------------------------------------------------------
-  // TrackSelectionView::processKeyEvent
+  // OptionView::processKeyEvent
   //
   bool
-  TrackSelectionView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
+  OptionView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
   {
     e->ignore();
 
@@ -157,10 +138,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TrackSelectionView::setEnabled
+  // OptionView::setEnabled
   //
   void
-  TrackSelectionView::setEnabled(bool enable)
+  OptionView::setEnabled(bool enable)
   {
     if (!style_ || isEnabled() == enable)
     {
@@ -191,16 +172,54 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TrackSelectionView::sync_ui
+  // OptionView::sync_ui
   //
   void
-  TrackSelectionView::sync_ui()
+  OptionView::sync_ui()
   {
-#if 0
-    TrackSelectionView & view = *this;
+#if 1
+    OptionView & view = *this;
     const ItemViewStyle & style = *style_;
     Item & root = *root_;
 #endif
+
+    Item & hidden = *hidden_;
+    Item & panel = *panel_;
+    panel.children_.clear();
+
+    std::size_t num_options = options_.size();
+
+    Item * prev = NULL;
+    for (std::size_t i = 0; i < num_options; i++)
+    {
+      const Option & option = options_[i];
+
+      Item & row = panel.addNew<Item>(str("option_", i).c_str());
+      row.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
+      row.anchors_.right_ = ItemRef::reference(panel, kPropertyRight);
+      row.anchors_.top_ = prev ?
+        ItemRef::reference(*prev, kPropertyBottom) :
+        ItemRef::reference(panel, kPropertyTop);
+      row.height_ = row.
+        addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
+
+      Rectangle & bg = row.addNew<Rectangle>("bg");
+      bg.anchors_.fill(row);
+      bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
+      bg.visible_ = BoolRef::constant(i % 2 == 1);
+
+      Text & text = row.addNew<Text>("text");
+      text.anchors_.vcenter(row);
+      text.text_ = TVarRef::constant(TVar(option.text_));
+      text.color_ = text.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
+      text.background_ = ColorRef::transparent(text, kPropertyColor);
+      text.fontSize_ = text.
+        addExpr(style_item_ref(view, &ItemViewStyle::title_height_));
+      text.elide_ = Qt::ElideNone;
+      text.setAttr("oneline", true);
+
+      prev = &row;
+    }
   }
 
 }

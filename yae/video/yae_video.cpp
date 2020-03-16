@@ -62,6 +62,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_program_name
+  //
+  std::string
+  get_program_name(const IReader & reader, std::size_t program)
+  {
+    TProgramInfo info;
+
+    if (reader.getProgramInfo(program, info))
+    {
+      return get(info.metadata_, std::string("service_name"));
+    }
+
+    return std::string();
+  }
+
+  //----------------------------------------------------------------
   // getBitsPerSample
   //
   unsigned int

@@ -6,8 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-#ifndef YAE_TRACK_SELECTION_VIEW_H_
-#define YAE_TRACK_SELECTION_VIEW_H_
+#ifndef YAE_OPTION_VIEW_H_
+#define YAE_OPTION_VIEW_H_
 
 // Qt library:
 #include <QObject>
@@ -26,21 +26,32 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // TrackSelectionView
+  // OptionView
   //
-  class YAEUI_API TrackSelectionView : public ItemView
+  class YAEUI_API OptionView : public ItemView
   {
     Q_OBJECT;
 
   public:
-    TrackSelectionView();
+
+    OptionView();
 
     void setStyle(ItemViewStyle * style);
-    void setTracks(const std::vector<TTrackInfo> & tracks);
 
     // virtual:
     ItemViewStyle * style() const
     { return style_; }
+
+    //----------------------------------------------------------------
+    // Option
+    //
+    struct Option
+    {
+      uint32_t index_;
+      std::string text_;
+    };
+
+    void setOptions(const std::vector<Option> & options);
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
@@ -49,17 +60,19 @@ namespace yae
     void setEnabled(bool enable);
 
   signals:
-    void selected(const TTrackInfo & track);
+    void selected(const Option & option);
     void done();
 
   protected:
     void sync_ui();
 
     ItemViewStyle * style_;
-    std::vector<TTrackInfo> tracks_;
+    std::vector<Option> options_;
+    yae::shared_ptr<Item> hidden_;
+    yae::shared_ptr<Item> panel_;
   };
 
 }
 
 
-#endif // YAE_TRACK_SELECTION_VIEW_H_
+#endif // YAE_OPTION_VIEW_H_

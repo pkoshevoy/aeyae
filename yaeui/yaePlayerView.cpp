@@ -1994,22 +1994,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // getProgramName
-  //
-  static std::string
-  getProgramName(const IReader & reader, std::size_t program)
-  {
-    TProgramInfo info;
-
-    if (reader.getProgramInfo(program, info))
-    {
-      return get(info.metadata_, std::string("service_name"));
-    }
-
-    return std::string();
-  }
-
-  //----------------------------------------------------------------
   // PlayerView::populateContextMenu
   //
   void
@@ -2254,10 +2238,10 @@ namespace yae
         trackName +=
           tr(", %1 Hz, %2 channels").
           arg(traits.sampleRate_).
-          arg(int(traits.channelLayout_));
+          arg(getNumberOfChannels(traits.channelLayout_));
       }
 
-      std::string serviceName = getProgramName(*reader, info.program_);
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
@@ -2333,7 +2317,7 @@ namespace yae
         }
       }
 
-      std::string serviceName = getProgramName(*reader, info.program_);
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
@@ -2396,7 +2380,7 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(label));
       }
 
-      std::string serviceName = getProgramName(*reader, info.program_);
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));

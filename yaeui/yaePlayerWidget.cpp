@@ -930,14 +930,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // actions_to_options
+  //
+  static void
+  actions_to_options(const QActionGroup * action_group,
+                     std::vector<OptionView::Option> & options)
+  {
+    QList<QAction *> actions;
+
+    if (action_group)
+    {
+      actions = action_group->actions();
+    }
+
+    int num_options = actions.size();
+    options.resize(num_options);
+
+    int index = 0;
+    for (QList<QAction *>::const_iterator i = actions.begin();
+         i != actions.end(); ++i, ++index)
+    {
+      const QAction * action = *i;
+      OptionView::Option & option = options[index];
+      option.index_ = index;
+      option.text_ = action->text().toUtf8().constData();
+    }
+  }
+
+  //----------------------------------------------------------------
   // PlayerWidget::showVideoTrackSelectionView
   //
   void
   PlayerWidget::showVideoTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
-    std::vector<TTrackInfo> tracks = player.video_tracks_info();
-    videoTrackSelectionView_.setTracks(tracks);
+    std::vector<OptionView::Option> options;
+    actions_to_options(view_.videoTrackGroup_, options);
+
+    videoTrackSelectionView_.setOptions(options);
     videoTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }
@@ -948,9 +977,10 @@ namespace yae
   void
   PlayerWidget::showAudioTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
-    std::vector<TTrackInfo> tracks = player.audio_tracks_info();
-    audioTrackSelectionView_.setTracks(tracks);
+    std::vector<OptionView::Option> options;
+    actions_to_options(view_.audioTrackGroup_, options);
+
+    audioTrackSelectionView_.setOptions(options);
     audioTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }
@@ -961,9 +991,10 @@ namespace yae
   void
   PlayerWidget::showSubttTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
-    std::vector<TTrackInfo> tracks = player.subtt_tracks_info();
-    subttTrackSelectionView_.setTracks(tracks);
+    std::vector<OptionView::Option> options;
+    actions_to_options(view_.subsTrackGroup_, options);
+
+    subttTrackSelectionView_.setOptions(options);
     subttTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }

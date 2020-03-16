@@ -42,6 +42,12 @@ namespace yae
                TTime & t1);
 
   //----------------------------------------------------------------
+  // get_program_name
+  //
+  YAE_API std::string
+  get_program_name(const IReader & reader, std::size_t program);
+
+  //----------------------------------------------------------------
   // TAudioSampleFormat
   //
   enum TAudioSampleFormat

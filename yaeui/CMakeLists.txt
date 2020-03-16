@@ -106,9 +106,9 @@ set(project_moc_hxx
   # yaetv:
   yaeAspectRatioView.h
   yaeConfirmView.h
+  yaeOptionView.h
   yaePlayerView.h
   yaePlayerWidget.h
-  yaeTrackSelectionView.h
   )
 
 if (YAE_USE_PLAYER_QUICK_WIDGET)
@@ -221,14 +221,14 @@ set(project_sources
   yaeAspectRatioView.h
   yaeConfirmView.cpp
   yaeConfirmView.h
+  yaeOptionView.cpp
+  yaeOptionView.h
   yaePlayerStyle.cpp
   yaePlayerStyle.h
   yaePlayerView.cpp
   yaePlayerView.h
   yaePlayerWidget.cpp
   yaePlayerWidget.h
-  yaeTrackSelectionView.cpp
-  yaeTrackSelectionView.h
   )
 
 if (LIBASS_LIBRARY)
