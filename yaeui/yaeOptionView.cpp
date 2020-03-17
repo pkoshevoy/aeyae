@@ -72,7 +72,8 @@ namespace yae
     hidden_.reset(new Item("hidden"));
     Item & hidden = root.addHidden<Item>(hidden_);
     hidden.width_ = hidden.
-      addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
+      // addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
+      addExpr(new UnitSize(view));
 
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
@@ -100,6 +101,7 @@ namespace yae
     panel.anchors_.top_ = ItemRef::reference(mainview, kPropertyTop);
     panel.anchors_.left_ = ItemRef::reference(mainview, kPropertyLeft);
     panel.anchors_.right_ = ItemRef::reference(mainview, kPropertyRight);
+    // panel.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 1.0));
   }
 
   //----------------------------------------------------------------
@@ -177,12 +179,9 @@ namespace yae
   void
   OptionView::sync_ui()
   {
-#if 1
     OptionView & view = *this;
     const ItemViewStyle & style = *style_;
     Item & root = *root_;
-#endif
-
     Item & hidden = *hidden_;
     Item & panel = *panel_;
     panel.children_.clear();
@@ -200,23 +199,40 @@ namespace yae
       row.anchors_.top_ = prev ?
         ItemRef::reference(*prev, kPropertyBottom) :
         ItemRef::reference(panel, kPropertyTop);
-      row.height_ = row.
-        addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
+      row.height_ = ItemRef::reference(hidden, kUnitSize, 2.0);
 
       Rectangle & bg = row.addNew<Rectangle>("bg");
       bg.anchors_.fill(row);
       bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
       bg.visible_ = BoolRef::constant(i % 2 == 1);
 
-      Text & text = row.addNew<Text>("text");
-      text.anchors_.vcenter(row);
-      text.text_ = TVarRef::constant(TVar(option.text_));
-      text.color_ = text.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
-      text.background_ = ColorRef::transparent(text, kPropertyColor);
-      text.fontSize_ = text.
-        addExpr(style_item_ref(view, &ItemViewStyle::title_height_));
-      text.elide_ = Qt::ElideNone;
-      text.setAttr("oneline", true);
+      Text & headline = row.addNew<Text>("headline");
+      headline.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+      headline.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+      headline.anchors_.bottom_ = ItemRef::reference(row, kPropertyVCenter);
+      headline.margins_.
+        set_left(ItemRef::reference(hidden, kUnitSize, 2.0));
+      headline.margins_.
+        set_right(ItemRef::reference(hidden, kUnitSize, 1.5));
+      headline.text_ = TVarRef::constant(TVar(option.headline_));
+      headline.color_ = headline.
+        addExpr(style_color_ref(view, &ItemViewStyle::fg_edit_selected_));
+      headline.background_ = ColorRef::transparent(headline, kPropertyColor);
+      headline.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.55);
+      headline.elide_ = Qt::ElideRight;
+      headline.setAttr("oneline", true);
+
+      Text & fineprint = row.addNew<Text>("fineprint");
+      fineprint.anchors_.top_ = ItemRef::reference(headline, kPropertyBottom);
+      fineprint.anchors_.left_ = ItemRef::reference(headline, kPropertyLeft);
+      fineprint.anchors_.right_ = ItemRef::reference(headline, kPropertyRight);
+      fineprint.text_ = TVarRef::constant(TVar(option.fineprint_));
+      fineprint.color_ = fineprint.
+        addExpr(style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.7));
+      fineprint.background_ = ColorRef::transparent(fineprint, kPropertyColor);
+      fineprint.fontSize_ = ItemRef::scale(headline, kPropertyFontSize, 0.7);
+      fineprint.elide_ = Qt::ElideRight;
+      fineprint.setAttr("oneline", true);
 
       prev = &row;
     }

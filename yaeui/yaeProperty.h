@@ -120,6 +120,7 @@ namespace yae
     kPropertyChecked,
     kPropertyR1,
     kPropertyR2,
+    kPropertyFontSize,
     kPropertyFontAscent,
     kPropertyFontDescent,
     kPropertyFontHeight,

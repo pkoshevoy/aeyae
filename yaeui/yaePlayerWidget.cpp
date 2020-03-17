@@ -930,41 +930,75 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // actions_to_options
-  //
-  static void
-  actions_to_options(const QActionGroup * action_group,
-                     std::vector<OptionView::Option> & options)
-  {
-    QList<QAction *> actions;
-
-    if (action_group)
-    {
-      actions = action_group->actions();
-    }
-
-    int num_options = actions.size();
-    options.resize(num_options);
-
-    int index = 0;
-    for (QList<QAction *>::const_iterator i = actions.begin();
-         i != actions.end(); ++i, ++index)
-    {
-      const QAction * action = *i;
-      OptionView::Option & option = options[index];
-      option.index_ = index;
-      option.text_ = action->text().toUtf8().constData();
-    }
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::showVideoTrackSelectionView
   //
   void
   PlayerWidget::showVideoTrackSelectionView()
   {
-    std::vector<OptionView::Option> options;
-    actions_to_options(view_.videoTrackGroup_, options);
+    const PlayerItem & player = *(view_.player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.video_tracks_info();
+    const std::vector<VideoTraits> & traits = player.video_tracks_traits();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == traits.size());
+
+    std::vector<OptionView::Option> options(num_tracks);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      const VideoTraits & vtts = traits[i];
+
+      OptionView::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Video Track " << i + 1;
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << yae::strfmt("%u x %u, %.3f fps",
+                           vtts.visibleWidth_,
+                           vtts.visibleHeight_,
+                           vtts.frameRate_);
+
+        if (vtts.cameraRotation_)
+        {
+          static const char * degree_utf8 = "\xc2""\xb0";
+          oss << ", rotated " << vtts.cameraRotation_ << degree_utf8;
+        }
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
 
     videoTrackSelectionView_.setOptions(options);
     videoTrackSelectionView_.setEnabled(true);
@@ -977,8 +1011,62 @@ namespace yae
   void
   PlayerWidget::showAudioTrackSelectionView()
   {
-    std::vector<OptionView::Option> options;
-    actions_to_options(view_.audioTrackGroup_, options);
+    const PlayerItem & player = *(view_.player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.audio_tracks_info();
+    const std::vector<AudioTraits> & traits = player.audio_tracks_traits();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == traits.size());
+
+    std::vector<OptionView::Option> options(num_tracks);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      const AudioTraits & atts = traits[i];
+
+      OptionView::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Audio Track " << i + 1;
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << atts.sampleRate_ << " Hz, "
+            << getNumberOfChannels(atts.channelLayout_) << " channels";
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
 
     audioTrackSelectionView_.setOptions(options);
     audioTrackSelectionView_.setEnabled(true);
@@ -991,8 +1079,71 @@ namespace yae
   void
   PlayerWidget::showSubttTrackSelectionView()
   {
-    std::vector<OptionView::Option> options;
-    actions_to_options(view_.subsTrackGroup_, options);
+    const PlayerItem & player = *(view_.player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.subtt_tracks_info();
+    const std::vector<TSubsFormat> & formats = player.subtt_tracks_format();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == formats.size());
+
+    std::vector<OptionView::Option> options(num_tracks + 4);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      TSubsFormat format = formats[i];
+
+      OptionView::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Subtitles Track " << i + 1;
+
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << "format: " << getSubsFormatLabel(format);
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
+
+    // add fake CC1-4 tracks:
+    for (unsigned int i = 0; i < 4; i++)
+    {
+      OptionView::Option & option = options[num_tracks + i];
+      option.index_ = num_tracks + i;
+      option.headline_ = yae::strfmt("Closed Captions (CC%u)", (i + 1));
+      option.fineprint_ = "format: CEA-608";
+    }
 
     subttTrackSelectionView_.setOptions(options);
     subttTrackSelectionView_.setEnabled(true);

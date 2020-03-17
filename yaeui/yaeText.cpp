@@ -767,6 +767,10 @@ namespace yae
     {
       value = opacity_.get();
     }
+    else if (property == kPropertyFontSize)
+    {
+      value = fontSize_.get();
+    }
     else if (property == kPropertyFontAscent)
     {
       value = fontAscent();

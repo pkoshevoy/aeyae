@@ -48,7 +48,8 @@ namespace yae
     struct Option
     {
       uint32_t index_;
-      std::string text_;
+      std::string headline_;
+      std::string fineprint_;
     };
 
     void setOptions(const std::vector<Option> & options);
