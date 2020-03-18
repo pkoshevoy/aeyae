@@ -151,6 +151,10 @@ namespace yae
     void dismissAudioTrackSelectionView();
     void dismissSubttTrackSelectionView();
 
+    void videoTrackSelectedOption(int option_index);
+    void audioTrackSelectedOption(int option_index);
+    void subttTrackSelectedOption(int option_index);
+
     void adjustCanvasHeight();
     void canvasSizeBackup();
     void canvasSizeRestore();

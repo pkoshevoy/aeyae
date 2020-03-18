@@ -78,6 +78,35 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_selected_subtt_track
+  //
+  int
+  get_selected_subtt_track(const IReader & reader)
+  {
+    int nsubs = int(reader.subsCount());
+    unsigned int cc = reader.getRenderCaptions();
+
+    // if closed captions are selected -- return that (offset by nsubs):
+    if (cc)
+    {
+      return nsubs + cc - 1;
+    }
+
+    // find the 1st selected subtitles track, if any:
+    int si = 0;
+    for (; si < nsubs && !reader.getSubsRender(si); si++)
+    {}
+
+    if (si < nsubs)
+    {
+      return si;
+    }
+
+    // disabled:
+    return nsubs + 4;
+  }
+
+  //----------------------------------------------------------------
   // getBitsPerSample
   //
   unsigned int

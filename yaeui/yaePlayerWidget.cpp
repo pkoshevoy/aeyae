@@ -175,12 +175,24 @@ namespace yae
                  this, SLOT(dismissAspectRatioSelectionView()));
     YAE_ASSERT(ok);
 
+    ok = connect(&videoTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(videoTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
     ok = connect(&videoTrackSelectionView_, SIGNAL(done()),
                  this, SLOT(dismissVideoTrackSelectionView()));
     YAE_ASSERT(ok);
 
+    ok = connect(&audioTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(audioTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
     ok = connect(&audioTrackSelectionView_, SIGNAL(done()),
                  this, SLOT(dismissAudioTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&subttTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(subttTrackSelectedOption(int)));
     YAE_ASSERT(ok);
 
     ok = connect(&subttTrackSelectionView_, SIGNAL(done()),
@@ -944,7 +956,7 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == traits.size());
 
-    std::vector<OptionView::Option> options(num_tracks);
+    std::vector<OptionView::Option> options(num_tracks + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
@@ -1000,7 +1012,16 @@ namespace yae
       }
     }
 
-    videoTrackSelectionView_.setOptions(options);
+    // add Disabled track option:
+    {
+      OptionView::Option & option = options[num_tracks];
+      option.index_ = num_tracks;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader->getSelectedVideoTrackIndex();
+    videoTrackSelectionView_.setOptions(options, preselect);
     videoTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }
@@ -1020,7 +1041,7 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == traits.size());
 
-    std::vector<OptionView::Option> options(num_tracks);
+    std::vector<OptionView::Option> options(num_tracks + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
@@ -1068,7 +1089,16 @@ namespace yae
       }
     }
 
-    audioTrackSelectionView_.setOptions(options);
+    // add Disabled track option:
+    {
+      OptionView::Option & option = options[num_tracks];
+      option.index_ = num_tracks;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader->getSelectedAudioTrackIndex();
+    audioTrackSelectionView_.setOptions(options, preselect);
     audioTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }
@@ -1088,7 +1118,7 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == formats.size());
 
-    std::vector<OptionView::Option> options(num_tracks + 4);
+    std::vector<OptionView::Option> options(num_tracks + 4 + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
@@ -1140,12 +1170,21 @@ namespace yae
     for (unsigned int i = 0; i < 4; i++)
     {
       OptionView::Option & option = options[num_tracks + i];
-      option.index_ = num_tracks + i;
+      option.index_ = num_tracks + i + 1;
       option.headline_ = yae::strfmt("Closed Captions (CC%u)", (i + 1));
       option.fineprint_ = "format: CEA-608";
     }
 
-    subttTrackSelectionView_.setOptions(options);
+    // add Disabled track option:
+    {
+      OptionView::Option & option = options[num_tracks + 4];
+      option.index_ = num_tracks + 5;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader ? get_selected_subtt_track(*reader) : 4;
+    subttTrackSelectionView_.setOptions(options, preselect);
     subttTrackSelectionView_.setEnabled(true);
     view_.setEnabled(false);
   }
@@ -1280,6 +1319,57 @@ namespace yae
   {
     subttTrackSelectionView_.setEnabled(false);
     view_.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::videoTrackSelectedOption
+  //
+  void
+  PlayerWidget::videoTrackSelectedOption(int option_index)
+  {
+    if (!view_.videoTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < view_.videoTrackGroup_->actions().size())
+    {
+      view_.videoTrackGroup_->actions()[option_index]->trigger();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::audioTrackSelectedOption
+  //
+  void
+  PlayerWidget::audioTrackSelectedOption(int option_index)
+  {
+    if (!view_.audioTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < view_.audioTrackGroup_->actions().size())
+    {
+      view_.audioTrackGroup_->actions()[option_index]->trigger();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::subttTrackSelectedOption
+  //
+  void
+  PlayerWidget::subttTrackSelectedOption(int option_index)
+  {
+    if (!view_.subsTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < view_.subsTrackGroup_->actions().size())
+    {
+      view_.subsTrackGroup_->actions()[option_index]->trigger();
+    }
   }
 
   //----------------------------------------------------------------

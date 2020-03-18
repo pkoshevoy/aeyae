@@ -52,7 +52,8 @@ namespace yae
       std::string fineprint_;
     };
 
-    void setOptions(const std::vector<Option> & options);
+    void setOptions(const std::vector<Option> & options,
+                    int preselect_option);
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
@@ -60,15 +61,23 @@ namespace yae
     // virtual:
     void setEnabled(bool enable);
 
+    inline int get_selected() const
+    { return selected_; }
+
   signals:
-    void selected(const Option & option);
+    void option_selected(int index);
     void done();
+
+  public slots:
+    void set_selected(int index, bool is_done = false);
 
   protected:
     void sync_ui();
 
     ItemViewStyle * style_;
     std::vector<Option> options_;
+    std::size_t selected_;
+
     yae::shared_ptr<Item> hidden_;
     yae::shared_ptr<Item> panel_;
   };

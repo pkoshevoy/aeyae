@@ -48,6 +48,21 @@ namespace yae
   get_program_name(const IReader & reader, std::size_t program);
 
   //----------------------------------------------------------------
+  // get_selected_subtt_track
+  //
+  // return a value in range:
+  //
+  //  -  [0, nsubs) for a Subtitles track
+  //
+  //  -  [nsubs, nsubs + 4) for Closed Captions CC1-4
+  //
+  //  -  nsubs + 4 for Disabled
+  //
+  //
+  YAE_API int
+  get_selected_subtt_track(const IReader & reader);
+
+  //----------------------------------------------------------------
   // TAudioSampleFormat
   //
   enum TAudioSampleFormat

@@ -22,13 +22,35 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // OnDone
+  // IsOptionSelected
   //
-  struct OnDone : public InputArea
+  struct IsOptionSelected : TBoolExpr
   {
-    OnDone(const char * id, ItemView & view):
+    IsOptionSelected(const OptionView & view, int index):
+      view_(view),
+      index_(index)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = view_.get_selected() == index_;
+    }
+
+    const OptionView & view_;
+    int index_;
+  };
+
+
+  //----------------------------------------------------------------
+  // SelectOption
+  //
+  struct SelectOption : public InputArea
+  {
+    SelectOption(const char * id, OptionView & view, int index):
       InputArea(id),
-      view_(view)
+      view_(view),
+      index_(index)
     {}
 
     // virtual:
@@ -40,11 +62,12 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      view_.setEnabled(false);
+      view_.set_selected(index_, true);
       return true;
     }
 
-    ItemView & view_;
+    OptionView & view_;
+    int index_;
   };
 
 
@@ -53,7 +76,8 @@ namespace yae
   //
   OptionView::OptionView():
     ItemView("OptionView"),
-    style_(NULL)
+    style_(NULL),
+    selected_(0)
   {}
 
   //----------------------------------------------------------------
@@ -105,13 +129,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // OptionView::setTracks
+  // OptionView::setOptions
   //
   void
-  OptionView::setOptions
-  (const std::vector<OptionView::Option> & options)
+  OptionView::setOptions(const std::vector<OptionView::Option> & options,
+                         int preselect_option)
   {
     options_ = options;
+    selected_ = preselect_option;
   }
 
   //----------------------------------------------------------------
@@ -174,6 +199,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // OptionView::selected
+  //
+  void
+  OptionView::set_selected(int index, bool is_done)
+  {
+    if (index < options_.size())
+    {
+      selected_ = index;
+      emit option_selected(selected_);
+    }
+
+    if (is_done)
+    {
+      emit done();
+    }
+  }
+
+  //----------------------------------------------------------------
   // OptionView::sync_ui
   //
   void
@@ -186,25 +229,26 @@ namespace yae
     Item & panel = *panel_;
     panel.children_.clear();
 
-    std::size_t num_options = options_.size();
+    int num_options = int(options_.size());
 
     Item * prev = NULL;
-    for (std::size_t i = 0; i < num_options; i++)
+    for (int index = 0; index < num_options; index++)
     {
-      const Option & option = options_[i];
+      const Option & option = options_[index];
 
-      Item & row = panel.addNew<Item>(str("option_", i).c_str());
+      Item & row = panel.addNew<Item>(str("option_", index).c_str());
       row.anchors_.left_ = ItemRef::reference(panel, kPropertyLeft);
       row.anchors_.right_ = ItemRef::reference(panel, kPropertyRight);
       row.anchors_.top_ = prev ?
         ItemRef::reference(*prev, kPropertyBottom) :
         ItemRef::reference(panel, kPropertyTop);
-      row.height_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+      row.height_ = row.addExpr(new RoundUp(hidden, kUnitSize, 2.0));
+
 
       Rectangle & bg = row.addNew<Rectangle>("bg");
       bg.anchors_.fill(row);
       bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
-      bg.visible_ = BoolRef::constant(i % 2 == 1);
+      bg.visible_ = bg.addExpr(new IsOptionSelected(view, index));
 
       Text & headline = row.addNew<Text>("headline");
       headline.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
@@ -233,6 +277,17 @@ namespace yae
       fineprint.fontSize_ = ItemRef::scale(headline, kPropertyFontSize, 0.7);
       fineprint.elide_ = Qt::ElideRight;
       fineprint.setAttr("oneline", true);
+
+      Rectangle & hline = row.addNew<Rectangle>("hline");
+      hline.anchors_.fill(row);
+      hline.anchors_.top_.reset();
+      hline.height_ = ItemRef::constant(1);
+      hline.color_ = hline.
+        addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.3));
+      // hline.visible_ = BoolRef::constant(i % 2 == 1);
+
+      SelectOption & sel = row.add(new SelectOption("sel", view, index));
+      sel.anchors_.fill(row);
 
       prev = &row;
     }
