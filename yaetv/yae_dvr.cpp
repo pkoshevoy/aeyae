@@ -2559,10 +2559,14 @@ namespace yae
     // update the wishlist:
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
-      return wishlist_.remove(wi_key);
+      if (!wishlist_.remove(wi_key))
+      {
+        return false;
+      }
     }
 
     save_wishlist();
+    return true;
   }
 
   //----------------------------------------------------------------
