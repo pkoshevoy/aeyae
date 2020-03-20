@@ -383,6 +383,10 @@ namespace yae
                  this, SLOT(backToPlaylist()));
     YAE_ASSERT(ok);
 
+    ok = connect(&playerView, SIGNAL(delete_playing_file()),
+                 this, SLOT(confirmDeletePlayingRecording()));
+    YAE_ASSERT(ok);
+
     ok = connect(&start_live_playback_, SIGNAL(timeout()),
                  this, SLOT(startLivePlayback()));
     YAE_ASSERT(ok);
@@ -720,6 +724,69 @@ namespace yae
     confirm.negative_.reset(new DeclineDeleteRecording(*this, rec_ptr));
     ConfirmView::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Close"));
+    neg.bg_ = style.fg_;
+    neg.fg_ = style.bg_;
+
+    view.setEnabled(false);
+    confirm.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // CancelDeleteRecording
+  //
+  struct CancelDeleteRecording : ConfirmView::Action
+  {
+    CancelDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+      mainWindow_(mainWindow),
+      rec_(rec)
+    {}
+
+    // virtual:
+    void operator()() const
+    {
+      PlayerView & view = mainWindow_.playerWidget_->view();
+      ConfirmView & confirm = mainWindow_.playerWidget_->confirm_;
+      view.setEnabled(true);
+      confirm.setEnabled(false);
+    }
+
+    MainWindow & mainWindow_;
+    TRecordingPtr rec_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::confirmDeletePlayingRecording
+  //
+  void
+  MainWindow::confirmDeletePlayingRecording()
+  {
+    TRecordingPtr rec_ptr = view_.now_playing();
+    if (!rec_ptr)
+    {
+      return;
+    }
+
+    const Recording & rec = *rec_ptr;
+    PlayerView & view = playerWidget_->view();
+
+    // shortcuts:
+    const AppStyle & style = *(view_.style());
+    ConfirmView & confirm = playerWidget_->confirm_;
+
+    std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
+    confirm.message_ = TVarRef::constant(TVar(msg));
+    confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm.fg_ = style.bg_;
+
+    confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
+    ConfirmView::Action & aff = *confirm.affirmative_;
+    aff.message_ = TVarRef::constant(TVar("Delete"));
+    aff.bg_ = style.cursor_;
+    aff.fg_ = style.fg_;
+
+    confirm.negative_.reset(new CancelDeleteRecording(*this, rec_ptr));
+    ConfirmView::Action & neg = *confirm.negative_;
+    neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
 

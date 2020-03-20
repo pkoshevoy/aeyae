@@ -1841,40 +1841,6 @@ namespace yae
     std::string basepath_;
   };
 
-  //----------------------------------------------------------------
-  // GetTexTrashcan
-  //
-  struct GetTexTrashcan : public TTextureExpr
-  {
-    GetTexTrashcan(AppView & view):
-      view_(view)
-    {}
-
-    // virtual:
-    void evaluate(TTexturePtr & result) const
-    {
-      const AppStyle & style = *(view_.style());
-      Item & root = *(view_.root());
-      Item & hidden = root.get<Item>("hidden");
-
-      uint32_t l = yae::floor_log2<double>(hidden.width());
-      l = std::min<uint32_t>(l, 8);
-      uint32_t tex_width = 1 << l;
-
-      QImage img = trashcanImage(// texture width, power of 2:
-                                 tex_width,
-                                 // color:
-                                 style.fg_.get(),
-                                 // background color:
-                                 style.fg_.get().transparent());
-
-      style.trashcan_->setImage(img);
-      result = style.trashcan_;
-    }
-
-    AppView & view_;
-  };
-
 
   //----------------------------------------------------------------
   // GetTexCollapsed

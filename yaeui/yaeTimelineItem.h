@@ -384,6 +384,7 @@ namespace yae
     ContextCallback video_track_cb_;
     ContextCallback audio_track_cb_;
     ContextCallback subtt_track_cb_;
+    ContextCallback delete_file_cb_;
 
     ItemView::TAnimatorPtr opacity_animator_;
     ItemView::TAnimatorPtr controls_animator_;

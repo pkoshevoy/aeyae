@@ -494,6 +494,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Texture::getImageWidth
+  //
+  unsigned int
+  Texture::getImageWidth() const
+  { return p_->iw_; }
+
+  //----------------------------------------------------------------
+  // Texture::getImageHeight
+  //
+  unsigned int
+  Texture::getImageHeight() const
+  { return p_->ih_; }
+
+  //----------------------------------------------------------------
   // Texture::bind
   //
   bool

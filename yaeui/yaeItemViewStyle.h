@@ -136,6 +136,7 @@ namespace yae
     TTexturePtr grid_off_;
     TTexturePtr pause_;
     TTexturePtr play_;
+    TTexturePtr trashcan_;
   };
 
 
@@ -454,6 +455,19 @@ namespace yae
         result = style->play_;
       }
     }
+
+    const ItemView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetTexTrashcan
+  //
+  struct GetTexTrashcan : public TTextureExpr
+  {
+    GetTexTrashcan(const ItemView & view);
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const;
 
     const ItemView & view_;
   };

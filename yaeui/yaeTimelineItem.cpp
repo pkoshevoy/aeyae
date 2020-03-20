@@ -568,40 +568,79 @@ namespace yae
       playlistToggle.anchors_.fill(playlistButton);
     }
 
+    // other on-screen controls:
+    ItemRef tool_btn_size = ItemRef::scale(titleHeight,
+                                           kPropertyExpression,
+                                           1.5);
+
+    // back button:
     Item & arrow_btn = this->addNew<Item>("arrow_btn");
-    arrow_btn.visible_ = BoolRef::constant(!back_arrow_cb_.is_null());
     arrow_btn.anchors_.top_ = ItemRef::offset(*this, kPropertyTop, 2);
     arrow_btn.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
-    arrow_btn.width_ = ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
-    arrow_btn.height_ = arrow_btn.width_;
-    arrow_btn.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    arrow_btn.margins_.set_left
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-
-    CallOnClick<ContextCallback> & arrow_btn_ia = arrow_btn.
-      add(new CallOnClick<ContextCallback>("arrow_btn_on_click",
-                                           this->back_arrow_cb_));
+    arrow_btn.visible_ = arrow_btn.addExpr(new IsValid(back_arrow_cb_));
+    arrow_btn.height_ = arrow_btn.
+      addExpr(new InvisibleItemZeroHeight(arrow_btn));
     {
-      arrow_btn_ia.anchors_.fill(arrow_btn);
-
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
-      bg.anchors_.fill(arrow_btn);
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(arrow_btn, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
 
-      ArrowItem & arrow = arrow_btn.add<ArrowItem>
+      ArrowItem & arrow = bg.add<ArrowItem>
         (new ArrowItem("arrow", ArrowItem::kLeft));
-      arrow.anchors_.fill(arrow_btn);
+      arrow.anchors_.fill(bg);
       arrow.margins_.set
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
       arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.25);
       arrow.color_ = colorControlsFg;
       arrow.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & arrow_btn_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("arrow_btn_on_click", *this, &TimelineItem::back_arrow_cb_));
+      arrow_btn_ia.anchors_.fill(bg);
     }
 
-    // other on-screen controls:
+    // trashcan button:
+    Item & delete_file = this->addNew<Item>("delete_file");
+    delete_file.anchors_.top_ = ItemRef::offset(arrow_btn, kPropertyBottom);
+    delete_file.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+    delete_file.visible_ = delete_file.addExpr(new IsValid(delete_file_cb_));
+    delete_file.height_ = delete_file.
+      addExpr(new InvisibleItemZeroHeight(delete_file));
+    {
+      RoundRect & bg = delete_file.addNew<RoundRect>("bg");
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBg;
+      bg.opacity_ = shadow.opacity_;
+      bg.anchors_.top_ = ItemRef::reference(delete_file, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      TexturedRect & trashcan = bg.addNew<TexturedRect>("trashcan");
+      trashcan.anchors_.fill(bg);
+      trashcan.margins_.set(ItemRef::scale(bg, kPropertyHeight, 0.1));
+      trashcan.texture_ = trashcan.addExpr(new GetTexTrashcan(view_));
+      trashcan.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & delete_file_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("delete_file_on_click", *this, &TimelineItem::delete_file_cb_));
+      delete_file_ia.anchors_.fill(bg);
+    }
 
     // crop:
     Item & frame_crop = this->addNew<Item>("frame_crop");
@@ -612,8 +651,8 @@ namespace yae
       addExpr(new InvisibleItemZeroHeight(frame_crop));
     {
       RoundRect & bg = frame_crop.addNew<RoundRect>("bg");
-      bg.width_ = arrow_btn.width_;
-      bg.height_ = arrow_btn.width_;
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
@@ -651,8 +690,8 @@ namespace yae
       addExpr(new InvisibleItemZeroHeight(aspect_ratio));
     {
       RoundRect & bg = aspect_ratio.addNew<RoundRect>("bg");
-      bg.width_ = arrow_btn.width_;
-      bg.height_ = arrow_btn.width_;
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
@@ -689,8 +728,8 @@ namespace yae
       addExpr(new InvisibleItemZeroHeight(video_track));
     {
       RoundRect & bg = video_track.addNew<RoundRect>("bg");
-      bg.width_ = arrow_btn.width_;
-      bg.height_ = arrow_btn.width_;
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
@@ -727,8 +766,8 @@ namespace yae
       addExpr(new InvisibleItemZeroHeight(audio_track));
     {
       RoundRect & bg = audio_track.addNew<RoundRect>("bg");
-      bg.width_ = arrow_btn.width_;
-      bg.height_ = arrow_btn.width_;
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
@@ -765,8 +804,8 @@ namespace yae
       addExpr(new InvisibleItemZeroHeight(subtt_track));
     {
       RoundRect & bg = subtt_track.addNew<RoundRect>("bg");
-      bg.width_ = arrow_btn.width_;
-      bg.height_ = arrow_btn.width_;
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;

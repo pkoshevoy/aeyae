@@ -94,6 +94,7 @@ namespace yae
 
     void confirmDelete(TRecordingPtr rec);
     void playbackFinished(TTime playheadPos);
+    void confirmDeletePlayingRecording();
     void saveBookmark();
     void playerWindowClosed();
     void playerEnteringFullScreen();

@@ -98,6 +98,7 @@ namespace yae
     void select_video_track();
     void select_audio_track();
     void select_subtt_track();
+    void delete_playing_file();
 
   public:
     bool is_playback_paused() const;
@@ -164,6 +165,7 @@ namespace yae
     void triggerSelectVideoTrack();
     void triggerSelectAudioTrack();
     void triggerSelectSubttTrack();
+    void triggerDeletePlayingFile();
 
     void populateContextMenu();
     void adjustMenuActions();

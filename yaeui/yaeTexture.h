@@ -84,8 +84,10 @@ namespace yae
     Texture(const char * id, const QImage & image);
     ~Texture();
 
-    // helper:
+    // helpers:
     void setImage(const QImage & image);
+    unsigned int getImageWidth() const;
+    unsigned int getImageHeight() const;
 
     // virtual:
     void get(Property property, double & value) const;

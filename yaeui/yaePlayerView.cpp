@@ -154,6 +154,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // delete_playing_file_cb
+  //
+  static void
+  delete_playing_file_cb(void * context)
+  {
+    PlayerView * view = (PlayerView *)context;
+    view->triggerDeletePlayingFile();
+  }
+
+  //----------------------------------------------------------------
   // new_qaction
   //
   template <typename TQObj>
@@ -1354,12 +1364,14 @@ namespace yae
         timeline.frame_crop_cb_.reset();
         timeline.aspect_ratio_cb_.reset();
         timeline.subtt_track_cb_.reset();
+        timeline.delete_file_cb_.reset();
       }
       else
       {
         timeline.frame_crop_cb_.reset(&yae::select_frame_crop_cb, this);
         timeline.aspect_ratio_cb_.reset(&yae::select_aspect_ratio_cb, this);
         timeline.subtt_track_cb_.reset(&yae::select_subtt_track_cb, this);
+        timeline.delete_file_cb_.reset(&yae::delete_playing_file_cb, this);
       }
 
       if (videoInfo.size() < 2)
@@ -1982,6 +1994,15 @@ namespace yae
   PlayerView::triggerSelectSubttTrack()
   {
     emit select_subtt_track();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::triggerDeletePlayingFile
+  //
+  void
+  PlayerView::triggerDeletePlayingFile()
+  {
+    emit delete_playing_file();
   }
 
   //----------------------------------------------------------------

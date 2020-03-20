@@ -71,10 +71,6 @@ namespace yae
     // generate expanded group button texture:
     expanded_ = Item::addHidden<Texture>
       (new Texture("expanded", QImage())).sharedPtr<Texture>();
-
-    // generate trashcan texture:
-    trashcan_ = Item::addHidden<Texture>
-      (new Texture("trashcan", QImage())).sharedPtr<Texture>();
   }
 
   //----------------------------------------------------------------

@@ -49,7 +49,6 @@ namespace yae
 
     TTexturePtr collapsed_;
     TTexturePtr expanded_;
-    TTexturePtr trashcan_;
   };
 
 }
