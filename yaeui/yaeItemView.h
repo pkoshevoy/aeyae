@@ -217,6 +217,9 @@ namespace yae
     // helper for checking mouseOverItems:
     bool isMouseOverItem(const Item & item) const;
 
+    // reset mouse click/drag state:
+    void resetMouseState();
+
     // virtual:
     TImageProviderPtr
     getImageProvider(const QString & imageUrl, QString & imageId) const

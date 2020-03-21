@@ -4111,6 +4111,7 @@ namespace yae
 
     emit playback(rec_ptr);
     dataChanged();
+    resetMouseState();
   }
 
   //----------------------------------------------------------------
