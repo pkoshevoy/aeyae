@@ -149,8 +149,8 @@ namespace yae
     // set probesize to 128 MiB:
     av_dict_set(&options, "probesize", "134217728", 0);
 
-    // set analyze duration to 10 seconds:
-    av_dict_set(&options, "analyzeduration", "10000000", 0);
+    // set analyze duration to 20 seconds:
+    av_dict_set(&options, "analyzeduration", "20000000", 0);
 
     // set genpts:
     av_dict_set(&options, "fflags", "genpts", 0);
