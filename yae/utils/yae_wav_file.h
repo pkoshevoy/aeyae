@@ -109,14 +109,14 @@ namespace yae
     }
 
     bool save(unsigned int numSamples,
-              const unsigned char * samples,
+              const void * samples,
               const char * newFilePrefix = NULL)
     {
       std::size_t size = (numSamples * numChannels_ * bitsPerSample_) / 8;
       return save(samples, size, newFilePrefix);
     }
 
-    bool save(const unsigned char * data,
+    bool save(const void * data,
               std::size_t dataSize,
               const char * newFilePrefix = NULL)
     {
@@ -136,8 +136,8 @@ namespace yae
         return false;
       }
 
-      const unsigned char * src = data;
-      const unsigned char * end = data + dataSize;
+      const unsigned char * src = (const unsigned char *)data;
+      const unsigned char * end = src + dataSize;
 
       while (src < end)
       {
@@ -159,7 +159,7 @@ namespace yae
 
     static bool save(const char * fn,
                      const AudioTraits & atts,
-                     const unsigned char * data,
+                     const void * data,
                      std::size_t size)
     {
       WavFile wav;
@@ -242,6 +242,8 @@ namespace yae
       fwrite("data", 1, 4, file_);
       uint4b = 0;
       fwrite(&uint4b, 1, 4, file_);
+
+      return true;
     }
 
     FILE * file_;
