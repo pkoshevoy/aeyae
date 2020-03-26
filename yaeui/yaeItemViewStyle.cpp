@@ -477,10 +477,6 @@ namespace yae
     play_ = Item::addHidden<Texture>
       (new Texture("play", QImage())).sharedPtr<Texture>();
 
-    // generate trashcan texture:
-    trashcan_ = Item::addHidden<Texture>
-      (new Texture("trashcan", QImage())).sharedPtr<Texture>();
-
     // generate playlist grid on button texture:
     {
       QImage img = barsImage(128,
@@ -565,8 +561,9 @@ namespace yae
   //----------------------------------------------------------------
   // GetTexTrashcan::GetTexTrashcan
   //
-  GetTexTrashcan::GetTexTrashcan(const ItemView & view):
-    view_(view)
+  GetTexTrashcan::GetTexTrashcan(const ItemView & view, const Item & item):
+    view_(view),
+    item_(item)
   {}
 
   //----------------------------------------------------------------
@@ -580,23 +577,30 @@ namespace yae
 
     if (style)
     {
-      double unit_size = style->unit_size_.get();
-      uint32_t l = yae::floor_log2<double>(unit_size);
+      double item_size = item_.width();
+      uint32_t l = yae::floor_log2<double>(item_size) + 1;
       l = std::min<uint32_t>(l, 8);
       uint32_t tex_width = 1 << l;
 
-      if (style->trashcan_->getImageWidth() != tex_width)
+      TTexturePtr & trashcan = style->trashcan_[tex_width];
+      if (!trashcan)
       {
+        // generate trashcan texture:
+        std::string name = strfmt("trashcan_%03u", tex_width);
+
+        trashcan = style->Item::addHidden<Texture>
+          (new Texture(name.c_str(), QImage())).sharedPtr<Texture>();
+
         QImage img = trashcanImage(// texture width, power of 2:
                                    tex_width,
                                    // color:
                                    style->fg_controls_.get(),
                                    // background color:
                                    style->fg_controls_.get().transparent());
-        style->trashcan_->setImage(img);
+        trashcan->setImage(img);
       }
 
-      result = style->trashcan_;
+      result = trashcan;
     }
   }
 

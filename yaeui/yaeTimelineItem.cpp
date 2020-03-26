@@ -633,7 +633,8 @@ namespace yae
       TexturedRect & trashcan = bg.addNew<TexturedRect>("trashcan");
       trashcan.anchors_.fill(bg);
       trashcan.margins_.set(ItemRef::scale(bg, kPropertyHeight, 0.1));
-      trashcan.texture_ = trashcan.addExpr(new GetTexTrashcan(view_));
+      trashcan.texture_ = trashcan.
+        addExpr(new GetTexTrashcan(view_, trashcan));
       trashcan.opacity_ = shadow.opacity_;
 
       Call<TimelineItem, ContextCallback> & delete_file_ia = bg.

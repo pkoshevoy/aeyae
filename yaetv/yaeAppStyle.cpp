@@ -93,7 +93,6 @@ namespace yae
 
     collapsed_->uncache();
     expanded_->uncache();
-    trashcan_->uncache();
 
     ItemViewStyle::uncache();
   }

@@ -3938,7 +3938,8 @@ namespace yae
         trashcan.margins_.
           set_bottom(ItemRef::reference(nbytes, kPropertyFontDescent));
         trashcan.width_ = ItemRef::reference(trashcan, kPropertyHeight);
-        trashcan.texture_ = trashcan.addExpr(new GetTexTrashcan(view));
+        trashcan.texture_ = trashcan.
+          addExpr(new GetTexTrashcan(view, trashcan));
 
         trashcan_bg.anchors_.center(trashcan);
         trashcan_bg.width_ = ItemRef::scale(trashcan, kPropertyHeight, 2);

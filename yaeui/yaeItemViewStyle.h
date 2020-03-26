@@ -9,6 +9,9 @@
 #ifndef YAE_ITEM_VIEW_STYLE_H_
 #define YAE_ITEM_VIEW_STYLE_H_
 
+// standard:
+#include <map>
+
 // Qt library:
 #include <QFont>
 
@@ -136,7 +139,9 @@ namespace yae
     TTexturePtr grid_off_;
     TTexturePtr pause_;
     TTexturePtr play_;
-    TTexturePtr trashcan_;
+
+    // indexed by nearest power-of-2 size:
+    std::map<uint32_t, TTexturePtr> trashcan_;
   };
 
 
@@ -464,12 +469,13 @@ namespace yae
   //
   struct GetTexTrashcan : public TTextureExpr
   {
-    GetTexTrashcan(const ItemView & view);
+    GetTexTrashcan(const ItemView & view, const Item & item);
 
     // virtual:
     void evaluate(TTexturePtr & result) const;
 
     const ItemView & view_;
+    const Item & item_;
   };
 
 }
