@@ -206,7 +206,7 @@ namespace yae
     if (has(buffer_, line))
     {
 #if 0 // ndef NDEBUG
-      yae_debug << "DROPPING DUPLICATE: " << line.data_;
+      yae_debug << "ass_process_data: DROPPING DUPLICATE: " << line.data_;
 #endif
       return;
     }

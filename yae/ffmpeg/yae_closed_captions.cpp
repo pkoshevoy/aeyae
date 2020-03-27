@@ -906,6 +906,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         sf.tEnd_.time_ = endPkt;
       }
 
+      sf.time_ = sf.time_.rebased(30000);
       sf.tEnd_ = std::max(sf.tEnd_, sf.time_ + TTime(1001, 30000));
 
       std::string header((const char *)(ccDec->subtitle_header),
@@ -947,7 +948,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       SubtitlesTrack & captions = captions_[i];
       TSubsFrame & last = captions.last_;
-      int64_t nframes = (ptsNext.get(30000) - last.tEnd_.get(30000)) / 1001;
+      int64_t nframes =
+        (ptsNext.get(30000) - last.tEnd_.get(30000) + 1000) / 1001;
 
       // avoid extending caption duration indefinitely:
       if (nframes && last.tEnd_ < last.time_ + 12.0)
