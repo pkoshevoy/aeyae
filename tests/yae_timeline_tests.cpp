@@ -161,6 +161,28 @@ BOOST_AUTO_TEST_CASE(yae_parse_time)
   // 1h 1m 1s
   BOOST_CHECK(parse_time(t, "01:01:01", NULL, NULL, 30000.0 / 1001.0));
   BOOST_CHECK_EQUAL(t.get(1000), 1000 * (1 + 60 * (1 + 60)));
+
+  // 20:53:28.57
+  BOOST_CHECK(parse_time(t, "20:53:28.57", ":", "."));
+  BOOST_CHECK_EQUAL(100, t.base_);
+
+  int64_t x = t.time_;
+  int64_t cs = x % 100;
+  BOOST_CHECK_EQUAL(57, cs);
+
+  x /= 100;
+  int64_t sec = x % 60;
+  BOOST_CHECK_EQUAL(28, sec);
+
+  x /= 60;
+  int64_t min = x % 60;
+  BOOST_CHECK_EQUAL(53, min);
+
+  x /= 60;
+  BOOST_CHECK_EQUAL(20, x);
+
+  std::string str = t.to_hhmmss_ms();
+  BOOST_CHECK(str == "20:53:28.570");
 }
 
 BOOST_AUTO_TEST_CASE(yae_timeline)

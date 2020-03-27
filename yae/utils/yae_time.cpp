@@ -821,13 +821,14 @@ namespace yae
             uint64_t base,
             std::string & ts,
             const char * separator,
-            bool includeNegativeSign = false)
+            bool include_negative_sign = false,
+            bool round_up = false)
   {
     bool negative = (time < 0);
     int64_t t = negative ? -time : time;
 
     // convert to seconds, round up:
-    t = (t + (base >> 1) - 1) / base;
+    t = (round_up ? (t + (base >> 1) - 1) : t) / base;
 
     int64_t seconds = t % 60;
     t /= 60;
@@ -837,7 +838,7 @@ namespace yae
 
     std::ostringstream os;
 
-    if (negative && includeNegativeSign && (seconds || minutes || hours))
+    if (negative && include_negative_sign && (seconds || minutes || hours))
     {
       os << '-';
     }
@@ -857,7 +858,7 @@ namespace yae
   void
   TTime::to_hhmmss(std::string & ts, const char * separator) const
   {
-    yae::to_hhmmss(time_, base_, ts, separator, true);
+    yae::to_hhmmss(time_, base_, ts, separator, true, true);
   }
 
   //----------------------------------------------------------------

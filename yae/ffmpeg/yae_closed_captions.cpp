@@ -397,13 +397,13 @@ namespace yae
       }
 
       unsigned int data_channel = cc_data_channel(b0);
-      if (data_channel > 0)
-      {
-        dataChannel[field_number - 1] = data_channel;
-      }
-      else
+      if (!data_channel)
       {
         data_channel = dataChannel[field_number - 1];
+      }
+      else if (data_channel < 3)
+      {
+        dataChannel[field_number - 1] = data_channel;
       }
 
       if (data_channel == 2)
@@ -759,6 +759,71 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   }
 
   //----------------------------------------------------------------
+  // parse_timespan
+  //
+  static bool
+  parse_timespan(const AVSubtitle & sub,
+                 TTime & tmin,
+                 TTime & tmax)
+  {
+    // std::vector<std::string> columns;
+
+    tmin = TTime::max_flicks();
+    tmax = TTime::min_flicks();
+
+    for (int r = 0; r < sub.num_rects; r++)
+    {
+      const AVSubtitleRect * rect = sub.rects[r];
+      if (rect)
+      {
+        std::vector<std::string> values;
+        yae::split(values, ",", rect->ass);
+
+        // NOTE: the values are assumed to match the [Events] Format:
+        // values[1] == Start and values[2] == End
+        if (values.size() < 3)
+        {
+          continue;
+        }
+
+        // shortcuts:
+        std::string & start = values[1];
+        std::string & end = values[2];
+
+        yae::strip_ws(start);
+        yae::strip_ws(end);
+
+        TTime t0;
+        if (yae::parse_time(t0, start.c_str(), ":", "."))
+        {
+          tmin = std::min(tmin, t0);
+        }
+
+        TTime t1;
+        if (yae::parse_time(t1, end.c_str(), ":", "."))
+        {
+          tmax = std::max(tmax, t1);
+        }
+      }
+    }
+
+    if (tmax <= tmin &&
+        sub.pts &&
+        sub.end_display_time != std::numeric_limits<uint32_t>::max())
+    {
+#if 0
+      tmax = tmin + TTime(sub.end_display_time - sub.start_display_time, 1000);
+      tmax = tmax.rebased(100);
+#else
+      tmin = tmax - TTime(sub.end_display_time - sub.start_display_time, 1000);
+      tmin = tmin.rebased(100);
+#endif
+    }
+
+    return tmin <= tmax;
+  }
+
+  //----------------------------------------------------------------
   // CaptionsDecoder::decode
   //
   void
@@ -817,16 +882,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         continue;
       }
 
+      // just parse the time stamp from the Dialogue, it's less broken
       TSubsFrame sf;
       sf.traits_ = kSubsCEA608;
       sf.render_ = true;
       sf.rewriteTimings_ = true;
-      sf.time_.base_ = AV_TIME_BASE;
-      sf.tEnd_.base_ = AV_TIME_BASE;
-      sf.tEnd_.time_ = std::numeric_limits<int64>::max();
 
-      if (packet.pts != AV_NOPTS_VALUE)
+      if (!parse_timespan(sub, sf.time_, sf.tEnd_) &&
+          packet.pts != AV_NOPTS_VALUE)
       {
+        sf.time_.base_ = AV_TIME_BASE;
+        sf.tEnd_.base_ = AV_TIME_BASE;
+        sf.tEnd_.time_ = std::numeric_limits<int64>::max();
+
         int64_t ptsPkt = av_rescale_q(packet.pts,
                                       timeBase,
                                       kAvTimeBase);
@@ -838,6 +906,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         sf.tEnd_.time_ = endPkt;
       }
 
+      sf.tEnd_ = std::max(sf.tEnd_, sf.time_ + TTime(1001, 30000));
+
       std::string header((const char *)(ccDec->subtitle_header),
                          (const char *)(ccDec->subtitle_header +
                                         ccDec->subtitle_header_size));
@@ -847,15 +917,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       std::size_t sz = header.size();
       sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
                                     &TSubsPrivate::deallocator);
-      captions_[n].last_ = sf;
-
-      if (packet.duration)
+      if (sub.num_rects)
       {
-        captions_[n].push(sf, terminator);
+        SubtitlesTrack & captions = captions_[n];
+        TSubsFrame & last = captions.last_;
+
+        // try to avoid introducing flicker with roll-up captions:
+        int64_t nframes = (sf.time_.get(30000) - last.tEnd_.get(30000)) / 1001;
+        if (nframes < 3)
+        {
+          sf.time_ = last.tEnd_;
+        }
+
+        last = sf;
+        captions.push(sf, terminator);
       }
     }
 
     // extend the duration of the most recent caption to cover current frame:
+    TTime ptsNow = TTime(pts * timeBase.num, timeBase.den).rebased(30000);
+    TTime ptsNext = ptsNow + TTime(1001, 30000);
+
     for (unsigned int i = 0; i < 4; i++)
     {
       if (!cc_[i])
@@ -863,34 +945,20 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         continue;
       }
 
-      // shortcut:
       SubtitlesTrack & captions = captions_[i];
-
-      // set timebase at twice the actual framerate:
-      Rational tb(1001, 60000);
-
-      // shift back by half a frame duration to avoid flickering captions
-      // due to small-error timestamp mismatch between PTS and libass timestamp
-      int64_t ptsNow =
-        av_rescale_q(pts, timeBase, kAvTimeBase) -
-        av_rescale_q(1, tb, kAvTimeBase);
-
-      int64_t ptsNext = ptsNow + av_rescale_q(2, tb, kAvTimeBase);
-
       TSubsFrame & last = captions.last_;
-      if (last.tEnd_.base_ == AV_TIME_BASE &&
-          last.tEnd_.time_ < ptsNext &&
+      int64_t nframes = (ptsNext.get(30000) - last.tEnd_.get(30000)) / 1001;
 
-          // avoid extending caption duration indefinitely:
-          last.tEnd_ < last.time_ + 12.0)
+      // avoid extending caption duration indefinitely:
+      if (nframes && last.tEnd_ < last.time_ + 12.0)
       {
-        int64_t ptsPrev = last.tEnd_.time_;
-        last.tEnd_.time_ = ptsNext;
+        TTime ptsPrev = last.tEnd_;
+        last.tEnd_ += TTime(nframes * 1001, 30000);
 
         // avoid creating overlapping ASS events,
         // better to create short adjacent events instead:
         TSubsFrame sf(last);
-        sf.time_.time_ = ptsPrev;
+        sf.time_ = ptsPrev;
         captions.push(sf, terminator);
       }
     }
