@@ -212,6 +212,15 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // next
+  //
+  TRecordingPtr
+  next(const TRecordingPtr & after_this,
+       const std::map<uint32_t, TScheduledRecordings> & recordings,
+       uint32_t ch_num,
+       uint32_t gpt_time);
+
+  //----------------------------------------------------------------
   // find
   //
   TRecordingPtr

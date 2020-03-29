@@ -907,7 +907,7 @@ namespace yae
   {
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
     uint64_t t_gps = unix_epoch_time_to_gps_time(start_live_seek_pos_.get(1));
-    live_rec_ = yae::find(view_.rec_by_channel_, live_ch, t_gps + 10);
+    live_rec_ = yae::next(live_rec_, view_.rec_by_channel_, live_ch, t_gps);
 
     IReaderPtr reader = playbackRecording(live_rec_);
     if (reader)
@@ -942,6 +942,7 @@ namespace yae
   void
   MainWindow::stopLivePlayback()
   {
+    start_live_playback_.stop();
     dvr_.close_live();
     live_rec_.reset();
   }

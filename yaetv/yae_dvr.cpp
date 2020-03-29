@@ -1129,10 +1129,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // find
+  // next
   //
   TRecordingPtr
-  find(const std::map<uint32_t, TScheduledRecordings> & recordings,
+  next(const TRecordingPtr & after_this,
+       const std::map<uint32_t, TScheduledRecordings> & recordings,
        uint32_t ch_num,
        uint32_t gps_time)
   {
@@ -1168,15 +1169,27 @@ namespace yae
     TScheduledRecordings::const_iterator it = schedule.upper_bound(gps_time);
     if (it == schedule.end())
     {
-      TScheduledRecordings::const_reverse_iterator it = schedule.rbegin();
-      rec_gps_t0 = it->first;
-      rec_ptr = it->second;
+      TScheduledRecordings::const_reverse_iterator rit = schedule.rbegin();
+      it = std::next(rit).base();
+      YAE_ASSERT(rit->second == it->second);
     }
     else if (it != schedule.begin())
     {
       --it;
+    }
+
+    while (it != schedule.end())
+    {
       rec_gps_t0 = it->first;
       rec_ptr = it->second;
+
+      if (!after_this || after_this->gps_t0_ < rec_ptr->gps_t0_)
+      {
+        break;
+      }
+
+      rec_ptr.reset();
+      ++it;
     }
 
     if (!rec_ptr)
@@ -1187,10 +1200,21 @@ namespace yae
     const Recording & rec = *rec_ptr;
     if (gps_time < rec_gps_t0 || rec.gps_t1_ <= gps_time)
     {
-      return TRecordingPtr();
+      return after_this;
     }
 
     return rec_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // find
+  //
+  TRecordingPtr
+  find(const std::map<uint32_t, TScheduledRecordings> & recordings,
+       uint32_t ch_num,
+       uint32_t gps_time)
+  {
+    return yae::next(TRecordingPtr(), recordings, ch_num, gps_time);
   }
 
   //----------------------------------------------------------------
