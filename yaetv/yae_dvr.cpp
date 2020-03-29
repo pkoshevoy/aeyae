@@ -302,9 +302,10 @@ namespace yae
       }
     }
 
-    if (when_)
+    Timespan timespan = when_ ? *when_ : Timespan();
+    bool match_timespan = !timespan.empty();
+    if (match_timespan)
     {
-      const Timespan & timespan = *when_;
       TTime t0((program.tm_.tm_hour * 60 +
                 program.tm_.tm_min) * 60 +
                program.tm_.tm_sec, 1);
@@ -324,9 +325,9 @@ namespace yae
       }
     }
 
-    if (weekday_mask_)
+    uint8_t weekday_mask = weekday_mask_ ? *weekday_mask_ : 0;
+    if (weekday_mask)
     {
-      uint8_t weekday_mask = *weekday_mask_;
       uint8_t program_wday = (1 << program.tm_.tm_wday);
       if ((weekday_mask & program_wday) != program_wday)
       {
@@ -334,7 +335,8 @@ namespace yae
       }
     }
 
-    if (!title_.empty())
+    bool match_title = !title_.empty();
+    if (match_title)
     {
       if (!rx_title_)
       {
@@ -348,7 +350,8 @@ namespace yae
       }
     }
 
-    if (!description_.empty())
+    bool match_description = !description_.empty();
+    if (match_description)
     {
       if (!rx_description_)
       {
@@ -362,7 +365,11 @@ namespace yae
       }
     }
 
-    if (channel_ && (date_ || weekday_mask_ || when_))
+    if (channel_ && (date_ ||
+                     weekday_mask ||
+                     match_timespan ||
+                     match_title ||
+                     match_description))
     {
       return true;
     }
@@ -385,16 +392,16 @@ namespace yae
       json["channel"] = major_minor;
     }
 
-    if (when_)
+    if (when_ && !when_->empty())
     {
       Json::Value & when = json["when"];
       when["t0"] = when_->t0_.to_hhmmss();
       when["t1"] = when_->t1_.to_hhmmss();
     }
 
-    if (weekday_mask_)
+    const uint16_t weekday_mask = weekday_mask_ ? *weekday_mask_ : 0;
+    if (weekday_mask)
     {
-      const uint16_t weekday_mask = *weekday_mask_;
       const char * separator = "";
       std::ostringstream oss;
       for (int i = 0; i < 7; i++)
@@ -477,7 +484,14 @@ namespace yae
       Timespan ts;
       YAE_EXPECT(yae::parse_time(ts.t0_, t0.c_str(), ":", "."));
       YAE_EXPECT(yae::parse_time(ts.t1_, t1.c_str(), ":", "."));
-      when_.reset(ts);
+      if (ts.empty())
+      {
+        when_.reset();
+      }
+      else
+      {
+        when_.reset(ts);
+      }
     }
 
     if (json.isMember("weekdays"))
@@ -520,7 +534,14 @@ namespace yae
         }
       }
 
-      weekday_mask_.reset(weekday_mask);
+      if (weekday_mask)
+      {
+        weekday_mask_.reset(weekday_mask);
+      }
+      else
+      {
+        weekday_mask_.reset();
+      }
     }
 
     yae::load(json, "date", date_);
