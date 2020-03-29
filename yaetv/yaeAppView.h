@@ -86,6 +86,38 @@ namespace yae
     // helper:
     TRecordingPtr now_playing() const;
 
+    //----------------------------------------------------------------
+    // Playback
+    //
+    struct Playback
+    {
+      Playback(const std::string & playlist = std::string(),
+               const std::string & filename = std::string(),
+               const std::string & basepath = std::string()):
+        playlist_(playlist),
+        filename_(filename),
+        basepath_(basepath)
+      {}
+
+      std::string playlist_;
+      std::string filename_;
+      std::string basepath_;
+    };
+
+    //----------------------------------------------------------------
+    // ChanTime
+    //
+    struct ChanTime
+    {
+      ChanTime(uint32_t ch_num, uint32_t gps_time):
+        ch_num_(ch_num),
+        gps_time_(gps_time)
+      {}
+
+      uint32_t ch_num_;
+      uint32_t gps_time_;
+    };
+
   signals:
     void toggle_fullscreen();
     void confirm_delete(TRecordingPtr);
@@ -111,6 +143,7 @@ namespace yae
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
     void add_wishlist_item();
+    void add_wishlist_item(const yae::shared_ptr<ChanTime> & program_sel);
     void edit_wishlist_item(const std::string & row_id);
     void remove_wishlist_item(const std::string & wi_key);
     void save_wishlist_item();
@@ -174,40 +207,7 @@ namespace yae
     // all recordings, indexed by channel and gps start time:
     std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
 
-    //----------------------------------------------------------------
-    // Playback
-    //
-    struct Playback
-    {
-      Playback(const std::string & playlist = std::string(),
-               const std::string & filename = std::string(),
-               const std::string & basepath = std::string()):
-        playlist_(playlist),
-        filename_(filename),
-        basepath_(basepath)
-      {}
-
-      std::string playlist_;
-      std::string filename_;
-      std::string basepath_;
-    };
-
     yae::shared_ptr<Playback> now_playing_;
-
-    //----------------------------------------------------------------
-    // ChanTime
-    //
-    struct ChanTime
-    {
-      ChanTime(uint32_t ch_num, uint32_t gps_time):
-        ch_num_(ch_num),
-        gps_time_(gps_time)
-      {}
-
-      uint32_t ch_num_;
-      uint32_t gps_time_;
-    };
-
     yae::shared_ptr<ChanTime> program_sel_;
 
     std::map<uint32_t, std::size_t> ch_index_;

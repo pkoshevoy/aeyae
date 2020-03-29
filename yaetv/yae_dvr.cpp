@@ -334,7 +334,6 @@ namespace yae
       }
     }
 
-    bool ok = false;
     if (!title_.empty())
     {
       if (!rx_title_)
@@ -342,10 +341,10 @@ namespace yae
         rx_title_.reset(boost::regex(title_, boost::regex::icase));
       }
 
-      if (program.title_ == title_ ||
-          boost::regex_match(program.title_, *rx_title_))
+      if (!(program.title_ == title_ ||
+            boost::regex_match(program.title_, *rx_title_)))
       {
-        ok = true;
+        return false;
       }
     }
 
@@ -356,14 +355,19 @@ namespace yae
         rx_description_.reset(boost::regex(description_, boost::regex::icase));
       }
 
-      if (program.description_ == description_ ||
-          boost::regex_match(program.description_, *rx_description_))
+      if (!(program.description_ == description_ ||
+            boost::regex_match(program.description_, *rx_description_)))
       {
-        ok = true;
+        return false;
       }
     }
 
-    return ok || (channel_ && (date_ || weekday_mask_ || when_));
+    if (channel_ && (date_ || weekday_mask_ || when_))
+    {
+      return true;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------

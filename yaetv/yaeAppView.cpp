@@ -1516,6 +1516,35 @@ namespace yae
     AppView & view_;
   };
 
+  //----------------------------------------------------------------
+  // ProgramDetailsAddWishlist
+  //
+  struct ProgramDetailsAddWishlist : public InputArea
+  {
+    ProgramDetailsAddWishlist(const char * id, AppView & view):
+      InputArea(id),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      yae::shared_ptr<AppView::ChanTime> program_sel = view_.program_sel_;
+      view_.program_sel_.reset();
+      view_.requestUncache();
+      view_.add_wishlist_item(program_sel);
+      return true;
+    }
+
+    AppView & view_;
+  };
+
 
   //----------------------------------------------------------------
   // ToggleRecording
@@ -4134,6 +4163,47 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::add_wishlist_item
+  //
+  void
+  AppView::add_wishlist_item(const yae::shared_ptr<ChanTime> & program_sel)
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+
+    sidebar_sel_ = "wl: add";
+
+    Wishlist::Item wi;
+    if (program_sel)
+    {
+      uint32_t ch_num = program_sel->ch_num_;
+      uint32_t gps_time = program_sel->gps_time_;
+
+      const yae::mpeg_ts::EPG::Channel * channel = NULL;
+      const yae::mpeg_ts::EPG::Program * program = NULL;
+
+      if (epg_.find(ch_num, gps_time, channel, program))
+      {
+        TTime t0((program->tm_.tm_hour * 60 +
+                  program->tm_.tm_min) * 60 +
+                 program->tm_.tm_sec, 1);
+
+        wi.title_ = program->title_;
+        wi.weekday_mask_ = (1 << program->tm_.tm_wday);
+        wi.when_ = Timespan(t0, t0 + TTime(program->duration_, 1));
+        wi.channel_ = std::make_pair(channel->major_, channel->minor_);
+      }
+    }
+
+    wi_edit_.reset(new std::pair<std::string, Wishlist::Item>
+                   (std::string(), wi));
+
+    wishlist_ui_->uncache();
+    requestRepaint();
+  }
+
+  //----------------------------------------------------------------
   // AppView::edit_wishlist_item
   //
   void
@@ -5043,9 +5113,11 @@ namespace yae
 
     RoundRect & bg_toggle = body.addNew<RoundRect>("bg_toggle");
     RoundRect & bg_close = body.addNew<RoundRect>("bg_close");
+    RoundRect & bg_add_wi = body.addNew<RoundRect>("bg_add_wi");
 
     Text & tx_toggle = body.addNew<Text>("tx_toggle");
     Text & tx_close = body.addNew<Text>("tx_close");
+    Text & tx_add_wi = body.addNew<Text>("tx_add_wi");
 
     tx_toggle.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
     tx_toggle.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
@@ -5100,6 +5172,33 @@ namespace yae
     CloseProgramDetails & on_close = bg_close.
       add(new CloseProgramDetails("on_close", *this));
     on_close.anchors_.fill(bg_close);
+
+    tx_add_wi.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
+    tx_add_wi.anchors_.right_ = ItemRef::reference(paragraphs, kPropertyRight);
+    tx_add_wi.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
+    tx_add_wi.text_ = TVarRef::constant(TVar("New Wishlist"));
+    tx_add_wi.color_ = tx_add_wi.
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    tx_add_wi.background_ = tx_add_wi.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    tx_add_wi.fontSize_ = tx_toggle.fontSize_;
+    tx_add_wi.elide_ = Qt::ElideNone;
+    tx_add_wi.setAttr("oneline", true);
+
+    bg_add_wi.anchors_.fill(tx_add_wi);
+    bg_add_wi.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_add_wi.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+    bg_add_wi.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_add_wi.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+    bg_add_wi.color_ = bg_add_wi.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+    bg_add_wi.background_ = bg_add_wi.
+      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_add_wi.radius_ = ItemRef::scale(bg_add_wi, kPropertyHeight, 0.1);
+
+    ProgramDetailsAddWishlist & on_add_wi = bg_add_wi.
+      add(new ProgramDetailsAddWishlist("on_add_wi", *this));
+    on_add_wi.anchors_.fill(bg_add_wi);
   }
 
   //----------------------------------------------------------------
