@@ -611,14 +611,23 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      mainWindow_.playerWindow_.stopAndHide();
-      mainWindow_.view_.now_playing_.reset();
-
-      const Recording & rec = *rec_;
+      // shortcuts:
       DVR & dvr = mainWindow_.dvr_;
-      dvr.delete_recording(rec);
-
       AppView & appView = mainWindow_.view_;
+      const Recording & rec = *rec_;
+
+      if (appView.now_playing_)
+      {
+        std::string filename = rec.get_basename() + ".mpg";
+
+        if (appView.now_playing_->filename_ == filename)
+        {
+          mainWindow_.playerWindow_.stopAndHide();
+          appView.now_playing_.reset();
+        }
+      }
+
+      dvr.delete_recording(rec);
       appView.sync_ui();
       appView.requestRepaint();
     }
@@ -669,10 +678,21 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      mainWindow_.playerWindow_.stopAndHide();
-      mainWindow_.view_.now_playing_.reset();
-
+      // shortcuts:
       AppView & appView = mainWindow_.view_;
+      const Recording & rec = *rec_;
+
+      if (appView.now_playing_)
+      {
+        std::string filename = rec.get_basename() + ".mpg";
+
+        if (appView.now_playing_->filename_ == filename)
+        {
+          mainWindow_.playerWindow_.stopAndHide();
+          mainWindow_.view_.now_playing_.reset();
+        }
+      }
+
       appView.sync_ui();
       appView.requestRepaint();
     }
