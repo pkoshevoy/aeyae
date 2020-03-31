@@ -11,6 +11,7 @@
 
 // std includes:
 #include <cstdio>
+#include <iterator>
 #include <list>
 #include <map>
 #include <math.h>
@@ -1447,6 +1448,18 @@ namespace yae
     TFuncPtr func_;
     void * context_;
   };
+
+  //----------------------------------------------------------------
+  // next
+  //
+  template <typename TIter>
+  TIter
+  next(const TIter & iter, std::size_t n = 1)
+  {
+    TIter i = iter;
+    std::advance(i, n);
+    return i;
+  }
 
 }
 

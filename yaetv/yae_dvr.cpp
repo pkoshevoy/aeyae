@@ -1191,7 +1191,7 @@ namespace yae
     if (it == schedule.end())
     {
       TScheduledRecordings::const_reverse_iterator rit = schedule.rbegin();
-      it = std::next(rit).base();
+      it = yae::next(rit).base();
       YAE_ASSERT(rit->second == it->second);
     }
     else if (it != schedule.begin())
