@@ -2127,12 +2127,15 @@ namespace yae
         file.close();
 
         const struct tm & date = *(item.date_);
-        const Timespan & timespan = *(item.when_);
-
-        int64_t t1 = localtime_to_unix_epoch_time(date) + timespan.dt().get(1);
-        if (now < t1)
+        if (item.when_)
         {
-          continue;
+          const Timespan & when = *(item.when_);
+
+          int64_t t1 = localtime_to_unix_epoch_time(date) + when.dt().get(1);
+          if (now < t1)
+          {
+            continue;
+          }
         }
       }
 

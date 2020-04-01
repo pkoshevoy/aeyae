@@ -166,6 +166,10 @@ BOOST_AUTO_TEST_CASE(yae_parse_time)
   BOOST_CHECK(parse_time(t, "20:53:28.57", ":", "."));
   BOOST_CHECK_EQUAL(100, t.base_);
 
+  BOOST_CHECK_EQUAL(TTime(0, 1).to_hhmmss(), std::string("00:00:00"));
+  BOOST_CHECK_EQUAL(TTime(-1, 1).to_hhmmss(), std::string("-00:00:01"));
+  BOOST_CHECK(!parse_time(t, "00:00:-1", ":", "."));
+
   int64_t x = t.time_;
   int64_t cs = x % 100;
   BOOST_CHECK_EQUAL(57, cs);
