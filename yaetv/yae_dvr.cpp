@@ -1219,7 +1219,7 @@ namespace yae
     }
 
     const Recording & rec = *rec_ptr;
-    if (gps_time < rec_gps_t0 || rec.gps_t1_ <= gps_time)
+    if (!after_this && (gps_time < rec_gps_t0 || rec.gps_t1_ <= gps_time))
     {
       return after_this;
     }
