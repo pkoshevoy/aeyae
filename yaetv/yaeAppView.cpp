@@ -2374,7 +2374,7 @@ namespace yae
       bool same_blacklist = (blacklist.channels_ == blacklist_.channels_);
 
       std::map<std::string, TChannels> channels;
-      dvr_->hdhr_.get_channels(channels);
+      dvr_->get_channels(channels);
       bool same_channels = (channels == channels_);
 
       std::map<uint32_t, TScheduledRecordings> schedule;

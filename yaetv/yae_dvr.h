@@ -43,6 +43,20 @@ namespace yae
   struct DVR;
 
   //----------------------------------------------------------------
+  // TChannelNames
+  //
+  // channel names indexed by channel_minor
+  //
+  typedef std::map<uint16_t, std::string> TChannelNames;
+
+  //----------------------------------------------------------------
+  // TChannels
+  //
+  // indexed by channel_major
+  //
+  typedef std::map<uint16_t, TChannelNames> TChannels;
+
+  //----------------------------------------------------------------
   // Wishlist
   //
   struct Wishlist
@@ -346,7 +360,8 @@ namespace yae
              const std::string & frequency);
       ~Stream();
 
-      void open(const yae::shared_ptr<Stream, IStream> & self_ptr);
+      void open(const yae::shared_ptr<Stream, IStream> & self_ptr,
+                const yae::TWorkerPtr & worker_ptr);
 
       virtual void close();
       virtual bool is_open() const;
@@ -396,10 +411,14 @@ namespace yae
     void scan_channels();
     void update_epg();
 
+    TStreamPtr capture_stream(const HDHomeRun::TSessionPtr & session_ptr,
+                              const std::string & frequency,
+                              const TTime & duration);
+
     TStreamPtr capture_stream(const std::string & frequency,
                               const TTime & duration);
 
-    TWorkerPtr get_stream_worker(const std::string & frequency);
+    void no_signal(const std::string & frequency);
 
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
     void get(Blacklist & blacklist) const;
@@ -505,6 +524,24 @@ namespace yae
 
     bool get_cached_epg(TTime & lastmod, yae::mpeg_ts::EPG & epg) const;
 
+    void get_tuner_cache(const std::string & device_name,
+                         Json::Value & tuner_cache) const;
+
+    void update_tuner_cache(const std::string & device_name,
+                            const Json::Value & tuner_cache);
+
+  protected:
+    void update_channel_frequency_luts();
+
+  public:
+    // fill in the major.minor -> frequency lookup table:
+    void get_channels(std::map<uint32_t, std::string> & chan_freq) const;
+    void get_channels(std::map<std::string, TChannels> & channels) const;
+    bool get_channels(const std::string & freq, TChannels & channels) const;
+
+    // helper:
+    uint16_t get_channel_major(const std::string & frequency) const;
+
     // protect against concurrent access:
     mutable boost::mutex mutex_;
 
@@ -532,6 +569,11 @@ namespace yae
     TTime margin_;
 
   protected:
+    mutable boost::mutex tuner_cache_mutex_;
+    Json::Value tuner_cache_;
+    std::map<uint32_t, std::string> channel_frequency_lut_;
+    std::map<std::string, TChannels> frequency_channel_lut_;
+
     TTime next_channel_scan_;
     TTime next_epg_refresh_;
     TTime next_schedule_refresh_;

@@ -5245,12 +5245,13 @@ namespace yae
       static const int64_t err_threshold_sec = 60;
       if (abs_err >= err_threshold_sec)
       {
-
+#if 0
         int64_t roundup_err = 60 * ((err + 30 * (err / abs_err)) / 60);
         yae_wlog("%sactual GPS time differs from expected GPS time "
                  "by approximately %s",
                  log_prefix_.c_str(),
                  TTime(roundup_err, 1).to_short_txt().c_str());
+#endif
         stt_error_ = err;
       }
 
@@ -5803,7 +5804,7 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::get_epg_bucket
+    // Context::get_epg_bucket_nolock
     //
     const Bucket &
     Context::get_epg_bucket_nolock(uint32_t gps_time) const
@@ -5937,6 +5938,35 @@ namespace yae
         boost::unique_lock<boost::mutex> lock(mutex_);
         const Bucket & bucket = bucket_[bx];
         get_epg_nolock(bucket, epg, lang);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // Context::get_channels
+    //
+    void
+    Context::get_channels(std::map<uint32_t, EPG::Channel> & channels,
+                          const std::string & lang) const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      uint32_t gps_time = gps_time_now();
+      const Bucket & bucket = get_epg_bucket_nolock(gps_time);
+
+      for (std::map<uint32_t, ChannelGuide>::const_iterator
+             i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
+      {
+        const uint32_t ch_num = i->first;
+        EPG::Channel & channel = channels[ch_num];
+        channel.major_ = channel_major(ch_num);
+        channel.minor_ = channel_minor(ch_num);
+
+        const ChannelGuide & guide = i->second;
+        channel.name_ = guide.name_;
+
+        if (!guide.channel_etm_.empty())
+        {
+          channel.description_ = get_text(guide.channel_etm_, lang);
+        }
       }
     }
 

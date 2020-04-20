@@ -603,7 +603,7 @@ namespace yae
 
       // bootstrap_blacklist(dvr);
       // bootstrap_wishlist(dvr);
-
+#if 0
       // NOTE: this list will not include any tuners that are currently
       // locked (in use by another application):
       std::list<std::string> available_tuners;
@@ -618,6 +618,7 @@ namespace yae
         // resuts for this tuner:
         YAE_EXPECT(dvr.hdhr_.init(tuner_name));
       }
+#endif
 
       yae::Worker dummy;
       service_loop.execute(dummy);

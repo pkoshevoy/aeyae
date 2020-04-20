@@ -202,6 +202,7 @@ namespace yae
       {
         qApp->postEvent(target_, new Discover());
 
+#if 0
         std::list<std::string> available_tuners;
         dvr_.hdhr_.discover_tuners(available_tuners);
 
@@ -215,6 +216,7 @@ namespace yae
           // resuts for this tuner:
           YAE_EXPECT(dvr_.hdhr_.init(tuner_name));
         }
+#endif
       }
       catch (const std::exception & e)
       {

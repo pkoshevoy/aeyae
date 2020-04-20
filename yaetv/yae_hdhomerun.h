@@ -61,8 +61,7 @@ namespace yae
   //
   struct IStream
   {
-    virtual ~IStream() {}
-
+    virtual ~IStream();
     virtual void close() = 0;
     virtual bool is_open() const = 0;
 
@@ -76,18 +75,54 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // TChannelNames
+  // TunerDevice
   //
-  // channel names indexed by channel_minor
-  //
-  typedef std::map<uint16_t, std::string> TChannelNames;
+  struct TunerDevice
+  {
+    virtual ~TunerDevice();
+    virtual int num_tuners() const = 0;
+    virtual std::string name() const = 0;
+    virtual std::string tuner_name(int tuner_index) const = 0;
+  };
 
   //----------------------------------------------------------------
-  // TChannels
+  // TunerDevicePtr
   //
-  // indexed by channel_major
+  typedef yae::shared_ptr<TunerDevice> TunerDevicePtr;
+
+
+  //----------------------------------------------------------------
+  // TunerStatus
   //
-  typedef std::map<uint16_t, TChannelNames> TChannels;
+  struct TunerStatus
+  {
+    TunerStatus(bool signal_present = false,
+                uint32_t signal_strength = 0,
+                uint32_t signal_to_noise_quality = 0,
+                uint32_t symbol_error_quality = 0);
+
+    bool signal_present_;
+    uint32_t signal_strength_;
+    uint32_t signal_to_noise_quality_;
+    uint32_t symbol_error_quality_;
+  };
+
+
+  //----------------------------------------------------------------
+  // TunerChannel
+  //
+  struct TunerChannel
+  {
+    TunerChannel(uint16_t ch_number = 0,
+                 uint32_t frequency = 0);
+
+    inline std::string frequency_str() const
+    { return boost::lexical_cast<std::string>(frequency_); }
+
+    uint16_t ch_number_;
+    uint32_t frequency_;
+    std::string name_;
+  };
 
 
   //----------------------------------------------------------------
@@ -98,8 +133,13 @@ namespace yae
     HDHomeRun(const std::string & cache_dir);
     ~HDHomeRun();
 
-    void discover_tuners(std::list<std::string> & tuners);
-    bool init(const std::string & tuner_name);
+    void discover_devices(std::list<TunerDevicePtr> & devices);
+
+    void get_channel_list(std::list<TunerChannel> & channels,
+                          const char * chanel_map = "us-bcast") const;
+
+    // void discover_tuners(std::list<std::string> & tuners);
+    // bool init(const std::string & tuner_name);
 
     //----------------------------------------------------------------
     // Session
@@ -112,11 +152,14 @@ namespace yae
       Session();
       ~Session();
 
+      const std::string & device_name() const;
       const std::string & tuner_name() const;
 
+      bool exclusive() const;
       bool expired() const;
       void extend(const TTime & t);
       void finish();
+      void get_tuner_status(TunerStatus & tuner_status) const;
 
     protected:
       Session(const Session &);
@@ -132,22 +175,19 @@ namespace yae
     TSessionPtr open_session(uint32_t frequency = 0);
 
     // grab a specific tuner, if available:
-    TSessionPtr open_session(const std::string & tuner);
+    TSessionPtr open_session(const std::string & tuner,
 
-    bool scan_channels(TSessionPtr session_ptr,
-                       const IAssert & keep_going);
+                             // for channel scanning session
+                             // should not be shared:
+                             bool exclusive_session = false);
+
+    bool tune_to(const HDHomeRun::TSessionPtr & session_ptr,
+                 const uint32_t frequency,
+                 TunerStatus & status);
 
     void capture(TSessionPtr session_ptr,
                  yae::weak_ptr<IStream> stream_ptr,
                  const std::string & frequency);
-
-    // fill in the major.minor -> frequency lookup table:
-    bool get_channels(std::map<uint32_t, std::string> & chan_freq) const;
-    bool get_channels(const std::string & freq, TChannels & channels) const;
-    bool get_channels(std::map<std::string, TChannels> & channels) const;
-
-    // helper:
-    uint16_t get_channel_major(const std::string & frequency) const;
 
   protected:
     // intentionally disabled:

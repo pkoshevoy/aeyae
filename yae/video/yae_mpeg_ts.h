@@ -2438,6 +2438,10 @@ namespace yae
       void get_epg(yae::mpeg_ts::EPG & epg,
                    const std::string & lang = std::string("eng")) const;
 
+      // channels, indexed by major.minor:
+      void get_channels(std::map<uint32_t, EPG::Channel> & channels,
+                        const std::string & lang = std::string("eng")) const;
+
       bool channel_guide_overlaps(int64_t t) const;
 
       void save(Json::Value & json) const;

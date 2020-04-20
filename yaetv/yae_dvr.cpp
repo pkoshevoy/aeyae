@@ -1754,7 +1754,7 @@ namespace yae
       std::string tuner_name = session_->tuner_name();
       oss << tuner_name << " " << frequency << "Hz";
 
-      uint16_t channel_major = dvr_.hdhr_.get_channel_major(frequency_);
+      uint16_t channel_major = dvr_.get_channel_major(frequency_);
       if (channel_major)
       {
         oss << ", channel major " << channel_major;
@@ -1779,12 +1779,13 @@ namespace yae
   // DVR::Stream::open
   //
   void
-  DVR::Stream::open(const DVR::TStreamPtr & stream_ptr)
+  DVR::Stream::open(const DVR::TStreamPtr & stream_ptr,
+                    const yae::TWorkerPtr & worker_ptr)
   {
     yae::shared_ptr<CaptureStream, yae::Worker::Task> task;
     task.reset(new CaptureStream(stream_ptr));
 
-    worker_ = dvr_.get_stream_worker(frequency_);
+    worker_ = worker_ptr;
     worker_->add(task);
     worker_->start();
   }
@@ -2008,6 +2009,13 @@ namespace yae
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
     cleanup_yaetv_dir();
 
+    // load the tuner cache:
+    {
+      std::string path = (yaetv_ / "tuners.json").string();
+      yae::TOpenFile(path, "rb").load(tuner_cache_);
+      update_channel_frequency_luts();
+    }
+
     // load the blacklist:
     load_blacklist();
 
@@ -2172,7 +2180,7 @@ namespace yae
     {
       // NOTE: this assumes hdhr_.discover_tuners(..), hdhr_.init(tuner)
       // has already happened:
-      hdhr_.get_channels(frequencies);
+      DVR::get_channels(frequencies);
     }
 
     // load the EPG:
@@ -2251,12 +2259,58 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // save_epg
+  //
+  void
+  save_epg(const DVR & dvr,
+           const std::string & frequency,
+           const yae::mpeg_ts::Context & ctx)
+  {
+    dvr.save_epg(frequency, ctx);
+    dvr.save_frequencies();
+
+    ctx.dump();
+
+#if 0
+    // also store it to disk, to help with post-mortem debugging:
+    yae::mpeg_ts::EPG epg;
+    ctx.get_epg_now(epg);
+
+    int64_t t = yae::TTime::now().get(1);
+    t -= t % 1800; // round-down to half-hour:
+
+    struct tm tm;
+    yae::unix_epoch_time_to_localtime(t, tm);
+
+    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
+    {
+      const yae::mpeg_ts::EPG::Channel & channel = i->second;
+      std::string fn = strfmt("epg-%02i.%02i-%02u%02u.json",
+                              channel.major_,
+                              channel.minor_,
+                              tm.tm_hour,
+                              tm.tm_min);
+
+      Json::Value json;
+      yae::mpeg_ts::save(json, channel);
+      yae::TOpenFile((dvr.yaetv_ / fn).string(), "wb").save(json);
+    }
+#endif
+  }
+
+
+  //----------------------------------------------------------------
   // ScanChannels
   //
   struct ScanChannels : yae::Worker::Task
   {
     ScanChannels(DVR & dvr);
 
+    // helper:
+    bool tune_and_scan(HDHomeRun::TSessionPtr session_ptr,
+                       const TunerChannel & tuner_channel,
+                       TunerStatus & tuner_status);
     // virtual:
     void execute(const yae::Worker & worker);
     void cancel();
@@ -2273,6 +2327,105 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // ScanChannels::tune_and_scan
+  //
+  bool
+  ScanChannels::tune_and_scan(HDHomeRun::TSessionPtr session_ptr,
+                              const TunerChannel & tuner_channel,
+                              TunerStatus & tuner_status)
+  {
+    std::string frequency = tuner_channel.frequency_str();
+    DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
+    if (!handler_ptr)
+    {
+      handler_ptr.reset(new DVR::PacketHandler(dvr_));
+    }
+
+    const DVR::PacketHandler & packet_handler = *handler_ptr;
+    const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+#if 0
+    const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
+    TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
+    YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
+
+    if (elapsed_time_since_mgt < dvr_.epg_refresh_period_)
+    {
+      yae_ilog("%s skipping channel scan update for %s",
+               session_ptr->device_name().c_str(),
+               frequency.c_str());
+      return false;
+    }
+#endif
+    if (!dvr_.hdhr_.tune_to(session_ptr,
+                            tuner_channel.frequency_,
+                            tuner_status))
+    {
+      yae_ilog("%s channel scan failed to tune to %u",
+               session_ptr->device_name().c_str(),
+               tuner_channel.frequency_);
+      return true;
+    }
+
+    static const TTime sample_dur(30, 1);
+    DVR::TStreamPtr stream_ptr = dvr_.capture_stream(session_ptr,
+                                                     frequency,
+                                                     sample_dur);
+    if (!stream_ptr)
+    {
+      yae_wlog("%s channel scan failed for %s",
+               session_ptr->device_name().c_str(),
+               frequency.c_str());
+      return false;
+    }
+
+    // wait until EPG is ready:
+    DVR::Stream & stream = *stream_ptr;
+    boost::system_time giveup_at(boost::get_system_time());
+    giveup_at += boost::posix_time::seconds(sample_dur.get(1));
+
+    yae_ilog("%sstarted channel scan for %s",
+             packet_handler.ctx_.log_prefix_.c_str(),
+             frequency.c_str());
+
+    bool done = false;
+    while (!done)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      if (yae::Worker::Task::cancelled_)
+      {
+        yae_wlog("%s channel scan cancelled for %s",
+                 session_ptr->device_name().c_str(),
+                 frequency.c_str());
+        break;
+      }
+
+      try
+      {
+        if (stream.epg_ready_.timed_wait(lock, giveup_at))
+        {
+          done = true;
+          break;
+        }
+      }
+      catch (...)
+      {}
+
+      boost::system_time now(boost::get_system_time());
+      if (giveup_at <= now)
+      {
+        done = true;
+        break;
+      }
+    }
+
+    session_ptr->get_tuner_status(tuner_status);
+    stream.close();
+    stream.worker_->wait_until_finished();
+
+    return done;
+  }
+
+  //----------------------------------------------------------------
   // ScanChannels::execute
   //
   void
@@ -2280,13 +2433,138 @@ namespace yae
   {
     (void)worker;
 
-    HDHomeRun::TSessionPtr session_ptr = dvr_.hdhr_.open_session();
-    if (!session_ptr)
-    {
-      return;
-    }
+    // FIXME: pkoshevoy: make channel_map configurable:
+    static const char * channel_map = "us-bcast";
+    std::list<TunerChannel> channels;
+    dvr_.hdhr_.get_channel_list(channels, channel_map);
 
-    dvr_.hdhr_.scan_channels(session_ptr, keep_going_);
+    std::list<TunerDevicePtr> devices;
+    dvr_.hdhr_.discover_devices(devices);
+
+    for (std::list<TunerDevicePtr>::const_iterator
+           i = devices.begin(); i != devices.end(); ++i)
+    {
+      if (yae::Worker::Task::cancelled_)
+      {
+        return;
+      }
+
+      // FIXME: pkoshevoy: check whether device is enabled in settings:
+      const TunerDevicePtr & device_ptr = *i;
+      const TunerDevice & device = *device_ptr;
+
+      Json::Value tuner_cache;
+      dvr_.get_tuner_cache(device.name(), tuner_cache);
+
+      int64_t timestamp = tuner_cache.get("timestamp", 0).asInt64();
+      int64_t now = yae::TTime::now().get(1);
+      int64_t elapsed = now - timestamp;
+      int64_t threshold = 10 * 24 * 60 * 60;
+
+      if (threshold < elapsed)
+      {
+        // cache is too old, purge it:
+        yae_ilog("%s channel scan cache expired", device.name().c_str());
+        tuner_cache.clear();
+      }
+
+      if (!tuner_cache.empty())
+      {
+        struct tm localtime;
+        yae::unix_epoch_time_to_localtime(timestamp, localtime);
+        std::string date = yae::to_yyyymmdd_hhmmss(localtime);
+
+        yae_ilog("%s skipping channel scan, using cache from %s",
+                 device.name().c_str(),
+                 date.c_str());
+        continue;
+      }
+
+      bool done = false;
+      int num_tuners = device.num_tuners();
+      for (int tuner = 0; !done && tuner < num_tuners; tuner++)
+      {
+        std::string tuner_name = device.tuner_name(tuner);
+        bool exclusive_session = true;
+
+        HDHomeRun::TSessionPtr session_ptr =
+          dvr_.hdhr_.open_session(tuner_name, exclusive_session);
+        if (!session_ptr)
+        {
+          continue;
+        }
+
+        for (std::list<TunerChannel>::const_iterator
+               k = channels.begin(); !done && k != channels.end(); ++k)
+        {
+          // check for cancellation:
+          if (yae::Worker::Task::cancelled_)
+          {
+            return;
+          }
+
+          const TunerChannel & tuner_channel = *k;
+          std::string frequency = tuner_channel.frequency_str();
+
+          TunerStatus tuner_status;
+          if (!tune_and_scan(session_ptr, tuner_channel, tuner_status))
+          {
+            if (!tuner_status.signal_present_)
+            {
+              dvr_.no_signal(frequency);
+            }
+            continue;
+          }
+
+          Json::Value & cache = tuner_cache["frequencies"][frequency];
+          Json::Value & status = cache["status"];
+          status["signal_present"] = tuner_status.signal_present_;
+          status["signal_strength"] = tuner_status.signal_strength_;
+          status["symbol_error_quality"] = tuner_status.symbol_error_quality_;
+          status["signal_to_noise_quality"] =
+            tuner_status.signal_to_noise_quality_;
+
+          DVR::TPacketHandlerPtr & handler_ptr =
+            dvr_.packet_handler_[frequency];
+          YAE_ASSERT(handler_ptr);
+
+          const DVR::PacketHandler & packet_handler = *handler_ptr;
+          const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+
+          std::map<uint32_t, yae::mpeg_ts::EPG::Channel> channels;
+          ctx.get_channels(channels);
+
+          Json::Value & programs = cache["programs"];
+          programs = Json::Value(Json::arrayValue);
+
+          for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+                 x = channels.begin(); x != channels.end(); ++x)
+          {
+            const yae::mpeg_ts::EPG::Channel & channel = x->second;
+            Json::Value p;
+            p["major"] = channel.major_;
+            p["minor"] = channel.minor_;
+            p["name"] = channel.name_;
+
+            if (!channel.description_.empty())
+            {
+              p["description"] = channel.description_;
+            }
+
+            programs.append(p);
+          }
+        }
+
+        done = true;
+      }
+
+      if (done)
+      {
+        tuner_cache["timestamp"] = now;
+        dvr_.update_tuner_cache(device.name(), tuner_cache);
+        dvr_.save_epg();
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -2322,9 +2600,6 @@ namespace yae
     void execute(const yae::Worker & worker);
 
     // helper:
-    void save_epg(const std::string & frequency,
-                  const yae::mpeg_ts::Context & ctx);
-
     DVR & dvr_;
   };
 
@@ -2346,7 +2621,7 @@ namespace yae
 
     static const TTime sample_dur(30, 1);
     std::map<uint32_t, std::string> channels;
-    dvr_.hdhr_.get_channels(channels);
+    dvr_.get_channels(channels);
 
     std::list<std::string> frequencies;
     std::map<std::string, uint16_t> channel_major;
@@ -2389,6 +2664,11 @@ namespace yae
     for (std::list<std::string>::const_iterator
            i = frequencies.begin(); i != frequencies.end(); ++i)
     {
+      if (yae::Worker::Task::cancelled_)
+      {
+        return;
+      }
+
       // shortuct:
       const std::string & frequency = *i;
       uint16_t major = yae::at(channel_major, frequency);
@@ -2411,7 +2691,7 @@ namespace yae
         yae_ilog("skipping EPG update for channels %i.* (%s)",
                  major,
                  frequency.c_str());
-        // save_epg(frequency, ctx);
+        // yae::save_epg(dvr_, frequency, ctx);
       }
       else
       {
@@ -2454,7 +2734,7 @@ namespace yae
             }
           }
 
-          save_epg(frequency, ctx);
+          yae::save_epg(dvr_, frequency, ctx);
         }
         else
         {
@@ -2467,46 +2747,6 @@ namespace yae
     }
   }
 
-  //----------------------------------------------------------------
-  // UpdateProgramGuide::save_epg
-  //
-  void
-  UpdateProgramGuide::save_epg(const std::string & frequency,
-                               const yae::mpeg_ts::Context & ctx)
-  {
-    dvr_.save_epg(frequency, ctx);
-    dvr_.save_frequencies();
-
-    ctx.dump();
-
-#if 0
-    // also store it to disk, to help with post-mortem debugging:
-    yae::mpeg_ts::EPG epg;
-    ctx.get_epg_now(epg);
-
-    int64_t t = yae::TTime::now().get(1);
-    t -= t % 1800; // round-down to half-hour:
-
-    struct tm tm;
-    yae::unix_epoch_time_to_localtime(t, tm);
-
-    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-           i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
-    {
-      const yae::mpeg_ts::EPG::Channel & channel = i->second;
-      std::string fn = strfmt("epg-%02i.%02i-%02u%02u.json",
-                              channel.major_,
-                              channel.minor_,
-                              tm.tm_hour,
-                              tm.tm_min);
-
-      Json::Value json;
-      yae::mpeg_ts::save(json, channel);
-      yae::TOpenFile((dvr_.yaetv_ / fn).string(), "wb").save(json);
-    }
-#endif
-  }
-
 
   //----------------------------------------------------------------
   // DVR::update_epg
@@ -2517,6 +2757,41 @@ namespace yae
     yae::shared_ptr<UpdateProgramGuide, yae::Worker::Task> task;
     task.reset(new UpdateProgramGuide(*this));
     worker_.add(task);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::capture_stream
+  //
+  DVR::TStreamPtr
+  DVR::capture_stream(const HDHomeRun::TSessionPtr & session_ptr,
+                      const std::string & frequency,
+                      const TTime & duration)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    TStreamPtr stream_ptr = stream_[frequency].lock();
+
+    if (stream_ptr && stream_ptr->session_)
+    {
+      YAE_ASSERT(stream_ptr->session_ != session_ptr);
+
+      // do not interfere with an existing session:
+      return DVR::TStreamPtr();
+    }
+
+    stream_ptr.reset(new Stream(*this, session_ptr, frequency));
+    Stream & stream = *stream_ptr;
+    HDHomeRun::Session & session = *stream.session_;
+    session.extend(TTime::now() + duration);
+
+    TWorkerPtr & worker_ptr = stream_worker_[frequency];
+    if (!worker_ptr)
+    {
+      worker_ptr.reset(new yae::Worker());
+    }
+
+    stream.open(stream_ptr, worker_ptr);
+
+    return stream_ptr;
   }
 
   //----------------------------------------------------------------
@@ -2548,28 +2823,39 @@ namespace yae
 
     Stream & stream = *stream_ptr;
     HDHomeRun::Session & session = *stream.session_;
+
+    if (session.exclusive())
+    {
+      // session sharing is not allowed:
+      return DVR::TStreamPtr();
+    }
+
     session.extend(TTime::now() + duration);
 
     if (!stream.is_open())
     {
-      stream.open(stream_ptr);
+      TWorkerPtr & worker_ptr = stream_worker_[frequency];
+      if (!worker_ptr)
+      {
+        worker_ptr.reset(new yae::Worker());
+      }
+
+      stream.open(stream_ptr, worker_ptr);
     }
 
     return stream_ptr;
   }
 
   //----------------------------------------------------------------
-  // DVR::get_stream_worker
+  // DVR::no_signal
   //
-  TWorkerPtr
-  DVR::get_stream_worker(const std::string & frequency)
+  void
+  DVR::no_signal(const std::string & frequency)
   {
-    TWorkerPtr & worker_ptr = stream_worker_[frequency];
-    if (!worker_ptr)
-    {
-      worker_ptr.reset(new yae::Worker());
-    }
-    return worker_ptr;
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    packet_handler_.erase(frequency);
+    stream_worker_.erase(frequency);
+    stream_.erase(frequency);
   }
 
   //----------------------------------------------------------------
@@ -2712,7 +2998,7 @@ namespace yae
       {
         const std::string & frequency = i->first;
         yae::TChannels & channels = frequencies[frequency];
-        hdhr_.get_channels(frequency, channels);
+        DVR::get_channels(frequency, channels);
       }
     }
 
@@ -3442,7 +3728,7 @@ namespace yae
     if (prev_ch)
     {
       std::map<uint32_t, std::string> frequencies;
-      hdhr_.get_channels(frequencies);
+      DVR::get_channels(frequencies);
       std::string frequency = yae::at(frequencies, prev_ch);
 
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -3471,7 +3757,7 @@ namespace yae
     if (live_ch)
     {
       std::map<uint32_t, std::string> frequencies;
-      hdhr_.get_channels(frequencies);
+      DVR::get_channels(frequencies);
       std::string frequency = yae::at(frequencies, live_ch);
 
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -3500,7 +3786,11 @@ namespace yae
     schedule_.update(*this, epg);
 
     std::map<uint32_t, std::string> frequencies;
-    hdhr_.get_channels(frequencies);
+    DVR::get_channels(frequencies);
+    if (frequencies.empty())
+    {
+      return;
+    }
 
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
@@ -3590,6 +3880,142 @@ namespace yae
     return false;
   }
 
+  //----------------------------------------------------------------
+  // DVR::get_tuner_cache
+  //
+  void
+  DVR::get_tuner_cache(const std::string & device_name,
+                       Json::Value & tuner_cache) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    tuner_cache = tuner_cache_.get(device_name, Json::Value());
+  }
+
+  //----------------------------------------------------------------
+  // DVR::update_tuner_cache
+  //
+  void
+  DVR::update_tuner_cache(const std::string & device_name,
+                          const Json::Value & tuner_cache)
+  {
+    Json::Value cache;
+    {
+      boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+      tuner_cache_[device_name] = tuner_cache;
+      update_channel_frequency_luts();
+      cache = tuner_cache_;
+    }
+
+    // save tuner_cache to disk:
+    std::string path = (yaetv_ / "tuners.json").string();
+    yae::TOpenFile(path, "wb").save(cache);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::update_channel_frequency_luts
+  //
+  void
+  DVR::update_channel_frequency_luts()
+  {
+    const Json::Value & const_tuner_cache = tuner_cache_;
+    for (Json::Value::const_iterator i = const_tuner_cache.begin();
+         i != tuner_cache_.end(); ++i)
+    {
+      std::string device_name = i.key().asString();
+      const Json::Value & tuner_cache = *i;
+      const Json::Value & frequencies = tuner_cache["frequencies"];
+
+      for (Json::Value::const_iterator j = frequencies.begin();
+           j != frequencies.end(); ++j)
+      {
+        std::string frequency = j.key().asString();
+        const Json::Value & cache = *j;
+        const Json::Value & programs = cache["programs"];
+        TChannels & channels = frequency_channel_lut_[frequency];
+
+        for (Json::Value::const_iterator k = programs.begin();
+             k != programs.end(); ++k)
+        {
+          const Json::Value & program = *k;
+          uint16_t major = uint16_t(program["major"].asUInt());
+          uint16_t minor = uint16_t(program["minor"].asUInt());
+          std::string name = program["name"].asString();
+          channels[major][minor] = name;
+
+          uint32_t ch_num = yae::mpeg_ts::channel_number(major, minor);
+          channel_frequency_lut_[ch_num] = frequency;
+        }
+
+        if (channels.empty())
+        {
+          frequency_channel_lut_.erase(frequency);
+        }
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channels
+  //
+  void
+  DVR::get_channels(std::map<uint32_t, std::string> & chan_freq) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    chan_freq = channel_frequency_lut_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channels
+  //
+  void
+  DVR::get_channels(std::map<std::string, TChannels> & channels) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    channels = frequency_channel_lut_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channels
+  //
+  bool
+  DVR::get_channels(const std::string & freq, TChannels & channels) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    std::map<std::string, TChannels>::const_iterator found =
+      frequency_channel_lut_.find(freq);
+    if (found == frequency_channel_lut_.end())
+    {
+      return false;
+    }
+
+    channels = found->second;
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channel_major
+  //
+  uint16_t
+  DVR::get_channel_major(const std::string & frequency) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    std::map<std::string, TChannels>::const_iterator found =
+      frequency_channel_lut_.find(frequency);
+    if (found == frequency_channel_lut_.end())
+    {
+      return 0;
+    }
+
+    const TChannels & channels = found->second;
+    if (channels.empty())
+    {
+      return 0;
+    }
+
+    YAE_ASSERT(channels.size() == 1);
+    uint16_t major = channels.begin()->first;
+    return major;
+  }
 
   //----------------------------------------------------------------
   // cleanup_yaetv_logs
