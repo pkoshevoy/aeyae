@@ -2188,6 +2188,13 @@ namespace yae
            i = frequencies.begin(); i != frequencies.end(); ++i)
     {
       const std::string & frequency = i->first;
+      const yae::TChannels & channels = i->second;
+
+      if (channels.empty())
+      {
+        continue;
+      }
+
       std::string epg_path =
         (yaetv_ / ("epg-" + frequency + ".json")).string();
 
@@ -2560,7 +2567,7 @@ namespace yae
 
       if (done)
       {
-        tuner_cache["timestamp"] = now;
+        tuner_cache["timestamp"] = (Json::Value::Int64)now;
         dvr_.update_tuner_cache(device.name(), tuner_cache);
         dvr_.save_epg();
       }

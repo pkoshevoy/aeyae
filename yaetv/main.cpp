@@ -724,11 +724,15 @@ main(int argc, char ** argv)
       }
 #endif
 
-      std::locale::global(boost::locale::generator().generate(""));
-    }
+      boost::locale::generator gen;
+      std::locale loc = std::locale(gen("en_US.UTF-8"),
+                                    std::locale::classic(),
+                                    std::locale::numeric);
+      std::locale::global(loc);
 
-    // Make boost.filesystem use global locale:
-    boost::filesystem::path::imbue(std::locale());
+      // Make boost.filesystem use global locale:
+      boost::filesystem::path::imbue(loc);
+    }
 
 #ifdef __APPLE__
     // show the Dock icon:
