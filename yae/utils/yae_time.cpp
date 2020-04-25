@@ -781,7 +781,10 @@ namespace yae
     int64_t t = negative ? -time : time;
 
     // convert to seconds, round up:
-    t = (t + (base >> 1) - 1) / base;
+    t =
+      (base > 1) ?
+      (t + (base >> 1) - 1) / base :
+      (t / base);
 
     // convert to minutes, round up:
     t = (t + 29) / 60;

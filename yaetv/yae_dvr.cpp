@@ -186,6 +186,20 @@ namespace yae
       sep = ", ";
     }
 
+    if (min_minutes_ && *min_minutes_)
+    {
+      uint16_t min_minutes = *min_minutes_;
+      oss << sep << "GEQ " << min_minutes << "min";
+      sep = ", ";
+    }
+
+    if (max_minutes_ && *max_minutes_)
+    {
+      uint16_t max_minutes = *max_minutes_;
+      oss << sep << "LEQ " << max_minutes << "min";
+      sep = ", ";
+    }
+
     if (!title_.empty())
     {
       oss << sep << title_;
@@ -244,6 +258,20 @@ namespace yae
       sep = ", ";
     }
 
+    if (min_minutes_ && *min_minutes_)
+    {
+      uint16_t min_minutes = *min_minutes_;
+      oss << sep << "GEQ " << min_minutes << " min";
+      sep = ", ";
+    }
+
+    if (max_minutes_ && *max_minutes_)
+    {
+      uint16_t max_minutes = *max_minutes_;
+      oss << sep << "LEQ " << max_minutes << " min";
+      sep = ", ";
+    }
+
     if (!title_.empty())
     {
       oss << sep << title_;
@@ -268,6 +296,17 @@ namespace yae
       sep = ", ";
     }
 
+    if (disabled_ && *disabled_)
+    {
+      oss << sep << "disabled";
+      sep = ", ";
+    }
+    else
+    {
+      oss << sep << "enabled";
+      sep = ", ";
+    }
+
     return std::string(oss.str().c_str());
   }
 
@@ -278,6 +317,11 @@ namespace yae
   Wishlist::Item::matches(const yae::mpeg_ts::EPG::Channel & channel,
                           const yae::mpeg_ts::EPG::Program & program) const
   {
+    if (disabled_ && *disabled_)
+    {
+      return false;
+    }
+
     if (channel_)
     {
       const std::pair<uint16_t, uint16_t> & require_channel = *channel_;
@@ -297,6 +341,24 @@ namespace yae
       if (tm.tm_year != program.tm_.tm_year ||
           tm.tm_mon  != program.tm_.tm_mon  ||
           tm.tm_mday != program.tm_.tm_mday)
+      {
+        return false;
+      }
+    }
+
+    if (min_minutes_ && *min_minutes_)
+    {
+      uint32_t min_duration = 60 * (*min_minutes_);
+      if (program.duration_ < min_duration)
+      {
+        return false;
+      }
+    }
+
+    if (max_minutes_ && *max_minutes_)
+    {
+      uint32_t max_duration = 60 * (*max_minutes_);
+      if (program.duration_ > max_duration)
       {
         return false;
       }
@@ -421,8 +483,11 @@ namespace yae
     yae::save(json, "date", date_);
     yae::save(json, "title", title_);
     yae::save(json, "description", description_);
+    yae::save(json, "min_minutes", min_minutes_);
+    yae::save(json, "max_minutes", max_minutes_);
     yae::save(json, "max_recordings", max_recordings_);
     yae::save(json, "skip_duplicates", skip_duplicates_);
+    yae::save(json, "disabled", disabled_);
   }
 
   //----------------------------------------------------------------
@@ -547,8 +612,11 @@ namespace yae
     yae::load(json, "date", date_);
     yae::load(json, "title", title_);
     yae::load(json, "description", description_);
+    yae::load(json, "min_minutes", min_minutes_);
+    yae::load(json, "max_minutes", max_minutes_);
     yae::load(json, "max_recordings", max_recordings_);
     yae::load(json, "skip_duplicates", skip_duplicates_);
+    yae::load(json, "disabled", disabled_);
   }
 
   //----------------------------------------------------------------

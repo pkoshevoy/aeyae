@@ -155,6 +155,8 @@ namespace yae
     void update_wi_time_start(const QString &);
     void update_wi_time_end(const QString &);
     void update_wi_date(const QString &);
+    void update_wi_min_minutes(const QString &);
+    void update_wi_max_minutes(const QString &);
     void update_wi_max(const QString &);
 
   protected:

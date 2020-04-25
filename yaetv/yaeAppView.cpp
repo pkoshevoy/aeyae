@@ -433,6 +433,66 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetWishlistItemMinDuration
+  //
+  struct GetWishlistItemMinDuration : public TVarExpr
+  {
+    GetWishlistItemMinDuration(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.min_minutes_ && *wi.min_minutes_)
+        {
+          uint16_t n = *wi.min_minutes_;
+          std::string txt = boost::lexical_cast<std::string>(n);
+          result = TVar(txt);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemMaxDuration
+  //
+  struct GetWishlistItemMaxDuration : public TVarExpr
+  {
+    GetWishlistItemMaxDuration(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (wi.max_minutes_ && *wi.max_minutes_)
+        {
+          uint16_t n = *wi.max_minutes_;
+          std::string txt = boost::lexical_cast<std::string>(n);
+          result = TVar(txt);
+          return;
+        }
+      }
+
+      result = TVar("");
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
   // GetWishlistItemMax
   //
   struct GetWishlistItemMax : public TVarExpr
@@ -509,6 +569,60 @@ namespace yae
         else
         {
           wi.skip_duplicates_ = true;
+        }
+      }
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // GetWishlistItemEnabled
+  //
+  struct GetWishlistItemEnabled : public TBoolExpr
+  {
+    GetWishlistItemEnabled(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        result = !(wi.disabled_ && *wi.disabled_);
+        return;
+      }
+
+      result = false;
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleWishlistItemEnabled
+  //
+  struct OnToggleWishlistItemEnabled : public CheckboxItem::Action
+  {
+    OnToggleWishlistItemEnabled(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem & cbox) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (cbox.checked_.get())
+        {
+          wi.disabled_ = true;
+        }
+        else
+        {
+          wi.disabled_.reset();
         }
       }
     }
@@ -3357,6 +3471,7 @@ namespace yae
         dot.color_ = dot.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
 #endif
+        double fade = wi.is_disabled() ? 0.5 : 1.0;
         Text & chan = row.addNew<Text>("chan");
         chan.font_ = style.font_;
         chan.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
@@ -3384,7 +3499,7 @@ namespace yae
         desc.elide_ = Qt::ElideRight;
         desc.text_ = TVarRef::constant(TVar(wi.to_txt()));
         desc.color_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0 * fade));
         desc.background_ = desc.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       }
@@ -4341,7 +4456,7 @@ namespace yae
       {
         int hh = boost::lexical_cast<int>(tokens[0]);
         int mm = boost::lexical_cast<int>(tokens[1]);
-        TTime t(hh * 60 + mm, 1);
+        TTime t(60 * (mm + 60 * hh), 1);
 
         Timespan when = wi.when_ ? *wi.when_ : Timespan(t, t);
         when.t0_ = t;
@@ -4377,7 +4492,7 @@ namespace yae
       {
         int hh = boost::lexical_cast<int>(tokens[0]);
         int mm = boost::lexical_cast<int>(tokens[1]);
-        TTime t(hh * 60 + mm, 1);
+        TTime t(60 * (mm + 60 * hh), 1);
 
         Timespan when = wi.when_ ? *wi.when_ : Timespan(t, t);
         when.t1_ = t;
@@ -4427,6 +4542,58 @@ namespace yae
       else
       {
         wi.date_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_min_minutes
+  //
+  void
+  AppView::update_wi_min_minutes(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      uint16_t n = boost::lexical_cast<uint16_t>(txt);
+
+      if (n)
+      {
+        wi.min_minutes_ = n;
+      }
+      else
+      {
+        wi.min_minutes_.reset();
+      }
+
+      requestUncache(wishlist_ui_.get());
+      requestRepaint();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AppView::update_wi_max_minutes
+  //
+  void
+  AppView::update_wi_max_minutes(const QString & qstr)
+  {
+    if (wi_edit_)
+    {
+      Wishlist::Item & wi = wi_edit_->second;
+      std::string txt(qstr.toUtf8().constData());
+      uint16_t n = boost::lexical_cast<uint16_t>(txt);
+
+      if (n)
+      {
+        wi.max_minutes_ = n;
+      }
+      else
+      {
+        wi.max_minutes_.reset();
       }
 
       requestUncache(wishlist_ui_.get());
@@ -5870,7 +6037,7 @@ namespace yae
     r5.anchors_.top_ = ItemRef::reference(r4, kPropertyBottom);
     r5.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    // layout the date row:
+    // layout the weekdays row:
     {
       // shortcut:
       Item & row = r5;
@@ -5954,7 +6121,7 @@ namespace yae
     r6.anchors_.top_ = ItemRef::reference(r5, kPropertyBottom);
     r6.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    // layout the date row:
+    // layout the exact date row:
     {
       // shortcut:
       Item & row = r6;
@@ -6057,10 +6224,218 @@ namespace yae
     r7.anchors_.top_ = ItemRef::reference(r6, kPropertyBottom);
     r7.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    // layout the max recordings row:
+    // layout the min duration row:
     {
       // shortcut:
       Item & row = r7;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Min. Duration"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_min_duration", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 6);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = text.addExpr(new GetWishlistItemMinDuration(view));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.
+        set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_min_minutes(const QString &)));
+      YAE_ASSERT(ok);
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, minimum program duration in minutes"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r8 = body.addNew<Item>("r8");
+    r8.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r8.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r8.anchors_.top_ = ItemRef::reference(r7, kPropertyBottom);
+    r8.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the max duration row:
+    {
+      // shortcut:
+      Item & row = r8;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Max. Duration"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      Rectangle & text_bg = row.
+        addNew<Rectangle>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_max_duration", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "wishlist_ui", 7);
+
+      text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = text.addExpr(new GetWishlistItemMaxDuration(view));
+      text.font_ = style.font_;
+      text.font_.setWeight(62);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.
+        set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+
+      ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
+                   &view, SLOT(update_wi_max_minutes(const QString &)));
+      YAE_ASSERT(ok);
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, maximum program duration in minutes"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r9 = body.addNew<Item>("r9");
+    r9.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r9.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r9.anchors_.top_ = ItemRef::reference(r8, kPropertyBottom);
+    r9.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the max recordings row:
+    {
+      // shortcut:
+      Item & row = r9;
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
@@ -6097,7 +6472,7 @@ namespace yae
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
       ItemFocus::singleton().
-        setFocusable(view, focus, "wishlist_ui", 6);
+        setFocusable(view, focus, "wishlist_ui", 8);
 
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6154,16 +6529,16 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
     }
 
-    Item & r8 = body.addNew<Item>("r8");
-    r8.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-    r8.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-    r8.anchors_.top_ = ItemRef::reference(r7, kPropertyBottom);
-    r8.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+    Item & r10 = body.addNew<Item>("r10");
+    r10.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r10.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r10.anchors_.top_ = ItemRef::reference(r9, kPropertyBottom);
+    r10.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
     // layout the skip duplicates row:
     {
       // shortcut:
-      Item & row = r8;
+      Item & row = r10;
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
@@ -6201,16 +6576,64 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
     }
 
-    Item & r9 = body.addNew<Item>("r9");
-    r9.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-    r9.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-    r9.anchors_.top_ = ItemRef::reference(r8, kPropertyBottom);
-    r9.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+    Item & r11 = body.addNew<Item>("r11");
+    r11.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r11.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r11.anchors_.top_ = ItemRef::reference(r10, kPropertyBottom);
+    r11.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the Enabled row:
+    {
+      // shortcut:
+      Item & row = r11;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Enabled"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+      cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.width_ = cbox.height_;
+      cbox.checked_ = cbox.addExpr(new GetWishlistItemEnabled(view));
+      cbox.on_toggle_.reset(new OnToggleWishlistItemEnabled(view));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, enable or disable this wishlist item"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r12 = body.addNew<Item>("r12");
+    r12.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r12.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r12.anchors_.top_ = ItemRef::reference(r11, kPropertyBottom);
+    r12.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
     // layout the buttons:
     {
       // shortcut:
-      Item & row = r9;
+      Item & row = r12;
 
       RoundRect & bg_remove = body.addNew<RoundRect>("bg_remove");
       RoundRect & bg_save = body.addNew<RoundRect>("bg_save");

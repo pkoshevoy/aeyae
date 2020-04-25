@@ -735,7 +735,7 @@ namespace yae
         InputHandler & handler = *i;
         InputArea * ia = handler.inputArea();
 
-        if (!dragged_ && pressed_ != &handler &&
+        if (!dragged_ && pressed_ && pressed_ != &handler &&
             ia && ia->onPress(handler.csysOrigin_, startPt_))
         {
           // previous handler didn't handle the drag event, try another:

@@ -84,7 +84,10 @@ namespace yae
       { return max_recordings_ ? *max_recordings_ : 0; }
 
       inline bool skip_duplicates() const
-      { return skip_duplicates_ ? *skip_duplicates_ : false; }
+      { return skip_duplicates_ && *skip_duplicates_; }
+
+      inline bool is_disabled() const
+      { return disabled_ && *disabled_; }
 
       inline bool operator == (const Wishlist::Item & other) const
       {
@@ -111,12 +114,15 @@ namespace yae
         Sat = 1 << 6
       };
 
+      yae::optional<bool> disabled_;
       yae::optional<bool> skip_duplicates_;
       yae::optional<uint16_t> max_recordings_;
       yae::optional<std::pair<uint16_t, uint16_t> > channel_;
       yae::optional<struct tm> date_;
       yae::optional<Timespan> when_;
       yae::optional<uint16_t> weekday_mask_;
+      yae::optional<uint16_t> min_minutes_;
+      yae::optional<uint16_t> max_minutes_;
       std::string title_;
       std::string description_;
 
