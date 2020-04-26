@@ -192,8 +192,9 @@ namespace yae
       basedir = (fs::path(movies.toUtf8().constData()) / "yaetv").string();
     }
 
-    QFileInfo basedir_fi(QString::fromUtf8(basedir.c_str()));
-    this->storageLineEdit->setText(basedir_fi.canonicalFilePath());
+    QString basedir_qstr = QString::fromUtf8(basedir.c_str());
+    basedir_qstr = QDir::toNativeSeparators(basedir_qstr);
+    this->storageLineEdit->setText(basedir_qstr);
 
     // tuners:
     Json::Value tuners = preferences_.
@@ -250,8 +251,11 @@ namespace yae
       return;
     }
 
+    QString basedir_qstr = this->storageLineEdit->text();
+    basedir_qstr = QDir::toNativeSeparators(basedir_qstr);
+
     preferences_["basedir"] =
-      fs::path(this->storageLineEdit->text().toUtf8().constData()).string();
+      fs::path(basedir_qstr.toUtf8().constData()).string();
 
     preferences_["channelmap"] =
       this->channelMapComboBox->currentText().toUtf8().constData();
@@ -283,6 +287,7 @@ namespace yae
                                         QFileDialog::DontResolveSymlinks);
     if (!folder.isEmpty())
     {
+      folder = QDir::toNativeSeparators(folder);
       this->storageLineEdit->setText(folder);
     }
   }

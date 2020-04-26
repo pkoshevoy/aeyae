@@ -2574,6 +2574,7 @@ namespace yae
 
       Json::Value tuner_cache;
       dvr_.get_tuner_cache(device.name(), tuner_cache);
+      bool rescan = false;
 
       int64_t timestamp = tuner_cache.get("timestamp", 0).asInt64();
       int64_t now = yae::TTime::now().get(1);
@@ -2584,10 +2585,10 @@ namespace yae
       {
         // cache is too old, purge it:
         yae_ilog("%s channel scan cache expired", device.name().c_str());
-        tuner_cache.clear();
+        rescan = true;
       }
 
-      if (!tuner_cache.empty())
+      if (!rescan)
       {
         struct tm localtime;
         yae::unix_epoch_time_to_localtime(timestamp, localtime);
@@ -2629,6 +2630,23 @@ namespace yae
           const TunerChannel & tuner_channel = *k;
           std::string frequency = tuner_channel.frequency_str();
 
+          Json::Value & cache = tuner_cache["frequencies"][frequency];
+          int64_t timestamp = cache.get("timestamp", 0).asInt64();
+          int64_t elapsed = now - timestamp;
+          if (elapsed < threshold)
+          {
+            // use the cached value:
+            struct tm localtime;
+            yae::unix_epoch_time_to_localtime(timestamp, localtime);
+            std::string date = yae::to_yyyymmdd_hhmmss(localtime);
+
+            yae_ilog("%s skipping channel scan for %s, using cache from %s",
+                     device.name().c_str(),
+                     frequency.c_str(),
+                     date.c_str());
+            continue;
+          }
+
           TunerStatus tuner_status;
           if (!tune_and_scan(session_ptr, tuner_channel, tuner_status))
           {
@@ -2639,7 +2657,6 @@ namespace yae
             continue;
           }
 
-          Json::Value & cache = tuner_cache["frequencies"][frequency];
           Json::Value & status = cache["status"];
           status["signal_present"] = tuner_status.signal_present_;
           status["signal_strength"] = tuner_status.signal_strength_;
@@ -2677,6 +2694,7 @@ namespace yae
             programs.append(p);
           }
 
+          cache["timestamp"] = (Json::Value::Int64)now;
           dvr_.update_tuner_cache(device.name(), tuner_cache);
           dvr_.save_epg();
         }
@@ -3966,7 +3984,18 @@ namespace yae
           }
         }
 
-        std::string frequency = yae::at(frequencies, ch_num);
+        std::map<uint32_t, std::string>::const_iterator
+          found = frequencies.find(ch_num);
+        if (found == frequencies.end())
+        {
+          yae_elog("can't find frequency for channel %i.%i, can't record %s",
+                   int(rec.channel_major_),
+                   int(rec.channel_minor_),
+                   rec.get_basename().c_str());
+          continue;
+        }
+
+        std::string frequency = found->second;
         TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
 
         if (!stream)
