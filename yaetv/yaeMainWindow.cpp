@@ -150,6 +150,7 @@ namespace yae
   {
     Ui::PreferencesDialog::setupUi(this);
     tuners_layout_ = new QVBoxLayout(this->tunersScrollAreaContents);
+    tuners_layout_->setContentsMargins(0, 0, 0, 0);
 
     bool ok = connect(this->storageToolButton, SIGNAL(clicked()),
                       this, SLOT(on_select_storage_folder()));
