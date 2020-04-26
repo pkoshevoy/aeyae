@@ -19,6 +19,7 @@
 // Qt includes:
 #include <QActionGroup>
 #include <QApplication>
+#include <QCheckBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
 #include <QDesktopWidget>
@@ -139,6 +140,146 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // PreferencesDialog::PreferencesDialog
+  //
+  PreferencesDialog::PreferencesDialog(QWidget * parent):
+    QDialog(parent),
+    Ui::PreferencesDialog(),
+    tuners_layout_(NULL),
+    dvr_(NULL)
+  {
+    Ui::PreferencesDialog::setupUi(this);
+    tuners_layout_ = new QVBoxLayout(this->tunersScrollAreaContents);
+
+    bool ok = connect(this->storageToolButton, SIGNAL(clicked()),
+                      this, SLOT(on_select_storage_folder()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(finished(int)),
+                 this, SLOT(on_finished(int)));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PreferencesDialog::~PreferencesDialog
+  //
+  PreferencesDialog::~PreferencesDialog()
+  {
+    delete tuners_layout_;
+    tuners_layout_ = NULL;
+  }
+
+  //----------------------------------------------------------------
+  // PreferencesDialog::show
+  //
+  void
+  PreferencesDialog::show(DVR & dvr)
+  {
+    dvr.get_preferences(preferences_);
+
+    // storage:
+    std::string basedir =
+      preferences_.get("basedir", std::string()).asString();
+
+    if (basedir.empty())
+    {
+      QString movies = YAE_STANDARD_LOCATION(MoviesLocation);
+      basedir = (fs::path(movies.toUtf8().constData()) / "yaetv").string();
+    }
+
+    this->storageLineEdit->setText(QString::fromUtf8(basedir.c_str()));
+
+    // tuners:
+    Json::Value tuners = preferences_.
+      get("tuners", Json::Value(Json::objectValue));
+
+    std::list<TunerDevicePtr> devices;
+    dvr.hdhr_.discover_devices(devices);
+
+    // clear any prior items:
+    tuners_.clear();
+
+    QLayoutItem * layout_item = NULL;
+    while ((layout_item = tuners_layout_->takeAt(0)) != 0)
+    {
+      QWidget * widget = layout_item->widget();
+      delete layout_item;
+      delete widget;
+    }
+
+    for (std::list<TunerDevicePtr>::const_iterator
+           i = devices.begin(); i != devices.end(); ++i)
+    {
+      const TunerDevice & device = *(*(i));
+      for (int j = 0, num_tuners = device.num_tuners(); j < num_tuners; j++)
+      {
+        std::string tuner_name = device.tuner_name(j);
+        QCheckBox * cb = new QCheckBox(QString::fromUtf8(tuner_name.c_str()));
+
+        bool disabled = tuners.get(tuner_name, false).asBool();
+        cb->setCheckState(disabled ? Qt::Unchecked : Qt::Checked);
+
+        tuners_layout_->addWidget(cb);
+        tuners_[tuner_name] = cb;
+      }
+    }
+
+    tuners_layout_->addSpacerItem(new QSpacerItem(0, // width
+                                                  0, // height
+                                                  QSizePolicy::Minimum,
+                                                  QSizePolicy::Expanding));
+
+    dvr_ = &dvr;
+    QDialog::show();
+  }
+
+  //----------------------------------------------------------------
+  // PreferencesDialog::on_finished
+  //
+  void
+  PreferencesDialog::on_finished(int result)
+  {
+    if (result != QDialog::Accepted)
+    {
+      return;
+    }
+
+    preferences_["basedir"] =
+      this->storageLineEdit->text().toUtf8().constData();
+
+    Json::Value & tuners = preferences_["tuners"];
+    for (std::map<std::string, QCheckBox *>::const_iterator
+           i = tuners_.begin(); i != tuners_.end(); ++i)
+    {
+      const std::string & tuner_name = i->first;
+      QCheckBox * cb = i->second;
+      tuners[tuner_name] = (cb->checkState() == Qt::Checked);
+    }
+
+    // update the preferences:
+    dvr_->set_preferences(preferences_);
+  }
+
+  //----------------------------------------------------------------
+  // PreferencesDialog::on_select_storage_folder
+  //
+  void
+  PreferencesDialog::on_select_storage_folder()
+  {
+    QString folder =
+      QFileDialog::getExistingDirectory(this,
+                                        tr("Select DVR storage folder"),
+                                        this->storageLineEdit->text(),
+                                        QFileDialog::ShowDirsOnly |
+                                        QFileDialog::DontResolveSymlinks);
+    if (!folder.isEmpty())
+    {
+      this->storageLineEdit->setText(folder);
+    }
+  }
+
+
+  //----------------------------------------------------------------
   // AboutDialog::AboutDialog
   //
   AboutDialog::AboutDialog(QWidget * parent):
@@ -150,90 +291,6 @@ namespace yae
     textBrowser->setSearchPaths(QStringList() << ":/");
     textBrowser->setSource(QUrl("qrc:///yaeAbout.html"));
   }
-
-
-  //----------------------------------------------------------------
-  // InitTuners
-  //
-  struct InitTuners : AsyncTaskQueue::Task
-  {
-
-    //----------------------------------------------------------------
-    // InitTuners
-    //
-    InitTuners(QObject * target, yae::DVR & dvr):
-      target_(target),
-      dvr_(dvr)
-    {}
-
-    //----------------------------------------------------------------
-    // Discover
-    //
-    struct Discover : public QEvent
-    {
-      Discover(): QEvent(QEvent::User) {}
-    };
-
-    //----------------------------------------------------------------
-    // Initialize
-    //
-    struct Initialize : public QEvent
-    {
-      Initialize(const std::string & tuner_name):
-        QEvent(QEvent::User),
-        name_(tuner_name)
-      {}
-
-      std::string name_;
-    };
-
-    //----------------------------------------------------------------
-    // Done
-    //
-    struct Done : public QEvent
-    {
-      Done(): QEvent(QEvent::User) {}
-    };
-
-    // virtual:
-    void run()
-    {
-      try
-      {
-        qApp->postEvent(target_, new Discover());
-
-#if 0
-        std::list<std::string> available_tuners;
-        dvr_.hdhr_.discover_tuners(available_tuners);
-
-        for (std::list<std::string>::const_iterator
-               i = available_tuners.begin(); i != available_tuners.end(); ++i)
-        {
-          const std::string & tuner_name = *i;
-          qApp->postEvent(target_, new Initialize(tuner_name));
-
-          // NOTE: this can take a while if there aren't cached channel scan
-          // resuts for this tuner:
-          YAE_EXPECT(dvr_.hdhr_.init(tuner_name));
-        }
-#endif
-      }
-      catch (const std::exception & e)
-      {
-       yae_wlog("InitTuners::run exception: %s", e.what());
-      }
-      catch (...)
-      {
-       yae_wlog("InitTuners::run unknown exception");
-      }
-
-      qApp->postEvent(target_, new Done());
-    }
-
-  protected:
-    QObject * target_;
-    yae::DVR & dvr_;
-  };
 
 
   //----------------------------------------------------------------
@@ -268,6 +325,7 @@ namespace yae
     QMainWindow(NULL, 0),
     contextMenu_(NULL),
     shortcutExit_(NULL),
+    preferencesDialog_(this),
     playerWidget_(NULL),
     playerWindow_(this),
     readerPrototype_(reader_prototype),
@@ -335,6 +393,10 @@ namespace yae
 
     ok = connect(shortcutExit_, SIGNAL(activated()),
                  actionExit, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionPreferences, SIGNAL(triggered()),
+                 this, SLOT(editPreferences()));
     YAE_ASSERT(ok);
 
     ok = connect(actionAbout, SIGNAL(triggered()),
@@ -438,10 +500,6 @@ namespace yae
     spinner_.setStyle(view_.style());
     spinner_.setEnabled(false);
 
-    TAsyncTaskPtr t(new InitTuners(this, dvr_));
-    tasks_.push_back(t);
-    async_.push_back(t);
-
     playerWidget_->initItemViews();
   }
 
@@ -455,6 +513,15 @@ namespace yae
 
     MainWindow::close();
     qApp->quit();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::editPreferences
+  //
+  void
+  MainWindow::editPreferences()
+  {
+    preferencesDialog_.show(dvr_);
   }
 
   //----------------------------------------------------------------
@@ -947,70 +1014,6 @@ namespace yae
     start_live_playback_.stop();
     dvr_.close_live();
     live_rec_.reset();
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::event
-  //
-  bool
-  MainWindow::event(QEvent * e)
-  {
-    if (e->type() == QEvent::User)
-    {
-      InitTuners::Discover * discover_tuners =
-        dynamic_cast<InitTuners::Discover *>(e);
-      if (discover_tuners)
-      {
-        const AppStyle & style = *(view_.style());
-        spinner_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
-        spinner_.fg_ = style.bg_;
-        spinner_.text_color_ = style.bg_;
-
-        spinner_.setEnabled(true);
-        spinner_.setText(tr("looking for available tuners"));
-        discover_tuners->accept();
-        return true;
-      }
-
-      InitTuners::Initialize * initialize_tuner =
-        dynamic_cast<InitTuners::Initialize *>(e);
-      if (initialize_tuner)
-      {
-        const std::string & tuner_name = initialize_tuner->name_;
-        spinner_.setText(tr("initializing tuner channel list: %1").
-                         arg(QString::fromUtf8(tuner_name.c_str())));
-        initialize_tuner->accept();
-        return true;
-      }
-
-      InitTuners::Done * done =
-        dynamic_cast<InitTuners::Done *>(e);
-      if (done)
-      {
-        if (!dvr_.service_loop_worker_)
-        {
-          dvr_.service_loop_worker_.reset(new yae::Worker());
-        }
-
-        TWorkerPtr service_loop_worker_ptr = dvr_.service_loop_worker_;
-        Worker & service_loop_worker = *service_loop_worker_ptr;
-
-        if (service_loop_worker.is_idle())
-        {
-          yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
-          task.reset(new DVR::ServiceLoop(dvr_));
-          // DVR::ServiceLoop & service_loop = *task;
-          service_loop_worker.add(task);
-        }
-
-        tasks_.pop_front();
-        spinner_.setEnabled(!tasks_.empty());
-        done->accept();
-        return true;
-      }
-    }
-
-    return QMainWindow::event(e);
   }
 
   //----------------------------------------------------------------

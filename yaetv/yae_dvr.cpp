@@ -2075,7 +2075,24 @@ namespace yae
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
+    restart(basedir_.string());
+  }
+
+  //----------------------------------------------------------------
+  // DVR::restart
+  //
+  void
+  DVR::restart(const std::string & basedir)
+  {
+    shutdown();
+
     cleanup_yaetv_dir();
+
+    // load preferences:
+    {
+      std::string path = (fs::path(yaetv_) / "settings.json").string();
+      yae::TOpenFile(path, "rb").load(preferences_);
+    }
 
     // load the tuner cache:
     {
@@ -2097,6 +2114,9 @@ namespace yae
       yae::TOpenFile(path, "rb").load(json);
       schedule_.load(json);
     }
+
+    yae_ilog("DVR start, recordings storage: %s", basedir.c_str());
+    basedir_ = basedir.empty() ? yae::get_temp_dir_utf8() : basedir;
 
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
@@ -2144,6 +2164,24 @@ namespace yae
 
     yae_ilog("total size of recordings: %.3F GB",
              double(recordings_bytes) / 1000000000.0);
+
+    // (re)start the service loop:
+    worker_.start();
+
+    if (!service_loop_worker_)
+    {
+      service_loop_worker_.reset(new yae::Worker());
+    }
+
+    TWorkerPtr service_loop_worker_ptr = service_loop_worker_;
+    Worker & service_loop_worker = *service_loop_worker_ptr;
+
+    if (service_loop_worker.is_idle())
+    {
+      yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
+      task.reset(new DVR::ServiceLoop(*this));
+      service_loop_worker.add(task);
+    }
   }
 
   //----------------------------------------------------------------
@@ -2330,6 +2368,10 @@ namespace yae
         worker_ptr->wait_until_finished();
       }
     }
+
+    packet_handler_.clear();
+    stream_worker_.clear();
+    stream_.clear();
   }
 
 
@@ -4090,6 +4132,42 @@ namespace yae
     YAE_ASSERT(channels.size() == 1);
     uint16_t major = channels.begin()->first;
     return major;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_preferences
+  //
+  void
+  DVR::get_preferences(Json::Value & preferences) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    preferences = preferences_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::set_preferences
+  //
+  void
+  DVR::set_preferences(const Json::Value & preferences)
+  {
+    std::string basedir =
+      preferences.get("basedir", basedir_.string()).asString();
+
+    // may need to restart the DVR if settings have changed:
+    {
+      boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+      if (preferences_ == preferences)
+      {
+        return;
+      }
+
+      preferences_ = preferences;
+
+      std::string path = (yaetv_ / "settings.json").string();
+      YAE_ASSERT(yae::TOpenFile(path, "wb").save(preferences));
+    }
+
+    restart(basedir);
   }
 
   //----------------------------------------------------------------

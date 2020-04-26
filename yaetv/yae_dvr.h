@@ -409,6 +409,8 @@ namespace yae
         const std::string & recordings_dir);
     ~DVR();
 
+    void restart(const std::string & basedir);
+
     void cleanup_yaetv_dir();
     void cleanup_explicitly_scheduled_items();
 
@@ -548,6 +550,9 @@ namespace yae
     // helper:
     uint16_t get_channel_major(const std::string & frequency) const;
 
+    void get_preferences(Json::Value & preferences) const;
+    void set_preferences(const Json::Value & preferences);
+
     // protect against concurrent access:
     mutable boost::mutex mutex_;
 
@@ -586,6 +591,8 @@ namespace yae
 
     yae::mpeg_ts::EPG epg_;
     TTime epg_lastmod_;
+
+    Json::Value preferences_;
   };
 
 

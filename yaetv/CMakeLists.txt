@@ -131,6 +131,7 @@ set(project_uis
   yaeAbout.ui
   yaeMainWindow.ui
   yaePlayerWindow.ui
+  yaePreferencesDialog.ui
   ../apprenticevideo/yaeAspectRatioDialog.ui
   )
 

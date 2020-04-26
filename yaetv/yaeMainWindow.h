@@ -10,6 +10,7 @@
 #define YAE_MAIN_WINDOW_H_
 
 // Qt:
+#include <QCheckBox>
 #include <QDialog>
 #include <QMainWindow>
 #include <QMenu>
@@ -34,6 +35,7 @@
 // uic:
 #include "ui_yaeAbout.h"
 #include "ui_yaeMainWindow.h"
+#include "ui_yaePreferencesDialog.h"
 
 
 namespace yae
@@ -49,6 +51,31 @@ namespace yae
 #else
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
 #endif
+
+  //----------------------------------------------------------------
+  // PreferencesDialog
+  //
+  class PreferencesDialog : public QDialog,
+                            public Ui::PreferencesDialog
+  {
+    Q_OBJECT;
+
+  public:
+    PreferencesDialog(QWidget * parent = 0);
+    ~PreferencesDialog();
+
+    void show(DVR & dvr);
+
+  public slots:
+    void on_finished(int result);
+    void on_select_storage_folder();
+
+  protected:
+    QVBoxLayout * tuners_layout_;
+    DVR * dvr_;
+    Json::Value preferences_;
+    std::map<std::string, QCheckBox *> tuners_;
+  };
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -82,6 +109,9 @@ namespace yae
     // file menu:
     void fileExit();
 
+    // edit preferences:
+    void editPreferences();
+
     // help menu:
     void helpAbout();
 
@@ -107,7 +137,6 @@ namespace yae
 
   protected:
     // virtual:
-    bool event(QEvent * e);
     void changeEvent(QEvent * e);
     void closeEvent(QCloseEvent * e);
     void keyPressEvent(QKeyEvent * e);
@@ -120,6 +149,7 @@ namespace yae
     QShortcut * shortcutExit_;
 
   public:
+    PreferencesDialog preferencesDialog_;
     PlayerWidget * playerWidget_;
     PlayerWindow playerWindow_;
 
