@@ -50,8 +50,8 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
-    <addaction name="actionExit"/>
     <addaction name="actionPreferences"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -62,6 +62,11 @@
    <addaction name="menuFile"/>
    <addaction name="menuHelp"/>
   </widget>
+  <action name="actionPreferences">
+   <property name="text">
+    <string>Preferences</string>
+   </property>
+  </action>
   <action name="actionExit">
    <property name="text">
     <string>&amp;Quit</string>
@@ -76,11 +81,6 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
-   </property>
-  </action>
-  <action name="actionPreferences">
-   <property name="text">
-    <string>Preferences</string>
    </property>
   </action>
  </widget>

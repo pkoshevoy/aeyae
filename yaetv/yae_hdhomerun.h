@@ -136,10 +136,7 @@ namespace yae
     void discover_devices(std::list<TunerDevicePtr> & devices);
 
     void get_channel_list(std::list<TunerChannel> & channels,
-                          const char * chanel_map = "us-bcast") const;
-
-    // void discover_tuners(std::list<std::string> & tuners);
-    // bool init(const std::string & tuner_name);
+                          const char * channel_map) const;
 
     //----------------------------------------------------------------
     // Session
@@ -172,7 +169,8 @@ namespace yae
     typedef yae::shared_ptr<Session> TSessionPtr;
 
     // grab any tuner (if available), capable of tuning to a given frequency:
-    TSessionPtr open_session(uint32_t frequency = 0);
+    TSessionPtr open_session(const std::set<std::string> & enabled_tuners,
+                             uint32_t frequency = 0);
 
     // grab a specific tuner, if available:
     TSessionPtr open_session(const std::string & tuner,

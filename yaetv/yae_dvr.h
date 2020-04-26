@@ -550,8 +550,15 @@ namespace yae
     // helper:
     uint16_t get_channel_major(const std::string & frequency) const;
 
+    bool has_preferences() const;
     void get_preferences(Json::Value & preferences) const;
     void set_preferences(const Json::Value & preferences);
+
+    // returns false if there are no enabled tuners:
+    bool discover_enabled_tuners(std::set<std::string> & tuner_names);
+
+    // default is us-bcast, can be configured in preferences:
+    std::string get_channelmap() const;
 
     // protect against concurrent access:
     mutable boost::mutex mutex_;
@@ -592,6 +599,7 @@ namespace yae
     yae::mpeg_ts::EPG epg_;
     TTime epg_lastmod_;
 
+    mutable boost::mutex preferences_mutex_;
     Json::Value preferences_;
   };
 

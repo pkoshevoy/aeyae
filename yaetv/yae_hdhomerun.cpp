@@ -432,9 +432,10 @@ namespace yae
     void discover_devices(std::list<TunerDevicePtr> & devices);
 
     void get_channel_list(std::list<TunerChannel> & channels,
-                          const char * chanel_map = "us-bcast") const;
+                          const char * channel_map) const;
 
-    HDHomeRun::TSessionPtr open_session(uint32_t frequency = 0);
+    HDHomeRun::TSessionPtr open_session(const std::set<std::string> & tuners,
+                                        uint32_t frequency = 0);
     HDHomeRun::TSessionPtr open_session(const std::string & tuner_name,
                                         bool exclusive = false);
     HDHomeRun::TSessionPtr open_session(const std::string & tuner_name,
@@ -495,6 +496,8 @@ namespace yae
     YAE_ASSERT(devices.empty());
 
     // discover HDHomeRun devices:
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     int num_found =
       hdhomerun_discover_find_devices_custom_v2
       (0, // target_ip, 0 to auto-detect IP address(es)
@@ -553,24 +556,42 @@ namespace yae
   // HDHomeRun::Private::open_session
   //
   HDHomeRun::TSessionPtr
-  HDHomeRun::Private::open_session(uint32_t frequency)
+  HDHomeRun::Private::open_session(const std::set<std::string> & tuners,
+                                   uint32_t frequency)
   {
+    std::map<std::string, TunerRef> all_tuners;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      all_tuners = tuners_;
+    }
+
     HDHomeRun::TSessionPtr session;
     for (std::map<std::string, TunerRef>::reverse_iterator
-           i = tuners_.rbegin(); i != tuners_.rend() && !session; ++i)
+           i = all_tuners.rbegin(); i != all_tuners.rend() && !session; ++i)
     {
       const std::string & tuner_name = i->first;
+      if (!yae::has(tuners, tuner_name))
+      {
+        continue;
+      }
+
       const TunerRef & tuner = i->second;
-      const hdhomerun_discover_device_t & device = devices_[tuner.device_];
-      hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
-                                                        device.ip_addr,
-                                                        tuner.tuner_,
-                                                        dbg_.get()));
+      hdhomerun_devptr_t hd_ptr;
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        const hdhomerun_discover_device_t & device = devices_[tuner.device_];
+        hd_ptr.reset(hdhomerun_device_create(device.device_id,
+                                             device.ip_addr,
+                                             tuner.tuner_,
+                                             dbg_.get()));
+      }
+
       if (hd_ptr)
       {
         session = open_session(tuner_name, hd_ptr, frequency);
       }
     }
+
     return session;
   }
 
@@ -581,22 +602,34 @@ namespace yae
   HDHomeRun::Private::open_session(const std::string & tuner_name,
                                    bool exclusive)
   {
+    std::map<std::string, TunerRef> all_tuners;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      all_tuners = tuners_;
+    }
+
     HDHomeRun::TSessionPtr session;
     std::map<std::string, TunerRef>::const_iterator
-      found = tuners_.find(tuner_name);
-    if (found != tuners_.end())
+      found = all_tuners.find(tuner_name);
+    if (found != all_tuners.end())
     {
       const TunerRef & tuner = found->second;
-      const hdhomerun_discover_device_t & device = devices_[tuner.device_];
-      hdhomerun_devptr_t hd_ptr(hdhomerun_device_create(device.device_id,
-                                                        device.ip_addr,
-                                                        tuner.tuner_,
-                                                        dbg_.get()));
+      hdhomerun_devptr_t hd_ptr;
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        const hdhomerun_discover_device_t & device = devices_[tuner.device_];
+        hd_ptr.reset(hdhomerun_device_create(device.device_id,
+                                             device.ip_addr,
+                                             tuner.tuner_,
+                                             dbg_.get()));
+      }
+
       if (hd_ptr)
       {
         session = open_session(tuner_name, hd_ptr, 0, exclusive);
       }
     }
+
     return session;
   }
 
@@ -969,9 +1002,10 @@ namespace yae
   // HDHomeRun::open_session
   //
   HDHomeRun::TSessionPtr
-  HDHomeRun::open_session(uint32_t frequency)
+  HDHomeRun::open_session(const std::set<std::string> & enabled_tuners,
+                          uint32_t frequency)
   {
-    return private_->open_session(frequency);
+    return private_->open_session(enabled_tuners, frequency);
   }
 
   //----------------------------------------------------------------

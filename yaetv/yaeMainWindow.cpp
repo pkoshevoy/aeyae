@@ -170,12 +170,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PreferencesDialog::show
+  // PreferencesDialog::init
   //
   void
-  PreferencesDialog::show(DVR & dvr)
+  PreferencesDialog::init(DVR & dvr)
   {
     dvr.get_preferences(preferences_);
+
+    std::string channelmap =
+      preferences_.get("channelmap", "us-bcast").asString();
+    this->channelMapComboBox->
+      setCurrentText(QString::fromUtf8(channelmap.c_str()));
 
     // storage:
     std::string basedir =
@@ -187,7 +192,8 @@ namespace yae
       basedir = (fs::path(movies.toUtf8().constData()) / "yaetv").string();
     }
 
-    this->storageLineEdit->setText(QString::fromUtf8(basedir.c_str()));
+    QFileInfo basedir_fi(QString::fromUtf8(basedir.c_str()));
+    this->storageLineEdit->setText(basedir_fi.canonicalFilePath());
 
     // tuners:
     Json::Value tuners = preferences_.
@@ -216,8 +222,8 @@ namespace yae
         std::string tuner_name = device.tuner_name(j);
         QCheckBox * cb = new QCheckBox(QString::fromUtf8(tuner_name.c_str()));
 
-        bool disabled = tuners.get(tuner_name, false).asBool();
-        cb->setCheckState(disabled ? Qt::Unchecked : Qt::Checked);
+        bool enabled = tuners.get(tuner_name, true).asBool();
+        cb->setCheckState(enabled ? Qt::Checked : Qt::Unchecked);
 
         tuners_layout_->addWidget(cb);
         tuners_[tuner_name] = cb;
@@ -245,7 +251,10 @@ namespace yae
     }
 
     preferences_["basedir"] =
-      this->storageLineEdit->text().toUtf8().constData();
+      fs::path(this->storageLineEdit->text().toUtf8().constData()).string();
+
+    preferences_["channelmap"] =
+      this->channelMapComboBox->currentText().toUtf8().constData();
 
     Json::Value & tuners = preferences_["tuners"];
     for (std::map<std::string, QCheckBox *>::const_iterator
@@ -501,6 +510,12 @@ namespace yae
     spinner_.setEnabled(false);
 
     playerWidget_->initItemViews();
+
+    if (!dvr_.has_preferences())
+    {
+      preferencesDialog_.init(dvr_);
+      preferencesDialog_.exec();
+    }
   }
 
   //----------------------------------------------------------------
@@ -521,7 +536,8 @@ namespace yae
   void
   MainWindow::editPreferences()
   {
-    preferencesDialog_.show(dvr_);
+    preferencesDialog_.init(dvr_);
+    preferencesDialog_.show();
   }
 
   //----------------------------------------------------------------

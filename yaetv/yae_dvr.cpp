@@ -2175,13 +2175,9 @@ namespace yae
 
     TWorkerPtr service_loop_worker_ptr = service_loop_worker_;
     Worker & service_loop_worker = *service_loop_worker_ptr;
-
-    if (service_loop_worker.is_idle())
-    {
-      yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
-      task.reset(new DVR::ServiceLoop(*this));
-      service_loop_worker.add(task);
-    }
+    yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
+    task.reset(new DVR::ServiceLoop(*this));
+    service_loop_worker.add(task);
   }
 
   //----------------------------------------------------------------
@@ -2550,10 +2546,16 @@ namespace yae
   {
     (void)worker;
 
-    // FIXME: pkoshevoy: make channel_map configurable:
-    static const char * channel_map = "us-bcast";
+    std::set<std::string> enabled_tuners;
+    if (!dvr_.discover_enabled_tuners(enabled_tuners))
+    {
+      // there are no enabled tuners, nothing to do here:
+      return;
+    }
+
+    std::string channelmap = dvr_.get_channelmap();
     std::list<TunerChannel> channels;
-    dvr_.hdhr_.get_channel_list(channels, channel_map);
+    dvr_.hdhr_.get_channel_list(channels, channelmap.c_str());
 
     std::list<TunerDevicePtr> devices;
     dvr_.hdhr_.discover_devices(devices);
@@ -2602,8 +2604,12 @@ namespace yae
       for (int tuner = 0; !done && tuner < num_tuners; tuner++)
       {
         std::string tuner_name = device.tuner_name(tuner);
-        bool exclusive_session = true;
+        if (!yae::has(enabled_tuners, tuner_name))
+        {
+          continue;
+        }
 
+        bool exclusive_session = true;
         HDHomeRun::TSessionPtr session_ptr =
           dvr_.hdhr_.open_session(tuner_name, exclusive_session);
         if (!session_ptr)
@@ -2670,6 +2676,9 @@ namespace yae
 
             programs.append(p);
           }
+
+          dvr_.update_tuner_cache(device.name(), tuner_cache);
+          dvr_.save_epg();
         }
 
         done = true;
@@ -2924,8 +2933,16 @@ namespace yae
     if (!stream_ptr || !stream_ptr->session_)
     {
       // start a new session:
+      std::set<std::string> enabled_tuners;
+      if (!discover_enabled_tuners(enabled_tuners))
+      {
+        // there are no enabled tuners, nothing to do here:
+        return TStreamPtr();
+      }
+
       uint32_t freq_hz = boost::lexical_cast<uint32_t>(frequency);
-      HDHomeRun::TSessionPtr session_ptr = hdhr_.open_session(freq_hz);
+      HDHomeRun::TSessionPtr session_ptr =
+        hdhr_.open_session(enabled_tuners, freq_hz);
       if (!session_ptr)
       {
         // no tuners available:
@@ -4135,12 +4152,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::has_preferences
+  //
+  bool
+  DVR::has_preferences() const
+  {
+    boost::unique_lock<boost::mutex> lock(preferences_mutex_);
+    return !preferences_.empty();
+  }
+
+  //----------------------------------------------------------------
   // DVR::get_preferences
   //
   void
   DVR::get_preferences(Json::Value & preferences) const
   {
-    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    boost::unique_lock<boost::mutex> lock(preferences_mutex_);
     preferences = preferences_;
   }
 
@@ -4155,7 +4182,7 @@ namespace yae
 
     // may need to restart the DVR if settings have changed:
     {
-      boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+      boost::unique_lock<boost::mutex> lock(preferences_mutex_);
       if (preferences_ == preferences)
       {
         return;
@@ -4168,6 +4195,51 @@ namespace yae
     }
 
     restart(basedir);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::discover_enabled_tuners
+  //
+  bool
+  DVR::discover_enabled_tuners(std::set<std::string> & tuner_names)
+  {
+    Json::Value tuners;
+    {
+      boost::unique_lock<boost::mutex> lock(preferences_mutex_);
+      tuners = preferences_.get("tuners", Json::Value(Json::objectValue));
+    }
+
+    std::list<TunerDevicePtr> devices;
+    hdhr_.discover_devices(devices);
+
+    for (std::list<TunerDevicePtr>::const_iterator
+           i = devices.begin(); i != devices.end(); ++i)
+    {
+      const TunerDevice & device = *(*(i));
+      for (int j = 0, num_tuners = device.num_tuners(); j < num_tuners; j++)
+      {
+        std::string tuner_name = device.tuner_name(j);
+        bool enabled = tuners.get(tuner_name, true).asBool();
+        if (enabled)
+        {
+          tuner_names.insert(tuner_name);
+        }
+      }
+    }
+
+    return !tuner_names.empty();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channelmap
+  //
+  std::string
+  DVR::get_channelmap() const
+  {
+    boost::unique_lock<boost::mutex> lock(preferences_mutex_);
+    std::string channelmap =
+      preferences_.get("channelmap", "us-bcast").asString();
+    return channelmap;
   }
 
   //----------------------------------------------------------------

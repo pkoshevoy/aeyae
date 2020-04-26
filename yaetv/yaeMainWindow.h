@@ -64,7 +64,7 @@ namespace yae
     PreferencesDialog(QWidget * parent = 0);
     ~PreferencesDialog();
 
-    void show(DVR & dvr);
+    void init(DVR & dvr);
 
   public slots:
     void on_finished(int result);

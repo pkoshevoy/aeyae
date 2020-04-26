@@ -7,13 +7,94 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>300</height>
+    <height>400</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>Preferences</string>
   </property>
-  <layout class="QVBoxLayout" name="verticalLayout_2">
+  <layout class="QVBoxLayout" name="verticalLayout_3">
+   <item>
+    <widget class="QGroupBox" name="groupBox">
+     <property name="title">
+      <string>Channel Map</string>
+     </property>
+     <layout class="QVBoxLayout" name="verticalLayout_2">
+      <item>
+       <widget class="QComboBox" name="channelMapComboBox">
+        <property name="currentText">
+         <string>us-bcast</string>
+        </property>
+        <item>
+         <property name="text">
+          <string>au-bcast</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>au-cable</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>eu-bcast</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>eu-cable</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>tw-bcast</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>tw-cable</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>kr-bcast</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>kr-cable</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>us-bcast</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>us-cable</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>us-hrc</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>us-irc</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>jp-bcast</string>
+         </property>
+        </item>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
    <item>
     <widget class="QGroupBox" name="storageGroupBox">
      <property name="title">
@@ -52,8 +133,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>372</width>
-           <height>141</height>
+           <width>362</width>
+           <height>200</height>
           </rect>
          </property>
         </widget>
