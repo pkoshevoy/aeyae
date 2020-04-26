@@ -29,6 +29,7 @@
 // yae includes:
 #include "../api/yae_api.h"
 #include "../api/yae_shared_ptr.h"
+#include "../utils/yae_utils.h"
 #include "../utils/yae_time.h"
 
 
@@ -277,7 +278,7 @@ namespace yae
       {}
 
       // try again:
-      replace_inplace(key_str, ",", "");
+      yae::replace_inplace(key_str, ",", "");
       TKey key = boost::lexical_cast<TKey>(key_str);
       load(*i, kv[key]);
     }
