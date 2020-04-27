@@ -179,8 +179,16 @@ namespace yae
 
     std::string channelmap =
       preferences_.get("channelmap", "us-bcast").asString();
-    this->channelMapComboBox->
-      setCurrentText(QString::fromUtf8(channelmap.c_str()));
+
+    QString channelmap_qstr = QString::fromUtf8(channelmap.c_str());
+    for (int i = 0, n = this->channelMapComboBox->count(); i < n; i++)
+    {
+      if (this->channelMapComboBox->itemText(i) == channelmap_qstr)
+      {
+        this->channelMapComboBox->setCurrentIndex(i);
+        break;
+      }
+    }
 
     // storage:
     std::string basedir =
