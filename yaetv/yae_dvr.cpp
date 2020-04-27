@@ -2853,7 +2853,8 @@ namespace yae
           dvr_.capture_stream(frequency, sample_dur);
         if (stream_ptr)
         {
-          std::string device_name = stream_ptr->session_->device_name();
+          HDHomeRun::TSessionPtr session_ptr = stream_ptr->session_;
+          std::string device_name = session_ptr->device_name();
           Json::Value tuner_cache;
           dvr_.get_tuner_cache(device_name, tuner_cache);
           Json::Value & cache = tuner_cache["frequencies"][frequency];
@@ -2894,7 +2895,7 @@ namespace yae
           }
 
           TunerStatus tuner_status;
-          stream_ptr->session_->get_tuner_status(tuner_status);
+          session_ptr->get_tuner_status(tuner_status);
           yae::update_tuner_cache(cache, tuner_status, ctx);
 
           int64_t now = yae::TTime::now().get(1);
