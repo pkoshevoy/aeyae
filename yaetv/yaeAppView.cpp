@@ -2553,9 +2553,7 @@ namespace yae
         worker_.add(task);
       }
 
-      dvr_->get_recordings(recordings, playlists, rec_by_channel);
       bool same_recordings = (recordings == recordings_);
-
       if (!same_recordings)
       {
         recordings_.swap(recordings);
