@@ -150,10 +150,9 @@ namespace yae
   {
     Ui::PreferencesDialog::setupUi(this);
     tuners_layout_ = new QVBoxLayout(this->tunersScrollAreaContents);
-    tuners_layout_->setContentsMargins(0, 0, 0, 0);
 
-    bool ok = connect(this->storageToolButton, SIGNAL(clicked()),
-                      this, SLOT(on_select_storage_folder()));
+    bool ok = connect(this->storageToolButton, SIGNAL(clicked(bool)),
+                      this, SLOT(select_storage_folder()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(finished(int)),
@@ -275,10 +274,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PreferencesDialog::on_select_storage_folder
+  // PreferencesDialog::select_storage_folder
   //
   void
-  PreferencesDialog::on_select_storage_folder()
+  PreferencesDialog::select_storage_folder()
   {
     QString folder =
       QFileDialog::getExistingDirectory(this,

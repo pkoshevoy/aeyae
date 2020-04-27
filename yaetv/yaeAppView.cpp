@@ -2463,6 +2463,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // GetRecordings
+  //
+  struct GetRecordings : yae::Worker::Task
+  {
+    GetRecordings(AppView & app):
+      app_(app)
+    {}
+
+    // virtual:
+    void execute(const yae::Worker & worker)
+    {
+      DVR * dvr = app_.model();
+      if (dvr)
+      {
+        TFoundRecordingsPtr found_ptr(new FoundRecordings());
+        FoundRecordings & found = *found_ptr;
+        dvr->get_recordings(found.recordings_,
+                            found.playlists_,
+                            found.rec_by_channel_);
+        app_.found_recordings(found_ptr);
+      }
+    }
+
+    AppView & app_;
+  };
+
+  //----------------------------------------------------------------
+  // AppView::set_found_recordings
+  //
+  void
+  AppView::found_recordings(const TFoundRecordingsPtr & found)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    found_recordings_ = found;
+  }
+
+  //----------------------------------------------------------------
   // AppView::sync_ui
   //
   void
@@ -2498,6 +2535,24 @@ namespace yae
       TRecordings recordings;
       std::map<std::string, TRecordings> playlists;
       std::map<uint32_t, TScheduledRecordings> rec_by_channel;
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        if (found_recordings_)
+        {
+          const FoundRecordings & found = *found_recordings_;
+          recordings = found.recordings_;
+          playlists = found.playlists_;
+          rec_by_channel = found.rec_by_channel_;
+        }
+      }
+
+      if (worker_.is_idle())
+      {
+        yae::shared_ptr<GetRecordings, yae::Worker::Task> task;
+        task.reset(new GetRecordings(*this));
+        worker_.add(task);
+      }
+
       dvr_->get_recordings(recordings, playlists, rec_by_channel);
       bool same_recordings = (recordings == recordings_);
 

@@ -2539,6 +2539,45 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // update_tuner_cache
+  //
+  static void
+  update_tuner_cache(Json::Value & cache,
+                     const TunerStatus & tuner_status,
+                     const yae::mpeg_ts::Context & ctx)
+  {
+    Json::Value & status = cache["status"];
+    status["signal_present"] = tuner_status.signal_present_;
+    status["signal_strength"] = tuner_status.signal_strength_;
+    status["symbol_error_quality"] = tuner_status.symbol_error_quality_;
+    status["signal_to_noise_quality"] =
+      tuner_status.signal_to_noise_quality_;
+
+    std::map<uint32_t, yae::mpeg_ts::EPG::Channel> channels;
+    ctx.get_channels(channels);
+
+    Json::Value & programs = cache["programs"];
+    programs = Json::Value(Json::arrayValue);
+
+    for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+           x = channels.begin(); x != channels.end(); ++x)
+    {
+      const yae::mpeg_ts::EPG::Channel & channel = x->second;
+      Json::Value p;
+      p["major"] = channel.major_;
+      p["minor"] = channel.minor_;
+      p["name"] = channel.name_;
+
+      if (!channel.description_.empty())
+      {
+        p["description"] = channel.description_;
+      }
+
+      programs.append(p);
+    }
+  }
+
+  //----------------------------------------------------------------
   // ScanChannels::execute
   //
   void
@@ -2657,46 +2696,17 @@ namespace yae
             continue;
           }
 
-          Json::Value & status = cache["status"];
-          status["signal_present"] = tuner_status.signal_present_;
-          status["signal_strength"] = tuner_status.signal_strength_;
-          status["symbol_error_quality"] = tuner_status.symbol_error_quality_;
-          status["signal_to_noise_quality"] =
-            tuner_status.signal_to_noise_quality_;
-
           DVR::TPacketHandlerPtr & handler_ptr =
             dvr_.packet_handler_[frequency];
           YAE_ASSERT(handler_ptr);
 
           const DVR::PacketHandler & packet_handler = *handler_ptr;
           const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
-
-          std::map<uint32_t, yae::mpeg_ts::EPG::Channel> channels;
-          ctx.get_channels(channels);
-
-          Json::Value & programs = cache["programs"];
-          programs = Json::Value(Json::arrayValue);
-
-          for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
-                 x = channels.begin(); x != channels.end(); ++x)
-          {
-            const yae::mpeg_ts::EPG::Channel & channel = x->second;
-            Json::Value p;
-            p["major"] = channel.major_;
-            p["minor"] = channel.minor_;
-            p["name"] = channel.name_;
-
-            if (!channel.description_.empty())
-            {
-              p["description"] = channel.description_;
-            }
-
-            programs.append(p);
-          }
+          yae::update_tuner_cache(cache, tuner_status, ctx);
 
           cache["timestamp"] = (Json::Value::Int64)now;
           dvr_.update_tuner_cache(device.name(), tuner_cache);
-          dvr_.save_epg();
+          yae::save_epg(dvr_, frequency, ctx);
         }
 
         done = true;
@@ -2843,13 +2853,18 @@ namespace yae
           dvr_.capture_stream(frequency, sample_dur);
         if (stream_ptr)
         {
+          std::string device_name = stream_ptr->session_->device_name();
+          Json::Value tuner_cache;
+          dvr_.get_tuner_cache(device_name, tuner_cache);
+          Json::Value & cache = tuner_cache["frequencies"][frequency];
+
           // wait until EPG is ready:
           DVR::Stream & stream = *stream_ptr;
           boost::system_time giveup_at(boost::get_system_time());
           giveup_at += boost::posix_time::seconds(sample_dur.get(1));
 
           yae_ilog("%sstarted EPG update for channels %i.* (%s)",
-                   packet_handler.ctx_.log_prefix_.c_str(),
+                   ctx.log_prefix_.c_str(),
                    major,
                    frequency.c_str());
 
@@ -2877,6 +2892,14 @@ namespace yae
               break;
             }
           }
+
+          TunerStatus tuner_status;
+          stream_ptr->session_->get_tuner_status(tuner_status);
+          yae::update_tuner_cache(cache, tuner_status, ctx);
+
+          int64_t now = yae::TTime::now().get(1);
+          cache["timestamp"] = (Json::Value::Int64)now;
+          dvr_.update_tuner_cache(device_name, tuner_cache);
 
           yae::save_epg(dvr_, frequency, ctx);
         }

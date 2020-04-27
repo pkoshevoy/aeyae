@@ -22,6 +22,7 @@
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_demuxer_reader.h"
 #include "yae/thread/yae_task_runner.h"
+#include "yae/thread/yae_worker.h"
 #include "yae/utils/yae_lru_cache.h"
 #include "yae/video/yae_video.h"
 
@@ -117,6 +118,9 @@ namespace yae
       uint32_t ch_num_;
       uint32_t gps_time_;
     };
+
+    // for async scanning of available recordings:
+    void found_recordings(const TFoundRecordingsPtr & found);
 
   signals:
     void toggle_fullscreen();
@@ -238,6 +242,11 @@ namespace yae
     std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
     yae::shared_ptr<Item> wishlist_ui_;
     yae::shared_ptr<std::pair<std::string, Wishlist::Item> > wi_edit_;
+
+  protected:
+    mutable boost::mutex mutex_;
+    yae::Worker worker_;
+    TFoundRecordingsPtr found_recordings_;
   };
 
 }

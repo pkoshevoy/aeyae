@@ -299,6 +299,22 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // FoundRecordings
+  //
+  struct FoundRecordings
+  {
+    TRecordings recordings_;
+    std::map<std::string, TRecordings> playlists_;
+    std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
+  };
+
+  //----------------------------------------------------------------
+  // TFoundRecordingsPtr
+  //
+  typedef yae::shared_ptr<FoundRecordings> TFoundRecordingsPtr;
+
+
+  //----------------------------------------------------------------
   // DVR
   //
   struct DVR

@@ -68,7 +68,7 @@ namespace yae
 
   public slots:
     void on_finished(int result);
-    void on_select_storage_folder();
+    void select_storage_folder();
 
   protected:
     QVBoxLayout * tuners_layout_;
