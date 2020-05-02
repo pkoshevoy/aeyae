@@ -566,6 +566,10 @@ namespace yae
     // helper:
     uint16_t get_channel_major(const std::string & frequency) const;
 
+    bool get_channel_name(uint16_t major,
+                          uint16_t minor,
+                          std::string & name) const;
+
     bool has_preferences() const;
     void get_preferences(Json::Value & preferences) const;
     void set_preferences(const Json::Value & preferences);

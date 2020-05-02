@@ -4066,7 +4066,8 @@ namespace yae
         sep = ", ";
       }
 
-      std::map<uint16_t, RatingRegion>::const_iterator found = rrt.find(region);
+      std::map<uint16_t, RatingRegion>::const_iterator
+        found = rrt.find(region);
       if (found != rrt.end())
       {
         const RatingRegion & rr = found->second;

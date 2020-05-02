@@ -1072,6 +1072,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // find_program
+  //
+  static const yae::mpeg_ts::EPG::Program *
+  find_program(const std::list<yae::mpeg_ts::EPG::Program> & programs,
+               uint32_t gps_time)
+  {
+    for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator
+           i = programs.begin(); i != programs.end(); ++i)
+    {
+      const yae::mpeg_ts::EPG::Program & program = *i;
+      uint32_t program_end = program.gps_time_ + program.duration_;
+      if (program.gps_time_ <= gps_time && gps_time < program_end)
+      {
+        return &program;
+      }
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
   // Schedule::update
   //
   void
@@ -1084,9 +1105,26 @@ namespace yae
     {
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
+      std::list<yae::mpeg_ts::EPG::Program> programs = channel.programs_;
+
+      // handle the situation when there is no EPG for the current bucket:
+      uint32_t gps_time = uint32_t(TTime::gps_now().get(1));
+      if (!yae::find_program(programs, gps_time))
+      {
+        programs.push_back(yae::mpeg_ts::EPG::Program());
+        yae::mpeg_ts::EPG::Program & prog = programs.back();
+        prog.title_ = yae::strfmt("Program Guide Not Available",
+                                  int(channel.major_),
+                                  int(channel.minor_));
+
+        uint32_t bucket_index = (gps_time / 10800);
+        prog.gps_time_ = bucket_index * 10800;
+        prog.duration_ = 10800;
+        yae::gps_time_to_localtime(prog.gps_time_, prog.tm_);
+      }
 
       for (std::list<yae::mpeg_ts::EPG::Program>::const_iterator
-             j = channel.programs_.begin(); j != channel.programs_.end(); ++j)
+             j = programs.begin(); j != programs.end(); ++j)
       {
         const yae::mpeg_ts::EPG::Program & program = *j;
 
@@ -4202,6 +4240,48 @@ namespace yae
     YAE_ASSERT(channels.size() == 1);
     uint16_t major = channels.begin()->first;
     return major;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channel_name
+  //
+  bool
+  DVR::get_channel_name(uint16_t major,
+                        uint16_t minor,
+                        std::string & name) const
+  {
+    uint32_t ch_num = yae::mpeg_ts::channel_number(major, minor);
+
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    std::string frequency = yae::get(channel_frequency_lut_, ch_num);
+    if (frequency.empty())
+    {
+      return false;
+    }
+
+    std::map<std::string, TChannels>::const_iterator found =
+      frequency_channel_lut_.find(frequency);
+    if (found == frequency_channel_lut_.end())
+    {
+      return false;
+    }
+
+    const TChannels & channels = found->second;
+    TChannels::const_iterator found_major = channels.find(major);
+    if (found_major == channels.end())
+    {
+      return false;
+    }
+
+    const TChannelNames & ch_names = found_major->second;
+    TChannelNames::const_iterator found_minor = ch_names.find(minor);
+    if (found_minor == ch_names.end())
+    {
+      return false;
+    }
+
+    name = found_minor->second;
+    return true;
   }
 
   //----------------------------------------------------------------
