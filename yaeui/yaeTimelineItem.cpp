@@ -569,14 +569,18 @@ namespace yae
     }
 
     // other on-screen controls:
+    Item & other = this->addNew<Item>("other_controls");
+    other.anchors_.fill(*this);
+    other.visible_ = BoolRef::inverse(this->is_playlist_visible_);
+
     ItemRef tool_btn_size = ItemRef::scale(titleHeight,
                                            kPropertyExpression,
                                            1.5);
 
     // back button:
-    Item & arrow_btn = this->addNew<Item>("arrow_btn");
-    arrow_btn.anchors_.top_ = ItemRef::offset(*this, kPropertyTop, 2);
-    arrow_btn.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+    Item & arrow_btn = other.addNew<Item>("arrow_btn");
+    arrow_btn.anchors_.top_ = ItemRef::offset(other, kPropertyTop, 2);
+    arrow_btn.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
     arrow_btn.visible_ = arrow_btn.addExpr(new IsValid(back_arrow_cb_));
     arrow_btn.height_ = arrow_btn.
       addExpr(new InvisibleItemZeroHeight(arrow_btn));
@@ -588,7 +592,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(arrow_btn, kPropertyTop);
-      bg.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_left
@@ -610,9 +614,9 @@ namespace yae
     }
 
     // trashcan button:
-    Item & delete_file = this->addNew<Item>("delete_file");
+    Item & delete_file = other.addNew<Item>("delete_file");
     delete_file.anchors_.top_ = ItemRef::offset(arrow_btn, kPropertyBottom);
-    delete_file.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+    delete_file.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
     delete_file.visible_ = delete_file.addExpr(new IsValid(delete_file_cb_));
     delete_file.height_ = delete_file.
       addExpr(new InvisibleItemZeroHeight(delete_file));
@@ -624,7 +628,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(delete_file, kPropertyTop);
-      bg.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_left
@@ -644,9 +648,9 @@ namespace yae
     }
 
     // crop:
-    Item & frame_crop = this->addNew<Item>("frame_crop");
+    Item & frame_crop = other.addNew<Item>("frame_crop");
     frame_crop.anchors_.top_ = arrow_btn.anchors_.top_;
-    frame_crop.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    frame_crop.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     frame_crop.visible_ = frame_crop.addExpr(new IsValid(frame_crop_cb_));
     frame_crop.height_ = frame_crop.
       addExpr(new InvisibleItemZeroHeight(frame_crop));
@@ -658,7 +662,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(frame_crop, kPropertyTop);
-      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_right
@@ -682,9 +686,9 @@ namespace yae
     }
 
     // aspect ratio:
-    Item & aspect_ratio = this->addNew<Item>("aspect_ratio");
+    Item & aspect_ratio = other.addNew<Item>("aspect_ratio");
     aspect_ratio.anchors_.top_ = ItemRef::offset(frame_crop, kPropertyBottom);
-    aspect_ratio.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    aspect_ratio.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     aspect_ratio.visible_ = aspect_ratio.
       addExpr(new IsValid(aspect_ratio_cb_));
     aspect_ratio.height_ = aspect_ratio.
@@ -697,7 +701,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(aspect_ratio, kPropertyTop);
-      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_right
@@ -721,9 +725,9 @@ namespace yae
     }
 
     // video track selection:
-    Item & video_track = this->addNew<Item>("video_track");
+    Item & video_track = other.addNew<Item>("video_track");
     video_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
-    video_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    video_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     video_track.visible_ = video_track.addExpr(new IsValid(video_track_cb_));
     video_track.height_ = video_track.
       addExpr(new InvisibleItemZeroHeight(video_track));
@@ -735,7 +739,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(video_track, kPropertyTop);
-      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_right
@@ -759,9 +763,9 @@ namespace yae
     }
 
     // audio track selection:
-    Item & audio_track = this->addNew<Item>("audio_track");
+    Item & audio_track = other.addNew<Item>("audio_track");
     audio_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
-    audio_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    audio_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     audio_track.visible_ = audio_track.addExpr(new IsValid(audio_track_cb_));
     audio_track.height_ = audio_track.
       addExpr(new InvisibleItemZeroHeight(audio_track));
@@ -773,7 +777,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(audio_track, kPropertyTop);
-      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_right
@@ -797,9 +801,9 @@ namespace yae
     }
 
     // subtitles/captions selection:
-    Item & subtt_track = this->addNew<Item>("subtt_track");
+    Item & subtt_track = other.addNew<Item>("subtt_track");
     subtt_track.anchors_.top_ = ItemRef::offset(audio_track, kPropertyBottom);
-    subtt_track.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+    subtt_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     subtt_track.visible_ = subtt_track.addExpr(new IsValid(subtt_track_cb_));
     subtt_track.height_ = subtt_track.
       addExpr(new InvisibleItemZeroHeight(subtt_track));
@@ -811,7 +815,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(subtt_track, kPropertyTop);
-      bg.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
+      bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_right

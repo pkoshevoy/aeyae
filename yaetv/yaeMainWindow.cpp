@@ -397,6 +397,8 @@ namespace yae
     // shortcut:
     PlayerView & playerView = playerWidget_->view();
     playerView.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
+    playerView.enableBackArrowButton_ = BoolRef::constant(true);
+    playerView.enableDeleteFileButton_ = BoolRef::constant(true);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),

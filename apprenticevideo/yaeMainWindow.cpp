@@ -851,6 +851,10 @@ namespace yae
     ok = connect(&(playerWidget_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
+
+    ok = connect(&(playerWidget_->sigs_), SIGNAL(maybeHideCursor()),
+                 &(playerWidget_->sigs_), SLOT(hideCursor()));
+    YAE_ASSERT(ok);
 #endif
 
     ok = connect(actionHalfSize, SIGNAL(triggered()),

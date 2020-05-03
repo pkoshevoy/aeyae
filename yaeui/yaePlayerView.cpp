@@ -938,7 +938,10 @@ namespace yae
     subsTrackMapper_(NULL),
     chapterMapper_(NULL),
 
-    timelineTimer_(this)
+    timelineTimer_(this),
+    showNextPrev_(BoolRef::constant(false)),
+    enableBackArrowButton_(BoolRef::constant(false)),
+    enableDeleteFileButton_(BoolRef::constant(false))
   {
     init_actions();
     translate_ui();
@@ -1029,7 +1032,12 @@ namespace yae
     timeline.is_timeline_visible_ = BoolRef::constant(false);
     // timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
-    timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
+
+    if (enableBackArrowButton_.get())
+    {
+      timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
+    }
+
     timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
     timeline.layout();
 
@@ -1371,7 +1379,11 @@ namespace yae
         timeline.frame_crop_cb_.reset(&yae::select_frame_crop_cb, this);
         timeline.aspect_ratio_cb_.reset(&yae::select_aspect_ratio_cb, this);
         timeline.subtt_track_cb_.reset(&yae::select_subtt_track_cb, this);
-        timeline.delete_file_cb_.reset(&yae::delete_playing_file_cb, this);
+
+        if (enableDeleteFileButton_.get())
+        {
+          timeline.delete_file_cb_.reset(&yae::delete_playing_file_cb, this);
+        }
       }
 
       if (videoInfo.size() < 2)

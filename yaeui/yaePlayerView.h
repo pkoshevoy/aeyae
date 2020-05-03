@@ -290,6 +290,9 @@ namespace yae
     // property indicating whether Go Back and Skip should be included
     // in the Playback menu for playlist navigation:
     BoolRef showNextPrev_;
+
+    BoolRef enableBackArrowButton_;
+    BoolRef enableDeleteFileButton_;
   };
 
 }
