@@ -1809,6 +1809,13 @@ namespace yae
     if (stream_ptr)
     {
       HDHomeRun::TSessionPtr session_ptr = stream_ptr->session_;
+
+      YAE_ASSERT(session_ptr);
+      if (!session_ptr)
+      {
+        return;
+      }
+
       HDHomeRun & hdhr = stream_ptr->dvr_.hdhr_;
       std::string frequency = stream_ptr->frequency_;
       stream_ptr.reset();
