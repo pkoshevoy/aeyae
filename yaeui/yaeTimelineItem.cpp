@@ -524,26 +524,25 @@ namespace yae
       fullscreenToggle.anchors_.fill(fullscreenBtn);
     }
 
-    // add other player controls:
+    // other on-screen controls:
+    ItemRef tool_btn_size = ItemRef::scale(titleHeight,
+                                           kPropertyExpression,
+                                           1.5);
+
+    // playlist burger button:
     Item & playlistButton = this->addNew<Item>("playlistButton");
+    playlistButton.anchors_.top_ = ItemRef::offset(*this, kPropertyTop, 0);
+    playlistButton.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
+    playlistButton.width_ = tool_btn_size;
+    playlistButton.height_ = tool_btn_size;
+    playlistButton.margins_.set_top
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+    playlistButton.margins_.set_left
+      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
     playlistButton.visible_ = BoolRef::constant(!toggle_playlist_.is_null());
-
-    CallOnClick<ContextCallback> & playlistToggle = playlistButton.
-      add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
-                                           this->toggle_playlist_));
     {
-      playlistButton.anchors_.top_ =
-        ItemRef::offset(*this, kPropertyTop, 2);
-      playlistButton.anchors_.left_ =
-        ItemRef::reference(*this, kPropertyLeft);
-      playlistButton.width_ =
-        ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
-      playlistButton.height_ = playlistButton.width_;
-
       RoundRect & bg = playlistButton.addNew<RoundRect>("bg");
       bg.anchors_.fill(playlistButton);
-      bg.margins_.set(ItemRef::reference(playlistButton, kPropertyHeight,
-                                         0.1, -1.0));
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
@@ -551,35 +550,33 @@ namespace yae
 
       TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
       gridOn.anchors_.fill(playlistButton);
-      gridOn.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
-                                         0.2));
+      gridOn.margins_.set
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
       gridOn.visible_ = BoolRef::reference(this->is_playlist_visible_);
       gridOn.texture_ = gridOn.addExpr(new StyleGridOnTexture(view_));
       gridOn.opacity_ = shadow.opacity_;
 
       TexturedRect & gridOff = playlistButton.add(new TexturedRect("gridOff"));
       gridOff.anchors_.fill(playlistButton);
-      gridOff.margins_.set(ItemRef::scale(playlistButton, kPropertyHeight,
-                                          0.2));
+      gridOff.margins_.set
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
       gridOff.visible_ = BoolRef::inverse(this->is_playlist_visible_);
       gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(view_));
       gridOff.opacity_ = shadow.opacity_;
 
+      CallOnClick<ContextCallback> & playlistToggle = playlistButton.
+        add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
+                                             this->toggle_playlist_));
       playlistToggle.anchors_.fill(playlistButton);
     }
 
-    // other on-screen controls:
     Item & other = this->addNew<Item>("other_controls");
     other.anchors_.fill(*this);
     other.visible_ = BoolRef::inverse(this->is_playlist_visible_);
 
-    ItemRef tool_btn_size = ItemRef::scale(titleHeight,
-                                           kPropertyExpression,
-                                           1.5);
-
     // back button:
     Item & arrow_btn = other.addNew<Item>("arrow_btn");
-    arrow_btn.anchors_.top_ = ItemRef::offset(other, kPropertyTop, 2);
+    arrow_btn.anchors_.top_ = ItemRef::offset(other, kPropertyTop);
     arrow_btn.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
     arrow_btn.visible_ = arrow_btn.addExpr(new IsValid(back_arrow_cb_));
     arrow_btn.height_ = arrow_btn.
@@ -592,7 +589,7 @@ namespace yae
       bg.color_ = colorControlsBg;
       bg.opacity_ = shadow.opacity_;
       bg.anchors_.top_ = ItemRef::reference(arrow_btn, kPropertyTop);
-      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+      bg.anchors_.left_ = ItemRef::reference(arrow_btn, kPropertyLeft);
       bg.margins_.set_top
         (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
       bg.margins_.set_left
@@ -602,8 +599,8 @@ namespace yae
         (new ArrowItem("arrow", ArrowItem::kLeft));
       arrow.anchors_.fill(bg);
       arrow.margins_.set
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
-      arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.25);
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.3));
+      arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.178);
       arrow.color_ = colorControlsFg;
       arrow.opacity_ = shadow.opacity_;
 

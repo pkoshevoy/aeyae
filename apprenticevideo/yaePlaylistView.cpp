@@ -587,7 +587,7 @@ namespace yae
     const ItemRef & fontSize = style.font_size_;
     const Item & scrollbar = playlist["scrollbar"];
     const Text & nowPlaying = style.now_playing_;
-
+    const ItemRef & titleHeight = style.title_height_;
     const ColorRef & colorCursor = style.cursor_;
     const ColorRef & colorSort = style.fg_hint_;
 
@@ -617,13 +617,12 @@ namespace yae
     filter.anchors_.bottom_.reset();
     filter.height_ = ItemRef::scale(item, kPropertyHeight, 0.333);
     filter.radius_ = ItemRef::scale(filter, kPropertyHeight, 0.1);
-    filter.margins_.set_left(ItemRef::offset(filter, kPropertyHeight, -4));
+    filter.margins_.set_left(ItemRef::reference(titleHeight, 2.5, -4));
 
     Item & icon = filter.addNew<Item>("filter_icon");
     {
       RoundRect & circle = icon.addNew<RoundRect>("circle");
-      circle.anchors_.hcenter_ =
-        ItemRef::reference(filter, kPropertyHeight, 1.5, -4);
+      circle.anchors_.hcenter_ = ItemRef::reference(titleHeight, 3.5, -4);
       circle.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
       circle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
       circle.height_ = circle.width_;
