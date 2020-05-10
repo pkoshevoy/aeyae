@@ -26,6 +26,7 @@
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
 #include "yaePlayerView.h"
+#include "yaePlayerWidget.h"
 #include "yaeProperty.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
