@@ -163,6 +163,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::prepend
+  //
+  void
+  Canvas::prepend(Canvas::ILayer * layer)
+  {
+    if (!layer || has(layers_, layer))
+    {
+      YAE_ASSERT(false);
+      return;
+    }
+
+    layer->setDelegate(delegate_);
+    layer->setContext(context_);
+    layers_.push_front(layer);
+    layer->resizeTo(this);
+    layer->requestRepaint();
+  }
+
+  //----------------------------------------------------------------
   // Canvas::fragmentShaderFor
   //
   const TFragmentShader *

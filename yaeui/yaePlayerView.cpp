@@ -84,16 +84,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // toggle_playlist
-  //
-  static void
-  toggle_playlist(void * context)
-  {
-    PlayerView * view = (PlayerView *)context;
-    view->togglePlaylist();
-  }
-
-  //----------------------------------------------------------------
   // back_arrow_cb
   //
   static void
@@ -164,26 +154,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // new_qaction
+  // context_query_timeline_visible
   //
-  template <typename TQObj>
-  static TQObj *
-  add(QObject * parent, const char * objectName)
+  static bool
+  context_query_timeline_visible(void * context, bool & timeline_visible)
   {
-    TQObj * obj = new TQObj(parent);
-    obj->setObjectName(QString::fromUtf8(objectName));
-    return obj;
-  }
-
-  //----------------------------------------------------------------
-  // add_menu
-  //
-  static QMenu *
-  add_menu(const char * objectName)
-  {
-    QMenu * menu = new QMenu();
-    menu->setObjectName(QString::fromUtf8(objectName));
-    return menu;
+    PlayerView * view = (PlayerView *)context;
+    timeline_visible = view->actionShowTimeline_->isChecked();
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -203,12 +181,6 @@ namespace yae
 
     actionNextChapter_ = add<QAction>(this, "actionNextChapter");
     actionNextChapter_->setShortcutContext(Qt::ApplicationShortcut);
-
-    actionNext_ = add<QAction>(this, "actionNext");
-    actionNext_->setShortcutContext(Qt::ApplicationShortcut);
-
-    actionPrev_ = add<QAction>(this, "actionPrev");
-    actionPrev_->setShortcutContext(Qt::ApplicationShortcut);
 
 
 
@@ -387,11 +359,6 @@ namespace yae
 
     menuPlayback_->addAction(actionPlay_);
     menuPlayback_->addSeparator();
-#if 0
-    menuPlayback_->addAction(actionPrev_);
-    menuPlayback_->addAction(actionNext_);
-    menuPlayback_->addSeparator();
-#endif
     menuPlayback_->addAction(actionLoop_);
     menuPlayback_->addAction(actionSetInPoint_);
     menuPlayback_->addAction(actionSetOutPoint_);
@@ -483,9 +450,6 @@ namespace yae
     bool deinterlaceFrames =
       loadBooleanSettingOrDefault(kDeinterlaceFrames, false);
     actionDeinterlace_->setChecked(deinterlaceFrames);
-
-    actionRemove_ = add<QAction>(this, "actionRemove_");
-    actionRemove_->setShortcutContext(Qt::ApplicationShortcut);
 
     QActionGroup * aspectRatioGroup = new QActionGroup(this);
     aspectRatioGroup->addAction(actionAspectRatioAuto_);
@@ -653,18 +617,6 @@ namespace yae
                  this, SLOT(togglePlayback()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionNext_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_next()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionPrev_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_prev()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionRemove_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_remove()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionLoop_, SIGNAL(triggered()),
                  this, SLOT(playbackLoop()));
     YAE_ASSERT(ok);
@@ -692,7 +644,15 @@ namespace yae
     ok = connect(actionDownmixToStereo_, SIGNAL(triggered()),
                  this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
-  }
+ 
+    ok = connect(menuChapters_, SIGNAL(aboutToShow()),
+                 this, SLOT(updateChaptersMenu()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionNextChapter_, SIGNAL(triggered()),
+                 this, SLOT(skipToNextChapter()));
+    YAE_ASSERT(ok);
+ }
 
   //----------------------------------------------------------------
   // PlayerView::translate_ui
@@ -709,12 +669,6 @@ namespace yae
 
     actionNextChapter_->setText(trUtf8("Skip To &Next Chapter"));
     actionNextChapter_->setShortcut(trUtf8("Ctrl+N"));
-
-    actionNext_->setText(trUtf8("Skip"));
-    actionNext_->setShortcut(trUtf8("Alt+Right"));
-
-    actionPrev_->setText(trUtf8("Go Back"));
-    actionPrev_->setShortcut(trUtf8("Alt+Left"));
 
 
 
@@ -832,10 +786,6 @@ namespace yae
 
 
 
-    actionRemove_->setText(trUtf8("&Remove Selected"));
-    actionRemove_->setShortcut(trUtf8("Delete"));
-
-
     menuPlayback_->setTitle(trUtf8("&Playback"));
     menuPlaybackSpeed_->setTitle(trUtf8("Playback Speed"));
     menuAudio_->setTitle(trUtf8("&Audio"));
@@ -856,8 +806,6 @@ namespace yae
 
     actionPlay_(NULL),
     actionNextChapter_(NULL),
-    actionNext_(NULL),
-    actionPrev_(NULL),
 
     actionLoop_(NULL),
     actionSetInPoint_(NULL),
@@ -911,8 +859,6 @@ namespace yae
     actionTempo167_(NULL),
     actionTempo200_(NULL),
 
-    actionRemove_(NULL),
-
     menuPlayback_(NULL),
     menuPlaybackSpeed_(NULL),
     menuAudio_(NULL),
@@ -939,7 +885,6 @@ namespace yae
     chapterMapper_(NULL),
 
     timelineTimer_(this),
-    showNextPrev_(BoolRef::constant(false)),
     enableBackArrowButton_(BoolRef::constant(false)),
     enableDeleteFileButton_(BoolRef::constant(false))
   {
@@ -1022,15 +967,15 @@ namespace yae
                                      player.timeline()));
 
     TimelineItem & timeline = *timeline_;
+    timeline.query_timeline_visible_.
+      reset(&yae::context_query_timeline_visible, this);
+
     timeline.is_playback_paused_ = timeline.addExpr
       (new IsPlaybackPaused(*this));
 
     timeline.is_fullscreen_ = timeline.addExpr
       (new IsFullscreen(*this));
 
-    timeline.is_playlist_visible_ = BoolRef::constant(false);
-    timeline.is_timeline_visible_ = BoolRef::constant(false);
-    // timeline.toggle_playlist_.reset(&yae::toggle_playlist, this);
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
 
     if (enableBackArrowButton_.get())
@@ -1078,6 +1023,8 @@ namespace yae
   void
   PlayerView::setEnabled(bool enable)
   {
+    YAE_ASSERT(style_);
+
     if (!style_ || isEnabled() == enable)
     {
       return;
@@ -1183,6 +1130,13 @@ namespace yae
   bool
   PlayerView::processWheelEvent(Canvas * canvas, QWheelEvent * e)
   {
+    TimelineItem & timeline = *timeline_;
+    if (timeline.is_playlist_visible_.get())
+    {
+      // let the playlist handle the scroll event:
+      return false;
+    }
+
     double tNow = timeline_model().currentTime();
     if (tNow <= 1e-1)
     {
@@ -1935,14 +1889,14 @@ namespace yae
       return;
     }
 
+    IReaderPtr reader_ptr = player_->reader();
     TTime t0(0, 0);
     TTime t1(0, 0);
-    IReader * reader = get_reader();
-    yae::get_timeline(reader, t0, t1);
-
-    emit playback_finished(t1);
+    yae::get_timeline(reader_ptr.get(), t0, t1);
 
     stopPlayback();
+
+    emit playback_finished(t1);
   }
 
   //----------------------------------------------------------------
@@ -2018,15 +1972,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // addMenuCopyTo
-  //
-  static void
-  addMenuCopyTo(QMenu * dst, QMenu * src)
-  {
-    dst->addAction(src->menuAction());
-  }
-
-  //----------------------------------------------------------------
   // PlayerView::populateContextMenu
   //
   void
@@ -2049,31 +1994,18 @@ namespace yae
     // populate the context menu:
     contextMenu_->clear();
     contextMenu_->addAction(actionPlay_);
-
-#if 0
     contextMenu_->addSeparator();
-    contextMenu_->addAction(actionPrev_);
-    contextMenu_->addAction(actionNext_);
 
-    if (reader)
-    {
-      contextMenu_->addSeparator();
-      contextMenu_->addAction(actionRemove_);
-    }
-#endif
-
-    contextMenu_->addSeparator();
     contextMenu_->addAction(actionLoop_);
     contextMenu_->addAction(actionSetInPoint_);
     contextMenu_->addAction(actionSetOutPoint_);
     contextMenu_->addAction(actionShowTimeline_);
-
     contextMenu_->addSeparator();
+
     contextMenu_->addAction(actionShrinkWrap_);
     contextMenu_->addAction(actionFullScreen_);
     contextMenu_->addAction(actionFillScreen_);
     addMenuCopyTo(contextMenu_, menuPlaybackSpeed_);
-
     contextMenu_->addSeparator();
 
     if (numVideoTracks || numAudioTracks)
@@ -2120,7 +2052,6 @@ namespace yae
                       videoTraits,
                       subsInfo,
                       subsFormat);
-
   }
 
   //----------------------------------------------------------------

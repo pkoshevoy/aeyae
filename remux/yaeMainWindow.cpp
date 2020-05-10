@@ -1045,17 +1045,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // swapShortcuts
-  //
-  static inline void
-  swapShortcuts(QShortcut * a, QAction * b)
-  {
-    QKeySequence tmp = a->key();
-    a->setKey(b->shortcut());
-    b->setShortcut(tmp);
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::swapShortcuts
   //
   void

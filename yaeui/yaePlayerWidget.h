@@ -79,7 +79,7 @@ namespace yae
                  Qt::WindowFlags f = Qt::WindowFlags());
     ~PlayerWidget();
 
-    void initItemViews();
+    virtual void initItemViews();
 
     void playback(const IReaderPtr & reader,
                   const IBookmark * bookmark = NULL,
@@ -155,16 +155,22 @@ namespace yae
     void audioTrackSelectedOption(int option_index);
     void subttTrackSelectedOption(int option_index);
 
-    void adjustCanvasHeight();
     void canvasSizeBackup();
     void canvasSizeRestore();
-    void swapShortcuts();
+
+    virtual void adjustCanvasHeight();
+    virtual void swapShortcuts();
+    virtual void populateContextMenu();
 
   protected:
     // virtual:
     bool event(QEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
+
+    virtual bool processEvent(QEvent * event);
+    virtual bool processKeyEvent(QKeyEvent * event);
+    virtual bool processMousePressEvent(QMouseEvent * event);
 
     // helpers:
     void canvasSizeSet(double xexpand, double yexpand);
@@ -184,8 +190,6 @@ namespace yae
     QShortcut * shortcutFillScreen_;
     QShortcut * shortcutShowTimeline_;
     QShortcut * shortcutPlay_;
-    QShortcut * shortcutNext_;
-    QShortcut * shortcutPrev_;
     QShortcut * shortcutLoop_;
     QShortcut * shortcutCropNone_;
     QShortcut * shortcutAutoCrop_;
@@ -199,7 +203,6 @@ namespace yae
     QShortcut * shortcutAspectRatio1_33_;
     QShortcut * shortcutAspectRatio1_78_;
 
-    QShortcut * shortcutRemove_;
 
   public:
     // frame canvas:
@@ -224,14 +227,6 @@ namespace yae
     // shrink wrap stretch factors:
     double xexpand_;
     double yexpand_;
-
-    // selected track info is used to select matching track(s)
-    // after loading next file:
-    TTrackInfo selAudio_;
-    AudioTraits selAudioTraits_;
-
-    TTrackInfo selSubs_;
-    TSubsFormat selSubsFormat_;
   };
 
 }

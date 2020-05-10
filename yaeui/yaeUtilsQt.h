@@ -20,10 +20,13 @@
 #include "yae/video/yae_reader.h"
 
 // Qt includes:
+#include <QAction>
 #include <QEvent>
+#include <QMenu>
 #include <QObject>
 #include <QPoint>
 #include <QRect>
+#include <QShortcut>
 #include <QString>
 
 #if (QT_VERSION >= QT_VERSION_CHECK(4, 6, 0) && \
@@ -295,6 +298,78 @@ namespace yae
 
     bool reconnect_;
   };
+
+  //----------------------------------------------------------------
+  // swapShortcuts
+  //
+  inline void
+  swapShortcuts(QShortcut * a, QAction * b)
+  {
+    QKeySequence tmp = a->key();
+    a->setKey(b->shortcut());
+    b->setShortcut(tmp);
+  }
+
+  //----------------------------------------------------------------
+  // add
+  //
+  template <typename TQObj>
+  inline TQObj *
+  add(QObject * parent, const char * objectName)
+  {
+    TQObj * obj = new TQObj(parent);
+    obj->setObjectName(QString::fromUtf8(objectName));
+    return obj;
+  }
+
+  //----------------------------------------------------------------
+  // add_menu
+  //
+  inline QMenu *
+  add_menu(const char * objectName)
+  {
+    QMenu * menu = new QMenu();
+    menu->setObjectName(QString::fromUtf8(objectName));
+    return menu;
+  }
+
+  //----------------------------------------------------------------
+  // addMenuCopyTo
+  //
+  inline QAction *
+  addMenuCopyTo(QMenu * dst, QMenu * src)
+  {
+    QAction * action = src->menuAction();
+    dst->addAction(action);
+    return action;
+  }
+
+  //----------------------------------------------------------------
+  // find_last_separator
+  //
+  QAction *
+  find_last_separator(const QMenu & menu, QAction *& next);
+
+  //----------------------------------------------------------------
+  // MenuBreak
+  //
+  struct MenuBreak
+  {
+    MenuBreak(QAction * separator = NULL,
+              QAction * next = NULL):
+      separator_(separator),
+      next_(next)
+    {}
+
+    QAction * separator_;
+    QAction * next_;
+  };
+
+  //----------------------------------------------------------------
+  // find_menu_breaks
+  //
+  bool
+  find_menu_breaks(const QMenu & menu, std::list<MenuBreak> & breaks);
 
 }
 

@@ -261,6 +261,9 @@ namespace yae
     //       3. event handling -- front-to-back, until handled
     void append(ILayer * layer);
 
+    // add a layer at the back:
+    void prepend(ILayer * layer);
+
     // lookup a fragment shader for a given pixel format, if one exits:
     const TFragmentShader * fragmentShaderFor(const VideoTraits & vtts) const;
 

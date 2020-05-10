@@ -86,9 +86,7 @@ namespace yae
     void adjust_canvas_height();
     void toggle_playlist();
     void playback_next();
-    void playback_prev();
     void playback_finished(TTime playhead_pos);
-    void playback_remove();
     void fixup_next_prev();
     void save_bookmark();
     void on_back_arrow();
@@ -185,8 +183,6 @@ namespace yae
 
     QAction * actionPlay_;
     QAction * actionNextChapter_;
-    QAction * actionNext_;
-    QAction * actionPrev_;
 
     QAction * actionLoop_;
     QAction * actionSetInPoint_;
@@ -253,9 +249,6 @@ namespace yae
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;
 
-    // playlist shortcuts:
-    QAction * actionRemove_;
-
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
@@ -286,10 +279,6 @@ namespace yae
     yae::shared_ptr<ItemViewStyle, Item> style_;
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
-
-    // property indicating whether Go Back and Skip should be included
-    // in the Playback menu for playlist navigation:
-    BoolRef showNextPrev_;
 
     BoolRef enableBackArrowButton_;
     BoolRef enableDeleteFileButton_;

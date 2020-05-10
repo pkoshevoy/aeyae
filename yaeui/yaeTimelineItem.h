@@ -363,6 +363,7 @@ namespace yae
   public slots:
     void modelChanged();
     void showTimeline(bool);
+    void showPlaylist(bool);
 
   public:
     ItemView & view_;
@@ -373,6 +374,9 @@ namespace yae
     BoolRef is_fullscreen_;
     BoolRef is_playlist_visible_;
     BoolRef is_timeline_visible_;
+
+    ContextQuery<bool> query_playlist_visible_;
+    ContextQuery<bool> query_timeline_visible_;
 
     ContextCallback toggle_playback_;
     ContextCallback toggle_fullscreen_;

@@ -28,7 +28,7 @@ namespace yae
 
   // forward declarations:
   struct PlaylistViewStyle;
-  class MainWindow;
+  class PlayerView;
   class PlaylistView;
   class Texture;
   class Text;
@@ -149,7 +149,7 @@ namespace yae
     PlaylistView();
 
     // need to reference main window for current playback status:
-    void setup(MainWindow * mainWindow);
+    void setup(PlayerView * player);
 
     // data source:
     void setModel(PlaylistModelProxy * model);
@@ -212,7 +212,7 @@ namespace yae
     void rowsRemoved(const QModelIndex & parent, int start, int end);
 
   protected:
-    MainWindow * mainWindow_;
+    PlayerView * player_;
     PlaylistModelProxy * model_;
     std::string style_;
   };

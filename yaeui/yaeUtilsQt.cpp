@@ -2077,4 +2077,52 @@ namespace yae
     return name;
   }
 
+  //----------------------------------------------------------------
+  // find_last_separator
+  //
+  QAction *
+  find_last_separator(const QMenu & menu, QAction *& next)
+  {
+    next = NULL;
+
+    QList<QAction *> actions = menu.actions();
+    while (!actions.empty())
+    {
+      QAction * action = actions.back();
+      if (action->isSeparator())
+      {
+        return action;
+      }
+
+      next = action;
+      actions.pop_back();
+    }
+
+    return NULL;
+  }
+
+  //----------------------------------------------------------------
+  // find_menu_breaks
+  //
+  bool
+  find_menu_breaks(const QMenu & menu, std::list<MenuBreak> & breaks)
+  {
+    QAction * next = NULL;
+    QList<QAction *> actions = menu.actions();
+
+    while (!actions.empty())
+    {
+      QAction * action = actions.back();
+      if (action->isSeparator())
+      {
+        breaks.push_front(MenuBreak(action, next));
+      }
+
+      next = action;
+      actions.pop_back();
+    }
+
+    return !breaks.empty();
+  }
+
 }

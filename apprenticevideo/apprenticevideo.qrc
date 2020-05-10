@@ -17,15 +17,5 @@
     <file>images/group-exposed.png</file>
     <file>images/group-collapsed.png</file>
     <file>yaeAbout.html</file>
-    <file>qml/FilterIcon.qml</file>
-    <file>qml/Player.qml</file>
-    <file>qml/Playlist.qml</file>
-    <file>qml/Timeline.qml</file>
-    <file>qml/TimelineMarker.qml</file>
-    <file>qml/TimelineMarkerDragItem.qml</file>
-    <file>qml/SortAndOrder.qml</file>
-    <file>qml/XButton.qml</file>
-    <file>qml/YDebug.qml</file>
-    <file>qml/Utils.js</file>
   </qresource>
 </RCC>

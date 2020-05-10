@@ -500,6 +500,7 @@ namespace yae
       image_provider(new ThumbnailProvider(readerPrototype_));
     view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
 
+    TMakeCurrentContext currentContext(canvas_->Canvas::context());
     canvas_->initializePrivateBackend();
     canvas_->setGreeting(tr("yaetv"));
     canvas_->append(&view_);
@@ -570,17 +571,6 @@ namespace yae
     }
 
     about->show();
-  }
-
-  //----------------------------------------------------------------
-  // swapShortcuts
-  //
-  static inline void
-  swapShortcuts(QShortcut * a, QAction * b)
-  {
-    QKeySequence tmp = a->key();
-    a->setKey(b->shortcut());
-    b->setShortcut(tmp);
   }
 
   //----------------------------------------------------------------

@@ -112,7 +112,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // IsValidCallback
+  // IsValid
   //
   struct IsValid : public TBoolExpr
   {
@@ -130,6 +130,31 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // IsTrue
+  //
+  struct IsTrue : public TBoolExpr
+  {
+    IsTrue(const ContextQuery<bool> & query):
+      query_(query)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (query_.is_null())
+      {
+        result = false;
+      }
+      else
+      {
+        query_(result);
+      }
+    }
+
+    const ContextQuery<bool> & query_;
+  };
+
+  //----------------------------------------------------------------
   // TimelineItem::TimelineItem
   //
   TimelineItem::TimelineItem(const char * name,
@@ -139,7 +164,10 @@ namespace yae
     Item(name),
     view_(view),
     model_(model)
-  {}
+  {
+    is_timeline_visible_ = addExpr(new IsTrue(query_timeline_visible_));
+    is_playlist_visible_ = addExpr(new IsTrue(query_playlist_visible_));
+  }
 
   //----------------------------------------------------------------
   // TimelineItem::layout
@@ -539,7 +567,8 @@ namespace yae
       (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
     playlistButton.margins_.set_left
       (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
-    playlistButton.visible_ = BoolRef::constant(!toggle_playlist_.is_null());
+    playlistButton.visible_ = playlistButton.
+      addExpr(new IsValid(toggle_playlist_));
     {
       RoundRect & bg = playlistButton.addNew<RoundRect>("bg");
       bg.anchors_.fill(playlistButton);
@@ -564,9 +593,9 @@ namespace yae
       gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(view_));
       gridOff.opacity_ = shadow.opacity_;
 
-      CallOnClick<ContextCallback> & playlistToggle = playlistButton.
-        add(new CallOnClick<ContextCallback>("playlist_toggle_on_click",
-                                             this->toggle_playlist_));
+      Call<TimelineItem, ContextCallback> & playlistToggle = playlistButton.
+        add(new Call<TimelineItem, ContextCallback>
+            ("toggle_playlist", *this, &TimelineItem::toggle_playlist_));
       playlistToggle.anchors_.fill(playlistButton);
     }
 
@@ -1090,10 +1119,17 @@ namespace yae
       return;
     }
 
-    is_timeline_visible_ = BoolRef::constant(show_timeline);
-
     uncache();
     maybeAnimateOpacity();
+  }
+
+  //----------------------------------------------------------------
+  // TimelineItem::showPlaylist
+  //
+  void
+  TimelineItem::showPlaylist(bool show_playlist)
+  {
+    uncache();
   }
 
 }

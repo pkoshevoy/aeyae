@@ -25,7 +25,6 @@
 #include <QSpacerItem>
 #include <QUrl>
 #include <QVBoxLayout>
-#include <QWheelEvent>
 
 // local:
 #include "yaePlayerWidget.h"
@@ -234,20 +233,6 @@ namespace yae
                  view_.actionNextChapter_, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    shortcutNext_ = new QShortcut(this);
-    shortcutNext_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutNext_, SIGNAL(activated()),
-                 view_.actionNext_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutPrev_ = new QShortcut(this);
-    shortcutPrev_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutPrev_, SIGNAL(activated()),
-                 view_.actionPrev_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     shortcutLoop_ = new QShortcut(this);
     shortcutLoop_->setContext(Qt::ApplicationShortcut);
 
@@ -325,10 +310,6 @@ namespace yae
                  view_.actionAspectRatio1_78_, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    shortcutRemove_ = new QShortcut(this);
-    shortcutRemove_->setContext(Qt::ApplicationShortcut);
-    shortcutRemove_->setKey(QKeySequence(QKeySequence::Delete));
-
     QVBoxLayout * canvasLayout = new QVBoxLayout(this);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
@@ -350,6 +331,10 @@ namespace yae
 
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
+
+    ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
+                 this, SLOT(focusChanged(QWidget *, QWidget *)));
+    YAE_ASSERT(ok);
 
     ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(requestToggleFullScreen()));
@@ -402,6 +387,8 @@ namespace yae
   PlayerWidget::initItemViews()
   {
     canvas_->initializePrivateBackend();
+
+    TMakeCurrentContext currentContext(canvas_->Canvas::context());
     canvas_->setGreeting(tr("yaetv player"));
     canvas_->append(&view_);
 
@@ -486,6 +473,8 @@ namespace yae
     ok = connect(this, SIGNAL(setOutPoint()),
                  &view_.timeline_model(), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
+
+    view_.setEnabled(true);
   }
 
   //----------------------------------------------------------------
@@ -496,7 +485,7 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
-    view_.setEnabled(true);
+    // view_.setEnabled(true);
     view_.playback(reader, bookmark, start_from_zero_time);
   }
 
@@ -507,7 +496,7 @@ namespace yae
   PlayerWidget::stop()
   {
     view_.stopPlayback();
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
     cropView_.setEnabled(false);
     frameCropSelectionView_.setEnabled(false);
     aspectRatioSelectionView_.setEnabled(false);
@@ -721,7 +710,7 @@ namespace yae
       aspectRatioSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
     }
 
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
     cropView_.setEnabled(false);
     aspectRatioSelectionView_.setEnabled(true);
   }
@@ -927,7 +916,7 @@ namespace yae
       frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kAuto);
     }
 
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
     cropView_.setEnabled(false);
     frameCropSelectionView_.setEnabled(true);
   }
@@ -1023,7 +1012,7 @@ namespace yae
     int preselect = reader->getSelectedVideoTrackIndex();
     videoTrackSelectionView_.setOptions(options, preselect);
     videoTrackSelectionView_.setEnabled(true);
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -1100,7 +1089,7 @@ namespace yae
     int preselect = reader->getSelectedAudioTrackIndex();
     audioTrackSelectionView_.setOptions(options, preselect);
     audioTrackSelectionView_.setEnabled(true);
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -1186,7 +1175,7 @@ namespace yae
     int preselect = reader ? get_selected_subtt_track(*reader) : 4;
     subttTrackSelectionView_.setOptions(options, preselect);
     subttTrackSelectionView_.setEnabled(true);
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
   }
 
   //----------------------------------------------------------------
@@ -1248,7 +1237,7 @@ namespace yae
       cropView_.setCrop(frame, crop);
     }
 
-    view_.setEnabled(false);
+    // view_.setEnabled(false);
     frameCropSelectionView_.setEnabled(false);
     aspectRatioSelectionView_.setEnabled(false);
     videoTrackSelectionView_.setEnabled(false);
@@ -1451,17 +1440,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // swapShortcuts
-  //
-  static inline void
-  swapShortcuts(QShortcut * a, QAction * b)
-  {
-    QKeySequence tmp = a->key();
-    a->setKey(b->shortcut());
-    b->setShortcut(tmp);
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::swapShortcuts
   //
   void
@@ -1471,8 +1449,6 @@ namespace yae
     yae::swapShortcuts(shortcutFillScreen_, view_.actionFillScreen_);
     yae::swapShortcuts(shortcutShowTimeline_, view_.actionShowTimeline_);
     yae::swapShortcuts(shortcutPlay_, view_.actionPlay_);
-    yae::swapShortcuts(shortcutNext_, view_.actionNext_);
-    yae::swapShortcuts(shortcutPrev_, view_.actionPrev_);
     yae::swapShortcuts(shortcutLoop_, view_.actionLoop_);
     yae::swapShortcuts(shortcutCropNone_, view_.actionCropFrameNone_);
     yae::swapShortcuts(shortcutCrop1_33_, view_.actionCropFrame1_33_);
@@ -1488,10 +1464,65 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerWidget::populateContextMenu
+  //
+  void
+  PlayerWidget::populateContextMenu()
+  {
+    view_.populateContextMenu();
+  }
+
+  //----------------------------------------------------------------
   // PlayerWidget::event
   //
   bool
   PlayerWidget::event(QEvent * e)
+  {
+    if (this->processEvent(e))
+    {
+      return true;
+    }
+
+    return QWidget::event(e);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::keyPressEvent
+  //
+  void
+  PlayerWidget::keyPressEvent(QKeyEvent * e)
+  {
+    e->ignore();
+
+    if (this->processKeyEvent(e))
+    {
+      e->accept();
+      return;
+    }
+
+    QWidget::keyPressEvent(e);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::mousePressEvent
+  //
+  void
+  PlayerWidget::mousePressEvent(QMouseEvent * e)
+  {
+    if (this->processMousePressEvent(e))
+    {
+      e->accept();
+      return;
+    }
+
+    QWidget::mousePressEvent(e);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::processEvent
+  //
+  bool
+  PlayerWidget::processEvent(QEvent * e)
   {
     QEvent::Type et = e->type();
 
@@ -1609,60 +1640,56 @@ namespace yae
 #endif
     }
 
-    return QWidget::event(e);
+    return false;
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::keyPressEvent
+  // PlayerWidget::processKeyEvent
   //
-  void
-  PlayerWidget::keyPressEvent(QKeyEvent * event)
+  bool
+  PlayerWidget::processKeyEvent(QKeyEvent * event)
   {
     int key = event->key();
-    event->ignore();
 
-    if (key == Qt::Key_Escape)
+    if (key == Qt::Key_Escape && window()->isFullScreen())
     {
-      if (window()->isFullScreen())
-      {
-        exitFullScreen();
-        event->accept();
-      }
+      exitFullScreen();
+      return true;
     }
-    else if (key == Qt::Key_I)
+
+    if (key == Qt::Key_I)
     {
       emit setInPoint();
-      event->accept();
+      return true;
     }
-    else if (key == Qt::Key_O)
+
+    if (key == Qt::Key_O)
     {
       emit setOutPoint();
-      event->accept();
+      return true;
     }
-    else
-    {
-      QWidget::keyPressEvent(event);
-    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::mousePressEvent
+  // PlayerWidget::processMousePressEvent
   //
-  void
-  PlayerWidget::mousePressEvent(QMouseEvent * e)
+  bool
+  PlayerWidget::processMousePressEvent(QMouseEvent * event)
   {
-    if (e->button() == Qt::RightButton)
+    if (event->button() == Qt::RightButton)
     {
-      QPoint localPt = e->pos();
+      QPoint localPt = event->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
 
-      view_.populateContextMenu();
+      populateContextMenu();
+
       view_.contextMenu_->popup(globalPt);
-      e->accept();
-      return;
+      return true;
     }
 
-    QWidget::mousePressEvent(e);
+    return false;
   }
 
   //----------------------------------------------------------------

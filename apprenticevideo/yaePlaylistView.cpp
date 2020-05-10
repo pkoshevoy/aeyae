@@ -6,15 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// standard:
 #include <cmath>
 #include <iomanip>
 #include <sstream>
 
-// Qt library:
+// Qt:
 #include <QItemSelectionModel>
 
-// local interfaces:
+// yaeui:
 #include "yaeColor.h"
 #include "yaeExpression.h"
 #include "yaeFlickableArea.h"
@@ -25,10 +25,7 @@
 #include "yaeInputArea.h"
 #include "yaeItemFocus.h"
 #include "yaeItemRef.h"
-#include "yaeListViewStyle.h"
-#include "yaeMainWindow.h"
-#include "yaePlaylistView.h"
-#include "yaePlaylistViewStyle.h"
+#include "yaePlayerView.h"
 #include "yaeProperty.h"
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
@@ -40,6 +37,11 @@
 #include "yaeTexturedRect.h"
 #include "yaeTransform.h"
 #include "yaeUtilsQt.h"
+
+// local:
+#include "yaeListViewStyle.h"
+#include "yaePlaylistView.h"
+#include "yaePlaylistViewStyle.h"
 
 
 namespace yae
@@ -1651,7 +1653,7 @@ namespace yae
   //
   PlaylistView::PlaylistView():
     ItemView("playlist"),
-    mainWindow_(NULL),
+    player_(NULL),
     model_(NULL)
   {
     Item & root = *root_;
@@ -1737,9 +1739,9 @@ namespace yae
   // PlaylistView::setup
   //
   void
-  PlaylistView::setup(MainWindow * mainWindow)
+  PlaylistView::setup(PlayerView * player)
   {
-    mainWindow_ = mainWindow;
+    player_ = player;
   }
 
   //----------------------------------------------------------------
@@ -2229,9 +2231,9 @@ namespace yae
   {
 #ifdef __APPLE__
     QEvent::Type et = event->type();
-    if (et == QEvent::User && mainWindow_)
+    if (et == QEvent::User && player_)
     {
-      bool playbackPaused = mainWindow_->isPlaybackPaused();
+      bool playbackPaused = player_->is_playback_paused();
       RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(event);
       if (rc && playbackPaused)
       {

@@ -34,13 +34,6 @@ if (Qt5_FOUND)
   option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
   if (YAE_USE_QOPENGL_WIDGET)
     add_definitions(-DYAE_USE_QOPENGL_WIDGET)
-
-    option(YAE_USE_PLAYER_QUICK_WIDGET "Use QML implementation" OFF)
-    if (YAE_USE_PLAYER_QUICK_WIDGET)
-      find_package(Qt5 COMPONENTS Quick QuickWidgets Qml)
-      add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
-      # add_definitions(-DQT_QML_DEBUG)
-    endif ()
   endif ()
 
 else (Qt5_FOUND)
@@ -84,26 +77,16 @@ find_library(GLEW_LIBRARY GLEW
   DOC "GLEW library")
 
 set(project_moc_hxx
+  yaeMainWidget.h
   yaeMainWindow.h
   yaePlaylist.h
   yaePlaylistModel.h
   yaePlaylistModelProxy.h
   yaePlaylistView.h
-  yaeTimelineView.h
   )
-
-if (YAE_USE_PLAYER_QUICK_WIDGET)
-  set(project_moc_hxx
-    ${project_moc_hxx}
-    yaeCanvasQuickFbo.h
-    yaeQuickWidget.h
-    yaeUtilsQml.h
-    )
-endif ()
 
 set(project_uis
   yaeAbout.ui
-  yaeAspectRatioDialog.ui
   yaeMainWindow.ui
   yaeOpenUrlDialog.ui
   )
@@ -116,6 +99,8 @@ set(project_sources
   yaeListViewStyle.h
   yaeListViewStyle.cpp
   yaeMain.cpp
+  yaeMainWidget.h
+  yaeMainWidget.cpp
   yaeMainWindow.h
   yaeMainWindow.cpp
   yaePlaylist.h
@@ -130,8 +115,6 @@ set(project_sources
   yaePlaylistView.cpp
   yaePlaylistViewStyle.h
   yaePlaylistViewStyle.cpp
-  yaeTimelineView.h
-  yaeTimelineView.cpp
   )
 
 if (QT4_FOUND)
@@ -142,26 +125,6 @@ endif ()
 if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
-
-  set(project_sources
-    ${project_sources}
-    qml/FilterIcon.qml
-    qml/Player.qml
-    qml/Playlist.qml
-    qml/Timeline.qml
-    qml/TimelineMarker.qml
-    qml/TimelineMarkerDragItem.qml
-    qml/SortAndOrder.qml
-    qml/XButton.qml
-    qml/YDebug.qml
-    qml/Utils.js
-    yaeCanvasQuickFbo.h
-    yaeCanvasQuickFbo.cpp
-    yaeQuickWidget.h
-    yaeQuickWidget.cpp
-    yaeUtilsQml.h
-    yaeUtilsQml.cpp
-    )
 endif ()
 
 find_path(LIBASS_INCLUDE_DIR
@@ -452,13 +415,6 @@ if (Qt5_FOUND)
     Qt5::OpenGL
     Qt5::Widgets
     )
-  if (YAE_USE_PLAYER_QUICK_WIDGET)
-    set(TARGET_LIBS ${TARGET_LIBS}
-      Qt5::Quick
-      Qt5::QuickWidgets
-      Qt5::Qml
-      )
-  endif ()
 endif ()
 
 if (Qt5DBus_FOUND)
