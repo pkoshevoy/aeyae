@@ -391,6 +391,7 @@ namespace yae
     canvasContainer_->addWidget(canvas_);
 
     playerWidget_ = new PlayerWidget(this, canvas_);
+    playerWidget_->greeting_ = tr("loading");
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
 
@@ -502,7 +503,7 @@ namespace yae
 
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
     canvas_->initializePrivateBackend();
-    canvas_->setGreeting(tr("yaetv"));
+    canvas_->setGreeting(tr("hello"));
     canvas_->append(&view_);
 
     view_.setModel(&dvr_);

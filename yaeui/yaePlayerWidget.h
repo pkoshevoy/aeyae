@@ -205,6 +205,10 @@ namespace yae
 
 
   public:
+
+    // default greeting is hello:
+    QString greeting_;
+
     // frame canvas:
     TCanvasWidget * canvas_;
 

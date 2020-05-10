@@ -65,6 +65,8 @@ namespace yae
     canvas_(NULL),
     renderMode_(Canvas::kScaleToFit)
   {
+    greeting_ = tr("hello");
+
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
@@ -389,7 +391,7 @@ namespace yae
     canvas_->initializePrivateBackend();
 
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
-    canvas_->setGreeting(tr("yaetv player"));
+    canvas_->setGreeting(greeting_);
     canvas_->append(&view_);
 
     canvas_->append(&spinner_);

@@ -211,7 +211,7 @@ namespace yae
       return;
     }
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
     yae_debug << "ass_process_data: " << line.data_;
 #endif
 
