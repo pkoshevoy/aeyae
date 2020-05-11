@@ -8,6 +8,7 @@
 
 // Qt:
 #include <QApplication>
+#include <QProcess>
 
 // yaeui:
 #include "yaePlayerStyle.h"
@@ -1076,6 +1077,143 @@ namespace yae
     }
 
     return ItemView::event(e);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerView::processEvent
+  //
+  bool
+  PlayerView::processEvent(Canvas * canvas, QEvent * e)
+  {
+    QEvent::Type et = e->type();
+
+    if (et == QEvent::User)
+    {
+#ifdef __APPLE__
+      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
+      if (rc)
+      {
+        TimelineItem & timeline = *timeline_;
+        if (timeline.is_playlist_visible_.get())
+        {
+          // let the playlist handle the remote control:
+          return false;
+        }
+
+#ifndef NDEBUG
+        std::cerr
+          << "received remote control event(" << rc
+          << "), buttonId: " << rc->buttonId_
+          << ", down: " << rc->pressedDown_
+          << ", clicks: " << rc->clickCount_
+          << ", held down: " << rc->heldDown_
+          << std::endl;
+#endif
+        rc->accept();
+
+        if (rc->buttonId_ == kRemoteControlPlayButton)
+        {
+          if (rc->pressedDown_)
+          {
+            if (rc->heldDown_)
+            {
+              this->toggle_fullscreen_();
+            }
+            else
+            {
+              togglePlayback();
+            }
+
+            return true;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlMenuButton)
+        {
+          if (rc->pressedDown_)
+          {
+            if (rc->heldDown_)
+            {
+              if (actionCropFrameAutoDetect_->isChecked())
+              {
+                actionCropFrameNone_->trigger();
+              }
+              else
+              {
+                actionCropFrameAutoDetect_->trigger();
+              }
+            }
+            else
+            {
+              emit rc_menu_button_pressed();
+            }
+
+            return true;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeUp)
+        {
+          if (!rc->pressedDown_)
+          {
+            // raise the volume:
+            static QStringList args;
+
+            if (args.empty())
+            {
+              args << "-e" << ("set currentVolume to output "
+                               "volume of (get volume settings)")
+                   << "-e" << ("set volume output volume "
+                               "(currentVolume + 6.25)")
+                   << "-e" << ("do shell script \"afplay "
+                               "/System/Library/LoginPlugins"
+                               "/BezelServices.loginPlugin"
+                               "/Contents/Resources/volume.aiff\"");
+            }
+
+            QProcess::startDetached("/usr/bin/osascript", args);
+            return true;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlVolumeDown)
+        {
+          if (!rc->pressedDown_)
+          {
+            // lower the volume:
+            static QStringList args;
+
+            if (args.empty())
+            {
+              args << "-e" << ("set currentVolume to output "
+                               "volume of (get volume settings)")
+                   << "-e" << ("set volume output volume "
+                               "(currentVolume - 6.25)")
+                   << "-e" << ("do shell script \"afplay "
+                               "/System/Library/LoginPlugins"
+                               "/BezelServices.loginPlugin"
+                               "/Contents/Resources/volume.aiff\"");
+            }
+
+            QProcess::startDetached("/usr/bin/osascript", args);
+            return true;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlLeftButton ||
+                 rc->buttonId_ == kRemoteControlRightButton)
+        {
+          if (!rc->pressedDown_)
+          {
+            double offset =
+              (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
+
+            timeline_model().seekFromCurrentTime(offset);
+            timeline_->maybeAnimateOpacity();
+            return true;
+          }
+        }
+      }
+#endif
+    }
+
+    return ItemView::processEvent(canvas, e);
   }
 
   //----------------------------------------------------------------

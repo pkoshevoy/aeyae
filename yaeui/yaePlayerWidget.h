@@ -14,10 +14,6 @@
 #include <QWidget>
 
 // local:
-#ifdef __APPLE__
-#include "yaeAppleRemoteControl.h"
-#include "yaeAppleUtils.h"
-#endif
 #include "yaeAspectRatioView.h"
 #include "yaeCanvasWidget.h"
 #include "yaeConfirmView.h"
@@ -38,31 +34,6 @@ namespace yae
   typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
 #else
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
-#endif
-
-
-#ifdef __APPLE__
-  //----------------------------------------------------------------
-  // RemoteControlEvent
-  //
-  struct RemoteControlEvent : public QEvent
-  {
-    RemoteControlEvent(TRemoteControlButtonId buttonId,
-                       bool pressedDown,
-                       unsigned int clickCount,
-                       bool heldDown):
-      QEvent(QEvent::User),
-      buttonId_(buttonId),
-      pressedDown_(pressedDown),
-      clickCount_(clickCount),
-      heldDown_(heldDown)
-    {}
-
-    TRemoteControlButtonId buttonId_;
-    bool pressedDown_;
-    unsigned int clickCount_;
-    bool heldDown_;
-  };
 #endif
 
 
@@ -102,7 +73,6 @@ namespace yae
   signals:
     void setInPoint();
     void setOutPoint();
-    void menuButtonPressed();
     void playbackFinished();
     void enteringFullScreen();
     void exitingFullScreen();
@@ -164,11 +134,9 @@ namespace yae
 
   protected:
     // virtual:
-    bool event(QEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
-    virtual bool processEvent(QEvent * event);
     virtual bool processKeyEvent(QKeyEvent * event);
     virtual bool processMousePressEvent(QMouseEvent * event);
 

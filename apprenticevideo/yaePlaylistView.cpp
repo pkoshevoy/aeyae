@@ -2234,11 +2234,10 @@ namespace yae
     QEvent::Type et = event->type();
     if (et == QEvent::User && player_)
     {
-      bool playbackPaused = player_->is_playback_paused();
       RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(event);
-      if (rc && playbackPaused)
+      if (rc)
       {
-#if 0 // ndef NDEBUG
+#ifndef NDEBUG
         yae_debug
           << "remote control: " << rc->buttonId_
           << ", down: " << rc->pressedDown_
@@ -2257,48 +2256,60 @@ namespace yae
             if (currentIndex != playingIndex)
             {
               model_->setPlayingItem(currentIndex);
-              rc->accept();
+
+              if (player_->is_playback_paused())
+              {
+                player_->togglePlayback();
+              }
             }
+            else
+            {
+              player_->togglePlayback();
+            }
+
+            return true;
+          }
+        }
+        else if (rc->buttonId_ == kRemoteControlMenuButton)
+        {
+          if (rc->pressedDown_ && !rc->heldDown_)
+          {
+            emit rc_menu_button_pressed();
+            return true;
           }
         }
         else if (rc->buttonId_ == kRemoteControlVolumeUp)
         {
-          if (rc->pressedDown_)
+          if (!rc->pressedDown_)
           {
             move_cursor(*this, selectionFlags, &move_cursor_up);
+            return true;
           }
-
-          rc->accept();
         }
         else if (rc->buttonId_ == kRemoteControlVolumeDown)
         {
-          if (rc->pressedDown_)
+          if (!rc->pressedDown_)
           {
             move_cursor(*this, selectionFlags, &move_cursor_down);
+            return true;
           }
-
-          rc->accept();
         }
         else if (rc->buttonId_ == kRemoteControlLeftButton)
         {
-          if (rc->pressedDown_)
+          if (!rc->pressedDown_)
           {
             move_cursor(*this, selectionFlags, &move_cursor_left);
+            return true;
           }
-
-          rc->accept();
         }
         else if (rc->buttonId_ == kRemoteControlRightButton)
         {
-          if (rc->pressedDown_)
+          if (!rc->pressedDown_)
           {
             move_cursor(*this, selectionFlags, &move_cursor_right);
+            return true;
           }
-
-          rc->accept();
         }
-
-        return rc->isAccepted();
       }
     }
 #endif

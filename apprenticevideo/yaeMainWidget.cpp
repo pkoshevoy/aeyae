@@ -207,6 +207,14 @@ namespace yae
                  actionShowPlaylist_, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    ok = connect(&player_view, SIGNAL(rc_menu_button_pressed()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlistView_, SIGNAL(rc_menu_button_pressed()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     // select all:
     ok = connect(actionSelectAll_, SIGNAL(triggered()),
                  &playlistModel_, SLOT(selectAll()));

@@ -189,6 +189,9 @@ namespace yae
     // virtual:
     bool resizeTo(const Canvas * canvas);
 
+  signals:
+    void rc_menu_button_pressed();
+
   public slots:
     // adjust scrollview position to ensure a given item is visible:
     void ensureVisible(const QModelIndex & itemIndex);

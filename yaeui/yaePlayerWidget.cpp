@@ -20,7 +20,6 @@
 #include <QFileInfo>
 #include <QMenu>
 #include <QMimeData>
-#include <QProcess>
 #include <QShortcut>
 #include <QSpacerItem>
 #include <QUrl>
@@ -1496,20 +1495,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::event
-  //
-  bool
-  PlayerWidget::event(QEvent * e)
-  {
-    if (this->processEvent(e))
-    {
-      return true;
-    }
-
-    return QWidget::event(e);
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::keyPressEvent
   //
   void
@@ -1539,131 +1524,6 @@ namespace yae
     }
 
     QWidget::mousePressEvent(e);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::processEvent
-  //
-  bool
-  PlayerWidget::processEvent(QEvent * e)
-  {
-    QEvent::Type et = e->type();
-
-    if (et == QEvent::User)
-    {
-#ifdef __APPLE__
-      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
-      if (rc)
-      {
-#ifndef NDEBUG
-        std::cerr
-          << "received remote control event(" << rc
-          << "), buttonId: " << rc->buttonId_
-          << ", down: " << rc->pressedDown_
-          << ", clicks: " << rc->clickCount_
-          << ", held down: " << rc->heldDown_
-          << std::endl;
-#endif
-        rc->accept();
-
-        if (rc->buttonId_ == kRemoteControlPlayButton)
-        {
-          if (rc->pressedDown_)
-          {
-            if (rc->heldDown_)
-            {
-              toggleFullScreen();
-            }
-            else
-            {
-              view_.togglePlayback();
-            }
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlMenuButton)
-        {
-          if (rc->pressedDown_)
-          {
-            if (rc->heldDown_)
-            {
-              if (view_.actionCropFrameAutoDetect_->isChecked())
-              {
-                view_.actionCropFrameNone_->trigger();
-              }
-              else
-              {
-                view_.actionCropFrameAutoDetect_->trigger();
-              }
-            }
-            else
-            {
-              emit menuButtonPressed();
-            }
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeUp)
-        {
-          if (rc->pressedDown_)
-          {
-            // raise the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume + 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeDown)
-        {
-          if (rc->pressedDown_)
-          {
-            // lower the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume - 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlLeftButton ||
-                 rc->buttonId_ == kRemoteControlRightButton)
-        {
-          if (rc->pressedDown_)
-          {
-            double offset =
-              (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
-
-            view_.timeline_model().seekFromCurrentTime(offset);
-            view_.timeline_->maybeAnimateOpacity();
-          }
-        }
-
-        return true;
-      }
-#endif
-    }
-
-    return false;
   }
 
   //----------------------------------------------------------------
@@ -1812,16 +1672,15 @@ namespace yae
                                 clickCount,
                                 heldDown));
 #ifndef NDEBUG
-    std::cerr
+    yae_debug
       << "posting remote control event(" << rc.get()
       << "), buttonId: " << buttonId
       << ", down: " << pressedDown
       << ", clicks: " << clickCount
-      << ", held down: " << heldDown
-      << std::endl;
+      << ", held down: " << heldDown;
 #endif
 
-    qApp->postEvent(widget, rc.release(), Qt::HighEventPriority);
+    qApp->postEvent(widget->canvas_, rc.release(), Qt::HighEventPriority);
   }
 #endif
 

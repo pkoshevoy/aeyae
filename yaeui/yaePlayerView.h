@@ -20,6 +20,10 @@
 #include <QTimer>
 
 // yaeui:
+#ifdef __APPLE__
+#include "yaeAppleRemoteControl.h"
+#include "yaeAppleUtils.h"
+#endif
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 #include "yaePlayerItem.h"
@@ -28,6 +32,30 @@
 
 namespace yae
 {
+
+#ifdef __APPLE__
+  //----------------------------------------------------------------
+  // RemoteControlEvent
+  //
+  struct RemoteControlEvent : public QEvent
+  {
+    RemoteControlEvent(TRemoteControlButtonId buttonId,
+                       bool pressedDown,
+                       unsigned int clickCount,
+                       bool heldDown):
+      QEvent(QEvent::User),
+      buttonId_(buttonId),
+      pressedDown_(pressedDown),
+      clickCount_(clickCount),
+      heldDown_(heldDown)
+    {}
+
+    TRemoteControlButtonId buttonId_;
+    bool pressedDown_;
+    unsigned int clickCount_;
+    bool heldDown_;
+  };
+#endif
 
   //----------------------------------------------------------------
   // PlayerView
@@ -69,6 +97,7 @@ namespace yae
     bool event(QEvent * e);
 
     // virtual:
+    bool processEvent(Canvas * canvas, QEvent * event);
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
@@ -90,6 +119,7 @@ namespace yae
     void fixup_next_prev();
     void save_bookmark();
     void on_back_arrow();
+    void rc_menu_button_pressed();
 
     void select_frame_crop();
     void select_aspect_ratio();
