@@ -62,8 +62,29 @@ namespace yae
                              TCanvasWidget * shared_ctx,
                              Qt::WindowFlags flags):
     QWidget(parent, flags),
+#ifdef __APPLE__
+    appleRemoteControl_(NULL),
+#endif
+    shortcutFullScreen_(NULL),
+    shortcutFillScreen_(NULL),
+    shortcutShowTimeline_(NULL),
+    shortcutPlay_(NULL),
+    shortcutLoop_(NULL),
+    shortcutCropNone_(NULL),
+    shortcutAutoCrop_(NULL),
+    shortcutCrop1_33_(NULL),
+    shortcutCrop1_78_(NULL),
+    shortcutCrop1_85_(NULL),
+    shortcutCrop2_40_(NULL),
+    shortcutCropOther_(NULL),
+    shortcutNextChapter_(NULL),
+    shortcutAspectRatioNone_(NULL),
+    shortcutAspectRatio1_33_(NULL),
+    shortcutAspectRatio1_78_(NULL),
     canvas_(NULL),
-    renderMode_(Canvas::kScaleToFit)
+    renderMode_(Canvas::kScaleToFit),
+    xexpand_(1.0),
+    yexpand_(1.0)
   {
     greeting_ = tr("hello");
 
