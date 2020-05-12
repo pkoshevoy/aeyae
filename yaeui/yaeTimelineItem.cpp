@@ -790,7 +790,7 @@ namespace yae
 
     // audio track selection:
     Item & audio_track = other.addNew<Item>("audio_track");
-    audio_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
+    audio_track.anchors_.top_ = ItemRef::offset(video_track, kPropertyBottom);
     audio_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
     audio_track.visible_ = audio_track.addExpr(new IsValid(audio_track_cb_));
     audio_track.height_ = audio_track.
