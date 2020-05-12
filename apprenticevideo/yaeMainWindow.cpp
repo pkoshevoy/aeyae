@@ -421,6 +421,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::changeEvent
+  //
+  void
+  MainWindow::changeEvent(QEvent * e)
+  {
+    if (e->type() == QEvent::WindowStateChange)
+    {
+      if (isFullScreen())
+      {
+        menubar->hide();
+      }
+      else
+      {
+        menubar->show();
+      }
+    }
+
+    e->ignore();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::closeEvent
   //
   void
