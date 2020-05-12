@@ -507,7 +507,8 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
-    // view_.setEnabled(true);
+    dismissSelectionViews();
+    view_.setEnabled(true);
     view_.playback(reader, bookmark, start_from_zero_time);
   }
 
@@ -518,13 +519,7 @@ namespace yae
   PlayerWidget::stop()
   {
     view_.stopPlayback();
-    // view_.setEnabled(false);
-    cropView_.setEnabled(false);
-    frameCropSelectionView_.setEnabled(false);
-    aspectRatioSelectionView_.setEnabled(false);
-    videoTrackSelectionView_.setEnabled(false);
-    audioTrackSelectionView_.setEnabled(false);
-    subttTrackSelectionView_.setEnabled(false);
+    dismissSelectionViews();
   }
 
   //----------------------------------------------------------------
@@ -1330,6 +1325,20 @@ namespace yae
   {
     subttTrackSelectionView_.setEnabled(false);
     view_.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::dismissSelectionViews
+  //
+  void
+  PlayerWidget::dismissSelectionViews()
+  {
+    cropView_.setEnabled(false);
+    frameCropSelectionView_.setEnabled(false);
+    aspectRatioSelectionView_.setEnabled(false);
+    videoTrackSelectionView_.setEnabled(false);
+    audioTrackSelectionView_.setEnabled(false);
+    subttTrackSelectionView_.setEnabled(false);
   }
 
   //----------------------------------------------------------------

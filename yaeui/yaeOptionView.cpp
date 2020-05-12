@@ -104,11 +104,10 @@ namespace yae
     root.width_ = root.addExpr(new GetViewWidth(view));
     root.height_ = root.addExpr(new GetViewHeight(view));
 
-#if 0
     // setup mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
     mouse_trap.anchors_.fill(root);
-#endif
+    mouse_trap.onDoubleClick_ = false;
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);

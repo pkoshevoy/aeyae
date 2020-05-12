@@ -111,6 +111,7 @@ namespace yae
     // setup mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
     mouse_trap.anchors_.fill(root);
+    mouse_trap.onDoubleClick_ = false;
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);

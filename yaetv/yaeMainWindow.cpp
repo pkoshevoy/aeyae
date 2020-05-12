@@ -838,7 +838,6 @@ namespace yae
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
 
-    view.setEnabled(false);
     confirm.setEnabled(true);
   }
 
@@ -855,9 +854,7 @@ namespace yae
     // virtual:
     void operator()() const
     {
-      PlayerView & view = mainWindow_.playerWidget_->view();
       ConfirmView & confirm = mainWindow_.playerWidget_->confirm_;
-      view.setEnabled(true);
       confirm.setEnabled(false);
     }
 
@@ -878,7 +875,6 @@ namespace yae
     }
 
     const Recording & rec = *rec_ptr;
-    PlayerView & view = playerWidget_->view();
 
     // shortcuts:
     const AppStyle & style = *(view_.style());
@@ -901,7 +897,6 @@ namespace yae
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
 
-    view.setEnabled(false);
     confirm.setEnabled(true);
   }
 

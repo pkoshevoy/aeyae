@@ -120,6 +120,7 @@ namespace yae
     void dismissVideoTrackSelectionView();
     void dismissAudioTrackSelectionView();
     void dismissSubttTrackSelectionView();
+    void dismissSelectionViews();
 
     void videoTrackSelectedOption(int option_index);
     void audioTrackSelectedOption(int option_index);
