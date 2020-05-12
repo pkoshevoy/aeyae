@@ -1130,6 +1130,7 @@ namespace yae
   TimelineItem::showPlaylist(bool show_playlist)
   {
     uncache();
+    maybeAnimateOpacity();
   }
 
 }

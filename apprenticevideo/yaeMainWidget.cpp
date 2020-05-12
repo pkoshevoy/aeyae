@@ -465,11 +465,7 @@ namespace yae
       loadBooleanSettingOrDefault(kResumePlaybackFromBookmark, true);
     actionResumeFromBookmark_->setChecked(resumeFromBookmark);
 
-#if 0 // already handled in yaePlayerView.cpp
-    bool showTimeline =
-      loadBooleanSettingOrDefault(kShowTimeline, false);
-    player_view.actionShowTimeline_->setChecked(showTimeline);
-#endif
+    timeline.showPlaylist(false);
   }
 
   //----------------------------------------------------------------
