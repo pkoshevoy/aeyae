@@ -72,10 +72,20 @@ namespace yae
       widget_.setCursor(QCursor(Qt::BlankCursor));
     }
 
+    void showCursor()
+    {
+      widget_.setCursor(QCursor(Qt::ArrowCursor));
+    }
+
   public:
     void emitToggleFullScreen()
     {
       emit toggleFullScreen();
+    }
+
+    void stopHideCursorTimer()
+    {
+      timerHideCursor_.stop();
     }
 
     void startHideCursorTimer()
@@ -337,7 +347,7 @@ namespace yae
 
         if (et == QEvent::MouseMove)
         {
-          TWidget::setCursor(QCursor(Qt::ArrowCursor));
+          sigs_.showCursor();
           sigs_.startHideCursorTimer();
         }
         else if (et == QEvent::Resize)

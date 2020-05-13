@@ -76,8 +76,16 @@ namespace yae
   void
   PlayerWindow::stopAndHide()
   {
+    PlayerWidget * playerWidget = playerWidget_;
+
     stopPlayback();
     hide();
+
+    if (playerWidget)
+    {
+      playerWidget->canvas_->sigs_.stopHideCursorTimer();
+      playerWidget->canvas_->sigs_.showCursor();
+    }
 
     emit windowClosed();
   }
