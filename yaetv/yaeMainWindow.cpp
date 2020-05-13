@@ -432,10 +432,6 @@ namespace yae
                  playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&(playerWidget_->canvas_->sigs_), SIGNAL(maybeHideCursor()),
-                 &(playerWidget_->canvas_->sigs_), SLOT(hideCursor()));
-    YAE_ASSERT(ok);
-
     ok = connect(&view_, SIGNAL(watch_live(uint32_t, TTime)),
                  this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);

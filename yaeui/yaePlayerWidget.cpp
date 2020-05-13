@@ -362,6 +362,10 @@ namespace yae
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
+                 &(canvas_->sigs_), SLOT(hideCursor()));
+    YAE_ASSERT(ok);
+
     view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
