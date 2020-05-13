@@ -431,6 +431,7 @@ namespace yae
 
     border_ = ColorRef::constant(Color(0x7f7f7f, 1.0));
     cursor_ = ColorRef::constant(Color(0xf12b24, 1.0));
+    cursor_fg_ = ColorRef::constant(Color(0xffffff, 1.0));
     scrollbar_ = ColorRef::constant(Color(0x7f7f7f, 0.5));
     separator_ = ColorRef::constant(scrollbar_.get());
     underline_ = ColorRef::constant(cursor_.get());
@@ -534,6 +535,7 @@ namespace yae
 
     border_.uncache();
     cursor_.uncache();
+    cursor_fg_.uncache();
     scrollbar_.uncache();
     separator_.uncache();
     underline_.uncache();

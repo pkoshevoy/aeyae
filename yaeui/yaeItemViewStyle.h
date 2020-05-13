@@ -111,6 +111,7 @@ namespace yae
 
     ColorRef border_;
     ColorRef cursor_;
+    ColorRef cursor_fg_;
     ColorRef scrollbar_;
     ColorRef separator_;
     ColorRef underline_;

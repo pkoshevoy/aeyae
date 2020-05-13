@@ -41,7 +41,6 @@ namespace yae
     ColorRef fg_epg_scrollbar_;
     ColorRef bg_epg_cancelled_;
     ColorRef bg_epg_rec_;
-    ColorRef bg_epg_sel_;
 
     TGradientPtr bg_epg_header_;
     TGradientPtr bg_epg_shadow_;

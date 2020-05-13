@@ -382,7 +382,7 @@ namespace yae
           uint16_t mask = *wi.weekday_mask_;
           if ((mask & wday_) == wday_)
           {
-            result = style.bg_epg_.get();
+            result = style.cursor_fg_.get();
             return;
           }
         }
@@ -3495,7 +3495,7 @@ namespace yae
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
         bg.color_ = bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & icon = row.addNew<RoundRect>("icon");
@@ -3508,22 +3508,7 @@ namespace yae
            addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
         icon.color_ = icon.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
-#if 0
-        RoundRect & dot = row.addNew<RoundRect>("dot");
-        dot.radius_ = ItemRef::reference(dot, kPropertyHeight, 0.5);
-        dot.anchors_.left_ = ItemRef::offset(icon, kPropertyLeft);
-        dot.anchors_.bottom_ = ItemRef::offset(icon, kPropertyBottom);
-        dot.width_ = dot.addExpr(new OddRoundUp(icon, kPropertyHeight, 0.2));
-        dot.height_ = dot.width_;
-        dot.margins_.
-          set_left(ItemRef::reference(icon, kPropertyHeight, 0.1));
-        dot.margins_.
-          set_bottom(ItemRef::reference(icon, kPropertyHeight, 0.1));
-        dot.background_ = dot.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
-        dot.color_ = dot.
-          addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
-#endif
+
         double fade = wi.is_disabled() ? 0.5 : 1.0;
         Text & chan = row.addNew<Text>("chan");
         chan.font_ = style.font_;
@@ -3646,7 +3631,7 @@ namespace yae
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
         bg.color_ = bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & chbg = row.addNew<RoundRect>("chbg");
@@ -4023,22 +4008,21 @@ namespace yae
         badge.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
         badge.elide_ = Qt::ElideRight;
         badge.color_ = badge.
-          // addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+          addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
         badge.background_ = badge.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
-          // addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
         badge.text_ = badge.addExpr(new GetBadgeText(view, basepath));
         badge.visible_ = badge.addExpr(new ShowBadge(view, basepath));
 
         badge_bg.anchors_.fill(badge);
+        badge_bg.margins_.
+          set_top(ItemRef::reference(badge, kPropertyFontDescent, -1.0));
         badge_bg.margins_.
           set_left(ItemRef::reference(hidden, kUnitSize, -0.1));
         badge_bg.margins_.
           set_right(ItemRef::reference(hidden, kUnitSize, -0.1));
         badge_bg.visible_ = BoolRef::reference(badge, kPropertyVisible);
         badge_bg.color_ = badge_bg.
-          // addExpr(style_color_ref(view, &AppStyle::bg_epg_));
           addExpr(style_color_ref(view, &AppStyle::cursor_));
 
         Text & title = c1.addNew<Text>("title");
@@ -4145,7 +4129,7 @@ namespace yae
         trashcan_bg.color_ = trashcan_bg.
           addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
         trashcan_bg.background_ = trashcan_bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_, 0.0));
+          addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
 
         DeleteRecording & trashcan_ia =
           c4.add(new DeleteRecording("trashcan_ia", view, name));
@@ -4704,7 +4688,7 @@ namespace yae
     Item & mainview = overview.add<Item>(mainview_);
 
     Rectangle & sep = overview.addNew<Rectangle>("separator");
-    sep.color_ = sep.addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+    sep.color_ = sep.addExpr(style_color_ref(view, &AppStyle::bg_splitter_));
 
     Splitter & splitter = overview.
       add(new Splitter("splitter",
@@ -4783,7 +4767,7 @@ namespace yae
     bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
     bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
     bg.color_ = bg.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+      addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
     bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
     Text & label = row.addNew<Text>("label");
@@ -5343,7 +5327,7 @@ namespace yae
     tx_toggle.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
     tx_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     tx_toggle.color_ = tx_toggle.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+      addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
     tx_toggle.background_ = tx_toggle.
       addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
     tx_toggle.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
@@ -6698,7 +6682,7 @@ namespace yae
       tx_remove.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       tx_remove.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
       tx_remove.color_ = tx_remove.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+        addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
       tx_remove.background_ = tx_remove.
         addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
       tx_remove.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);

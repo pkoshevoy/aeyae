@@ -741,7 +741,7 @@ namespace yae
     ConfirmView::Action & aff = *confirm_.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
-    aff.fg_ = style.fg_;
+    aff.fg_ = style.cursor_fg_;
 
     confirm_.negative_.reset(new ConfirmView::Action());
     ConfirmView::Action & neg = *confirm_.negative_;
@@ -826,7 +826,7 @@ namespace yae
     ConfirmView::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
-    aff.fg_ = style.fg_;
+    aff.fg_ = style.cursor_fg_;
 
     confirm.negative_.reset(new DeclineDeleteRecording(*this, rec_ptr));
     ConfirmView::Action & neg = *confirm.negative_;
@@ -885,7 +885,7 @@ namespace yae
     ConfirmView::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
-    aff.fg_ = style.fg_;
+    aff.fg_ = style.cursor_fg_;
 
     confirm.negative_.reset(new CancelDeleteRecording(*this, rec_ptr));
     ConfirmView::Action & neg = *confirm.negative_;
