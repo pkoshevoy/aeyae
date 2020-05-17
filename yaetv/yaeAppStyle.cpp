@@ -34,13 +34,13 @@ namespace yae
     bg_epg_cancelled_ = ColorRef::constant(Color(0x000000, 1.0));
     bg_epg_rec_ = ColorRef::constant(Color(0xFF0000, 1.0));
 #elif 1
-    bg_sidebar_ = ColorRef::constant(Color(0x373737, 1.0));
+    bg_sidebar_ = ColorRef::constant(Color(0x35383C, 1.0));
     bg_splitter_ = ColorRef::constant(Color(0x000000, 1.0));
-    bg_epg_ = ColorRef::constant(Color(0x303030, 1.0));
+    bg_epg_ = ColorRef::constant(Color(0x2E3135, 1.0));
     fg_epg_ = ColorRef::constant(Color(0xAFAFAF, 1.0));
     fg_epg_chan_ = ColorRef::constant(Color(0xAFAFAF, 1.0));
-    bg_epg_tile_ = ColorRef::constant(Color(0x3F3F3F, 1.0));
-    bg_epg_scrollbar_ = ColorRef::constant(Color(0x303030, 1.0));
+    bg_epg_tile_ = ColorRef::constant(Color(0x3D4045, 1.0));
+    bg_epg_scrollbar_ = ColorRef::constant(Color(0x2E3135, 1.0));
     fg_epg_scrollbar_ = ItemViewStyle::scrollbar_;
     bg_epg_cancelled_ = ColorRef::constant(Color(0x000000, 1.0));
     bg_epg_rec_ = ColorRef::constant(Color(0xFF0000, 1.0));
@@ -57,12 +57,12 @@ namespace yae
       gradient[0.95] = Color(0xB9B9B9, 1.00);
       gradient[1.00] = Color(0x8E8E8E, 1.00);
 #elif 1
-      gradient[0.00] = Color(0x5F5F5F, 1.00);
-      gradient[0.05] = Color(0x505050, 1.00);
-      gradient[0.50] = Color(0x414141, 1.00);
-      gradient[0.55] = Color(0x303030, 1.00);
-      gradient[0.95] = Color(0x292929, 1.00);
-      gradient[1.00] = Color(0x1E1E1E, 1.00);
+      gradient[0.00] = Color(0x5D6064, 1.00);
+      gradient[0.05] = Color(0x4E5155, 1.00);
+      gradient[0.50] = Color(0x3F4246, 1.00);
+      gradient[0.55] = Color(0x2E3135, 1.00);
+      gradient[0.95] = Color(0x272A2E, 1.00);
+      gradient[1.00] = Color(0x1C1F23, 1.00);
 #else
       gradient[0.00] = Color(0x29292D, 1.00);
       gradient[1.00] = Color(0x1C1B1F, 1.00);
