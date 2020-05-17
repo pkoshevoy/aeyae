@@ -852,7 +852,7 @@ namespace yae
     PlayerView & player_view = PlayerWidget::view();
     player_view.player_->playback_stop();
 
-    this->setWindowTitle(tr("Apprentice Video"));
+    window()->setWindowTitle(tr("Apprentice Video"));
 
     player_view.adjustMenuActions();
 
