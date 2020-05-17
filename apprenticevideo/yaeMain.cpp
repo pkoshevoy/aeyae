@@ -153,11 +153,21 @@ mainMayThrowException(int argc, char ** argv)
               << "LANG: " << lang << std::endl;
 #endif
 
-    std::locale::global(boost::locale::generator().generate(""));
-  }
+#if defined(__APPLE__) && defined(__BIG_ENDIAN__)
+    const char * default_locale = "C";
+#else
+    const char * default_locale = "";
+#endif
 
-  // Make boost.filesystem use global locale:
-  boost::filesystem::path::imbue(std::locale());
+    boost::locale::generator gen;
+    std::locale loc = std::locale(gen(default_locale),
+                                  std::locale::classic(),
+                                  std::locale::numeric);
+    std::locale::global(loc);
+
+    // Make boost.filesystem use global locale:
+    boost::filesystem::path::imbue(loc);
+  }
 
 #if defined(_WIN32) && !defined(NDEBUG)
   // restore console stdio:

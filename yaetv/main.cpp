@@ -724,8 +724,14 @@ main(int argc, char ** argv)
       }
 #endif
 
+#if defined(__APPLE__) && defined(__BIG_ENDIAN__)
+      const char * default_locale = "C";
+#else
+      const char * default_locale = "";
+#endif
+
       boost::locale::generator gen;
-      std::locale loc = std::locale(gen("en_US.UTF-8"),
+      std::locale loc = std::locale(gen(default_locale),
                                     std::locale::classic(),
                                     std::locale::numeric);
       std::locale::global(loc);
