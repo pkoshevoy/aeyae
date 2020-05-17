@@ -63,9 +63,6 @@ namespace yae
       gradient[0.55] = Color(0x2E3135, 1.00);
       gradient[0.95] = Color(0x272A2E, 1.00);
       gradient[1.00] = Color(0x1C1F23, 1.00);
-#else
-      gradient[0.00] = Color(0x29292D, 1.00);
-      gradient[1.00] = Color(0x1C1B1F, 1.00);
 #endif
     }
 
@@ -84,8 +81,8 @@ namespace yae
       gradient[0.00] = Color(0xE9E9ED, 1.00);
       gradient[1.00] = Color(0xDCDBDF, 1.00);
 #else
-      gradient[0.00] = Color(0x29292D, 1.00);
-      gradient[1.00] = Color(0x1C1B1F, 1.00);
+      gradient[0.00] = Color(0x26292D, 1.00);
+      gradient[1.00] = Color(0x181B1F, 1.00);
 #endif
     }
 
