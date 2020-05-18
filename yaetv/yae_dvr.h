@@ -315,6 +315,20 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // remove_excess_recordings
+  //
+  void remove_excess_recordings(const fs::path & basedir,
+                                const Recording & rec);
+
+  //----------------------------------------------------------------
+  // make_room_for
+  //
+  bool make_room_for(const fs::path & basedir,
+                     const Recording & rec,
+                     uint64_t num_sec);
+
+
+  //----------------------------------------------------------------
   // DVR
   //
   struct DVR
@@ -485,7 +499,6 @@ namespace yae
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const Recording & rec);
 
-    void remove_excess_recordings(const Recording & rec);
     bool make_room_for(const Recording & rec, uint64_t num_sec);
 
     // find an earlier recording with the same program description:

@@ -862,6 +862,9 @@ namespace yae
 
     mpg_.reset();
 
+    uint32_t num_sec = gps_t1_ - gps_t0_;
+    yae::make_room_for(basedir, *this, num_sec);
+
     fs::path title_path = get_title_path(basedir);
     std::string title_path_str = title_path.string();
     if (!yae::mkdir_p(title_path_str))
@@ -3698,10 +3701,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::remove_excess_recordings
+  // remove_excess_recordings
   //
   void
-  DVR::remove_excess_recordings(const Recording & rec)
+  remove_excess_recordings(const fs::path & basedir,
+                           const Recording & rec)
   {
     if (!rec.max_recordings_)
     {
@@ -3711,7 +3715,7 @@ namespace yae
 
     std::map<std::string, std::string> recordings;
     {
-      std::string title_path = rec.get_title_path(basedir_).string();
+      std::string title_path = rec.get_title_path(basedir).string();
       CollectRecordings collect_recordings(recordings);
       for_each_file_at(title_path, collect_recordings);
     }
@@ -3758,25 +3762,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::make_room_for
+  // make_room_for
   //
   bool
-  DVR::make_room_for(const Recording & rec, uint64_t num_sec)
+  make_room_for(const fs::path & basedir,
+                const Recording & rec,
+                uint64_t num_sec)
   {
-    cleanup_yaetv_dir();
-
     // remove any existing old recordings beyond max recordings limit:
-    remove_excess_recordings(rec);
+    yae::remove_excess_recordings(basedir, rec);
 
     // must accommodate max 19.39Mbps ATSC transport stream:
-    std::string title_path = rec.get_title_path(basedir_).string();
+    std::string title_path = rec.get_title_path(basedir).string();
     uint64_t title_bytes = (num_sec * 20000000) >> 3;
 
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
     uint64_t available_bytes = 0;
 
-    if (!yae::stat_diskspace(title_path.c_str(),
+    if (!yae::stat_diskspace(basedir.string().c_str(),
                              filesystem_bytes,
                              filesystem_bytes_free,
                              available_bytes))
@@ -3795,9 +3799,8 @@ namespace yae
 
     std::map<std::string, std::string> recordings;
     {
-      std::string title_path = rec.get_title_path(basedir_).string();
       CollectRecordings collect_recordings(recordings);
-      for_each_file_at(title_path, collect_recordings);
+      for_each_file_at(basedir.string(), collect_recordings);
     }
 
     std::size_t removed_bytes = 0;
@@ -3824,6 +3827,17 @@ namespace yae
              rec.channel_minor_,
              rec.title_.c_str());
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::make_room_for
+  //
+  bool
+  DVR::make_room_for(const Recording & rec, uint64_t num_sec)
+  {
+    cleanup_yaetv_dir();
+
+    return yae::make_room_for(basedir_, rec, num_sec);
   }
 
   //----------------------------------------------------------------
@@ -4041,14 +4055,15 @@ namespace yae
         if (!is_recording)
         {
           std::string title_path = rec.get_title_path(basedir_).string();
-          if (!yae::mkdir_p(title_path))
-          {
-            yae_elog("failed to mkdir %s", title_path.c_str());
-            continue;
-          }
 
           if (!make_room_for(rec, num_sec))
           {
+            continue;
+          }
+
+          if (!yae::mkdir_p(title_path))
+          {
+            yae_elog("failed to mkdir %s", title_path.c_str());
             continue;
           }
         }
