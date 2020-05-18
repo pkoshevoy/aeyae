@@ -31,7 +31,7 @@
 namespace yae
 {
   // forward declarations:
-  struct YAE_API IReader;
+  struct IReader;
 
   //----------------------------------------------------------------
   // get_timeline

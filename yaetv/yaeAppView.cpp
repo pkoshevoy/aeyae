@@ -4166,7 +4166,7 @@ namespace yae
   AppView::on_watch_live(uint32_t ch_num)
   {
     TTime seek_pos = TTime::now();
-    yae::queue_call(*this, &AppView::watch_live, ch_num, seek_pos);
+    yae::queue_call(*this, &AppView::emit_watch_live, ch_num, seek_pos);
   }
 
   //----------------------------------------------------------------
@@ -4274,7 +4274,7 @@ namespace yae
 
     // ask for confirmation:
     TRecordingPtr rec_ptr = found->second;
-    yae::queue_call(*this, &AppView::confirm_delete, rec_ptr);
+    yae::queue_call(*this, &AppView::emit_confirm_delete, rec_ptr);
   }
 
   //----------------------------------------------------------------
@@ -4295,7 +4295,7 @@ namespace yae
     std::string basepath = rec.get_filepath(dvr_->basedir_, "");
     now_playing_.reset(new Playback(sidebar_sel_, name, basepath));
 
-    yae::queue_call(*this, &AppView::playback, rec_ptr);
+    yae::queue_call(*this, &AppView::emit_playback, rec_ptr);
     dataChanged();
     resetMouseState();
   }

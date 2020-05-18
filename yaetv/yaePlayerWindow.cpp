@@ -87,7 +87,7 @@ namespace yae
       playerWidget->canvas_->sigs_.showCursor();
     }
 
-    yae::queue_call(*this, &PlayerWindow::windowClosed);
+    yae::queue_call(*this, &PlayerWindow::emit_window_closed);
   }
 
   //----------------------------------------------------------------

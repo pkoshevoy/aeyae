@@ -18,6 +18,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeText.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -122,7 +123,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      view_.done();
+      yae::queue_call(view_, &FrameCropView::emit_done);
       return true;
     }
 

@@ -134,6 +134,34 @@ namespace yae
                   const IBookmark * bookmark = NULL,
                   bool start_from_zero_time = false);
 
+    // ugh, all this is because in Qt4 signals are protected:
+    inline void emit_toggle_playback()
+    { emit togglePlayback(); }
+
+    inline void emit_toggle_playlist()
+    { emit toggle_playlist(); }
+
+    inline void emit_on_back_arrow()
+    { emit on_back_arrow(); }
+
+    inline void emit_select_frame_crop()
+    { emit select_frame_crop(); }
+
+    inline void emit_select_aspect_ratio()
+    { emit select_aspect_ratio(); }
+
+    inline void emit_select_video_track()
+    { emit select_video_track(); }
+
+    inline void emit_select_audio_track()
+    { emit select_audio_track(); }
+
+    inline void emit_select_subtt_track()
+    { emit select_subtt_track(); }
+
+    inline void emit_delete_playing_file()
+    { emit delete_playing_file(); }
+
   public slots:
     // live timeline refresh:
     void sync_ui();

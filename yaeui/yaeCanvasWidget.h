@@ -66,6 +66,11 @@ namespace yae
     void toggleFullScreen();
     void maybeHideCursor();
 
+  public:
+    // signals are protected in Qt4, this is a workaround:
+    inline void emit_toggle_fullscreen()
+    { emit toggleFullScreen(); }
+
   public slots:
     void hideCursor()
     {
@@ -361,7 +366,7 @@ namespace yae
 
         if (et == QEvent::MouseButtonDblClick)
         {
-          sigs_.toggleFullScreen();
+          sigs_.emit_toggle_fullscreen();
           event->accept();
           return true;
         }

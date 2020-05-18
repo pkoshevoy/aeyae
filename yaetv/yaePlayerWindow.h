@@ -47,6 +47,11 @@ namespace yae
   signals:
     void windowClosed();
 
+  public:
+    // signals are protected in Qt4, this is a workaround:
+    inline void emit_window_closed()
+    { emit windowClosed(); }
+
   protected:
     // virtual:
     void changeEvent(QEvent * e);

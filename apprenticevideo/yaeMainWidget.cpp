@@ -420,7 +420,7 @@ namespace yae
   toggle_playlist(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::toggle_playlist);
+    yae::queue_call(*view, &PlayerView::emit_toggle_playlist);
   }
 
   //----------------------------------------------------------------

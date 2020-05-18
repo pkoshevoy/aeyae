@@ -81,7 +81,7 @@ namespace yae
   toggle_playback(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::togglePlayback);
+    yae::queue_call(*view, &PlayerView::emit_toggle_playback);
   }
 
   //----------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace yae
   back_arrow_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::on_back_arrow);
+    yae::queue_call(*view, &PlayerView::emit_on_back_arrow);
   }
 
   //----------------------------------------------------------------
@@ -101,7 +101,7 @@ namespace yae
   select_frame_crop_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::select_frame_crop);
+    yae::queue_call(*view, &PlayerView::emit_select_frame_crop);
   }
 
   //----------------------------------------------------------------
@@ -111,7 +111,7 @@ namespace yae
   select_aspect_ratio_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::select_aspect_ratio);
+    yae::queue_call(*view, &PlayerView::emit_select_aspect_ratio);
   }
 
   //----------------------------------------------------------------
@@ -121,7 +121,7 @@ namespace yae
   select_video_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::select_video_track);
+    yae::queue_call(*view, &PlayerView::emit_select_video_track);
   }
 
   //----------------------------------------------------------------
@@ -131,7 +131,7 @@ namespace yae
   select_audio_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::select_audio_track);
+    yae::queue_call(*view, &PlayerView::emit_select_audio_track);
   }
 
   //----------------------------------------------------------------
@@ -141,7 +141,7 @@ namespace yae
   select_subtt_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::select_subtt_track);
+    yae::queue_call(*view, &PlayerView::emit_select_subtt_track);
   }
 
   //----------------------------------------------------------------
@@ -151,7 +151,7 @@ namespace yae
   delete_playing_file_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::delete_playing_file);
+    yae::queue_call(*view, &PlayerView::emit_delete_playing_file);
   }
 
   //----------------------------------------------------------------

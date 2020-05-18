@@ -128,6 +128,17 @@ namespace yae
     void playback(TRecordingPtr);
     void watch_live(uint32_t ch_num, TTime seek_pos);
 
+  public:
+    // signals are protected in Qt4, this is a workaround:
+    inline void emit_confirm_delete(TRecordingPtr rec)
+    { emit confirm_delete(rec); }
+
+    inline void emit_playback(TRecordingPtr rec)
+    { emit playback(rec); }
+
+    inline void emit_watch_live(uint32_t ch_num, TTime seek_pos)
+    { emit watch_live(ch_num, seek_pos); }
+
   public slots:
     void layoutChanged();
     void dataChanged();
