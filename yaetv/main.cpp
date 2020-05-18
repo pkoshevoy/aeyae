@@ -42,6 +42,9 @@
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_version.h"
 
+// yaeui:
+#include "yaeUtilsQt.h"
+
 // local:
 #include "yaeMainWindow.h"
 #include "yae_dvr.h"
@@ -60,50 +63,6 @@ namespace yae
   // mainWindow
   //
   MainWindow * mainWindow = NULL;
-
-  //----------------------------------------------------------------
-  // Application
-  //
-  class Application : public QApplication
-  {
-  public:
-    Application(int & argc, char ** argv):
-      QApplication(argc, argv)
-    {
-#ifdef __APPLE__
-      QString appDir = QApplication::applicationDirPath();
-      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
-      QApplication::addLibraryPath(plugInsDir);
-#endif
-    }
-
-    // virtual: overridden to propagate custom events to the parent:
-    bool notify(QObject * receiver, QEvent * e)
-    {
-      YAE_ASSERT(receiver && e);
-      bool result = false;
-
-      QEvent::Type et = e ? e->type() : QEvent::None;
-      if (et >= QEvent::User)
-      {
-        e->ignore();
-      }
-
-      while (receiver)
-      {
-        result = QApplication::notify(receiver, e);
-        if (et < QEvent::User || (result && e->isAccepted()))
-        {
-          break;
-        }
-
-        receiver = receiver->parent();
-      }
-
-      return result;
-    }
-  };
-
 
   //----------------------------------------------------------------
   // parse_mpeg_ts

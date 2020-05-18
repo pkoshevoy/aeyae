@@ -122,7 +122,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      view_.emitDone();
+      view_.done();
       return true;
     }
 
@@ -659,7 +659,7 @@ namespace yae
           key == Qt::Key_Enter ||
           key == Qt::Key_Escape)
       {
-        emitDone();
+        this->done();
         e->accept();
       }
     }

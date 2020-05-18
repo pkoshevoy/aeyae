@@ -71,12 +71,14 @@ namespace yae
 
     void initItemViews();
 
+  public slots:
     void setPlaylist(const std::list<QString> & playlist,
                      bool beginPlaybackImmediately = true);
 
+    void setPlaylist(const QString & filename);
+
     void playbackSetTempo(double percentTempo);
 
-  public slots:
     // file menu:
     void fileNewWindow();
     void fileOpen();

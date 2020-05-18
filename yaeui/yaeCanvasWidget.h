@@ -78,11 +78,6 @@ namespace yae
     }
 
   public:
-    void emitToggleFullScreen()
-    {
-      emit toggleFullScreen();
-    }
-
     void stopHideCursorTimer()
     {
       timerHideCursor_.stop();
@@ -354,17 +349,19 @@ namespace yae
         {
           TWidget::resizeEvent((QResizeEvent *)event);
           TCanvasWidget::updateCanvasSize();
+          event->accept();
           return true;
         }
 
         if (Canvas::processEvent(event))
         {
+          event->accept();
           return true;
         }
 
         if (et == QEvent::MouseButtonDblClick)
         {
-          sigs_.emitToggleFullScreen();
+          sigs_.toggleFullScreen();
           event->accept();
           return true;
         }

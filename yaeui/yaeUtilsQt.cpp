@@ -20,7 +20,9 @@
 #include <QDirIterator>
 #include <QEvent>
 #include <QFile>
+#include <QFileOpenEvent>
 #include <QMetaEnum>
+#include <QMouseEvent>
 #include <QPoint>
 #include <QRect>
 #include <QStringList>
@@ -2123,6 +2125,114 @@ namespace yae
     }
 
     return !breaks.empty();
+  }
+
+  //----------------------------------------------------------------
+  // handle_queued_call_event
+  //
+  bool
+  handle_queued_call_event(QEvent * event)
+  {
+    if (event->type() == QEvent::User)
+    {
+      yae::QueuedCallEvent * e = dynamic_cast<yae::QueuedCallEvent *>(event);
+      if (e)
+      {
+        e->accept();
+        e->execute();
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+
+  //----------------------------------------------------------------
+  // Application::Application
+  //
+  Application::Application(int & argc, char ** argv):
+    QApplication(argc, argv)
+  {
+#ifdef __APPLE__
+    QString appDir = QApplication::applicationDirPath();
+    QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
+    QApplication::addLibraryPath(plugInsDir);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // Application::notify
+  //
+  bool
+  Application::notify(QObject * receiver, QEvent * event)
+  {
+    YAE_ASSERT(receiver && event);
+    bool result = false;
+
+    QEvent::Type et = event ? event->type() : QEvent::None;
+    if (et >= QEvent::User)
+    {
+      if (yae::handle_queued_call_event(event))
+      {
+        return true;
+      }
+
+      event->ignore();
+    }
+
+    while (receiver)
+    {
+      result = QApplication::notify(receiver, event);
+
+#if 0 // ndef NDEBUG
+      if (et == QEvent::MouseButtonPress ||
+          et == QEvent::MouseButtonRelease ||
+          et == QEvent::MouseButtonDblClick ||
+          et == QEvent::MouseMove)
+      {
+        QMouseEvent * e = static_cast<QMouseEvent *>(event);
+        yae_warn
+          << "QApplication::notify(" << receiver << ", " << e << ") = "
+          << result
+          << ", receiver \"" << receiver->objectName().toUtf8().constData()
+          << "\", " << e->button() << " button, "
+          << e->buttons() << " buttons, spontaneous: "
+          << (e->spontaneous() ? "true" : "false")
+          << ", " << yae::to_str(et)
+          << ", " << (e->isAccepted() ? "accept" : "ignore");
+      }
+#endif
+      if (et < QEvent::User || (result && event->isAccepted()))
+      {
+        break;
+      }
+
+      receiver = receiver->parent();
+    }
+
+    return result;
+  }
+
+  //----------------------------------------------------------------
+  // Application::event
+  //
+  bool
+  Application::event(QEvent * event)
+  {
+    QEvent::Type et = event ? event->type() : QEvent::None;
+    if (et != QEvent::FileOpen)
+    {
+      return QApplication::event(event);
+    }
+
+    // handle the apple event to open a document:
+    QFileOpenEvent * e = static_cast<QFileOpenEvent *>(event);
+    QString filename = e->file();
+    emit file_open(filename);
+
+    e->accept();
+    return true;
   }
 
 }

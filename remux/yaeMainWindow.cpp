@@ -556,6 +556,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::loadFile
+  //
+  void
+  MainWindow::loadFile(const QString & filename)
+  {
+    if (filename.endsWith(".yaerx", Qt::CaseInsensitive))
+    {
+      this->fileOpen(filename);
+    }
+    else
+    {
+      std::string source = filename.toUtf8().constData();
+      std::set<std::string> sources;
+      sources.insert(source);
+      this->add(sources);
+    }
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::fileOpen
   //
   void

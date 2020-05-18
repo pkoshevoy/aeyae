@@ -114,9 +114,6 @@ namespace yae
     // NOTE: xCrop and yCrop are expressed in the rotated coordinate system:
     void setCrop(const Segment & xCrop, const Segment & yCrop);
 
-    inline void emitDone()
-    { emit done(); }
-
   signals:
     void done();
 

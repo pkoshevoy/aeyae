@@ -185,15 +185,6 @@ namespace yae
     void stopPlayback();
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
-    void togglePlaylist();
-
-    void onBackArrow();
-    void triggerSelectFrameCrop();
-    void triggerSelectAspectRatio();
-    void triggerSelectVideoTrack();
-    void triggerSelectAudioTrack();
-    void triggerSelectSubttTrack();
-    void triggerDeletePlayingFile();
 
     void populateContextMenu();
     void adjustMenuActions();

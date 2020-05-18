@@ -21,6 +21,7 @@
 
 // Qt includes:
 #include <QAction>
+#include <QApplication>
 #include <QEvent>
 #include <QMenu>
 #include <QObject>
@@ -370,6 +371,159 @@ namespace yae
   //
   bool
   find_menu_breaks(const QMenu & menu, std::list<MenuBreak> & breaks);
+
+
+  //----------------------------------------------------------------
+  // QueuedCallEvent
+  //
+  struct QueuedCallEvent : public QEvent
+  {
+    QueuedCallEvent(): QEvent(QEvent::User) {}
+    virtual void execute() = 0;
+  };
+
+  //----------------------------------------------------------------
+  // QueuedCall
+  //
+  template <typename TObj, typename TFunc>
+  struct QueuedCall : public QueuedCallEvent
+  {
+    QueuedCall(TObj & obj,
+               TFunc TObj::* const func):
+      obj_(obj),
+      func_(func)
+    {}
+
+    // virtual:
+    void execute()
+    {
+      (obj_.*func_)();
+    }
+
+    TObj & obj_;
+    TFunc TObj::* const func_;
+  };
+
+  //----------------------------------------------------------------
+  // queue_call
+  //
+  template <typename TObj, typename TFunc>
+  void
+  queue_call(TObj & obj, TFunc TObj::* const func)
+  {
+    qApp->postEvent(&obj, new QueuedCall<TObj, TFunc>(obj, func));
+  }
+
+  //----------------------------------------------------------------
+  // QueuedCallArgs1
+  //
+  template <typename TObj, typename TFunc, typename TArg1>
+  struct QueuedCallArgs1 : public QueuedCallEvent
+  {
+    QueuedCallArgs1(TObj & obj,
+                    TFunc TObj::* const func,
+                    TArg1 arg1):
+      obj_(obj),
+      func_(func),
+      arg1_(arg1)
+    {}
+
+    // virtual:
+    void execute()
+    {
+      (obj_.*func_)(arg1_);
+    }
+
+    TObj & obj_;
+    TFunc TObj::* const func_;
+    TArg1 arg1_;
+  };
+
+  //----------------------------------------------------------------
+  // queue_call
+  //
+  template <typename TObj, typename TFunc, typename TArg1>
+  void
+  queue_call(TObj & obj,
+             TFunc TObj::* const func,
+             TArg1 arg1)
+  {
+    qApp->postEvent
+      (&obj, new QueuedCallArgs1<TObj, TFunc, TArg1>(obj, func, arg1));
+  }
+
+  //----------------------------------------------------------------
+  // QueuedCallArgs1
+  //
+  template <typename TObj, typename TFunc, typename TArg1, typename TArg2>
+  struct QueuedCallArgs2 : public QueuedCallEvent
+  {
+    QueuedCallArgs2(TObj & obj,
+                    TFunc TObj::* const func,
+                    TArg1 arg1,
+                    TArg2 arg2):
+      obj_(obj),
+      func_(func),
+      arg1_(arg1),
+      arg2_(arg2)
+    {}
+
+    // virtual:
+    void execute()
+    {
+      (obj_.*func_)(arg1_, arg2_);
+    }
+
+    TObj & obj_;
+    TFunc TObj::* const func_;
+    TArg1 arg1_;
+    TArg2 arg2_;
+  };
+
+  //----------------------------------------------------------------
+  // queue_call
+  //
+  template <typename TObj, typename TFunc, typename TArg1, typename TArg2>
+  void
+  queue_call(TObj & obj,
+             TFunc TObj::* const func,
+             TArg1 arg1,
+             TArg2 arg2)
+  {
+    qApp->postEvent
+      (&obj,
+       new QueuedCallArgs2<TObj, TFunc, TArg1, TArg2>
+       (obj, func, arg1, arg2));
+  }
+
+  //----------------------------------------------------------------
+  // handle_queued_call_event
+  //
+  bool
+  handle_queued_call_event(QEvent * event);
+
+
+  //----------------------------------------------------------------
+  // Application
+  //
+  class Application : public QApplication
+  {
+    Q_OBJECT;
+
+  public:
+    Application(int & argc, char ** argv);
+
+    // virtual: overridden to propagate custom events to the parent:
+    bool notify(QObject * receiver, QEvent * event);
+
+  signals:
+    // emitted when QFileOpenEvent is processed:
+    void file_open(const QString & filename);
+
+  protected:
+    // virtual: overridden to hadle QFileOpenEvent:
+    bool event(QEvent * event);
+  };
 
 }
 

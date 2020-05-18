@@ -2010,7 +2010,7 @@ namespace yae
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
         Item & ia = output.add
-          (new InvokeMethodOnClick("export_ia", view, "emit_remux"));
+          (new InvokeMethodOnClick("export_ia", view, "remux"));
         ia.anchors_.fill(btn);
       }
 
@@ -4234,15 +4234,6 @@ namespace yae
     {
       timeline_->maybeAnimateControls();
     }
-  }
-
-  //----------------------------------------------------------------
-  // RemuxView::emit_remux
-  //
-  void
-  RemuxView::emit_remux()
-  {
-    emit remux();
   }
 
   //----------------------------------------------------------------

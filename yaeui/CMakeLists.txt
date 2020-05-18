@@ -34,13 +34,6 @@ if (Qt5_FOUND)
   option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
   if (YAE_USE_QOPENGL_WIDGET)
     add_definitions(-DYAE_USE_QOPENGL_WIDGET)
-
-    option(YAE_USE_PLAYER_QUICK_WIDGET "Use QML implementation" OFF)
-    if (YAE_USE_PLAYER_QUICK_WIDGET)
-      find_package(Qt5 COMPONENTS Quick QuickWidgets Qml)
-      add_definitions(-DYAE_USE_PLAYER_QUICK_WIDGET)
-      # add_definitions(-DQT_QML_DEBUG)
-    endif ()
   endif ()
 
 else (Qt5_FOUND)
@@ -109,16 +102,10 @@ set(project_moc_hxx
   yaeOptionView.h
   yaePlayerView.h
   yaePlayerWidget.h
-  )
 
-if (YAE_USE_PLAYER_QUICK_WIDGET)
-  set(project_moc_hxx
-    ${project_moc_hxx}
-    yaeCanvasQuickFbo.h
-    yaeQuickWidget.h
-    yaeUtilsQml.h
-    )
-endif ()
+  # yaeui:
+  yaeUtilsQt.h
+  )
 
 set(project_uis
   # ../apprenticevideo/yaeAspectRatioDialog.ui

@@ -379,12 +379,13 @@ namespace yae
     contextFormat.setSampleBuffers(false);
     canvas_ = new TCanvasWidget(contextFormat, this, canvas_);
 #endif
+    canvas_->setObjectName(tr("app view canvas"));
 
     view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
     view_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
     canvas_->setFocusPolicy(Qt::StrongFocus);
-    canvas_->setAcceptDrops(true);
+    canvas_->setAcceptDrops(false);
     canvas_->setRenderMode(Canvas::kScaleToFit);
 
     // insert canvas widget into the main window layout:

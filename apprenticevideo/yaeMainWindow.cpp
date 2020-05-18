@@ -199,6 +199,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::setPlaylist
+  //
+  void
+  MainWindow::setPlaylist(const QString & filename)
+  {
+    std::list<QString> playlist;
+    yae::addToPlaylist(playlist, filename);
+    this->setPlaylist(playlist);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackSetTempo
   //
   void

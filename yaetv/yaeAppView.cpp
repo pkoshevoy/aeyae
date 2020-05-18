@@ -27,6 +27,7 @@
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
 #include "yaeTexturedRect.h"
+#include "yaeUtilsQt.h"
 
 // local:
 #include "yaeAppView.h"
@@ -744,7 +745,7 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      view_.on_watch_live(ch_num_);
+      yae::queue_call(view_, &AppView::on_watch_live, ch_num_);
       return true;
     }
 
@@ -1558,7 +1559,10 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      view_.show_program_details(ch_num_, gps_time_);
+      yae::queue_call(view_,
+                      &AppView::show_program_details,
+                      ch_num_,
+                      gps_time_);
       return true;
     }
 
@@ -1717,7 +1721,7 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      view_.playback_recording(rec_);
+      yae::queue_call(view_, &AppView::playback_recording, rec_);
       return true;
     }
 
@@ -4162,7 +4166,7 @@ namespace yae
   AppView::on_watch_live(uint32_t ch_num)
   {
     TTime seek_pos = TTime::now();
-    emit watch_live(ch_num, seek_pos);
+    yae::queue_call(*this, &AppView::watch_live, ch_num, seek_pos);
   }
 
   //----------------------------------------------------------------
@@ -4270,7 +4274,7 @@ namespace yae
 
     // ask for confirmation:
     TRecordingPtr rec_ptr = found->second;
-    emit confirm_delete(rec_ptr);
+    yae::queue_call(*this, &AppView::confirm_delete, rec_ptr);
   }
 
   //----------------------------------------------------------------
@@ -4291,7 +4295,7 @@ namespace yae
     std::string basepath = rec.get_filepath(dvr_->basedir_, "");
     now_playing_.reset(new Playback(sidebar_sel_, name, basepath));
 
-    emit playback(rec_ptr);
+    yae::queue_call(*this, &AppView::playback, rec_ptr);
     dataChanged();
     resetMouseState();
   }

@@ -81,7 +81,7 @@ namespace yae
   toggle_playback(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->togglePlayback();
+    yae::queue_call(*view, &PlayerView::togglePlayback);
   }
 
   //----------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace yae
   back_arrow_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->onBackArrow();
+    yae::queue_call(*view, &PlayerView::on_back_arrow);
   }
 
   //----------------------------------------------------------------
@@ -101,7 +101,7 @@ namespace yae
   select_frame_crop_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerSelectFrameCrop();
+    yae::queue_call(*view, &PlayerView::select_frame_crop);
   }
 
   //----------------------------------------------------------------
@@ -111,7 +111,7 @@ namespace yae
   select_aspect_ratio_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerSelectAspectRatio();
+    yae::queue_call(*view, &PlayerView::select_aspect_ratio);
   }
 
   //----------------------------------------------------------------
@@ -121,7 +121,7 @@ namespace yae
   select_video_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerSelectVideoTrack();
+    yae::queue_call(*view, &PlayerView::select_video_track);
   }
 
   //----------------------------------------------------------------
@@ -131,7 +131,7 @@ namespace yae
   select_audio_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerSelectAudioTrack();
+    yae::queue_call(*view, &PlayerView::select_audio_track);
   }
 
   //----------------------------------------------------------------
@@ -141,7 +141,7 @@ namespace yae
   select_subtt_track_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerSelectSubttTrack();
+    yae::queue_call(*view, &PlayerView::select_subtt_track);
   }
 
   //----------------------------------------------------------------
@@ -151,7 +151,7 @@ namespace yae
   delete_playing_file_cb(void * context)
   {
     PlayerView * view = (PlayerView *)context;
-    view->triggerDeletePlayingFile();
+    yae::queue_call(*view, &PlayerView::delete_playing_file);
   }
 
   //----------------------------------------------------------------
@@ -645,7 +645,7 @@ namespace yae
     ok = connect(actionDownmixToStereo_, SIGNAL(triggered()),
                  this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
- 
+
     ok = connect(menuChapters_, SIGNAL(aboutToShow()),
                  this, SLOT(updateChaptersMenu()));
     YAE_ASSERT(ok);
@@ -2035,78 +2035,6 @@ namespace yae
     stopPlayback();
 
     emit playback_finished(t1);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::togglePlaylist
-  //
-  void
-  PlayerView::togglePlaylist()
-  {
-    emit toggle_playlist();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::onBackArrow
-  //
-  void
-  PlayerView::onBackArrow()
-  {
-    emit on_back_arrow();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerSelectFrameCrop
-  //
-  void
-  PlayerView::triggerSelectFrameCrop()
-  {
-    emit select_frame_crop();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerSelectAspectRatio
-  //
-  void
-  PlayerView::triggerSelectAspectRatio()
-  {
-    emit select_aspect_ratio();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerSelectVideoTrack
-  //
-  void
-  PlayerView::triggerSelectVideoTrack()
-  {
-    emit select_video_track();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerSelectAudioTrack
-  //
-  void
-  PlayerView::triggerSelectAudioTrack()
-  {
-    emit select_audio_track();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerSelectSubttTrack
-  //
-  void
-  PlayerView::triggerSelectSubttTrack()
-  {
-    emit select_subtt_track();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerView::triggerDeletePlayingFile
-  //
-  void
-  PlayerView::triggerDeletePlayingFile()
-  {
-    emit delete_playing_file();
   }
 
   //----------------------------------------------------------------

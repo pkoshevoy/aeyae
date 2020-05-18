@@ -40,7 +40,6 @@
 // Qt includes:
 #include <QApplication>
 #include <QDir>
-#include <QFileOpenEvent>
 #ifdef YAE_USE_QT5
 #include <QSurfaceFormat>
 #endif
@@ -62,65 +61,6 @@ namespace yae
   //
   MainWindow * mainWindow = NULL;
 
-  //----------------------------------------------------------------
-  // Application
-  //
-  class Application : public QApplication
-  {
-  public:
-    Application(int & argc, char ** argv):
-      QApplication(argc, argv)
-    {
-#ifdef __APPLE__
-      QString appDir = QApplication::applicationDirPath();
-      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
-      QApplication::addLibraryPath(plugInsDir);
-#endif
-    }
-
-    // virtual: overridden to propagate custom events to the parent:
-    bool notify(QObject * receiver, QEvent * e)
-    {
-      YAE_ASSERT(receiver && e);
-      bool result = false;
-
-      QEvent::Type et = e ? e->type() : QEvent::None;
-      if (et >= QEvent::User)
-      {
-        e->ignore();
-      }
-
-      while (receiver)
-      {
-        result = QApplication::notify(receiver, e);
-        if (et < QEvent::User || (result && e->isAccepted()))
-        {
-          break;
-        }
-
-        receiver = receiver->parent();
-      }
-
-      return result;
-    }
-
-  protected:
-    bool event(QEvent * e)
-    {
-      if (e->type() != QEvent::FileOpen)
-      {
-        return QApplication::event(e);
-      }
-
-      // handle the apple event to open a document:
-      QString filename = static_cast<QFileOpenEvent *>(e)->file();
-      std::list<QString> playlist;
-      yae::addToPlaylist(playlist, filename);
-      mainWindow->setPlaylist(playlist);
-
-      return true;
-    }
-  };
 }
 
 //----------------------------------------------------------------
@@ -306,6 +246,13 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   yae::mainWindow = new yae::MainWindow(readerPrototype);
+
+  bool ok = QObject::connect(&app,
+                             SIGNAL(file_open(const QString &)),
+                             yae::mainWindow,
+                             SLOT(setPlaylist(const QString &)));
+  YAE_ASSERT(ok);
+
   yae::mainWindow->show();
   yae::mainWindow->initItemViews();
 

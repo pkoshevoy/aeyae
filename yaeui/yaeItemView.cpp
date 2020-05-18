@@ -21,7 +21,10 @@
 #include <QTouchEvent>
 #include <QWheelEvent>
 
-// local interfaces:
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeInputArea.h"
 #include "yaeItemFocus.h"
@@ -508,12 +511,14 @@ namespace yae
 #if 0 // ndef NDEBUG
       if (et != QEvent::MouseMove)
       {
-        yae_debug
+        yae_warn
+          << '\n'
+          << yae::get_stacktrace_str() << '\n'
           << root_->id_ << ": "
-          << "processed mouse event == " << processed << ", "
+          << "processed mouse event(" << event << ") == " << processed << ", "
           << e->button() << " button, "
           << e->buttons() << " buttons, "
-          << yae::toString(et);
+          << yae::to_str(et);
       }
 #endif
 

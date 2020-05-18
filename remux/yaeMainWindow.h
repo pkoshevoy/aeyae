@@ -96,6 +96,9 @@ namespace yae
     void setOutPoint();
 
   public slots:
+    // this can open .yaerx or append a source file to the playlist:
+    void loadFile(const QString & filename);
+
     // file menu:
     void fileOpen();
     void fileOpen(const QString & filename);

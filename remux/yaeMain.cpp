@@ -71,74 +71,6 @@ namespace yae
   //
   MainWindow * mainWindow = NULL;
 
-  //----------------------------------------------------------------
-  // Application
-  //
-  class Application : public QApplication
-  {
-  public:
-    Application(int & argc, char ** argv):
-      QApplication(argc, argv)
-    {
-#ifdef __APPLE__
-      QString appDir = QApplication::applicationDirPath();
-      QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
-      QApplication::addLibraryPath(plugInsDir);
-#endif
-    }
-
-    // virtual: overridden to propagate custom events to the parent:
-    bool notify(QObject * receiver, QEvent * e)
-    {
-      YAE_ASSERT(receiver && e);
-      bool result = false;
-
-      QEvent::Type et = e ? e->type() : QEvent::None;
-      if (et >= QEvent::User)
-      {
-        e->ignore();
-      }
-
-      while (receiver)
-      {
-        result = QApplication::notify(receiver, e);
-        if (et < QEvent::User || (result && e->isAccepted()))
-        {
-          break;
-        }
-
-        receiver = receiver->parent();
-      }
-
-      return result;
-    }
-
-  protected:
-    bool event(QEvent * e)
-    {
-      if (e->type() != QEvent::FileOpen)
-      {
-        return QApplication::event(e);
-      }
-
-      // handle the apple event to open a document:
-      QString filename = static_cast<QFileOpenEvent *>(e)->file();
-      std::set<std::string> sources;
-
-      if (filename.endsWith(".yaerx", Qt::CaseInsensitive))
-      {
-        mainWindow->fileOpen(filename);
-      }
-      else
-      {
-        std::string source = filename.toUtf8().constData();
-        sources.insert(source);
-        mainWindow->add(sources);
-      }
-
-      return true;
-    }
-  };
 }
 
 
@@ -477,6 +409,13 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   yae::mainWindow = new yae::MainWindow();
+
+  bool ok = QObject::connect(&app,
+                             SIGNAL(file_open(const QString &)),
+                             yae::mainWindow,
+                             SLOT(loadFile(const QString &)));
+  YAE_ASSERT(ok);
+
   yae::mainWindow->add(sources, clips);
   yae::mainWindow->show();
 

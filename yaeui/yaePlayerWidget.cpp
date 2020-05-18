@@ -348,6 +348,8 @@ namespace yae
     canvas_ = new TCanvasWidget(contextFormat, this, shared_ctx);
 #endif
 
+    canvas_->setObjectName(tr("player view canvas"));
+
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
 
