@@ -1423,10 +1423,11 @@ namespace yae
 
     // shortcut:
     QImage & subsFrm = imageBuffer->qimg_;
-    subsFrm.fill(0);
+    subsFrm.fill(QColor(0x00, 0x00, 0x00, 0xff)); // opaque black
 
     QPainter painter(&subsFrm);
-    painter.setPen(QColor(0x7f, 0x7f, 0x7f, 0x7f));
+    painter.setCompositionMode(QPainter::CompositionMode_Source);
+    painter.setPen(QColor(0x3f, 0x3f, 0x3f, 0xff));
 
     QFont ft;
     ft.setStyleHint(QFont::SansSerif);
