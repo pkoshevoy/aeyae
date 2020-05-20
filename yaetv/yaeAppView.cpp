@@ -3077,7 +3077,7 @@ namespace yae
       const std::string & frequency = i->first;
       const TChannels & ch_majors = i->second;
 
-      YAE_ASSERT(ch_majors.size() == 1);
+      YAE_EXPECT(ch_majors.size() == 1);
       if (ch_majors.empty())
       {
         continue;

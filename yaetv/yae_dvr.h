@@ -327,6 +327,12 @@ namespace yae
                      const Recording & rec,
                      uint64_t num_sec);
 
+  //----------------------------------------------------------------
+  // make_room_for
+  //
+  bool make_room_for(const std::string & path,
+                     uint64_t required_bytes);
+
 
   //----------------------------------------------------------------
   // DVR
@@ -448,6 +454,7 @@ namespace yae
     void shutdown();
     void scan_channels();
     void update_epg();
+    void cleanup_storage();
 
     TStreamPtr capture_stream(const HDHomeRun::TSessionPtr & session_ptr,
                               const std::string & frequency,
@@ -552,6 +559,18 @@ namespace yae
       next_schedule_refresh_ = t;
     }
 
+    inline TTime next_storage_cleanup() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_storage_cleanup_);
+    }
+
+    inline void set_next_storage_cleanup(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_storage_cleanup_ = t;
+    }
+
     inline void cache_epg(const yae::mpeg_ts::EPG & epg)
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -617,6 +636,7 @@ namespace yae
     TTime channel_scan_period_;
     TTime epg_refresh_period_;
     TTime schedule_refresh_period_;
+    TTime storage_cleanup_period_;
     TTime margin_;
 
   protected:
@@ -628,6 +648,7 @@ namespace yae
     TTime next_channel_scan_;
     TTime next_epg_refresh_;
     TTime next_schedule_refresh_;
+    TTime next_storage_cleanup_;
 
     yae::mpeg_ts::EPG epg_;
     TTime epg_lastmod_;
