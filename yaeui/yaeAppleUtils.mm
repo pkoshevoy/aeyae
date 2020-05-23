@@ -236,12 +236,16 @@ namespace yae
 static bool
 query_dark_mode()
 {
+  bool dark = false;
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
   NSAppearance * ea = [NSApp effectiveAppearance];
   NSString * ns_appearance = [ea name];
-  bool dark =
+  dark =
     (ns_appearance == NSAppearanceNameDarkAqua ||
      ns_appearance == NSAppearanceNameAccessibilityHighContrastDarkAqua ||
      ns_appearance == NSAppearanceNameAccessibilityHighContrastVibrantDark);
+#endif
 
   return dark;
 }
@@ -271,6 +275,7 @@ query_dark_mode()
                     selector:@selector(themeChanged:)
                         name:@"AppleInterfaceThemeChangedNotification"
                       object:nil];
+  return self;
 }
 
 //----------------------------------------------------------------

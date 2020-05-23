@@ -2283,7 +2283,20 @@ namespace yae
   bool
   Application::query_dark_mode() const
   {
-    return private_ ? private_->query_dark_mode() : true;
+    bool dark = false;
+
+    if (private_)
+    {
+      dark = private_->query_dark_mode();
+    }
+#ifndef __APPLE__
+    else
+    {
+      dark = true;
+    }
+#endif
+
+    return dark;
   }
 
 }
