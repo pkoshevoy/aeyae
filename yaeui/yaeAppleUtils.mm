@@ -24,6 +24,9 @@
 #include <objc/objc-runtime.h>
 #endif
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // local:
 #include "yaeAppleUtils.h"
 
@@ -209,6 +212,120 @@ namespace yae
   PreventAppNap::~PreventAppNap()
   {
     delete private_;
+  }
+
+
+  //----------------------------------------------------------------
+  // AppleApp::Private
+  //
+  struct AppleApp::Private
+  {
+    Private();
+    ~Private();
+
+  private:
+    NSObject * obj_;
+  };
+
+}
+
+
+//----------------------------------------------------------------
+// query_dark_mode
+//
+static bool
+query_dark_mode()
+{
+  NSAppearance * ea = [NSApp effectiveAppearance];
+  NSString * ns_appearance = [ea name];
+  bool dark =
+    (ns_appearance == NSAppearanceNameDarkAqua ||
+     ns_appearance == NSAppearanceNameAccessibilityHighContrastDarkAqua ||
+     ns_appearance == NSAppearanceNameAccessibilityHighContrastVibrantDark);
+
+  return dark;
+}
+
+
+//----------------------------------------------------------------
+// TApplicationBridge
+//
+@interface TApplicationBridge : NSObject {}
+- (id) init;
+- (void) themeChanged: (NSNotification *) notification;
+@end
+
+@implementation TApplicationBridge
+
+//----------------------------------------------------------------
+// init
+//
+- (id) init
+{
+  self = [super init];
+
+  NSDistributedNotificationCenter * notifications =
+    [NSDistributedNotificationCenter defaultCenter];
+
+  [notifications addObserver:self
+                    selector:@selector(themeChanged:)
+                        name:@"AppleInterfaceThemeChangedNotification"
+                      object:nil];
+}
+
+//----------------------------------------------------------------
+// themeChanged:
+//
+- (void) themeChanged: (NSNotification *) notification
+{
+  qApp->postEvent(qApp, new yae::ThemeChangedEvent());
+}
+
+@end
+
+
+namespace yae
+{
+
+  //----------------------------------------------------------------
+  // AppleApp::AppleApp
+  //
+  AppleApp::Private::Private():
+    obj_(NULL)
+  {
+    obj_ = [[TApplicationBridge alloc] init];
+  }
+
+  //----------------------------------------------------------------
+  // AppleApp::AppleApp
+  //
+  AppleApp::Private::~Private()
+  {
+    [obj_ release];
+  }
+
+  //----------------------------------------------------------------
+  // AppleApp::AppleApp
+  //
+  AppleApp::AppleApp():
+    private_(new AppleApp::Private())
+  {}
+
+  //----------------------------------------------------------------
+  // AppleApp::~AppleApp
+  //
+  AppleApp::~AppleApp()
+  {
+    delete private_;
+  }
+
+  //----------------------------------------------------------------
+  // AppleApp::query_dark_mode
+  //
+  bool
+  AppleApp::query_dark_mode() const
+  {
+    return ::query_dark_mode();
   }
 
 }

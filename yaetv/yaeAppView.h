@@ -142,6 +142,7 @@ namespace yae
   public slots:
     void layoutChanged();
     void dataChanged();
+    void requestUncacheEPG();
 
     void sync_ui();
     void sync_ui_epg();

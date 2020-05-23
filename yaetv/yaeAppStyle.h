@@ -12,11 +12,12 @@
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 
-// local:
+// yaeui:
 #include "yaeColor.h"
 #include "yaeGradient.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -28,6 +29,8 @@ namespace yae
   struct AppStyle : public ItemViewStyle
   {
     AppStyle(const char * id, const ItemView & view);
+
+    void themeChanged(const yae::Application & app);
 
     virtual void uncache();
 

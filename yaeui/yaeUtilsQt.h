@@ -502,6 +502,14 @@ namespace yae
   bool
   handle_queued_call_event(QEvent * event);
 
+  //----------------------------------------------------------------
+  // ThemeChangedEvent
+  //
+  struct ThemeChangedEvent : public QEvent
+  {
+    ThemeChangedEvent(): QEvent(QEvent::User) {}
+  };
+
 
   //----------------------------------------------------------------
   // Application
@@ -512,6 +520,9 @@ namespace yae
 
   public:
     Application(int & argc, char ** argv);
+    ~Application();
+
+    static Application & singleton();
 
     // virtual: overridden to propagate custom events to the parent:
     bool notify(QObject * receiver, QEvent * event);
@@ -520,9 +531,24 @@ namespace yae
     // emitted when QFileOpenEvent is processed:
     void file_open(const QString & filename);
 
+    // emitted on AppleInterfaceThemeChangedNotification, etc...
+    void theme_changed(const yae::Application & app);
+
   protected:
     // virtual: overridden to hadle QFileOpenEvent:
     bool event(QEvent * event);
+
+  public:
+    bool query_dark_mode() const;
+
+    // platform specific implementation details:
+    struct Private
+    {
+      virtual ~Private() {}
+      virtual bool query_dark_mode() const = 0;
+    };
+
+    Private * private_;
   };
 
 }

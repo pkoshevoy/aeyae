@@ -9,8 +9,11 @@
 // Qt:
 #include <QCloseEvent>
 
-// local:
+// yaeui:
+#include "yaeAppleUtils.h"
 #include "yaePlayerWidget.h"
+
+// local:
 #include "yaePlayerWindow.h"
 
 

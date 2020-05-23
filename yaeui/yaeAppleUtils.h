@@ -9,8 +9,11 @@
 #ifndef YAE_APPLE_UTILS_H_
 #define YAE_APPLE_UTILS_H_
 
-// standard C++:
+// standard:
 #include <string>
+
+// yaeui:
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -35,6 +38,27 @@ namespace yae
 
     struct Private;
     Private * private_;
+  };
+
+
+  //----------------------------------------------------------------
+  // AppleApp
+  //
+  struct AppleApp : public yae::Application::Private
+  {
+    AppleApp();
+    ~AppleApp();
+
+    // virtual:
+    bool query_dark_mode() const;
+
+    struct Private;
+    Private * private_;
+
+  private:
+    // intentionally disabled:
+    AppleApp(const AppleApp &);
+    AppleApp & operator = (const AppleApp &);
   };
 }
 

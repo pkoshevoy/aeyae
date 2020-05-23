@@ -533,6 +533,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::themeChanged
+  //
+  void
+  MainWindow::themeChanged(const yae::Application & app)
+  {
+    AppStyle & style = *(view_.style());
+    style.themeChanged(app);
+    view_.requestUncacheEPG();
+    view_.requestUncache();
+    view_.requestRepaint();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::fileExit
   //
   void

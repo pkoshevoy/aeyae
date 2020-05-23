@@ -613,6 +613,17 @@ namespace yae
 
     yae::Application app(argc, argv);
     yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir, reader);
+
+    bool ok = true;
+    ok = QObject::connect(&app,
+                          SIGNAL(theme_changed(const yae::Application &)),
+                          yae::mainWindow,
+                          SLOT(themeChanged(const yae::Application &)));
+    YAE_ASSERT(ok);
+
+    // initialize application style:
+    yae::mainWindow->themeChanged(app);
+
     yae::mainWindow->show();
     yae::mainWindow->initItemViews();
 

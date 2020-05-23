@@ -6,16 +6,19 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// standard:
 #include <set>
 
-// yae includes:
+// aeyae:
 #include "yae/video/yae_video.h"
 
-// local includes:
-#include <yaeUtilsQt.h>
+// yaeui:
+#ifdef __APPLE__
+#include "yaeAppleUtils.h"
+#endif
+#include "yaeUtilsQt.h"
 
-// Qt includes:
+// Qt:
 #include <QDateTime>
 #include <QDirIterator>
 #include <QEvent>
@@ -2152,13 +2155,39 @@ namespace yae
   // Application::Application
   //
   Application::Application(int & argc, char ** argv):
-    QApplication(argc, argv)
+    QApplication(argc, argv),
+    private_(NULL)
   {
 #ifdef __APPLE__
     QString appDir = QApplication::applicationDirPath();
     QString plugInsDir = QDir::cleanPath(appDir + "/../PlugIns");
     QApplication::addLibraryPath(plugInsDir);
+
+    private_ = new AppleApp();
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // Application::~Application
+  //
+  Application::~Application()
+  {
+    if (private_)
+    {
+      delete private_;
+      private_ = NULL;
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Application::singleton
+  //
+  Application &
+  Application::singleton()
+  {
+    Application * yae_app = dynamic_cast<Application *>(qApp);
+    YAE_THROW_IF(!yae_app);
+    return *yae_app;
   }
 
   //----------------------------------------------------------------
@@ -2221,18 +2250,40 @@ namespace yae
   Application::event(QEvent * event)
   {
     QEvent::Type et = event ? event->type() : QEvent::None;
-    if (et != QEvent::FileOpen)
+    if (et == QEvent::FileOpen)
     {
-      return QApplication::event(event);
+      // handle the apple event to open a document:
+      QFileOpenEvent * e = static_cast<QFileOpenEvent *>(event);
+      QString filename = e->file();
+      emit file_open(filename);
+
+      e->accept();
+      return true;
     }
 
-    // handle the apple event to open a document:
-    QFileOpenEvent * e = static_cast<QFileOpenEvent *>(event);
-    QString filename = e->file();
-    emit file_open(filename);
+    if (et == QEvent::User)
+    {
+      ThemeChangedEvent * theme_changed_event =
+        dynamic_cast<ThemeChangedEvent *>(event);
 
-    e->accept();
-    return true;
+      if (theme_changed_event)
+      {
+        emit theme_changed(*this);
+        event->accept();
+        return true;
+      }
+    }
+
+    return QApplication::event(event);
+  }
+
+  //----------------------------------------------------------------
+  // Application::query_dark_mode
+  //
+  bool
+  Application::query_dark_mode() const
+  {
+    return private_ ? private_->query_dark_mode() : true;
   }
 
 }

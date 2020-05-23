@@ -106,6 +106,8 @@ namespace yae
     void initItemViews();
 
   public slots:
+    void themeChanged(const yae::Application & app);
+
     // file menu:
     void fileExit();
 
