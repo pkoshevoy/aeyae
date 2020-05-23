@@ -2995,7 +2995,7 @@ namespace yae
     // virtual:
     void execute(const yae::Worker & worker)
     {
-      static const uint64_t min_free_bytes = 9000000000;
+      static const uint64_t min_free_bytes = 9000000000ull;
       yae::make_room_for(dvr_.basedir_.string(), min_free_bytes);
     }
 
