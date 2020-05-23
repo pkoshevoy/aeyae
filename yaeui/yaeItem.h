@@ -941,6 +941,14 @@ namespace yae
   //
   struct YAEUI_API Layout
   {
+    inline void clear()
+    {
+      names_.clear();
+      index_.clear();
+      items_.clear();
+      item_.reset();
+    }
+
     yae::shared_ptr<Item> item_;
 
     // index -> id

@@ -346,6 +346,7 @@ namespace yae
     {
       Blacklist();
 
+      void clear();
       void toggle(uint32_t ch_num);
 
       std::set<uint32_t> channels_;

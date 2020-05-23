@@ -3284,6 +3284,16 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // DVR::Blacklist::clear
+  //
+  void
+  DVR::Blacklist::clear()
+  {
+    channels_.clear();
+    lastmod_ = std::numeric_limits<int64_t>::min();
+  }
+
+  //----------------------------------------------------------------
   // DVR::Blacklist::toggle
   //
   void

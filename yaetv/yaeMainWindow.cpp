@@ -552,6 +552,7 @@ namespace yae
   MainWindow::fileExit()
   {
     dvr_.shutdown();
+    view_.setContext(yae::shared_ptr<IOpenGLContext>());
 
     MainWindow::close();
     qApp->quit();
