@@ -13,9 +13,6 @@
 #include <stdexcept>
 #include <vector>
 
-// boost includes:
-#include <boost/thread.hpp>
-
 // Apple imports:
 #import <Cocoa/Cocoa.h>
 #import <CoreAudio/CoreAudio.h>

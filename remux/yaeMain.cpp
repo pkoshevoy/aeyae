@@ -169,9 +169,13 @@ mainMayThrowException(int argc, char ** argv)
 #endif
 
     boost::locale::generator gen;
+#if !defined(__APPLE__) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090
     std::locale loc = std::locale(gen(default_locale),
                                   std::locale::classic(),
                                   std::locale::numeric);
+#else
+    std::locale loc = std::locale(gen(default_locale));
+#endif
     std::locale::global(loc);
 
     // Make boost.filesystem use global locale:
