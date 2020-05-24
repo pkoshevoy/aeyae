@@ -1813,7 +1813,7 @@ namespace yae
     {
       HDHomeRun::TSessionPtr session_ptr = stream_ptr->session_;
 
-      YAE_ASSERT(session_ptr);
+      YAE_EXPECT(session_ptr);
       if (!session_ptr)
       {
         return;
