@@ -2996,6 +2996,7 @@ namespace yae
     void execute(const yae::Worker & worker)
     {
       static const uint64_t min_free_bytes = 9000000000ull;
+      yae_dlog("storage cleanup to free up %" PRIu64 " bytes", min_free_bytes);
       yae::make_room_for(dvr_.basedir_.string(), min_free_bytes);
     }
 
