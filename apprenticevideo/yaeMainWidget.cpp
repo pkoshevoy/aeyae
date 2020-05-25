@@ -194,6 +194,10 @@ namespace yae
                  this, SLOT(playbackFinished(TTime)));
     YAE_ASSERT(ok);
 
+    ok = connect(&player_view, SIGNAL(video_track_selected()),
+                 this, SLOT(adjustPlaylistStyle()));
+    YAE_ASSERT(ok);
+
     // show playlist:
     ok = connect(actionShowPlaylist_, SIGNAL(toggled(bool)),
                  this, SLOT(playbackShowPlaylist()));
@@ -798,6 +802,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWidget::adjustPlaylistStyle
+  //
+  void
+  MainWidget::adjustPlaylistStyle()
+  {
+    const PlayerView & player_view = PlayerWidget::view();
+    IReaderPtr reader_ptr = player_view.player_->reader();
+    IReader & reader = *reader_ptr;
+
+    std::size_t numAudioTracks = reader.getNumberOfAudioTracks();
+    std::size_t numVideoTracks = reader.getNumberOfVideoTracks();
+    std::size_t videoTrackIndex = reader.getSelectedVideoTrackIndex();
+
+    VideoTraits vtts;
+    bool gotVideoTraits = reader.getVideoTraits(vtts);
+
+    if ((videoTrackIndex >= numVideoTracks && numAudioTracks > 0) ||
+        // audio files with embeded album art poster frame
+        // typically show up with ridiculous frame rate,
+        // so I'll consider that as an audio file trait:
+        (gotVideoTraits && vtts.frameRate_ > 240.0))
+    {
+      playlistView_.setStyleId(PlaylistView::kListView);
+    }
+    else if (numVideoTracks)
+    {
+      playlistView_.setStyleId(PlaylistView::kGridView);
+    }
+  }
+
+  //----------------------------------------------------------------
   // MainWidget::exitPlaylist
   //
   void
@@ -1339,25 +1374,7 @@ namespace yae
 
     emit adjust_menus(reader_ptr);
 
-    std::size_t numAudioTracks = reader.getNumberOfAudioTracks();
-    std::size_t numVideoTracks = reader.getNumberOfVideoTracks();
-    std::size_t videoTrackIndex = reader.getSelectedVideoTrackIndex();
-
-    VideoTraits vtts;
-    bool gotVideoTraits = reader.getVideoTraits(vtts);
-
-    if ((videoTrackIndex >= numVideoTracks && numAudioTracks > 0) ||
-        // audio files with embeded album art poster frame
-        // typically show up with ridiculous frame rate,
-        // so I'll consider that as an audio file trait:
-        (gotVideoTraits && vtts.frameRate_ > 240.0))
-    {
-      playlistView_.setStyleId(PlaylistView::kListView);
-    }
-    else if (numVideoTracks)
-    {
-      playlistView_.setStyleId(PlaylistView::kGridView);
-    }
+    adjustPlaylistStyle();
 
     return true;
   }

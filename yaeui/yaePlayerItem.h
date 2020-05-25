@@ -204,6 +204,13 @@ namespace yae
     yae::shared_ptr<Canvas> personal_canvas_;
     bool paused_;
 
+    // track selection can be done by the user,
+    // or by virtue of playing back a file
+    // and capturing initial selection to maintain continuity
+    bool sel_video_initialized_;
+    bool sel_audio_initialized_;
+    bool sel_subtt_initialized_;
+
     // selected track info is used to select matching track(s)
     // when loading next file:
     TTrackInfo sel_video_;

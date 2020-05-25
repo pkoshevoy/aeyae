@@ -120,6 +120,7 @@ namespace yae
     void save_bookmark();
     void on_back_arrow();
     void rc_menu_button_pressed();
+    void video_track_selected();
 
     void select_frame_crop();
     void select_aspect_ratio();

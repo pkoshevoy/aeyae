@@ -627,6 +627,9 @@ namespace yae
                std::size_t ntracks = 0,
                std::size_t index = 0);
 
+    inline void clear()
+    { *this = TTrackInfo(); }
+
     bool isValid() const;
     bool hasLang() const;
     bool hasName() const;

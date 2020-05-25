@@ -155,8 +155,9 @@ namespace yae
     // set genpts:
     av_dict_set(&options, "fflags", "genpts", 0);
 
+    resourcePath_ = resourcePath ? resourcePath : "";
     int err = avformat_open_input(&context_,
-                                  resourcePath,
+                                  resourcePath_.c_str(),
                                   NULL, // AVInputFormat to force
                                   &options);
     av_dict_free(&options);
@@ -477,6 +478,7 @@ namespace yae
     streamIndexToProgramIndex_.clear();
 
     avformat_close_input(&context_);
+    YAE_ASSERT(!context_);
   }
 
   //----------------------------------------------------------------

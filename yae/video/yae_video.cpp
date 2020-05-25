@@ -662,6 +662,7 @@ namespace yae
   TTrackInfo::TTrackInfo(std::size_t program,
                          std::size_t ntracks,
                          std::size_t index):
+    nprograms_(0),
     program_(program),
     ntracks_(ntracks),
     index_(index)

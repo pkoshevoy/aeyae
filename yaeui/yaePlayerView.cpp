@@ -1823,6 +1823,8 @@ namespace yae
 
       QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
     }
+
+    emit video_track_selected();
   }
 
   //----------------------------------------------------------------

@@ -26,7 +26,10 @@ namespace yae
     QObject(),
     Item(id),
     reader_id_(0),
-    paused_(false)
+    paused_(false),
+    sel_video_initialized_(false),
+    sel_audio_initialized_(false),
+    sel_subtt_initialized_(false)
   {
     bool ok = true;
 
@@ -199,7 +202,7 @@ namespace yae
 
     if (!selInfo.isValid())
     {
-      // video was disabled, keep it disabled:
+      // track was disabled, keep it disabled:
       return n;
     }
 
@@ -391,7 +394,7 @@ namespace yae
     bool rememberSelectedVideoTrack = !reader_;
 
     std::size_t program = find_matching_program(videoInfo, sel_video_);
-    std::size_t vtrack = !reader_ ? 0 :
+    std::size_t vtrack = !sel_video_initialized_ ? 0 :
       find_matching_track<VideoTraits>(videoInfo,
                                        videoTraits,
                                        sel_video_,
@@ -410,7 +413,7 @@ namespace yae
     }
 
     bool rememberSelectedAudioTrack = !reader_;
-    std::size_t atrack = !reader_ ? 0 :
+    std::size_t atrack = !sel_audio_initialized_ ? 0 :
       find_matching_track<AudioTraits>(audioInfo,
                                        audioTraits,
                                        sel_audio_,
@@ -446,7 +449,7 @@ namespace yae
     }
 
     bool rememberSelectedSubtitlesTrack = !reader_;
-    std::size_t strack = !reader_ ? numSubttTracks :
+    std::size_t strack = !sel_subtt_initialized_ ? numSubttTracks :
       find_matching_track<TSubsFormat>(subsInfo,
                                        subsFormat,
                                        sel_subtt_,
@@ -483,17 +486,20 @@ namespace yae
     {
       reader->getSelectedVideoTrackInfo(sel_video_);
       reader->getVideoTraits(sel_video_traits_);
+      sel_video_initialized_ = true;
     }
 
     if (rememberSelectedAudioTrack)
     {
       reader->getSelectedAudioTrackInfo(sel_audio_);
       reader->getAudioTraits(sel_audio_traits_);
+      sel_audio_initialized_ = true;
     }
 
     if (rememberSelectedSubtitlesTrack)
     {
       sel_subtt_format_ = reader->subsInfo(strack, sel_subtt_);
+      sel_subtt_initialized_ = true;
     }
   }
 
@@ -747,8 +753,6 @@ namespace yae
     {
       canvas->acceptFramesWithReaderId(reader_id_);
     }
-
-    reader_.reset();
   }
 
   //----------------------------------------------------------------
@@ -981,6 +985,8 @@ namespace yae
     IReader * reader = reader_.get();
     if (!reader)
     {
+      sel_audio_.clear();
+      sel_audio_initialized_ = true;
       return false;
     }
 
@@ -998,6 +1004,7 @@ namespace yae
 
     reader->getSelectedAudioTrackInfo(sel_audio_);
     reader->getAudioTraits(sel_audio_traits_);
+    sel_audio_initialized_ = true;
 
     // if the audio program is not the same as the video program
     // then change the video track to a matching audio program:
@@ -1015,6 +1022,7 @@ namespace yae
 
         reader->getSelectedVideoTrackInfo(sel_video_);
         reader->getVideoTraits(sel_video_traits_);
+        sel_video_initialized_ = true;
       }
 
       if (sinfo.isValid())
@@ -1024,6 +1032,7 @@ namespace yae
         select_subtt_track(reader, i);
         curr_tracks.subtt_ = i;
         reader->subsInfo(i, sel_subtt_);
+        sel_subtt_initialized_ = true;
       }
     }
 
@@ -1054,6 +1063,8 @@ namespace yae
     IReader * reader = reader_.get();
     if (!reader)
     {
+      sel_video_.clear();
+      sel_video_initialized_ = true;
       return false;
     }
 
@@ -1071,6 +1082,7 @@ namespace yae
 
     reader->getSelectedVideoTrackInfo(sel_video_);
     reader->getVideoTraits(sel_video_traits_);
+    sel_video_initialized_ = true;
 
     // if the video program is not the same as the audio program
     // then change the audio track to a matching video program:
@@ -1088,6 +1100,7 @@ namespace yae
 
         reader->getSelectedAudioTrackInfo(sel_audio_);
         reader->getAudioTraits(sel_audio_traits_);
+        sel_audio_initialized_ = true;
       }
 
       if (sinfo.isValid())
@@ -1097,6 +1110,7 @@ namespace yae
         select_subtt_track(reader, i);
         curr_tracks.subtt_ = i;
         reader->subsInfo(i, sel_subtt_);
+        sel_subtt_initialized_ = true;
       }
     }
 
@@ -1127,6 +1141,8 @@ namespace yae
     IReader * reader = reader_.get();
     if (!reader)
     {
+      sel_subtt_.clear();
+      sel_subtt_initialized_ = true;
       return false;
     }
 
@@ -1141,6 +1157,7 @@ namespace yae
 
     select_subtt_track(reader, index);
     sel_subtt_format_ = reader->subsInfo(index, sel_subtt_);
+    sel_subtt_initialized_ = true;
 
     // if the subtitles program is not the same as the audio/video program
     // then change the audio/video track to a matching subtitles program:
@@ -1158,6 +1175,7 @@ namespace yae
 
         reader->getSelectedVideoTrackInfo(sel_video_);
         reader->getVideoTraits(sel_video_traits_);
+        sel_video_initialized_ = true;
       }
 
       if (ainfo.isValid())
@@ -1169,6 +1187,7 @@ namespace yae
 
         reader->getSelectedAudioTrackInfo(sel_audio_);
         reader->getAudioTraits(sel_audio_traits_);
+        sel_audio_initialized_ = true;
       }
     }
 

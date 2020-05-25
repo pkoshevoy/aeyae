@@ -83,6 +83,7 @@ namespace yae
 
   signals:
     void adjust_menus(IReaderPtr reader);
+    void adjust_playlist_style();
     void swap_shortcuts();
 
   public slots:
@@ -99,6 +100,7 @@ namespace yae
     void playbackShowPlaylist();
 
     // helpers:
+    void adjustPlaylistStyle();
     void exitPlaylist();
     void togglePlaylist();
     void setPlayingItem(const QModelIndex & index);

@@ -159,6 +159,7 @@ namespace yae
     // during frame stepping (when playback is disabled)
     QueueWaitMgr framestepTerminator_;
 
+    std::string resourcePath_;
     AVFormatContext * context_;
 
     std::vector<TAttachment> attachments_;
