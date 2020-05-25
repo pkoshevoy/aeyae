@@ -155,6 +155,41 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // ToolButtonOpacity
+  //
+  struct ToolButtonOpacity : public TDoubleExpr
+  {
+    ToolButtonOpacity(ItemView & view,
+                      const TransitionItem & opacity,
+                      const Item & item,
+                      const InputArea & ia):
+      view_(view),
+      opacity_(opacity),
+      item_(item),
+      ia_(ia)
+    {}
+
+    void evaluate(double & result) const
+    {
+      opacity_.get(kPropertyTransition, result);
+
+      if (!view_.isMouseOverItem(item_))
+      {
+        result *= 0.25;
+      }
+      else if (!view_.isMousePressed(ia_))
+      {
+        result *= 0.5;
+      }
+    }
+
+    const ItemView & view_;
+    const TransitionItem & opacity_;
+    const Item & item_;
+    const InputArea & ia_;
+  };
+
+  //----------------------------------------------------------------
   // TimelineItem::TimelineItem
   //
   TimelineItem::TimelineItem(const char * name,
@@ -285,6 +320,9 @@ namespace yae
 
     ColorRef colorControlsBgTransparent = this->addExpr
       (style_color_ref(view_, &ItemViewStyle::bg_controls_, 0.0));
+
+    ColorRef colorControlsBgOpaque = this->addExpr
+      (style_color_ref(view_, &ItemViewStyle::bg_controls_, 1.0, 1.0));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
@@ -573,8 +611,7 @@ namespace yae
       RoundRect & bg = playlistButton.addNew<RoundRect>("bg");
       bg.anchors_.fill(playlistButton);
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.visible_ = BoolRef::inverse(this->is_playlist_visible_);
 
       TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
@@ -597,6 +634,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("toggle_playlist", *this, &TimelineItem::toggle_playlist_));
       playlistToggle.anchors_.fill(playlistButton);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, playlistToggle));
+      bg.opacity_.disableCaching();
     }
 
     Item & other = this->addNew<Item>("other_controls");
@@ -615,8 +656,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(arrow_btn, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(arrow_btn, kPropertyLeft);
       bg.margins_.set_top
@@ -637,11 +677,187 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("arrow_btn_on_click", *this, &TimelineItem::back_arrow_cb_));
       arrow_btn_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, arrow_btn_ia));
+      bg.opacity_.disableCaching();
+    }
+
+    // prev item button:
+    Item & back_to_prev = other.addNew<Item>("back_to_prev");
+    back_to_prev.anchors_.top_ = ItemRef::offset(playlistButton,
+                                                 kPropertyBottom);
+    back_to_prev.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+    back_to_prev.visible_ = back_to_prev.addExpr(new IsValid(back_to_prev_cb_));
+    back_to_prev.height_ = back_to_prev.
+      addExpr(new InvisibleItemZeroHeight(back_to_prev));
+    {
+      RoundRect & bg = back_to_prev.addNew<RoundRect>("bg");
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBgOpaque;
+      bg.anchors_.top_ = ItemRef::reference(back_to_prev, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      Text & txt = bg.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("PREV"));
+      txt.alignment_ = Qt::AlignCenter;
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & back_to_prev_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("back_to_prev_on_click", *this, &TimelineItem::back_to_prev_cb_));
+      back_to_prev_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, back_to_prev_ia));
+      bg.opacity_.disableCaching();
+    }
+
+    // next item button:
+    Item & skip_to_next = other.addNew<Item>("skip_to_next");
+    skip_to_next.anchors_.top_ = ItemRef::offset(back_to_prev,
+                                                 kPropertyBottom);
+    skip_to_next.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+    skip_to_next.visible_ = skip_to_next.addExpr(new IsValid(skip_to_next_cb_));
+    skip_to_next.height_ = skip_to_next.
+      addExpr(new InvisibleItemZeroHeight(skip_to_next));
+    {
+      RoundRect & bg = skip_to_next.addNew<RoundRect>("bg");
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBgOpaque;
+      bg.anchors_.top_ = ItemRef::reference(skip_to_next, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      Text & txt = bg.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("NEXT"));
+      txt.alignment_ = Qt::AlignCenter;
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & skip_to_next_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("skip_to_next_on_click", *this, &TimelineItem::skip_to_next_cb_));
+      skip_to_next_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, skip_to_next_ia));
+      bg.opacity_.disableCaching();
+    }
+
+    // select all button:
+    Item & select_all = other.addNew<Item>("select_all");
+    select_all.anchors_.top_ = ItemRef::offset(skip_to_next,
+                                               kPropertyBottom);
+    select_all.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+    select_all.visible_ = select_all.addExpr(new IsValid(select_all_cb_));
+    select_all.height_ = select_all.
+      addExpr(new InvisibleItemZeroHeight(select_all));
+    {
+      RoundRect & bg = select_all.addNew<RoundRect>("bg");
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBgOpaque;
+      bg.anchors_.top_ = ItemRef::reference(select_all, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      Text & txt = bg.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("SEL \xe2\x9c\xb1"));
+      txt.alignment_ = Qt::AlignCenter;
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & select_all_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("select_all_on_click", *this, &TimelineItem::select_all_cb_));
+      select_all_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, select_all_ia));
+      bg.opacity_.disableCaching();
+    }
+
+    // remove selected button:
+    Item & remove_sel = other.addNew<Item>("remove_sel");
+    remove_sel.anchors_.top_ = ItemRef::offset(select_all,
+                                               kPropertyBottom);
+    remove_sel.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+    remove_sel.visible_ = remove_sel.addExpr(new IsValid(remove_sel_cb_));
+    remove_sel.height_ = remove_sel.
+      addExpr(new InvisibleItemZeroHeight(remove_sel));
+    {
+      RoundRect & bg = remove_sel.addNew<RoundRect>("bg");
+      bg.width_ = tool_btn_size;
+      bg.height_ = tool_btn_size;
+      bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
+      bg.color_ = colorControlsBgOpaque;
+      bg.anchors_.top_ = ItemRef::reference(remove_sel, kPropertyTop);
+      bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
+      bg.margins_.set_top
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      bg.margins_.set_left
+        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+
+      Text & txt = bg.addNew<Text>("txt");
+      txt.anchors_.center(bg);
+      txt.font_ = style.font_large_;
+      txt.font_.setWeight(57);
+      txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
+      txt.text_ = TVarRef::constant(TVar("DEL"));
+      txt.alignment_ = Qt::AlignCenter;
+      txt.elide_ = Qt::ElideNone;
+      txt.color_ = colorControlsFg;
+      txt.background_ = colorControlsBgTransparent;
+      txt.opacity_ = shadow.opacity_;
+
+      Call<TimelineItem, ContextCallback> & remove_sel_ia = bg.
+        add(new Call<TimelineItem, ContextCallback>
+            ("remove_sel_on_click", *this, &TimelineItem::remove_sel_cb_));
+      remove_sel_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, remove_sel_ia));
+      bg.opacity_.disableCaching();
     }
 
     // trashcan button:
     Item & delete_file = other.addNew<Item>("delete_file");
-    delete_file.anchors_.top_ = ItemRef::offset(arrow_btn, kPropertyBottom);
+    delete_file.anchors_.top_ = ItemRef::offset(remove_sel, kPropertyBottom);
     delete_file.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
     delete_file.visible_ = delete_file.addExpr(new IsValid(delete_file_cb_));
     delete_file.height_ = delete_file.
@@ -651,8 +867,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(delete_file, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
@@ -671,6 +886,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("delete_file_on_click", *this, &TimelineItem::delete_file_cb_));
       delete_file_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, delete_file_ia));
+      bg.opacity_.disableCaching();
     }
 
     // crop:
@@ -685,8 +904,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(frame_crop, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
@@ -709,6 +927,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("frame_crop_on_click", *this, &TimelineItem::frame_crop_cb_));
       frame_crop_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, frame_crop_ia));
+      bg.opacity_.disableCaching();
     }
 
     // aspect ratio:
@@ -724,8 +946,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(aspect_ratio, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
@@ -748,6 +969,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("aspect_ratio_on_click", *this, &TimelineItem::aspect_ratio_cb_));
       aspect_ratio_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, aspect_ratio_ia));
+      bg.opacity_.disableCaching();
     }
 
     // video track selection:
@@ -762,8 +987,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(video_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
@@ -786,6 +1010,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("video_track_on_click", *this, &TimelineItem::video_track_cb_));
       video_track_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, video_track_ia));
+      bg.opacity_.disableCaching();
     }
 
     // audio track selection:
@@ -800,8 +1028,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(audio_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
@@ -824,6 +1051,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("audio_track_on_click", *this, &TimelineItem::audio_track_cb_));
       audio_track_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, audio_track_ia));
+      bg.opacity_.disableCaching();
     }
 
     // subtitles/captions selection:
@@ -838,8 +1069,7 @@ namespace yae
       bg.width_ = tool_btn_size;
       bg.height_ = tool_btn_size;
       bg.radius_ = ItemRef::reference(bg, kPropertyHeight, 0.05, 0.5);
-      bg.color_ = colorControlsBg;
-      bg.opacity_ = shadow.opacity_;
+      bg.color_ = colorControlsBgOpaque;
       bg.anchors_.top_ = ItemRef::reference(subtt_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
@@ -862,6 +1092,10 @@ namespace yae
         add(new Call<TimelineItem, ContextCallback>
             ("subtt_track_on_click", *this, &TimelineItem::subtt_track_cb_));
       subtt_track_ia.anchors_.fill(bg);
+
+      bg.opacity_ = bg.
+        addExpr(new ToolButtonOpacity(view_, opacity, bg, subtt_track_ia));
+      bg.opacity_.disableCaching();
     }
 
 

@@ -217,6 +217,9 @@ namespace yae
     // helper for checking mouseOverItems:
     bool isMouseOverItem(const Item & item) const;
 
+    // helper for checking clicked items:
+    bool isMousePressed(const InputArea & item) const;
+
     // reset mouse click/drag state:
     void resetMouseState();
 

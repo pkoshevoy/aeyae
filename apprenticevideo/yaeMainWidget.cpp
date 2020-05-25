@@ -242,22 +242,6 @@ namespace yae
                  this, SLOT(fixupNextPrev()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionRemove_, SIGNAL(triggered()),
-                 &playlistModel_, SLOT(removeSelected()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionSelectAll_, SIGNAL(triggered()),
-                 &playlistModel_, SLOT(selectAll()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutRemove_, SIGNAL(activated()),
-                 &playlistModel_, SLOT(removeSelected()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutSelectAll_, SIGNAL(activated()),
-                 &playlistModel_, SLOT(selectAll()));
-    YAE_ASSERT(ok);
-
     ok = connect(&playlistModel_,
                  SIGNAL(playingItemChanged(const QModelIndex &)),
                  this,
@@ -428,6 +412,50 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // playlist_back_to_prev
+  //
+  static void
+  playlist_back_to_prev(void * context)
+  {
+    MainWidget * mainWidget = (MainWidget *)context;
+    yae::queue_call(*(mainWidget->actionPrev_),
+                    &QAction::trigger);
+  }
+
+  //----------------------------------------------------------------
+  // playlist_skip_to_next
+  //
+  static void
+  playlist_skip_to_next(void * context)
+  {
+    MainWidget * mainWidget = (MainWidget *)context;
+    yae::queue_call(*(mainWidget->actionNext_),
+                    &QAction::trigger);
+  }
+
+  //----------------------------------------------------------------
+  // playlist_select_all
+  //
+  static void
+  playlist_select_all(void * context)
+  {
+    MainWidget * mainWidget = (MainWidget *)context;
+    yae::queue_call(*(mainWidget->actionSelectAll_),
+                    &QAction::trigger);
+  }
+
+  //----------------------------------------------------------------
+  // playlist_remove_selected
+  //
+  static void
+  playlist_remove_selected(void * context)
+  {
+    MainWidget * mainWidget = (MainWidget *)context;
+    yae::queue_call(*(mainWidget->actionRemove_),
+                    &QAction::trigger);
+  }
+
+  //----------------------------------------------------------------
   // MainWidget::initItemViews
   //
   void
@@ -455,6 +483,14 @@ namespace yae
 
     PlayerView & player_view = PlayerWidget::view_;
     TimelineItem & timeline = *(player_view.timeline_);
+    timeline.back_to_prev_cb_.
+      reset(&yae::playlist_back_to_prev, this);
+    timeline.skip_to_next_cb_.
+      reset(&yae::playlist_skip_to_next, this);
+    timeline.select_all_cb_.
+      reset(&yae::playlist_select_all, this);
+    timeline.remove_sel_cb_.
+      reset(&yae::playlist_remove_selected, this);
     timeline.toggle_playlist_.
       reset(&yae::toggle_playlist, &player_view);
     timeline.query_playlist_visible_.

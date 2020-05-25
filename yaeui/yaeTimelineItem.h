@@ -388,6 +388,10 @@ namespace yae
     ContextCallback video_track_cb_;
     ContextCallback audio_track_cb_;
     ContextCallback subtt_track_cb_;
+    ContextCallback back_to_prev_cb_;
+    ContextCallback skip_to_next_cb_;
+    ContextCallback select_all_cb_;
+    ContextCallback remove_sel_cb_;
     ContextCallback delete_file_cb_;
 
     ItemView::TAnimatorPtr opacity_animator_;

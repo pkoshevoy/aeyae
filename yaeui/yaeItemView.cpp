@@ -894,6 +894,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemView::isMousePressed
+  //
+  bool
+  ItemView::isMousePressed(const InputArea & item) const
+  {
+    if (!pressed_)
+    {
+      return false;
+    }
+
+    yae::shared_ptr<InputArea, Item> pressed = pressed_->input_.lock();
+    if (pressed && pressed.get() == &item)
+    {
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // ItemView::resetMouseState
   //
   void
