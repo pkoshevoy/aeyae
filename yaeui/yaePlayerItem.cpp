@@ -1000,9 +1000,6 @@ namespace yae
     stop_renderers();
 
     select_audio_track(reader, index);
-    curr_tracks.audio_ = index;
-    curr_tracks.video_ = sel_video_.index_;
-    curr_tracks.subtt_ = sel_subtt_.index_;
 
     reader->getSelectedAudioTrackInfo(sel_audio_);
     reader->getAudioTraits(sel_audio_traits_);
@@ -1020,7 +1017,6 @@ namespace yae
         // select another video track:
         std::size_t i = program.video_.empty() ? 0 : program.video_.front();
         select_video_track(reader, i);
-        curr_tracks.video_ = i;
 
         reader->getSelectedVideoTrackInfo(sel_video_);
         reader->getVideoTraits(sel_video_traits_);
@@ -1032,7 +1028,6 @@ namespace yae
         // select another subtitle track:
         std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
         select_subtt_track(reader, i);
-        curr_tracks.subtt_ = i;
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
       }
@@ -1049,6 +1044,10 @@ namespace yae
     {
       timeline_.resetFor(reader);
     }
+
+    curr_tracks.audio_ = reader->getSelectedAudioTrackIndex();
+    curr_tracks.video_ = reader->getSelectedVideoTrackIndex();
+    curr_tracks.subtt_ = get_selected_subtt_track(*reader);
 
     reader->threadStart();
 
@@ -1080,9 +1079,6 @@ namespace yae
     stop_renderers();
 
     select_video_track(reader, index);
-    curr_tracks.video_ = index;
-    curr_tracks.audio_ = sel_audio_.index_;
-    curr_tracks.subtt_ = sel_subtt_.index_;
 
     reader->getSelectedVideoTrackInfo(sel_video_);
     reader->getVideoTraits(sel_video_traits_);
@@ -1100,7 +1096,6 @@ namespace yae
         // select another audio track:
         std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
         select_audio_track(reader, i);
-        curr_tracks.audio_ = i;
 
         reader->getSelectedAudioTrackInfo(sel_audio_);
         reader->getAudioTraits(sel_audio_traits_);
@@ -1112,7 +1107,6 @@ namespace yae
         // select another subtitle track:
         std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
         select_subtt_track(reader, i);
-        curr_tracks.subtt_ = i;
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
       }
@@ -1129,6 +1123,10 @@ namespace yae
     {
       timeline_.resetFor(reader);
     }
+
+    curr_tracks.audio_ = reader->getSelectedAudioTrackIndex();
+    curr_tracks.video_ = reader->getSelectedVideoTrackIndex();
+    curr_tracks.subtt_ = get_selected_subtt_track(*reader);
 
     reader->threadStart();
 
@@ -1163,10 +1161,6 @@ namespace yae
     sel_subtt_format_ = reader->subsInfo(index, sel_subtt_);
     sel_subtt_initialized_ = true;
 
-    curr_tracks.subtt_ = index;
-    curr_tracks.audio_ = sel_audio_.index_;
-    curr_tracks.video_ = sel_video_.index_;
-
     // if the subtitles program is not the same as the audio/video program
     // then change the audio/video track to a matching subtitles program:
     if (sel_subtt_.isValid() && sel_subtt_.program_ != prev_program)
@@ -1179,7 +1173,6 @@ namespace yae
         // select another video track:
         std::size_t i = program.video_.empty() ? 0 : program.video_.front();
         select_video_track(reader, i);
-        curr_tracks.video_ = i;
 
         reader->getSelectedVideoTrackInfo(sel_video_);
         reader->getVideoTraits(sel_video_traits_);
@@ -1191,7 +1184,6 @@ namespace yae
         // select another audio track:
         std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
         select_audio_track(reader, i);
-        curr_tracks.audio_ = i;
 
         reader->getSelectedAudioTrackInfo(sel_audio_);
         reader->getAudioTraits(sel_audio_traits_);
@@ -1210,6 +1202,10 @@ namespace yae
     {
       timeline_.resetFor(reader);
     }
+
+    curr_tracks.audio_ = reader->getSelectedAudioTrackIndex();
+    curr_tracks.video_ = reader->getSelectedVideoTrackIndex();
+    curr_tracks.subtt_ = get_selected_subtt_track(*reader);
 
     reader->threadStart();
 
