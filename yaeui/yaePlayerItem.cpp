@@ -1001,6 +1001,8 @@ namespace yae
 
     select_audio_track(reader, index);
     curr_tracks.audio_ = index;
+    curr_tracks.video_ = sel_video_.index_;
+    curr_tracks.subtt_ = sel_subtt_.index_;
 
     reader->getSelectedAudioTrackInfo(sel_audio_);
     reader->getAudioTraits(sel_audio_traits_);
@@ -1079,6 +1081,8 @@ namespace yae
 
     select_video_track(reader, index);
     curr_tracks.video_ = index;
+    curr_tracks.audio_ = sel_audio_.index_;
+    curr_tracks.subtt_ = sel_subtt_.index_;
 
     reader->getSelectedVideoTrackInfo(sel_video_);
     reader->getVideoTraits(sel_video_traits_);
@@ -1158,6 +1162,10 @@ namespace yae
     select_subtt_track(reader, index);
     sel_subtt_format_ = reader->subsInfo(index, sel_subtt_);
     sel_subtt_initialized_ = true;
+
+    curr_tracks.subtt_ = index;
+    curr_tracks.audio_ = sel_audio_.index_;
+    curr_tracks.video_ = sel_video_.index_;
 
     // if the subtitles program is not the same as the audio/video program
     // then change the audio/video track to a matching subtitles program:
