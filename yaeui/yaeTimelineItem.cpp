@@ -795,7 +795,7 @@ namespace yae
       txt.font_ = style.font_large_;
       txt.font_.setWeight(57);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
-      txt.text_ = TVarRef::constant(TVar("SEL \xe2\x9c\xb1"));
+      txt.text_ = TVarRef::constant(TVar("SEL *"));
       txt.alignment_ = Qt::AlignCenter;
       txt.elide_ = Qt::ElideNone;
       txt.color_ = colorControlsFg;
