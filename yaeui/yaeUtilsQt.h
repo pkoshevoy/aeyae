@@ -539,6 +539,11 @@ namespace yae
     bool event(QEvent * event);
 
   public:
+    inline void set_appearance(const char * appearance)
+    { set_appearance(std::string(appearance ? appearance : "auto")); }
+
+    void set_appearance(const std::string & appearance);
+
     bool query_dark_mode() const;
 
     // platform specific implementation details:
@@ -549,6 +554,7 @@ namespace yae
     };
 
     Private * private_;
+    std::string appearance_;
   };
 
 }

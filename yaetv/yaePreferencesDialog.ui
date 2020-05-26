@@ -15,6 +15,48 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout_4">
    <item>
+    <widget class="QGroupBox" name="appeareanceGroupBox">
+     <property name="title">
+      <string>Appearance</string>
+     </property>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <item>
+       <widget class="QRadioButton" name="radioButtonAuto">
+        <property name="text">
+         <string>Auto</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">appearanceButtonGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioButtonDark">
+        <property name="text">
+         <string>Dark</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">appearanceButtonGroup</string>
+        </attribute>
+       </widget>
+      </item>
+      <item>
+       <widget class="QRadioButton" name="radioButtonLight">
+        <property name="text">
+         <string>Light</string>
+        </property>
+        <attribute name="buttonGroup">
+         <string notr="true">appearanceButtonGroup</string>
+        </attribute>
+       </widget>
+      </item>
+     </layout>
+    </widget>
+   </item>
+   <item>
     <widget class="QGroupBox" name="groupBox">
      <property name="title">
       <string>Channel Map</string>
@@ -202,4 +244,7 @@
    </hints>
   </connection>
  </connections>
+ <buttongroups>
+  <buttongroup name="appearanceButtonGroup"/>
+ </buttongroups>
 </ui>

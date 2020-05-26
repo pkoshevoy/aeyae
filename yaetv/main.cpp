@@ -497,6 +497,7 @@ namespace yae
     yae::signal_handler();
 
     // parse input parameters:
+    std::string appearance;
     std::string basedir;
     bool no_ui = false;
 
@@ -550,6 +551,7 @@ namespace yae
       if (yae::TOpenFile(path, "rb").load(json))
       {
         basedir = json.get("basedir", "").asString();
+        appearance = json.get("appearance", std::string("auto")).asString();
       }
     }
 
@@ -622,7 +624,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     // initialize application style:
-    yae::mainWindow->themeChanged(app);
+    app.set_appearance(appearance);
 
     yae::mainWindow->show();
     yae::mainWindow->initItemViews();

@@ -2278,12 +2278,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Application::set_appearance
+  //
+  void
+  Application::set_appearance(const std::string & appearance)
+  {
+    if (appearance_ == appearance)
+    {
+      return;
+    }
+
+    appearance_ = appearance;
+    emit theme_changed(*this);
+  }
+
+  //----------------------------------------------------------------
   // Application::query_dark_mode
   //
   bool
   Application::query_dark_mode() const
   {
     bool dark = false;
+
+    if (appearance_ == "dark")
+    {
+      return true;
+    }
+
+    if (appearance_ == "light")
+    {
+      return false;
+    }
 
     if (private_)
     {

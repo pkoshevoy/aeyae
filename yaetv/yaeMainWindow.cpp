@@ -155,6 +155,18 @@ namespace yae
                       this, SLOT(select_storage_folder()));
     YAE_ASSERT(ok);
 
+    ok = connect(this->radioButtonAuto, SIGNAL(clicked(bool)),
+                 this, SLOT(on_appearance_changed()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this->radioButtonDark, SIGNAL(clicked(bool)),
+                 this, SLOT(on_appearance_changed()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this->radioButtonLight, SIGNAL(clicked(bool)),
+                 this, SLOT(on_appearance_changed()));
+    YAE_ASSERT(ok);
+
     ok = connect(this, SIGNAL(finished(int)),
                  this, SLOT(on_finished(int)));
     YAE_ASSERT(ok);
@@ -188,6 +200,23 @@ namespace yae
         this->channelMapComboBox->setCurrentIndex(i);
         break;
       }
+    }
+
+    // appearance:
+    std::string appearance =
+      preferences_.get("appearance", std::string("auto")).asString();
+
+    if (appearance == "dark")
+    {
+      radioButtonDark->setChecked(true);
+    }
+    else if (appearance == "light")
+    {
+      radioButtonLight->setChecked(true);
+    }
+    else
+    {
+      radioButtonAuto->setChecked(true);
     }
 
     // storage:
@@ -256,7 +285,27 @@ namespace yae
   {
     if (result != QDialog::Accepted)
     {
+      // restore appearance:
+      std::string appearance =
+        preferences_.get("appearance", std::string("auto")).asString();
+
+      yae::Application & app = yae::Application::singleton();
+      app.set_appearance(appearance);
+
       return;
+    }
+
+    if (radioButtonDark->isChecked())
+    {
+      preferences_["appearance"] = "dark";
+    }
+    else if (radioButtonLight->isChecked())
+    {
+      preferences_["appearance"] = "light";
+    }
+    else
+    {
+      preferences_["appearance"] = "auto";
     }
 
     QString basedir_qstr = this->storageLineEdit->text();
@@ -297,6 +346,27 @@ namespace yae
     {
       folder = QDir::toNativeSeparators(folder);
       this->storageLineEdit->setText(folder);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PreferencesDialog::on_appearance_changed
+  //
+  void
+  PreferencesDialog::on_appearance_changed()
+  {
+    yae::Application & app = yae::Application::singleton();
+    if (radioButtonDark->isChecked())
+    {
+      app.set_appearance("dark");
+    }
+    else if (radioButtonLight->isChecked())
+    {
+      app.set_appearance("light");
+    }
+    else
+    {
+      app.set_appearance("auto");
     }
   }
 
