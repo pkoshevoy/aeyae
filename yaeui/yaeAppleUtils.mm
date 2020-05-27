@@ -240,9 +240,9 @@ query_dark_mode()
   SEL sel = NSSelectorFromString(@"effectiveAppearance");
   if ([NSApp respondsToSelector:sel])
   {
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
     NSAppearance * ea = [NSApp performSelector:sel];
     NSString * ns_appearance = [ea name];
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
     dark =
       (ns_appearance == NSAppearanceNameDarkAqua ||
        ns_appearance == NSAppearanceNameAccessibilityHighContrastDarkAqua ||
