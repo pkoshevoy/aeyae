@@ -1521,7 +1521,9 @@ namespace yae
         }
 
         rec_ptr.reset(new Recording());
-        *rec_ptr = yae::make_recording(*channel, *program);
+        Recording & rec = *rec_ptr;
+        rec = yae::make_recording(*channel, *program);
+        rec.cancelled_ = true;
       }
     }
 
@@ -1555,18 +1557,18 @@ namespace yae
           return;
         }
 
-        if (!rec.cancelled_)
+        uint64_t gps_now = TTime::gps_now().get(1);
+        if (gps_now < rec.gps_t1_)
         {
-          uint64_t gps_now = TTime::gps_now().get(1);
           result =
-            rec.gps_t1_ <= gps_now ?
-            TVar(std::string("Not Available")) :
+            rec.cancelled_ ?
+            result = TVar(std::string("Record")) :
             TVar(std::string("Cancel"));
           return;
         }
       }
 
-      result = TVar(std::string("Record"));
+      result = TVar(std::string("Not Available"));
     }
 
     const AppView & view_;
