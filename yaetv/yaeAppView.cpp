@@ -1560,7 +1560,7 @@ namespace yae
           uint64_t gps_now = TTime::gps_now().get(1);
           result =
             rec.gps_t1_ <= gps_now ?
-            TVar(std::string("Missed")) :
+            TVar(std::string("Not Available")) :
             TVar(std::string("Cancel"));
           return;
         }
