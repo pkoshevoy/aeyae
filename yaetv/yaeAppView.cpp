@@ -1557,7 +1557,11 @@ namespace yae
 
         if (!rec.cancelled_)
         {
-          result = TVar(std::string("Cancel"));
+          uint64_t gps_now = TTime::gps_now().get(1);
+          result =
+            rec.gps_t1_ <= gps_now ?
+            TVar(std::string("Missed")) :
+            TVar(std::string("Cancel"));
           return;
         }
       }
@@ -1641,6 +1645,12 @@ namespace yae
          if (playback_ptr)
          {
            yae::queue_call(view_, &AppView::watch_now, playback_ptr, rec_ptr);
+           return true;
+         }
+
+         uint64_t gps_now = TTime::gps_now().get(1);
+         if (rec.gps_t1_ <= gps_now)
+         {
            return true;
          }
       }
