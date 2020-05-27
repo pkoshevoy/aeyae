@@ -248,6 +248,14 @@ namespace yae
        uint32_t ch_num,
        uint32_t gpt_time);
 
+  //----------------------------------------------------------------
+  // make_recording
+  //
+  Recording
+  make_recording(const yae::mpeg_ts::EPG::Channel & channel,
+                 const yae::mpeg_ts::EPG::Program & program,
+                 Recording::MadeBy rec_cause = Recording::kUnspecified,
+                 uint16_t max_recordings = 0);
 
   //----------------------------------------------------------------
   // Schedule
@@ -518,6 +526,41 @@ namespace yae
     get_recordings(TRecordings & by_filename,
                    std::map<std::string, TRecordings> & by_playlist,
                    std::map<uint32_t, TScheduledRecordings> & by_chan) const;
+
+    //----------------------------------------------------------------
+    // ChanTime
+    //
+    struct ChanTime
+    {
+      ChanTime(uint32_t ch_num, uint32_t gps_time):
+        ch_num_(ch_num),
+        gps_time_(gps_time)
+      {}
+
+      uint32_t ch_num_;
+      uint32_t gps_time_;
+    };
+
+    //----------------------------------------------------------------
+    // Playback
+    //
+    struct Playback
+    {
+      Playback(const std::string & playlist = std::string(),
+               const std::string & filename = std::string(),
+               const std::string & basepath = std::string()):
+        playlist_(playlist),
+        filename_(filename),
+        basepath_(basepath)
+      {}
+
+      std::string playlist_;
+      std::string filename_;
+      std::string basepath_;
+    };
+
+    yae::shared_ptr<Playback>
+    is_ready_to_play(const Recording & rec) const;
 
     void watch_live(uint32_t ch_num);
     void close_live();

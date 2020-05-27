@@ -1097,9 +1097,9 @@ namespace yae
       const Recording & rec = *live_rec_;
       std::string basepath = rec.get_filepath(dvr_.basedir_, "");
       std::string filename = rec.get_basename() + ".mpg";
-      view_.now_playing_.reset(new AppView::Playback(view_.sidebar_sel_,
-                                                     filename,
-                                                     basepath));
+      view_.now_playing_.reset(new DVR::Playback(view_.sidebar_sel_,
+                                                 filename,
+                                                 basepath));
     }
   }
 

@@ -237,15 +237,18 @@ static bool
 query_dark_mode()
 {
   bool dark = false;
-
+  SEL sel = NSSelectorFromString(@"effectiveAppearance");
+  if ([NSApp respondsToSelector:sel])
+  {
+    NSAppearance * ea = [NSApp performSelector:sel];
+    NSString * ns_appearance = [ea name];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 101400
-  NSAppearance * ea = [NSApp effectiveAppearance];
-  NSString * ns_appearance = [ea name];
-  dark =
-    (ns_appearance == NSAppearanceNameDarkAqua ||
-     ns_appearance == NSAppearanceNameAccessibilityHighContrastDarkAqua ||
-     ns_appearance == NSAppearanceNameAccessibilityHighContrastVibrantDark);
+    dark =
+      (ns_appearance == NSAppearanceNameDarkAqua ||
+       ns_appearance == NSAppearanceNameAccessibilityHighContrastDarkAqua ||
+       ns_appearance == NSAppearanceNameAccessibilityHighContrastVibrantDark);
 #endif
+  }
 
   return dark;
 }

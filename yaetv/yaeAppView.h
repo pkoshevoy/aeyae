@@ -87,38 +87,6 @@ namespace yae
     // helper:
     TRecordingPtr now_playing() const;
 
-    //----------------------------------------------------------------
-    // Playback
-    //
-    struct Playback
-    {
-      Playback(const std::string & playlist = std::string(),
-               const std::string & filename = std::string(),
-               const std::string & basepath = std::string()):
-        playlist_(playlist),
-        filename_(filename),
-        basepath_(basepath)
-      {}
-
-      std::string playlist_;
-      std::string filename_;
-      std::string basepath_;
-    };
-
-    //----------------------------------------------------------------
-    // ChanTime
-    //
-    struct ChanTime
-    {
-      ChanTime(uint32_t ch_num, uint32_t gps_time):
-        ch_num_(ch_num),
-        gps_time_(gps_time)
-      {}
-
-      uint32_t ch_num_;
-      uint32_t gps_time_;
-    };
-
     // for async scanning of available recordings:
     void found_recordings(const TFoundRecordingsPtr & found);
 
@@ -158,8 +126,10 @@ namespace yae
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
+    void watch_now(yae::shared_ptr<DVR::Playback> playback_ptr,
+                   TRecordingPtr rec_ptr);
     void add_wishlist_item();
-    void add_wishlist_item(const yae::shared_ptr<ChanTime> & program_sel);
+    void add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & program_sel);
     void edit_wishlist_item(const std::string & row_id);
     void remove_wishlist_item(const std::string & wi_key);
     void save_wishlist_item();
@@ -225,8 +195,8 @@ namespace yae
     // all recordings, indexed by channel and gps start time:
     std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
 
-    yae::shared_ptr<Playback> now_playing_;
-    yae::shared_ptr<ChanTime> program_sel_;
+    yae::shared_ptr<DVR::Playback> now_playing_;
+    yae::shared_ptr<DVR::ChanTime> program_sel_;
 
     std::map<uint32_t, std::size_t> ch_index_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;

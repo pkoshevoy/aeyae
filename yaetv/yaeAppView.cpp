@@ -1485,6 +1485,50 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // find_recording
+  //
+  static TRecordingPtr
+  find_recording(const yae::mpeg_ts::EPG & epg,
+                 const std::map<uint32_t, TScheduledRecordings> & schedule,
+                 const yae::shared_ptr<DVR::ChanTime> & program_sel)
+  {
+    TRecordingPtr rec_ptr;
+
+    if (program_sel)
+    {
+      // shortcuts:
+      uint32_t ch_num = program_sel->ch_num_;
+      uint32_t gps_time = program_sel->gps_time_;
+
+      const yae::mpeg_ts::EPG::Channel * channel = NULL;
+      const yae::mpeg_ts::EPG::Program * program = NULL;
+
+      if (epg.find(ch_num, gps_time, channel, program))
+      {
+        std::map<uint32_t, TScheduledRecordings>::const_iterator
+          found_ch = schedule.find(ch_num);
+
+        if (found_ch != schedule.end())
+        {
+          const TScheduledRecordings & sched = found_ch->second;
+          TScheduledRecordings::const_iterator found = sched.find(gps_time);
+
+          if (found != sched.end())
+          {
+            rec_ptr = found->second;
+            return rec_ptr;
+          }
+        }
+
+        rec_ptr.reset(new Recording());
+        *rec_ptr = yae::make_recording(*channel, *program);
+      }
+    }
+
+    return rec_ptr;
+  }
+
+  //----------------------------------------------------------------
   // GetProgramDetailsToggleText
   //
   struct GetProgramDetailsToggleText : public TVarExpr
@@ -1496,36 +1540,25 @@ namespace yae
     // virtual:
     void evaluate(TVar & result) const
     {
-      if (view_.program_sel_)
+      TRecordingPtr rec_ptr = yae::find_recording(view_.epg_,
+                                                  view_.schedule_,
+                                                  view_.program_sel_);
+      if (rec_ptr)
       {
-        // shortcuts:
-        uint32_t ch_num = view_.program_sel_->ch_num_;
-        uint32_t gps_time = view_.program_sel_->gps_time_;
+        const Recording & rec = *rec_ptr;
+        yae::shared_ptr<DVR::Playback> ready =
+          view_.model()->is_ready_to_play(rec);
 
-        const yae::mpeg_ts::EPG::Channel * channel = NULL;
-        const yae::mpeg_ts::EPG::Program * program = NULL;
-
-        if (view_.epg_.find(ch_num, gps_time, channel, program))
+        if (ready)
         {
-          std::map<uint32_t, TScheduledRecordings>::const_iterator
-            found_ch = view_.schedule_.find(ch_num);
+          result = TVar(std::string("Watch Now"));
+          return;
+        }
 
-          if (found_ch != view_.schedule_.end())
-          {
-            const TScheduledRecordings & sched = found_ch->second;
-            TScheduledRecordings::const_iterator found = sched.find(gps_time);
-
-            if (found != sched.end())
-            {
-              TRecordingPtr rec_ptr = found->second;
-              const Recording & rec = *rec_ptr;
-              if (!rec.cancelled_)
-              {
-                result = TVar(std::string("Cancel"));
-                return;
-              }
-            }
-          }
+        if (!rec.cancelled_)
+        {
+          result = TVar(std::string("Cancel"));
+          return;
         }
       }
 
@@ -1596,7 +1629,23 @@ namespace yae
         return false;
       }
 
-      const AppView::ChanTime & program_details = *(view_.program_sel_);
+      TRecordingPtr rec_ptr = yae::find_recording(view_.epg_,
+                                                  view_.schedule_,
+                                                  view_.program_sel_);
+      if (rec_ptr)
+      {
+         const Recording & rec = *rec_ptr;
+         yae::shared_ptr<DVR::Playback> playback_ptr =
+           view_.model()->is_ready_to_play(rec);
+
+         if (playback_ptr)
+         {
+           yae::queue_call(view_, &AppView::watch_now, playback_ptr, rec_ptr);
+           return true;
+         }
+      }
+
+      const DVR::ChanTime & program_details = *(view_.program_sel_);
       view_.toggle_recording(program_details.ch_num_,
                              program_details.gps_time_);
       parent_->uncache();
@@ -1653,7 +1702,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      yae::shared_ptr<AppView::ChanTime> program_sel = view_.program_sel_;
+      yae::shared_ptr<DVR::ChanTime> program_sel = view_.program_sel_;
       view_.program_sel_.reset();
       view_.requestUncache();
       view_.add_wishlist_item(program_sel);
@@ -1921,7 +1970,7 @@ namespace yae
   {
     if (view.now_playing_)
     {
-      const AppView::Playback & now_playing = *(view.now_playing_);
+      const DVR::Playback & now_playing = *(view.now_playing_);
       return (now_playing.basepath_ == basepath);
     }
 
@@ -4012,8 +4061,8 @@ namespace yae
                                                         table,
                                                         layout.index_,
                                                         row.id_,
-                                                        1.78));
-        row.height_ = ItemRef::reference(hidden, kUnitSize, 1.78);
+                                                        2.56));
+        row.height_ = ItemRef::reference(hidden, kUnitSize, 2.56);
 
         PlaybackRecording & playback_ia =
           row.add(new PlaybackRecording("playback_ia", view, name));
@@ -4253,7 +4302,7 @@ namespace yae
       return;
     }
 
-    program_sel_.reset(new ChanTime(ch_num, gps_time));
+    program_sel_.reset(new DVR::ChanTime(ch_num, gps_time));
 
     // shortcuts:
     Item & panel = *(pd_layout_.item_);
@@ -4363,8 +4412,26 @@ namespace yae
     const TRecordingPtr & rec_ptr = found->second;
     const Recording & rec = *rec_ptr;
     std::string basepath = rec.get_filepath(dvr_->basedir_, "");
-    now_playing_.reset(new Playback(sidebar_sel_, name, basepath));
+    now_playing_.reset(new DVR::Playback(sidebar_sel_, name, basepath));
 
+    yae::queue_call(*this, &AppView::emit_playback, rec_ptr);
+    dataChanged();
+    resetMouseState();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::watch_now
+  //
+  void
+  AppView::watch_now(yae::shared_ptr<DVR::Playback> playback_ptr,
+                     TRecordingPtr rec_ptr)
+  {
+    if (!(playback_ptr && rec_ptr))
+    {
+      return;
+    }
+
+    now_playing_ = playback_ptr;
     yae::queue_call(*this, &AppView::emit_playback, rec_ptr);
     dataChanged();
     resetMouseState();
@@ -4392,7 +4459,7 @@ namespace yae
   // AppView::add_wishlist_item
   //
   void
-  AppView::add_wishlist_item(const yae::shared_ptr<ChanTime> & program_sel)
+  AppView::add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & prog_sel)
   {
     // shortcuts:
     AppView & view = *this;
@@ -4401,10 +4468,10 @@ namespace yae
     sidebar_sel_ = "wl: add";
 
     Wishlist::Item wi;
-    if (program_sel)
+    if (prog_sel)
     {
-      uint32_t ch_num = program_sel->ch_num_;
-      uint32_t gps_time = program_sel->gps_time_;
+      uint32_t ch_num = prog_sel->ch_num_;
+      uint32_t gps_time = prog_sel->gps_time_;
 
       const yae::mpeg_ts::EPG::Channel * channel = NULL;
       const yae::mpeg_ts::EPG::Program * program = NULL;
@@ -4777,7 +4844,7 @@ namespace yae
                        // orientation:
                        Splitter::kHorizontal,
                        // initial position:
-                       0.4));
+                       0.331));
     splitter.anchors_.inset(sep, -5.0, 0.0);
 
     sep.anchors_.top_ = ItemRef::reference(overview, kPropertyTop);
