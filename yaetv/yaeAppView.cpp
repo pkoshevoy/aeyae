@@ -980,6 +980,31 @@ namespace yae
     std::string name_;
   };
 
+  //----------------------------------------------------------------
+  // WidthMinusMargin
+  //
+  struct WidthMinusMargin : TDoubleExpr
+  {
+    WidthMinusMargin(const AppView & view,
+                     const Item & item,
+                     double margin):
+      view_(view),
+      item_(item),
+      margin_(margin)
+    {}
+
+    // virtual:
+    void evaluate(double & result) const
+    {
+      result = item_.width();
+      double unit_size = view_.style_->unit_size_.get();
+      result -= unit_size * margin_;
+    }
+
+    const AppView & view_;
+    const Item & item_;
+    double margin_;
+  };
 
   //----------------------------------------------------------------
   // gps_time_round_dn
@@ -4318,7 +4343,12 @@ namespace yae
 
     // shortcuts:
     Item & panel = *(pd_layout_.item_);
-    Item & body = panel.Item::get<Item>("body");
+
+    Scrollview & scrollview = panel.
+      get<Scrollview>((panel.id_ + ".scrollview").c_str());
+    Item & content = *(scrollview.content_);
+
+    Item & body = content.Item::get<Item>("body");
     RoundRect & head_bg = body.Item::get<RoundRect>("head_bg");
     Item & ch_item = head_bg.Item::get<Item>("ch_item");
 
@@ -5284,9 +5314,15 @@ namespace yae
     bg.anchors_.fill(panel);
     bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
 
-    Item & body = panel.addNew<Item>("body");
-    body.anchors_.fill(panel);
-    body.margins_.set(ItemRef::reference(hidden, kUnitSize, 1));
+    Scrollview & scrollview =
+      layout_scrollview(kScrollbarVertical, view, style, panel,
+                        ItemRef::reference(hidden, kUnitSize, 0.33));
+    Item & content = *(scrollview.content_);
+
+    Item & body = content.addNew<Item>("body");
+    body.anchors_.top_ = ItemRef::reference(hidden, kUnitSize, 1);
+    body.anchors_.left_ = ItemRef::reference(hidden, kUnitSize, 1);
+    body.width_ = body.addExpr(new WidthMinusMargin(view, panel, 2));
 
 
     Item & r1 = body.addNew<Item>("r1");
@@ -5402,10 +5438,12 @@ namespace yae
     paragraphs.anchors_.fill(body);
     paragraphs.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     paragraphs.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
+    paragraphs.anchors_.top_ = ItemRef::reference(head_bg, kPropertyBottom);
+    paragraphs.anchors_.bottom_.reset();
+    paragraphs.height_ = ItemRef::constant(0.0);
 
     Item & r4 = body.addNew<Item>("r4");
-    r4.anchors_.fill(body);
-    r4.anchors_.top_ = ItemRef::reference(head_bg, kPropertyBottom);
+    r4.anchors_.fill(paragraphs);
     r4.anchors_.bottom_.reset();
     r4.height_ = ItemRef::reference(hidden, kUnitSize, 1.2);
 
@@ -5442,7 +5480,7 @@ namespace yae
     desc.text_ = TVarRef::constant(TVar(QString::fromUtf8(description)));
 
     Item & r5 = body.addNew<Item>("r5");
-    r5.anchors_.fill(body);
+    r5.anchors_.fill(paragraphs);
     r5.anchors_.top_ = ItemRef::reference(desc, kPropertyBottom);
     r5.anchors_.bottom_.reset();
     r5.height_ = ItemRef::reference(hidden, kUnitSize, 1.2);
@@ -5462,7 +5500,7 @@ namespace yae
     status.text_ = status.addExpr(new GetProgramDetailsStatus(view));
 
     Item & r6 = body.addNew<Item>("r6");
-    r6.anchors_.fill(body);
+    r6.anchors_.fill(paragraphs);
     r6.anchors_.top_ = ItemRef::reference(r5, kPropertyBottom);
     r6.anchors_.bottom_.reset();
     r6.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.4));
@@ -5556,6 +5594,13 @@ namespace yae
     ProgramDetailsAddWishlist & on_add_wi = bg_add_wi.
       add(new ProgramDetailsAddWishlist("on_add_wi", *this));
     on_add_wi.anchors_.fill(bg_add_wi);
+
+    // spacer:
+    Item & r7 = body.addNew<Item>("r7");
+    r7.anchors_.fill(paragraphs);
+    r7.anchors_.top_ = ItemRef::reference(r6, kPropertyBottom);
+    r7.anchors_.bottom_.reset();
+    r7.height_ = ItemRef::reference(hidden, kUnitSize, 1);
   }
 
   //----------------------------------------------------------------
