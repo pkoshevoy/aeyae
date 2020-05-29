@@ -484,6 +484,9 @@ namespace yae
   //
   struct Schedule
   {
+    // check whether a given recording is in progress:
+    bool is_recording_now(const TRecPtr & rec_ptr) const;
+
     // return previous live channel number, set new live channel number:
     uint32_t enable_live(uint32_t ch_num);
     uint32_t disable_live();

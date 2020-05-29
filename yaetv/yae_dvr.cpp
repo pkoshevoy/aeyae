@@ -1109,6 +1109,28 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Schedule::is_recording_now
+  //
+  bool
+  Schedule::is_recording_now(const TRecPtr & rec_ptr) const
+  {
+    if (!rec_ptr)
+    {
+      return false;
+    }
+
+    const Recording::Rec & rec = *rec_ptr;
+    TRecordingPtr recording_ptr = get(rec.ch_num(), rec.gps_t0_);
+    if (!recording_ptr)
+    {
+      return false;
+    }
+
+    const Recording & recording = *recording_ptr;
+    return recording.is_recording();
+  }
+
+  //----------------------------------------------------------------
   // Schedule::enable_live
   //
   uint32_t

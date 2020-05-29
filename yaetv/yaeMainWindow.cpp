@@ -891,6 +891,24 @@ namespace yae
       return;
     }
 
+    if (dvr_.schedule_.is_recording_now(rec_ptr))
+    {
+      // probably exhausted the buffer, try to resume playback:
+      IReaderPtr reader = playbackRecording(rec_ptr);
+      if (reader)
+      {
+        TTime t0(0, 0);
+        TTime t1(0, 0);
+        if (yae::get_timeline(reader.get(), t0, t1))
+        {
+          double seek_pos = std::max(t0.sec(), playheadPos.sec() - 10.0);
+          reader->seek(seek_pos);
+        }
+
+        return;
+      }
+    }
+
     const Recording::Rec & rec = *rec_ptr;
 
     PlayerView & view = playerWidget_->view();
