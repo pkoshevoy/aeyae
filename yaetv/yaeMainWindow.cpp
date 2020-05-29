@@ -800,6 +800,8 @@ namespace yae
       }
 
       dvr.delete_recording(rec);
+      appView.requestUncacheEPG();
+      appView.requestUncache();
       appView.sync_ui();
       appView.requestRepaint();
     }
