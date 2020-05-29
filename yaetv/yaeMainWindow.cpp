@@ -916,6 +916,9 @@ namespace yae
     const TimelineModel & timeline = view.timeline_model();
     save_bookmark(dvr_, rec, reader, timeline.timelineStart());
 
+    // stop playback timers, etc...
+    view.stopPlayback();
+
     // shortcuts:
     const AppStyle & style = *(view_.style());
     ConfirmView & confirm = playerWidget_->confirm_;

@@ -937,6 +937,9 @@ namespace yae
   void
   MainWidget::playbackFinished(TTime playheadPos)
   {
+    PlayerView & player_view = PlayerWidget::view();
+    player_view.stopPlayback();
+
     // remove current bookmark:
     QModelIndex index = playlistModel_.playingItem();
     QModelIndex iNext = playlistModel_.nextItem(index);

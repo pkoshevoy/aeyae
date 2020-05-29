@@ -2034,8 +2034,9 @@ namespace yae
     TTime t1(0, 0);
     yae::get_timeline(reader_ptr.get(), t0, t1);
 
-    stopPlayback();
-
+    // NOTE: emit playback_finished before stopPlayback
+    // otherwise the final bookmark will have invalid track selections
+    // due to IReader being closed:
     emit playback_finished(t1);
   }
 
