@@ -156,15 +156,15 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(this->radioButtonAuto, SIGNAL(clicked(bool)),
-                 this, SLOT(on_appearance_changed()));
+                 this, SLOT(appearance_changed()));
     YAE_ASSERT(ok);
 
     ok = connect(this->radioButtonDark, SIGNAL(clicked(bool)),
-                 this, SLOT(on_appearance_changed()));
+                 this, SLOT(appearance_changed()));
     YAE_ASSERT(ok);
 
     ok = connect(this->radioButtonLight, SIGNAL(clicked(bool)),
-                 this, SLOT(on_appearance_changed()));
+                 this, SLOT(appearance_changed()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(finished(int)),
@@ -350,10 +350,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PreferencesDialog::on_appearance_changed
+  // PreferencesDialog::appearance_changed
   //
   void
-  PreferencesDialog::on_appearance_changed()
+  PreferencesDialog::appearance_changed()
   {
     yae::Application & app = yae::Application::singleton();
     if (radioButtonDark->isChecked())
