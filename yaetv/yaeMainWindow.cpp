@@ -63,7 +63,7 @@ namespace yae
   //
   static void
   save_bookmark(const DVR & dvr,
-                const Recording & rec,
+                const Recording::Rec & rec,
                 const IReader * reader,
                 double position_in_sec)
   {
@@ -106,7 +106,7 @@ namespace yae
   // load_bookmark
   //
   yae::shared_ptr<IBookmark>
-  load_bookmark(const DVR & dvr, const Recording & rec)
+  load_bookmark(const DVR & dvr, const Recording::Rec & rec)
   {
     yae::shared_ptr<IBookmark> bookmark_ptr;
     std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
@@ -507,12 +507,12 @@ namespace yae
                  this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(playback(TRecordingPtr)),
-                 this, SLOT(playbackRecording(TRecordingPtr)));
+    ok = connect(&view_, SIGNAL(playback(TRecPtr)),
+                 this, SLOT(playbackRecording(TRecPtr)));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(confirm_delete(TRecordingPtr)),
-                 this, SLOT(confirmDelete(TRecordingPtr)));
+    ok = connect(&view_, SIGNAL(confirm_delete(TRecPtr)),
+                 this, SLOT(confirmDelete(TRecPtr)));
     YAE_ASSERT(ok);
 
     ok = connect(&playerWindow_, SIGNAL(windowClosed()),
@@ -709,14 +709,14 @@ namespace yae
   // MainWindow::playbackRecording
   //
   IReaderPtr
-  MainWindow::playbackRecording(TRecordingPtr rec_ptr)
+  MainWindow::playbackRecording(TRecPtr rec_ptr)
   {
     if (!rec_ptr)
     {
       return IReaderPtr();
     }
 
-    const Recording & rec = *rec_ptr;
+    const Recording::Rec & rec = *rec_ptr;
     std::string path = rec.get_filepath(dvr_.basedir_.string());
 
     IReaderPtr reader = yae::openFile(readerPrototype_,
@@ -775,7 +775,7 @@ namespace yae
   //
   struct ConfirmDeleteRecording : ConfirmView::Action
   {
-    ConfirmDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+    ConfirmDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
       mainWindow_(mainWindow),
       rec_(rec)
     {}
@@ -786,7 +786,7 @@ namespace yae
       // shortcuts:
       DVR & dvr = mainWindow_.dvr_;
       AppView & appView = mainWindow_.view_;
-      const Recording & rec = *rec_;
+      const Recording::Rec & rec = *rec_;
 
       if (appView.now_playing_)
       {
@@ -805,16 +805,16 @@ namespace yae
     }
 
     MainWindow & mainWindow_;
-    TRecordingPtr rec_;
+    TRecPtr rec_;
   };
 
   //----------------------------------------------------------------
   // MainWindow::confirmDelete
   //
   void
-  MainWindow::confirmDelete(TRecordingPtr rec_ptr)
+  MainWindow::confirmDelete(TRecPtr rec_ptr)
   {
-    const Recording & rec = *rec_ptr;
+    const Recording::Rec & rec = *rec_ptr;
     const AppStyle & style = *(view_.style());
 
     std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
@@ -842,7 +842,7 @@ namespace yae
   //
   struct DeclineDeleteRecording : ConfirmView::Action
   {
-    DeclineDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+    DeclineDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
       mainWindow_(mainWindow),
       rec_(rec)
     {}
@@ -852,7 +852,7 @@ namespace yae
     {
       // shortcuts:
       AppView & appView = mainWindow_.view_;
-      const Recording & rec = *rec_;
+      const Recording::Rec & rec = *rec_;
 
       if (appView.now_playing_)
       {
@@ -870,7 +870,7 @@ namespace yae
     }
 
     MainWindow & mainWindow_;
-    TRecordingPtr rec_;
+    TRecPtr rec_;
   };
 
   //----------------------------------------------------------------
@@ -879,7 +879,7 @@ namespace yae
   void
   MainWindow::playbackFinished(TTime playheadPos)
   {
-    TRecordingPtr rec_ptr = view_.now_playing();
+    TRecPtr rec_ptr = view_.now_playing();
     if (live_rec_ || !rec_ptr)
     {
       uint32_t live_ch = dvr_.schedule_.get_live_channel();
@@ -891,7 +891,7 @@ namespace yae
       return;
     }
 
-    const Recording & rec = *rec_ptr;
+    const Recording::Rec & rec = *rec_ptr;
 
     PlayerView & view = playerWidget_->view();
     const IReader * reader = view.get_reader();
@@ -927,7 +927,7 @@ namespace yae
   //
   struct CancelDeleteRecording : ConfirmView::Action
   {
-    CancelDeleteRecording(MainWindow & mainWindow, const TRecordingPtr & rec):
+    CancelDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
       mainWindow_(mainWindow),
       rec_(rec)
     {}
@@ -940,7 +940,7 @@ namespace yae
     }
 
     MainWindow & mainWindow_;
-    TRecordingPtr rec_;
+    TRecPtr rec_;
   };
 
   //----------------------------------------------------------------
@@ -949,13 +949,13 @@ namespace yae
   void
   MainWindow::confirmDeletePlayingRecording()
   {
-    TRecordingPtr rec_ptr = view_.now_playing();
+    TRecPtr rec_ptr = view_.now_playing();
     if (!rec_ptr)
     {
       return;
     }
 
-    const Recording & rec = *rec_ptr;
+    const Recording::Rec & rec = *rec_ptr;
 
     // shortcuts:
     const AppStyle & style = *(view_.style());
@@ -987,13 +987,13 @@ namespace yae
   void
   MainWindow::saveBookmark()
   {
-    TRecordingPtr now_playing = view_.now_playing();
+    TRecPtr now_playing = view_.now_playing();
     if (!now_playing)
     {
       return;
     }
 
-    const Recording & rec = *now_playing;
+    const Recording::Rec & rec = *now_playing;
     const PlayerView & view = playerWidget_->view();
     const IReader * reader = view.get_reader();
     const TimelineModel & timeline = view.timeline_model();
@@ -1074,7 +1074,10 @@ namespace yae
   {
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
     uint64_t t_gps = unix_epoch_time_to_gps_time(start_live_seek_pos_.get(1));
-    live_rec_ = yae::next(live_rec_, view_.rec_by_channel_, live_ch, t_gps);
+    live_rec_ = yae::next<Recording::Rec>(view_.rec_by_channel_,
+                                          live_ch,
+                                          t_gps,
+                                          live_rec_);
 
     IReaderPtr reader = playbackRecording(live_rec_);
     if (reader)
@@ -1094,7 +1097,7 @@ namespace yae
         reader->seek(seek_pos);
       }
 
-      const Recording & rec = *live_rec_;
+      const Recording::Rec & rec = *live_rec_;
       std::string basepath = rec.get_filepath(dvr_.basedir_, "");
       std::string filename = rec.get_basename() + ".mpg";
       view_.now_playing_.reset(new DVR::Playback(view_.sidebar_sel_,

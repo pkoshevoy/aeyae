@@ -85,23 +85,23 @@ namespace yae
     bool processRightClick();
 
     // helper:
-    TRecordingPtr now_playing() const;
+    TRecPtr now_playing() const;
 
     // for async scanning of available recordings:
     void found_recordings(const TFoundRecordingsPtr & found);
 
   signals:
     void toggle_fullscreen();
-    void confirm_delete(TRecordingPtr);
-    void playback(TRecordingPtr);
+    void confirm_delete(TRecPtr);
+    void playback(TRecPtr);
     void watch_live(uint32_t ch_num, TTime seek_pos);
 
   public:
     // signals are protected in Qt4, this is a workaround:
-    inline void emit_confirm_delete(TRecordingPtr rec)
+    inline void emit_confirm_delete(TRecPtr rec)
     { emit confirm_delete(rec); }
 
-    inline void emit_playback(TRecordingPtr rec)
+    inline void emit_playback(TRecPtr rec)
     { emit playback(rec); }
 
     inline void emit_watch_live(uint32_t ch_num, TTime seek_pos)
@@ -119,15 +119,14 @@ namespace yae
     void sync_ui_wishlist();
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
-                          const TRecordings & playlist_recs);
+                          const TRecs & playlist_recs);
 
     void on_watch_live(uint32_t ch_num);
     void show_program_details(uint32_t ch_num, uint32_t gps_time);
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
-    void watch_now(yae::shared_ptr<DVR::Playback> playback_ptr,
-                   TRecordingPtr rec_ptr);
+    void watch_now(yae::shared_ptr<DVR::Playback> playback_ptr, TRecPtr rec);
     void add_wishlist_item();
     void add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & program_sel);
     void edit_wishlist_item(const std::string & row_id);
@@ -187,13 +186,13 @@ namespace yae
     std::map<uint32_t, TScheduledRecordings> schedule_;
 
     // all recordings, indexed by filename:
-    TRecordings recordings_;
+    TRecs recordings_;
 
     // all recordings, indexed by playlist:
-    std::map<std::string, TRecordings> playlists_;
+    std::map<std::string, TRecs> playlists_;
 
     // all recordings, indexed by channel and gps start time:
-    std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
+    std::map<uint32_t, TRecsByTime> rec_by_channel_;
 
     yae::shared_ptr<DVR::Playback> now_playing_;
     yae::shared_ptr<DVR::ChanTime> program_sel_;

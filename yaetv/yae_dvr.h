@@ -159,25 +159,10 @@ namespace yae
   //
   struct Recording
   {
-    Recording();
-    Recording(const yae::mpeg_ts::EPG::Channel & channel,
-              const yae::mpeg_ts::EPG::Program & program);
-    ~Recording();
 
-    fs::path get_title_path(const fs::path & basedir) const;
-    std::string get_basename() const;
-    std::string get_filepath(const fs::path & basedir,
-                             const char * suffix = ".mpg") const;
-
-    yae::TOpenFilePtr open_mpg(const fs::path & basedir);
-    yae::TOpenFilePtr open_dat(const fs::path & basedir);
-
-    void write(const fs::path & basedir, const yae::IBuffer & data);
-    void write_dat();
-
-    inline uint32_t ch_num() const
-    { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
-
+    //----------------------------------------------------------------
+    // MadeBy
+    //
     enum MadeBy
     {
       kUnspecified = 0,
@@ -186,29 +171,198 @@ namespace yae
       kLiveChannel = 3
     };
 
-    MadeBy made_by_;
+    //----------------------------------------------------------------
+    // Rec
+    //
+    struct Rec
+    {
+      Rec();
+      Rec(const yae::mpeg_ts::EPG::Channel & channel,
+          const yae::mpeg_ts::EPG::Program & program,
+          Recording::MadeBy rec_cause = Recording::kUnspecified,
+          uint16_t max_recordings = 0);
 
-    bool cancelled_;
-    uint64_t utc_t0_;
-    uint32_t gps_t0_;
-    uint32_t gps_t1_;
-    uint16_t channel_major_;
-    uint16_t channel_minor_;
-    std::string channel_name_;
-    std::string title_;
-    std::string rating_;
-    std::string description_;
-    uint16_t max_recordings_;
+      void update(const yae::mpeg_ts::EPG::Channel & channel,
+                  const yae::mpeg_ts::EPG::Program & program,
+                  Recording::MadeBy rec_cause = Recording::kUnspecified,
+                  uint16_t max_recordings = 0);
+
+      inline uint32_t ch_num() const
+      { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
+
+      inline uint32_t gps_t0() const
+      { return gps_t0_; }
+
+      inline uint32_t gps_t1() const
+      { return gps_t1_; }
+
+      inline uint32_t get_duration() const
+      { return gps_t1_ - gps_t0_; }
+
+      inline bool is_recordable() const
+      { return TTime::gps_now().get(1) < gps_t1_; }
+
+      fs::path get_title_path(const fs::path & basedir) const;
+
+      std::string get_basename() const;
+      std::string get_filepath(const fs::path & basedir,
+                               const char * suffix = ".mpg") const;
+
+      Recording::MadeBy made_by_;
+      bool cancelled_;
+      uint64_t utc_t0_;
+      uint32_t gps_t0_;
+      uint32_t gps_t1_;
+      uint16_t channel_major_;
+      uint16_t channel_minor_;
+      std::string channel_name_;
+      std::string title_;
+      std::string rating_;
+      std::string description_;
+      uint16_t max_recordings_;
+    };
+
+    Recording();
+    Recording(const yae::shared_ptr<Recording::Rec> & rec);
+    Recording(const yae::mpeg_ts::EPG::Channel & channel,
+              const yae::mpeg_ts::EPG::Program & program,
+              Recording::MadeBy rec_cause = Recording::kUnspecified,
+              uint16_t max_recordings = 0);
+    ~Recording();
+
+    inline void set(const yae::shared_ptr<Recording::Rec> & rec)
+    { rec_ = rec; }
+
+    inline yae::shared_ptr<Recording::Rec> get() const
+    { return rec_; }
+
+    inline uint32_t ch_num() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->ch_num();
+    }
+
+    inline uint32_t gps_t0() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->gps_t0_;
+    }
+
+    inline uint32_t gps_t1() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->gps_t1_;
+    }
+
+    inline uint32_t is_cancelled() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->cancelled_;
+    }
+
+    inline uint32_t made_by_wishlist() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->made_by_ == Recording::kWishlistItem;
+    }
+
+    inline uint16_t max_recordings() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->max_recordings_;
+    }
+
+    inline fs::path get_title_path(const fs::path & basedir) const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->get_title_path(basedir);
+    }
+
+    inline std::string get_basename() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->get_basename();
+    }
+
+    inline std::string get_filepath(const fs::path & basedir,
+                                    const char * suffix = ".mpg") const
+    {
+      yae::shared_ptr<Recording::Rec> rec = rec_;
+      return rec->get_filepath(basedir, suffix);
+    }
+
+    yae::TOpenFilePtr open_mpg(const fs::path & basedir);
+    yae::TOpenFilePtr open_dat(const fs::path & basedir);
+
+    void write(const fs::path & basedir, const yae::IBuffer & data);
+    void write_dat();
+
+    inline bool is_recording() const
+    { return stream_ && stream_->is_open(); }
+
+    inline void set_stream(const yae::shared_ptr<IStream> & s)
+    { stream_ = s; }
+
+  private:
+    // intentionally disabled:
+    Recording(const Recording &);
+    Recording & operator = (const Recording &);
+
+  protected:
+    // recording attributes:
+    yae::shared_ptr<Recording::Rec> rec_;
+
+    // keep-alive the stream as long as the Recording exists:
+    yae::shared_ptr<IStream> stream_;
 
     yae::TOpenFilePtr mpg_; // transport stream (188 byte packets)
     yae::TOpenFilePtr dat_; // time:filesize 8 byte pairs
-    yae::shared_ptr<IStream> stream_;
     uint64_t dat_time_;
     uint64_t mpg_size_;
   };
 
-  void save(Json::Value & json, const Recording & rec);
-  void load(const Json::Value & json, Recording & rec);
+  void save(Json::Value & json, const Recording::Rec & rec);
+  void load(const Json::Value & json, Recording::Rec & rec);
+
+  void save(Json::Value & json, const Recording & recording);
+  void load(const Json::Value & json, Recording & recording);
+
+
+  //----------------------------------------------------------------
+  // TRecPtr
+  //
+  typedef yae::shared_ptr<Recording::Rec> TRecPtr;
+
+  //----------------------------------------------------------------
+  // TRecs
+  //
+  typedef std::map<std::string, TRecPtr> TRecs;
+
+  //----------------------------------------------------------------
+  // TRecsByTime
+  //
+  typedef std::map<uint32_t, TRecPtr> TRecsByTime;
+
+
+  //----------------------------------------------------------------
+  // FoundRecordings
+  //
+  struct FoundRecordings
+  {
+    // indexed by filename:
+    TRecs by_filename_;
+
+    // indexed by playlist:
+    std::map<std::string, TRecs> by_playlist_;
+
+    // indexed by channel number:
+    std::map<uint32_t, TRecsByTime> by_channel_;
+  };
+
+  //----------------------------------------------------------------
+  // TFoundRecordingsPtr
+  //
+  typedef yae::shared_ptr<FoundRecordings> TFoundRecordingsPtr;
 
 
   //----------------------------------------------------------------
@@ -234,28 +388,96 @@ namespace yae
   //----------------------------------------------------------------
   // next
   //
-  TRecordingPtr
-  next(const TRecordingPtr & after_this,
-       const std::map<uint32_t, TScheduledRecordings> & recordings,
+  TRecPtr
+  next(const TRecPtr & after_this,
+       const std::map<uint32_t, TRecsByTime> & recordings,
        uint32_t ch_num,
        uint32_t gpt_time);
 
   //----------------------------------------------------------------
-  // find
+  // next
   //
-  TRecordingPtr
-  find(const std::map<uint32_t, TScheduledRecordings> & recordings,
+  template <typename TRec>
+  yae::shared_ptr<TRec>
+  next(const std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<TRec> > > &
+       recordings,
        uint32_t ch_num,
-       uint32_t gpt_time);
+       uint32_t gps_time,
+       const yae::shared_ptr<TRec> & after_this = yae::shared_ptr<TRec>())
+  {
+    typedef yae::shared_ptr<TRec> TRecPtr;
+    typedef std::map<uint32_t, TRecPtr> TRecsByTime;
+    typedef std::map<uint32_t, TRecsByTime> TRecByChannel;
 
-  //----------------------------------------------------------------
-  // make_recording
-  //
-  Recording
-  make_recording(const yae::mpeg_ts::EPG::Channel & channel,
-                 const yae::mpeg_ts::EPG::Program & program,
-                 Recording::MadeBy rec_cause = Recording::kUnspecified,
-                 uint16_t max_recordings = 0);
+    typename TRecByChannel::const_iterator ch_found = recordings.find(ch_num);
+    if (ch_found == recordings.end())
+    {
+      // nothing scheduled for this channel:
+      return TRecPtr();
+    }
+
+    // recordings are indexed by GPS start time:
+    const TRecsByTime & schedule = ch_found->second;
+    if (schedule.empty())
+    {
+      // nothing scheduled for this channel:
+      return TRecPtr();
+    }
+
+    uint32_t schedule_t0 = schedule.begin()->first;
+    uint32_t schedule_t1 = schedule.rbegin()->second->gps_t1();
+    if (gps_time < schedule_t0 || schedule_t1 <= gps_time)
+    {
+      // nothing scheduled at given time:
+      return TRecPtr();
+    }
+
+    // find the earliest recording with start time greater than gps_time:
+    uint32_t rec_gps_t0 = 0;
+    TRecPtr rec_ptr;
+
+    typename TRecsByTime::const_iterator it = schedule.upper_bound(gps_time);
+    if (it == schedule.end())
+    {
+      typename TRecsByTime::const_reverse_iterator rit = schedule.rbegin();
+      it = yae::next(rit).base();
+      YAE_ASSERT(rit->second == it->second);
+    }
+    else if (it != schedule.begin())
+    {
+      --it;
+    }
+
+    while (it != schedule.end())
+    {
+      rec_gps_t0 = it->first;
+      rec_ptr = it->second;
+
+      // sanity check:
+      YAE_ASSERT(rec_gps_t0 == rec_ptr->gps_t0());
+
+      if (!after_this || after_this->gps_t0() < rec_gps_t0)
+      {
+        break;
+      }
+
+      rec_ptr.reset();
+      ++it;
+    }
+
+    if (!rec_ptr)
+    {
+      return TRecPtr();
+    }
+
+    const TRec & rec = *rec_ptr;
+    if (!after_this && (gps_time < rec_gps_t0 || rec.gps_t1() <= gps_time))
+    {
+      return after_this;
+    }
+
+    return rec_ptr;
+  }
 
   //----------------------------------------------------------------
   // Schedule
@@ -307,22 +529,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // FoundRecordings
-  //
-  struct FoundRecordings
-  {
-    TRecordings recordings_;
-    std::map<std::string, TRecordings> playlists_;
-    std::map<uint32_t, TScheduledRecordings> rec_by_channel_;
-  };
-
-  //----------------------------------------------------------------
-  // TFoundRecordingsPtr
-  //
-  typedef yae::shared_ptr<FoundRecordings> TFoundRecordingsPtr;
-
-
-  //----------------------------------------------------------------
   // remove_excess_recordings
   //
   void remove_excess_recordings(const fs::path & basedir,
@@ -332,7 +538,7 @@ namespace yae
   // make_room_for
   //
   bool make_room_for(const fs::path & basedir,
-                     const Recording & rec,
+                     const Recording::Rec & rec,
                      uint64_t num_sec);
 
   //----------------------------------------------------------------
@@ -513,19 +719,16 @@ namespace yae
                          const yae::mpeg_ts::EPG::Program & program) const;
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
-    void delete_recording(const Recording & rec);
+    void delete_recording(const Recording::Rec & rec);
 
-    bool make_room_for(const Recording & rec, uint64_t num_sec);
+    bool make_room_for(const Recording::Rec & rec, uint64_t num_sec);
 
     // find an earlier recording with the same program description:
-    TRecordingPtr
+    TRecPtr
     already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
                      const yae::mpeg_ts::EPG::Program & program) const;
 
-    void
-    get_recordings(TRecordings & by_filename,
-                   std::map<std::string, TRecordings> & by_playlist,
-                   std::map<uint32_t, TScheduledRecordings> & by_chan) const;
+    void get_existing_recordings(FoundRecordings & found) const;
 
     //----------------------------------------------------------------
     // ChanTime
@@ -560,7 +763,7 @@ namespace yae
     };
 
     yae::shared_ptr<Playback>
-    is_ready_to_play(const Recording & rec) const;
+    is_ready_to_play(const Recording::Rec & rec) const;
 
     void watch_live(uint32_t ch_num);
     void close_live();

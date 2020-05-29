@@ -1318,8 +1318,8 @@ namespace yae
 
         if (found != schedule.end())
         {
-          TRecordingPtr rec_ptr = found->second;
-          const Recording & rec = *rec_ptr;
+          const TRecPtr rec_ptr = found->second->get();
+          const Recording::Rec & rec = *rec_ptr;
           result = rec.cancelled_;
         }
       }
@@ -1378,8 +1378,8 @@ namespace yae
 
         if (found != schedule.end())
         {
-          TRecordingPtr rec_ptr = found->second;
-          const Recording & rec = *rec_ptr;
+          const TRecPtr rec_ptr = found->second->get();
+          const Recording::Rec & rec = *rec_ptr;
 
           result = (rec.cancelled_ ?
                     style.bg_epg_cancelled_.get() :
@@ -1491,8 +1491,8 @@ namespace yae
 
             if (found != sched.end())
             {
-              TRecordingPtr rec_ptr = found->second;
-              const Recording & rec = *rec_ptr;
+              const TRecPtr rec_ptr = found->second->get();
+              const Recording::Rec & rec = *rec_ptr;
               if (!rec.cancelled_)
               {
                 result = TVar(std::string("Scheduled to record."));
@@ -1517,7 +1517,7 @@ namespace yae
                  const std::map<uint32_t, TScheduledRecordings> & schedule,
                  const yae::shared_ptr<DVR::ChanTime> & program_sel)
   {
-    TRecordingPtr rec_ptr;
+    TRecordingPtr recording_ptr;
 
     if (program_sel)
     {
@@ -1540,19 +1540,19 @@ namespace yae
 
           if (found != sched.end())
           {
-            rec_ptr = found->second;
-            return rec_ptr;
+            recording_ptr = found->second;
+            return recording_ptr;
           }
         }
 
-        rec_ptr.reset(new Recording());
-        Recording & rec = *rec_ptr;
-        rec = yae::make_recording(*channel, *program);
+        TRecPtr rec_ptr(new Recording::Rec(*channel, *program));
+        Recording::Rec & rec = *rec_ptr;
         rec.cancelled_ = true;
+        recording_ptr.reset(new Recording(rec_ptr));
       }
     }
 
-    return rec_ptr;
+    return recording_ptr;
   }
 
   //----------------------------------------------------------------
@@ -1567,12 +1567,14 @@ namespace yae
     // virtual:
     void evaluate(TVar & result) const
     {
-      TRecordingPtr rec_ptr = yae::find_recording(view_.epg_,
-                                                  view_.schedule_,
-                                                  view_.program_sel_);
-      if (rec_ptr)
+      TRecordingPtr recording_ptr = yae::find_recording(view_.epg_,
+                                                        view_.schedule_,
+                                                        view_.program_sel_);
+      if (recording_ptr)
       {
-        const Recording & rec = *rec_ptr;
+        const TRecPtr rec_ptr = recording_ptr->get();
+        const Recording::Rec & rec = *rec_ptr;
+
         yae::shared_ptr<DVR::Playback> ready =
           view_.model()->is_ready_to_play(rec);
 
@@ -1582,8 +1584,7 @@ namespace yae
           return;
         }
 
-        uint64_t gps_now = TTime::gps_now().get(1);
-        if (gps_now < rec.gps_t1_)
+        if (rec.is_recordable())
         {
           result =
             rec.cancelled_ ?
@@ -1660,26 +1661,29 @@ namespace yae
         return false;
       }
 
-      TRecordingPtr rec_ptr = yae::find_recording(view_.epg_,
-                                                  view_.schedule_,
-                                                  view_.program_sel_);
-      if (rec_ptr)
+      TRecordingPtr recording_ptr = yae::find_recording(view_.epg_,
+                                                        view_.schedule_,
+                                                        view_.program_sel_);
+      if (recording_ptr)
       {
-         const Recording & rec = *rec_ptr;
-         yae::shared_ptr<DVR::Playback> playback_ptr =
-           view_.model()->is_ready_to_play(rec);
+        const TRecPtr rec_ptr = recording_ptr->get();
+        const Recording::Rec & rec = *rec_ptr;
 
-         if (playback_ptr)
-         {
-           yae::queue_call(view_, &AppView::watch_now, playback_ptr, rec_ptr);
-           return true;
-         }
+        yae::shared_ptr<DVR::Playback> playback_ptr =
+          view_.model()->is_ready_to_play(rec);
 
-         uint64_t gps_now = TTime::gps_now().get(1);
-         if (rec.gps_t1_ <= gps_now)
-         {
-           return true;
-         }
+        if (playback_ptr)
+        {
+          yae::queue_call(view_, &AppView::watch_now, playback_ptr, rec_ptr);
+          return true;
+        }
+
+        if (!rec.is_recordable())
+        {
+          // this program was not recorded and is in the past,
+          // so there is nothing to do here:
+          return true;
+        }
       }
 
       const DVR::ChanTime & program_details = *(view_.program_sel_);
@@ -1933,7 +1937,7 @@ namespace yae
     {
       std::size_t n = 0;
 
-      std::map<std::string, TRecordings>::const_iterator
+      std::map<std::string, TRecs>::const_iterator
         found = view_.playlists_.find(name_);
 
       if (found != view_.playlists_.end())
@@ -2605,21 +2609,21 @@ namespace yae
   //----------------------------------------------------------------
   // AppView::now_playing
   //
-  TRecordingPtr
+  TRecPtr
   AppView::now_playing() const
   {
     if (now_playing_)
     {
-      TRecordings::const_iterator found =
+      TRecs::const_iterator found =
         recordings_.find(now_playing_->filename_);
       if (found != recordings_.end())
       {
-        const TRecordingPtr & rec_ptr = found->second;
+        const TRecPtr & rec_ptr = found->second;
         return rec_ptr;
       }
     }
 
-    return TRecordingPtr();
+    return TRecPtr();
   }
 
   //----------------------------------------------------------------
@@ -2639,9 +2643,7 @@ namespace yae
       {
         TFoundRecordingsPtr found_ptr(new FoundRecordings());
         FoundRecordings & found = *found_ptr;
-        dvr->get_recordings(found.recordings_,
-                            found.playlists_,
-                            found.rec_by_channel_);
+        dvr->get_existing_recordings(found);
         app_.found_recordings(found_ptr);
       }
     }
@@ -2692,17 +2694,17 @@ namespace yae
       dvr_->schedule_.get(schedule);
       bool same_schedule = (schedule == schedule_);
 
-      TRecordings recordings;
-      std::map<std::string, TRecordings> playlists;
-      std::map<uint32_t, TScheduledRecordings> rec_by_channel;
+      TRecs recordings;
+      std::map<std::string, TRecs> playlists;
+      std::map<uint32_t, TRecsByTime> rec_by_channel;
       {
         boost::unique_lock<boost::mutex> lock(mutex_);
         if (found_recordings_)
         {
           const FoundRecordings & found = *found_recordings_;
-          recordings = found.recordings_;
-          playlists = found.playlists_;
-          rec_by_channel = found.rec_by_channel_;
+          recordings = found.by_filename_;
+          playlists = found.by_playlist_;
+          rec_by_channel = found.by_channel_;
         }
       }
 
@@ -3061,7 +3063,8 @@ namespace yae
       for (TScheduledRecordings::const_iterator
              j = recordings.begin(); j != recordings.end(); ++j)
       {
-        const Recording & rec = *(j->second);
+        const TRecPtr rec_ptr = j->second->get();
+        const Recording::Rec & rec = *rec_ptr;
         if (!rec.cancelled_)
         {
           uint32_t gps_t1 = yae::get(rec_times, rec.gps_t0_, rec.gps_t1_);
@@ -3432,7 +3435,8 @@ namespace yae
            i = schedule.begin(); i != schedule.end(); ++i)
     {
       const std::string & rec_id = i->first;
-      const Recording & rec = *(i->second);
+      const TRecPtr rec_ptr = i->second->get();
+      const Recording::Rec & rec = *rec_ptr;
       const uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
                                                            rec.channel_minor_);
 
@@ -3760,17 +3764,17 @@ namespace yae
     std::size_t num_playlists = 0;
     pl_index_.clear();
 
-    for (std::map<std::string, TRecordings>::const_iterator
+    for (std::map<std::string, TRecs>::const_iterator
            i = playlists_.begin(); i != playlists_.end(); ++i)
     {
       const std::string & name = i->first;
-      const TRecordings & recs = i->second;
+      const TRecs & recs = i->second;
       if (recs.empty())
       {
         continue;
       }
 
-      const Recording & rec = *(recs.begin()->second);
+      const Recording::Rec & rec = *(recs.begin()->second);
       pl_index_[name] = num_playlists;
       num_playlists++;
 
@@ -3918,7 +3922,7 @@ namespace yae
   //
   void
   AppView::sync_ui_playlist(const std::string & playlist_name,
-                            const TRecordings & playlist_recs)
+                            const TRecs & playlist_recs)
   {
     // shortcuts:
     AppView & view = *this;
@@ -4072,12 +4076,12 @@ namespace yae
     layout.index_.clear();
     std::map<std::string, yae::shared_ptr<Layout> > rows;
 
-    for (TRecordings::const_iterator
+    for (TRecs::const_iterator
            i = playlist_recs.begin(); i != playlist_recs.end(); ++i)
     {
       const std::string & name = i->first;
-      const TRecordingPtr & rec_ptr = i->second;
-      const Recording & rec = *rec_ptr;
+      const TRecPtr & rec_ptr = i->second;
+      const Recording::Rec & rec = *rec_ptr;
       std::string basepath = rec.get_filepath(dvr_->basedir_, "");
 
       layout.index_[name] = layout.names_.size();
@@ -4426,7 +4430,7 @@ namespace yae
   void
   AppView::delete_recording(const std::string & name)
   {
-    TRecordings::iterator found = recordings_.find(name);
+    TRecs::iterator found = recordings_.find(name);
     YAE_ASSERT(found != recordings_.end());
     if (found == recordings_.end())
     {
@@ -4434,7 +4438,7 @@ namespace yae
     }
 
     // ask for confirmation:
-    TRecordingPtr rec_ptr = found->second;
+    TRecPtr rec_ptr = found->second;
     yae::queue_call(*this, &AppView::emit_confirm_delete, rec_ptr);
   }
 
@@ -4444,15 +4448,15 @@ namespace yae
   void
   AppView::playback_recording(const std::string & name)
   {
-    TRecordings::iterator found = recordings_.find(name);
+    TRecs::iterator found = recordings_.find(name);
     YAE_ASSERT(found != recordings_.end());
     if (found == recordings_.end())
     {
       return;
     }
 
-    const TRecordingPtr & rec_ptr = found->second;
-    const Recording & rec = *rec_ptr;
+    const TRecPtr & rec_ptr = found->second;
+    const Recording::Rec & rec = *rec_ptr;
     std::string basepath = rec.get_filepath(dvr_->basedir_, "");
     now_playing_.reset(new DVR::Playback(sidebar_sel_, name, basepath));
 
@@ -4466,7 +4470,7 @@ namespace yae
   //
   void
   AppView::watch_now(yae::shared_ptr<DVR::Playback> playback_ptr,
-                     TRecordingPtr rec_ptr)
+                     TRecPtr rec_ptr)
   {
     if (!(playback_ptr && rec_ptr))
     {

@@ -123,9 +123,9 @@ namespace yae
     void watchLive(uint32_t ch_num, TTime seekPos);
 
     // returns NULL reader if playback failed to start:
-    IReaderPtr playbackRecording(TRecordingPtr rec);
+    IReaderPtr playbackRecording(TRecPtr rec);
 
-    void confirmDelete(TRecordingPtr rec);
+    void confirmDelete(TRecPtr rec);
     void playbackFinished(TTime playheadPos);
     void confirmDeletePlayingRecording();
     void saveBookmark();
@@ -174,7 +174,7 @@ namespace yae
 
     QTimer start_live_playback_;
     TTime start_live_seek_pos_;
-    TRecordingPtr live_rec_;
+    TRecPtr live_rec_;
   };
 }
 
