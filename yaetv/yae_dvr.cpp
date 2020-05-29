@@ -2881,25 +2881,25 @@ namespace yae
       TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
       YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
 
-      if (elapsed_time_since_mgt < dvr_.epg_refresh_period_)
-      {
-        yae_ilog("skipping EPG update for channels %i.* (%s)",
-                 major,
-                 frequency.c_str());
-        // yae::save_epg(dvr_, frequency, ctx);
-      }
-      else
-      {
-        DVR::TStreamPtr stream_ptr =
-          dvr_.capture_stream(frequency, sample_dur);
-        if (stream_ptr)
-        {
-          HDHomeRun::TSessionPtr session_ptr = stream_ptr->session_;
-          std::string device_name = session_ptr->device_name();
-          Json::Value tuner_cache;
-          dvr_.get_tuner_cache(device_name, tuner_cache);
-          Json::Value & cache = tuner_cache["frequencies"][frequency];
+      bool update_mgt = dvr_.epg_refresh_period_ <= elapsed_time_since_mgt;
 
+      DVR::TStreamPtr stream_ptr =
+        update_mgt ?
+        dvr_.capture_stream(frequency, sample_dur) :
+        dvr_.get_existing_stream(frequency);
+
+      HDHomeRun::TSessionPtr session_ptr =
+        stream_ptr ? stream_ptr->session_ : HDHomeRun::TSessionPtr();
+
+      if (stream_ptr && session_ptr)
+      {
+        std::string device_name = session_ptr->device_name();
+        Json::Value tuner_cache;
+        dvr_.get_tuner_cache(device_name, tuner_cache);
+        Json::Value & cache = tuner_cache["frequencies"][frequency];
+
+        if (update_mgt)
+        {
           // wait until EPG is ready:
           DVR::Stream & stream = *stream_ptr;
           boost::system_time giveup_at(boost::get_system_time());
@@ -2934,24 +2934,30 @@ namespace yae
               break;
             }
           }
-
-          TunerStatus tuner_status;
-          session_ptr->get_tuner_status(tuner_status);
-          yae::update_tuner_cache(cache, tuner_status, ctx);
-
-          int64_t now = yae::TTime::now().get(1);
-          cache["timestamp"] = (Json::Value::Int64)now;
-          dvr_.update_tuner_cache(device_name, tuner_cache);
-
-          yae::save_epg(dvr_, frequency, ctx);
         }
         else
         {
-          yae_wlog("failed to start EPG update for channels %i.* (%s)",
+          yae_ilog("skipping EPG update for channels %i.* (%s)",
                    major,
                    frequency.c_str());
-          continue;
         }
+
+        TunerStatus tuner_status;
+        session_ptr->get_tuner_status(tuner_status);
+        yae::update_tuner_cache(cache, tuner_status, ctx);
+
+        int64_t now = yae::TTime::now().get(1);
+        cache["timestamp"] = (Json::Value::Int64)now;
+        dvr_.update_tuner_cache(device_name, tuner_cache);
+
+        yae::save_epg(dvr_, frequency, ctx);
+      }
+      else
+      {
+        yae_wlog("failed to start EPG update for channels %i.* (%s)",
+                 major,
+                 frequency.c_str());
+        continue;
       }
     }
   }
@@ -3091,6 +3097,17 @@ namespace yae
       stream.open(stream_ptr, worker_ptr);
     }
 
+    return stream_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_existing_stream
+  //
+  DVR::TStreamPtr
+  DVR::get_existing_stream(const std::string & frequency)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    TStreamPtr stream_ptr = stream_[frequency].lock();
     return stream_ptr;
   }
 

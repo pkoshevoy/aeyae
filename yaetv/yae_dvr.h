@@ -678,6 +678,8 @@ namespace yae
     TStreamPtr capture_stream(const std::string & frequency,
                               const TTime & duration);
 
+    TStreamPtr get_existing_stream(const std::string & frequency);
+
     void no_signal(const std::string & frequency);
 
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
