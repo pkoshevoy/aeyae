@@ -230,8 +230,9 @@ namespace yae
               uint16_t max_recordings = 0);
     ~Recording();
 
-    inline void set(const yae::shared_ptr<Recording::Rec> & rec)
-    { rec_ = rec; }
+    // NOTE: this will close any open .mpg .dat files
+    // if the recording has been cancelled
+    void set(const yae::shared_ptr<Recording::Rec> & rec);
 
     inline yae::shared_ptr<Recording::Rec> get() const
     { return rec_; }
@@ -295,7 +296,7 @@ namespace yae
     yae::TOpenFilePtr open_dat(const fs::path & basedir);
 
     void write(const fs::path & basedir, const yae::IBuffer & data);
-    void write_dat();
+    void write_dat(const yae::TOpenFilePtr & dat_ptr);
 
     inline bool is_recording() const
     { return stream_ && stream_->is_open(); }

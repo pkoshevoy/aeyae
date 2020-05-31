@@ -509,7 +509,8 @@ namespace yae
     for (int i = 0; i < num_found; i++)
     {
       const hdhomerun_discover_device_t & found = devices_[i];
-      yae_ilog("hdhomerun device %08X found at %u.%u.%u.%u\n",
+      yae_ilog("%p hdhomerun device %08X found at %u.%u.%u.%u\n",
+               this,
                (unsigned int)found.device_id,
                (unsigned int)(found.ip_addr >> 24) & 0x0FF,
                (unsigned int)(found.ip_addr >> 16) & 0x0FF,
@@ -668,7 +669,8 @@ namespace yae
       char * owner = NULL;
       if (hdhomerun_device_get_tuner_lockkey_owner(hd, &owner) != 1)
       {
-        yae_wlog("hdhomerun_device_get_tuner_lockkey_owner failed for %s",
+        yae_wlog("%p hdhomerun_device_get_tuner_lockkey_owner failed for %s",
+                 this,
                  tuner_name.c_str());
         return HDHomeRun::TSessionPtr();
       }
@@ -676,7 +678,8 @@ namespace yae
       if (strcmp(owner, "none") != 0)
       {
         // tuner belongs to another process, ignore:
-        yae_wlog("skipping tuner %s, current owner: %s",
+        yae_wlog("%p skipping tuner %s, current owner: %s",
+                 this,
                  tuner_name.c_str(),
                  owner);
         return HDHomeRun::TSessionPtr();;
@@ -699,13 +702,15 @@ namespace yae
     }
     catch (const std::exception & e)
     {
-      yae_wlog("failed to lock tuner %s: %s",
+      yae_wlog("%p failed to lock tuner %s: %s",
+               this,
                tuner_name.c_str(),
                e.what());
     }
     catch (...)
     {
-      yae_wlog("failed to configure tuner %s: unexpected exception",
+      yae_wlog("%p failed to configure tuner %s: unexpected exception",
+               this,
                tuner_name.c_str());
     }
 
@@ -734,7 +739,7 @@ namespace yae
                                  NULL,
                                  &error) <= 0)
     {
-      YAE_THROW("failed to set channel, error: %s", error);
+      YAE_THROW("%p failed to set channel, error: %s", this, error);
     }
   }
 
@@ -753,7 +758,7 @@ namespace yae
     int ret = hdhomerun_device_wait_for_lock(hd, &status);
     if (ret < 0)
     {
-      yae_wlog("hdhomerun_device_wait_for_lock: %i", ret);
+      yae_wlog("%p hdhomerun_device_wait_for_lock: %i", this, ret);
     }
 
     tuner_status.signal_present_ = status.signal_present;
@@ -826,12 +831,12 @@ namespace yae
                                    NULL,
                                    &error) <= 0)
       {
-        YAE_THROW("failed to set channel, error: %s", error);
+        YAE_THROW("%p failed to set channel, error: %s", this, error);
       }
 
       if (hdhomerun_device_stream_start(hd) <= 0)
       {
-        YAE_THROW("failed to start stream for %s", channel.c_str());
+        YAE_THROW("%p failed to start stream for %s", this, channel.c_str());
       }
       else
       {
@@ -844,11 +849,12 @@ namespace yae
                                             &status_str,
                                             &status) == 1)
       {
-        yae_ilog("%s, status: %s", tuner_name.c_str(), status_str);
+        yae_ilog("%p %s, status: %s", this, tuner_name.c_str(), status_str);
         session.set_tuner_status(status);
       }
 
-      yae_ilog("%s %sHz: capturing",
+      yae_ilog("%p %s %sHz: capturing",
+               this,
                session.tuner_name_.c_str(),
                frequency.c_str());
 
@@ -860,12 +866,14 @@ namespace yae
         yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
         if (!stream_ptr)
         {
+          yae_ilog("%p break capture: !stream_ptr", this);
           break;
         }
 
         IStream & stream = *stream_ptr;
         if (!stream.is_open())
         {
+          yae_ilog("%p break capture: !stream.is_open()", this);
           break;
         }
 
@@ -896,7 +904,8 @@ namespace yae
                                                       &status);
           if (ret <= 0)
           {
-            yae_elog("%s, hdhomerun_device_get_tuner_status: %i",
+            yae_elog("%p %s, hdhomerun_device_get_tuner_status: %i",
+                     this,
                      tuner_name.c_str(),
                      ret);
             break;
@@ -931,7 +940,9 @@ namespace yae
           double time_since_last_packet = (now - time_of_last_packet).sec();
           if (time_since_last_packet > 1.0)
           {
-            yae_elog("%s %sHz: no data received within %f sec, giving up now",
+            yae_elog("%p %s %sHz: no data received within %f sec, "
+                     "giving up now",
+                     this,
                      tuner_name.c_str(),
                      frequency.c_str(),
                      time_since_last_packet);
@@ -944,14 +955,16 @@ namespace yae
     }
     catch (const std::exception & e)
     {
-      yae_wlog("%s %sHz: stream failed: %s",
+      yae_wlog("%p %s %sHz: stream failed: %s",
+               this,
                tuner_name.c_str(),
                frequency.c_str(),
                e.what());
     }
     catch (...)
     {
-      yae_wlog("%s %sHz: stream failed: unexpected exception",
+      yae_wlog("%p %s %sHz: stream failed: unexpected exception",
+               this,
                tuner_name.c_str(),
                frequency.c_str());
     }

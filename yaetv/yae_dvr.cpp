@@ -886,7 +886,23 @@ namespace yae
     if (mpg_ && mpg_->is_open())
     {
       std::string fn = rec_->get_basename();
-      yae_ilog("stopped recording: %s", fn.c_str());
+      yae_ilog("%p stopped recording: %s", this, fn.c_str());
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Recording::set
+  //
+  void
+  Recording::set(const yae::shared_ptr<Recording::Rec> & rec_ptr)
+  {
+    rec_ = rec_ptr;
+
+    if (rec_ptr->cancelled_)
+    {
+      stream_.reset();
+      mpg_.reset();
+      dat_.reset();
     }
   }
 
@@ -896,39 +912,48 @@ namespace yae
   yae::TOpenFilePtr
   Recording::open_mpg(const fs::path & basedir)
   {
-    if (mpg_ && mpg_->is_open())
-    {
-      return mpg_;
-    }
-
     // keep-alive:
     yae::shared_ptr<Recording::Rec> rec_ptr = rec_;
+    yae::TOpenFilePtr mpg_ptr = mpg_;
+
+    if (mpg_ptr && mpg_ptr->is_open())
+    {
+      return mpg_ptr;
+    }
+
+    mpg_ptr.reset();
+
     const Recording::Rec & rec = *rec_ptr;
-
-    mpg_.reset();
-
     uint32_t num_sec = rec.get_duration();
+    if (rec.cancelled_)
+    {
+      return mpg_ptr;
+    }
+
     yae::make_room_for(basedir, rec, num_sec);
 
     fs::path title_path = rec.get_title_path(basedir);
     std::string title_path_str = title_path.string();
     if (!yae::mkdir_p(title_path_str))
     {
-      yae_elog("mkdir_p failed for: %s", title_path_str.c_str());
+      yae_elog("%p mkdir_p failed for: %s", this, title_path_str.c_str());
       return TOpenFilePtr();
     }
 
     std::string basename = rec.get_basename();
     std::string basepath = (title_path / basename).string();
     std::string filepath = basepath + ".mpg";
-    mpg_.reset(new yae::TOpenFile(filepath, "ab"));
-    bool ok = mpg_->is_open();
+    mpg_ptr.reset(new yae::TOpenFile(filepath, "ab"));
+    bool ok = mpg_ptr->is_open();
 
-    yae_ilog("writing to: %s, %s", filepath.c_str(), ok ? "ok" : "failed");
+    yae_ilog("%p writing to: %s, %s",
+             this,
+             filepath.c_str(),
+             ok ? "ok" : "failed");
     if (!ok)
     {
-      mpg_.reset();
-      yae_elog("fopen failed for: %s", filepath.c_str());
+      yae_elog("%p fopen failed for: %s", this, filepath.c_str());
+      mpg_ptr.reset();
     }
     else
     {
@@ -941,7 +966,7 @@ namespace yae
         // realign to TS packet boundary:
         std::size_t padding = 188 - misalignment;
         std::vector<uint8_t> zeros(padding);
-        mpg_->write(zeros);
+        mpg_ptr->write(zeros);
         mpg_size_ += padding;
       }
 
@@ -950,11 +975,12 @@ namespace yae
       std::string filepath = basepath + ".json";
       if (!yae::TOpenFile(filepath, "wb").save(json))
       {
-        yae_wlog("fopen failed for: %s", filepath.c_str());
+        yae_wlog("%p fopen failed for: %s", this, filepath.c_str());
       }
     }
 
-    return mpg_;
+    mpg_ = mpg_ptr;
+    return mpg_ptr;
   }
 
   //----------------------------------------------------------------
@@ -963,27 +989,34 @@ namespace yae
   yae::TOpenFilePtr
   Recording::open_dat(const fs::path & basedir)
   {
-    if (dat_ && dat_->is_open())
-    {
-      return dat_;
-    }
-
     // keep-alive:
     yae::shared_ptr<Recording::Rec> rec_ptr = rec_;
-    const Recording::Rec & rec = *rec_ptr;
+    yae::TOpenFilePtr dat_ptr = dat_;
 
-    dat_.reset();
-
-    std::string filepath = rec.get_filepath(basedir, ".dat");
-    dat_.reset(new yae::TOpenFile(filepath, "ab"));
-
-    if (!dat_->is_open())
+    if (dat_ptr && dat_ptr->is_open())
     {
-      yae_wlog("fopen failed for: %s", filepath.c_str());
-      dat_.reset();
+      return dat_ptr;
     }
 
-    return dat_;
+    dat_ptr.reset();
+
+    const Recording::Rec & rec = *rec_ptr;
+    if (rec.cancelled_)
+    {
+      return dat_ptr;
+    }
+
+    std::string filepath = rec.get_filepath(basedir, ".dat");
+    dat_ptr.reset(new yae::TOpenFile(filepath, "ab"));
+
+    if (!dat_ptr->is_open())
+    {
+      yae_wlog("%p fopen failed for: %s", this, filepath.c_str());
+      dat_ptr.reset();
+    }
+
+    dat_ = dat_ptr;
+    return dat_ptr;
   }
 
   //----------------------------------------------------------------
@@ -992,16 +1025,16 @@ namespace yae
   void
   Recording::write(const fs::path & basedir, const yae::IBuffer & data)
   {
-    open_mpg(basedir);
-    if (!mpg_)
+    yae::TOpenFilePtr mpg_ptr = open_mpg(basedir);
+    if (!mpg_ptr)
     {
       return;
     }
 
-    open_dat(basedir);
-    write_dat();
+    yae::TOpenFilePtr dat_ptr = open_dat(basedir);
+    write_dat(dat_ptr);
 
-    YAE_EXPECT(mpg_->write(data.get(), data.size()));
+    YAE_EXPECT(mpg_ptr->write(data.get(), data.size()));
     mpg_size_ += data.size();
   }
 
@@ -1009,9 +1042,9 @@ namespace yae
   // Recording::write_dat
   //
   void
-  Recording::write_dat()
+  Recording::write_dat(const yae::TOpenFilePtr & dat_ptr)
   {
-    if (!dat_)
+    if (!dat_ptr)
     {
       return;
     }
@@ -1026,8 +1059,10 @@ namespace yae
       yae::Bitstream bs(payload);
       bs.write_bits(64, dat_time_);
       bs.write_bits(64, mpg_size_);
-      YAE_ASSERT(dat_->write(payload.get(), payload.size()));
-      dat_->flush();
+
+      yae::TOpenFile & dat = *dat_ptr;
+      YAE_ASSERT(dat.write(payload.get(), payload.size()));
+      dat.flush();
     }
   }
 
@@ -1273,13 +1308,16 @@ namespace yae
           recording_ptr.reset(new Recording());
         }
 
+        Recording & recording = *recording_ptr;
+        bool is_cancelled = recording.is_cancelled();
+
         uint16_t max_recordings = want->max_recordings();
         TRecPtr rec_ptr(new Recording::Rec(channel,
                                            program,
                                            rec_cause,
                                            max_recordings));
+        rec_ptr->cancelled_ = is_cancelled;
 
-        Recording & recording = *recording_ptr;
         recording.set(rec_ptr);
       }
     }
@@ -1886,7 +1924,9 @@ namespace yae
       oss << ", ";
 
       packet_handler.ctx_.log_prefix_ = oss.str().c_str();
-      yae_ilog("stream start: %s", packet_handler.ctx_.log_prefix_.c_str());
+      yae_ilog("%p stream start: %s",
+               this,
+               packet_handler.ctx_.log_prefix_.c_str());
     }
   }
 
@@ -1921,7 +1961,9 @@ namespace yae
   {
     PacketHandler & packet_handler = *packet_handler_;
 
-    yae_ilog("stream stop: %s", packet_handler.ctx_.log_prefix_.c_str());
+    yae_ilog("%p stream stop: %s",
+             this,
+             packet_handler.ctx_.log_prefix_.c_str());
     packet_handler.ring_buffer_.close();
 
     // it's as ready as it's going to be:
