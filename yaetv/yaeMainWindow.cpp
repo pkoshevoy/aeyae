@@ -535,6 +535,10 @@ namespace yae
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
 
+    ok = connect(&playerView, SIGNAL(save_bookmark_at(double)),
+                 this, SLOT(saveBookmarkAt(double)));
+    YAE_ASSERT(ok);
+
     ok = connect(&playerView, SIGNAL(on_back_arrow()),
                  this, SLOT(backToPlaylist()));
     YAE_ASSERT(ok);
@@ -913,14 +917,6 @@ namespace yae
 
     const Recording::Rec & rec = *rec_ptr;
 
-    PlayerView & view = playerWidget_->view();
-    const IReader * reader = view.get_reader();
-    const TimelineModel & timeline = view.timeline_model();
-    save_bookmark(dvr_, rec, reader, timeline.timelineStart());
-
-    // stop playback timers, etc...
-    view.stopPlayback();
-
     // shortcuts:
     const AppStyle & style = *(view_.style());
     ConfirmView & confirm = playerWidget_->confirm_;
@@ -1016,11 +1012,27 @@ namespace yae
       return;
     }
 
+    const PlayerView & view = playerWidget_->view();
+    const TimelineModel & timeline = view.timeline_model();
+    saveBookmarkAt(timeline.currentTime());
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::saveBookmarkAt
+  //
+  void
+  MainWindow::saveBookmarkAt(double position_in_sec)
+  {
+    TRecPtr now_playing = view_.now_playing();
+    if (!now_playing)
+    {
+      return;
+    }
+
     const Recording::Rec & rec = *now_playing;
     const PlayerView & view = playerWidget_->view();
     const IReader * reader = view.get_reader();
-    const TimelineModel & timeline = view.timeline_model();
-    save_bookmark(dvr_, rec, reader, timeline.currentTime());
+    save_bookmark(dvr_, rec, reader, position_in_sec);
   }
 
   //----------------------------------------------------------------

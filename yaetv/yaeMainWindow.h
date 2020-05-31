@@ -129,6 +129,7 @@ namespace yae
     void playbackFinished(TTime playheadPos);
     void confirmDeletePlayingRecording();
     void saveBookmark();
+    void saveBookmarkAt(double position_in_sec);
     void playerWindowClosed();
     void playerEnteringFullScreen();
     void playerExitingFullScreen();

@@ -118,6 +118,7 @@ namespace yae
     void playback_finished(TTime playhead_pos);
     void fixup_next_prev();
     void save_bookmark();
+    void save_bookmark_at(double position_in_ec);
     void on_back_arrow();
     void rc_menu_button_pressed();
     void video_track_selected();

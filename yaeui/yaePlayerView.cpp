@@ -2034,9 +2034,13 @@ namespace yae
     TTime t1(0, 0);
     yae::get_timeline(reader_ptr.get(), t0, t1);
 
-    // NOTE: emit playback_finished before stopPlayback
-    // otherwise the final bookmark will have invalid track selections
-    // due to IReader being closed:
+    // move the bookmark to the start of the recording:
+    const TimelineModel & timeline = timeline_model();
+    emit save_bookmark_at(timeline.timelineStart());
+
+    // stop playback timers, close the reader:
+    stopPlayback();
+
     emit playback_finished(t1);
   }
 
