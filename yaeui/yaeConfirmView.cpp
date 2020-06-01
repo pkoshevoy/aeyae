@@ -87,6 +87,9 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
+      yae::shared_ptr<OnAction, Item> keep_alive = self_.lock();
+      YAE_ASSERT(keep_alive);
+
       const ConfirmView::Action & action = *action_;
       action();
       view_.setEnabled(false);
