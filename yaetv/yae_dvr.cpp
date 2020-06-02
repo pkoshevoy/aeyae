@@ -865,6 +865,7 @@ namespace yae
   Recording::Recording(const yae::shared_ptr<Recording::Rec> & rec):
     rec_(rec)
   {
+    YAE_ASSERT(rec);
     YAE_THROW_IF(!rec);
   }
 
@@ -883,7 +884,7 @@ namespace yae
   //
   Recording::~Recording()
   {
-    if (mpg_ && mpg_->is_open())
+    if (writer_ && writer_->mpg_.is_open())
     {
       std::string fn = rec_->get_basename();
       yae_ilog("%p stopped recording: %s", this, fn.c_str());
@@ -894,42 +895,86 @@ namespace yae
   // Recording::set
   //
   void
-  Recording::set(const yae::shared_ptr<Recording::Rec> & rec_ptr)
+  Recording::set_rec(const yae::shared_ptr<Recording::Rec> & rec_ptr)
   {
+    // avoid data race:
+    TWriteLock lock(mutex_);
     rec_ = rec_ptr;
 
-    if (rec_ptr->cancelled_)
+    if (rec_->cancelled_)
     {
       stream_.reset();
-      mpg_.reset();
-      dat_.reset();
+      writer_.reset();
     }
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Writer::Writer
+  //
+  Recording::Writer::Writer():
+    dat_time_(0),
+    mpg_size_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // Recording::write
+  //
+  void
+  Recording::Writer::write(const yae::IBuffer & data)
+  {
+    YAE_EXPECT(mpg_.write(data.get(), data.size()));
+
+    int64_t time_now = yae::TTime::now().get(1);
+    int64_t elapsed_sec = time_now - dat_time_;
+
+    if (elapsed_sec > 0)
+    {
+      dat_time_ = time_now;
+
+      if (dat_.is_open())
+      {
+        yae::Data payload(16);
+        yae::Bitstream bs(payload);
+        bs.write_bits(64, dat_time_);
+        bs.write_bits(64, mpg_size_);
+
+        YAE_ASSERT(dat_.write(payload.get(), payload.size()));
+        dat_.flush();
+      }
+
+      mpg_.flush();
+    }
+
+    mpg_size_ += data.size();
   }
 
   //----------------------------------------------------------------
   // Recording::open_mpg
   //
-  yae::TOpenFilePtr
-  Recording::open_mpg(const fs::path & basedir)
+  yae::shared_ptr<Recording::Writer>
+  Recording::get_writer(const fs::path & basedir)
   {
-    // keep-alive:
-    yae::shared_ptr<Recording::Rec> rec_ptr = rec_;
-    yae::TOpenFilePtr mpg_ptr = mpg_;
-
-    if (mpg_ptr && mpg_ptr->is_open())
+    // avoid data race:
     {
-      return mpg_ptr;
+      TReadLock lock(mutex_);
+      if (writer_ && writer_->mpg_.is_open())
+      {
+        return writer_;
+      }
+
+      writer_.reset();
     }
 
-    mpg_ptr.reset();
-
+    yae::shared_ptr<Recording::Rec> rec_ptr = get_rec();
     const Recording::Rec & rec = *rec_ptr;
-    uint32_t num_sec = rec.get_duration();
+
+    yae::shared_ptr<Recording::Writer> writer_ptr;
     if (rec.cancelled_)
     {
-      return mpg_ptr;
+      return writer_ptr;
     }
 
+    uint32_t num_sec = rec.get_duration();
     yae::make_room_for(basedir, rec, num_sec);
 
     fs::path title_path = rec.get_title_path(basedir);
@@ -937,86 +982,62 @@ namespace yae
     if (!yae::mkdir_p(title_path_str))
     {
       yae_elog("%p mkdir_p failed for: %s", this, title_path_str.c_str());
-      return TOpenFilePtr();
+      return writer_ptr;
     }
 
     std::string basename = rec.get_basename();
     std::string basepath = (title_path / basename).string();
-    std::string filepath = basepath + ".mpg";
-    mpg_ptr.reset(new yae::TOpenFile(filepath, "ab"));
-    bool ok = mpg_ptr->is_open();
+    std::string path_mpg = basepath + ".mpg";
+
+    writer_ptr.reset(new Recording::Writer());
+    Recording::Writer & writer = *writer_ptr;
+
+    writer.mpg_.open(path_mpg, "ab");
+    bool ok = writer.mpg_.is_open();
 
     yae_ilog("%p writing to: %s, %s",
              this,
-             filepath.c_str(),
+             path_mpg.c_str(),
              ok ? "ok" : "failed");
     if (!ok)
     {
-      yae_elog("%p fopen failed for: %s", this, filepath.c_str());
-      mpg_ptr.reset();
+      yae_elog("%p fopen failed for: %s", this, path_mpg.c_str());
+      writer_ptr.reset();
+      return writer_ptr;
     }
-    else
+
+    writer.dat_time_ = 0;
+    writer.mpg_size_ = yae::stat_filesize((basepath + ".mpg").c_str());
+
+    uint64_t misalignment = writer.mpg_size_ % 188;
+    if (misalignment)
     {
-      dat_time_ = 0;
-      mpg_size_ = yae::stat_filesize((basepath + ".mpg").c_str());
-
-      uint64_t misalignment = mpg_size_ % 188;
-      if (misalignment)
-      {
-        // realign to TS packet boundary:
-        std::size_t padding = 188 - misalignment;
-        std::vector<uint8_t> zeros(padding);
-        mpg_ptr->write(zeros);
-        mpg_size_ += padding;
-      }
-
-      Json::Value json;
-      yae::save(json, *this);
-      std::string filepath = basepath + ".json";
-      if (!yae::TOpenFile(filepath, "wb").save(json))
-      {
-        yae_wlog("%p fopen failed for: %s", this, filepath.c_str());
-      }
+      // realign to TS packet boundary:
+      std::size_t padding = 188 - misalignment;
+      std::vector<uint8_t> zeros(padding);
+      writer.mpg_.write(zeros);
+      writer.mpg_size_ += padding;
     }
 
-    mpg_ = mpg_ptr;
-    return mpg_ptr;
-  }
-
-  //----------------------------------------------------------------
-  // Recording::open_dat
-  //
-  yae::TOpenFilePtr
-  Recording::open_dat(const fs::path & basedir)
-  {
-    // keep-alive:
-    yae::shared_ptr<Recording::Rec> rec_ptr = rec_;
-    yae::TOpenFilePtr dat_ptr = dat_;
-
-    if (dat_ptr && dat_ptr->is_open())
+    std::string path_dat = basepath + ".dat";
+    if (!writer.dat_.open(path_dat, "ab"))
     {
-      return dat_ptr;
+      yae_wlog("%p fopen failed for: %s", this, path_dat.c_str());
     }
 
-    dat_ptr.reset();
+    Json::Value json;
+    yae::save(json, rec);
 
-    const Recording::Rec & rec = *rec_ptr;
-    if (rec.cancelled_)
+    std::string path_json = basepath + ".json";
+    if (!yae::TOpenFile(path_json, "wb").save(json))
     {
-      return dat_ptr;
+      yae_wlog("%p fopen failed for: %s", this, path_json.c_str());
     }
 
-    std::string filepath = rec.get_filepath(basedir, ".dat");
-    dat_ptr.reset(new yae::TOpenFile(filepath, "ab"));
-
-    if (!dat_ptr->is_open())
-    {
-      yae_wlog("%p fopen failed for: %s", this, filepath.c_str());
-      dat_ptr.reset();
-    }
-
-    dat_ = dat_ptr;
-    return dat_ptr;
+    // avoid data race:
+    TWriteLock lock(mutex_);
+    writer_ = writer_ptr;
+    return writer_ptr;
   }
 
   //----------------------------------------------------------------
@@ -1025,45 +1046,34 @@ namespace yae
   void
   Recording::write(const fs::path & basedir, const yae::IBuffer & data)
   {
-    yae::TOpenFilePtr mpg_ptr = open_mpg(basedir);
-    if (!mpg_ptr)
+    yae::shared_ptr<Writer> writer_ptr = get_writer(basedir);
+    if (!writer_ptr)
     {
       return;
     }
 
-    yae::TOpenFilePtr dat_ptr = open_dat(basedir);
-    write_dat(dat_ptr);
-
-    YAE_EXPECT(mpg_ptr->write(data.get(), data.size()));
-    mpg_size_ += data.size();
+    Writer & writer = *writer_ptr;
+    writer.write(data);
   }
 
   //----------------------------------------------------------------
-  // Recording::write_dat
+  // Recording::is_recording
+  //
+  bool
+  Recording::is_recording() const
+  {
+    TReadLock lock(mutex_);
+    return stream_ && stream_->is_open();
+  }
+
+  //----------------------------------------------------------------
+  // Recording::set_stream
   //
   void
-  Recording::write_dat(const yae::TOpenFilePtr & dat_ptr)
+  Recording::set_stream(const yae::shared_ptr<IStream> & s)
   {
-    if (!dat_ptr)
-    {
-      return;
-    }
-
-    int64_t time_now = yae::TTime::now().get(1);
-    int64_t elapsed_sec = time_now - dat_time_;
-
-    if (elapsed_sec > 0)
-    {
-      dat_time_ = time_now;
-      yae::Data payload(16);
-      yae::Bitstream bs(payload);
-      bs.write_bits(64, dat_time_);
-      bs.write_bits(64, mpg_size_);
-
-      yae::TOpenFile & dat = *dat_ptr;
-      YAE_ASSERT(dat.write(payload.get(), payload.size()));
-      dat.flush();
-    }
+    TWriteLock lock(mutex_);
+    stream_ = s;
   }
 
   //----------------------------------------------------------------
@@ -1128,7 +1138,7 @@ namespace yae
   void
   save(Json::Value & json, const Recording & recording)
   {
-    yae::shared_ptr<Recording::Rec> rec = recording.get();
+    yae::shared_ptr<Recording::Rec> rec = recording.get_rec();
     save(json, *rec);
   }
 
@@ -1140,7 +1150,7 @@ namespace yae
   {
     yae::shared_ptr<Recording::Rec> rec(new Recording::Rec);
     load(json, *rec);
-    recording.set(rec);
+    recording.set_rec(rec);
   }
 
   //----------------------------------------------------------------
@@ -1317,8 +1327,7 @@ namespace yae
                                            rec_cause,
                                            max_recordings));
         rec_ptr->cancelled_ = is_cancelled;
-
-        recording.set(rec_ptr);
+        recording.set_rec(rec_ptr);
       }
     }
 
@@ -1348,7 +1357,7 @@ namespace yae
         const uint32_t gps_t0 = j->first;
         const TRecordingPtr & recording_ptr = j->second;
         const Recording & recording = *recording_ptr;
-        const TRecPtr rec_ptr = recording.get();
+        const TRecPtr rec_ptr = recording.get_rec();
         const Recording::Rec & rec = *rec_ptr;
 
         if (rec.gps_t1_ < gps_now)
@@ -1454,10 +1463,10 @@ namespace yae
     }
 
     Recording & recording = *(found_rec->second);
-    TRecPtr rec_ptr(new Recording::Rec(*recording.get()));
+    TRecPtr rec_ptr(new Recording::Rec(*recording.get_rec()));
     Recording::Rec & rec = *rec_ptr;
     rec.cancelled_ = !(rec.cancelled_);
-    recording.set(rec_ptr);
+    recording.set_rec(rec_ptr);
 
     yae_ilog("%s wishlist recording: %s",
              rec.cancelled_ ? "cancel" : "schedule",
@@ -1487,9 +1496,9 @@ namespace yae
     }
 
     Recording & recording = *(found_rec->second);
-    TRecPtr rec_ptr(new Recording::Rec(*recording.get()));
+    TRecPtr rec_ptr(new Recording::Rec(*recording.get_rec()));
     rec_ptr->cancelled_ = true;
-    recording.set(rec_ptr);
+    recording.set_rec(rec_ptr);
 
     schedule.erase(found_rec);
 
@@ -4199,7 +4208,7 @@ namespace yae
         Recording & recording = *(*j);
         bool is_recording = recording.is_recording();
 
-        TRecPtr rec_ptr = recording.get();
+        TRecPtr rec_ptr = recording.get_rec();
         const Recording::Rec & rec = *rec_ptr;
         uint64_t num_sec = rec.gps_t1_ + margin_sec - gps_time;
 

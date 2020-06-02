@@ -1318,7 +1318,7 @@ namespace yae
 
         if (found != schedule.end())
         {
-          const TRecPtr rec_ptr = found->second->get();
+          const TRecPtr rec_ptr = found->second->get_rec();
           const Recording::Rec & rec = *rec_ptr;
           result = rec.cancelled_;
         }
@@ -1378,7 +1378,7 @@ namespace yae
 
         if (found != schedule.end())
         {
-          const TRecPtr rec_ptr = found->second->get();
+          const TRecPtr rec_ptr = found->second->get_rec();
           const Recording::Rec & rec = *rec_ptr;
 
           result = (rec.cancelled_ ?
@@ -1491,7 +1491,7 @@ namespace yae
 
             if (found != sched.end())
             {
-              const TRecPtr rec_ptr = found->second->get();
+              const TRecPtr rec_ptr = found->second->get_rec();
               const Recording::Rec & rec = *rec_ptr;
               if (!rec.cancelled_)
               {
@@ -1572,7 +1572,7 @@ namespace yae
                                                         view_.program_sel_);
       if (recording_ptr)
       {
-        const TRecPtr rec_ptr = recording_ptr->get();
+        const TRecPtr rec_ptr = recording_ptr->get_rec();
         const Recording::Rec & rec = *rec_ptr;
 
         yae::shared_ptr<DVR::Playback> ready =
@@ -1666,7 +1666,7 @@ namespace yae
                                                         view_.program_sel_);
       if (recording_ptr)
       {
-        const TRecPtr rec_ptr = recording_ptr->get();
+        const TRecPtr rec_ptr = recording_ptr->get_rec();
         const Recording::Rec & rec = *rec_ptr;
 
         yae::shared_ptr<DVR::Playback> playback_ptr =
@@ -3063,7 +3063,7 @@ namespace yae
       for (TScheduledRecordings::const_iterator
              j = recordings.begin(); j != recordings.end(); ++j)
       {
-        const TRecPtr rec_ptr = j->second->get();
+        const TRecPtr rec_ptr = j->second->get_rec();
         const Recording::Rec & rec = *rec_ptr;
         if (!rec.cancelled_)
         {
@@ -3435,7 +3435,7 @@ namespace yae
            i = schedule.begin(); i != schedule.end(); ++i)
     {
       const std::string & rec_id = i->first;
-      const TRecPtr rec_ptr = i->second->get();
+      const TRecPtr rec_ptr = i->second->get_rec();
       const Recording::Rec & rec = *rec_ptr;
       const uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
                                                            rec.channel_minor_);
