@@ -413,15 +413,6 @@ namespace yae
   //----------------------------------------------------------------
   // next
   //
-  TRecPtr
-  next(const TRecPtr & after_this,
-       const std::map<uint32_t, TRecsByTime> & recordings,
-       uint32_t ch_num,
-       uint32_t gpt_time);
-
-  //----------------------------------------------------------------
-  // next
-  //
   template <typename TRec>
   yae::shared_ptr<TRec>
   next(const std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<TRec> > > &
