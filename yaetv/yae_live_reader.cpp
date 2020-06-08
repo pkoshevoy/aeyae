@@ -437,9 +437,14 @@ namespace yae
           double bytes_per_sec = double(dv) / double(dt);
           double r = bytes_per_sec / avg_bytes_per_sec;
 
-          if (r < 0.01 && dt > 3)
+          if ((r < 0.01 && dt > 3) ||
+
+              // keep ranges short to minimize interpolation error
+              // when adjusting timestamps
+              seg_dt >= 60.0)
           {
-            // discont, instantaneous bitrate is less than half of avg bitrate:
+            // discont, instantaneous bitrate is less than half of avg bitrate,
+            // or 60 sec segment duration reached
             ranges_.back().p1_ = filesize;
             ranges_.push_back(ByteRange(ranges_.size(), walltime, filesize));
             segments_.push_back(Seg(walltime_.size()));
@@ -511,17 +516,6 @@ namespace yae
 
       if (dt > 0 && t <= double(t1))
       {
-#if 0
-        // linear approximation:
-        double s = std::max(0.0, t - double(t0)) / double(dt);
-        double offset = double(segment.bytes(*this) * s);
-
-        // make sure packet position is a multiple of 188
-        // to maintain alignment with TS packet boundaries:
-        uint64_t pos = segment.p0(*this) + uint64_t(offset);
-        pos -= pos % 188;
-        return TSeekPosPtr(new BytePos(pos, t));
-#else
         // binary search through walltime:
         std::size_t j0 = segment.i_;
         std::size_t j1 = segment.n_ + j0 - 1;
@@ -542,7 +536,6 @@ namespace yae
         return (z == walltime_[j1] ?
                 TSeekPosPtr(new BytePos(filesize_[j1], t)) :
                 TSeekPosPtr(new BytePos(filesize_[j0], t)));
-#endif
       }
     }
 

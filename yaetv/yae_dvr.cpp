@@ -3025,7 +3025,7 @@ namespace yae
 
         yae::save_epg(dvr_, frequency, ctx);
       }
-      else
+      else if (update_mgt)
       {
         yae_wlog("failed to start EPG update for channels %i.* (%s)",
                  major,

@@ -1228,22 +1228,33 @@ namespace yae
     }
 
     int key = event->key();
+    bool key_press = event->type() == QEvent::KeyPress;
+
     if (key == Qt::Key_N)
     {
-      // FIXME: pkoshevoy: must respect item focus
-      skipToNextFrame();
+      if (key_press)
+      {
+        // FIXME: pkoshevoy: must respect item focus
+        skipToNextFrame();
+      }
     }
     else if (key == Qt::Key_MediaNext ||
              key == Qt::Key_Period ||
              key == Qt::Key_Greater)
     {
-      skipForward();
+      if (key_press)
+      {
+        skipForward();
+      }
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
              key == Qt::Key_Less)
     {
-      skipBack();
+      if (key_press)
+      {
+        skipBack();
+      }
     }
     else if (key == Qt::Key_MediaPlay ||
 #if QT_VERSION >= 0x040700
@@ -1252,7 +1263,10 @@ namespace yae
 #endif
              key == Qt::Key_MediaStop)
     {
-      togglePlayback();
+      if (key_press)
+      {
+        togglePlayback();
+      }
     }
     else
     {
