@@ -164,6 +164,10 @@ namespace yae
     void setPlaybackIntervalStart(double timeIn);
     void setPlaybackIntervalEnd(double timeOut);
 
+    bool findBoundingSamples(std::size_t & i0,
+                             std::size_t & i1,
+                             uint64_t pos) const;
+
     void adjustTimestamps(AVFormatContext * ctx, AVPacket * pkt);
 
     static void
@@ -182,8 +186,8 @@ namespace yae
 
     // protect against concurrent access:
     mutable boost::mutex mutex_;
-    std::vector<uint64_t> walltime_;
-    std::vector<uint64_t> filesize_;
+    std::vector<uint64_t> walltime_; // seconds
+    std::vector<uint64_t> filesize_; // bytes
 
     //----------------------------------------------------------------
     // Seg
@@ -215,7 +219,10 @@ namespace yae
 
       double bytes_per_sec(const Private & ctx) const;
 
+      // index of first sample:
       std::size_t i_;
+
+      // number of samples:
       std::size_t n_;
     };
 
@@ -241,8 +248,13 @@ namespace yae
         p1_(end_pos)
       {}
 
+      // segment index:
       std::size_t ix_;
+
+      // walltime, start time:
       uint64_t t0_;
+
+      // file offsets, start and end:
       uint64_t p0_;
       uint64_t p1_;
     };
@@ -441,7 +453,7 @@ namespace yae
 
               // keep ranges short to minimize interpolation error
               // when adjusting timestamps
-              seg_dt >= 60.0)
+              seg_dt >= 10.0)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate,
             // or 60 sec segment duration reached
@@ -626,6 +638,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // LiveReader::Private::findBoundingSamples
+  //
+  bool
+  LiveReader::Private::findBoundingSamples(std::size_t & i0,
+                                           std::size_t & i1,
+                                           uint64_t pos) const
+  {
+    while ((i1 - i0) > 1)
+    {
+      std::size_t j = i0 + ((i1 - i0) >> 1);
+
+      if (filesize_[j] <= pos)
+      {
+        i0 = j;
+      }
+      else
+      {
+        i1 = j;
+      }
+    }
+
+    i1 = i0 + 1;
+    bool ok = i1 < segments_.size();
+    return ok;
+  }
+
+  //----------------------------------------------------------------
   // LiveReader::Private::adjustTimestamps
   //
   void
@@ -647,12 +686,26 @@ namespace yae
       return;
     }
 
+    TTime dts(stream->time_base.num * pkt->dts,
+              stream->time_base.den);
+
     const ByteRange * range =
       (currRange_ < ranges_.size()) ? &(ranges_.at(currRange_)) : NULL;
 
-    if (!range || (pkt->pos != -1 &&
-                   (pkt->pos < range->p0_ ||
-                    range->p1_ <= pkt->pos)))
+    if (range && pkt->pos != -1)
+    {
+      // check that the range is still valid:
+      const Seg & segment = segments_[range->ix_];
+      double byterate = segment.bytes_per_sec(*this);
+      double posErr0 = double(pkt->pos - int64_t(range->p0_));
+      double posErr1 = double(pkt->pos - int64_t(range->p1_));
+      if (posErr0 < -byterate || posErr1 > byterate)
+      {
+        range = NULL;
+      }
+    }
+
+    if (!range && pkt->pos != -1)
     {
       const ByteRange * r0 = &(ranges_.front());
       const ByteRange * r1 = &(ranges_.back());
@@ -661,31 +714,41 @@ namespace yae
 
       const Seg & segment = segments_[range->ix_];
       double byterate = segment.bytes_per_sec(*this);
-
-      TTime dts(stream->time_base.num * pkt->dts,
-                stream->time_base.den);
-
       double posErr = double(pkt->pos - range->p0_);
       double secErr = posErr / byterate;
-
-      TTime walltime(range->t0_, 1);
-      walltimeOffset_ = (dts - walltime) - TTime(secErr);
-
 #if 0
+      std::size_t i0 = segment.i_;
+      std::size_t i1 = segment.n_ + i0;
+      if (findBoundingSamples(i0, i1, pkt->pos))
+      {
+        uint64_t dz = filesize_[i1] - filesize_[i0];
+        uint64_t dt = walltime_[i1] - walltime_[i0];
+        byterate = double(dz) / double(dt);
+        posErr = double(pkt->pos - filesize_[i0]);
+        secErr = posErr / byterate;
+
+        TTime walltime(walltime_[i0], 1);
+        walltimeOffset_ = (dts - walltime) - TTime(secErr);
+      }
+      else
+#endif
+      {
+        TTime walltime(range->t0_, 1);
+        walltimeOffset_ = (dts - walltime) - TTime(secErr);
+      }
+
+#ifndef NDEBUG
       yae_wlog
         ("LiveReader"
-         ": pkt = (%s, %12" PRIu64 ")"
-         ", r0: r[%i] = (%s, %12" PRIu64 ")"
-         ", r1: r[%i] = (%s, %12" PRIu64 ")"
+         ": pkt = (%i, %s, %12" PRIu64 ")"
          ", range: r[%i] = (%s, %12" PRIu64 ")"
          ", byterate %.3f"
          ", posErr %13.1f"
          ", secErr %.3f"
          ", walltimeOffset %s",
+         pkt->stream_index,
          dts.to_hhmmss_ms().c_str(),
          pkt->pos,
-         r0 - r0, TTime(r0->t0_, 1).to_hhmmss_ms().c_str(), r0->p0_,
-         r1 - r0, TTime(r1->t0_, 1).to_hhmmss_ms().c_str(), r1->p0_,
          range - r0, TTime(range->t0_, 1).to_hhmmss_ms().c_str(), range->p0_,
          byterate,
          posErr,
@@ -694,8 +757,6 @@ namespace yae
 #endif
     }
 
-    TTime dts(stream->time_base.num * pkt->dts,
-              stream->time_base.den);
     dts -= walltimeOffset_;
     pkt->dts = av_rescale_q(dts.time_,
                             Rational(1, dts.base_),
