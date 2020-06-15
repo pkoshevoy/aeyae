@@ -186,8 +186,10 @@ namespace yae
 
     // protect against concurrent access:
     mutable boost::mutex mutex_;
-    std::vector<uint64_t> walltime_; // seconds
+    std::vector<uint64_t> walltime_; // expressed in kTimebase
     std::vector<uint64_t> filesize_; // bytes
+
+    enum { kTimebase = 1000 };
 
     //----------------------------------------------------------------
     // Seg
@@ -211,7 +213,7 @@ namespace yae
       inline uint64_t p1(const Private & ctx) const
       { return n_ ? ctx.filesize_.at(i_ + n_ - 1) : 0; }
 
-      inline uint64_t seconds(const Private & ctx) const
+      inline uint64_t dt(const Private & ctx) const
       { return t1(ctx) - t0(ctx); }
 
       inline uint64_t bytes(const Private & ctx) const
@@ -259,6 +261,9 @@ namespace yae
       uint64_t p1_;
     };
 
+    // timebase of the .dat file:
+    uint64_t walltimeTimebase_;
+
     yae::TTime walltimeOffset_;
     std::vector<ByteRange> ranges_;
     std::size_t currRange_;
@@ -274,6 +279,7 @@ namespace yae
       timeOut_(TTime::max_flicks_as_sec()),
       sumTime_(0),
       sumSize_(0),
+      walltimeTimebase_(1),
       walltimeOffset_(0, 1),
       currRange_(std::numeric_limits<std::size_t>::max())
   {
@@ -302,7 +308,10 @@ namespace yae
     std::size_t i1 = i_ + n_ - 1;
     uint64_t dv = ctx.filesize_[i1] - ctx.filesize_[i_];
     uint64_t dt = ctx.walltime_[i1] - ctx.walltime_[i_];
-    double bytes_per_sec = double(dv) / double(dt);
+
+    double bytes_per_sec =
+      double(dv * LiveReader::Private::kTimebase) / double(dt);
+
     return bytes_per_sec;
   }
 
@@ -375,6 +384,7 @@ namespace yae
     Data buffer(16);
     Bitstream bs(buffer);
     bool updated = false;
+    bool start_new_range = false;
 
     // clear the EOF indicator:
     clearerr(dat.file_);
@@ -402,9 +412,25 @@ namespace yae
         break;
       }
 
+      if (buffer.starts_with("timebase", 8))
+      {
+        // discont, because "timebase" is written right after fopen:
+        bs.seek(64);
+        walltimeTimebase_ = bs.read_bits(64);
+        yae_wlog("LiveReader: timebase: %" PRIu64 "", walltimeTimebase_);
+        start_new_range = true;
+        continue;
+      }
+
       bs.seek(0);
       uint64_t walltime = bs.read_bits(64);
       uint64_t filesize = bs.read_bits(64);
+
+      if (Private::kTimebase != walltimeTimebase_)
+      {
+        // convert to Private::kTimebase:
+        walltime = (walltime * Private::kTimebase) / walltimeTimebase_;
+      }
 
       // make sure walltime and filesize are monotonically increasing:
       if (!walltime_.empty() &&
@@ -441,27 +467,31 @@ namespace yae
         uint64_t seg_dt = walltime - segment->t0(*this);
 
         double avg_bytes_per_sec =
-          double(sumSize_ + seg_sz) /
+          double((sumSize_ + seg_sz) * Private::kTimebase) /
           double(sumTime_ + seg_dt);
 
         if (avg_bytes_per_sec > 0.0)
         {
-          double bytes_per_sec = double(dv) / double(dt);
+          double bytes_per_sec = double(dv * Private::kTimebase) / double(dt);
           double r = bytes_per_sec / avg_bytes_per_sec;
 
           if ((r < 0.01 && dt > 3) ||
 
               // keep ranges short to minimize interpolation error
               // when adjusting timestamps
-              seg_dt >= 10.0)
+              seg_dt >= 10.0 * Private::kTimebase ||
+
+              // discont indicated by "timebase" in .dat:
+              start_new_range)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate,
-            // or 60 sec segment duration reached
+            // or max segment duration reached
             ranges_.back().p1_ = filesize;
             ranges_.push_back(ByteRange(ranges_.size(), walltime, filesize));
             segments_.push_back(Seg(walltime_.size()));
             sumTime_ += seg_dt;
             sumSize_ += seg_sz;
+            start_new_range = false;
 
             // update the shortcut:
             segment = &(segments_.back());
@@ -491,12 +521,15 @@ namespace yae
     if (walltime_.empty())
     {
       start.reset(0, 0); // invalid time
-      duration.reset(0, 1); // zero duration
+      duration.reset(0, Private::kTimebase); // zero duration
     }
     else
     {
-      start = walltime_.front();
-      duration = walltime_.back() - walltime_.front();
+      start = TTime(walltime_.front(),
+                    Private::kTimebase);
+
+      duration = TTime(walltime_.back() - walltime_.front(),
+                       Private::kTimebase);
     }
 
     // FIXME: consider timespan of the Recording (as scheduled),
@@ -519,6 +552,8 @@ namespace yae
     }
 
     // find the segment that corresponds to the given position:
+    uint64_t tt = uint64_t(std::max<double>(0.0, t) * Private::kTimebase);
+
     for (std::size_t i = 0, n = segments_.size(); i < n; i++)
     {
       const Seg & segment = segments_[i];
@@ -526,16 +561,16 @@ namespace yae
       uint64_t t1 = segment.t1(*this);
       uint64_t dt = t1 - t0;
 
-      if (dt > 0 && t <= double(t1))
+      if (dt > 0 && tt <= t1)
       {
         // binary search through walltime:
         std::size_t j0 = segment.i_;
         std::size_t j1 = segment.n_ + j0 - 1;
-        uint64_t z = uint64_t(t);
+
         while (j0 + 1 < j1)
         {
           std::size_t j = (j0 + j1) >> 1;
-          if (z <= walltime_[j])
+          if (tt <= walltime_[j])
           {
             j1 = j;
           }
@@ -545,7 +580,7 @@ namespace yae
           }
         }
 
-        return (z == walltime_[j1] ?
+        return (tt == walltime_[j1] ?
                 TSeekPosPtr(new BytePos(filesize_[j1], t)) :
                 TSeekPosPtr(new BytePos(filesize_[j0], t)));
       }
@@ -698,10 +733,17 @@ namespace yae
       const Seg & segment = segments_[range->ix_];
       double byterate = segment.bytes_per_sec(*this);
       double posErr0 = double(pkt->pos - int64_t(range->p0_));
-      double posErr1 = double(pkt->pos - int64_t(range->p1_));
-      if (posErr0 < -byterate || posErr1 > byterate)
+      if (posErr0 < -byterate)
       {
         range = NULL;
+      }
+      else if (range->p1_ != std::numeric_limits<uint64_t>::max())
+      {
+        double posErr1 = double(pkt->pos - int64_t(range->p1_));
+        if (posErr1 > byterate)
+        {
+          range = NULL;
+        }
       }
     }
 
@@ -710,51 +752,57 @@ namespace yae
       const ByteRange * r0 = &(ranges_.front());
       const ByteRange * r1 = &(ranges_.back());
       range = find_range(r0, r1, pkt->pos);
-      currRange_ = range - r0;
 
       const Seg & segment = segments_[range->ix_];
       double byterate = segment.bytes_per_sec(*this);
-      double posErr = double(pkt->pos - range->p0_);
-      double secErr = posErr / byterate;
-#if 0
-      std::size_t i0 = segment.i_;
-      std::size_t i1 = segment.n_ + i0;
-      if (findBoundingSamples(i0, i1, pkt->pos))
-      {
-        uint64_t dz = filesize_[i1] - filesize_[i0];
-        uint64_t dt = walltime_[i1] - walltime_[i0];
-        byterate = double(dz) / double(dt);
-        posErr = double(pkt->pos - filesize_[i0]);
-        secErr = posErr / byterate;
 
-        TTime walltime(walltime_[i0], 1);
-        walltimeOffset_ = (dts - walltime) - TTime(secErr);
-      }
-      else
-#endif
+      if (byterate > 0.0)
       {
-        TTime walltime(range->t0_, 1);
-        walltimeOffset_ = (dts - walltime) - TTime(secErr);
-      }
+        currRange_ = range - r0;
+        double posErr = double(pkt->pos - range->p0_);
+        double secErr = posErr / byterate;
+#if 0
+        std::size_t i0 = segment.i_;
+        std::size_t i1 = segment.n_ + i0;
+        if (findBoundingSamples(i0, i1, pkt->pos))
+        {
+          uint64_t dz = filesize_[i1] - filesize_[i0];
+          uint64_t dt = walltime_[i1] - walltime_[i0];
+          byterate = double(dz * Private::kTimebase) / double(dt);
+          posErr = double(pkt->pos - filesize_[i0]);
+          secErr = posErr / byterate;
+
+          TTime walltime(walltime_[i0], Private::kTimebase);
+          walltimeOffset_ = (dts - walltime) - TTime(secErr);
+        }
+        else
+#endif
+        {
+          TTime walltime(range->t0_, Private::kTimebase);
+          walltimeOffset_ = (dts - walltime) - TTime(secErr);
+        }
 
 #ifndef NDEBUG
-      yae_wlog
-        ("LiveReader"
-         ": pkt = (%i, %s, %12" PRIu64 ")"
-         ", range: r[%i] = (%s, %12" PRIu64 ")"
-         ", byterate %.3f"
-         ", posErr %13.1f"
-         ", secErr %.3f"
-         ", walltimeOffset %s",
-         pkt->stream_index,
-         dts.to_hhmmss_ms().c_str(),
-         pkt->pos,
-         range - r0, TTime(range->t0_, 1).to_hhmmss_ms().c_str(), range->p0_,
-         byterate,
-         posErr,
-         secErr,
-         walltimeOffset_.to_hhmmss_ms().c_str());
+        yae_wlog
+          ("LiveReader"
+           ": pkt = (%i, %s, %12" PRIu64 ")"
+           ", range: r[%i] = (%s, %12" PRIu64 ")"
+           ", byterate %.3f"
+           ", posErr %13.1f"
+           ", secErr %.3f"
+           ", walltimeOffset %s",
+           pkt->stream_index,
+           dts.to_hhmmss_ms().c_str(),
+           pkt->pos,
+           range - r0,
+           TTime(range->t0_, Private::kTimebase).to_hhmmss_ms().c_str(),
+           range->p0_,
+           byterate,
+           posErr,
+           secErr,
+           walltimeOffset_.to_hhmmss_ms().c_str());
 #endif
+      }
     }
 
     dts -= walltimeOffset_;

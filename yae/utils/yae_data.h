@@ -372,6 +372,9 @@ namespace yae
     inline operator const TData * () const
     { return data_ ? static_cast<const TData *>(data_->get()) : NULL; }
 
+    inline bool starts_with(const void * d, std::size_t z) const
+    { return size() < z ? false : memcmp(get(), d, z) == 0; }
+
   protected:
     TBufferPtr data_;
   };

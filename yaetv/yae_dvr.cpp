@@ -924,10 +924,10 @@ namespace yae
   {
     YAE_EXPECT(mpg_.write(data.get(), data.size()));
 
-    int64_t time_now = yae::TTime::now().get(1);
-    int64_t elapsed_sec = time_now - dat_time_;
+    int64_t time_now = yae::TTime::now().get(Writer::kTimebase);
+    int64_t elapsed_time = time_now - dat_time_;
 
-    if (elapsed_sec > 0)
+    if (elapsed_time > Writer::kTimebase)
     {
       dat_time_ = time_now;
 
@@ -1023,6 +1023,14 @@ namespace yae
     if (!writer.dat_.open(path_dat, "ab"))
     {
       yae_wlog("%p fopen failed for: %s", this, path_dat.c_str());
+    }
+    else
+    {
+      yae::Data payload(16);
+      yae::Bitstream bs(payload);
+      bs.write_bytes("timebase", 8);
+      bs.write_bits(64, Writer::kTimebase);
+      YAE_ASSERT(writer.dat_.write(payload.get(), payload.size()));
     }
 
     Json::Value json;

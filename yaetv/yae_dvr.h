@@ -306,6 +306,8 @@ namespace yae
 
       void write(const yae::IBuffer & data);
 
+      enum { kTimebase = 1000 };
+
       yae::TOpenFile mpg_; // transport stream (188 byte packets)
       yae::TOpenFile dat_; // time:filesize 8 byte pairs
       uint64_t dat_time_;
