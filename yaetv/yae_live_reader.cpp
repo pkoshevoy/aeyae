@@ -475,11 +475,11 @@ namespace yae
           double bytes_per_sec = double(dv * Private::kTimebase) / double(dt);
           double r = bytes_per_sec / avg_bytes_per_sec;
 
-          if ((r < 0.01 && dt > 3) ||
+          if ((r < 0.01 && dt > 3.0 * Private::kTimebase) ||
 
               // keep ranges short to minimize interpolation error
               // when adjusting timestamps
-              seg_dt >= 10.0 * Private::kTimebase ||
+              seg_dt >= 60.0 * Private::kTimebase ||
 
               // discont indicated by "timebase" in .dat:
               start_new_range)
