@@ -478,8 +478,8 @@ namespace yae
           if ((r < 0.01 && dt > 3.0 * Private::kTimebase) ||
 
               // keep ranges short to minimize interpolation error
-              // when adjusting timestamps
-              seg_dt >= 60.0 * Private::kTimebase ||
+              // when adjusting timestamps:
+              // seg_dt >= 60.0 * Private::kTimebase ||
 
               // discont indicated by "timebase" in .dat:
               start_new_range)
