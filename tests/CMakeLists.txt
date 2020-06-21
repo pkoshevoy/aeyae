@@ -44,6 +44,7 @@ target_compile_definitions(aeyae-tests PRIVATE
   -DBOOST_TEST_DYN_LINK)
 
 target_link_libraries(aeyae-tests
+  ${TARGET_LIBS}
   ${Boost_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
   aeyae
