@@ -1492,7 +1492,7 @@ namespace yae
         }
       }
 
-      if (videoInfo.size() < 2)
+      if (videoInfo.size() < 1)
       {
         timeline.video_track_cb_.reset();
       }
@@ -1501,7 +1501,7 @@ namespace yae
         timeline.video_track_cb_.reset(&yae::select_video_track_cb, this);
       }
 
-      if (audioInfo.size() < 2)
+      if (audioInfo.size() < 1)
       {
         timeline.audio_track_cb_.reset();
       }
