@@ -231,9 +231,9 @@ add_executable(${PROGNAME}
 add_dependencies(${PROGNAME} "update_resource_files_aeyaeremux")
 
 set(TARGET_LIBS
-  ${TARGET_LIBS}
-  aeyae
   yaeui
+  aeyae
+  ${TARGET_LIBS}
   ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}

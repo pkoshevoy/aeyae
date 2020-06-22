@@ -299,9 +299,9 @@ add_executable(${PROGNAME}
 add_dependencies(${PROGNAME} "update_resource_files_yaetv")
 
 set(TARGET_LIBS
-  ${TARGET_LIBS}
-  aeyae
   yaeui
+  aeyae
+  ${TARGET_LIBS}
   ${Boost_LIBRARIES}
   ${LIBASS_LIBRARY}
   ${GLEW_LIBRARY}
