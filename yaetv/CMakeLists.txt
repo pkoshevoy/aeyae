@@ -82,43 +82,7 @@ if (WIN32 AND NOT (MINGW OR MSYS))
   include_directories(AFTER ../apprenticevideo/msIntTypes)
 endif ()
 
-
-set(HDHOMERUN_INCLUDE_PATH "$ENV{HDHOMERUN_INCLUDE_DIR}"
-  CACHE PATH "search path for hdhomerun headers")
-
-find_path(HDHOMERUN_INCLUDE_DIR
-  hdhomerun_device.h
-  PATHS
-  ${HDHOMERUN_INCLUDE_PATH}
-  ${CMAKE_INSTALL_PREFIX}/include
-  "$ENV{HOME}/x86_64/include"
-  /Developer/x86_64/include)
-
-if (HDHOMERUN_INCLUDE_DIR)
-  include_directories(AFTER
-    ${HDHOMERUN_INCLUDE_DIR}
-    )
-endif (HDHOMERUN_INCLUDE_DIR)
-
-
-set(HDHOMERUN_LIB_PATH "$ENV{HDHOMERUN_LIBS_PATH}"
-  CACHE PATH "search path for hdhomerun library")
-
-find_library(HDHOMERUN_LIBRARY hdhomerun
-  PATHS ${HDHOMERUN_LIB_PATH}
-  DOC "hdhomerun library")
-
-if (HDHOMERUN_LIBRARY)
-  set(TARGET_LIBS ${TARGET_LIBS} ${HDHOMERUN_LIBRARY})
-endif (HDHOMERUN_LIBRARY)
-
-if (WIN32)
-  set(TARGET_LIBS
-    ${TARGET_LIBS}
-    iphlpapi ws2_32
-    )
-endif ()
-
+include("${aeyae_SOURCE_DIR}/add_hdhomerun.cmake")
 
 set(project_moc_hxx
 
@@ -164,71 +128,6 @@ if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
-
-find_path(LIBASS_INCLUDE_DIR
-  ass/ass.h
-  PATHS
-  ${LIBASS_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (LIBASS_INCLUDE_DIR)
-  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
-endif ()
-
-if (LIBASS_LIBRARY)
-  add_definitions(-DYAE_USE_LIBASS)
-endif ()
-
-
-if (NOT (APPLE))
-  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
-    CACHE
-    PATH "root path for portaudio lib/ and include/ folders")
-
-  find_library(PORTAUDIO_LIBRARY portaudio
-    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
-    DOC "portaudio library")
-
-  find_path(PORTAUDIO_INCLUDE_DIR
-    portaudio.h
-    PATHS
-    ${PORTAUDIO_DIR}/include
-    ${FFMPEG_HEADERS_PATH}
-    /usr/include
-    /usr/local/include
-    /opt/local/include)
-
-  if (PORTAUDIO_INCLUDE_DIR)
-    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
-  endif ()
-endif()
-
-
-
-set(GLEW_DIR "$ENV{GLEW_DIR}"
-  CACHE
-  PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW
-  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "GLEW library"
-  )
-
-find_path(GLEW_INCLUDE_DIR
-  GL/glew.h
-  PATHS
-  ${GLEW_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (GLEW_INCLUDE_DIR)
-  include_directories(AFTER ${GLEW_INCLUDE_DIR})
-endif ()
-
 
 if (WIN32)
   set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")

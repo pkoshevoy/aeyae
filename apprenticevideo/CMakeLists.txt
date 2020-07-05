@@ -127,54 +127,12 @@ if (Qt5_FOUND)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
-find_path(LIBASS_INCLUDE_DIR
-  ass/ass.h
-  PATHS
-  ${LIBASS_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (LIBASS_INCLUDE_DIR)
-  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
-endif ()
-
-if (NOT (APPLE))
-  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
-    CACHE
-    PATH "root path for portaudio lib/ and include/ folders")
-
-  find_library(PORTAUDIO_LIBRARY portaudio
-    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
-    DOC "portaudio library")
-
-  find_path(PORTAUDIO_INCLUDE_DIR
-    portaudio.h
-    PATHS
-    ${PORTAUDIO_DIR}/include
-    ${FFMPEG_HEADERS_PATH}
-    /usr/include
-    /usr/local/include
-    /opt/local/include)
-
-  if (PORTAUDIO_INCLUDE_DIR)
-    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
-  endif ()
-endif()
-
-find_path(GLEW_INCLUDE_DIR
-  GL/glew.h
-  PATHS
-  ${GLEW_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (GLEW_INCLUDE_DIR)
-  include_directories(AFTER ${GLEW_INCLUDE_DIR})
-endif ()
+#include("${aeyae_SOURCE_DIR}/add_ffmpeg.cmake")
+#include("${aeyae_SOURCE_DIR}/add_glew.cmake")
+#include("${aeyae_SOURCE_DIR}/add_libass.cmake")
+#if (NOT (APPLE))
+#  include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
+#endif (NOT (APPLE))
 
 if (WIN32)
   set (YAE_VERSIONED_FILES

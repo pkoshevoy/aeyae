@@ -111,6 +111,7 @@ namespace yae
 
     // file menu:
     void fileExit();
+    void exitConfirmed();
 
     // edit preferences:
     void editPreferences();
@@ -134,6 +135,7 @@ namespace yae
     void playerEnteringFullScreen();
     void playerExitingFullScreen();
     void backToPlaylist();
+    void confirmExit();
 
   protected slots:
     void startLivePlayback();

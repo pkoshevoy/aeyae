@@ -65,16 +65,6 @@ if (WIN32 AND NOT (MINGW OR MSYS))
   include_directories(AFTER ../apprenticevideo/msIntTypes)
 endif ()
 
-
-set(GLEW_DIR "$ENV{GLEW_DIR}"
-  CACHE
-  PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW
-  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "GLEW library"
-  )
-
-
 set(project_moc_hxx
 
   yaeDemuxerView.h
@@ -106,61 +96,12 @@ if (Qt5_FOUND)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
-find_path(LIBASS_INCLUDE_DIR
-  ass/ass.h
-  PATHS
-  ${LIBASS_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (LIBASS_INCLUDE_DIR)
-  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
-endif ()
-
-if (LIBASS_LIBRARY)
-  add_definitions(-DYAE_USE_LIBASS)
-endif ()
-
-
-if (NOT (APPLE))
-  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
-    CACHE
-    PATH "root path for portaudio lib/ and include/ folders")
-
-  find_library(PORTAUDIO_LIBRARY portaudio
-    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
-    DOC "portaudio library")
-
-  find_path(PORTAUDIO_INCLUDE_DIR
-    portaudio.h
-    PATHS
-    ${PORTAUDIO_DIR}/include
-    ${FFMPEG_HEADERS_PATH}
-    /usr/include
-    /usr/local/include
-    /opt/local/include)
-
-  if (PORTAUDIO_INCLUDE_DIR)
-    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
-  endif ()
-endif()
-
-
-find_path(GLEW_INCLUDE_DIR
-  GL/glew.h
-  PATHS
-  ${GLEW_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (GLEW_INCLUDE_DIR)
-  include_directories(AFTER ${GLEW_INCLUDE_DIR})
-endif ()
-
+#include("${aeyae_SOURCE_DIR}/add_ffmpeg.cmake")
+#include("${aeyae_SOURCE_DIR}/add_glew.cmake")
+#include("${aeyae_SOURCE_DIR}/add_libass.cmake")
+#if (NOT (APPLE))
+#  include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
+#endif (NOT (APPLE))
 
 if (WIN32)
   set (YAE_VERSIONED_FILE "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
@@ -234,17 +175,11 @@ set(TARGET_LIBS
   yaeui
   aeyae
   ${TARGET_LIBS}
-  ${LIBASS_LIBRARY}
-  ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
   ${Boost_LIBRARIES}
   )
-
-if (PORTAUDIO_LIBRARY)
-  set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARY})
-endif ()
 
 if (APPLE)
   find_library(CORE_AUDIO_FRAMEWORK CoreAudio)

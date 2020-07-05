@@ -75,13 +75,6 @@ if (WIN32 AND NOT (MINGW OR MSYS))
   include_directories(AFTER msIntTypes)
 endif ()
 
-set(GLEW_DIR "$ENV{GLEW_DIR}"
-  CACHE
-  PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW
-  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "GLEW library")
-
 set(project_moc_hxx
   # apprenticevideo:
   yaeCanvasWidget.h
@@ -218,7 +211,7 @@ set(project_sources
   yaePlayerWidget.h
   )
 
-if (LIBASS_LIBRARY)
+if (LIBASS_FOUND OR LIBASS_LIBRARY)
   add_definitions(-DYAE_USE_LIBASS)
   set(project_sources
     ${project_sources}
@@ -247,60 +240,16 @@ if (APPLE)
     martinkahr-apple_remote_control/RemoteControl.h
     martinkahr-apple_remote_control/RemoteControl.m)
 else ()
+  include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
   set(project_sources
     ${project_sources}
     yaePortaudioRenderer.h
     yaePortaudioRenderer.cpp)
 endif ()
 
-find_path(LIBASS_INCLUDE_DIR
-  ass/ass.h
-  PATHS
-  ${LIBASS_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (LIBASS_INCLUDE_DIR)
-  include_directories(AFTER ${LIBASS_INCLUDE_DIR})
-endif ()
-
-if (NOT (APPLE))
-  set(PORTAUDIO_DIR "$ENV{PORTAUDIO_DIR}"
-    CACHE
-    PATH "root path for portaudio lib/ and include/ folders")
-
-  find_library(PORTAUDIO_LIBRARY portaudio
-    PATHS ${PORTAUDIO_DIR}/lib ${FFMPEG_LIBS_PATH}
-    DOC "portaudio library")
-
-  find_path(PORTAUDIO_INCLUDE_DIR
-    portaudio.h
-    PATHS
-    ${PORTAUDIO_DIR}/include
-    ${FFMPEG_HEADERS_PATH}
-    /usr/include
-    /usr/local/include
-    /opt/local/include)
-
-  if (PORTAUDIO_INCLUDE_DIR)
-    include_directories(AFTER ${PORTAUDIO_INCLUDE_DIR})
-  endif ()
-endif()
-
-find_path(GLEW_INCLUDE_DIR
-  GL/glew.h
-  PATHS
-  ${GLEW_DIR}/include
-  ${FFMPEG_HEADERS_PATH}
-  /usr/include
-  /usr/local/include
-  /opt/local/include)
-
-if (GLEW_INCLUDE_DIR)
-  include_directories(AFTER ${GLEW_INCLUDE_DIR})
-endif ()
+include("${aeyae_SOURCE_DIR}/add_ffmpeg.cmake")
+include("${aeyae_SOURCE_DIR}/add_glew.cmake")
+include("${aeyae_SOURCE_DIR}/add_libass.cmake")
 
 # Set some Apple MacOS Specific settings
 if (QT4_FOUND)
@@ -351,6 +300,4 @@ if (Qt5_FOUND)
   endif ()
 endif ()
 
-target_link_libraries(${PROGNAME}
-  ${TARGET_LIBS}
-  )
+target_link_libraries(${PROGNAME} PRIVATE ${TARGET_LIBS})

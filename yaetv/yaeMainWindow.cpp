@@ -625,10 +625,18 @@ namespace yae
   void
   MainWindow::fileExit()
   {
+    confirmExit();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::exitConfirmed
+  //
+  void
+  MainWindow::exitConfirmed()
+  {
     dvr_.shutdown();
     view_.setContext(yae::shared_ptr<IOpenGLContext>());
-
-    MainWindow::close();
+    // MainWindow::close();
     qApp->quit();
   }
 
@@ -1102,6 +1110,61 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ConfirmExit
+  //
+  struct ConfirmExit : ConfirmView::Action
+  {
+    ConfirmExit(MainWindow & mainWindow):
+      mainWindow_(mainWindow)
+    {}
+
+    // virtual:
+    void operator()() const
+    {
+      mainWindow_.exitConfirmed();
+    }
+
+    MainWindow & mainWindow_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::confirmExit
+  //
+  void
+  MainWindow::confirmExit()
+  {
+    const AppStyle & style = *(view_.style());
+
+    const char * msg =
+      "NOTE: if you exit the DVR then it will not be able to "
+      "update the Program Guide or record any scheduled programs.";
+
+    ConfirmView & confirm =
+      (canvasContainer_->currentWidget() == playerWidget_ &&
+       window()->isFullScreen()) ?
+      playerWidget_->confirm_ :
+      confirm_;
+
+    confirm.message_ = TVarRef::constant(TVar(msg));
+    confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm.fg_ = style.bg_;
+
+    confirm.affirmative_.reset(new ConfirmExit(*this));
+    ConfirmView::Action & aff = *confirm.affirmative_;
+    aff.message_ = TVarRef::constant(TVar("Exit"));
+    aff.bg_ = style.cursor_;
+    aff.fg_ = style.cursor_fg_;
+
+    confirm.negative_.reset(new ConfirmView::Action());
+    ConfirmView::Action & neg = *confirm.negative_;
+    neg.message_ = TVarRef::constant(TVar("Cancel"));
+    neg.bg_ = style.fg_;
+    neg.fg_ = style.bg_;
+
+    confirm.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::startLivePlayback
   //
   void
@@ -1179,7 +1242,7 @@ namespace yae
   void
   MainWindow::closeEvent(QCloseEvent * e)
   {
-    e->accept();
+    e->ignore();
     fileExit();
   }
 
