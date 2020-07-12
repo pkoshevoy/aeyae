@@ -220,6 +220,7 @@ namespace yae
       { return p1(ctx) - p0(ctx); }
 
       double bytes_per_sec(const Private & ctx) const;
+      double estimate_pos(const Private & ctx, double walltime) const;
 
       // index of first sample:
       std::size_t i_;
@@ -260,6 +261,8 @@ namespace yae
       uint64_t p0_;
       uint64_t p1_;
     };
+
+    const ByteRange * findBoundingRange(double t) const;
 
     // timebase of the .dat file:
     uint64_t walltimeTimebase_;
@@ -313,6 +316,25 @@ namespace yae
       double(dv * LiveReader::Private::kTimebase) / double(dt);
 
     return bytes_per_sec;
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::Seg::estimate_pos
+  //
+  double
+  LiveReader::Private::Seg::estimate_pos(const Private & ctx,
+                                         double walltime) const
+  {
+    double bytes_per_sec = this->bytes_per_sec(ctx);
+    uint64_t p0 = this->p0(ctx);
+
+    double t0_sec =
+      double(this->t0(ctx)) /
+      double(LiveReader::Private::kTimebase);
+
+    double dt = std::max(0.0, walltime - t0_sec);
+    double p = p0 + uint64_t(dt * bytes_per_sec);
+    return p;
   }
 
   //----------------------------------------------------------------
@@ -546,6 +568,7 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     updateTimelinePositions();
 
+#if 0
     if (segments_.empty())
     {
       return TSeekPosPtr(new TimePos(t));
@@ -596,6 +619,17 @@ namespace yae
       p = double(segment.p1(*this)) + (t - t1) * byterate;
       p = std::min<double>(p, std::numeric_limits<uint64_t>::max());
     }
+
+#else
+    const ByteRange * range = findBoundingRange(t);
+    if (!range)
+    {
+      return TSeekPosPtr(new TimePos(t));
+    }
+
+    const Seg & segment = segments_[range->ix_];
+    double p = segment.estimate_pos(*this, t);
+#endif
 
     uint64_t pos = uint64_t(p);
     pos -= pos % 188;
@@ -697,6 +731,38 @@ namespace yae
     i1 = i0 + 1;
     bool ok = i1 < segments_.size();
     return ok;
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::Private::findBoundingRange
+  //
+  const LiveReader::Private::ByteRange *
+  LiveReader::Private::findBoundingRange(double t) const
+  {
+    if (ranges_.empty())
+    {
+      return NULL;
+    }
+
+    uint64_t tt = uint64_t(std::max(0.0, t) * LiveReader::Private::kTimebase);
+    std::size_t i0 = 0;
+    std::size_t i1 = ranges_.size() - 1;
+
+    while ((i1 - i0) > 1)
+    {
+      std::size_t j = i0 + ((i1 - i0) >> 1);
+
+      if (ranges_[j].t0_ <= tt)
+      {
+        i0 = j;
+      }
+      else
+      {
+        i1 = j;
+      }
+    }
+
+    return (ranges_[i1].t0_ <= tt ? &(ranges_[i1]) : &(ranges_[i0]));
   }
 
   //----------------------------------------------------------------
