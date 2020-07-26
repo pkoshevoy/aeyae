@@ -356,7 +356,7 @@ namespace yae
 
     if (signal_handler_received_sigint())
     {
-      app->postEvent(mainWindow, new QCloseEvent());
+      yae::queue_call(*mainWindow, &MainWindow::exitConfirmed);
     }
   }
 
