@@ -1133,6 +1133,14 @@ namespace yae
   void
   MainWindow::confirmExit()
   {
+    std::set<std::string> enabled_tuners;
+    if (!dvr_.discover_enabled_tuners(enabled_tuners))
+    {
+      // there are no enabled tuners, no need to confirm:
+      exitConfirmed();
+      return;
+    }
+
     const AppStyle & style = *(view_.style());
 
     const char * msg =
