@@ -514,7 +514,6 @@ namespace yae
                          bool start_from_zero_time)
   {
     dismissSelectionViews();
-    view_.setEnabled(true);
     view_.playback(reader, bookmark, start_from_zero_time);
   }
 

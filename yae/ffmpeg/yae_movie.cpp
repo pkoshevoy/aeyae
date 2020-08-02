@@ -764,9 +764,35 @@ namespace yae
           break;
         }
 
+        AVStream * stream =
+          packet.stream_index < int(context_->nb_streams) ?
+          context_->streams[packet.stream_index] :
+          NULL;
+
         if (adjustTimestamps_)
         {
-          adjustTimestamps_(adjustTimestampsCtx_, context_, &packet);
+          int ref_stream_index =
+            videoTrack ? videoTrack->streamIndex() :
+            audioTrack ? audioTrack->streamIndex() :
+            -1;
+
+          int ref_prog_index =
+            ref_stream_index != -1 ?
+            get(streamIndexToProgramIndex_, ref_stream_index) :
+            -1;
+
+          int pkt_prog_index =
+            get(streamIndexToProgramIndex_, packet.stream_index);
+
+          if (ref_prog_index == pkt_prog_index)
+          {
+            adjustTimestamps_(adjustTimestampsCtx_, context_, &packet);
+          }
+          else
+          {
+            YAE_ASSERT(videoTrack->streamIndex() != packet.stream_index);
+            continue;
+          }
         }
 
         if (packet.dts != AV_NOPTS_VALUE)
@@ -796,11 +822,6 @@ namespace yae
         }
         else
         {
-          AVStream * stream =
-            packet.stream_index < int(context_->nb_streams) ?
-            context_->streams[packet.stream_index] :
-            NULL;
-
           bool closedCaptions = false;
           if (stream)
           {
@@ -1182,9 +1203,10 @@ namespace yae
     const AVStream * stream = NULL;
     if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
         strcmp(context_->iformat->name, "ogg") != 0 &&
-        audioTrack)
+        audioTrack || videoTrack)
     {
-      int streamIndex = audioTrack->streamIndex();
+      int streamIndex =
+        audioTrack ? audioTrack->streamIndex() : videoTrack->streamIndex();
       if (streamIndex >= 0)
       {
         stream = context_->streams[streamIndex];
