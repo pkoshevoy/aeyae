@@ -19,7 +19,8 @@
 #include <boost/thread.hpp>
 
 // aeyae:
-#include "yae_benchmark.h"
+#include "yae/api/yae_assert.h"
+#include "yae/utils/yae_benchmark.h"
 
 
 //----------------------------------------------------------------
@@ -348,87 +349,6 @@ namespace yae
   TBenchmark::clear()
   {
     Private::clear();
-  }
-
-
-  //----------------------------------------------------------------
-  // Timesheet::Timesheet
-  //
-  Timesheet::Timesheet():
-    start_(yae::TTime::now())
-  {}
-
-  //----------------------------------------------------------------
-  // Timesheet::clear
-  //
-  void
-  Timesheet::clear()
-  {
-    boost::lock_guard<boost::mutex> lock(mutex_);
-    where_.clear();
-    start_ = yae::TTime::now();
-  }
-
-  //----------------------------------------------------------------
-  // Timesheet::to_str
-  //
-  std::string
-  Timesheet::to_str() const
-  {
-    std::ostringstream oss;
-
-    boost::lock_guard<boost::mutex> lock(mutex_);
-    yae::TTime elapsed = yae::TTime::now() - start_;
-    oss << "timesheet log, elapsed time: " << elapsed.to_hhmmss_ms() << '\n';
-
-    for (std::map<std::string, std::map<std::string, Log> >::const_iterator
-           i = where_.begin(); i != where_.end(); ++i)
-    {
-      const std::string & where = i->first;
-      const std::map<std::string, Log> & where_log = i->second;
-
-      oss << "  " << where << '\n';
-      for (std::map<std::string, Log>::const_iterator
-             j = where_log.begin(); j != where_log.end(); ++j)
-      {
-        const std::string & what = j->first;
-        const Timesheet::Log & log = j->second;
-        oss << "    " << std::right << std::setw(30) << what
-            << ", count: " << std::setw(16) << std::left
-            << log.n_
-            << " avg work: " << std::setw(8) << std::left
-            << log.avg_work().sec_msec()
-            << " sum work: " << std::setw(10) << std::left
-            << log.work_.sec_msec();
-
-        double sec_work = log.work_.sec();
-        double fps_work = (double(log.n_) + 1e-6) / (sec_work + 1e-6);
-
-        if (log.wait_.time_)
-        {
-          oss << " fps: " << std::setw(10) << std::left << fps_work;
-
-          double sec_wait_and_work = (log.work_ + log.wait_).sec();
-          double fps_wait_and_work = ((double(log.n_) + 1e-6) /
-                                      (sec_wait_and_work + 1e-6));
-
-          oss << " avg wait: " << std::setw(8) << std::left
-              << log.avg_wait().sec_msec()
-              << " sum wait: " << std::setw(10) << std::left
-              << log.wait_.sec_msec()
-              << " fps: "
-              << fps_wait_and_work;
-        }
-        else
-        {
-          oss << " fps: " << fps_work;
-        }
-        oss << '\n';
-      }
-      oss << '\n';
-    }
-    oss << '\n';
-    return std::string(oss.str().c_str());
   }
 
 

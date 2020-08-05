@@ -17,6 +17,7 @@
 
 // yae includes:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 #include "yae/api/yae_shared_ptr.h"
 
 

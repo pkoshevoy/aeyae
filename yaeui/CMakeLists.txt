@@ -97,6 +97,7 @@ set(project_moc_hxx
   yaePlayerWidget.h
 
   # yaeui:
+  yaeApplication.h
   yaeUtilsQt.h
   )
 
@@ -105,6 +106,8 @@ set(project_uis
   )
 
 set(project_sources
+  yaeApplication.cpp
+  yaeApplication.h
 
   # apprenticevideo:
   yaeArrowItem.cpp

@@ -123,7 +123,4 @@ namespace yae
 }
 
 
-#include "yae_assert.h"
-
-
 #endif // YAE_API_H_

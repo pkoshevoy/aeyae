@@ -18,6 +18,7 @@
 
 // aeyae:
 #include "yae_api.h"
+#include "yae_assert.h"
 #include "yae_settings_interface.h"
 
 

@@ -250,6 +250,8 @@ add_library(${PROGNAME} SHARED
   yae/utils/yae_plugin_registry.h
   yae/utils/yae_time.cpp
   yae/utils/yae_time.h
+  yae/utils/yae_timesheet.cpp
+  yae/utils/yae_timesheet.h
   yae/utils/yae_tree.h
   yae/utils/yae_type_name.h
   yae/utils/yae_utils.cpp

@@ -32,7 +32,6 @@
 
 // aeyae:
 #include "../api/yae_api.h"
-#include "../utils/yae_benchmark.h"
 
 
 namespace yae
@@ -88,7 +87,7 @@ namespace yae
 
     inline void decrement_shared() YAE_NOEXCEPT
     {
-      YAE_ASSERT(shared_ > 0);
+      assert(shared_ > 0);
 
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
       if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
@@ -124,7 +123,7 @@ namespace yae
 
     inline void decrement_weak() YAE_NOEXCEPT
     {
-      YAE_ASSERT(weak_ > 0);
+      assert(weak_ > 0);
 
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
       if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")

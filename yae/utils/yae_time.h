@@ -22,6 +22,7 @@
 
 // yae includes:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 
 
 namespace yae
