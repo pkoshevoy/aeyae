@@ -10,7 +10,9 @@
 #define YAE_DATA_H_
 
 // system includes:
+#include <algorithm>
 #include <inttypes.h>
+#include <limits>
 #include <string>
 #include <string.h>
 #include <vector>
