@@ -317,7 +317,7 @@ namespace yae
       TTime pkt_time(s.time_base.num * packet.dts, s.time_base.den);
       double t = pkt_time.sec();
       double dt = t - sec_;
-      if (!pos || fabs(dt) <= 0.02)
+      if (!pos || fabs(dt) <= 0.034)
       {
         err = avformat_seek_file(context,
                                  streamIndex,
@@ -332,7 +332,8 @@ namespace yae
       double padding = 0.0;
       while (pos == prev_pos)
       {
-        int64_t pos_err = bytes_per_sec_ * (dt + padding);
+        static const double dampening_factor = 0.95;
+        int64_t pos_err = dampening_factor * bytes_per_sec_ * (dt + padding);
         pos_err += (pos_err % 188);
         pos = std::max<int64_t>(0, pos - pos_err);
 
