@@ -1206,7 +1206,7 @@ namespace yae
         audioTrack || videoTrack)
     {
       int streamIndex =
-        audioTrack ? audioTrack->streamIndex() : videoTrack->streamIndex();
+        videoTrack ? videoTrack->streamIndex() : audioTrack->streamIndex();
       if (streamIndex >= 0)
       {
         stream = context_->streams[streamIndex];
