@@ -1409,8 +1409,6 @@ namespace yae
                        const IBookmark * bookmark,
                        bool start_from_zero_time)
   {
-    setEnabled(true);
-
     TimelineModel & timeline = timeline_model();
     timeline.startFromZero(start_from_zero_time);
 
@@ -1994,7 +1992,6 @@ namespace yae
     timeline_->maybeAnimateOpacity();
     timeline_->maybeAnimateControls();
     actionPlay_->setText(tr("Play"));
-    setEnabled(false);
   }
 
   //----------------------------------------------------------------
