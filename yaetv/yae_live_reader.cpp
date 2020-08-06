@@ -278,7 +278,7 @@ namespace yae
     int seekFlags = AVSEEK_FLAG_BYTE;
     int64_t pos = pos_;
 
-    for (int attempt = 0; attempt < 3; attempt++)
+    for (int attempt = 0; attempt < 10; attempt++)
     {
       err = avformat_seek_file(context,
                                streamIndex,
@@ -289,7 +289,8 @@ namespace yae
 
       TPacketPtr packetPtr(new AvPkt());
       AVPacket & packet = packetPtr->get();
-      for (int skip = 0; skip < 1000; skip++)
+      int skip = 0;
+      for (skip = 0; skip < 1000; skip++)
       {
         err = av_read_frame(context, &packet);
         if (packet.dts == AV_NOPTS_VALUE ||
@@ -316,7 +317,7 @@ namespace yae
       TTime pkt_time(s.time_base.num * packet.dts, s.time_base.den);
       double t = pkt_time.sec();
       double dt = t - sec_;
-      if (dt <= 0.02 || !pos)
+      if (!pos || fabs(dt) <= 0.02)
       {
         err = avformat_seek_file(context,
                                  streamIndex,
@@ -329,11 +330,23 @@ namespace yae
 
       int64_t prev_pos = pos;
       double padding = 0.0;
-      while (pos >= prev_pos)
+      while (pos == prev_pos)
       {
         int64_t pos_err = bytes_per_sec_ * (dt + padding);
         pos_err += (pos_err % 188);
         pos = std::max<int64_t>(0, pos - pos_err);
+
+#ifndef NDEBUG
+        yae_wlog("LiveReader: stream %i, seek %s, attempt %i, skip %i, "
+                 "t = %s, dt = %.3f, pos_err = %12" PRIi64,
+                 packet.stream_index,
+                 TTime(sec_).to_hhmmss_ms().c_str(),
+                 attempt,
+                 skip,
+                 pkt_time.to_hhmmss_ms().c_str(),
+                 dt,
+                 pos_err);
+#endif
         padding += 0.5;
       }
     }
@@ -536,6 +549,7 @@ namespace yae
       {
         ranges_.push_back(ByteRange(0, walltime, filesize));
         segments_.push_back(Seg());
+        start_new_range = false;
       }
 
       // shortcut:
@@ -573,7 +587,7 @@ namespace yae
 
               // discont indicated by "timebase" in .dat:
               start_new_range &&
-              segment->bytes_per_sec(*this) > 0)
+              segment->bytes_per_sec(*this) > 1000)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate,
             // or max segment duration reached
