@@ -15,7 +15,7 @@
 #include <iostream>
 
 // atomics:
-#if defined(__GNUC__) &&  defined(__APPLE__) && defined(_ARCH_PPC)
+#if defined(__APPLE__) && defined(_ARCH_PPC) && (__GNUC__ == 4)
 # include <bits/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
