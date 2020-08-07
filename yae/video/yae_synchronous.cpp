@@ -10,10 +10,12 @@
 #include <iostream>
 
 // boost includes:
+#ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <boost/date_time/posix_time/time_formatters.hpp>
+#endif
 
 // aeyae:
 #include "yae_synchronous.h"
@@ -31,40 +33,149 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // TimeSegment::TimeSegment
+  // TimeSegment
   //
-  TimeSegment::TimeSegment():
-    realtime_(false),
-    waitForMe_(boost::system_time()),
-    delayInSeconds_(0.0),
-    stopped_(false),
-    observer_(NULL)
-  {}
+  struct TimeSegment
+  {
+    TimeSegment():
+      realtime_(false),
+      waitForMe_(boost::system_time()),
+      delayInSeconds_(0.0),
+      stopped_(false),
+      observer_(NULL)
+    {}
+
+    // this indicates whether the clock is in the real-time mode,
+    // requires monotonically increasing current time
+    // and disallows rolling back time:
+    bool realtime_;
+
+    // this keeps track of "when" the time segment was specified:
+    boost::system_time origin_;
+
+    // current time:
+    TTime t0_;
+
+    // this keeps track of "when" someone announced they will be late:
+    boost::system_time waitForMe_;
+
+    // how long to wait:
+    double delayInSeconds_;
+
+    // this indicates whether the clock is stopped while waiting for someone:
+    bool stopped_;
+
+    // shared clock observer interface, may be NULL:
+    IClockObserver * observer_;
+
+    // avoid concurrent access from multiple threads:
+    mutable boost::mutex mutex_;
+  };
+
+  //----------------------------------------------------------------
+  // TTimeSegmentPtr
+  //
+  typedef yae::shared_ptr<TimeSegment> TTimeSegmentPtr;
+
+
+  //----------------------------------------------------------------
+  // SharedClock::Private
+  //
+  struct SharedClock::Private
+  {
+    Private(const SharedClock & clock):
+      clock_(clock),
+      shared_(new TimeSegment()),
+      copied_(false)
+    {
+      waitingFor_ = boost::get_system_time();
+    }
+
+    //! Check whether a given clock and this clock
+    //! refer to the same time segment:
+    bool sharesCurrentTimeWith(const SharedClock & c) const;
+
+    //! NOTE: setMasterClock will fail if the given clock
+    //! and this clock do not refer to the same current time.
+    //!
+    //! Specify which is the master reference clock:
+    bool setMasterClock(const SharedClock & master);
+
+    //! NOTE: setting current time is permitted
+    //! only when this clock is the master clock:
+    bool allowsSettingTime() const;
+
+    // realtime requires monotonically increasing
+    // current time and disallows rolling back time:
+    bool setRealtime(bool realtime);
+
+    // check whether the master clock has been updated recently:
+    bool isMasterClockBehindRealtime() const;
+
+    //! reset to initial state, do not notify the observer:
+    bool resetCurrentTime();
+
+    //! set current time (only if this is the master clock):
+    bool setCurrentTime(const TTime & t0,
+                        double latencyInSeconds = 0.0,
+                        bool notifyObserver = true);
+
+    //! retrieve the reference time interval and time since last clock update;
+    //! returns false when clock is not set or is stopped while the clock
+    //! owner is waiting for someone to catch up;
+    //! returns true when clock is running:
+    bool getCurrentTime(TTime & t0,
+                        double & elapsedTime,
+                        bool & withinRealtimeTolerance) const;
+
+    //! announce that you are late so others would stop and wait for you:
+    void waitForMe(double waitInSeconds = 1.0);
+    void waitForOthers();
+
+    //! the reader may call this after seeking
+    //! to terminate waitForOthers early, to avoid
+    //! stuttering playback when seeking backwards:
+    void cancelWaitForOthers();
+
+    void setObserver(IClockObserver * observer);
+
+    //! notify the observer (if it exists) that there will be no
+    //! further updates to the current time on this clock,
+    //! most likely because playback has reached the end:
+    bool noteTheClockHasStopped();
+
+    const SharedClock & clock_;
+    TTimeSegmentPtr shared_;
+    boost::system_time waitingFor_;
+    bool copied_;
+  };
+
 
   //----------------------------------------------------------------
   // SharedClock::SharedClock
   //
-  SharedClock::SharedClock():
-    shared_(new TimeSegment()),
-    copied_(false)
+  SharedClock::SharedClock()
   {
-    waitingFor_ = boost::get_system_time();
+    private_ = new SharedClock::Private(*this);
   }
 
   //----------------------------------------------------------------
   // SharedClock::~SharedClock
   //
   SharedClock::~SharedClock()
-  {}
+  {
+    delete private_;
+  }
 
   //----------------------------------------------------------------
   // SharedClock::SharedClock
   //
-  SharedClock::SharedClock(const SharedClock & c):
-    shared_(c.shared_),
-    copied_(true)
+  SharedClock::SharedClock(const SharedClock & c)
   {
-    waitingFor_ = boost::get_system_time();
+    private_ = new SharedClock::Private(*this);
+    private_->shared_ = c.private_->shared_;
+    private_->copied_ = true;
+    private_->waitingFor_ = boost::get_system_time();
   }
 
   //----------------------------------------------------------------
@@ -75,9 +186,9 @@ namespace yae
   {
     if (this != &c)
     {
-      shared_ = c.shared_;
-      copied_ = true;
-      waitingFor_ = boost::get_system_time();
+      private_->shared_ = c.private_->shared_;
+      private_->copied_ = true;
+      private_->waitingFor_ = boost::get_system_time();
     }
 
     return *this;
@@ -87,9 +198,33 @@ namespace yae
   // SharedClock::sharesCurrentTimeWith
   //
   bool
+  SharedClock::Private::sharesCurrentTimeWith(const SharedClock & c) const
+  {
+    return shared_ == c.private_->shared_;
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::sharesCurrentTimeWith
+  //
+  bool
   SharedClock::sharesCurrentTimeWith(const SharedClock & c) const
   {
-    return shared_ == c.shared_;
+    return private_->sharesCurrentTimeWith(c);
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::setMasterClock
+  //
+  bool
+  SharedClock::Private::setMasterClock(const SharedClock & master)
+  {
+    if (sharesCurrentTimeWith(master))
+    {
+      copied_ = (&clock_ != &master);
+      return true;
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -98,13 +233,16 @@ namespace yae
   bool
   SharedClock::setMasterClock(const SharedClock & master)
   {
-    if (sharesCurrentTimeWith(master))
-    {
-      copied_ = (this != &master);
-      return true;
-    }
+    return private_->setMasterClock(master);
+  }
 
-    return false;
+  //----------------------------------------------------------------
+  // SharedClock::Private::allowsSettingTime
+  //
+  bool
+  SharedClock::Private::allowsSettingTime() const
+  {
+    return copied_;
   }
 
   //----------------------------------------------------------------
@@ -113,14 +251,14 @@ namespace yae
   bool
   SharedClock::allowsSettingTime() const
   {
-    return !copied_;
+    return private_->allowsSettingTime();
   }
 
   //----------------------------------------------------------------
-  // SharedClock::setRealtime
+  // SharedClock::Private::setRealtime
   //
   bool
-  SharedClock::setRealtime(bool enabled)
+  SharedClock::Private::setRealtime(bool enabled)
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -141,10 +279,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::resetCurrentTime
+  // SharedClock::setRealtime
   //
   bool
-  SharedClock::resetCurrentTime()
+  SharedClock::setRealtime(bool enabled)
+  {
+    return private_->setRealtime(enabled);
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::resetCurrentTime
+  //
+  bool
+  SharedClock::Private::resetCurrentTime()
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -166,12 +313,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::setCurrentTime
+  // SharedClock::resetCurrentTime
   //
   bool
-  SharedClock::setCurrentTime(const TTime & t,
-                              double latency,
-                              bool notifyObserver)
+  SharedClock::resetCurrentTime()
+  {
+    return private_->resetCurrentTime();
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::setCurrentTime
+  //
+  bool
+  SharedClock::Private::setCurrentTime(const TTime & t,
+                                       double latency,
+                                       bool notifyObserver)
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -209,7 +365,7 @@ namespace yae
 
       if (timeSegment.observer_ && notifyObserver)
       {
-        timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+        timeSegment.observer_->noteCurrentTimeChanged(clock_, t);
       }
 
       return true;
@@ -223,11 +379,22 @@ namespace yae
 #ifdef YAE_DEBUG_SHARED_CLOCK
         yae_debug << "MASTER CLOCK IS NOT ACCURATE\n";
 #endif
-        timeSegment.observer_->noteCurrentTimeChanged(*this, t);
+        timeSegment.observer_->noteCurrentTimeChanged(clock_, t);
       }
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::setCurrentTime
+  //
+  bool
+  SharedClock::setCurrentTime(const TTime & t,
+                              double latency,
+                              bool notifyObserver)
+  {
+    return private_->setCurrentTime(t, latency, notifyObserver);
   }
 
   //----------------------------------------------------------------
@@ -236,12 +403,12 @@ namespace yae
   static const double kRealtimeTolerance = 0.2;
 
   //----------------------------------------------------------------
-  // SharedClock::getCurrentTime
+  // SharedClock::Private::getCurrentTime
   //
   bool
-  SharedClock::getCurrentTime(TTime & t0,
-                              double & elapsedTime,
-                              bool & masterClockIsAccurate) const
+  SharedClock::Private::getCurrentTime(TTime & t0,
+                                       double & elapsedTime,
+                                       bool & masterClockIsAccurate) const
   {
     TTimeSegmentPtr keepAlive(shared_);
     const TimeSegment & timeSegment = *keepAlive;
@@ -268,10 +435,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::waitForMe
+  // SharedClock::getCurrentTime
+  //
+  bool
+  SharedClock::getCurrentTime(TTime & t0,
+                              double & elapsedTime,
+                              bool & masterClockIsAccurate) const
+  {
+    return private_->getCurrentTime(t0, elapsedTime, masterClockIsAccurate);
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::waitForMe
   //
   void
-  SharedClock::waitForMe(double delayInSeconds)
+  SharedClock::Private::waitForMe(double delayInSeconds)
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -299,6 +477,15 @@ namespace yae
         << "\n";
 #endif
     }
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::waitForMe
+  //
+  void
+  SharedClock::waitForMe(double delayInSeconds)
+  {
+    private_->waitForMe(delayInSeconds);
   }
 
   //----------------------------------------------------------------
@@ -359,10 +546,10 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // SharedClock::waitForOthers
+  // SharedClock::Private::waitForOthers
   //
   void
-  SharedClock::waitForOthers()
+  SharedClock::Private::waitForOthers()
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -433,10 +620,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::cancelWaitForOthers
+  // SharedClock::waitForOthers
   //
   void
-  SharedClock::cancelWaitForOthers()
+  SharedClock::waitForOthers()
+  {
+    private_->waitForOthers();
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::cancelWaitForOthers
+  //
+  void
+  SharedClock::Private::cancelWaitForOthers()
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -458,10 +654,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::setObserver
+  // SharedClock::cancelWaitForOthers
   //
   void
-  SharedClock::setObserver(IClockObserver * observer)
+  SharedClock::cancelWaitForOthers()
+  {
+    private_->cancelWaitForOthers();
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::setObserver
+  //
+  void
+  SharedClock::Private::setObserver(IClockObserver * observer)
   {
     TTimeSegmentPtr keepAlive(shared_);
     TimeSegment & timeSegment = *keepAlive;
@@ -471,10 +676,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SharedClock::noteTheClockHasStopped
+  // SharedClock::setObserver
+  //
+  void
+  SharedClock::setObserver(IClockObserver * observer)
+  {
+    private_->setObserver(observer);
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::Private::noteTheClockHasStopped
   //
   bool
-  SharedClock::noteTheClockHasStopped()
+  SharedClock::Private::noteTheClockHasStopped()
   {
     if (!copied_)
     {
@@ -484,13 +698,22 @@ namespace yae
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       if (timeSegment.observer_)
       {
-        timeSegment.observer_->noteTheClockHasStopped(*this);
+        timeSegment.observer_->noteTheClockHasStopped(clock_);
       }
 
       return true;
     }
 
     return false;
+  }
+
+  //----------------------------------------------------------------
+  // SharedClock::noteTheClockHasStopped
+  //
+  bool
+  SharedClock::noteTheClockHasStopped()
+  {
+    return private_->noteTheClockHasStopped();
   }
 
 
