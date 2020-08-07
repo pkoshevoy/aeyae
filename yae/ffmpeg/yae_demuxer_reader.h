@@ -208,12 +208,12 @@ namespace yae
     Thread<DemuxerReader> thread_;
 
     // output queue(s) deadlock avoidance mechanism:
-    QueueWaitMgr outputTerminator_;
+    QueueWaitMgr outputWaiter_;
 
     // this one is only used to avoid a deadlock waiting
     // for audio renderer to empty out the frame queue
     // during frame stepping (when playback is disabled)
-    QueueWaitMgr framestepTerminator_;
+    QueueWaitMgr framestepWaiter_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;

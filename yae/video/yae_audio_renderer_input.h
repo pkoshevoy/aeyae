@@ -60,7 +60,7 @@ namespace yae
 
     // this is a tool for aborting a request for an audio frame
     // from the decoded frames queue, used to avoid a deadlock:
-    QueueWaitMgr terminator_;
+    QueueWaitMgr waiter_;
 
     // current audio frame:
     TAudioFramePtr audioFrame_;

@@ -699,13 +699,13 @@ namespace yae
           if (audioTrack)
           {
             // flush out buffered frames with an empty packet:
-            audioTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            audioTrack->packetQueue_.push(TPacketPtr(), &outputWaiter_);
           }
 
           if (videoTrack)
           {
             // flush out buffered frames with an empty packet:
-            videoTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            videoTrack->packetQueue_.push(TPacketPtr(), &outputWaiter_);
           }
 
           if (!playbackEnabled_)
@@ -731,7 +731,7 @@ namespace yae
               waitIndefinitelyForConsumerToBlock();
 
             audioTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+              waitIndefinitelyForConsumerToBlock(&framestepWaiter_);
           }
 
           if (videoTrack)
@@ -740,7 +740,7 @@ namespace yae
               waitIndefinitelyForConsumerToBlock();
 
             videoTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+              waitIndefinitelyForConsumerToBlock(&framestepWaiter_);
           }
 
           // check whether user disabled playback while
@@ -807,7 +807,7 @@ namespace yae
         if (videoTrack &&
             videoTrack->streamIndex() == packet.stream_index)
         {
-          if (!videoTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!videoTrack->packetQueue_.push(packetPtr, &outputWaiter_))
           {
             break;
           }
@@ -815,7 +815,7 @@ namespace yae
         else if (audioTrack &&
                  audioTrack->streamIndex() == packet.stream_index)
         {
-          if (!audioTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!audioTrack->packetQueue_.push(packetPtr, &outputWaiter_))
           {
             break;
           }
@@ -957,13 +957,13 @@ namespace yae
               // let the captions decoder handle it:
               videoTrack->cc_.decode(stream->time_base,
                                      packet,
-                                     &outputTerminator_);
+                                     &outputWaiter_);
             }
 
             if (subs)
             {
               sf.trackId_ = subs->Track::id();
-              subs->push(sf, &outputTerminator_);
+              subs->push(sf, &outputWaiter_);
             }
           }
         }
@@ -1025,8 +1025,8 @@ namespace yae
       t->packetQueue_.waitIndefinitelyForConsumerToBlock();
     }
 
-    outputTerminator_.stopWaiting(false);
-    framestepTerminator_.stopWaiting(!playbackEnabled_);
+    outputWaiter_.stop_waiting(false);
+    framestepWaiter_.stop_waiting(!playbackEnabled_);
     return thread_.run();
   }
 
@@ -1058,8 +1058,8 @@ namespace yae
       t->threadStop();
     }
 
-    outputTerminator_.stopWaiting(true);
-    framestepTerminator_.stopWaiting(true);
+    outputWaiter_.stop_waiting(true);
+    framestepWaiter_.stop_waiting(true);
 
     thread_.interrupt();
     return thread_.wait();
@@ -1263,7 +1263,7 @@ namespace yae
         waitIndefinitelyForConsumerToBlock();
 
       audioTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+        waitIndefinitelyForConsumerToBlock(&framestepWaiter_);
     }
 
     if (videoTrack)
@@ -1272,7 +1272,7 @@ namespace yae
         waitIndefinitelyForConsumerToBlock();
 
       videoTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+        waitIndefinitelyForConsumerToBlock(&framestepWaiter_);
     }
 
     boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
@@ -1361,7 +1361,7 @@ namespace yae
 
       playbackEnabled_ = enabled;
       clock_.setRealtime(playbackEnabled_);
-      framestepTerminator_.stopWaiting(!playbackEnabled_);
+      framestepWaiter_.stop_waiting(!playbackEnabled_);
 
       if (playbackEnabled_ && looping_)
       {

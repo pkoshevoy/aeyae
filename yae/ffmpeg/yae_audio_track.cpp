@@ -411,7 +411,7 @@ namespace yae
 #endif
 
       // put the decoded frame into frame queue:
-      if (!frameQueue_.push(afPtr, &terminator_))
+      if (!frameQueue_.push(afPtr, &waiter_))
       {
         return;
       }
@@ -621,7 +621,7 @@ namespace yae
 
     if (alreadyDecoding)
     {
-      terminator_.stopWaiting(true);
+      waiter_.stop_waiting(true);
       frameQueue_.clear();
       thread_.interrupt();
       thread_.wait();
@@ -631,7 +631,7 @@ namespace yae
 
     if (alreadyDecoding)
     {
-      terminator_.stopWaiting(false);
+      waiter_.stop_waiting(false);
       return thread_.run();
     }
 

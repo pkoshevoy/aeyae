@@ -591,7 +591,7 @@ namespace yae
   bool
   Track::threadStart()
   {
-    terminator_.stopWaiting(false);
+    waiter_.stop_waiting(false);
     packetQueue_.open();
     return thread_.run();
   }
@@ -751,7 +751,7 @@ namespace yae
         boost::this_thread::interruption_point();
 
         TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr, &terminator_))
+        if (!packetQueue_.pop(packetPtr, &waiter_))
         {
           break;
         }
@@ -773,7 +773,7 @@ namespace yae
   bool
   Track::threadStop()
   {
-    terminator_.stopWaiting(true);
+    waiter_.stop_waiting(true);
     packetQueue_.close();
     thread_.interrupt();
     return thread_.wait();

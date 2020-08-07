@@ -136,68 +136,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // Lock
-  //
-  template <typename TMutex>
-  struct Lock
-  {
-    Lock(TMutex & mutex, bool lock_now = true):
-      mutex_(mutex),
-      locked_(false)
-    {
-      if (lock_now)
-      {
-        lock();
-      }
-    }
-
-    ~Lock()
-    {
-      unlock();
-    }
-
-    bool lock()
-    {
-      if (!locked_)
-      {
-        int err = mutex_.lock();
-        locked_ = !err;
-      }
-
-      return locked_;
-    }
-
-    bool trylock()
-    {
-      if (!locked_)
-      {
-        int err = mutex_.trylock();
-        locked_ = !err;
-      }
-
-      return locked_;
-    }
-
-    bool unlock()
-    {
-      if (locked_)
-      {
-        int err = mutex_.unlock();
-        locked_ = !(!err);
-      }
-
-      return !locked_;
-    }
-
-  private:
-    Lock(const Lock &);
-    Lock & operator = (const Lock &);
-
-    TMutex & mutex_;
-    bool locked_;
-  };
-
-  //----------------------------------------------------------------
   // PreventAppNap::Private
   //
   // tell App Nap that this is latency critical

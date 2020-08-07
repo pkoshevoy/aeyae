@@ -10,16 +10,12 @@
 #define YAE_QUEUE_H_
 
 // system includes:
-#include <set>
+#include <limits>
 #include <list>
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/thread.hpp>
-#endif
-
-// yae includes:
-#include "../video/yae_video.h"
+// aeyae:
+#include "yae/thread/yae_lockable.h"
+#include "yae/utils/yae_time.h"
 
 
 namespace yae
@@ -28,73 +24,13 @@ namespace yae
   //----------------------------------------------------------------
   // QueueWaitMgr
   //
-  struct QueueWaitMgr
-  {
-    QueueWaitMgr():
-      cond_(NULL),
-      wait_(true)
-    {}
+  typedef Waiter<IWaitable> QueueWaitMgr;
 
-    void waitingFor(boost::condition_variable * cond)
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      cond_ = cond;
-    }
-
-    void stopWaiting(bool stop = true)
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      wait_ = !stop;
-
-      if (cond_)
-      {
-        cond_->notify_all();
-      }
-    }
-
-    inline bool keepWaiting() const
-    {
-      boost::lock_guard<boost::mutex> lock(mutex_);
-      return wait_;
-    }
-
-  protected:
-    mutable boost::mutex mutex_;
-    boost::condition_variable * cond_;
-    bool wait_;
-  };
 
   //----------------------------------------------------------------
   // QueueWaitTerminator
   //
-  struct QueueWaitTerminator
-  {
-    QueueWaitTerminator(QueueWaitMgr * waitMgr,
-                        boost::condition_variable * cond):
-      waitMgr_(waitMgr)
-    {
-      if (waitMgr_)
-      {
-        waitMgr_->waitingFor(cond);
-      }
-    }
-
-    ~QueueWaitTerminator()
-    {
-      if (waitMgr_)
-      {
-        waitMgr_->waitingFor(NULL);
-      }
-    }
-
-    inline bool keepWaiting() const
-    {
-      return waitMgr_ ? waitMgr_->keepWaiting() : true;
-    }
-
-  private:
-    QueueWaitMgr * waitMgr_;
-  };
+  typedef WaitTerminator<IWaitable> QueueWaitTerminator;
 
 
   //----------------------------------------------------------------
@@ -147,7 +83,7 @@ namespace yae
 
     ~Queue()
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       sequences_.clear();
       size_ = 0;
       closed_ = true;
@@ -155,7 +91,7 @@ namespace yae
 
     void setSortFunc(TSortFunc sortFunc)
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       sortFunc_ = sortFunc;
     }
 
@@ -163,7 +99,7 @@ namespace yae
     {
       // change max queue size:
       {
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        Lock<Mutex> lock(mutex_);
         maxSize_ = std::numeric_limits<std::size_t>::max();
       }
 
@@ -174,7 +110,7 @@ namespace yae
     {
       // change max queue size:
       {
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        Lock<Mutex> lock(mutex_);
         if (maxSize_ == maxSize)
         {
           // same size, nothing changed:
@@ -190,21 +126,21 @@ namespace yae
     std::size_t getMaxSize() const
     {
       // get max queue size:
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       return maxSize_;
     }
 
     // check whether the Queue is empty:
     bool isEmpty() const
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       return !size_;
     }
 
     // check whether the queue is closed:
     bool isClosed() const
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       return closed_;
     }
 
@@ -213,7 +149,7 @@ namespace yae
     {
       // close the queue:
       {
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        Lock<Mutex> lock(mutex_);
         if (closed_)
         {
           // already closed:
@@ -235,7 +171,7 @@ namespace yae
     {
       // open the queue:
       {
-        boost::lock_guard<boost::mutex> lock(mutex_);
+        Lock<Mutex> lock(mutex_);
         if (!closed_)
         {
           // already open:
@@ -261,7 +197,7 @@ namespace yae
       {
         // remove from queue:
         {
-          boost::lock_guard<boost::mutex> lock(mutex_);
+          Lock<Mutex> lock(mutex_);
           sequences_.clear();
           size_ = 0;
         }
@@ -284,8 +220,8 @@ namespace yae
 
         // add to queue:
         {
-          boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && size_ >= maxSize_ && terminator.keepWaiting())
+          Lock<Mutex> lock(mutex_);
+          while (!closed_ && size_ >= maxSize_ && terminator.keep_waiting())
           {
 #if 0 // ndef NDEBUG
             yae_debug << this << " push wait, size " << size_;
@@ -327,8 +263,8 @@ namespace yae
 
         // remove from queue:
         {
-          boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && !size_ && waitForData && terminator.keepWaiting())
+          Lock<Mutex> lock(mutex_);
+          while (!closed_ && !size_ && waitForData && terminator.keep_waiting())
           {
 #if 0 // ndef NDEBUG
             yae_debug << this << " pop wait, size " << size_;
@@ -387,7 +323,7 @@ namespace yae
 
         // remove from queue:
         {
-          boost::unique_lock<boost::mutex> lock(mutex_);
+          Lock<Mutex> lock(mutex_);
           for (typename std::list<TSequence>::iterator
                  i = sequences_.begin(); i != sequences_.end(); )
           {
@@ -438,7 +374,7 @@ namespace yae
 
         // peek at the queue:
         {
-          boost::unique_lock<boost::mutex> lock(mutex_);
+          Lock<Mutex> lock(mutex_);
           if (closed_ || !size_)
           {
             return false;
@@ -469,9 +405,9 @@ namespace yae
     {
       QueueWaitTerminator terminator(waitMgr, &cond_);
 
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       while (!closed_ && !(consumerIsBlocked_ && !size_) &&
-             terminator.keepWaiting())
+             terminator.keep_waiting())
       {
         cond_.wait(lock);
       }
@@ -481,16 +417,13 @@ namespace yae
 
     bool waitForConsumerToBlock(double secToWait)
     {
-      boost::system_time whenToGiveUp(boost::get_system_time());
-      whenToGiveUp += boost::posix_time::microseconds(long(secToWait * 1e+6));
-
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      TTime whenToGiveUp = TTime::now() + TTime(secToWait);
+      Lock<Mutex> lock(mutex_);
       while (!closed_ && !(consumerIsBlocked_ && !size_))
       {
         if (!cond_.timed_wait(lock, whenToGiveUp))
         {
-          boost::system_time now(boost::get_system_time());
-          if (whenToGiveUp <= now)
+          if (whenToGiveUp <= TTime::now())
           {
             break;
           }
@@ -502,19 +435,19 @@ namespace yae
 
     bool producerIsBlocked() const
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       return producerIsBlocked_;
     }
 
     bool consumerIsBlocked() const
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       return consumerIsBlocked_;
     }
 
     void startNewSequence(const TData & sequenceEndData)
     {
-      boost::lock_guard<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       if (sequences_.empty())
       {
         sequences_.push_back(TSequence());
@@ -567,8 +500,8 @@ namespace yae
     TSortFunc sortFunc_;
 
   public:
-    mutable boost::mutex mutex_;
-    mutable boost::condition_variable cond_;
+    mutable Mutex mutex_;
+    mutable ConditionVariable cond_;
   };
 
 }

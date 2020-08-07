@@ -13,7 +13,7 @@
 #include <stdexcept>
 
 // aeyae:
-#include "../api/yae_log.h"
+#include "yae/api/yae_log.h"
 
 
 //----------------------------------------------------------------
