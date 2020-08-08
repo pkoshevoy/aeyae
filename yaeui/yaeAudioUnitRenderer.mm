@@ -374,7 +374,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioUnitRenderer::TPrivate::serviceTheCallback
+  // AudioUnitRenderer::TPrivate::au_render_cb
   //
   void
   AudioUnitRenderer::TPrivate::

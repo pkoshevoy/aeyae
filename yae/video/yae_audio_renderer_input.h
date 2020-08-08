@@ -13,8 +13,8 @@
 #include <string>
 
 // yae includes:
-#include "yae/video/yae_video.h"
 #include "yae/video/yae_reader.h"
+#include "yae/video/yae_synchronous.h"
 
 
 namespace yae
