@@ -232,8 +232,9 @@ if (APPLE)
     yaeAppleRemoteControl.mm
     yaeAppleUtils.h
     yaeAppleUtils.mm
+    yaeAudioUnitRenderer.cpp
     yaeAudioUnitRenderer.h
-    yaeAudioUnitRenderer.mm
+    yaeAudioUnitRenderer.m
     martinkahr-apple_remote_control/AppleRemote.h
     martinkahr-apple_remote_control/AppleRemote.m
     martinkahr-apple_remote_control/HIDRemoteControlDevice.h

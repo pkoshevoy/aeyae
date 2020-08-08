@@ -9,6 +9,61 @@
 #ifndef YAE_AUDIOUNIT_RENDERER_H_
 #define YAE_AUDIOUNIT_RENDERER_H_
 
+
+#ifdef __cplusplus
+extern "C"
+{
+#endif // __cplusplus
+#ifdef __APPLE__
+
+  //----------------------------------------------------------------
+  // *TAuCtxPush
+  //
+  typedef bool(*TAuCtxPush)(void *, // owner
+                            void *, // data
+                            unsigned long, // samples to read
+                            int, // channel count
+                            bool); // planar
+
+  //----------------------------------------------------------------
+  // *TAuCtxStop
+  //
+  typedef void(*TAuCtxStop)(void *); // owner
+
+  //----------------------------------------------------------------
+  // yae_au_ctx_create
+  //
+  void *
+  yae_au_ctx_create(void * owner,
+                    TAuCtxPush push,
+                    TAuCtxStop stop);
+
+  //----------------------------------------------------------------
+  // yae_au_ctx_destroy
+  //
+  void
+  yae_au_ctx_destroy(void ** context);
+
+  //----------------------------------------------------------------
+  // yae_au_ctx_stop
+  //
+  void
+  yae_au_ctx_stop(void * context);
+
+  //----------------------------------------------------------------
+  // yae_au_ctx_open_stream
+  //
+  bool
+  yae_au_ctx_open_stream(void * context,
+                         int sample_rate,
+                         int num_channels);
+#endif // __APPLE__
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+
+#ifdef __cplusplus
 // system includes:
 #include <string>
 
@@ -70,5 +125,5 @@ namespace yae
   };
 }
 
-
+#endif // __cplusplus
 #endif // YAE_AUDIOUNIT_RENDERER_H_
