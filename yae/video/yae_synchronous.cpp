@@ -93,17 +93,28 @@ namespace yae
 
     //! Check whether a given clock and this clock
     //! refer to the same time segment:
-    bool sharesCurrentTimeWith(const SharedClock & c) const;
+    inline bool sharesCurrentTimeWith(const SharedClock & c) const
+    { return shared_ == c.private_->shared_; }
 
     //! NOTE: setMasterClock will fail if the given clock
     //! and this clock do not refer to the same current time.
     //!
     //! Specify which is the master reference clock:
-    bool setMasterClock(const SharedClock & master);
+    inline bool setMasterClock(const SharedClock & master)
+    {
+      if (sharesCurrentTimeWith(master))
+      {
+        copied_ = (&clock_ != &master);
+        return true;
+      }
+
+      return false;
+    }
 
     //! NOTE: setting current time is permitted
     //! only when this clock is the master clock:
-    bool allowsSettingTime() const;
+    inline bool allowsSettingTime() const
+    { return !copied_; }
 
     // realtime requires monotonically increasing
     // current time and disallows rolling back time:
@@ -198,33 +209,9 @@ namespace yae
   // SharedClock::sharesCurrentTimeWith
   //
   bool
-  SharedClock::Private::sharesCurrentTimeWith(const SharedClock & c) const
-  {
-    return shared_ == c.private_->shared_;
-  }
-
-  //----------------------------------------------------------------
-  // SharedClock::sharesCurrentTimeWith
-  //
-  bool
   SharedClock::sharesCurrentTimeWith(const SharedClock & c) const
   {
     return private_->sharesCurrentTimeWith(c);
-  }
-
-  //----------------------------------------------------------------
-  // SharedClock::Private::setMasterClock
-  //
-  bool
-  SharedClock::Private::setMasterClock(const SharedClock & master)
-  {
-    if (sharesCurrentTimeWith(master))
-    {
-      copied_ = (&clock_ != &master);
-      return true;
-    }
-
-    return false;
   }
 
   //----------------------------------------------------------------
@@ -234,15 +221,6 @@ namespace yae
   SharedClock::setMasterClock(const SharedClock & master)
   {
     return private_->setMasterClock(master);
-  }
-
-  //----------------------------------------------------------------
-  // SharedClock::Private::allowsSettingTime
-  //
-  bool
-  SharedClock::Private::allowsSettingTime() const
-  {
-    return copied_;
   }
 
   //----------------------------------------------------------------
