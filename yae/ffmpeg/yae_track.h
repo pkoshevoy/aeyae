@@ -326,7 +326,7 @@ namespace yae
     Thread<Track> thread_;
 
     // deadlock avoidance mechanism:
-    QueueWaitMgr waiter_;
+    QueueWaitMgr terminator_;
 
     AVFormatContext * context_;
     AVStream * stream_;

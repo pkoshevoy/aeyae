@@ -733,7 +733,7 @@ namespace yae
       }
 
       // decode CEA-608 packets, if there are any:
-      cc_.decode(stream_->time_base, decoded, &waiter_);
+      cc_.decode(stream_->time_base, decoded, &terminator_);
 
       filterGraph_.push(&decoded);
 
@@ -859,14 +859,14 @@ namespace yae
           for (std::size_t i = 0; i < nsubs; i++)
           {
             SubtitlesTrack & subTrack = *((*subs_)[i]);
-            gatherApplicableSubtitles(vf.subs_, v0, v1, subTrack, waiter_);
+            gatherApplicableSubtitles(vf.subs_, v0, v1, subTrack, terminator_);
           }
 
           // and closed captions also:
           SubtitlesTrack * cc = cc_.captions();
           if (cc)
           {
-            gatherApplicableSubtitles(vf.subs_, v0, v1, *cc, waiter_);
+            gatherApplicableSubtitles(vf.subs_, v0, v1, *cc, terminator_);
           }
         }
 
@@ -900,7 +900,7 @@ namespace yae
         // put the output frame into frame queue:
         {
           // YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
-          if (!frameQueue_.push(vfPtr, &waiter_))
+          if (!frameQueue_.push(vfPtr, &terminator_))
           {
             return;
           }
@@ -1080,7 +1080,7 @@ namespace yae
       yae_debug << "\n\t\t\t\tSET TRAITS OVERRIDE\n";
 #endif
 
-      waiter_.stop_waiting(true);
+      terminator_.stopWaiting(true);
       frameQueue_.clear();
       thread_.interrupt();
       thread_.wait();
@@ -1092,7 +1092,7 @@ namespace yae
 
     if (alreadyDecoding && !sameTraits)
     {
-      waiter_.stop_waiting(false);
+      terminator_.stopWaiting(false);
       return thread_.run();
     }
 

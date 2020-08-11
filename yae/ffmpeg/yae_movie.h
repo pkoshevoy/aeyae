@@ -152,12 +152,12 @@ namespace yae
     mutable boost::timed_mutex mutex_;
 
     // output queue(s) deadlock avoidance mechanism:
-    QueueWaitMgr outputWaiter_;
+    QueueWaitMgr outputTerminator_;
 
     // this one is only used to avoid a deadlock waiting
     // for audio renderer to empty out the frame queue
     // during frame stepping (when playback is disabled)
-    QueueWaitMgr framestepWaiter_;
+    QueueWaitMgr framestepTerminator_;
 
     std::string resourcePath_;
     AVFormatContext * context_;

@@ -42,7 +42,7 @@ namespace yae
     bool skipToNextFrame();
 
     void thread_loop();
-    bool readOneFrame(QueueWaitMgr & waiter,
+    bool readOneFrame(QueueWaitMgr & terminator,
                       double & frameDuration,
                       double & f0,
                       double & df,
@@ -54,7 +54,7 @@ namespace yae
 
     // this is a tool for aborting a request for a video frame
     // from the decoded frames queue, used to avoid a deadlock:
-    QueueWaitMgr waiter_;
+    QueueWaitMgr terminator_;
 
     SharedClock & clock_;
     IVideoCanvas * canvas_;
@@ -106,7 +106,7 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(mutex_);
     stop_ = true;
     pause_ = false;
-    waiter_.stop_waiting(true);
+    terminator_.stopWaiting(true);
     thread_.interrupt();
     thread_.wait();
   }
@@ -135,7 +135,7 @@ namespace yae
 
     if (reader_ && canvas_ && !pause_ && !thread_.isRunning())
     {
-      waiter_.stop_waiting(false);
+      terminator_.stopWaiting(false);
       thread_.run();
     }
   }
@@ -157,8 +157,8 @@ namespace yae
   {
     if (canvas_ && reader_)
     {
-      QueueWaitMgr waiter;
-      waiter.stop_waiting(true);
+      QueueWaitMgr terminator;
+      terminator.stopWaiting(true);
 
       double frameDuration = 0.0;
       double f0 = framePosition_.sec();
@@ -168,7 +168,7 @@ namespace yae
 
       for (unsigned int i = 0; i < 2; i++)
       {
-        if (!readOneFrame(waiter, frameDuration, f0, df, tempo, drift))
+        if (!readOneFrame(terminator, frameDuration, f0, df, tempo, drift))
         {
           return false;
         }
@@ -324,7 +324,7 @@ namespace yae
       }
 
       // read a frame:
-      ok = readOneFrame(waiter_,
+      ok = readOneFrame(terminator_,
                         frameDuration,
                         f0,
                         df,
@@ -391,7 +391,7 @@ namespace yae
   // VideoRenderer::TPrivate::readOneFrame
   //
   bool
-  VideoRenderer::TPrivate::readOneFrame(QueueWaitMgr & waiter,
+  VideoRenderer::TPrivate::readOneFrame(QueueWaitMgr & terminator,
                                         double & frameDuration,
                                         double & f0,
                                         double & df,
@@ -404,7 +404,7 @@ namespace yae
 
     while (ok && !stop_)
     {
-      ok = reader_->readVideo(frame, &waiter);
+      ok = reader_->readVideo(frame, &terminator);
       if (!ok)
       {
         break;

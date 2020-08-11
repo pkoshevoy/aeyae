@@ -229,8 +229,6 @@ add_library(${PROGNAME} SHARED
   yae/ffmpeg/yae_video_track.cpp
   yae/ffmpeg/yae_video_track.h
 
-  yae/thread/yae_lockable.cpp
-  yae/thread/yae_lockable.h
   yae/thread/yae_queue.h
   yae/thread/yae_ring_buffer.cpp
   yae/thread/yae_ring_buffer.h

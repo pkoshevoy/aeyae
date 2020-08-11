@@ -80,7 +80,7 @@ namespace yae
     }
 
     sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
-    waiter_.stop_waiting(false);
+    terminator_.stopWaiting(false);
     return true;
   }
 
@@ -91,7 +91,7 @@ namespace yae
   AudioRendererInput::stop()
   {
     pause_ = false;
-    waiter_.stop_waiting(true);
+    terminator_.stopWaiting(true);
   }
 
   //----------------------------------------------------------------
@@ -124,7 +124,7 @@ namespace yae
       YAE_ASSERT(!audioFrameOffset_);
 
       // fetch the next audio frame from the reader:
-      if (!reader->readAudio(audioFrame_, &waiter_))
+      if (!reader->readAudio(audioFrame_, &terminator_))
       {
 #if YAE_DEBUG_AUDIO_RENDERER
         yae_dlog("reader(%p) readAudio failed, RESET AUDIO TIME COUNTERS",
@@ -169,7 +169,7 @@ namespace yae
   void
   AudioRendererInput::skipToTime(const TTime & t, IReader * reader)
   {
-    waiter_.stop_waiting(true);
+    terminator_.stopWaiting(true);
 
 #if YAE_DEBUG_AUDIO_RENDERER
     yae_debug << "TRY TO SKIP AUDIO TO @ " << t;
