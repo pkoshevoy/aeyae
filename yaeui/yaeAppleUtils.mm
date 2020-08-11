@@ -10,6 +10,9 @@
 #include <vector>
 #include <string>
 
+// posix:
+#include <pthread.h>
+
 // Apple imports:
 #import <Cocoa/Cocoa.h>
 
@@ -19,9 +22,6 @@
 #else
 #include <objc/objc-runtime.h>
 #endif
-
-// aeyae:
-#include "yae/thread/yae_lockable.h"
 
 // yaeui:
 #include "yaeAppleUtils.h"
@@ -96,6 +96,43 @@ namespace yae
 
     return result;
   }
+
+  //----------------------------------------------------------------
+  // Mutex
+  //
+  struct Mutex
+  {
+    Mutex()
+    {
+      pthread_mutex_init(&mutex_, NULL);
+    }
+
+    ~Mutex()
+    {
+      pthread_mutex_destroy(&mutex_);
+    }
+
+    inline int lock()
+    {
+      return pthread_mutex_lock(&mutex_);
+    }
+
+    inline int trylock()
+    {
+      return pthread_mutex_trylock(&mutex_);
+    }
+
+    inline int unlock()
+    {
+      return pthread_mutex_unlock(&mutex_);
+    }
+
+  private:
+    Mutex(const Mutex &);
+    Mutex & operator = (const Mutex &);
+
+    pthread_mutex_t mutex_;
+  };
 
 
   //----------------------------------------------------------------
