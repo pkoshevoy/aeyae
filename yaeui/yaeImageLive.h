@@ -34,6 +34,9 @@ namespace yae
     // virtual:
     void paintContent() const;
 
+    // virtual:
+    bool visible() const;
+
     mutable Canvas * canvas_;
     ItemRef opacity_;
   };

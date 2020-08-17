@@ -556,6 +556,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TabRect::visible
+  //
+  bool
+  TabRect::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // TabRect::get
   //
   void

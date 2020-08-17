@@ -217,6 +217,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ArrowItem::visible
+  //
+  bool
+  ArrowItem::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // ArrowItem::get
   //
   void

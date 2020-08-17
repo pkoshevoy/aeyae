@@ -34,6 +34,9 @@ namespace yae
     void paintContent() const;
 
     // virtual:
+    bool visible() const;
+
+    // virtual:
     void get(Property property, double & value) const;
 
     // virtual:

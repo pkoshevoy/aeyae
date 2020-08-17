@@ -40,6 +40,9 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
+    // virtual:
+    bool visible() const;
+
     // this gets complicated due to asynchronous loading of images:
     struct TPrivate;
     TPrivate * p_;

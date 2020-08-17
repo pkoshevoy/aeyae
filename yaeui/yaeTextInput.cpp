@@ -641,6 +641,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TextInput::visible
+  //
+  bool
+  TextInput::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // TextInput::text
   //
   QString

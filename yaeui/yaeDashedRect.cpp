@@ -98,6 +98,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DashedRect::visible
+  //
+  bool
+  DashedRect::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // DashedRect::get
   //
   void

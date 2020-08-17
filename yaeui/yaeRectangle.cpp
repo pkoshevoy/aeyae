@@ -106,6 +106,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Rectangle::visible
+  //
+  bool
+  Rectangle::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // Rectangle::get
   //
   void

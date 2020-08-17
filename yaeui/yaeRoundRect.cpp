@@ -437,6 +437,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // RoundRect::visible
+  //
+  bool
+  RoundRect::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // RoundRect::get
   //
   void

@@ -67,6 +67,9 @@ namespace yae
     void paintContent() const;
     void unpaintContent() const;
 
+    // virtual:
+    bool visible() const;
+
     // accessors to current text payload:
     QString text() const;
     void setText(const QString & text);

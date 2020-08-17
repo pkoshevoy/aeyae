@@ -128,6 +128,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DonutRect::visible
+  //
+  bool
+  DonutRect::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // DonutRect::get
   //
   void

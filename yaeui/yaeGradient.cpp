@@ -103,6 +103,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Gradient::visible
+  //
+  bool
+  Gradient::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // Gradient::get
   //
   void

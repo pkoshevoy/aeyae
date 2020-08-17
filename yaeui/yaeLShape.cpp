@@ -85,6 +85,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // LShape::visible
+  //
+  bool
+  LShape::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // LShape::get
   //
   void

@@ -325,4 +325,13 @@ namespace yae
     p_->unpaint();
   }
 
+  //----------------------------------------------------------------
+  // Image::visible
+  //
+  bool
+  Image::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
 }

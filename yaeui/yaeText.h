@@ -179,6 +179,9 @@ namespace yae
     { return bboxText_.get(); }
 
     // virtual:
+    bool visible() const;
+
+    // virtual:
     void get(Property property, bool & value) const;
 
     // virtual:

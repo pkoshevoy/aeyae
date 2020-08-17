@@ -90,6 +90,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TexturedRect::visible
+  //
+  bool
+  TexturedRect::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
+  //----------------------------------------------------------------
   // TexturedRect::get
   //
   void

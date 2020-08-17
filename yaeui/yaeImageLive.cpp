@@ -72,4 +72,13 @@ namespace yae
     }
   }
 
+  //----------------------------------------------------------------
+  // ImageLive::visible
+  //
+  bool
+  ImageLive::visible() const
+  {
+    return Item::visible() && opacity_.get() > 0.0;
+  }
+
 }

@@ -1516,7 +1516,7 @@ namespace yae
   bool
   Item::overlaps(const TVec2D & pt) const
   {
-    if (!Item::visible())
+    if (!this->visible())
     {
       return false;
     }
@@ -1639,7 +1639,7 @@ namespace yae
   Item::visibleInRegion(const Segment & xregion,
                         const Segment & yregion) const
   {
-    if (!Item::visible())
+    if (!this->visible())
     {
       return false;
     }

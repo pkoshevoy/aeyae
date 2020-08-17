@@ -517,7 +517,7 @@ namespace yae
     double hcenter() const;
     double vcenter() const;
 
-    bool visible() const;
+    virtual bool visible() const;
 
     // child item lookup, will throw a runtime exception
     // if a child with a matching id is not found here:
