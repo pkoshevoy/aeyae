@@ -36,7 +36,7 @@ namespace yae
     void close();
 
   private:
-    static bool push_cb(void * context, // this
+    static bool pull_cb(void * context, // this
                         void * data,
                         unsigned long samples_to_read,
                         int channel_count,
@@ -48,6 +48,9 @@ namespace yae
     void * yae_au_ctx_;
 
   public:
+    // protect against concurrent access:
+    mutable boost::mutex mutex_;
+
     // audio source:
     AudioRendererInput input_;
   };
@@ -58,7 +61,7 @@ namespace yae
   AudioUnitRenderer::TPrivate::TPrivate(SharedClock & sharedClock):
     input_(sharedClock)
   {
-    yae_au_ctx_ = yae_au_ctx_create(this, &push_cb, &stop_cb);
+    yae_au_ctx_ = yae_au_ctx_create(this, &pull_cb, &stop_cb);
   }
 
   //----------------------------------------------------------------
@@ -94,6 +97,11 @@ namespace yae
   {
     stop();
 
+    boost::unique_lock<boost::mutex> lock(mutex_);
+#ifndef NDEBUG
+    yae_debug << "AudioUnitRenderer::TPrivate::open " << reader;
+#endif
+
     AudioTraits atts;
     if (input_.open(reader) &&
         input_.reader_->getAudioTraitsOverride(atts))
@@ -122,7 +130,12 @@ namespace yae
   void
   AudioUnitRenderer::TPrivate::stop()
   {
+#ifndef NDEBUG
+    yae_debug << "AudioUnitRenderer::TPrivate::stop";
+#endif
     input_.stop();
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
     yae_au_ctx_stop(yae_au_ctx_);
   }
 
@@ -136,10 +149,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AudioUnitRenderer::TPrivate::push_cb
+  // AudioUnitRenderer::TPrivate::pull_cb
   //
   bool
-  AudioUnitRenderer::TPrivate::push_cb(void * context,
+  AudioUnitRenderer::TPrivate::pull_cb(void * context,
                                        void * data,
                                        unsigned long samples_to_read,
                                        int channel_count,
@@ -148,6 +161,7 @@ namespace yae
     TPrivate * renderer = (TPrivate *)context;
     try
     {
+      boost::unique_lock<boost::mutex> lock(renderer->mutex_);
       renderer->input_.getData(data,
                                samples_to_read,
                                channel_count,
@@ -157,7 +171,7 @@ namespace yae
     catch (const std::exception & e)
     {
 #ifndef NDEBUG
-      yae_debug
+      yae_error
         << "AudioUnitRenderer::TPrivate::callback: "
         << "abort due to exception: " << e.what();
 #endif
@@ -165,7 +179,7 @@ namespace yae
     catch (...)
     {
 #ifndef NDEBUG
-      yae_debug
+      yae_error
         << "AudioUnitRenderer::TPrivate::callback: "
         << "abort due to unexpected exception";
 #endif
@@ -180,6 +194,9 @@ namespace yae
   void
   AudioUnitRenderer::TPrivate::stop_cb(void * context)
   {
+#ifndef NDEBUG
+    yae_debug << "AudioUnitRenderer::TPrivate::stop_cb";
+#endif
     TPrivate * renderer = (TPrivate *)context;
     renderer->stop();
   }
@@ -270,6 +287,9 @@ namespace yae
   void
   AudioUnitRenderer::pause(bool paused)
   {
+#ifndef NDEBUG
+    yae_debug << "AudioUnitRenderer::pause " << (paused ? "true" : "false");
+#endif
     private_->input_.pause(paused);
   }
 

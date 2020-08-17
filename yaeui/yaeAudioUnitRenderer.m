@@ -27,7 +27,7 @@
 typedef struct yae_au_ctx_t
 {
   void * owner_;
-  TAuCtxPush push_;
+  TAuCtxPull pull_;
   TAuCtxStop stop_;
   AudioUnit au_;
   AudioStreamBasicDescription sd_;
@@ -38,13 +38,13 @@ typedef struct yae_au_ctx_t
 //
 void *
 yae_au_ctx_create(void * owner,
-                  TAuCtxPush push,
+                  TAuCtxPull pull,
                   TAuCtxStop stop)
 {
   yae_au_ctx_t * ctx = (yae_au_ctx_t *)malloc(sizeof(yae_au_ctx_t));
   memset(ctx, 0, sizeof(*ctx));
   ctx->owner_ = owner;
-  ctx->push_ = push;
+  ctx->pull_ = pull;
   ctx->stop_ = stop;
   return ctx;
 }
@@ -118,7 +118,7 @@ callback(// The client data that is provided either
 
   bool planar = !(ctx->sd_.mFormatFlags & kAudioFormatFlagsNativeFloatPacked);
 
-  if (ctx->push_(ctx->owner_,
+  if (ctx->pull_(ctx->owner_,
                  ioData->mBuffers[0].mData,
                  inNumberFrames,
                  ctx->sd_.mChannelsPerFrame,

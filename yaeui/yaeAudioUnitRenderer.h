@@ -17,9 +17,9 @@ extern "C"
 #ifdef __APPLE__
 
   //----------------------------------------------------------------
-  // *TAuCtxPush
+  // *TAuCtxPull
   //
-  typedef bool(*TAuCtxPush)(void *, // owner
+  typedef bool(*TAuCtxPull)(void *, // owner
                             void *, // data
                             unsigned long, // samples to read
                             int, // channel count
@@ -35,7 +35,7 @@ extern "C"
   //
   void *
   yae_au_ctx_create(void * owner,
-                    TAuCtxPush push,
+                    TAuCtxPull pull,
                     TAuCtxStop stop);
 
   //----------------------------------------------------------------
