@@ -9,20 +9,16 @@
 #ifndef YAE_SYNCHRONOUS_H_
 #define YAE_SYNCHRONOUS_H_
 
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#include <boost/thread/thread_time.hpp>
-#include <boost/date_time/posix_time/time_formatters.hpp>
-#endif
-
 // aeyae:
-#include "yae_video.h"
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_time.h"
 
 
 namespace yae
 {
+
+  // forward declarations:
   struct SharedClock;
 
   //----------------------------------------------------------------
@@ -40,45 +36,6 @@ namespace yae
                                         const TTime & t0) = 0;
     virtual void noteTheClockHasStopped(const SharedClock & c) = 0;
   };
-
-  //----------------------------------------------------------------
-  // TimeSegment
-  //
-  struct YAE_API TimeSegment
-  {
-    TimeSegment();
-
-    // this indicates whether the clock is in the real-time mode,
-    // requires monotonically increasing current time
-    // and disallows rolling back time:
-    bool realtime_;
-
-    // this keeps track of "when" the time segment was specified:
-    boost::system_time origin_;
-
-    // current time:
-    TTime t0_;
-
-    // this keeps track of "when" someone announced they will be late:
-    boost::system_time waitForMe_;
-
-    // how long to wait:
-    double delayInSeconds_;
-
-    // this indicates whether the clock is stopped while waiting for someone:
-    bool stopped_;
-
-    // shared clock observer interface, may be NULL:
-    IClockObserver * observer_;
-
-    // avoid concurrent access from multiple threads:
-    mutable boost::mutex mutex_;
-  };
-
-  //----------------------------------------------------------------
-  // TTimeSegmentPtr
-  //
-  typedef boost::shared_ptr<TimeSegment> TTimeSegmentPtr;
 
   //----------------------------------------------------------------
   // SharedClock
@@ -151,9 +108,8 @@ namespace yae
     bool noteTheClockHasStopped();
 
   private:
-    TTimeSegmentPtr shared_;
-    boost::system_time waitingFor_;
-    bool copied_;
+    struct Private;
+    Private * private_;
   };
 
   //----------------------------------------------------------------

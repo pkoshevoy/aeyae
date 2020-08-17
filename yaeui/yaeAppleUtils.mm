@@ -10,9 +10,8 @@
 #include <vector>
 #include <string>
 
-// boost:
-#include <boost/thread.hpp>
-#include <boost/shared_ptr.hpp>
+// posix:
+#include <pthread.h>
 
 // Apple imports:
 #import <Cocoa/Cocoa.h>
@@ -24,10 +23,7 @@
 #include <objc/objc-runtime.h>
 #endif
 
-// aeyae:
-#include "yae/api/yae_api.h"
-
-// local:
+// yaeui:
 #include "yaeAppleUtils.h"
 
 
@@ -102,6 +98,106 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Mutex
+  //
+  struct Mutex
+  {
+    Mutex()
+    {
+      pthread_mutex_init(&mutex_, NULL);
+    }
+
+    ~Mutex()
+    {
+      pthread_mutex_destroy(&mutex_);
+    }
+
+    inline int lock()
+    {
+      return pthread_mutex_lock(&mutex_);
+    }
+
+    inline int trylock()
+    {
+      return pthread_mutex_trylock(&mutex_);
+    }
+
+    inline int unlock()
+    {
+      return pthread_mutex_unlock(&mutex_);
+    }
+
+  private:
+    Mutex(const Mutex &);
+    Mutex & operator = (const Mutex &);
+
+    pthread_mutex_t mutex_;
+  };
+
+
+  //----------------------------------------------------------------
+  // Lock
+  //
+  template <typename TMutex>
+  struct Lock
+  {
+    Lock(TMutex & mutex, bool lock_now = true):
+      mutex_(mutex),
+      locked_(false)
+    {
+      if (lock_now)
+      {
+        lock();
+      }
+    }
+
+    ~Lock()
+    {
+      unlock();
+    }
+
+    bool lock()
+    {
+      if (!locked_)
+      {
+        int err = mutex_.lock();
+        locked_ = !err;
+      }
+
+      return locked_;
+    }
+
+    bool trylock()
+    {
+      if (!locked_)
+      {
+        int err = mutex_.trylock();
+        locked_ = !err;
+      }
+
+      return locked_;
+    }
+
+    bool unlock()
+    {
+      if (locked_)
+      {
+        int err = mutex_.unlock();
+        locked_ = !(!err);
+      }
+
+      return !locked_;
+    }
+
+  private:
+    Lock(const Lock &);
+    Lock & operator = (const Lock &);
+
+    TMutex & mutex_;
+    bool locked_;
+  };
+
+  //----------------------------------------------------------------
   // PreventAppNap::Private
   //
   // tell App Nap that this is latency critical
@@ -158,12 +254,12 @@ namespace yae
       }
     };
 
-    static boost::mutex mutex_;
+    static Mutex mutex_;
     static Activity * singleton_;
 
     Private()
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       if (!singleton_)
       {
         singleton_ = new Activity();
@@ -174,7 +270,7 @@ namespace yae
 
     ~Private()
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      Lock<Mutex> lock(mutex_);
       if (singleton_)
       {
         singleton_->count_--;
@@ -190,7 +286,7 @@ namespace yae
   //----------------------------------------------------------------
   // PreventAppNap::Private::mutex_
   //
-  boost::mutex
+  Mutex
   PreventAppNap::Private::mutex_;
 
   //----------------------------------------------------------------

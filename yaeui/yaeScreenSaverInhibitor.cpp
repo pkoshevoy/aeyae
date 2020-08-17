@@ -26,7 +26,10 @@
 #include <QtDBus/QtDBus>
 #endif
 
-// local includes:
+// aeyae:
+#include "yae/api/yae_assert.h"
+
+// yaeui:
 #include "yaeScreenSaverInhibitor.h"
 
 

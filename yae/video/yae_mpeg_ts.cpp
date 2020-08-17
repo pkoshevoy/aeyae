@@ -11,6 +11,7 @@
 #include <time.h>
 
 // yae includes:
+#include "yae/api/yae_assert.h"
 #include "yae/api/yae_log.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"

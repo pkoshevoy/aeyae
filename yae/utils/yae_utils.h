@@ -37,6 +37,7 @@
 
 // yae includes:
 #include "../api/yae_api.h"
+#include "../api/yae_assert.h"
 #include "../utils/yae_data.h"
 
 // namespace shortcut:

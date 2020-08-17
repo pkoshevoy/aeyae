@@ -14,6 +14,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 
 // local interfaces:
 #include "yaeVec.h"

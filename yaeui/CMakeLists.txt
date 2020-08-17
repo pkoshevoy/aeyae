@@ -97,7 +97,7 @@ set(project_moc_hxx
   yaePlayerWidget.h
 
   # yaeui:
-  yaeUtilsQt.h
+  yaeApplication.h
   )
 
 set(project_uis
@@ -105,6 +105,8 @@ set(project_uis
   )
 
 set(project_sources
+  yaeApplication.cpp
+  yaeApplication.h
 
   # apprenticevideo:
   yaeArrowItem.cpp
@@ -229,8 +231,9 @@ if (APPLE)
     yaeAppleRemoteControl.mm
     yaeAppleUtils.h
     yaeAppleUtils.mm
+    yaeAudioUnitRenderer.cpp
     yaeAudioUnitRenderer.h
-    yaeAudioUnitRenderer.mm
+    yaeAudioUnitRenderer.m
     martinkahr-apple_remote_control/AppleRemote.h
     martinkahr-apple_remote_control/AppleRemote.m
     martinkahr-apple_remote_control/HIDRemoteControlDevice.h

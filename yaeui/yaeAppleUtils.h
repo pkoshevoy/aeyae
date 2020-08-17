@@ -13,7 +13,7 @@
 #include <string>
 
 // yaeui:
-#include "yaeUtilsQt.h"
+#include "yaeApplication.h"
 
 
 namespace yae

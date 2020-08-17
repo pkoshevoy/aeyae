@@ -11,6 +11,12 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+// boost library:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
+#endif
+
 // aeyae:
 #include "../api/yae_log.h"
 #include "../api/yae_message_carrier_interface.h"
@@ -21,11 +27,70 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // TLog::Private
+  //
+  struct TLog::Private
+  {
+    Private():
+      message_repeated_(0)
+    {}
+
+    ~Private()
+    {
+      clear();
+    }
+
+    void clear();
+    void assign(const std::string & carrierId,
+                IMessageCarrier * carrier);
+
+    // dispose of a carrier associated with a given carrierId:
+    void remove(const std::string & carrierId);
+
+    //! broadcast a given message to every carrier
+    //! registered with this log instance:
+    void deliver(int messagePriority,
+                 const char * source,
+                 const char * message);
+
+    //----------------------------------------------------------------
+    // Message
+    //
+    struct Message
+    {
+      Message(int priority = 0,
+              const char * source = "",
+              const char * text = ""):
+        priority_(priority),
+        source_(source),
+        message_(text)
+      {}
+
+      inline bool operator == (const Message & msg) const
+      {
+        return (msg.priority_ == priority_ &&
+                msg.source_ == source_ &&
+                msg.message_ == message_);
+      }
+
+      int priority_;
+      std::string source_;
+      std::string message_;
+    };
+
+    mutable boost::mutex mutex_;
+    std::map<std::string, IMessageCarrier *> carriers_;
+    Message last_message_;
+    uint64_t message_repeated_;
+  };
+
+
+  //----------------------------------------------------------------
   // TLog::TLog
   //
   TLog::TLog(const std::string & carrierId,
              IMessageCarrier * carrier):
-    message_repeated_(0)
+    private_(new TLog::Private())
   {
     assign(carrierId, carrier);
   }
@@ -35,14 +100,14 @@ namespace yae
   //
   TLog::~TLog()
   {
-    clear();
+    delete private_;
   }
 
   //----------------------------------------------------------------
-  // TLog::clear
+  // TLog::Private::clear
   //
   void
-  TLog::clear()
+  TLog::Private::clear()
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
 
@@ -63,13 +128,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TLog::assign
+  // TLog::clear
+  //
+  void
+  TLog::clear()
+  {
+    private_->clear();
+  }
+
+  //----------------------------------------------------------------
+  // TLog::Private::assign
   //
   // add or update the carrier associated with a given carrierId:
   //
   void
-  TLog::assign(const std::string & carrierId,
-               IMessageCarrier * carrier)
+  TLog::Private::assign(const std::string & carrierId,
+                        IMessageCarrier * carrier)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
 
@@ -87,12 +161,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TLog::remove
+  // TLog::assign
+  //
+  void
+  TLog::assign(const std::string & carrierId,
+               IMessageCarrier * carrier)
+  {
+    private_->assign(carrierId, carrier);
+  }
+
+  //----------------------------------------------------------------
+  // TLog::Private::remove
   //
   // dispose of a carrier associated with a given carrierId:
   //
   void
-  TLog::remove(const std::string & carrierId)
+  TLog::Private::remove(const std::string & carrierId)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
 
@@ -113,37 +197,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TLog::Message::Message
+  // TLog::remove
   //
-  TLog::Message::Message(int priority,
-                         const char * source,
-                         const char * text):
-    priority_(priority),
-    source_(source),
-    message_(text)
-  {}
-
-  //----------------------------------------------------------------
-  // Message::operator ==
-  //
-  bool
-  TLog::Message::operator == (const TLog::Message & msg) const
+  void
+  TLog::remove(const std::string & carrierId)
   {
-    return (msg.priority_ == priority_ &&
-            msg.source_ == source_ &&
-            msg.message_ == message_);
+    private_->remove(carrierId);
   }
 
   //----------------------------------------------------------------
-  // TLog::deliver
+  // TLog::Private::deliver
   //
   //! broadcast a given message to every carrier
   //! registered with this log instance:
   //
   void
-  TLog::deliver(int messagePriority,
-                const char * source,
-                const char * message)
+  TLog::Private::deliver(int messagePriority,
+                         const char * source,
+                         const char * message)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
 
@@ -191,6 +262,17 @@ namespace yae
 #if 0 // ndef NDEBUG
     YAE_BREAKPOINT_IF(messagePriority == kError);
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // TLog::deliver
+  //
+  void
+  TLog::deliver(int messagePriority,
+                const char * source,
+                const char * message)
+  {
+    private_->deliver(messagePriority, source, message);
   }
 
   //----------------------------------------------------------------

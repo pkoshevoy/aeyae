@@ -15,11 +15,11 @@
 #include <iostream>
 
 // atomics:
-#if defined(__GNUC__) &&  defined(__APPLE__) && defined(_ARCH_PPC)
+#if defined(__APPLE__) && defined(_ARCH_PPC) && (__GNUC__ == 4)
 # include <bits/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
-#elif defined(__GNUC__) && __GNUC_MINOR__ >= 8
+#elif defined(__GNUC__) && __GNUC_MINOR__ >= 5
 # include <ext/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add_dispatch
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add_dispatch
@@ -32,7 +32,6 @@
 
 // aeyae:
 #include "../api/yae_api.h"
-#include "../utils/yae_benchmark.h"
 
 
 namespace yae
@@ -88,7 +87,7 @@ namespace yae
 
     inline void decrement_shared() YAE_NOEXCEPT
     {
-      YAE_ASSERT(shared_ > 0);
+      assert(shared_ > 0);
 
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
       if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
@@ -124,7 +123,7 @@ namespace yae
 
     inline void decrement_weak() YAE_NOEXCEPT
     {
-      YAE_ASSERT(weak_ > 0);
+      assert(weak_ > 0);
 
 #if defined(YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS)
       if (footprint_ && footprint_->name() == "yae::AsyncTaskQueue::Task")
