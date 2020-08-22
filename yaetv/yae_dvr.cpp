@@ -1932,13 +1932,13 @@ namespace yae
       std::string tuner_name = session_->tuner_name();
       oss << tuner_name << " " << frequency << "Hz";
 
-      uint16_t channel_major = dvr_.get_channel_major(frequency_);
-      if (channel_major)
+      std::string channels = dvr_.get_channels_str(frequency_);
+      if (!channels.empty())
       {
-        oss << ", channel major " << channel_major;
+        oss << ", channels: " << channels;
       }
 
-      oss << ", ";
+      oss << "; ";
 
       packet_handler.ctx_.log_prefix_ = oss.str().c_str();
       yae_ilog("%p stream start: %s",
@@ -2740,7 +2740,7 @@ namespace yae
       int64_t timestamp = tuner_cache.get("timestamp", 0).asInt64();
       int64_t now = yae::TTime::now().get(1);
       int64_t elapsed = now - timestamp;
-      int64_t threshold = 10 * 24 * 60 * 60;
+      int64_t threshold = 24 * 60 * 60;
 
       if (threshold < elapsed)
       {
@@ -2813,6 +2813,9 @@ namespace yae
           {
             if (!tuner_status.signal_present_)
             {
+              cache["programs"].clear();
+              cache["timestamp"] = (Json::Value::Int64)now;
+              dvr_.update_tuner_cache(device.name(), tuner_cache);
               dvr_.no_signal(frequency);
             }
             continue;
@@ -2824,6 +2827,8 @@ namespace yae
 
           const DVR::PacketHandler & packet_handler = *handler_ptr;
           const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+
+          cache["programs"].clear();
           yae::update_tuner_cache(cache, tuner_status, ctx);
 
           cache["timestamp"] = (Json::Value::Int64)now;
@@ -2899,46 +2904,11 @@ namespace yae
     std::map<uint32_t, std::string> channels;
     dvr_.get_channels(channels);
 
-    std::list<std::string> frequencies;
-    std::map<std::string, uint16_t> channel_major;
+    DVR::Blacklist blacklist;
+    dvr_.get(blacklist);
 
-#if 1
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
-    {
-      const uint32_t ch_num = i->first;
-      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-
-      DVR::Blacklist blacklist;
-      dvr_.get(blacklist);
-
-      if (has(blacklist.channels_, ch_num))
-      {
-        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-        yae_ilog("skipping EPG update for blacklisted channel %i.%i",
-                 int(major),
-                 int(minor));
-        continue;
-      }
-
-      const std::string & frequency = i->second;
-      if (frequencies.empty() || frequencies.back() != frequency)
-      {
-        frequencies.push_back(frequency);
-      }
-
-      channel_major[frequency] = major;
-    }
-#else
-    {
-      std::string frequency = "503000000"; // 14.*
-      frequencies.push_back(frequency);
-      channel_major[frequency] = 14;
-    }
-#endif
-
-    for (std::list<std::string>::const_iterator
-           i = frequencies.begin(); i != frequencies.end(); ++i)
     {
       if (yae::Worker::Task::cancelled_)
       {
@@ -2946,8 +2916,22 @@ namespace yae
       }
 
       // shortuct:
-      const std::string & frequency = *i;
-      uint16_t major = yae::at(channel_major, frequency);
+      const uint32_t ch_num = i->first;
+      const std::string & frequency = i->second;
+
+      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+      uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+
+      if (has(blacklist.channels_, ch_num))
+      {
+        yae_ilog("skipping EPG update for blacklisted channel %i.%i",
+                 int(major),
+                 int(minor));
+        continue;
+      }
+
+      // shortcut:
+      std::string channels_str = dvr_.get_channels_str(frequency);
 
       DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
       if (!handler_ptr)
@@ -2986,10 +2970,10 @@ namespace yae
           boost::system_time giveup_at(boost::get_system_time());
           giveup_at += boost::posix_time::seconds(sample_dur.get(1));
 
-          yae_ilog("%sstarted EPG update for channels %i.* (%s)",
+          yae_ilog("%sstarted EPG update for %s, channels %s",
                    ctx.log_prefix_.c_str(),
-                   major,
-                   frequency.c_str());
+                   frequency.c_str(),
+                   channels_str.c_str());
 
           while (true)
           {
@@ -4332,6 +4316,8 @@ namespace yae
   void
   DVR::update_channel_frequency_luts()
   {
+    frequency_channel_lut_.clear();
+
     const Json::Value & const_tuner_cache = tuner_cache_;
     for (Json::Value::const_iterator i = const_tuner_cache.begin();
          i != tuner_cache_.end(); ++i)
@@ -4346,7 +4332,18 @@ namespace yae
         std::string frequency = j.key().asString();
         const Json::Value & cache = *j;
         const Json::Value & programs = cache["programs"];
+        const Json::Value & status = cache["status"];
         TChannels & channels = frequency_channel_lut_[frequency];
+
+        bool signal_present =
+          status.get("signal_present", false).asBool();
+        uint32_t signal_to_noise_quality =
+          status.get("signal_to_noise_quality", 0).asUInt();
+        if (!signal_present)
+        {
+          frequency_channel_lut_.erase(frequency);
+          continue;
+        }
 
         for (Json::Value::const_iterator k = programs.begin();
              k != programs.end(); ++k)
@@ -4358,7 +4355,47 @@ namespace yae
           channels[major][minor] = name;
 
           uint32_t ch_num = yae::mpeg_ts::channel_number(major, minor);
-          channel_frequency_lut_[ch_num] = frequency;
+          std::string & ch_freq = channel_frequency_lut_[ch_num];
+          if (ch_freq.empty())
+          {
+            ch_freq = frequency;
+          }
+          else if (ch_freq != frequency)
+          {
+            // Hmm, channel is available on multiple frequencies,
+            // so choose the one that has the strongest signal:
+            Json::Value other = frequencies.get(ch_freq, Json::Value());
+
+            bool other_signal_present = other.
+              get("status", Json::Value()).
+              get("signal_present", false).
+              asBool();
+
+            uint32_t other_signal_to_noise_quality = other.
+              get("status", Json::Value()).
+              get("signal_to_noise_quality", 0).
+              asUInt();
+
+            yae_ilog("%i.%i is available on multiple frequencies: "
+                     "%s snq %u, %s snq %u",
+                     major, minor,
+                     ch_freq.c_str(), other_signal_to_noise_quality,
+                     frequency.c_str(), signal_to_noise_quality);
+
+            if (other_signal_present &&
+                signal_to_noise_quality <= other_signal_to_noise_quality)
+            {
+              // use the other frequency:
+              yae_ilog("will use %s Hz for %i.%i",
+                       ch_freq.c_str(), major, minor);
+            }
+            else
+            {
+              yae_ilog("will use %s Hz for %i.%i",
+                       frequency.c_str(), major, minor);
+              ch_freq = frequency;
+            }
+          }
         }
 
         if (channels.empty())
@@ -4408,28 +4445,38 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::get_channel_major
+  // DVR::get_channels_str
   //
-  uint16_t
-  DVR::get_channel_major(const std::string & frequency) const
+  std::string
+  DVR::get_channels_str(const std::string & frequency) const
   {
+    std::ostringstream oss;
+    const char * sep = "";
+
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     std::map<std::string, TChannels>::const_iterator found =
       frequency_channel_lut_.find(frequency);
-    if (found == frequency_channel_lut_.end())
+    if (found != frequency_channel_lut_.end())
     {
-      return 0;
+      const TChannels & channels = found->second;
+      for (TChannels::const_iterator
+             i = channels.begin(); i != channels.end(); ++i)
+      {
+        uint16_t major = i->first;
+        const TChannelNames & names = i->second;
+        for (TChannelNames::const_iterator
+               j = names.begin(); j != names.end(); ++j)
+        {
+          uint16_t minor = j->first;
+          const std::string & name = j->second;
+
+          oss << sep << major << "." << minor << " " << name;
+          sep = ", ";
+        }
+      }
     }
 
-    const TChannels & channels = found->second;
-    if (channels.empty())
-    {
-      return 0;
-    }
-
-    YAE_EXPECT(channels.size() == 1);
-    uint16_t major = channels.begin()->first;
-    return major;
+    return oss.str();
   }
 
   //----------------------------------------------------------------

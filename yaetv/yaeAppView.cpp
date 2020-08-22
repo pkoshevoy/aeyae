@@ -3236,15 +3236,12 @@ namespace yae
       const std::string & frequency = i->first;
       const TChannels & ch_majors = i->second;
 
-      YAE_EXPECT(ch_majors.size() == 1);
       if (ch_majors.empty())
       {
         continue;
       }
 
       uint64_t freq_hz = boost::lexical_cast<uint64_t>(frequency);
-      uint16_t ch_major = ch_majors.begin()->first;
-      const TChannelNames & ch_names = ch_majors.begin()->second;
 
       ch_layout_.index_[frequency] = ch_layout_.names_.size();
       ch_layout_.names_.push_back(frequency);
@@ -3255,9 +3252,7 @@ namespace yae
         layout_ptr.reset(new Layout());
         Layout & layout = *layout_ptr;
 
-        std::string title = strfmt("%" PRIu64 " MHz, channel major %i",
-                                   freq_hz / 1000000,
-                                   int(ch_major));
+        std::string title = strfmt("%" PRIu64 " MHz", freq_hz / 1000000);
         Item & group = add_collapsible_list(view,
                                             style,
                                             table,
@@ -3274,85 +3269,93 @@ namespace yae
         layout.index_.clear();
         std::map<std::string, yae::shared_ptr<Layout> > rows;
 
-        for (TChannelNames::const_iterator
-               j = ch_names.begin(); j != ch_names.end(); ++j)
+        for (TChannels::const_iterator
+               k = ch_majors.begin(); k != ch_majors.end(); ++k)
         {
-          uint16_t ch_minor = j->first;
-          const std::string & ch_name = j->second;
+          uint16_t ch_major = k->first;
+          const TChannelNames & ch_names = k->second;
 
-          std::string ch_num = strfmt("%i-%i", ch_major, ch_minor);
-          layout.index_[ch_num] = layout.names_.size();
-          layout.names_.push_back(ch_num);
-
-          yae::shared_ptr<Layout> & rowlayout_ptr = layout.items_[ch_num];
-          if (!rowlayout_ptr)
+          for (TChannelNames::const_iterator
+                 j = ch_names.begin(); j != ch_names.end(); ++j)
           {
-            rowlayout_ptr.reset(new Layout());
-            Layout & rowlayout = *rowlayout_ptr;
+            uint16_t ch_minor = j->first;
+            const std::string & ch_name = j->second;
 
-            rowlayout.item_.reset(new Item(ch_num.c_str()));
-            Item & row = body.add<Item>(rowlayout.item_);
+            std::string ch_num = strfmt("%i-%i", ch_major, ch_minor);
+            layout.index_[ch_num] = layout.names_.size();
+            layout.names_.push_back(ch_num);
 
-            row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-            row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-            row.anchors_.top_ = row.addExpr(new ListItemTop(view,
-                                                            body,
-                                                            layout.index_,
-                                                            row.id_,
-                                                            0.6));
-            row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+            yae::shared_ptr<Layout> & rowlayout_ptr = layout.items_[ch_num];
+            if (!rowlayout_ptr)
+            {
+              rowlayout_ptr.reset(new Layout());
+              Layout & rowlayout = *rowlayout_ptr;
+
+              rowlayout.item_.reset(new Item(ch_num.c_str()));
+              Item & row = body.add<Item>(rowlayout.item_);
+
+              row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+              row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+              row.anchors_.top_ = row.addExpr(new ListItemTop(view,
+                                                              body,
+                                                              layout.index_,
+                                                              row.id_,
+                                                              0.6));
+              row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
 #if 1
-            Rectangle & bg = row.addNew<Rectangle>("bg");
-            bg.anchors_.fill(row);
-            bg.color_ = bg.
-              addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-            bg.visible_ = bg.
-              addInverse(new IsOddRow(layout.index_, row.id_));
+              Rectangle & bg = row.addNew<Rectangle>("bg");
+              bg.anchors_.fill(row);
+              bg.color_ = bg.
+                addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+              bg.visible_ = bg.
+                addInverse(new IsOddRow(layout.index_, row.id_));
 #endif
 
-            CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
-            cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
-            cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-            cbox.margins_.set_left(ItemRef::reference(row.height_, 0.33));
-            cbox.height_ = ItemRef::reference(row.height_, 0.75);
-            cbox.width_ = cbox.height_;
-            cbox.checked_ = cbox.
-              addInverse(new IsBlacklisted(view, ch_major, ch_minor));
-            cbox.on_toggle_.
-              reset(new OnToggleBlacklist(view, ch_major, ch_minor));
+              CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+              cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+              cbox.anchors_.vcenter_ =
+                ItemRef::reference(row, kPropertyVCenter);
+              cbox.margins_.set_left(ItemRef::reference(row.height_, 0.33));
+              cbox.height_ = ItemRef::reference(row.height_, 0.75);
+              cbox.width_ = cbox.height_;
+              cbox.checked_ = cbox.
+                addInverse(new IsBlacklisted(view, ch_major, ch_minor));
+              cbox.on_toggle_.
+                reset(new OnToggleBlacklist(view, ch_major, ch_minor));
 
-            Item & maj_min = row.addNew<Item>("maj_min");
-            maj_min.anchors_.fill(row);
-            maj_min.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
-            maj_min.anchors_.right_.reset();
-            maj_min.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
-            maj_min.margins_.set_left(ItemRef::reference(row.height_, 0.33));
+              Item & maj_min = row.addNew<Item>("maj_min");
+              maj_min.anchors_.fill(row);
+              maj_min.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
+              maj_min.anchors_.right_.reset();
+              maj_min.width_ = ItemRef::reference(hidden, kUnitSize, 2.0);
+              maj_min.margins_.set_left(ItemRef::reference(row.height_, 0.33));
 
-            Text & ch_text = row.addNew<Text>("ch_text");
-            ch_text.anchors_.vcenter(maj_min);
-            ch_text.font_ = style.font_;
-            ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-            ch_text.elide_ = Qt::ElideRight;
-            ch_text.color_ = ch_text.
-              addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-            ch_text.background_ = ch_text.
-              addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-            ch_text.text_ = TVarRef::constant(TVar(ch_num));
+              Text & ch_text = row.addNew<Text>("ch_text");
+              ch_text.anchors_.vcenter(maj_min);
+              ch_text.font_ = style.font_;
+              ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+              ch_text.elide_ = Qt::ElideRight;
+              ch_text.color_ = ch_text.
+                addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+              ch_text.background_ = ch_text.
+                addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+              ch_text.text_ = TVarRef::constant(TVar(ch_num));
 
-            Text & name = row.addNew<Text>("ch_name");
-            name.anchors_.vcenter(row);
-            name.anchors_.left_ = ItemRef::reference(maj_min, kPropertyRight);
-            name.font_ = style.font_;
-            name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
-            name.elide_ = Qt::ElideRight;
-            name.color_ = name.
-              addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-            name.background_ = name.
-              addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-            name.text_ = TVarRef::constant(TVar(ch_name));
+              Text & name = row.addNew<Text>("ch_name");
+              name.anchors_.vcenter(row);
+              name.anchors_.left_ = ItemRef::reference(maj_min, kPropertyRight);
+              name.font_ = style.font_;
+              name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
+              name.elide_ = Qt::ElideRight;
+              name.color_ = name.
+                addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
+              name.background_ = name.
+                addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+              name.text_ = TVarRef::constant(TVar(ch_name));
+            }
+
+            rows[ch_num] = rowlayout_ptr;
           }
-
-          rows[ch_num] = rowlayout_ptr;
         }
 
         // unreferenced rows must be removed:

@@ -866,7 +866,7 @@ namespace yae
     bool get_channels(const std::string & freq, TChannels & channels) const;
 
     // helper:
-    uint16_t get_channel_major(const std::string & frequency) const;
+    std::string get_channels_str(const std::string & frequency) const;
 
     bool get_channel_name(uint16_t major,
                           uint16_t minor,
