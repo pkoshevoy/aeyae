@@ -1203,7 +1203,7 @@ namespace yae
     const AVStream * stream = NULL;
     if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
         strcmp(context_->iformat->name, "ogg") != 0 &&
-        audioTrack || videoTrack)
+        (audioTrack || videoTrack))
     {
       int streamIndex =
         videoTrack ? videoTrack->streamIndex() : audioTrack->streamIndex();
