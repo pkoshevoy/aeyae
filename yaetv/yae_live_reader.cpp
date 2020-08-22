@@ -580,14 +580,14 @@ namespace yae
           double bytes_per_sec = double(dv * Live::kTimebase) / double(dt);
           double r = bytes_per_sec / avg_bytes_per_sec;
 
-          if ((r < 0.01 && dt > 3.0 * Live::kTimebase) ||
+          if (((r < 0.01 && dt > 3.0 * Live::kTimebase) ||
 
-              // keep ranges short to minimize interpolation error
-              // when adjusting timestamps:
-              // seg_dt >= 60.0 * Live::kTimebase ||
+               // keep ranges short to minimize interpolation error
+               // when adjusting timestamps:
+               // seg_dt >= 60.0 * Live::kTimebase ||
 
-              // discont indicated by "timebase" in .dat:
-              start_new_range &&
+               // discont indicated by "timebase" in .dat:
+               start_new_range) &&
               segment->bytes_per_sec(*this) > 1000)
           {
             // discont, instantaneous bitrate is less than half of avg bitrate,
