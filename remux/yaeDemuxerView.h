@@ -21,6 +21,7 @@
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_demuxer_reader.h"
+#include "yae/ffmpeg/yae_remux.h"
 #include "yae/thread/yae_task_runner.h"
 #include "yae/utils/yae_lru_cache.h"
 #include "yae/video/yae_video.h"
@@ -32,9 +33,6 @@
 #include "yaePlayerItem.h"
 #include "yaeScrollview.h"
 #include "yaeTimelineItem.h"
-
-// local:
-#include "yaeRemux.h"
 
 
 namespace yae

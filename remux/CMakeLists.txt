@@ -82,8 +82,6 @@ set(project_sources
   yaeMain.cpp
   yaeMainWindow.cpp
   yaeMainWindow.h
-  yaeRemux.cpp
-  yaeRemux.h
   )
 
 if (QT4_FOUND)

@@ -219,7 +219,7 @@ namespace yae
   // ThumbnailProvider::requestImage
   //
   static QImage
-  getThumbnail(const yae::IReaderPtr & readerPrototype,
+  getThumbnail(const TReaderFactoryPtr & readerFactory,
                const QSize & thumbnailMaxSize,
                const QString & itemFilePath)
   {
@@ -245,7 +245,7 @@ namespace yae
 
     QImage image;
 
-    IReaderPtr reader = yae::openFile(readerPrototype, itemFilePath);
+    IReaderPtr reader = yae::openFile(readerFactory, itemFilePath);
     if (!reader)
     {
       return iconBroken;
@@ -333,7 +333,7 @@ namespace yae
   {
     typedef ThumbnailProvider::ICallback ICallback;
 
-    TPrivate(const IReaderPtr & readerPrototype,
+    TPrivate(const TReaderFactoryPtr & readerFactory,
              const TGetFilePathPtr & getFilePath,
              const QSize & envelopeSize,
              std::size_t cacheCapacity);
@@ -397,7 +397,7 @@ namespace yae
       boost::uint64_t mru_;
     };
 
-    IReaderPtr readerPrototype_;
+    TReaderFactoryPtr readerFactory_;
     TGetFilePathPtr getFilePath_;
     QSize envelopeSize_;
 
@@ -426,11 +426,11 @@ namespace yae
   //----------------------------------------------------------------
   // ThumbnailProvider::TPrivate::TPrivate
   //
-  ThumbnailProvider::TPrivate::TPrivate(const IReaderPtr & readerPrototype,
+  ThumbnailProvider::TPrivate::TPrivate(const TReaderFactoryPtr & readerFactory,
                                         const TGetFilePathPtr & getFilePath,
                                         const QSize & envelopeSize,
                                         std::size_t cacheCapacity):
-    readerPrototype_(readerPrototype),
+    readerFactory_(readerFactory),
     getFilePath_(getFilePath),
     envelopeSize_(envelopeSize),
     submitted_(0),
@@ -517,7 +517,7 @@ namespace yae
         << "\n";
 #endif
 
-      QImage image = getThumbnail(readerPrototype_,
+      QImage image = getThumbnail(readerFactory_,
                                   thumbnailMaxSize,
                                   itemFilePath);
 
@@ -651,12 +651,12 @@ namespace yae
   //----------------------------------------------------------------
   // ThumbnailProvider::ThumbnailProvider
   //
-  ThumbnailProvider::ThumbnailProvider(const IReaderPtr & readerPrototype,
+  ThumbnailProvider::ThumbnailProvider(const TReaderFactoryPtr & readerFactory,
                                        const TGetFilePathPtr & getFilePath,
                                        const QSize & envelopeSize,
                                        std::size_t cacheCapacity):
     ImageProvider(),
-    private_(new TPrivate(readerPrototype,
+    private_(new TPrivate(readerFactory,
                           getFilePath,
                           envelopeSize,
                           cacheCapacity))

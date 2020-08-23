@@ -237,19 +237,19 @@ mainMayThrowException(int argc, char ** argv)
   }
 
   //----------------------------------------------------------------
-  // readerPrototype
+  // readerFactory
   //
-  yae::IReaderPtr readerPrototype(yae::LiveReader::create());
+  yae::TReaderFactoryPtr readerFactory(new yae::ReaderFactory());
 
   if (canary)
   {
-    yae::testEachFile(readerPrototype, playlist);
+    yae::testEachFile(readerFactory, playlist);
 
     // if it didn't crash, then it's all good:
     return 0;
   }
 
-  yae::mainWindow = new yae::MainWindow(readerPrototype);
+  yae::mainWindow = new yae::MainWindow(readerFactory);
 
   bool ok = QObject::connect(&app,
                              SIGNAL(file_open(const QString &)),

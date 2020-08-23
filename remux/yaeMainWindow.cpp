@@ -14,44 +14,24 @@
 
 // boost includes:
 #include <boost/algorithm/string.hpp>
-#include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 
 // Qt includes:
-#include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
-#include <QDesktopServices>
-#include <QDesktopWidget>
-#include <QDirIterator>
 #include <QDragEnterEvent>
 #include <QFileDialog>
 #include <QFileInfo>
-#include <QMenu>
 #include <QMimeData>
-#include <QProcess>
 #include <QShortcut>
-#include <QSpacerItem>
 #include <QUrl>
 #include <QVBoxLayout>
-#include <QWheelEvent>
-
-// jsoncpp:
-#include "json/json.h"
 
 // yae includes:
 #include "yae/api/yae_version.h"
-#include "yae/utils/yae_benchmark.h"
-#include "yae/utils/yae_plugin_registry.h"
-#include "yae/video/yae_pixel_formats.h"
-#include "yae/video/yae_pixel_format_traits.h"
-#include "yae/video/yae_video_renderer.h"
+#include "yae/ffmpeg/yae_remux.h"
 
 // local includes:
 #include "yaeMainWindow.h"
-#include "yaePortaudioRenderer.h"
-#include "yaeRemux.h"
-#include "yaeTimelineModel.h"
-#include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 
 
@@ -275,25 +255,12 @@ namespace yae
     spinner_.setEnabled(false);
   }
 
+
   //----------------------------------------------------------------
-  // LoadTask
+  // LoaderProgressObserver
   //
-  struct LoadTask : AsyncTaskQueue::Task
+  struct LoaderProgressObserver : rx::Loader::IProgressObserver
   {
-
-    //----------------------------------------------------------------
-    // LoadTask
-    //
-    LoadTask(QObject * target,
-             const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
-             const std::set<std::string> & sources,
-             const std::list<ClipInfo> & src_clips):
-      target_(target),
-      demuxers_(demuxers),
-      sources_(sources),
-      src_clips_(src_clips)
-    {}
-
     //----------------------------------------------------------------
     // Began
     //
@@ -334,202 +301,36 @@ namespace yae
       Done(): QEvent(QEvent::User) {}
     };
 
-    // helper, for loading a source on-demand:
-    TDemuxerInterfacePtr get_demuxer(const std::string & source);
+    //----------------------------------------------------------------
+    // LoaderProgressObserver
+    //
+    LoaderProgressObserver(QObject * target):
+      target_(target)
+    {}
 
     // virtual:
-    void run()
+    void began(const std::string & source)
     {
-      try
-      {
-        if (src_clips_.empty())
-        {
-          load_sources();
-        }
-        else
-        {
-          load_source_clips();
-        }
-      }
-      catch (const std::exception & e)
-      {
-       yae_wlog("LoadTask::run exception: %s", e.what());
-      }
-      catch (...)
-      {
-       yae_wlog("LoadTask::run unknown exception");
-      }
+      qApp->postEvent(target_, new Began(source));
+    }
 
+    // virtual:
+    void loaded(const std::string & source,
+                const TDemuxerInterfacePtr & demuxer,
+                const TClipPtr & clip)
+    {
+      qApp->postEvent(target_, new Loaded(source, demuxer, clip));
+    }
+
+    // virtual:
+    void done()
+    {
       qApp->postEvent(target_, new Done());
     }
 
   protected:
-    // helpers:
-    void load_sources();
-    void load_source_clips();
-
     QObject * target_;
-    std::map<std::string, TDemuxerInterfacePtr> demuxers_;
-    std::set<std::string> sources_;
-    std::list<ClipInfo> src_clips_;
   };
-
-  //----------------------------------------------------------------
-  // LoadTask::get_demuxer
-  //
-  TDemuxerInterfacePtr
-  LoadTask::get_demuxer(const std::string & source)
-  {
-    if (!yae::has(demuxers_, source))
-    {
-      qApp->postEvent(target_, new Began(source));
-
-      std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(source, demuxers))
-      {
-        // failed to open the primary resource:
-       yae_wlog("failed to open %s, skipping...",
-               source.c_str());
-        return TDemuxerInterfacePtr();
-      }
-
-      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
-
-      // these are expressed in seconds:
-      static const double buffer_duration = 1.0;
-      static const double discont_tolerance = 0.1;
-
-      // wrap each demuxer in a DemuxerBuffer, build a summary:
-      for (std::list<TDemuxerPtr>::const_iterator
-             i = demuxers.begin(); i != demuxers.end(); ++i)
-      {
-        const TDemuxerPtr & demuxer = *i;
-
-        TDemuxerInterfacePtr
-          buffer(new DemuxerBuffer(demuxer, buffer_duration));
-
-        buffer->update_summary(discont_tolerance);
-        parallel_demuxer->append(buffer);
-      }
-
-      // summarize the demuxer:
-      parallel_demuxer->update_summary(discont_tolerance);
-
-      demuxers_[source] = parallel_demuxer;
-    }
-
-    return demuxers_[source];
-  }
-
-  //----------------------------------------------------------------
-  // LoadTask::run
-  //
-  void
-  LoadTask::load_sources()
-  {
-    std::string track_id("v:000");
-
-    for (std::set<std::string>::const_iterator
-           i = sources_.begin(); i != sources_.end(); ++i)
-    {
-      try
-      {
-        const std::string & source = *i;
-
-        TDemuxerInterfacePtr demuxer = get_demuxer(source);
-        if (!demuxer)
-        {
-          continue;
-        }
-
-        // shortcut:
-        const DemuxerSummary & summary = demuxer->summary();
-        if (yae::has(summary.decoders_, track_id))
-        {
-          const Timeline::Track & track = summary.get_track_timeline(track_id);
-          Timespan keep(track.pts_.front(), track.pts_.back());
-          TClipPtr clip(new Clip(demuxer, track_id, keep));
-          qApp->postEvent(target_, new Loaded(source, demuxer, clip));
-        }
-      }
-      catch (const std::exception & e)
-      {
-       yae_wlog("LoadTask::load_sources exception: %s", e.what());
-      }
-      catch (...)
-      {
-       yae_wlog("LoadTask::load_sources unknown exception");
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
-  // LoadTask::load_source_clips
-  //
-  void
-  LoadTask::load_source_clips()
-  {
-    for (std::list<ClipInfo>::const_iterator
-           i = src_clips_.begin(); i != src_clips_.end(); ++i)
-    {
-      try
-      {
-        const ClipInfo & trim = *i;
-
-        std::string track_id =
-          trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-        if (!al::starts_with(track_id, "v:"))
-        {
-          // not a video track:
-          continue;
-        }
-
-        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
-        if (!demuxer)
-        {
-          // failed to demux:
-          continue;
-        }
-
-        const DemuxerSummary & summary = demuxer->summary();
-        if (!yae::has(summary.decoders_, track_id))
-        {
-          // no such track:
-          continue;
-        }
-
-        const Timeline::Track & track = summary.get_track_timeline(track_id);
-        Timespan keep(track.pts_.front(), track.pts_.back());
-
-        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-        double fps = fe.best_guess();
-
-        if (!trim.t0_.empty() &&
-            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
-        {
-         yae_elog("failed to parse %s", trim.t0_.c_str());
-        }
-
-        if (!trim.t1_.empty() &&
-            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
-        {
-         yae_elog("failed to parse %s", trim.t1_.c_str());
-        }
-
-        TClipPtr clip(new Clip(demuxer, track_id, keep));
-        qApp->postEvent(target_, new Loaded(trim.source_, demuxer, clip));
-      }
-      catch (const std::exception & e)
-      {
-       yae_wlog("LoadTask::load_source_clips exception: %s", e.what());
-      }
-      catch (...)
-      {
-       yae_wlog("LoadTask::load_source_clips unknown exception");
-      }
-    }
-  }
 
   //----------------------------------------------------------------
   // MainWindow::add
@@ -538,7 +339,8 @@ namespace yae
   MainWindow::add(const std::set<std::string> & sources,
                   const std::list<ClipInfo> & src_clips)
   {
-    TAsyncTaskPtr t(new LoadTask(this, model_.demuxer_, sources, src_clips));
+    rx::Loader::TProgressObserverPtr cb(new LoaderProgressObserver(this));
+    TAsyncTaskPtr t(new rx::Loader(model_.demuxer_, sources, src_clips, cb));
     tasks_.push_back(t);
     async_.push_back(t);
   }
@@ -1082,7 +884,8 @@ namespace yae
   {
     if (e->type() == QEvent::User)
     {
-      LoadTask::Began * load_began = dynamic_cast<LoadTask::Began *>(e);
+      LoaderProgressObserver::Began * load_began =
+        dynamic_cast<LoaderProgressObserver::Began *>(e);
       if (load_began)
       {
         std::string dirname;
@@ -1097,7 +900,8 @@ namespace yae
         return true;
       }
 
-      LoadTask::Loaded * loaded = dynamic_cast<LoadTask::Loaded *>(e);
+      LoaderProgressObserver::Loaded * loaded =
+        dynamic_cast<LoaderProgressObserver::Loaded *>(e);
       if (loaded)
       {
         // update the model and the view:
@@ -1108,7 +912,8 @@ namespace yae
         return true;
       }
 
-      LoadTask::Done * load_done = dynamic_cast<LoadTask::Done *>(e);
+      LoaderProgressObserver::Done * load_done =
+        dynamic_cast<LoaderProgressObserver::Done *>(e);
       if (load_done)
       {
         tasks_.pop_front();

@@ -473,7 +473,7 @@ namespace yae
     boost::shared_ptr<ThumbnailProvider::GetFilePath>
       getFilePath(new PlaylistItemFilePath(playlistModel_));
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
-      imageProvider(new ThumbnailProvider(readerPrototype_, getFilePath));
+      imageProvider(new ThumbnailProvider(readerFactory_, getFilePath));
     playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
                                    imageProvider);
 
@@ -509,12 +509,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWidget::setReaderPrototype
+  // MainWidget::setReaderFactory
   //
   void
-  MainWidget::setReaderPrototype(const IReaderPtr & readerPrototype)
+  MainWidget::setReaderFactory(const TReaderFactoryPtr & readerFactory)
   {
-    readerPrototype_ = readerPrototype;
+    readerFactory_ = readerFactory;
   }
 
   //----------------------------------------------------------------
@@ -1389,7 +1389,7 @@ namespace yae
   MainWidget::load(const QString & path, const TBookmark * bookmark)
   {
     IReaderPtr reader_ptr =
-      canaryTest(path) ? yae::openFile(readerPrototype_, path) : IReaderPtr();
+      canaryTest(path) ? yae::openFile(readerFactory_, path) : IReaderPtr();
 
     if (!reader_ptr)
     {

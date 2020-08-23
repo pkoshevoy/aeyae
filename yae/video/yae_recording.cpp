@@ -444,4 +444,59 @@ namespace yae
     load(json, *rec);
     recording.set_rec(rec);
   }
+
+  //----------------------------------------------------------------
+  // maybe_yaetv_recording
+  //
+  TRecordingPtr
+  maybe_yaetv_recording(const std::string & filepath)
+  {
+    TRecordingPtr rec_ptr;
+    if (!al::ends_with(filepath, ".mpg"))
+    {
+      return rec_ptr;
+    }
+
+    std::string folder;
+    std::string fn_ext;
+    if (!parse_file_path(filepath, folder, fn_ext))
+    {
+      return rec_ptr;
+    }
+
+    std::string basename;
+    std::string suffix;
+    if (!parse_file_name(fn_ext, basename, suffix))
+    {
+      return rec_ptr;
+    }
+
+    fs::path path(folder);
+    std::string fn_rec = (path / (basename + ".json")).string();
+    if (!fs::exists(fn_rec))
+    {
+      return rec_ptr;
+    }
+
+    std::string fn_dat = (path / (basename + ".dat")).string();
+    if (!fs::exists(fn_dat))
+    {
+      return rec_ptr;
+    }
+
+    try
+    {
+      Json::Value json;
+      yae::TOpenFile(fn_rec, "rb").load(json);
+      rec_ptr.reset(new Recording());
+      yae::load(json, *rec_ptr);
+    }
+    catch (...)
+    {
+      rec_ptr.reset();
+    }
+
+    return rec_ptr;
+  }
+
 }

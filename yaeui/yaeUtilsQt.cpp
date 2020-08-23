@@ -2009,7 +2009,7 @@ namespace yae
   // openFile
   //
   IReaderPtr
-  openFile(const yae::IReaderPtr & readerPrototype, const QString & path)
+  openFile(const yae::TReaderFactoryPtr & readerFactory, const QString & path)
   {
     QString fn = path;
     QFileInfo fi(fn);
@@ -2025,24 +2025,24 @@ namespace yae
       }
     }
 
-    IReaderPtr reader(readerPrototype->clone());
-    std::string path_utf8;
-
-    if (convert_path_to_utf8(fn, path_utf8) &&
-        reader->open(path_utf8.c_str()))
+    std::string filepath;
+    if (convert_path_to_utf8(fn, filepath))
     {
-      return reader;
+      IReaderPtr reader = readerFactory->create(filepath);
+      if (reader->open(filepath.c_str()))
+      {
+        return reader;
+      }
     }
 
-    reader.reset();
-    return reader;
+    return IReaderPtr();
   }
 
   //----------------------------------------------------------------
   // testEachFile
   //
   bool
-  testEachFile(const yae::IReaderPtr & readerPrototype,
+  testEachFile(const yae::TReaderFactoryPtr & readerFactory,
                const std::list<QString> & playlist)
   {
     std::size_t numOpened = 0;
@@ -2054,7 +2054,7 @@ namespace yae
       const QString & fn = *j;
       numTotal++;
 
-      IReaderPtr reader = yae::openFile(readerPrototype, fn);
+      IReaderPtr reader = yae::openFile(readerFactory, fn);
       if (reader)
       {
         numOpened++;

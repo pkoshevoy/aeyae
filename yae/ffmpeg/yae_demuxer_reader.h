@@ -33,8 +33,11 @@ namespace yae
     DemuxerReader(const TDemuxerInterfacePtr & src = TDemuxerInterfacePtr());
     virtual ~DemuxerReader();
 
+    void init(const TDemuxerInterfacePtr & src);
+
   public:
-    static DemuxerReader * create(const TDemuxerInterfacePtr & demuxer);
+    static DemuxerReader * create(const TDemuxerInterfacePtr & demuxer =
+                                  TDemuxerInterfacePtr());
     virtual void destroy();
 
     //! prototype factory method that returns a new instance of DemuxerReader,
@@ -254,6 +257,12 @@ namespace yae
   //
   typedef yae::shared_ptr<DemuxerReader, yae::IPlugin, yae::call_destroy>
   DemuxerReaderPtr;
+
+  //----------------------------------------------------------------
+  // make_yaerx_reader
+  //
+  YAE_API DemuxerReaderPtr
+  make_yaerx_reader(const std::string & yaerx_path);
 
 }
 

@@ -41,7 +41,6 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_live_reader.h"
 
 // yaeui:
 #include "yaeUtilsQt.h"
@@ -610,11 +609,8 @@ namespace yae
     // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif
 
-    // instantiate reader prototype:
-    yae::IReaderPtr reader(yae::LiveReader::create());
-
     yae::Application app(argc, argv);
-    yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir, reader);
+    yae::mainWindow = new yae::MainWindow(yaetv_dir, basedir);
 
     bool ok = true;
     ok = QObject::connect(&app,

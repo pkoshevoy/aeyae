@@ -224,6 +224,8 @@ add_library(${PROGNAME} SHARED
   yae/ffmpeg/yae_movie.h
   yae/ffmpeg/yae_reader_ffmpeg.cpp
   yae/ffmpeg/yae_reader_ffmpeg.h
+  yae/ffmpeg/yae_remux.cpp
+  yae/ffmpeg/yae_remux.h
   yae/ffmpeg/yae_subtitles_track.cpp
   yae/ffmpeg/yae_subtitles_track.h
   yae/ffmpeg/yae_track.cpp
@@ -272,6 +274,8 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_pixel_format_traits.cpp
   yae/video/yae_pixel_format_traits.h
   yae/video/yae_pixel_formats.h
+  yae/video/yae_reader_factory.cpp
+  yae/video/yae_reader_factory.h
   yae/video/yae_reader.h
   yae/video/yae_recording.cpp
   yae/video/yae_recording.h

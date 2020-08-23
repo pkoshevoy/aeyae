@@ -12,6 +12,7 @@
 // local includes:
 #include "yae_demuxer_reader.h"
 #include "yae/ffmpeg/yae_audio_track.h"
+#include "yae/ffmpeg/yae_remux.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/ffmpeg/yae_video_track.h"
 #include "yae/thread/yae_queue.h"
@@ -44,21 +45,8 @@ namespace yae
   // DemuxerReader::DemuxerReader
   //
   DemuxerReader::DemuxerReader(const TDemuxerInterfacePtr & demuxer):
-    demuxer_(demuxer),
     readerId_(std::numeric_limits<unsigned int>::max()),
     thread_(this),
-    selectedVideoTrack_(std::numeric_limits<std::size_t>::max()),
-    selectedAudioTrack_(std::numeric_limits<std::size_t>::max()),
-    skipLoopFilter_(false),
-    skipNonReferenceFrames_(false),
-    enableClosedCaptions_(0),
-    timeIn_(-std::numeric_limits<double>::max()),
-    timeOut_(std::numeric_limits<double>::max()),
-    playbackEnabled_(false),
-    looping_(false),
-    mustStop_(true),
-    mustSeek_(false),
-    seekTime_(0.0),
     videoQueueSize_("video_queue_size"),
     audioQueueSize_("audio_queue_size")
   {
@@ -72,6 +60,34 @@ namespace yae
 
     audioQueueSize_.traits().setValueMin(1);
     audioQueueSize_.traits().setValue(kQueueSizeMedium);
+
+    init(demuxer);
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerReader::init
+  //
+  void
+  DemuxerReader::init(const TDemuxerInterfacePtr & demuxer_ptr)
+  {
+    demuxer_ = demuxer_ptr;
+    selectedVideoTrack_ = std::numeric_limits<std::size_t>::max();
+    selectedAudioTrack_ = std::numeric_limits<std::size_t>::max();
+    skipLoopFilter_ = false;
+    skipNonReferenceFrames_ = false;
+    enableClosedCaptions_ = 0;
+    timeIn_ = -std::numeric_limits<double>::max();
+    timeOut_ = std::numeric_limits<double>::max();
+    playbackEnabled_ = false;
+    looping_ = false;
+    mustStop_ = true;
+    mustSeek_ = false;
+    seekTime_ = 0.0;
+
+    if (!demuxer_)
+    {
+      return;
+    }
 
     // shortcut:
     const DemuxerSummary & summary = demuxer_->summary();
@@ -152,7 +168,7 @@ namespace yae
   DemuxerReader *
   DemuxerReader::create(const TDemuxerInterfacePtr & demuxer)
   {
-    return demuxer ? new DemuxerReader(demuxer) : NULL;
+    return new DemuxerReader(demuxer);
   }
 
   //----------------------------------------------------------------
@@ -222,8 +238,20 @@ namespace yae
   bool
   DemuxerReader::open(const char * resourcePathUTF8)
   {
-    YAE_ASSERT(false);
-    return false;
+    if (!al::ends_with(resourcePathUTF8, ".yaerx"))
+    {
+      return false;
+    }
+
+    TSerialDemuxerPtr serial_demuxer =
+      yae::load_yaerx(std::string(resourcePathUTF8));
+    if (!serial_demuxer)
+    {
+      return false;
+    }
+
+    init(serial_demuxer);
+    return !!demuxer_;
   }
 
   //----------------------------------------------------------------
@@ -1637,6 +1665,17 @@ namespace yae
 #if 0 // ndef NDEBUG
     av_log(NULL, AV_LOG_DEBUG, "DemuxerReader::thread_loop terminated");
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // make_yaerx_reader
+  //
+  DemuxerReaderPtr
+  make_yaerx_reader(const std::string & yaerx_path)
+  {
+    TSerialDemuxerPtr serial_demuxer = load_yaerx(yaerx_path);
+    DemuxerReaderPtr reader_ptr(DemuxerReader::create(serial_demuxer));
+    return reader_ptr;
   }
 
 }

@@ -237,6 +237,12 @@ namespace yae
   //
   typedef yae::shared_ptr<Recording> TRecordingPtr;
 
+  //----------------------------------------------------------------
+  // maybe_yaetv_recording
+  //
+  YAE_API TRecordingPtr
+  maybe_yaetv_recording(const std::string & resource_path_utf8);
+
 }
 
 

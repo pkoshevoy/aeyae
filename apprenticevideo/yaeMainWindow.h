@@ -66,7 +66,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    MainWindow(const IReaderPtr & readerPrototype);
+    MainWindow(const TReaderFactoryPtr & readerFactory);
     ~MainWindow();
 
     void initItemViews();

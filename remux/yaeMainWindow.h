@@ -19,6 +19,7 @@
 
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_remux.h"
 #include "yae/thread/yae_task_runner.h"
 
 // local includes:
@@ -27,7 +28,6 @@
 #endif
 #include "yaeCanvasWidget.h"
 #include "yaeDemuxerView.h"
-#include "yaeRemux.h"
 #include "yaeSpinnerView.h"
 
 // Qt uic generated files:

@@ -26,7 +26,7 @@
 #include <QString>
 
 // yae includes:
-#include "yae/video/yae_reader.h"
+#include "yae/video/yae_reader_factory.h"
 
 // local includes:
 #include "yaeImageProvider.h"
@@ -52,7 +52,7 @@ namespace yae
       { return id; }
     };
 
-    ThumbnailProvider(const IReaderPtr & readerPrototype,
+    ThumbnailProvider(const TReaderFactoryPtr & readerFactory,
 
                       const boost::shared_ptr<GetFilePath> & getFilePath =
                       boost::shared_ptr<GetFilePath>(new GetFilePath()),

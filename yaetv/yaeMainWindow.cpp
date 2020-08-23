@@ -41,6 +41,7 @@
 
 // aeyae:
 #include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_live_reader.h"
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_plugin_registry.h"
 #include "yae/video/yae_pixel_formats.h"
@@ -409,18 +410,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // LiveReaderFactory
+  //
+  struct LiveReaderFactory : ReaderFactory
+  {
+    // virtual:
+    IReaderPtr create(const std::string &) const
+    {
+      return IReaderPtr(LiveReader::create());
+    }
+  };
+
+
+  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const std::string & yaetv_dir,
-                         const std::string & recordings_dir,
-                         const IReaderPtr & reader_prototype):
+                         const std::string & recordings_dir):
     QMainWindow(NULL, 0),
     contextMenu_(NULL),
     shortcutExit_(NULL),
     preferencesDialog_(this),
     playerWidget_(NULL),
     playerWindow_(this),
-    readerPrototype_(reader_prototype),
+    readerFactory_(new LiveReaderFactory),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir),
     start_live_playback_(this)
@@ -569,7 +582,7 @@ namespace yae
   {
     // add image://thumbnails/... provider:
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
-      image_provider(new ThumbnailProvider(readerPrototype_));
+      image_provider(new ThumbnailProvider(readerFactory_));
     view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
 
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
@@ -731,7 +744,7 @@ namespace yae
     const Recording::Rec & rec = *rec_ptr;
     std::string path = rec.get_filepath(dvr_.basedir_.string());
 
-    IReaderPtr reader = yae::openFile(readerPrototype_,
+    IReaderPtr reader = yae::openFile(readerFactory_,
                                       QString::fromUtf8(path.c_str()));
     if (!reader)
     {

@@ -100,8 +100,7 @@ namespace yae
 
   public:
     MainWindow(const std::string & yaetv_dir,
-               const std::string & recordings_dir,
-               const IReaderPtr & reader_prototype);
+               const std::string & recordings_dir);
     ~MainWindow();
 
     void initItemViews();
@@ -160,7 +159,7 @@ namespace yae
     PlayerWindow playerWindow_;
 
     // file reader prototype factory instance:
-    IReaderPtr readerPrototype_;
+    TReaderFactoryPtr readerFactory_;
 
     // frame canvas:
     TCanvasWidget * canvas_;

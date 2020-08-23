@@ -13,6 +13,9 @@
 #include <list>
 #include <vector>
 
+// aeyae:
+#include "yae/video/yae_reader_factory.h"
+
 // yaeui:
 #include "yaePlayerWidget.h"
 
@@ -63,8 +66,8 @@ namespace yae
     // virtual:
     void initItemViews();
 
-    // specify a reader prototype for opening files:
-    void setReaderPrototype(const IReaderPtr & readerPrototype);
+    // specify a reader factory for opening files:
+    void setReaderFactory(const TReaderFactoryPtr & readerFactory);
 
     // specify a playlist of files to load:
     void setPlaylist(const std::list<QString> & playlist,
@@ -160,7 +163,7 @@ namespace yae
 
   protected:
     // file reader prototype factory instance:
-    IReaderPtr readerPrototype_;
+    TReaderFactoryPtr readerFactory_;
 
     // playlist stuff:
     TPlaylistModel playlistModel_;

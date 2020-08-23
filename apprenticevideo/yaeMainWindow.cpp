@@ -29,6 +29,7 @@
 
 // aeyae includes:
 #include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
 
 // local includes:
 #include "yaeMainWindow.h"
@@ -66,7 +67,7 @@ namespace yae
   //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
-  MainWindow::MainWindow(const IReaderPtr & readerPrototype):
+  MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
     QMainWindow(NULL, 0),
     playerWidget_(NULL)
   {
@@ -83,7 +84,7 @@ namespace yae
     canvasLayout->setSpacing(0);
 
     playerWidget_ = new MainWidget(this, NULL, Qt::Widget);
-    playerWidget_->setReaderPrototype(readerPrototype);
+    playerWidget_->setReaderFactory(readerFactory);
 
     playerWidget_->setFocusPolicy(Qt::StrongFocus);
     playerWidget_->setAcceptDrops(true);
@@ -93,8 +94,9 @@ namespace yae
 
     // setup the Open URL dialog:
     {
+      IReaderPtr ffmpeg_reader(ReaderFFMPEG::create());
       std::list<std::string> protocols;
-      readerPrototype->getUrlProtocols(protocols);
+      ffmpeg_reader->getUrlProtocols(protocols);
 
       QString supported = tr("Supported URL protocols include:\n");
       unsigned int column = 0;

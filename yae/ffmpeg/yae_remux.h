@@ -13,12 +13,11 @@
 #include <list>
 #include <string>
 
-// boost:
-#include <boost/filesystem/path.hpp>
-
 // aeyae:
+#include "yae/api/yae_api.h"
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/thread/yae_task_runner.h"
 
 
 namespace yae
@@ -27,7 +26,7 @@ namespace yae
   //----------------------------------------------------------------
   // ClipInfo
   //
-  struct ClipInfo
+  struct YAE_API ClipInfo
   {
     ClipInfo(const std::string & source = std::string(),
              const std::string & track = std::string(),
@@ -48,7 +47,7 @@ namespace yae
   //----------------------------------------------------------------
   // Clip
   //
-  struct Clip
+  struct YAE_API Clip
   {
     Clip(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
          const std::string & track = std::string(),
@@ -80,7 +79,7 @@ namespace yae
   //----------------------------------------------------------------
   // RemuxModel
   //
-  struct RemuxModel
+  struct YAE_API RemuxModel
   {
     TSerialDemuxerPtr make_serial_demuxer() const;
 
@@ -106,20 +105,80 @@ namespace yae
   //----------------------------------------------------------------
   // load
   //
-  TDemuxerInterfacePtr
+  YAE_API TDemuxerInterfacePtr
   load(const std::set<std::string> & sources,
        const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
        const double discont_tolerance = 0.017);
 
+
+  namespace rx
+  {
+
+    //----------------------------------------------------------------
+    // Loader
+    //
+    struct YAE_API Loader : yae::AsyncTaskQueue::Task
+    {
+
+      //----------------------------------------------------------------
+      // IProgressObserver
+      //
+      struct YAE_API IProgressObserver
+      {
+        virtual ~IProgressObserver() {}
+
+        virtual void began(const std::string & source) = 0;
+        virtual void loaded(const std::string & source,
+                            const TDemuxerInterfacePtr & demuxer,
+                            const TClipPtr & clip) = 0;
+        virtual void done() = 0;
+      };
+
+      //----------------------------------------------------------------
+      // TProgressObserverPtr
+      //
+      typedef yae::shared_ptr<IProgressObserver> TProgressObserverPtr;
+
+      //----------------------------------------------------------------
+      // Loader
+      //
+      Loader(const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
+             const std::set<std::string> & sources,
+             const std::list<ClipInfo> & src_clips,
+             const TProgressObserverPtr & observer = TProgressObserverPtr()):
+        demuxers_(demuxers),
+        sources_(sources),
+        src_clips_(src_clips),
+        observer_(observer)
+      {}
+
+      // virtual:
+      void run();
+
+    protected:
+      // helper, for loading a source on-demand:
+      TDemuxerInterfacePtr get_demuxer(const std::string & source);
+
+      // helpers:
+      void load_sources();
+      void load_source_clips();
+
+      std::map<std::string, TDemuxerInterfacePtr> demuxers_;
+      std::set<std::string> sources_;
+      std::list<ClipInfo> src_clips_;
+      TProgressObserverPtr observer_;
+    };
+
+  }
+
   //----------------------------------------------------------------
-  // demux
+  // load_yaerx
   //
-  void
-  demux(const TDemuxerInterfacePtr & demuxer,
-        const std::string & output_path = std::string(),
-        bool save_keyframes = false);
+  YAE_API TSerialDemuxerPtr
+  load_yaerx(const std::string & yaerx_path);
+
 }
 
 

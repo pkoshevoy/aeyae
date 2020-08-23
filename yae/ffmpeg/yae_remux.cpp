@@ -22,9 +22,7 @@
 // aeyae:
 #include "yae/api/yae_version.h"
 #include "yae/ffmpeg/yae_demuxer.h"
-
-// local:
-#include "yaeRemux.h"
+#include "yae/ffmpeg/yae_remux.h"
 
 // namespace shortcuts:
 namespace fs = boost::filesystem;
@@ -332,152 +330,266 @@ namespace yae
     return serial_demuxer;
   }
 
+
   //----------------------------------------------------------------
-  // demux
+  // rx::Loader::run
   //
   void
-  demux(const TDemuxerInterfacePtr & demuxer,
-        const std::string & output_path,
-        bool save_keyframes)
+  rx::Loader::run()
   {
-    const DemuxerSummary & summary = demuxer->summary();
-
-    std::map<int, TTime> prog_dts;
-    while (true)
+    try
     {
-      AVStream * stream = NULL;
-      TPacketPtr packet_ptr = demuxer->get(stream);
-      if (!packet_ptr)
+      if (src_clips_.empty())
       {
-        break;
-      }
-
-      // shortcuts:
-      AvPkt & pkt = *packet_ptr;
-      AVPacket & packet = pkt.get();
-
-      std::cout
-        << pkt.trackId_
-        << ", demuxer: " << std::setw(2) << pkt.demuxer_->demuxer_index()
-        << ", program: " << std::setw(3) << pkt.program_
-        << ", pos: " << std::setw(12) << std::setfill(' ') << packet.pos
-        << ", size: " << std::setw(6) << std::setfill(' ') << packet.size;
-
-      TTime dts;
-      if (get_dts(dts, stream, packet))
-      {
-        std::cout << ", dts: " << dts;
-
-        TTime prev_dts =
-          yae::get(prog_dts, pkt.program_,
-                   TTime(std::numeric_limits<int64_t>::min(), dts.base_));
-
-        // keep dts for reference:
-        prog_dts[pkt.program_] = dts;
-
-        if (dts < prev_dts)
-        {
-          av_log(NULL, AV_LOG_ERROR,
-                 "non-monotonically increasing DTS detected, "
-                 "program %03i, prev %s, curr %s\n",
-                 pkt.program_,
-                 prev_dts.to_hhmmss_frac(1000, ":", ".").c_str(),
-                 dts.to_hhmmss_frac(1000, ":", ".").c_str());
-
-          // the demuxer should always provide monotonically increasing DTS:
-          YAE_ASSERT(false);
-        }
+        this->load_sources();
       }
       else
       {
-        // the demuxer should always provide a DTS:
-        YAE_ASSERT(false);
+        this->load_source_clips();
+      }
+    }
+    catch (const std::exception & e)
+    {
+      yae_wlog("rx::Loader::run exception: %s", e.what());
+    }
+    catch (...)
+    {
+      yae_wlog("rx::Loader::run unknown exception");
+    }
+
+    if (observer_)
+    {
+      observer_->done();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // rx::Loader::get_demuxer
+  //
+  TDemuxerInterfacePtr
+  rx::Loader::get_demuxer(const std::string & source)
+  {
+    if (!yae::has(demuxers_, source))
+    {
+      if (observer_)
+      {
+        observer_->began(source);
       }
 
-      if (packet.pts != AV_NOPTS_VALUE)
+      std::list<TDemuxerPtr> demuxers;
+      if (!open_primary_and_aux_demuxers(source, demuxers))
       {
-        TTime pts(stream->time_base.num * packet.pts,
-                  stream->time_base.den);
-
-        std::cout << ", pts: " << pts;
+        // failed to open the primary resource:
+       yae_wlog("failed to open %s, skipping...",
+               source.c_str());
+        return TDemuxerInterfacePtr();
       }
 
-      if (packet.duration)
-      {
-        TTime dur(stream->time_base.num * packet.duration,
-                  stream->time_base.den);
+      TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
 
-        std::cout << ", dur: " << dur;
+      // these are expressed in seconds:
+      static const double buffer_duration = 1.0;
+      static const double discont_tolerance = 0.1;
+
+      // wrap each demuxer in a DemuxerBuffer, build a summary:
+      for (std::list<TDemuxerPtr>::const_iterator
+             i = demuxers.begin(); i != demuxers.end(); ++i)
+      {
+        const TDemuxerPtr & demuxer = *i;
+
+        TDemuxerInterfacePtr
+          buffer(new DemuxerBuffer(demuxer, buffer_duration));
+
+        buffer->update_summary(discont_tolerance);
+        parallel_demuxer->append(buffer);
       }
 
-      const AVMediaType codecType = stream->codecpar->codec_type;
+      // summarize the demuxer:
+      parallel_demuxer->update_summary(discont_tolerance);
 
-      int flags = packet.flags;
-      if (codecType != AVMEDIA_TYPE_VIDEO)
+      demuxers_[source] = parallel_demuxer;
+    }
+
+    return demuxers_[source];
+  }
+
+  //----------------------------------------------------------------
+  // rx::Loader::load_sources
+  //
+  void
+  rx::Loader::load_sources()
+  {
+    std::string track_id("v:000");
+
+    for (std::set<std::string>::const_iterator
+           i = sources_.begin(); i != sources_.end(); ++i)
+    {
+      try
       {
-        flags &= ~(AV_PKT_FLAG_KEY);
+        const std::string & source = *i;
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(source);
+        if (!demuxer)
+        {
+          continue;
+        }
+
+        // shortcut:
+        const DemuxerSummary & summary = demuxer->summary();
+        if (yae::has(summary.decoders_, track_id))
+        {
+          const Timeline::Track & track = summary.get_track_timeline(track_id);
+          Timespan keep(track.pts_.front(), track.pts_.back());
+          TClipPtr clip(new Clip(demuxer, track_id, keep));
+
+          if (observer_)
+          {
+            observer_->loaded(source, demuxer, clip);
+          }
+        }
       }
-
-      bool is_keyframe = false;
-      if (flags)
+      catch (const std::exception & e)
       {
-        std::cout << ", flags:";
-
-        if ((flags & AV_PKT_FLAG_KEY))
-        {
-          std::cout << " keyframe";
-          is_keyframe = true;
-        }
-
-        if ((flags & AV_PKT_FLAG_CORRUPT))
-        {
-          std::cout << " corrupt";
-        }
-
-        if ((flags & AV_PKT_FLAG_DISCARD))
-        {
-          std::cout << " discard";
-        }
-
-        if ((flags & AV_PKT_FLAG_TRUSTED))
-        {
-          std::cout << " trusted";
-        }
-
-        if ((flags & AV_PKT_FLAG_DISPOSABLE))
-        {
-          std::cout << " disposable";
-        }
+       yae_wlog("rx::Loader::load_sources exception: %s", e.what());
       }
-
-      for (int j = 0; j < packet.side_data_elems; j++)
+      catch (...)
       {
-        std::cout
-          << ", side_data[" << j << "] = { type: "
-          << packet.side_data[j].type << ", size: "
-          << packet.side_data[j].size << " }";
-      }
-
-      std::cout << std::endl;
-
-      if (is_keyframe && save_keyframes)
-      {
-        fs::path folder = (fs::path(output_path) /
-                           boost::replace_all_copy(pkt.trackId_, ":", "."));
-        fs::create_directories(folder);
-
-        std::string fn = (dts.to_hhmmss_frac(1000, "", ".") + ".png");
-        std::string path((folder / fn).string());
-
-        TrackPtr track_ptr = yae::get(summary.decoders_, pkt.trackId_);
-        VideoTrackPtr decoder_ptr =
-          boost::dynamic_pointer_cast<VideoTrack, Track>(track_ptr);
-
-        if (!save_keyframe(path, decoder_ptr, packet_ptr, 0, 0, 0.0, 1.0))
-        {
-          break;
-        }
+       yae_wlog("rx::Loader::load_sources unknown exception");
       }
     }
   }
+
+  //----------------------------------------------------------------
+  // rx::Loader::load_source_clips
+  //
+  void
+  rx::Loader::load_source_clips()
+  {
+    for (std::list<ClipInfo>::const_iterator
+           i = src_clips_.begin(); i != src_clips_.end(); ++i)
+    {
+      try
+      {
+        const ClipInfo & trim = *i;
+
+        std::string track_id =
+          trim.track_.empty() ? std::string("v:000") : trim.track_;
+
+        if (!al::starts_with(track_id, "v:"))
+        {
+          // not a video track:
+          continue;
+        }
+
+        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
+        if (!demuxer)
+        {
+          // failed to demux:
+          continue;
+        }
+
+        const DemuxerSummary & summary = demuxer->summary();
+        if (!yae::has(summary.decoders_, track_id))
+        {
+          // no such track:
+          continue;
+        }
+
+        const Timeline::Track & track = summary.get_track_timeline(track_id);
+        Timespan keep(track.pts_.front(), track.pts_.back());
+
+        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
+        double fps = fe.best_guess();
+
+        if (!trim.t0_.empty() &&
+            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+        {
+         yae_elog("failed to parse %s", trim.t0_.c_str());
+        }
+
+        if (!trim.t1_.empty() &&
+            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+        {
+         yae_elog("failed to parse %s", trim.t1_.c_str());
+        }
+
+        if (observer_)
+        {
+          TClipPtr clip(new Clip(demuxer, track_id, keep));
+          observer_->loaded(trim.source_, demuxer, clip);
+        }
+      }
+      catch (const std::exception & e)
+      {
+       yae_wlog("rx::Loader::load_source_clips exception: %s", e.what());
+      }
+      catch (...)
+      {
+       yae_wlog("rx::Loader::load_source_clips unknown exception");
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // ProgressObserver
+  //
+  struct ProgressObserver : rx::Loader::IProgressObserver
+  {
+    ProgressObserver(RemuxModel & model):
+      model_(model)
+    {}
+
+    // virtual:
+    void began(const std::string & source)
+    {
+      (void)source;
+    }
+
+    // virtual:
+    void loaded(const std::string & source,
+                const TDemuxerInterfacePtr & demuxer,
+                const TClipPtr & clip)
+    {
+      model_.sources_.push_back(source);
+      model_.demuxer_[source] = demuxer;
+      model_.source_[demuxer] = source;
+      model_.clips_.push_back(clip);
+    }
+
+    // virtual:
+    void done()
+    {}
+
+    RemuxModel & model_;
+  };
+
+  //----------------------------------------------------------------
+  // load_yaerx
+  //
+  TSerialDemuxerPtr
+  load_yaerx(const std::string & filename)
+  {
+    std::string json_str = TOpenFile(filename.c_str(), "rb").read();
+
+    std::set<std::string> sources;
+    std::list<ClipInfo> src_clips;
+    if (!RemuxModel::parse_json_str(json_str, sources, src_clips))
+    {
+      return TSerialDemuxerPtr();
+    }
+
+    RemuxModel model;
+    {
+      rx::Loader::TProgressObserverPtr observer(new ProgressObserver(model));
+      rx::Loader loader(model.demuxer_,
+                        sources,
+                        src_clips,
+                        observer);
+      loader.run();
+    }
+
+    TSerialDemuxerPtr serial_demuxer = model.make_serial_demuxer();
+    return serial_demuxer;
+  }
+
 }

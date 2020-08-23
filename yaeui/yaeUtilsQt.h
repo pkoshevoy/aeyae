@@ -17,6 +17,7 @@
 
 // yae includes:
 #include "yae/utils/yae_utils.h"
+#include "yae/video/yae_reader_factory.h"
 #include "yae/video/yae_reader.h"
 
 // yaeui:
@@ -172,14 +173,14 @@ namespace yae
   // openFile
   //
   YAEUI_API IReaderPtr
-  openFile(const yae::IReaderPtr & readerPrototype,
+  openFile(const yae::TReaderFactoryPtr & readerFactory,
            const QString & fn);
 
   //----------------------------------------------------------------
   // testEachFile
   //
   YAEUI_API bool
-  testEachFile(const yae::IReaderPtr & readerPrototype,
+  testEachFile(const yae::TReaderFactoryPtr & readerPrototype,
                const std::list<QString> & playlist);
 
   //----------------------------------------------------------------
