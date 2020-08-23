@@ -10,12 +10,7 @@
 #define YAE_LIVE_READER_H_
 
 // standard:
-#include <vector>
-
-// boost:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#endif
+#include <list>
 
 // aeyae:
 #include "yae/api/yae_api.h"
@@ -28,7 +23,7 @@ namespace yae
   //----------------------------------------------------------------
   // LiveReader
   //
-  struct LiveReader : public IReader
+  struct YAE_API LiveReader : public IReader
   {
   private:
     //! intentionally disabled:

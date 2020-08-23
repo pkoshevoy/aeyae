@@ -41,6 +41,7 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_live_reader.h"
 
 // yaeui:
 #include "yaeUtilsQt.h"
@@ -49,7 +50,6 @@
 #include "yaeMainWindow.h"
 #include "yae_dvr.h"
 #include "yae_hdhomerun.h"
-#include "yae_live_reader.h"
 #include "yae_signal_handler.h"
 
 // namespace shortcuts:

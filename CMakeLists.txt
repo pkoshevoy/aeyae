@@ -218,6 +218,8 @@ add_library(${PROGNAME} SHARED
   yae/ffmpeg/yae_ffmpeg_utils.h
   yae/ffmpeg/yae_ffmpeg_video_filter_graph.cpp
   yae/ffmpeg/yae_ffmpeg_video_filter_graph.h
+  yae/ffmpeg/yae_live_reader.cpp
+  yae/ffmpeg/yae_live_reader.h
   yae/ffmpeg/yae_movie.cpp
   yae/ffmpeg/yae_movie.h
   yae/ffmpeg/yae_reader_ffmpeg.cpp
@@ -264,12 +266,15 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_audio_renderer_input.h
   yae/video/yae_auto_crop.cpp
   yae/video/yae_auto_crop.h
+  yae/video/yae_istream.h
   yae/video/yae_mpeg_ts.cpp
   yae/video/yae_mpeg_ts.h
   yae/video/yae_pixel_format_traits.cpp
   yae/video/yae_pixel_format_traits.h
   yae/video/yae_pixel_formats.h
   yae/video/yae_reader.h
+  yae/video/yae_recording.cpp
+  yae/video/yae_recording.h
   yae/video/yae_synchronous.cpp
   yae/video/yae_synchronous.h
   yae/video/yae_video.cpp

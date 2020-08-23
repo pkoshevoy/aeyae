@@ -96,13 +96,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // IStream::~IStream
-  //
-  IStream::~IStream()
-  {}
-
-
-  //----------------------------------------------------------------
   // TunerDevice::~TunerDevice
   //
   TunerDevice::~TunerDevice()

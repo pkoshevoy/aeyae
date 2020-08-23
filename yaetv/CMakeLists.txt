@@ -104,8 +104,6 @@ set(project_sources
   yae_dvr.h
   yae_hdhomerun.cpp
   yae_hdhomerun.h
-  yae_live_reader.cpp
-  yae_live_reader.h
   yae_signal_handler.cpp
   yae_signal_handler.h
 

@@ -45,7 +45,7 @@
 #endif
 
 // yae includes:
-#include "yae/ffmpeg/yae_reader_ffmpeg.h"
+#include "yae/ffmpeg/yae_live_reader.h"
 #include "yae/utils/yae_utils.h"
 
 // local includes:
@@ -239,7 +239,7 @@ mainMayThrowException(int argc, char ** argv)
   //----------------------------------------------------------------
   // readerPrototype
   //
-  yae::IReaderPtr readerPrototype(yae::ReaderFFMPEG::create());
+  yae::IReaderPtr readerPrototype(yae::LiveReader::create());
 
   if (canary)
   {

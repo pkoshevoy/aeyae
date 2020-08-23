@@ -17,16 +17,14 @@
 
 // aeyae:
 #include "yae/api/yae_settings.h"
+#include "yae/ffmpeg/yae_live_reader.h"
 #include "yae/ffmpeg/yae_movie.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_reader.h"
+#include "yae/video/yae_recording.h"
 #include "yae/video/yae_video.h"
-
-// local:
-#include "yae_dvr.h"
-#include "yae_live_reader.h"
 
 
 //----------------------------------------------------------------

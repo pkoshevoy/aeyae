@@ -14,6 +14,7 @@
 
 // aeyae:
 #include "yae/utils/yae_time.h"
+#include "yae/video/yae_istream.h"
 #include "yae/video/yae_mpeg_ts.h"
 
 
@@ -53,24 +54,6 @@ namespace yae
     { return !stop_; }
 
     bool stop_;
-  };
-
-
-  //----------------------------------------------------------------
-  // IStream
-  //
-  struct IStream
-  {
-    virtual ~IStream();
-    virtual void close() = 0;
-    virtual bool is_open() const = 0;
-
-    // return value will be interpreted as follows:
-    //
-    //  true  -- keep going
-    //  false -- stop
-    //
-    virtual bool push(const void * data, std::size_t size) = 0;
   };
 
 
