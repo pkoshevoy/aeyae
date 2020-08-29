@@ -429,14 +429,12 @@ namespace yae
 
     if (channel_ && (date_ ||
                      weekday_mask ||
-                     match_timespan ||
-                     match_title ||
-                     match_description))
+                     match_timespan))
     {
       return true;
     }
 
-    return false;
+    return (match_title || match_description);
   }
 
   //----------------------------------------------------------------
