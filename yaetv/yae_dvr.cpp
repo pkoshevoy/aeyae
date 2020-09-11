@@ -1783,7 +1783,7 @@ namespace yae
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
-    storage_cleanup_period_(321, 1),
+    storage_cleanup_period_(31, 1),
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));

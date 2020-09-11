@@ -545,8 +545,8 @@ namespace yae
 
     // the available size is f_bsize * f_bavail
     filesystem_bytes = stat.f_frsize * stat.f_blocks;
-    filesystem_bytes_free = stat.f_bsize * stat.f_bfree;
-    available_bytes = stat.f_bsize * stat.f_bavail;
+    filesystem_bytes_free = stat.f_frsize * stat.f_bfree;
+    available_bytes = stat.f_frsize * stat.f_bavail;
 #endif
 
     return true;
