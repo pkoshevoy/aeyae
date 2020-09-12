@@ -1783,7 +1783,7 @@ namespace yae
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
-    storage_cleanup_period_(31, 1),
+    storage_cleanup_period_(300, 1),
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
@@ -3512,6 +3512,15 @@ namespace yae
       yae_elog("failed to query available disk space for %s", path.c_str());
       return false;
     }
+
+    yae_ilog("checking storage for %s: "
+             "%" PRIu64 " GB total, "
+             "%" PRIu64 " GB free, "
+             "%" PRIu64 " GB available",
+             path.c_str(),
+             filesystem_bytes / 1000000000,
+             filesystem_bytes_free / 1000000000,
+             available_bytes / 1000000000);
 
     if (required_bytes < available_bytes)
     {
