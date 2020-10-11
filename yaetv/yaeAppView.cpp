@@ -3897,7 +3897,13 @@ namespace yae
       {
         yae::shared_ptr<Item> row_ptr = i->second;
         YAE_ASSERT(body.remove(row_ptr));
+
+        yae::shared_ptr<Layout> layout_ptr = pl_layout_[name];
         pl_layout_.erase(name);
+
+        // must remove the playlist layout item from mainview to avoid
+        // a dangling reference to Layout::index_ in ListItemTop:
+        YAE_ASSERT(mainview_->remove(layout_ptr->item_));
 
         if (view.sidebar_sel_ == name)
         {
