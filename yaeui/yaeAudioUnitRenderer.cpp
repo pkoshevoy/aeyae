@@ -10,6 +10,12 @@
 #include <iostream>
 #include <stdexcept>
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
+#include <boost/thread.hpp>
+#endif
+
 // aeyae:
 #include "yae/video/yae_audio_renderer_input.h"
 
@@ -49,17 +55,19 @@ namespace yae
 
   public:
     // protect against concurrent access:
-    mutable boost::mutex mutex_;
+    mutable boost::timed_mutex mutex_;
 
     // audio source:
     AudioRendererInput input_;
+    boost::atomic<bool> stop_;
   };
 
   //----------------------------------------------------------------
   // AudioUnitRenderer::TPrivate::TPrivate
   //
   AudioUnitRenderer::TPrivate::TPrivate(SharedClock & sharedClock):
-    input_(sharedClock)
+    input_(sharedClock),
+    stop_(true)
   {
     yae_au_ctx_ = yae_au_ctx_create(this, &pull_cb, &stop_cb);
   }
@@ -97,7 +105,7 @@ namespace yae
   {
     stop();
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    boost::unique_lock<boost::timed_mutex> lock(mutex_);
 #ifndef NDEBUG
     yae_debug << "AudioUnitRenderer::TPrivate::open " << reader;
 #endif
@@ -117,10 +125,12 @@ namespace yae
       {
         // FIXME: is this a safe assumption?
         input_.outputLatency_ = 16e-3;
+        stop_ = false;
         return true;
       }
     }
 
+    stop_ = true;
     return false;
   }
 
@@ -133,9 +143,16 @@ namespace yae
 #ifndef NDEBUG
     yae_debug << "AudioUnitRenderer::TPrivate::stop";
 #endif
+
+    if (stop_)
+    {
+      return;
+    }
+
+    stop_ = true;
     input_.stop();
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    boost::unique_lock<boost::timed_mutex> lock(mutex_);
     yae_au_ctx_stop(yae_au_ctx_);
   }
 
@@ -161,7 +178,19 @@ namespace yae
     TPrivate * renderer = (TPrivate *)context;
     try
     {
-      boost::unique_lock<boost::mutex> lock(renderer->mutex_);
+      boost::unique_lock<boost::timed_mutex> lock(renderer->mutex_,
+                                                  boost::defer_lock);
+
+      while (!lock.timed_lock(boost::posix_time::milliseconds(50)))
+      {
+        if (renderer->stop_)
+        {
+          return false;
+        }
+
+        boost::this_thread::yield();
+      }
+
       renderer->input_.getData(data,
                                samples_to_read,
                                channel_count,
