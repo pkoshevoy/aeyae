@@ -890,7 +890,7 @@ namespace yae
 
         TTime now = TTime::now();
         double time_since_last_status = (now - time_of_last_status).sec();
-        if (time_since_last_status > 1.0)
+        if (time_since_last_status > 5.0)
         {
           int ret = hdhomerun_device_get_tuner_status(hd,
                                                       &status_str,
@@ -931,7 +931,7 @@ namespace yae
         if (!buffer)
         {
           double time_since_last_packet = (now - time_of_last_packet).sec();
-          if (time_since_last_packet > 1.0)
+          if (time_since_last_packet > 5.0)
           {
             yae_elog("%p %s %sHz: no data received within %f sec, "
                      "giving up now",

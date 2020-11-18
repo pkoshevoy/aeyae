@@ -2185,9 +2185,17 @@ namespace yae
                             tuner_channel.frequency_,
                             tuner_status))
     {
-      yae_ilog("%s channel scan failed to tune to %u",
+      yae_ilog("%s channel scan failed to tune to %u, "
+               "signal present: %s, "
+               "signal strength: %u, "
+               "signal to noise quality: %u, "
+               "signal error quality: %u",
                session_ptr->device_name().c_str(),
-               tuner_channel.frequency_);
+               tuner_channel.frequency_,
+               tuner_status.signal_present_ ? "yes" : "no",
+               tuner_status.signal_strength_,
+               tuner_status.symbol_error_quality_,
+               tuner_status.signal_to_noise_quality_);
       return true;
     }
 
