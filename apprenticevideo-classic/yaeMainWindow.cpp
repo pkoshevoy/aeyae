@@ -2701,8 +2701,12 @@ namespace yae
     PlaylistItem * item = playlistWidget_->lookup(index);
     if (!item)
     {
+      // prevent Canvas from rendering any pending frames from previous reader:
+      ++readerId_;
+      canvas_->acceptFramesWithReaderId(readerId_);
       canvas_->clear();
       canvas_->setGreeting(canvas_->greeting());
+
       actionPlay->setEnabled(false);
       fixupNextPrev();
     }
