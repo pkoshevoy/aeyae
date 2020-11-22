@@ -1,0 +1,1049 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>yaeMainWindow</class>
+ <widget class="QMainWindow" name="yaeMainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Apprentice Video Classic</string>
+  </property>
+  <property name="windowIcon">
+   <iconset resource="apprenticevideo-classic.qrc">
+    <normaloff>:/images/apprenticevideo-classic.png</normaloff>:/images/apprenticevideo-classic.png</iconset>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QWidget" name="canvasContainer_" native="true">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="timelineWidgets_" native="true">
+      <layout class="QGridLayout" name="gridLayout">
+       <property name="margin">
+        <number>0</number>
+       </property>
+       <property name="spacing">
+        <number>0</number>
+       </property>
+       <item row="1" column="0">
+        <widget class="QWidget" name="playheadContainer_" native="true">
+         <layout class="QVBoxLayout" name="verticalLayout_5">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>8</number>
+          </property>
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="rightMargin">
+           <number>4</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLineEdit" name="lineEditPlayhead_">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::ClickFocus</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="1" column="1">
+        <widget class="yae::TimelineControls" name="timelineControls_" native="true">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
+       </item>
+       <item row="1" column="2">
+        <widget class="QWidget" name="durationContainer_" native="true">
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>4</number>
+          </property>
+          <property name="topMargin">
+           <number>3</number>
+          </property>
+          <property name="rightMargin">
+           <number>8</number>
+          </property>
+          <property name="bottomMargin">
+           <number>4</number>
+          </property>
+          <item>
+           <widget class="QLineEdit" name="lineEditDuration_">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="focusPolicy">
+             <enum>Qt::NoFocus</enum>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+            </property>
+            <property name="readOnly">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0" colspan="3">
+        <widget class="QWidget" name="timelineSeparator_" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>1</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>1</height>
+          </size>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>21</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuFile">
+    <property name="title">
+     <string>&amp;File</string>
+    </property>
+    <addaction name="actionOpen"/>
+    <addaction name="actionOpenURL"/>
+    <addaction name="actionOpenFolder"/>
+    <addaction name="separator"/>
+    <addaction name="actionExit"/>
+   </widget>
+   <widget class="QMenu" name="menuPlayback">
+    <property name="title">
+     <string>&amp;Playback</string>
+    </property>
+    <widget class="QMenu" name="menuPlaybackSpeed">
+     <property name="title">
+      <string>Playback Speed</string>
+     </property>
+     <addaction name="actionTempo50"/>
+     <addaction name="actionTempo60"/>
+     <addaction name="actionTempo70"/>
+     <addaction name="actionTempo80"/>
+     <addaction name="actionTempo90"/>
+     <addaction name="actionTempo100"/>
+     <addaction name="actionTempo111"/>
+     <addaction name="actionTempo125"/>
+     <addaction name="actionTempo143"/>
+     <addaction name="actionTempo167"/>
+     <addaction name="actionTempo200"/>
+    </widget>
+    <addaction name="actionPlay"/>
+    <addaction name="separator"/>
+    <addaction name="actionPrev"/>
+    <addaction name="actionNext"/>
+    <addaction name="actionShowPlaylist"/>
+    <addaction name="actionRepeatPlaylist"/>
+    <addaction name="separator"/>
+    <addaction name="actionLoop"/>
+    <addaction name="actionSetInPoint"/>
+    <addaction name="actionSetOutPoint"/>
+    <addaction name="actionShowTimeline"/>
+    <addaction name="separator"/>
+    <addaction name="actionShrinkWrap"/>
+    <addaction name="actionFullScreen"/>
+    <addaction name="actionFillScreen"/>
+    <addaction name="separator"/>
+    <addaction name="menuPlaybackSpeed"/>
+   </widget>
+   <widget class="QMenu" name="menuAudio">
+    <property name="title">
+     <string>&amp;Audio</string>
+    </property>
+    <widget class="QMenu" name="menuAudioDevice">
+     <property name="title">
+      <string>Output Device</string>
+     </property>
+    </widget>
+    <addaction name="menuAudioDevice"/>
+    <addaction name="actionDownmixToStereo"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuVideo">
+    <property name="title">
+     <string>&amp;Video</string>
+    </property>
+    <widget class="QMenu" name="menuWindowSize">
+     <property name="title">
+      <string>Window Size</string>
+     </property>
+     <addaction name="actionHalfSize"/>
+     <addaction name="actionFullSize"/>
+     <addaction name="actionDoubleSize"/>
+    </widget>
+    <widget class="QMenu" name="menuCropFrame">
+     <property name="title">
+      <string>Crop Frame</string>
+     </property>
+     <addaction name="actionCropFrameNone"/>
+     <addaction name="actionCropFrame1_33"/>
+     <addaction name="actionCropFrame1_60"/>
+     <addaction name="actionCropFrame1_78"/>
+     <addaction name="actionCropFrame1_85"/>
+     <addaction name="actionCropFrame2_35"/>
+     <addaction name="actionCropFrame2_40"/>
+     <addaction name="actionCropFrameAutoDetect"/>
+    </widget>
+    <widget class="QMenu" name="menuAspectRatio">
+     <property name="title">
+      <string>Aspect Ratio</string>
+     </property>
+     <addaction name="actionAspectRatioAuto"/>
+     <addaction name="actionAspectRatio1_33"/>
+     <addaction name="actionAspectRatio1_60"/>
+     <addaction name="actionAspectRatio1_78"/>
+     <addaction name="actionAspectRatio1_85"/>
+     <addaction name="actionAspectRatio2_35"/>
+     <addaction name="actionAspectRatio2_40"/>
+     <addaction name="actionAspectRatioOther"/>
+    </widget>
+    <addaction name="menuCropFrame"/>
+    <addaction name="menuAspectRatio"/>
+    <addaction name="menuWindowSize"/>
+    <addaction name="separator"/>
+    <addaction name="actionVerticalScaling"/>
+    <addaction name="actionDeinterlace"/>
+    <addaction name="actionSkipColorConverter"/>
+    <addaction name="actionSkipLoopFilter"/>
+    <addaction name="actionSkipNonReferenceFrames"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>&amp;Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
+   <widget class="QMenu" name="menuSubs">
+    <property name="title">
+     <string>&amp;Subtitles</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menuChapters">
+    <property name="title">
+     <string>Chap&amp;ters</string>
+    </property>
+    <addaction name="actionNextChapter"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="menuBookmarks">
+    <property name="title">
+     <string>&amp;Bookmarks</string>
+    </property>
+    <addaction name="actionAutomaticBookmarks"/>
+    <addaction name="actionResumeFromBookmark"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemoveBookmarkNowPlaying"/>
+    <addaction name="actionRemoveBookmarks"/>
+   </widget>
+   <addaction name="menuFile"/>
+   <addaction name="menuBookmarks"/>
+   <addaction name="menuPlayback"/>
+   <addaction name="menuAudio"/>
+   <addaction name="menuVideo"/>
+   <addaction name="menuSubs"/>
+   <addaction name="menuChapters"/>
+   <addaction name="menuHelp"/>
+  </widget>
+  <widget class="QDockWidget" name="playlistDock_">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="acceptDrops">
+    <bool>true</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFeatureMask</set>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::AllDockWidgetAreas</set>
+   </property>
+   <property name="windowTitle">
+    <string>Playlist</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="playlistContainer_">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="margin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QWidget" name="playlistFilterContainer_" native="true">
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <property name="margin">
+         <number>4</number>
+        </property>
+        <item>
+         <widget class="yae::LineEdit" name="playlistFilter_">
+          <property name="minimumSize">
+           <size>
+            <width>0</width>
+            <height>22</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>16777215</width>
+            <height>22</height>
+           </size>
+          </property>
+          <property name="focusPolicy">
+           <enum>Qt::StrongFocus</enum>
+          </property>
+          <property name="toolTip">
+           <string>Search the playlist for keywords and show only those items which match</string>
+          </property>
+          <property name="styleSheet">
+           <string notr="true">QLineEdit	{
+	background-image: url(:/images/search.png);
+	background-repeat:no-repeat;
+	background-position: center left;
+	padding-left: 19px;
+}
+
+QLineEdit QToolButton#clear_ {
+    margin: 1px;
+	border: 0px;
+	border-radius: 3px;
+	background-color: #b9b9b9;
+	color: #ffffff;
+}
+
+QLineEdit QToolButton#clear_:pressed {
+    background-color: #878787;
+}
+</string>
+          </property>
+          <property name="placeholderText">
+           <string>Search And Filter</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="yae::PlaylistWidget" name="playlistWidget_">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="minimumSize">
+        <size>
+         <width>250</width>
+         <height>0</height>
+        </size>
+       </property>
+       <property name="focusPolicy">
+        <enum>Qt::StrongFocus</enum>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">#playlistWidget_ {
+    margin: 0px;
+    padding: 0px;
+    background-color: #f0f0f0;
+    border: 0px solid #1d1d1d;
+    border-width: 0px 0px 0px 0px;
+}
+</string>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Raised</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <action name="actionOpen">
+   <property name="text">
+    <string>&amp;Open</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionExit">
+   <property name="text">
+    <string>&amp;Quit</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Q</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSkipColorConverter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Skip Color Converter</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_78">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:9</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Shift+6</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_33">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4:3</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Shift+4</string>
+   </property>
+  </action>
+  <action name="actionAspectRatioAuto">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Automatic</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Shift+X</string>
+   </property>
+  </action>
+  <action name="actionFullScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Full Screen (letterbox)</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+F</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio2_40">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.40</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio2_35">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.35</string>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_85">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.85</string>
+   </property>
+  </action>
+  <action name="actionShrinkWrap">
+   <property name="text">
+    <string>Shrink &amp;Wrap</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_78">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:9</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+6</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionCropFrame1_33">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>4:3</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+4</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionCropFrame1_85">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>1.85</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+8</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionCropFrame2_40">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.40</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+2</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionCropFrame2_35">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>2.35</string>
+   </property>
+  </action>
+  <action name="actionCropFrameNone">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>None</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+X</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionShowTimeline">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show &amp;Timeline</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionPlay">
+   <property name="text">
+    <string>Play</string>
+   </property>
+   <property name="shortcut">
+    <string>Space</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionNext">
+   <property name="text">
+    <string>Skip</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Right</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionPrev">
+   <property name="text">
+    <string>Go Back</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+Left</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionLoop">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Loop</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+L</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionVerticalScaling">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Allow Vertical Upscaling</string>
+   </property>
+  </action>
+  <action name="actionOpenURL">
+   <property name="text">
+    <string>Open &amp;URL</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+U</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionOpenFolder">
+   <property name="text">
+    <string>Open Fol&amp;der</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Alt+O</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionShowPlaylist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show &amp;Playlist</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+P</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSkipLoopFilter">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Skip Loop Filter</string>
+   </property>
+  </action>
+  <action name="actionSkipNonReferenceFrames">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Skip Non-Reference Frames</string>
+   </property>
+  </action>
+  <action name="actionTempo50">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>50%</string>
+   </property>
+  </action>
+  <action name="actionTempo60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>60%</string>
+   </property>
+  </action>
+  <action name="actionTempo70">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>70%</string>
+   </property>
+  </action>
+  <action name="actionTempo80">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>80%</string>
+   </property>
+  </action>
+  <action name="actionTempo90">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>90%</string>
+   </property>
+  </action>
+  <action name="actionTempo100">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>100%</string>
+   </property>
+  </action>
+  <action name="actionTempo111">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>111%</string>
+   </property>
+  </action>
+  <action name="actionTempo125">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>125%</string>
+   </property>
+  </action>
+  <action name="actionTempo143">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>143%</string>
+   </property>
+  </action>
+  <action name="actionTempo167">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>167%</string>
+   </property>
+  </action>
+  <action name="actionTempo200">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>200%</string>
+   </property>
+  </action>
+  <action name="actionDeinterlace">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Deinterlace</string>
+   </property>
+  </action>
+  <action name="actionHalfSize">
+   <property name="text">
+    <string>Half Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+0</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionFullSize">
+   <property name="text">
+    <string>Full Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+1</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDoubleSize">
+   <property name="text">
+    <string>Double Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+2</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionSetInPoint">
+   <property name="text">
+    <string>Set &amp;In Point</string>
+   </property>
+   <property name="shortcut">
+    <string>I</string>
+   </property>
+  </action>
+  <action name="actionSetOutPoint">
+   <property name="text">
+    <string>Set &amp;Out Point</string>
+   </property>
+   <property name="shortcut">
+    <string>O</string>
+   </property>
+  </action>
+  <action name="actionCropFrameAutoDetect">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto Crop</string>
+   </property>
+   <property name="shortcut">
+    <string>Alt+C</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionAspectRatio1_60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:10</string>
+   </property>
+  </action>
+  <action name="actionCropFrame1_60">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>16:10</string>
+   </property>
+  </action>
+  <action name="actionAspectRatioOther">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Other</string>
+   </property>
+   <property name="toolTip">
+    <string>Specify custom frame aspect ratio</string>
+   </property>
+  </action>
+  <action name="actionAutomaticBookmarks">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Create Playlist Bookmarks Automatically</string>
+   </property>
+   <property name="toolTip">
+    <string>Automatically create and update bookmarks during playback, or whenever playback is paused</string>
+   </property>
+  </action>
+  <action name="actionRemoveBookmarks">
+   <property name="text">
+    <string>Remove All Bookmarks</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove all bookmarks currently present in the Bookmarks menu</string>
+   </property>
+  </action>
+  <action name="actionResumeFromBookmark">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Resume Playback From Bookmark</string>
+   </property>
+  </action>
+  <action name="actionFillScreen">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>F&amp;ull Screen</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+G</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionNextChapter">
+   <property name="text">
+    <string>Skip To &amp;Next Chapter</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDownmixToStereo">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Mix Down To Stereo</string>
+   </property>
+  </action>
+  <action name="actionRemoveBookmarkNowPlaying">
+   <property name="text">
+    <string>Remove Selected Bookmark</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove bookmark for the playlist item playing now</string>
+   </property>
+  </action>
+  <action name="actionRepeatPlaylist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Repeat Playlist</string>
+   </property>
+   <property name="toolTip">
+    <string>Repeat playlist from the beginning once the last playlist item completes playback</string>
+   </property>
+  </action>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>yae::PlaylistWidget</class>
+   <extends>QFrame</extends>
+   <header>yaePlaylistWidget.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>yae::LineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>yaeLineEdit.h</header>
+  </customwidget>
+  <customwidget>
+   <class>yae::TimelineControls</class>
+   <extends>QWidget</extends>
+   <header>yaeTimelineControls.h</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
+ <tabstops>
+  <tabstop>playlistWidget_</tabstop>
+  <tabstop>playlistFilter_</tabstop>
+ </tabstops>
+ <resources>
+  <include location="apprenticevideo-classic.qrc"/>
+ </resources>
+ <connections/>
+</ui>

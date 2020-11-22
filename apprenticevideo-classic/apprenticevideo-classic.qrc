@@ -1,0 +1,13 @@
+<RCC>
+  <qresource>
+    <file>images/apprenticevideo-about.png</file>
+    <file>images/apprenticevideo-classic.png</file>
+    <file>images/timeIn.png</file>
+    <file>images/timeOut.png</file>
+    <file>images/playHead.png</file>
+    <file>images/search.png</file>
+    <file>images/clear.png</file>
+    <file>images/clear-dark.png</file>
+    <file>yaeAbout.html</file>
+  </qresource>
+</RCC>
