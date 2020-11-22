@@ -3,7 +3,11 @@
 <head>
 <meta http-equiv="Content-type" content="text/html;charset=UTF-8" />
 <style type="text/css">
-p.indent1 { margin-left: 1em; }
+  p.indent1 { margin-left: 1em; }
+  * {
+  background-color: white;
+  color: black;
+  }
 </style>
 </head>
 <body>
@@ -16,7 +20,7 @@ written by Pavel Koshevoy
 </div>
 
 <h3>Acknowledgments</h3>
-<p class="indent1"><a href="https://sourceforge.net/projects/apprenticevideo/">Apprentice Video</a> is an open source video player.  It relies heavily on the excellent <a href="http://www.ffmpeg.org">FFmpeg</a> <a href="http://www.ffmpeg.org/doxygen/trunk/classes.html">APIs</a>.  Windows builds are possible thanks to <a href="http://ffmpeg.zeranoe.com/builds/">Zeranoe</a>.  Audio rendering is implemented via <a href="http://www.portaudio.com/">PortAudio</a>.  Video rendering is done with OpenGL and <a href="http://qt-project.org">Qt4</a>.  ASS/SSA subtitle rendering is implemented via <a href="http://code.google.com/p/libass/">libass</a>.  Apple Remote Control support is thanks to <a href="http://www.martinkahr.com/2007/07/26/remote-control-wrapper-20/index.html">Martin Kahr</a>.  Windows installer is built using <a href="http://wix.sourceforge.net/">WiX</a> 3.5.  Cross platform build configuration is put together using <a href="http://www.cmake.org/">CMake</a>. </p>
+<p class="indent1"><a href="https://github.com/pkoshevoy/aeyae">Apprentice Video Classic</a> is a video player.  It relies heavily on the excellent <a href="http://www.ffmpeg.org">FFmpeg</a> <a href="http://www.ffmpeg.org/doxygen/trunk/classes.html">APIs</a>.  Windows builds are possible thanks to <a href="http://ffmpeg.zeranoe.com/builds/">Zeranoe</a>.  Audio rendering is implemented via <a href="http://www.portaudio.com/">PortAudio</a>.  Video rendering is done with OpenGL, <a href="http://glew.sourceforge.net/">GLEW</a> and <a href="http://qt.io">Qt</a>.  ASS/SSA subtitle rendering is implemented via <a href="http://code.google.com/p/libass/">libass</a>.  Apple Remote Control support is thanks to <a href="http://www.martinkahr.com/2007/07/26/remote-control-wrapper-20/index.html">Martin Kahr</a>.  Windows installer is built using <a href="http://wix.sourceforge.net/">WiX</a> 3.5.  Cross platform build configuration is put together using <a href="http://www.cmake.org/">CMake</a>.  JSON support is thanks to <a href="https://github.com/open-source-parsers/jsoncpp">jsoncpp</a>. </p>
 
 <h3>Keyboard Shortcuts</h3>
 <em>NOTE: for OS X, use Command key in place of Ctrl key in the shortcuts below.</em>
@@ -62,11 +66,11 @@ created or updated whenever playback is paused.</p>
 <br />Automatically crop video to eliminate black borders, pillars and bars.  This is not a continuous operation, so if the borders change during playback of the current playlist item they will not be automatically detected and eliminated.  In this case repeat auto crop manually.  However, the operation will be repeated automatically when playback switches to another playlist item.</p>
 <p class="indent1"><b>Alt + X</b>
 <br />Reset video crop settings to initial state (no cropping).</p>
-<p class="indent1"><b>Alt + Shift + 4</b>
+<p class="indent1"><b>Alt + Ctrl + 4</b>
 <br />Force video to 4:3 aspect ratio.</p>
-<p class="indent1"><b>Alt + Shift + 6</b>
+<p class="indent1"><b>Alt + Ctrl + 6</b>
 <br />Force video to 16:9 aspect ratio.</p>
-<p class="indent1"><b>Alt + Shift + X</b>
+<p class="indent1"><b>Alt + Ctrl + X</b>
 <br />Set video to default (automatic) aspect ratio.</p>
 <p class="indent1"><b>Ctrl + T</b>
 <br />Show or hide the timeline.</p>

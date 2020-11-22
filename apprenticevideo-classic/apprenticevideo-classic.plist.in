@@ -53,7 +53,7 @@
 				<string>webm</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>apprenticevideo</string>
+			<string>apprenticevideo-classic.icns</string>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>LSIsAppleDefaultForType</key>
@@ -65,26 +65,32 @@
 	<key>LSMinimumSystemVersion</key>
 	<string>10.5.0</string>
 	<key>CFBundleExecutable</key>
-	<string>apprenticevideo</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@MACOSX_BUNDLE_SHORT_VERSION_STRING@</string>
+	<key>CFBundleVersion</key>
+	<string>@MACOSX_BUNDLE_LONG_VERSION_STRING@</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Apprentice Video by Pavel Koshevoy, revision @PROJ_WC_REVISION@</string>
+	<string>@MACOSX_BUNDLE_INFO_STRING@</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>@MACOSX_BUNDLE_COPYRIGHT@</string>
 	<key>CFBundleIconFile</key>
-	<string>apprenticevideo</string>
+	<string>@MACOSX_BUNDLE_ICON_FILE@</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.aragog.apprenticevideo</string>
+	<string>@MACOSX_BUNDLE_GUI_IDENTIFIER@</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>apprenticevideo</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundleDisplayName</key>
-	<string>apprenticevideo</string>
+	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>Revision @PROJ_WC_REVISION@</string>
-	<key>CFBundleSignature</key>
-	<string>.yap</string>
-	<key>CFBundleVersion</key>
-	<string>@PROJ_WC_REVISION@</string>
 	<key>NSAppleScriptEnabled</key>
+	<string>NO</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
 	<string>YES</string>
 </dict>
 </plist>

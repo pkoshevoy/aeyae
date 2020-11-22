@@ -463,7 +463,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>16:9</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+6</string>
+    <string>Alt+Ctrl+6</string>
    </property>
   </action>
   <action name="actionAspectRatio1_33">
@@ -474,7 +474,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>4:3</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+4</string>
+    <string>Alt+Ctrl+4</string>
    </property>
   </action>
   <action name="actionAspectRatioAuto">
@@ -485,7 +485,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>Automatic</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Shift+X</string>
+    <string>Alt+Ctrl+X</string>
    </property>
   </action>
   <action name="actionFullScreen">
