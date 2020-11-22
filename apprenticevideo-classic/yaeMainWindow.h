@@ -17,20 +17,22 @@
 #include <QShortcut>
 #include <QTimer>
 
-// yae includes:
-#include <yaeAPI.h>
-#include <yaeBookmarks.h>
-#include <yaeCanvas.h>
-#include <yaeReader.h>
-#include <yaeAudioRenderer.h>
-#include <yaeVideoRenderer.h>
-#include <yaeTimelineControls.h>
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/video/yae_audio_renderer.h"
+#include "yae/video/yae_reader_factory.h"
+#include "yae/video/yae_video_renderer.h"
+
+// yaeui:
 #ifdef __APPLE__
 #include "yaeAppleRemoteControl.h"
 #include "yaeAppleUtils.h"
 #endif
+#include "yaeCanvasWidget.h"
 
-// local includes:
+// local:
+#include "yaeBookmarks.h"
+#include "yaeTimelineControls.h"
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
 #include "ui_yaeMainWindow.h"
@@ -39,6 +41,15 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // TCanvasWidget
+  //
+#if defined(YAE_USE_QOPENGL_WIDGET)
+  typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
+#else
+  typedef CanvasWidget<QGLWidget> TCanvasWidget;
+#endif
 
   //----------------------------------------------------------------
   // AboutDialog
@@ -98,11 +109,15 @@ namespace yae
     Q_OBJECT;
 
   public:
-    MainWindow();
+    MainWindow(const TReaderFactoryPtr & readerFactory);
     ~MainWindow();
 
     // accessor to the OpenGL rendering canvas:
-    Canvas * canvas() const;
+    inline const TCanvasWidget & canvas() const
+    { return *canvas_; }
+
+    inline TCanvasWidget & canvas()
+    { return *canvas_; }
 
     static IReader * openFile(const QString & fn);
     static bool testEachFile(const std::list<QString> & playlist);
@@ -174,7 +189,6 @@ namespace yae
 
     // audio/video menus:
     void audioDownmixToStereo();
-    void audioSelectDevice(const QString & audioDevice);
     void audioSelectTrack(int index);
     void videoSelectTrack(int index);
     void subsSelectTrack(int index);
@@ -199,7 +213,6 @@ namespace yae
     void moveTimeIn(double seconds);
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
-    void populateAudioDeviceMenu();
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished(const SharedClock & c);
     void playbackStop();
@@ -250,7 +263,7 @@ namespace yae
     void swapShortcuts();
     void skipToNextFrame();
 
-    unsigned int adjustAudioTraitsOverride(IReader * reader);
+    void adjustAudioTraitsOverride(IReader * reader);
 
     static TVideoFramePtr autoCropCallback(void * context,
                                            const TCropFrame & detected,
@@ -296,10 +309,6 @@ namespace yae
     QShortcut * shortcutRemove_;
     QShortcut * shortcutSelectAll_;
 
-    // audio device selection widget:
-    QActionGroup * audioDeviceGroup_;
-    QSignalMapper * audioDeviceMapper_;
-
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;
     QActionGroup * videoTrackGroup_;
@@ -317,21 +326,21 @@ namespace yae
     QSignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
 
+    // file reader prototype factory instance:
+    TReaderFactoryPtr readerFactory_;
+
     // file reader:
-    IReader * reader_;
+    IReaderPtr reader_;
     unsigned int readerId_;
 
     // frame canvas:
-    Canvas * canvas_;
-
-    // audio device:
-    std::string audioDevice_;
+    TCanvasWidget * canvas_;
 
     // audio renderer:
-    IAudioRenderer * audioRenderer_;
+    TAudioRendererPtr audioRenderer_;
 
     // video renderer:
-    VideoRenderer * videoRenderer_;
+    TVideoRendererPtr videoRenderer_;
 
     // a flag indicating whether playback is paused:
     bool playbackPaused_;

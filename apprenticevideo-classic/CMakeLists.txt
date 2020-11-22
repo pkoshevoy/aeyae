@@ -56,6 +56,7 @@ include_directories(AFTER
   .
   ..
   ../yaeui
+  ../apprenticevideo
   ${PROJECT_BINARY_DIR}
   ${PROJECT_BINARY_DIR}/../apprenticevideo
   ${Boost_INCLUDE_DIR}
@@ -94,6 +95,8 @@ set(project_uis
 set(project_sources
   ../apprenticevideo/yaeBookmarks.h
   ../apprenticevideo/yaeBookmarks.cpp
+  ../apprenticevideo/yaePlaylistKey.cpp
+  ../apprenticevideo/yaePlaylistKey.h
   yaeLineEdit.cpp
   yaeLineEdit.h
   yaeMain.cpp

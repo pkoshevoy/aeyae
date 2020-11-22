@@ -20,9 +20,15 @@
 #include <QPaintEvent>
 #include <QUrl>
 
-// yae includes:
-#include <yaePlaylistWidget.h>
-#include <yaeUtilsQt.h>
+// aeyae:
+#include "yae/utils/yae_utils.h"
+
+// yaeui:
+#include "yaeCanvasQPainterUtils.h"
+#include "yaeUtilsQt.h"
+
+// local:
+#include "yaePlaylistWidget.h"
 
 
 namespace yae
@@ -87,61 +93,6 @@ namespace yae
     return itemHash;
   }
 
-
-  //----------------------------------------------------------------
-  // PlaylistKey::PlaylistKey
-  //
-  PlaylistKey::PlaylistKey(const QString & key, const QString & ext):
-    key_(key),
-    ext_(ext)
-  {}
-
-  //----------------------------------------------------------------
-  // PlaylistKey::operator
-  //
-  bool
-  PlaylistKey::operator == (const PlaylistKey & k) const
-  {
-    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
-    if (diff)
-    {
-      return false;
-    }
-
-    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
-    return !diff;
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistKey::operator <
-  //
-  bool
-  PlaylistKey::operator < (const PlaylistKey & k) const
-  {
-    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
-    if (diff)
-    {
-      return diff < 0;
-    }
-
-    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
-    return diff < 0;
-  }
-
-  //----------------------------------------------------------------
-  // PlaylistKey::operator >
-  //
-  bool PlaylistKey::operator > (const PlaylistKey & k) const
-  {
-    int diff = key_.compare(k.key_, Qt::CaseInsensitive);
-    if (diff)
-    {
-      return diff > 0;
-    }
-
-    diff = ext_.compare(k.ext_, Qt::CaseInsensitive);
-    return diff > 0;
-  }
 
   //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
@@ -216,34 +167,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // toWords
-  //
-  static QString
-  toWords(const std::list<PlaylistKey> & keys)
-  {
-    std::list<QString> words;
-    for (std::list<PlaylistKey>::const_iterator i = keys.begin();
-         i != keys.end(); ++i)
-    {
-      if (!words.empty())
-      {
-        // right-pointing double angle bracket:
-        words.push_back(QString::fromUtf8(" ""\xc2""\xbb"" "));
-      }
-
-      const PlaylistKey & key = *i;
-      splitIntoWords(key.key_, words);
-
-      if (!key.ext_.isEmpty())
-      {
-        words.push_back(key.ext_);
-      }
-    }
-
-    return toQString(words, true);
-  }
-
-  //----------------------------------------------------------------
   // PlaylistWidget::add
   //
   void
@@ -251,7 +174,7 @@ namespace yae
                       std::list<BookmarkHashInfo> * returnBookmarkHashList)
   {
 #if 0
-    std::cerr << "PlaylistWidget::add" << std::endl;
+    yae_debug << "PlaylistWidget::add";
 #endif
 
     // a temporary playlist tree used for deciding which of the
@@ -292,7 +215,7 @@ namespace yae
       if (name.isEmpty())
       {
 #if 0
-        std::cerr << "IGNORING: " << i->toUtf8().constData() << std::endl;
+        yae_debug << "IGNORING: " << i->toUtf8().constData();
 #endif
         continue;
       }
@@ -324,10 +247,17 @@ namespace yae
         if (keys.empty() && ext.compare(kExtEyetv, Qt::CaseInsensitive) == 0)
         {
           // handle Eye TV archive more gracefully:
+          QString channelNumber;
+          QString channelName;
           QString program;
           QString episode;
           QString timestamp;
-          if (!parseEyetvInfo(path, program, episode, timestamp))
+          if (!parseEyetvInfo(path,
+                              channelNumber,
+                              channelName,
+                              program,
+                              episode,
+                              timestamp))
           {
             break;
           }
@@ -403,7 +333,7 @@ namespace yae
 
     // remove leading redundant keys from abbreviated paths:
     while (!fringeGroups.empty() &&
-           isSizeTwoOrMore(fringeGroups.front().abbreviatedPath_))
+           is_size_two_or_more(fringeGroups.front().abbreviatedPath_))
     {
       const PlaylistKey & head = fringeGroups.front().abbreviatedPath_.front();
 
@@ -413,7 +343,7 @@ namespace yae
       {
         const std::list<PlaylistKey> & abbreviatedPath = i->abbreviatedPath_;
         const PlaylistKey & key = abbreviatedPath.front();
-        same = isSizeTwoOrMore(abbreviatedPath) && (key == head);
+        same = is_size_two_or_more(abbreviatedPath) && (key == head);
       }
 
       if (!same)
@@ -678,7 +608,7 @@ namespace yae
     }
 
 #if 0
-    std::cerr << "KEYWORDS MATCH: " << text.toUtf8().constData() << std::endl;
+    yae_debug << "KEYWORDS MATCH: " << text.toUtf8().constData();
 #endif
     return true;
   }
@@ -776,7 +706,7 @@ namespace yae
   PlaylistWidget::setCurrentItem(std::size_t index, bool force)
   {
 #if 0
-    std::cerr << "PlaylistWidget::setCurrentItem" << std::endl;
+    yae_debug << "PlaylistWidget::setCurrentItem";
 #endif
 
     if (index != current_ || force)
@@ -837,7 +767,7 @@ namespace yae
   PlaylistWidget::selectItem(std::size_t indexSel, bool exclusive)
   {
 #if 0
-    std::cerr << "PlaylistWidget::selectItem: " << indexSel << std::endl;
+    yae_debug << "PlaylistWidget::selectItem: " << indexSel;
 #endif
     bool itemSelected = false;
 
@@ -892,7 +822,7 @@ namespace yae
   PlaylistWidget::removeSelected()
   {
 #if 0
-    std::cerr << "PlaylistWidget::removeSelected" << std::endl;
+    yae_debug << "PlaylistWidget::removeSelected";
 #endif
 
     std::size_t oldIndex = 0;
@@ -1592,7 +1522,7 @@ namespace yae
   PlaylistWidget::resizeEvent(QResizeEvent * e)
   {
 #if 0
-    std::cerr << "PlaylistWidget::resizeEvent" << std::endl;
+    yae_debug << "PlaylistWidget::resizeEvent";
 #endif
 
     (void) e;
@@ -1606,7 +1536,7 @@ namespace yae
   PlaylistWidget::updateGeometries()
   {
 #if 0
-    std::cerr << "PlaylistWidget::updateGeometries" << std::endl;
+    yae_debug << "PlaylistWidget::updateGeometries";
 #endif
 
     std::size_t offset = 0;
@@ -2042,7 +1972,7 @@ namespace yae
                                   bool allowGroupSelection)
   {
 #if 0
-    std::cerr << "PlaylistWidget::updateSelection" << std::endl;
+    yae_debug << "PlaylistWidget::updateSelection";
 #endif
 
     QPoint viewOffset = getViewOffset();
@@ -2103,7 +2033,7 @@ namespace yae
                               bool toggleSelection)
   {
 #if 0
-    std::cerr << "PlaylistWidget::selectItems" << std::endl;
+    yae_debug << "PlaylistWidget::selectItems";
 #endif
 
     for (std::vector<PlaylistGroup>::iterator i = groups_.begin();
@@ -2128,9 +2058,8 @@ namespace yae
         {
           item.selected_ = toggleSelection ? !item.selected_ : true;
 #if 0
-          std::cerr << "selectItems, found: "
-                    << item.name_.toUtf8().constData()
-                    << std::endl;
+          yae_debug << "selectItems, found: "
+                    << item.name_.toUtf8().constData();
 #endif
         }
         else if (!toggleSelection)
@@ -2230,9 +2159,8 @@ namespace yae
       if (!group.excluded_)
       {
 #if 0
-        std::cerr << "lookupGroup, first: "
-                  << group.name_.toUtf8().constData()
-                  << std::endl;
+        yae_debug << "lookupGroup, first: "
+                  << group.name_.toUtf8().constData();
 #endif
         return index;
       }
@@ -2257,9 +2185,8 @@ namespace yae
       if (!group.excluded_)
       {
 #if 0
-        std::cerr << "lookupGroup, last: "
-                  << group.name_.toUtf8().constData()
-                  << std::endl;
+        yae_debug << "lookupGroup, last: "
+                  << group.name_.toUtf8().constData();
 #endif
         return index - 1;
       }
@@ -2287,7 +2214,7 @@ namespace yae
   PlaylistWidget::lookupGroupIndex(const QPoint & pt, bool findClosest) const
   {
 #if 0
-    std::cerr << "PlaylistWidget::lookupGroupIndex" << std::endl;
+    yae_debug << "PlaylistWidget::lookupGroupIndex";
 #endif
 
     if (groups_.empty())
@@ -2331,9 +2258,8 @@ namespace yae
             overlapExists(group.bboxItems_, pt))))
       {
 #if 0
-        std::cerr << "lookupGroup, found: "
-                  << group.name_.toUtf8().constData()
-                  << std::endl;
+        yae_debug << "lookupGroup, found: "
+                  << group.name_.toUtf8().constData();
 #endif
         return i0;
       }
@@ -2357,7 +2283,7 @@ namespace yae
   PlaylistWidget::lookupGroup(const QPoint & pt, bool findClosest)
   {
 #if 0
-    std::cerr << "PlaylistWidget::lookupGroup" << std::endl;
+    yae_debug << "PlaylistWidget::lookupGroup";
 #endif
 
     const std::size_t numGroups = groups_.size();
@@ -2380,7 +2306,7 @@ namespace yae
                                   const QPoint & pt) const
   {
 #if 0
-    std::cerr << "PlaylistWidget::lookupItemIndex" << std::endl;
+    yae_debug << "PlaylistWidget::lookupItemIndex";
 #endif
 
     if (!group ||
@@ -2425,9 +2351,8 @@ namespace yae
         if (overlapExists(item.bbox_, pt))
         {
 #if 0
-          std::cerr << "lookupItemIndex, found: "
-                    << item.name_.toUtf8().constData()
-                    << std::endl;
+          yae_debug << "lookupItemIndex, found: "
+                    << item.name_.toUtf8().constData();
 #endif
           return group->offset_ + i0;
         }
@@ -2446,9 +2371,8 @@ namespace yae
         if (!item.excluded_)
         {
 #if 0
-          std::cerr << "lookupItemIndex, last: "
-                    << item.name_.toUtf8().constData()
-                    << std::endl;
+          yae_debug << "lookupItemIndex, last: "
+                    << item.name_.toUtf8().constData();
 #endif
           return index;
         }
@@ -2497,7 +2421,7 @@ namespace yae
   PlaylistWidget::lookupGroup(std::size_t index)
   {
 #if 0
-    std::cerr << "PlaylistWidget::lookupGroup: " << index << std::endl;
+    yae_debug << "PlaylistWidget::lookupGroup: " << index;
 #endif
 
     if (groups_.empty())
@@ -2558,7 +2482,7 @@ namespace yae
   PlaylistWidget::lookup(std::size_t index, PlaylistGroup ** returnGroup)
   {
 #if 0
-    std::cerr << "PlaylistWidget::lookup: " << index << std::endl;
+    yae_debug << "PlaylistWidget::lookup: " << index;
 #endif
 
     PlaylistGroup * group = lookupGroup(index);

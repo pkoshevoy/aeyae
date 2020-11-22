@@ -23,8 +23,8 @@
 #include <QFontMetrics>
 #include <QTime>
 
-// yae includes:
-#include <yaeTimelineControls.h>
+// local:
+#include "yaeTimelineControls.h"
 
 
 namespace yae
@@ -68,14 +68,13 @@ namespace yae
     min %= 60;
 
 #if 0
-    std::cerr << "frame: " << frameNo
+    yae_debug << "frame: " << frameNo
               << "\tseconds: " << seconds
               << ", remainder: " << remainder
               << ", fps " << frameRate
               << ", fps (whole): " << fpsWhole
               << ", " << frameRate * remainder
-              << ", " << frame
-              << std::endl;
+              << ", " << frame;
 #endif
 
     std::ostringstream os;
@@ -441,7 +440,7 @@ namespace yae
       frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
-    timelineStart_ = start.toSeconds();
+    timelineStart_ = start.sec();
     timelinePosition_ = timelineStart_;
 
     unknownDuration_ = (!reader->isSeekable() ||
@@ -449,7 +448,7 @@ namespace yae
 
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :
-                         duration.toSeconds());
+                         duration.sec());
 
     if (auxPlayhead_)
     {
@@ -506,8 +505,8 @@ namespace yae
       frameNumberSeparator_ = kSeparatorForFrameNumber;
     }
 
-    timelineStart_ = start.toSeconds();
-    timelineDuration_ = duration.toSeconds();
+    timelineStart_ = start.sec();
+    timelineDuration_ = duration.sec();
     timelinePosition_ = timelineStart_;
 
     // shortcuts:
@@ -602,10 +601,9 @@ namespace yae
     {
       double seconds = std::max<double>(0.0, t0 + secOffset);
 #if 0
-      std::cerr << "seek from " << TTime(t0).to_hhmmss_usec(":")
+      yae_debug << "seek from " << TTime(t0).to_hhmmss_usec(":")
                 << " " << secOffset << " seconds to "
-                << TTime(seconds).to_hhmmss_usec(":")
-                << std::endl;
+                << TTime(seconds).to_hhmmss_usec(":");
 #endif
       seekTo(seconds);
     }
@@ -751,7 +749,7 @@ namespace yae
       // sometimes the timer remains active but the timeout signal is
       // never delivered; this is a workaround:
 #ifndef NDEBUG
-      std::cerr << "REPAINT TIMEOUT WAS LATE" << std::endl;
+      yae_debug << "REPAINT TIMEOUT WAS LATE";
 #endif
       repaintTimer_.stop();
 
@@ -782,18 +780,14 @@ namespace yae
       if (sharedClock_.sharesCurrentTimeWith(c))
       {
 #ifndef NDEBUG
-        std::cerr
-          << "NOTE: clock stopped"
-          << std::endl;
+        yae_debug << "NOTE: clock stopped";
 #endif
         emit clockStopped(c);
       }
 #ifndef NDEBUG
       else
       {
-        std::cerr
-          << "NOTE: ignoring stale delayed stopped clock"
-          << std::endl;
+        yae_debug << "NOTE: ignoring stale delayed stopped clock";
       }
 #endif
 
@@ -816,7 +810,7 @@ namespace yae
 
         TTime currentTime;
         timeChangedEvent->payload_.get(currentTime);
-        timelinePosition_ = currentTime.toSeconds();
+        timelinePosition_ = currentTime.sec();
 
         double t = timelinePosition_ - timelineStart_;
         markerPlayhead_.position_ = t / timelineDuration_;
@@ -846,7 +840,7 @@ namespace yae
                      slideshowTimer_.interval() * 2)
             {
 #ifndef NDEBUG
-              std::cerr << "STOPPED CLOCK TIMEOUT WAS LATE" << std::endl;
+              yae_debug << "STOPPED CLOCK TIMEOUT WAS LATE";
 #endif
               slideshowTimerExpired();
             }
@@ -860,9 +854,7 @@ namespace yae
         }
 
 #ifndef NDEBUG
-        std::cerr
-          << "NOTE: ignoring stale ClockStoppedEvent"
-          << std::endl;
+        yae_debug << "NOTE: ignoring stale ClockStoppedEvent";
 #endif
         return true;
       }

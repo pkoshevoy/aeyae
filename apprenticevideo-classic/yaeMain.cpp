@@ -20,11 +20,13 @@
 #include <wchar.h>
 #endif
 
+#include <stdlib.h>
 #include <iostream>
 #include <stdexcept>
 
-// GLEW includes:
-#include <GL/glew.h>
+// boost:
+#include <boost/locale.hpp>
+#include <boost/filesystem/path.hpp>
 
 // APPLE includes:
 #ifdef __APPLE__
@@ -37,9 +39,16 @@
 
 // Qt includes:
 #include <QApplication>
-#include <QFileOpenEvent>
+#include <QDir>
+#ifdef YAE_USE_QT5
+#include <QSurfaceFormat>
+#endif
 
 // yae includes:
+#include "yae/ffmpeg/yae_live_reader.h"
+#include "yae/utils/yae_utils.h"
+
+// local includes:
 #include <yaeMainWindow.h>
 #include <yaeUtilsQt.h>
 
@@ -52,33 +61,6 @@ namespace yae
   //
   MainWindow * mainWindow = NULL;
 
-  //----------------------------------------------------------------
-  // Application
-  //
-  class Application : public QApplication
-  {
-  public:
-    Application(int & argc, char ** argv):
-      QApplication(argc, argv)
-    {}
-
-  protected:
-    bool event(QEvent * e)
-    {
-      if (e->type() != QEvent::FileOpen)
-      {
-        return QApplication::event(e);
-      }
-
-      // handle the apple event to open a document:
-      QString filename = static_cast<QFileOpenEvent *>(e)->file();
-      std::list<QString> playlist;
-      yae::addToPlaylist(playlist, filename);
-      mainWindow->setPlaylist(playlist);
-
-      return true;
-    }
-  };
 }
 
 //----------------------------------------------------------------
@@ -87,6 +69,50 @@ namespace yae
 int
 mainMayThrowException(int argc, char ** argv)
 {
+  // Create and install global locale (UTF-8)
+  {
+    const char * lc_type = getenv("LC_TYPE");
+    const char * lc_all = getenv("LC_ALL");
+    const char * lang = getenv("LANG");
+
+#ifndef _WIN32
+    if (!(lc_type || lc_all || lang))
+    {
+      // avoid crasing in boost+libiconv:
+      setenv("LANG", "en_US.UTF-8", 1);
+    }
+#endif
+
+#ifndef NDEBUG
+    lang || (lang = "");
+    lc_all || (lc_all = "");
+    lc_type || (lc_type = "");
+
+    std::cerr << "LC_TYPE: " << lc_type << std::endl
+              << "LC_ALL: " << lc_all << std::endl
+              << "LANG: " << lang << std::endl;
+#endif
+
+#if defined(__APPLE__) && defined(__BIG_ENDIAN__)
+    const char * default_locale = "C";
+#else
+    const char * default_locale = "";
+#endif
+
+    boost::locale::generator gen;
+#if !defined(__APPLE__) || __MAC_OS_X_VERSION_MAX_ALLOWED >= 1090
+    std::locale loc = std::locale(gen(default_locale),
+                                  std::locale::classic(),
+                                  std::locale::numeric);
+#else
+    std::locale loc = std::locale(gen(default_locale));
+#endif
+    std::locale::global(loc);
+
+    // Make boost.filesystem use global locale:
+    boost::filesystem::path::imbue(loc);
+  }
+
 #if defined(_WIN32) && !defined(NDEBUG)
   // restore console stdio:
   {
@@ -116,6 +142,44 @@ mainMayThrowException(int argc, char ** argv)
   signal(SIGPIPE, SIG_IGN);
 #endif
 
+  // check for canary invocation:
+  bool canary = false;
+  int percentTempo = 100;
+  {
+    char ** src = argv + 1;
+    char ** end = argv + argc;
+    char ** dst = src;
+    for (; src < end; src++)
+    {
+      if (strcmp(*src, "--canary") == 0)
+      {
+        canary = true;
+        argc--;
+      }
+      else if (strcmp(*src, "--tempo") == 0)
+      {
+        src++;
+        argc--;
+        percentTempo = yae::to_scalar<int, const char *>(*src);
+        argc--;
+      }
+      else
+      {
+        *dst = *src;
+        dst++;
+      }
+    }
+  }
+
+#ifdef __APPLE__
+  if (!canary)
+  {
+    // show the Dock icon:
+    ProcessSerialNumber psn = { 0, kCurrentProcess };
+    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+  }
+#endif
+
   /*
   std::cout.precision(4);
   std::cerr.precision(4);
@@ -142,55 +206,64 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setApplicationName("ApprenticeVideo");
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
+
+#ifdef YAE_USE_QT5
+  // setup opengl:
+  {
+    QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
+                       QSurfaceFormat::DeprecatedFunctions);
+    fmt.setAlphaBufferSize(0);
+    fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
+    fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
+    QSurfaceFormat::setDefaultFormat(fmt);
+  }
+  // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+  // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
+  // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
+  yae::Application::setAttribute(Qt::AA_ShareOpenGLContexts, true);
+  // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+#endif
+
   yae::Application app(argc, argv);
   QStringList args = app.arguments();
 
   // check for canary invocation:
-  bool canary = false;
   std::list<QString> playlist;
 
   for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
   {
     const QString & arg = *i;
-    if (arg == QString::fromUtf8("--canary"))
-    {
-      canary = true;
-    }
-    else
-    {
-      yae::addToPlaylist(playlist, arg);
-    }
+    yae::addToPlaylist(playlist, arg);
   }
+
+  //----------------------------------------------------------------
+  // readerFactory
+  //
+  yae::TReaderFactoryPtr readerFactory(new yae::ReaderFactory());
 
   if (canary)
   {
-    yae::MainWindow::testEachFile(playlist);
+    yae::testEachFile(readerFactory, playlist);
 
     // if it didn't crash, then it's all good:
     return 0;
   }
 
-#ifdef __APPLE__
-  // show the Dock icon:
-  ProcessSerialNumber psn = { 0, kCurrentProcess };
-  TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-#endif
+  yae::mainWindow = new yae::MainWindow(readerFactory);
 
-  yae::mainWindow = new yae::MainWindow();
+  bool ok = QObject::connect(&app,
+                             SIGNAL(file_open(const QString &)),
+                             yae::mainWindow,
+                             SLOT(setPlaylist(const QString &)));
+  YAE_ASSERT(ok);
+
   yae::mainWindow->show();
 
-  // initialize OpenGL GLEW wrapper:
-  GLenum err = glewInit();
-  if (err != GLEW_OK)
-  {
-    std::cerr << "GLEW init failed: " << glewGetErrorString(err) << std::endl;
-    YAE_ASSERT(false);
-  }
-
   // initialize the canvas:
-  yae::mainWindow->canvas()->initializePrivateBackend();
+  yae::mainWindow->canvas().initializePrivateBackend();
 
   yae::mainWindow->setPlaylist(playlist);
+  yae::mainWindow->playbackSetTempo(percentTempo);
 
   app.exec();
   return 0;

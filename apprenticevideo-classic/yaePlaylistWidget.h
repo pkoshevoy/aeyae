@@ -21,29 +21,17 @@
 #include <QRubberBand>
 #include <QTimer>
 
-// yae includes:
-#include <yaeAPI.h>
-#include <yaeTree.h>
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_tree.h"
+
+// local:
+#include "yaeBookmarks.h"
+#include "yaePlaylistKey.h"
 
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // PlaylistKey
-  //
-  struct PlaylistKey
-  {
-    PlaylistKey(const QString & key = QString(),
-                const QString & ext = QString());
-
-    bool operator == (const PlaylistKey & k) const;
-    bool operator < (const PlaylistKey & k) const;
-    bool operator > (const PlaylistKey & k) const;
-
-    QString key_;
-    QString ext_;
-  };
 
   //----------------------------------------------------------------
   // TPlaylistTree
@@ -119,15 +107,6 @@ namespace yae
 
     // a hash string identifying this group:
     std::string bookmarkHash_;
-  };
-
-  //----------------------------------------------------------------
-  // BookmarkHashInfo
-  //
-  struct BookmarkHashInfo
-  {
-    std::string groupHash_;
-    std::list<std::string> itemHash_;
   };
 
   //----------------------------------------------------------------

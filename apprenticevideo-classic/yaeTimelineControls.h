@@ -23,10 +23,10 @@
 #include <QTimer>
 #include <QTime>
 
-// yae includes:
-#include <yaeAPI.h>
-#include <yaeReader.h>
-#include <yaeSynchronous.h>
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/video/yae_reader_factory.h"
+#include "yae/video/yae_synchronous.h"
 
 
 namespace yae
