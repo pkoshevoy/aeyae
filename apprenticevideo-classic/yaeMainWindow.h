@@ -136,6 +136,8 @@ namespace yae
     void setOutPoint();
 
   public slots:
+    void setPlaylist(const QString & filename);
+
     // file menu:
     void fileOpen();
     void fileOpenURL();

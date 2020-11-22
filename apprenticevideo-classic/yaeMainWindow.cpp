@@ -328,6 +328,7 @@ namespace yae
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
     contextFormat.setSampleBuffers(false);
+    TCanvasWidget * shared_ctx = NULL;
     canvas_ = new TCanvasWidget(contextFormat, this, shared_ctx);
 #endif
 
@@ -339,6 +340,7 @@ namespace yae
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
 
+    reader_.reset(ReaderFFMPEG::create());
 #ifdef __APPLE__
     audioRenderer_.reset(AudioUnitRenderer::create());
 #else
@@ -357,9 +359,8 @@ namespace yae
 
     // setup the Open URL dialog:
     {
-      IReaderPtr ffmpeg_reader(ReaderFFMPEG::create());
       std::list<std::string> protocols;
-      ffmpeg_reader->getUrlProtocols(protocols);
+      reader_->getUrlProtocols(protocols);
 
       QString supported = tr("Supported URL protocols include:\n");
       unsigned int column = 0;
@@ -819,8 +820,12 @@ namespace yae
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
 
-    ok = connect(canvas_, SIGNAL(toggleFullScreen()),
+    ok = connect(&(canvas_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(toggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
+                 &(canvas_->sigs_), SLOT(hideCursor()));
     YAE_ASSERT(ok);
 
     ok = connect(actionHalfSize, SIGNAL(triggered()),
@@ -1018,6 +1023,17 @@ namespace yae
     }
 
     playback();
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::setPlaylist
+  //
+  void
+  MainWindow::setPlaylist(const QString & filename)
+  {
+    std::list<QString> playlist;
+    yae::addToPlaylist(playlist, filename);
+    this->setPlaylist(playlist);
   }
 
   //----------------------------------------------------------------
