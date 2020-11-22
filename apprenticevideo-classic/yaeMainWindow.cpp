@@ -337,6 +337,23 @@ namespace yae
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
 
+    QString greeting =
+      tr("drop video/music files here\n\n"
+         "press Spacebar to pause/resume playback\n\n"
+         "press %1 to toggle the playlist\n\n"
+         "press %2 to toggle the timeline\n\n"
+         "press Alt %3, Alt %4 to skip through the playlist\n\n"
+#ifdef __APPLE__
+         "use Apple Remote to change volume or skip along the timeline\n\n"
+#endif
+         "explore the menus for more options").
+      arg(actionShowPlaylist->shortcut().toString()). // playlist
+      arg(actionShowTimeline->shortcut().toString()). // timeline
+      arg(QString::fromUtf8("\xE2""\x86""\x90")). // left arrow
+      arg(QString::fromUtf8("\xE2""\x86""\x92")); // right arrow
+
+    canvas_->setGreeting(greeting);
+
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
 
@@ -2244,6 +2261,9 @@ namespace yae
       actionShowPlaylist->setChecked(true);
       playlistDock_->show();
     }
+
+    // repaint the frame:
+    canvas_->requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -2279,6 +2299,9 @@ namespace yae
 
       timelineWidgets_->show();
     }
+
+    // repaint the frame:
+    canvas_->requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -3727,7 +3750,7 @@ namespace yae
     // move(new_x, new_y);
 
     // repaint the frame:
-    canvas_->refresh();
+    canvas_->requestRepaint();
 
     // avoid hiding the highlighted item:
     playlistWidget_->makeSureHighlightedItemIsVisible();
@@ -4435,6 +4458,9 @@ namespace yae
         this->setFocus();
       }
     }
+
+    // repaint the frame:
+    canvas_->requestRepaint();
   }
 
   //----------------------------------------------------------------
