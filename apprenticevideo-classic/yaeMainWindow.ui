@@ -364,10 +364,11 @@
 	background-repeat:no-repeat;
 	background-position: center left;
 	padding-left: 19px;
+	border: 1px solid #bdbdbd;
 }
 
 QLineEdit QToolButton#clear_ {
-    margin: 1px;
+	margin: 1px;
 	border: 0px;
 	border-radius: 3px;
 	background-color: #b9b9b9;
@@ -375,7 +376,7 @@ QLineEdit QToolButton#clear_ {
 }
 
 QLineEdit QToolButton#clear_:pressed {
-    background-color: #878787;
+	background-color: #878787;
 }
 </string>
           </property>
