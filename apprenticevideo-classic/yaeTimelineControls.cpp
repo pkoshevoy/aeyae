@@ -401,6 +401,8 @@ namespace yae
       {
         auxDuration_->setText(model_.auxDuration());
       }
+
+      requestRepaint();
     }
   }
 

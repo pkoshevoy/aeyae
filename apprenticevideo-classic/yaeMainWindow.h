@@ -215,6 +215,7 @@ namespace yae
     void moveTimeIn(double seconds);
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
+    void updateTimelineDuration();
     void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished(const SharedClock & c);
     void playbackStop();
@@ -375,6 +376,9 @@ namespace yae
 
     TTrackInfo selSubs_;
     TSubsFormat selSubsFormat_;
+
+    // update DVR live recordings duration:
+    QTimer durationTimer_;
 
     // auto-crop single shot timer:
     QTimer autocropTimer_;

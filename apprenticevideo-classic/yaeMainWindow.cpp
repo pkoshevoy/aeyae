@@ -403,6 +403,8 @@ namespace yae
       openUrl_->lineEdit->setToolTip(supported);
     }
 
+    durationTimer_.setInterval(1000);
+
     // for scroll-wheel event buffering,
     // used to avoid frequent seeking by small distances:
     scrollWheelTimer_.setSingleShot(true);
@@ -913,6 +915,10 @@ namespace yae
 
     ok = connect(playlistFilter_, SIGNAL(textChanged(const QString &)),
                  this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&durationTimer_, SIGNAL(timeout()),
+                 this, SLOT(updateTimelineDuration()));
     YAE_ASSERT(ok);
 
     ok = connect(&autocropTimer_, SIGNAL(timeout()),
@@ -1598,6 +1604,7 @@ namespace yae
     }
 
     bookmarkTimer_.start();
+    durationTimer_.start();
 
     return true;
   }
@@ -2810,6 +2817,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::updateTimelineDuration
+  //
+  void
+  MainWindow::updateTimelineDuration()
+  {
+    timelineControls_->model_.updateDuration(reader_);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::focusChanged
   //
   void
@@ -2858,6 +2874,7 @@ namespace yae
 
     // remove current bookmark:
     bookmarkTimer_.stop();
+    durationTimer_.stop();
 
     std::size_t itemIndex = playlistWidget_->currentItem();
     std::size_t nNext = playlistWidget_->countItemsAhead();
