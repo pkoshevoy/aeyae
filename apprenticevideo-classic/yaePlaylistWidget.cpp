@@ -60,41 +60,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // getBookmarkHash
-  //
-  static std::string
-  getBookmarkHash(const std::list<PlaylistKey> & keyPath)
-  {
-    QCryptographicHash crypto(QCryptographicHash::Sha1);
-    for (std::list<PlaylistKey>::const_iterator i = keyPath.begin();
-         i != keyPath.end(); ++i)
-    {
-      const PlaylistKey & key = *i;
-      crypto.addData(key.key_.toUtf8());
-      crypto.addData(key.ext_.toUtf8());
-    }
-
-    std::string groupHash("bookmark-");
-    groupHash += crypto.result().toHex().constData();
-    return groupHash;
-  }
-
-  //----------------------------------------------------------------
-  // getBookmarkHash
-  //
-  static std::string
-  getBookmarkHash(const PlaylistKey & key)
-  {
-    QCryptographicHash crypto(QCryptographicHash::Sha1);
-    crypto.addData(key.key_.toUtf8());
-    crypto.addData(key.ext_.toUtf8());
-
-    std::string itemHash(crypto.result().toHex().constData());
-    return itemHash;
-  }
-
-
-  //----------------------------------------------------------------
   // PlaylistItem::PlaylistItem
   //
   PlaylistItem::PlaylistItem():
@@ -314,13 +279,13 @@ namespace yae
 
         returnBookmarkHashList->push_back(BookmarkHashInfo());
         BookmarkHashInfo & hashInfo = returnBookmarkHashList->back();
-        hashInfo.groupHash_ = getBookmarkHash(keyPath);
+        hashInfo.groupHash_ = getKeyPathHash(keyPath);
 
         for (TSiblings::const_iterator j = siblings.begin();
              j != siblings.end(); ++j)
         {
           const PlaylistKey & key = j->first;
-          hashInfo.itemHash_.push_back(getBookmarkHash(key));
+          hashInfo.itemHash_.push_back(getKeyHash(key));
         }
       }
     }
@@ -369,7 +334,7 @@ namespace yae
       group.keyPath_ = fringeGroup.fullPath_;
       group.name_ = toWords(fringeGroup.abbreviatedPath_);
       group.offset_ = numItems_;
-      group.bookmarkHash_ = getBookmarkHash(group.keyPath_);
+      group.bookmarkHash_ = getKeyPathHash(group.keyPath_);
 
       // shortcuts:
       const TSiblings & siblings = fringeGroup.siblings_;
@@ -388,7 +353,7 @@ namespace yae
 
         playlistItem.name_ = toWords(key.key_);
         playlistItem.ext_ = key.ext_;
-        playlistItem.bookmarkHash_ = getBookmarkHash(playlistItem.key_);
+        playlistItem.bookmarkHash_ = getKeyHash(playlistItem.key_);
 
         if (firstNewItemPath && *firstNewItemPath == playlistItem.path_)
         {
