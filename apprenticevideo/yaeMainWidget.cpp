@@ -364,7 +364,7 @@ namespace yae
 #endif
          "explore the menus for more options").
       arg(clickOrTap).
-      arg(QString::fromUtf8("\xE2""\x98""\xB0")). // hamburger
+      arg(QString::fromUtf8("\xE2""\x89""\xA1")). // tripple bar
       arg(QString::fromUtf8("\xE2""\x86""\x90")). // left arrow
       arg(QString::fromUtf8("\xE2""\x86""\x92")); // right arrow
   }

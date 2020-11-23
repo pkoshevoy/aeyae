@@ -1430,10 +1430,16 @@ namespace yae
     painter.setPen(QColor(0x3f, 0x3f, 0x3f, 0xff));
 
     QFont ft;
+    ft.setFamily("Segoe UI, "
+                 "Arial, "
+                 "Helvetica, "
+                 "DejaVu Sans, "
+                 "Bitstream Vera Sans");
+
     ft.setStyleHint(QFont::SansSerif);
     ft.setStyleStrategy((QFont::StyleStrategy)
                         (QFont::PreferOutline |
-                         QFont::PreferAntialias |
+                         // QFont::PreferAntialias |
                          QFont::OpenGLCompatible));
     int px = std::max<int>(12, 56.0 * std::min<double>(w / max_w, h / max_h));
     ft.setPixelSize(px);
