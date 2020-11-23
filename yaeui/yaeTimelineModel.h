@@ -83,6 +83,7 @@ namespace yae
     TimelineModel();
     ~TimelineModel();
 
+    void trimLeadingZeros(bool enable);
     void startFromZero(bool enable);
 
     // NOTE: this instance of TimelineModel will register itself
@@ -103,12 +104,28 @@ namespace yae
     void updateDuration(IReader * reader);
 
     // accessors:
-    double timelineStart() const;
-    double timelineDuration() const;
+    inline double timelineStart() const
+    { return timelineStart_; }
+
+    inline double timelineEnd() const
+    {
+      return unknownDuration_ ?
+        std::numeric_limits<double>::max() :
+        timelineStart_ + timelineDuration_;
+    }
+
+    inline double timelineDuration() const
+    { return timelineDuration_; }
+
+    inline bool unknownDuration() const
+    { return unknownDuration_; }
+
+    inline bool hasTimelineDuration() const
+    { return !unknownDuration_ && timelineDuration_ > 0.0; }
+
+    // helpers:
     double timeIn() const;
     double timeOut() const;
-
-    // helper:
     double currentTime() const;
 
     // virtual: thread safe, asynchronous, non-blocking:
@@ -119,14 +136,6 @@ namespace yae
     // helper used to block the "clock has stopped" events
     // to avoid aborting playback prematurely:
     void ignoreClockStoppedEvent(bool ignore);
-
-    enum TState
-    {
-      kIdle,
-      kDraggingTimeInMarker,
-      kDraggingTimeOutMarker,
-      kDraggingPlayheadMarker
-    };
 
     inline const QString & auxPlayhead() const
     { return auxPlayhead_; }
@@ -143,12 +152,25 @@ namespace yae
     inline double markerPlayhead() const
     { return markerPlayhead_; }
 
+    const QString & clockTemplate();
+
+    // helper:
+    double getTimeAsSecondsAt(double marker) const;
+
+    // helpers:
+    QString getTimeStamp(double seconds) const;
+    QString getTimeStampAt(double marker) const;
+
+    // helper:
+    void emitUserIsSeeking(bool seeking);
+
     void setAuxPlayhead(const QString & playhead);
     void setMarkerTimeIn(double marker);
     void setMarkerTimeOut(double marker);
     void setMarkerPlayhead(double marker);
 
   signals:
+    void modelChanged();
     void auxPlayheadChanged();
     void auxDurationChanged();
     void markerTimeInChanged();
@@ -245,15 +267,6 @@ namespace yae
     double markerTimeOut_;
     double markerPlayhead_;
 
-    // current state of playback controls:
-    TState currentState_;
-
-    // horizontal and vertical padding around the timeline:
-    int padding_;
-
-    // timeline line width in pixels:
-    int lineWidth_;
-
     // a clock used to synchronize playback renderers,
     // used for playhead position:
     SharedClock sharedClock_;
@@ -270,6 +283,9 @@ namespace yae
 
     // playback position delivered via most recent timeline event:
     double timelinePosition_;
+
+    // for a more compact timesamp:
+    bool trimLeadingZeros_;
 
     // timeline is easier to read if it always starts from 00:00:00
     bool startFromZero_;

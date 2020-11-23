@@ -28,6 +28,9 @@
 #include "yae/video/yae_reader_factory.h"
 #include "yae/video/yae_synchronous.h"
 
+// yaeui:
+#include "yaeTimelineModel.h"
+
 
 namespace yae
 {
@@ -68,14 +71,15 @@ namespace yae
   //----------------------------------------------------------------
   // TimelineControls
   //
-  class TimelineControls : public QWidget,
-                           public IClockObserver
+  class TimelineControls : public QWidget
   {
     Q_OBJECT;
 
   public:
     TimelineControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
     ~TimelineControls();
+
+    TimelineModel model_;
 
     // optional widgets used to display (or edit) playhead
     // position and total duration:
@@ -86,67 +90,20 @@ namespace yae
                        // focus will be given to this widget:
                        QWidget * focusWidget);
 
-    // NOTE: this instance of TimelineControls will register itself
-    // as an observer of the given shared clock; it will unregister
-    // itself as the observer of previous shared clock.
-    void observe(const SharedClock & sharedClock);
-
-    // accessor to the current shared clock:
-    inline const SharedClock & sharedClock() const
-    { return sharedClock_; }
-
-    void resetFor(IReader * reader);
-    void adjustTo(IReader * reader);
-
-    // accessors:
-    double timelineStart() const;
-    double timelineDuration() const;
-    double timeIn() const;
-    double timeOut() const;
-
-    // helper:
-    double currentTime() const;
-
-    // virtual: thread safe, asynchronous, non-blocking:
-    void noteCurrentTimeChanged(const SharedClock & c,
-                                const TTime & currentTime);
-    void noteTheClockHasStopped(const SharedClock & c);
-
-    // helper used to block the "clock has stopped" events
-    // to avoid aborting playback prematurely:
-    void ignoreClockStoppedEvent(bool ignore);
-
-    enum TState
-    {
-      kIdle,
-      kDraggingTimeInMarker,
-      kDraggingTimeOutMarker,
-      kDraggingPlayheadMarker
-    };
-
-  signals:
-    void moveTimeIn(double t);
-    void moveTimeOut(double t);
-    void movePlayHead(double t);
-    void userIsSeeking(bool seeking);
-    void clockStopped(const SharedClock & c);
-
   public slots:
-    void setInPoint();
-    void setOutPoint();
-    void seekFromCurrentTime(double offsetSeconds);
-    void seekTo(double absoluteSeconds);
-    void seekTo(const QString & HhMmSsFf);
     void seekToAuxPlayhead();
     void requestRepaint();
 
   protected slots:
     void repaintTimerExpired();
-    void slideshowTimerExpired();
+    void modelChanged();
+    void modelTimeInChanged();
+    void modelTimeOutChanged();
+    void modelPlayheadChanged();
+    void modelDurationChanged();
 
   protected:
     // virtual:
-    bool event(QEvent * e);
     void paintEvent(QPaintEvent * e);
     void mousePressEvent(QMouseEvent * e);
     void mouseReleaseEvent(QMouseEvent * e);
@@ -162,67 +119,6 @@ namespace yae
                        int & yOriginPlayhead,
                        int & unitLength) const;
 
-    void updateAuxPlayhead(double position);
-    void updateAuxDuration(double duration);
-
-    //----------------------------------------------------------------
-    // ClockStoppedEvent
-    //
-    struct ClockStoppedEvent : public QEvent
-    {
-      ClockStoppedEvent(const SharedClock & c):
-        QEvent(QEvent::User),
-        clock_(c)
-      {}
-
-      SharedClock clock_;
-    };
-
-    //----------------------------------------------------------------
-    // TimelineEvent
-    //
-    struct TimelineEvent : public QEvent
-    {
-      //----------------------------------------------------------------
-      // TPayload
-      //
-      struct TPayload
-      {
-        TPayload(): dismissed_(true) {}
-
-        bool set(const TTime & currentTime)
-        {
-          boost::lock_guard<boost::mutex> lock(mutex_);
-          bool postThePayload = dismissed_;
-          currentTime_ = currentTime;
-          dismissed_ = false;
-          return postThePayload;
-        }
-
-        void get(TTime & currentTime)
-        {
-          boost::lock_guard<boost::mutex> lock(mutex_);
-          currentTime = currentTime_;
-          dismissed_ = true;
-        }
-
-      private:
-        mutable boost::mutex mutex_;
-        TTime currentTime_;
-        bool dismissed_;
-      };
-
-      TimelineEvent(TPayload & payload):
-        QEvent(QEvent::User),
-        payload_(payload)
-      {}
-
-      TPayload & payload_;
-    };
-
-    // event payload used for asynchronous timeline updates:
-    TimelineEvent::TPayload payload_;
-
     // direct manipulation handles representing in/out time points
     // and current playback position marker (playhead):
     Marker markerTimeIn_;
@@ -230,6 +126,14 @@ namespace yae
     Marker markerPlayhead_;
     Marker * activeMarker_;
     QPoint dragStart_;
+
+    enum TState
+    {
+      kIdle,
+      kDraggingTimeInMarker,
+      kDraggingTimeOutMarker,
+      kDraggingPlayheadMarker
+    };
 
     // current state of playback controls:
     TState currentState_;
@@ -239,27 +143,6 @@ namespace yae
 
     // timeline line width in pixels:
     int lineWidth_;
-
-    // a clock used to synchronize playback renderers,
-    // used for playhead position:
-    SharedClock sharedClock_;
-    bool ignoreClockStopped_;
-
-    // a flag indicating whether source duration is known or not:
-    bool unknownDuration_;
-
-    // playback doesn't necessarily start at zero seconds:
-    double timelineStart_;
-
-    // playback duration in seconds:
-    double timelineDuration_;
-
-    // playback position delivered via most recent timeline event:
-    double timelinePosition_;
-
-    // these are used to format the timecode text fields:
-    double frameRate_;
-    const char * frameNumberSeparator_;
 
     // text widgets for displaying (or editing) playhead position
     // and displaying total duration:
@@ -273,12 +156,6 @@ namespace yae
     // repaint buffering:
     QTimer repaintTimer_;
     QTime repaintTimerStartTime_;
-
-    // delay signaling stopped-clock when source duration is unknown
-    // or has just one frame (a single picture):
-    std::list<SharedClock> stoppedClock_;
-    QTimer slideshowTimer_;
-    QTime slideshowTimerStart_;
   };
 }
 

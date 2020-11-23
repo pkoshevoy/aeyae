@@ -54,7 +54,10 @@ namespace yae
   // getTimeStamp
   //
   static QString
-  getTimeStamp(double seconds, double frameRate, const char * frameNumSep)
+  makeTimeStamp(double seconds,
+                double frameRate,
+                const char * frameNumSep,
+                bool trimLeadingZeros)
   {
     if (seconds == std::numeric_limits<double>::max())
     {
@@ -95,20 +98,22 @@ namespace yae
 
     std::string str(os.str().c_str());
     const char * text = str.c_str();
-#if 0
-    // crop the leading zeros up to s:ff
-    const char * tend = text + 7;
 
-    while (text < tend)
+    if (trimLeadingZeros)
     {
-      if (*text != '0' && *text != ':')
-      {
-        break;
-      }
+      // crop the leading zeros up to s:ff
+      const char * tend = text + 7;
 
-      ++text;
+      while (text < tend)
+      {
+        if (*text != '0' && *text != ':')
+        {
+          break;
+        }
+
+        ++text;
+      }
     }
-#endif
 
     return QString::fromUtf8(text);
   }
@@ -122,6 +127,7 @@ namespace yae
     timelineStart_(0.0),
     timelineDuration_(0.0),
     timelinePosition_(0.0),
+    trimLeadingZeros_(false),
     startFromZero_(true),
     localtimeOffset_(0),
     frameRate_(100.0),
@@ -131,16 +137,10 @@ namespace yae
   {
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
 
-    padding_ = 8;
-    lineWidth_ = 3;
-
     // setup marker positions:
     markerTimeIn_ = timelineStart_;
     markerTimeOut_ = timelineStart_ + timelineDuration_;
     markerPlayhead_ = timelineStart_;
-
-    // current state of playback controls:
-    currentState_ = TimelineModel::kIdle;
 
     slideshowTimer_.setSingleShot(true);
     slideshowTimer_.setInterval(1000);
@@ -155,24 +155,6 @@ namespace yae
   //
   TimelineModel::~TimelineModel()
   {}
-
-  //----------------------------------------------------------------
-  // TimelineModel::timelineStart
-  //
-  double
-  TimelineModel::timelineStart() const
-  {
-    return timelineStart_;
-  }
-
-  //----------------------------------------------------------------
-  // TimelineModel::timelineDuration
-  //
-  double
-  TimelineModel::timelineDuration() const
-  {
-    return timelineDuration_;
-  }
 
   //----------------------------------------------------------------
   // TimelineModel::timeIn
@@ -240,6 +222,15 @@ namespace yae
   TimelineModel::ignoreClockStoppedEvent(bool ignore)
   {
     ignoreClockStopped_ = ignore;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::trimLeadingZeros
+  //
+  void
+  TimelineModel::trimLeadingZeros(bool enable)
+  {
+    trimLeadingZeros_ = enable;
   }
 
   //----------------------------------------------------------------
@@ -338,6 +329,8 @@ namespace yae
     timelineDuration_ = (unknownDuration_ ?
                          std::numeric_limits<double>::max() :
                          duration.sec());
+
+    emit modelChanged();
   }
 
   //----------------------------------------------------------------
@@ -354,12 +347,10 @@ namespace yae
                   timelineStart_ + timelineDuration_ - localtimeOffset_));
 
     QString ts_p = getTimeStamp(startFromZero_ ? 0.0 :
-                                timelineStart_ - localtimeOffset_,
-                                frameRate_,
-                                frameNumberSeparator_);
+                                timelineStart_ - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(T1, frameRate_, frameNumberSeparator_);
+    QString ts_d = getTimeStamp(T1);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(0.0);
@@ -393,16 +384,12 @@ namespace yae
 
     QString ts_p = getTimeStamp(startFromZero_ ?
                                 t - timelineStart_ :
-                                t - localtimeOffset_,
-                                frameRate_,
-                                frameNumberSeparator_);
+                                t - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
     QString ts_d = getTimeStamp(startFromZero_ ?
                                 timelineDuration_ :
-                                T1 - localtimeOffset_,
-                                frameRate_,
-                                frameNumberSeparator_);
+                                T1 - localtimeOffset_);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
@@ -467,6 +454,10 @@ namespace yae
         t1 = T1;
       }
     }
+    else
+    {
+      emit modelChanged();
+    }
 
     t0 = std::max<double>(T0, std::min<double>(T1, t0));
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
@@ -474,21 +465,71 @@ namespace yae
 
     QString ts_p = getTimeStamp(startFromZero_ ?
                                 t - timelineStart_ :
-                                t - localtimeOffset_,
-                                frameRate_,
-                                frameNumberSeparator_);
+                                t - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
     QString ts_d = getTimeStamp(startFromZero_ ?
                                 timelineDuration_ :
-                                T1 - localtimeOffset_,
-                                frameRate_,
-                                frameNumberSeparator_);
+                                T1 - localtimeOffset_);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
     updateMarkerTimeIn(unknownDuration_ ? 0.0 : (t0 - T0) / dT);
     updateMarkerTimeOut(unknownDuration_ ? 1.0 : (t1 - T0) / dT);
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::clockTemplate
+  //
+  const QString &
+  TimelineModel::clockTemplate()
+  {
+    return kClockTemplate;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::getTimeAsSecondsAt
+  //
+  double
+  TimelineModel::getTimeAsSecondsAt(double marker) const
+  {
+    double seconds = timelineStart_ + marker * timelineDuration_;
+    return seconds;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::getTimeStamp
+  //
+  QString
+  TimelineModel::getTimeStamp(double seconds) const
+  {
+    QString ts = makeTimeStamp(seconds,
+                               frameRate_,
+                               frameNumberSeparator_,
+                               trimLeadingZeros_);
+    return ts;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::getTimeStampAt
+  //
+  QString
+  TimelineModel::getTimeStampAt(double marker) const
+  {
+    double seconds = getTimeAsSecondsAt(marker);
+    QString ts = getTimeStamp(startFromZero_ ?
+                              seconds - timelineStart_ :
+                              seconds - localtimeOffset_);
+    return ts;
+  }
+
+  //----------------------------------------------------------------
+  // TimelineModel::emitUserIsSeeking
+  //
+  void
+  TimelineModel::emitUserIsSeeking(bool seeking)
+  {
+    emit userIsSeeking(seeking);
   }
 
   //----------------------------------------------------------------
@@ -560,7 +601,7 @@ namespace yae
   void
   TimelineModel::setInPoint()
   {
-    if (!unknownDuration_ && currentState_ == kIdle)
+    if (!unknownDuration_)
     {
       setMarkerTimeIn(markerPlayhead_);
     }
@@ -572,7 +613,7 @@ namespace yae
   void
   TimelineModel::setOutPoint()
   {
-    if (!unknownDuration_ && currentState_ == kIdle)
+    if (!unknownDuration_)
     {
       setMarkerTimeOut(markerPlayhead_);
     }
@@ -892,7 +933,7 @@ namespace yae
       (markerPlayhead_ * timelineDuration_ +
        (startFromZero_ ? 0.0 : timelineStart_ - localtimeOffset_));
 
-    QString ts = getTimeStamp(seconds, frameRate_, frameNumberSeparator_);
+    QString ts = getTimeStamp(seconds);
     updateAuxPlayhead(ts);
 
     return true;

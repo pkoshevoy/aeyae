@@ -866,31 +866,33 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setInPoint()),
-                 timelineControls_, SLOT(setInPoint()));
+                 &(timelineControls_->model_), SLOT(setInPoint()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setOutPoint()),
-                 timelineControls_, SLOT(setOutPoint()));
+                 &(timelineControls_->model_), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(userIsSeeking(bool)),
+    ok = connect(&(timelineControls_->model_), SIGNAL(userIsSeeking(bool)),
                  this, SLOT(userIsSeeking(bool)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(moveTimeIn(double)),
+    ok = connect(&(timelineControls_->model_), SIGNAL(moveTimeIn(double)),
                  this, SLOT(moveTimeIn(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(moveTimeOut(double)),
+    ok = connect(&(timelineControls_->model_), SIGNAL(moveTimeOut(double)),
                  this, SLOT(moveTimeOut(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(movePlayHead(double)),
+    ok = connect(&(timelineControls_->model_), SIGNAL(movePlayHead(double)),
                  this, SLOT(movePlayHead(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(timelineControls_, SIGNAL(clockStopped(const SharedClock &)),
-                 this, SLOT(playbackFinished(const SharedClock &)));
+    ok = connect(&(timelineControls_->model_),
+                 SIGNAL(clockStopped(const SharedClock &)),
+                 this,
+                 SLOT(playbackFinished(const SharedClock &)));
     YAE_ASSERT(ok);
 
     ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
@@ -1386,7 +1388,7 @@ namespace yae
     canvas_->acceptFramesWithReaderId(readerId_);
 
     // disconnect timeline from renderers:
-    timelineControls_->observe(SharedClock());
+    timelineControls_->model_.observe(SharedClock());
 
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
@@ -1504,7 +1506,7 @@ namespace yae
     canvas_->clearOverlay();
 
     // reset timeline start, duration, playhead, in/out points:
-    timelineControls_->resetFor(reader);
+    timelineControls_->model_.resetFor(reader);
 
     if (bookmark)
     {
@@ -2135,44 +2137,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TIgnoreClockStop
-  //
-  struct TIgnoreClockStop
-  {
-    TIgnoreClockStop(TimelineControls * tc):
-      tc_(tc)
-    {
-      count_++;
-      if (count_ < 2)
-      {
-        tc_->ignoreClockStoppedEvent(true);
-      }
-    }
-
-    ~TIgnoreClockStop()
-    {
-      count_--;
-      if (!count_)
-      {
-        tc_->ignoreClockStoppedEvent(false);
-      }
-    }
-
-  private:
-    TIgnoreClockStop(const TIgnoreClockStop &);
-    TIgnoreClockStop & operator = (const TIgnoreClockStop &);
-
-    static int count_;
-    TimelineControls * tc_;
-  };
-
-  //----------------------------------------------------------------
-  // TIgnoreClockStop::count_
-  //
-  int
-  TIgnoreClockStop::count_ = 0;
-
-  //----------------------------------------------------------------
   // MainWindow::playbackColorConverter
   //
   void
@@ -2181,7 +2145,7 @@ namespace yae
     bool skipColorConverter = actionSkipColorConverter->isChecked();
     saveBooleanSetting(kSkipColorConverter, skipColorConverter);
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
     stopRenderers();
 
@@ -2189,7 +2153,7 @@ namespace yae
     selectVideoTrack(reader_, videoTrack);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineControls_->model_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2490,7 +2454,7 @@ namespace yae
     else
     {
       actionPlay->setText(tr("Play"));
-      TIgnoreClockStop ignoreClockStop(timelineControls_);
+      TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
       stopRenderers();
       prepareReaderAndRenderers(reader_, playbackPaused_);
 
@@ -2508,13 +2472,13 @@ namespace yae
     saveBooleanSetting(kDownmixToStereo, actionDownmixToStereo->isChecked());
 
     // reset reader:
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
 
     stopRenderers();
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineControls_->model_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2531,7 +2495,7 @@ namespace yae
     yae_debug << "audioSelectTrack: " << index;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
     stopRenderers();
 
@@ -2540,7 +2504,7 @@ namespace yae
     reader_->getAudioTraits(selAudioTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineControls_->model_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2557,7 +2521,7 @@ namespace yae
     yae_debug << "videoSelectTrack: " << index;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
     stopRenderers();
 
@@ -2566,7 +2530,7 @@ namespace yae
     reader_->getVideoTraits(selVideoTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineControls_->model_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2583,7 +2547,7 @@ namespace yae
     yae_debug << "subsSelectTrack: " << index;
 #endif
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
     stopRenderers();
 
@@ -2591,7 +2555,7 @@ namespace yae
     selSubsFormat_ = reader_->subsInfo(index, selSubs_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
-    double t = timelineControls_->currentTime();
+    double t = timelineControls_->model_.currentTime();
     reader_->seek(t);
     reader_->threadStart();
 
@@ -2604,7 +2568,7 @@ namespace yae
   void
   MainWindow::updateChaptersMenu()
   {
-    const double playheadInSeconds = timelineControls_->currentTime();
+    const double playheadInSeconds = timelineControls_->model_.currentTime();
     QList<QAction *> actions = chaptersGroup_->actions();
 
     const std::size_t numActions = actions.size();
@@ -2653,7 +2617,7 @@ namespace yae
   void
   MainWindow::skipToNextChapter()
   {
-    const double playheadInSeconds = timelineControls_->currentTime();
+    const double playheadInSeconds = timelineControls_->model_.currentTime();
     const std::size_t numChapters = reader_->countChapters();
 
     for (std::size_t i = 0; i < numChapters; i++)
@@ -2663,7 +2627,7 @@ namespace yae
       {
         if (playheadInSeconds < ch.t0_sec())
         {
-          timelineControls_->seekTo(ch.t0_sec());
+          timelineControls_->model_.seekTo(ch.t0_sec());
           return;
         }
       }
@@ -2687,7 +2651,7 @@ namespace yae
     bool ok = reader_->getChapterInfo(index, ch);
     YAE_ASSERT(ok);
 
-    timelineControls_->seekTo(ch.t0_sec());
+    timelineControls_->model_.seekTo(ch.t0_sec());
   }
 
   //----------------------------------------------------------------
@@ -2884,7 +2848,7 @@ namespace yae
   void
   MainWindow::playbackFinished(const SharedClock & c)
   {
-    if (!timelineControls_->sharedClock().sharesCurrentTimeWith(c))
+    if (!timelineControls_->model_.sharedClock().sharesCurrentTimeWith(c))
     {
 #ifndef NDEBUG
       yae_debug << "NOTE: ignoring stale playbackFinished";
@@ -2950,8 +2914,8 @@ namespace yae
   MainWindow::playbackStop()
   {
     IReaderPtr reader(ReaderFFMPEG::create());
-    timelineControls_->observe(SharedClock());
-    timelineControls_->resetFor(reader);
+    timelineControls_->model_.observe(SharedClock());
+    timelineControls_->model_.resetFor(reader);
 
     reader_->close();
     videoRenderer_->close();
@@ -3121,12 +3085,12 @@ namespace yae
     bool isLooping = actionLoop->isChecked();
     if (isLooping)
     {
-      double t0 = timelineControls_->timelineStart();
-      double dt = timelineControls_->timelineDuration();
+      double t0 = timelineControls_->model_.timelineStart();
+      double dt = timelineControls_->model_.timelineDuration();
       seconds = t0 + fmod(seconds - t0, dt);
     }
 
-    timelineControls_->seekTo(seconds);
+    timelineControls_->model_.seekTo(seconds);
   }
 
   //----------------------------------------------------------------
@@ -3165,7 +3129,7 @@ namespace yae
 
     if (group && item)
     {
-      double positionInSeconds = timelineControls_->currentTime();
+      double positionInSeconds = timelineControls_->model_.currentTime();
       yae::saveBookmark(group->bookmarkHash_,
                         item->bookmarkHash_,
                         reader_,
@@ -3349,7 +3313,7 @@ namespace yae
             double offset =
               (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
 
-            timelineControls_->seekFromCurrentTime(offset);
+            timelineControls_->model_.seekFromCurrentTime(offset);
           }
         }
 
@@ -3367,7 +3331,7 @@ namespace yae
   void
   MainWindow::wheelEvent(QWheelEvent * e)
   {
-    double tNow = timelineControls_->currentTime();
+    double tNow = timelineControls_->model_.currentTime();
     if (tNow <= 1e-1)
     {
       // ignore it:
@@ -3458,13 +3422,13 @@ namespace yae
              key == Qt::Key_Period ||
              key == Qt::Key_Greater)
     {
-      timelineControls_->seekFromCurrentTime(7.0);
+      timelineControls_->model_.seekFromCurrentTime(7.0);
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
              key == Qt::Key_Less)
     {
-      timelineControls_->seekFromCurrentTime(-3.0);
+      timelineControls_->model_.seekFromCurrentTime(-3.0);
     }
     else if (key == Qt::Key_MediaPlay ||
 #if QT_VERSION >= 0x040700
@@ -3504,7 +3468,7 @@ namespace yae
     std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
     bool hasAudio = audioTrackIndex < numAudioTracks;
 
-    TIgnoreClockStop ignoreClockStop(timelineControls_);
+    TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     const IReader * reader = reader_;
 
     QTime startTime = QTime::currentTime();
@@ -3809,7 +3773,7 @@ namespace yae
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
 
     SharedClock sharedClock;
-    timelineControls_->observe(sharedClock);
+    timelineControls_->model_.observe(sharedClock);
     reader->setSharedClock(sharedClock);
 
     if (audioTrack < numAudioTracks &&
@@ -3855,7 +3819,7 @@ namespace yae
 
     if (!frameStepping)
     {
-      timelineControls_->adjustTo(reader);
+      timelineControls_->model_.adjustTo(reader);
 
       // request playback at currently selected playback rate:
       reader->setTempo(tempo_);
