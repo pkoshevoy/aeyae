@@ -449,14 +449,16 @@ if (WIN32)
   endif ()
 
   if (MINGW OR MSYS)
-    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico")
+    string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON
+      "${PROJECT_SOURCE_DIR}/apprenticevideo_classic.ico")
     string(REPLACE "/" "\\\\" NATIVE_DEPENDS_EXE "${DEPENDENCY_WALKER}")
     string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
     string(REPLACE "/" "\\\\" NATIVE_CANDLE_EXE "${WIX_CANDLE}")
     string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
     string(REPLACE "/" "\\\\" NATIVE_VC_CRT_MSM "${VC_CRT_MSM}")
   else (MINGW OR MSYS)
-    file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/${PROGNAME}.ico" NATIVE_PROGRAM_ICON)
+    file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/apprenticevideo_classic.ico"
+      NATIVE_PROGRAM_ICON)
     file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
     file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
     file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)

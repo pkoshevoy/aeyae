@@ -1,6 +1,6 @@
 #include "afxres.h"
 
-IDI_ICON1               ICON    DISCARDABLE     "apprenticevideo-classic.ico"
+IDI_ICON1               ICON    DISCARDABLE     "apprenticevideo_classic.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION	@PROJ_YY_MM_DD_HHMM@

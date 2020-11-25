@@ -646,7 +646,7 @@ usage(char ** argv, const char * message = NULL)
 {
   std::cerr
     << "USAGE: " << argv[0]
-    << " -what [apprenticevideo|aeyaeremux|yaetv]"
+    << " -what [apprenticevideo|apprenticevideo-classic|aeyaeremux|yaetv]"
     << " -dep-walker pathToDependsExe"
     << " -allow dlls;allowed;search;path;list"
     << " -wix-candle pathWixCandleExe"
@@ -794,6 +794,29 @@ main(int argc, char ** argv)
     data.product_name_ = "Apprentice Video";
     data.guid_upgrade_ = "a4a297db-1d6c-4320-b015-80add2a8d07c";
     data.comments_ = "A Video Player";
+
+    static const char * supported[] = {
+      "3gp", "aac", "ac3", "aiff", "asf", "avi", "divx", "dv", "flv", "f4v",
+      "mod", "mov", "mpeg", "mpg", "mp3", "mp4", "m2t", "m2ts",
+      "m2v", "m4a", "m4v", "mka", "mkv", "mts", "mxf", "ogg", "ogm", "ogv",
+      "ra", "rm", "ts", "vob", "wav", "wma", "wmv",
+      "weba", "webm"
+    };
+
+    static const std::size_t n_ext = sizeof(supported) / sizeof(supported[0]);
+    data.ext_.resize(n_ext);
+    for (std::size_t i = 0; i < n_ext; i++)
+    {
+      data.ext_[i] = supported[i];
+    }
+  }
+  else if (what == "apprenticevideo-classic")
+  {
+    data.installer_name_ = "apprenticevideo-classic";
+    data.product_id_ = "ApprenticeVideoClassic";
+    data.product_name_ = "Apprentice Video Classic";
+    data.guid_upgrade_ = "40fbf9bf-db60-459c-bd2a-444b306ed21d";
+    data.comments_ = "A Lightweight Video Player";
 
     static const char * supported[] = {
       "3gp", "aac", "ac3", "aiff", "asf", "avi", "divx", "dv", "flv", "f4v",
