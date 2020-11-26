@@ -96,6 +96,18 @@ namespace yae
     QString::fromUtf8("SkipNonReferenceFrames");
 
   //----------------------------------------------------------------
+  // kDeinterlaceFrames
+  //
+  static const QString kDeinterlaceFrames =
+    QString::fromUtf8("DeinterlaceFrames");
+
+  //----------------------------------------------------------------
+  // kShowTimeline
+  //
+  static const QString kShowTimeline =
+    QString::fromUtf8("ShowTimeline");
+
+  //----------------------------------------------------------------
   // swapLayouts
   //
   static void
@@ -365,10 +377,22 @@ namespace yae
 #endif
     videoRenderer_.reset(VideoRenderer::create());
 
-    // show the timeline:
+    // restore timeline preference (default == show):
     setTimelineCssForVideo(timelineWidgets_);
-    actionShowTimeline->setChecked(true);
-    timelineWidgets_->show();
+    {
+      SignalBlocker blockSignals(actionShowTimeline);
+      bool showTimeline = loadBooleanSettingOrDefault(kShowTimeline, true);
+      actionShowTimeline->setChecked(showTimeline);
+
+      if (showTimeline)
+      {
+        timelineWidgets_->show();
+      }
+      else
+      {
+        timelineWidgets_->hide();
+      }
+    }
 
     // hide the playlist:
     actionShowPlaylist->setChecked(false);
@@ -441,6 +465,10 @@ namespace yae
     bool skipNonReferenceFrames =
       loadBooleanSettingOrDefault(kSkipNonReferenceFrames, false);
     actionSkipNonReferenceFrames->setChecked(skipNonReferenceFrames);
+
+    bool deinterlaceFrames =
+      loadBooleanSettingOrDefault(kDeinterlaceFrames, false);
+    actionDeinterlace->setChecked(deinterlaceFrames);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -2160,6 +2188,9 @@ namespace yae
     bool skipColorConverter = actionSkipColorConverter->isChecked();
     saveBooleanSetting(kSkipColorConverter, skipColorConverter);
 
+    bool deint = actionDeinterlace->isChecked();
+    saveBooleanSetting(kDeinterlaceFrames, deint);
+
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     reader_->threadStop();
     stopRenderers();
@@ -2253,11 +2284,14 @@ namespace yae
   {
     SignalBlocker blockSignals(actionShowTimeline);
 
+    bool showTimeline = !timelineWidgets_->isVisible();
+    saveBooleanSetting(kShowTimeline, showTimeline);
+
     QRect mainGeom = geometry();
     int ctrlHeight = timelineWidgets_->height();
     bool fullScreen = this->isFullScreen();
 
-    if (timelineWidgets_->isVisible())
+    if (!showTimeline)
     {
       actionShowTimeline->setChecked(false);
       timelineWidgets_->hide();
