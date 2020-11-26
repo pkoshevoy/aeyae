@@ -174,7 +174,7 @@ namespace yae
                  this, SLOT(modelDurationChanged()));
     YAE_ASSERT(ok);
 
-    model_.trimLeadingZeros(true);
+    model_.trimLeadingZeros(false);
   }
 
   //----------------------------------------------------------------

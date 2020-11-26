@@ -8,6 +8,10 @@
     <file>images/search.png</file>
     <file>images/clear.png</file>
     <file>images/clear-dark.png</file>
+    <file>images/toggle-playback-on.png</file>
+    <file>images/toggle-playback-off.png</file>
+    <file>images/toggle-fullscreen-on.png</file>
+    <file>images/toggle-fullscreen-off.png</file>
     <file>yaeAbout.html</file>
   </qresource>
 </RCC>

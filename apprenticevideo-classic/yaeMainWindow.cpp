@@ -731,6 +731,10 @@ namespace yae
                  actionPlay, SLOT(trigger()));
     YAE_ASSERT(ok);
 
+    ok = connect(playbackToggle_, SIGNAL(clicked()),
+                 actionPlay, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionNext, SIGNAL(triggered()),
                  this, SLOT(playbackNext()));
     YAE_ASSERT(ok);
@@ -781,6 +785,10 @@ namespace yae
 
     ok = connect(playlistWidget_, SIGNAL(currentItemChanged(std::size_t)),
                  this, SLOT(playlistItemChanged(std::size_t)));
+    YAE_ASSERT(ok);
+
+    ok = connect(fullscreenToggle_, SIGNAL(clicked()),
+                 this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen, SIGNAL(triggered()),
@@ -2359,6 +2367,8 @@ namespace yae
       << actionFullScreen
       << actionFillScreen;
 
+    fullscreenToggle_->setChecked(true);
+
     if (renderMode == Canvas::kScaleToFit)
     {
       actionFullScreen->setChecked(true);
@@ -2424,6 +2434,7 @@ namespace yae
       << actionFullScreen
       << actionFillScreen;
 
+    fullscreenToggle_->setChecked(false);
     actionFullScreen->setChecked(false);
     actionFillScreen->setChecked(false);
     actionShrinkWrap->setEnabled(true);
@@ -2452,6 +2463,7 @@ namespace yae
 
     if (!playbackPaused_)
     {
+      playbackToggle_->setChecked(false);
       actionPlay->setText(tr("Pause"));
       prepareReaderAndRenderers(reader_, playbackPaused_);
       resumeRenderers();
@@ -2460,6 +2472,7 @@ namespace yae
     }
     else
     {
+      playbackToggle_->setChecked(true);
       actionPlay->setText(tr("Play"));
       TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
       stopRenderers();

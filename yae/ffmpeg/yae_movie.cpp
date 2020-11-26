@@ -790,7 +790,7 @@ namespace yae
           }
           else
           {
-            YAE_ASSERT(videoTrack->streamIndex() != packet.stream_index);
+            YAE_EXPECT(videoTrack->streamIndex() != packet.stream_index);
             continue;
           }
         }
