@@ -2581,6 +2581,8 @@ namespace yae
       bookmarkTimer_.stop();
       saveBookmark();
     }
+
+    view_.force_animate_opacity();
   }
 
   //----------------------------------------------------------------

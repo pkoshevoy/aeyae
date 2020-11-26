@@ -83,6 +83,12 @@
        </item>
        <item row="1" column="5">
         <widget class="QToolButton" name="fullscreenToggle_">
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
+         <property name="contextMenuPolicy">
+          <enum>Qt::NoContextMenu</enum>
+         </property>
          <property name="styleSheet">
           <string notr="true">QToolButton	{
 	background-color: transparent;
@@ -101,6 +107,12 @@
        </item>
        <item row="1" column="1">
         <widget class="QToolButton" name="playbackToggle_">
+         <property name="focusPolicy">
+          <enum>Qt::NoFocus</enum>
+         </property>
+         <property name="contextMenuPolicy">
+          <enum>Qt::NoContextMenu</enum>
+         </property>
          <property name="styleSheet">
           <string notr="true">QToolButton	{
 	background-color: transparent;
@@ -532,7 +544,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>16:9</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Ctrl+6</string>
+    <string>Ctrl+Alt+6</string>
    </property>
   </action>
   <action name="actionAspectRatio1_33">
@@ -543,7 +555,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>4:3</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Ctrl+4</string>
+    <string>Ctrl+Alt+4</string>
    </property>
   </action>
   <action name="actionAspectRatioAuto">
@@ -554,7 +566,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>Automatic</string>
    </property>
    <property name="shortcut">
-    <string>Alt+Ctrl+X</string>
+    <string>Ctrl+Alt+X</string>
    </property>
   </action>
   <action name="actionFullScreen">
