@@ -260,7 +260,7 @@ mainMayThrowException(int argc, char ** argv)
   yae::mainWindow->show();
 
   // initialize the canvas:
-  yae::mainWindow->canvas().initializePrivateBackend();
+  yae::mainWindow->initItemViews();
 
   yae::mainWindow->setPlaylist(playlist);
   yae::mainWindow->playbackSetTempo(percentTempo);

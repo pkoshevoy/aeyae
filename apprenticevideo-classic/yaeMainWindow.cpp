@@ -303,7 +303,8 @@ namespace yae
     tempo_(1.0),
     selVideo_(0, 1),
     selAudio_(0, 1),
-    selSubsFormat_(kSubsNone)
+    selSubsFormat_(kSubsNone),
+    style_("classic", view_)
   {
 #ifdef __APPLE__
     appleRemoteControl_ = NULL;
@@ -1019,6 +1020,71 @@ namespace yae
 
     canvas_->cropAutoDetectStop();
     delete canvas_;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::isPlaybackPaused
+  //
+  bool
+  MainWindow::isPlaybackPaused() const
+  {
+    return playbackPaused_;
+  }
+
+  //----------------------------------------------------------------
+  // IsPlaybackPaused
+  //
+  struct IsPlaybackPaused : public TBoolExpr
+  {
+    IsPlaybackPaused(const MainWindow & window):
+      window_(window)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = window_.isPlaybackPaused();
+    }
+
+    const MainWindow & window_;
+  };
+
+  //----------------------------------------------------------------
+  // toggle_playback
+  //
+  static void
+  toggle_playback(void * context)
+  {
+    yae_debug << "TOGGLE PLAYBACK!";
+    MainWindow * window = (MainWindow *)context;
+    yae::queue_call(*window, &MainWindow::togglePlayback);
+  }
+
+  //----------------------------------------------------------------
+  // is_playback_paused
+  //
+  static bool
+  is_playback_paused(void * context, bool & playback_paused)
+  {
+    MainWindow * window = (MainWindow *)context;
+    playback_paused = window->isPlaybackPaused();
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::initItemViews
+  //
+  void
+  MainWindow::initItemViews()
+  {
+    canvas_->initializePrivateBackend();
+
+    TMakeCurrentContext currentContext(canvas_->Canvas::context());
+    view_.toggle_playback_.reset(&yae::toggle_playback, this);
+    view_.is_playback_paused_.reset(&yae::is_playback_paused, this);
+    view_.setStyle(&style_);
+    canvas_->append(&view_);
+    view_.setEnabled(true);
   }
 
   //----------------------------------------------------------------

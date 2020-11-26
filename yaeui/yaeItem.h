@@ -31,6 +31,7 @@
 
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_utils.h"
 
 // local interfaces:
 #include "yaeCanvas.h"
@@ -1176,6 +1177,75 @@ namespace yae
     const BoolRef & predicate_;
     TDataRef a_;
     TDataRef b_;
+  };
+
+  //----------------------------------------------------------------
+  // IsValid
+  //
+  struct YAEUI_API IsValid : public TBoolExpr
+  {
+    IsValid(const ContextCallback & cb):
+      cb_(cb)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = !cb_.is_null();
+    }
+
+    const ContextCallback & cb_;
+  };
+
+  //----------------------------------------------------------------
+  // IsTrue
+  //
+  struct YAEUI_API IsTrue : public TBoolExpr
+  {
+    IsTrue(const ContextQuery<bool> & query):
+      query_(query)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (query_.is_null())
+      {
+        result = false;
+      }
+      else
+      {
+        query_(result);
+      }
+    }
+
+    const ContextQuery<bool> & query_;
+  };
+
+  //----------------------------------------------------------------
+  // IsFalse
+  //
+  struct YAEUI_API IsFalse : public TBoolExpr
+  {
+    IsFalse(const ContextQuery<bool> & query):
+      query_(query)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (query_.is_null())
+      {
+        result = true;
+      }
+      else
+      {
+        query_(result);
+        result = !result;
+      }
+    }
+
+    const ContextQuery<bool> & query_;
   };
 
 }

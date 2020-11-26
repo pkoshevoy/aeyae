@@ -76,9 +76,8 @@ namespace yae
   //
   struct AnimatorForControls : public ItemView::IAnimator
   {
-    AnimatorForControls(TimelineItem & timeline, Item & controlsContainer):
-      timeline_(timeline),
-      controlsContainer_(controlsContainer)
+    AnimatorForControls(TimelineItem & timeline):
+      timeline_(timeline)
     {}
 
     // helper:
@@ -108,50 +107,6 @@ namespace yae
     }
 
     TimelineItem & timeline_;
-    Item & controlsContainer_;
-  };
-
-  //----------------------------------------------------------------
-  // IsValid
-  //
-  struct IsValid : public TBoolExpr
-  {
-    IsValid(const ContextCallback & cb):
-      cb_(cb)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      result = !cb_.is_null();
-    }
-
-    const ContextCallback & cb_;
-  };
-
-  //----------------------------------------------------------------
-  // IsTrue
-  //
-  struct IsTrue : public TBoolExpr
-  {
-    IsTrue(const ContextQuery<bool> & query):
-      query_(query)
-    {}
-
-    // virtual:
-    void evaluate(bool & result) const
-    {
-      if (query_.is_null())
-      {
-        result = false;
-      }
-      else
-      {
-        query_(result);
-      }
-    }
-
-    const ContextQuery<bool> & query_;
   };
 
   //----------------------------------------------------------------
@@ -1177,11 +1132,8 @@ namespace yae
       mouseDetectForControls.anchors_.fill(controls);
     }
 
-    this->opacity_animator_.reset
-      (new Animator(*this, mouseDetect));
-
-    this->controls_animator_.reset
-      (new AnimatorForControls(*this, mouseDetectForControls));
+    this->opacity_animator_.reset(new Animator(*this, mouseDetect));
+    this->controls_animator_.reset(new AnimatorForControls(*this));
 
     animate_opacity_.reset(new AnimateOpacity(*this));
     playheadFocus.addObserver(Item::kOnFocus, animate_opacity_);

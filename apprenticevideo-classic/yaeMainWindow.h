@@ -32,6 +32,7 @@
 
 // local:
 #include "yaeBookmarks.h"
+#include "yaeMainView.h"
 #include "yaeTimelineControls.h"
 #include "ui_yaeAbout.h"
 #include "ui_yaeAspectRatioDialog.h"
@@ -111,6 +112,8 @@ namespace yae
   public:
     MainWindow(const TReaderFactoryPtr & readerFactory);
     ~MainWindow();
+
+    void initItemViews();
 
     // accessor to the OpenGL rendering canvas:
     inline const TCanvasWidget & canvas() const
@@ -234,6 +237,8 @@ namespace yae
 
     bool findBookmark(std::size_t itemIndex,
                       PlaylistBookmark & bookmark) const;
+
+    bool isPlaybackPaused() const;
 
   protected:
     // virtual:
@@ -385,6 +390,10 @@ namespace yae
 
     // auto-bookmark timer:
     QTimer bookmarkTimer_;
+
+    // player controls view:
+    MainView view_;
+    ItemViewStyle style_;
   };
 }
 

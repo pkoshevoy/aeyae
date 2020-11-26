@@ -80,6 +80,7 @@ find_library(GLEW_LIBRARY GLEW
 
 set(project_moc_hxx
   yaeLineEdit.h
+  yaeMainView.h
   yaeMainWindow.h
   yaePlaylistWidget.h
   yaeTimelineControls.h
@@ -100,6 +101,8 @@ set(project_sources
   yaeLineEdit.cpp
   yaeLineEdit.h
   yaeMain.cpp
+  yaeMainView.cpp
+  yaeMainView.h
   yaeMainWindow.cpp
   yaeMainWindow.h
   yaePlaylistWidget.cpp
