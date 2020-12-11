@@ -887,7 +887,10 @@ namespace yae
 
     timelineTimer_(this),
     enableBackArrowButton_(BoolRef::constant(false)),
-    enableDeleteFileButton_(BoolRef::constant(false))
+    enableDeleteFileButton_(BoolRef::constant(false)),
+
+    scrollStart_(0.0),
+    scrollOffset_(0.0)
   {
     init_actions();
     translate_ui();
@@ -1229,8 +1232,14 @@ namespace yae
 
     int key = event->key();
     bool key_press = event->type() == QEvent::KeyPress;
+    bool is_playlist_visible = timeline_->is_playlist_visible_.get();
 
-    if (key == Qt::Key_N)
+    if (is_playlist_visible)
+    {
+      // let the playlist handle most event:
+      return false;
+    }
+    else if (key == Qt::Key_N)
     {
       if (key_press)
       {
@@ -1240,7 +1249,8 @@ namespace yae
     }
     else if (key == Qt::Key_MediaNext ||
              key == Qt::Key_Period ||
-             key == Qt::Key_Greater)
+             key == Qt::Key_Greater ||
+             key == Qt::Key_Right)
     {
       if (key_press)
       {
@@ -1249,7 +1259,8 @@ namespace yae
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
-             key == Qt::Key_Less)
+             key == Qt::Key_Less ||
+             key == Qt::Key_Left)
     {
       if (key_press)
       {
@@ -1261,6 +1272,7 @@ namespace yae
              key == Qt::Key_MediaPause ||
              key == Qt::Key_MediaTogglePlayPause ||
 #endif
+             key == Qt::Key_Return ||
              key == Qt::Key_MediaStop)
     {
       if (key_press)

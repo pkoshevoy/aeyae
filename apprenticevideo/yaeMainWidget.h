@@ -132,9 +132,6 @@ namespace yae
     void populateContextMenu();
 
   protected:
-    // virtual:
-    bool processKeyEvent(QKeyEvent * event);
-
     // open a movie file for playback:
     bool load(const QString & path, const TBookmark * bookmark = NULL);
 

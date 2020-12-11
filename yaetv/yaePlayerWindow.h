@@ -56,7 +56,6 @@ namespace yae
     // virtual:
     void changeEvent(QEvent * e);
     void closeEvent(QCloseEvent * e);
-    void keyPressEvent(QKeyEvent * e);
 
   public:
     QVBoxLayout * containerLayout_;

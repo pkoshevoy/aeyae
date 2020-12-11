@@ -124,20 +124,4 @@ namespace yae
     stopAndHide();
   }
 
-  //----------------------------------------------------------------
-  // PlayerWindow::keyPressEvent
-  //
-  void
-  PlayerWindow::keyPressEvent(QKeyEvent * event)
-  {
-    int key = event->key();
-    event->ignore();
-
-    if (key == Qt::Key_Escape)
-    {
-      event->accept();
-      stopAndHide();
-    }
-  }
-
 }

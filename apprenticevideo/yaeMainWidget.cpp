@@ -1289,27 +1289,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWidget::processKeyEvent
-  //
-  bool
-  MainWidget::processKeyEvent(QKeyEvent * event)
-  {
-    if (PlayerWidget::processKeyEvent(event))
-    {
-      return true;
-    }
-
-    int key = event->key();
-    if (key == Qt::Key_Escape && actionShowPlaylist_->isChecked())
-    {
-      actionShowPlaylist_->trigger();
-      return true;
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
   // hasFileExt
   //
   inline static bool

@@ -65,11 +65,25 @@ namespace yae
   signals:
     void toggleFullScreen();
     void maybeHideCursor();
+    void escShort();
+    void escLong();
 
   public:
     // signals are protected in Qt4, this is a workaround:
     inline void emit_toggle_fullscreen()
     { emit toggleFullScreen(); }
+
+    inline void emit_esc_short()
+    {
+      // yae_error << "emit_esc_short";
+      emit escShort();
+    }
+
+    inline void emit_esc_long()
+    {
+      // yae_error << "emit_esc_long";
+      emit escLong();
+    }
 
   public slots:
     void hideCursor()
@@ -317,6 +331,9 @@ namespace yae
     // helper:
     void init()
     {
+      escPressed_ = false;
+      escRepeated_ = false;
+
       TWidget::setAttribute(Qt::WA_NoSystemBackground);
       TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
       TWidget::setAutoFillBackground(false);
@@ -371,6 +388,34 @@ namespace yae
           return true;
         }
 
+        if (et == QEvent::KeyPress ||
+            et == QEvent::KeyRelease)
+        {
+          QKeyEvent * e = static_cast<QKeyEvent *>(event);
+          if (et == QEvent::KeyPress)
+          {
+            escPressed_ = true;
+            escRepeated_ = e->isAutoRepeat();
+          }
+          else if (escPressed_)
+          {
+            if (escRepeated_)
+            {
+              sigs_.emit_esc_long();
+            }
+            else
+            {
+              sigs_.emit_esc_short();
+            }
+
+            escPressed_ = false;
+            escRepeated_ = false;
+          }
+
+          event->accept();
+          return true;
+        }
+
         return TWidget::event(event);
       }
       catch (const std::exception & e)
@@ -415,6 +460,16 @@ namespace yae
     }
 
     CanvasWidgetSignalsSlots sigs_;
+
+  protected:
+    // long-press (auto-repeated KeyPress prior to KeyRelease)
+    // should be interpreted as fullscreen toggle.
+    //
+    // short-press (no auto-repeated KeyPress prior to KeyRelease)
+    // should be interpreted as playlist toggle.
+    //
+    bool escPressed_;
+    bool escRepeated_;
   };
 
 }

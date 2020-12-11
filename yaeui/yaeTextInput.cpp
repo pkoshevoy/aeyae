@@ -109,12 +109,17 @@ namespace yae
       return false;
     }
 
-    if (et == QEvent::KeyPress)
+    if (et == QEvent::KeyPress ||
+        et == QEvent::KeyRelease)
     {
       QKeyEvent & ke = *(static_cast<QKeyEvent *>(e));
       if (ke.key() == Qt::Key_Escape)
       {
-        ItemFocus::singleton().clearFocus();
+        if (et == QEvent::KeyRelease)
+        {
+          ItemFocus::singleton().clearFocus();
+        }
+
         return true;
       }
     }

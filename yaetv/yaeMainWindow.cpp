@@ -516,6 +516,14 @@ namespace yae
                  playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
+                 playerWidget_, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(escLong()),
+                 playerWidget_, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(watch_live(uint32_t, TTime)),
                  this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);
@@ -558,6 +566,10 @@ namespace yae
 
     ok = connect(&playerView, SIGNAL(delete_playing_file()),
                  this, SLOT(confirmDeletePlayingRecording()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playerView, SIGNAL(toggle_playlist()),
+                 &playerWindow_, SLOT(stopAndHide()));
     YAE_ASSERT(ok);
 
     ok = connect(&start_live_playback_, SIGNAL(timeout()),

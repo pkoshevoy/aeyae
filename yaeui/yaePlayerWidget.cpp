@@ -364,6 +364,14 @@ namespace yae
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&(canvas_->sigs_), SIGNAL(escLong()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
+                 &view_, SIGNAL(toggle_playlist()));
+    YAE_ASSERT(ok);
+
     ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
                  &(canvas_->sigs_), SLOT(hideCursor()));
     YAE_ASSERT(ok);
@@ -1548,12 +1556,6 @@ namespace yae
   PlayerWidget::processKeyEvent(QKeyEvent * event)
   {
     int key = event->key();
-
-    if (key == Qt::Key_Escape && window()->isFullScreen())
-    {
-      exitFullScreen();
-      return true;
-    }
 
     if (key == Qt::Key_I)
     {

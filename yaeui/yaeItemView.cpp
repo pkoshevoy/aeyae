@@ -600,6 +600,19 @@ namespace yae
   bool
   ItemView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
   {
+#if 0 // ndef NDEBUG
+    yae_elog("ItemView(%s)::processKeyEvent: %s, key 0x%x %s%s %i",
+             root_->id_.c_str(),
+             e->type() == QEvent::KeyPress ? "KeyPress" :
+             e->type() == QEvent::KeyRelease ? "KeyRelease" :
+             e->type() == QEvent::ShortcutOverride ? "ShortcutOverride" :
+             yae::strfmt("type: %i", int(e->type())).c_str(),
+             e->key(),
+             e->text().toUtf8().constData(),
+             e->isAutoRepeat() ? " auto-repeat" : "",
+             e->count());
+#endif
+
     e->ignore();
     return false;
   }
