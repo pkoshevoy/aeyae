@@ -392,28 +392,34 @@ namespace yae
             et == QEvent::KeyRelease)
         {
           QKeyEvent * e = static_cast<QKeyEvent *>(event);
-          if (et == QEvent::KeyPress)
+          bool key_press = e->type() == QEvent::KeyPress;
+          int key = e->key();
+
+          if (key == Qt::Key_Escape)
           {
-            escPressed_ = true;
-            escRepeated_ = e->isAutoRepeat();
-          }
-          else if (escPressed_)
-          {
-            if (escRepeated_)
+            if (key_press)
             {
-              sigs_.emit_esc_long();
+              escPressed_ = true;
+              escRepeated_ = e->isAutoRepeat();
             }
-            else
+            else if (escPressed_)
             {
-              sigs_.emit_esc_short();
+              if (escRepeated_)
+              {
+                sigs_.emit_esc_long();
+              }
+              else
+              {
+                sigs_.emit_esc_short();
+              }
+
+              escPressed_ = false;
+              escRepeated_ = false;
             }
 
-            escPressed_ = false;
-            escRepeated_ = false;
+            event->accept();
+            return true;
           }
-
-          event->accept();
-          return true;
         }
 
         return TWidget::event(event);
