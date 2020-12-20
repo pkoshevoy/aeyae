@@ -393,6 +393,7 @@ namespace yae
         {
           QKeyEvent * e = static_cast<QKeyEvent *>(event);
           bool key_press = e->type() == QEvent::KeyPress;
+          bool auto_repeat = e->isAutoRepeat();
           int key = e->key();
 
           if (key == Qt::Key_Escape)
@@ -400,9 +401,9 @@ namespace yae
             if (key_press)
             {
               escPressed_ = true;
-              escRepeated_ = e->isAutoRepeat();
+              escRepeated_ = auto_repeat;
             }
-            else if (escPressed_)
+            else if (escPressed_ && !auto_repeat)
             {
               if (escRepeated_)
               {
