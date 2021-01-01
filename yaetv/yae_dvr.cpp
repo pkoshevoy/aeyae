@@ -4210,7 +4210,7 @@ namespace yae
       for (int j = 0, num_tuners = device.num_tuners(); j < num_tuners; j++)
       {
         std::string tuner_name = device.tuner_name(j);
-        bool enabled = tuners.get(tuner_name, true).asBool();
+        bool enabled = tuners.get(tuner_name, false).asBool();
         if (enabled)
         {
           tuner_names.insert(tuner_name);
