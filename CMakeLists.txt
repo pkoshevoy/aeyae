@@ -48,6 +48,7 @@ endif (WIN32)
 
 if (APPLE)
   add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
+  add_definitions(-D__ASSERTMACROS__)
 endif (APPLE)
 
 if (WIN32 AND NOT (MINGW OR MSYS))

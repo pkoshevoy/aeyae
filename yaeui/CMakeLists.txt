@@ -223,6 +223,8 @@ if (LIBASS_FOUND OR LIBASS_LIBRARY)
 endif ()
 
 if (APPLE)
+  add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
+  add_definitions(-D__ASSERTMACROS__)
   include_directories(AFTER martinkahr-apple_remote_control)
 
   set(project_sources

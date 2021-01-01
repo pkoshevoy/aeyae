@@ -27,12 +27,6 @@
 #include <QApplication>
 #include <QEvent>
 
-#ifdef __APPLE__
-#include <CoreServices/CoreServices.h>
-#elif !defined(_WIN32)
-#include <QtDBus/QtDBus>
-#endif
-
 // yae includes:
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_pixel_format_traits.h"

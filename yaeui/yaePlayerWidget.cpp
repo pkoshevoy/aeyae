@@ -6,9 +6,6 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// boost:
-#include <boost/interprocess/smart_ptr/unique_ptr.hpp>
-
 // Qt includes:
 #include <QActionGroup>
 #include <QApplication>
@@ -1682,22 +1679,20 @@ namespace yae
                                            bool heldDown)
   {
     PlayerWidget * widget = (PlayerWidget *)observerContext;
-
-    boost::interprocess::unique_ptr<RemoteControlEvent>
-      rc(new RemoteControlEvent(buttonId,
-                                pressedDown,
-                                clickCount,
-                                heldDown));
+    RemoteControlEvent * rc = new RemoteControlEvent(buttonId,
+                                                     pressedDown,
+                                                     clickCount,
+                                                     heldDown);
 #ifndef NDEBUG
     yae_debug
-      << "posting remote control event(" << rc.get()
+      << "posting remote control event(" << rc
       << "), buttonId: " << buttonId
       << ", down: " << pressedDown
       << ", clicks: " << clickCount
       << ", held down: " << heldDown;
 #endif
 
-    qApp->postEvent(widget->canvas_, rc.release(), Qt::HighEventPriority);
+    qApp->postEvent(widget->canvas_, rc, Qt::HighEventPriority);
   }
 #endif
 
