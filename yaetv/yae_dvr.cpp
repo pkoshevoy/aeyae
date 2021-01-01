@@ -2498,6 +2498,13 @@ namespace yae
     // unused:
     (void)worker;
 
+    std::set<std::string> enabled_tuners;
+    if (!dvr_.discover_enabled_tuners(enabled_tuners))
+    {
+      // there are no enabled tuners, nothing to do here:
+      return;
+    }
+
     static const TTime sample_dur(30, 1);
     std::map<uint32_t, std::string> channels;
     dvr_.get_channels(channels);
@@ -2649,6 +2656,13 @@ namespace yae
     // virtual:
     void execute(const yae::Worker & worker)
     {
+      std::set<std::string> enabled_tuners;
+      if (!dvr_.discover_enabled_tuners(enabled_tuners))
+      {
+        // there are no enabled tuners, it's not up to us to clean up:
+        return;
+      }
+
       static const uint64_t min_free_bytes = 9000000000ull;
       yae_dlog("storage cleanup to free up %" PRIu64 " bytes", min_free_bytes);
       yae::make_room_for(dvr_.basedir_.string(), min_free_bytes);
