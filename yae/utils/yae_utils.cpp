@@ -25,6 +25,8 @@
 // system includes:
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
+#include <sys/param.h>
+#include <sys/mount.h>
 #endif
 #if defined(_WIN32)
 #include <windows.h>
@@ -535,6 +537,18 @@ namespace yae
     filesystem_bytes_free = total_number_of_bytes_free.QuadPart;
     available_bytes = bytes_available_to_caller.QuadPart;
 
+#elif defined(__APPLE__)
+    struct statfs64 stat = { 0 };
+    int err = statfs64(path_utf8, &stat);
+    if (err)
+    {
+      return false;
+    }
+
+    filesystem_bytes = uint64_t(stat.f_bsize) * uint64_t(stat.f_blocks);
+    filesystem_bytes_free = uint64_t(stat.f_bsize) * uint64_t(stat.f_bfree);
+    available_bytes = uint64_t(stat.f_bsize) * uint64_t(stat.f_bavail);
+
 #else
     struct statvfs stat = { 0 };
     int err = statvfs(path_utf8, &stat);
@@ -544,9 +558,9 @@ namespace yae
     }
 
     // the available size is f_bsize * f_bavail
-    filesystem_bytes = stat.f_frsize * stat.f_blocks;
-    filesystem_bytes_free = stat.f_frsize * stat.f_bfree;
-    available_bytes = stat.f_frsize * stat.f_bavail;
+    filesystem_bytes = uint64_t(stat.f_frsize) * uint64_t(stat.f_blocks);
+    filesystem_bytes_free = uint64_t(stat.f_frsize) * uint64_t(stat.f_bfree);
+    available_bytes = uint64_t(stat.f_frsize) * uint64_t(stat.f_bavail);
 #endif
 
     return true;
