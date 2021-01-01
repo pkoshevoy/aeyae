@@ -880,6 +880,14 @@ namespace yae
                  this, SLOT(toggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&(canvas_->sigs_), SIGNAL(escLong()),
+                 this, SLOT(toggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
+                 actionShowPlaylist, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
                  &(canvas_->sigs_), SLOT(hideCursor()));
     YAE_ASSERT(ok);
