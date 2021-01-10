@@ -2562,17 +2562,17 @@ copyChapAtom(ChapAtom & dst,
     }
     else
     {
-      tb = ta < t1ms ? t1ms : ta;
+      tb = (t1ms && ta < t1ms) ? t1ms : ta;
     }
   }
 
-  if (!(t0ms < tb && ta < t1ms))
+  if (t1ms && !(t0ms < tb && ta < t1ms))
   {
     return false;
   }
 
-  ta = std::max(t0ms, std::min(t1ms, ta)) - t0ms;
-  tb = std::max(t0ms, std::min(t1ms, tb)) - t0ms;
+  ta = t1ms ? std::max(t0ms, std::min(t1ms, ta)) - t0ms : ta;
+  tb = t1ms ? std::max(t0ms, std::min(t1ms, tb)) - t0ms : tb;
 
   dst = src;
   dst.timeStart_.payload_.set(ta * (NANOSEC_PER_SEC / 1000));
