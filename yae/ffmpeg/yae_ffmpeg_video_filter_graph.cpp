@@ -362,15 +362,6 @@ namespace yae
       filters_ = oss.str().c_str();
     }
 
-    return setup_filter_links();
-  }
-
-  //----------------------------------------------------------------
-  // VideoFilterGraph::setup_filter_links
-  //
-  bool
-  VideoFilterGraph::setup_filter_links()
-  {
     graph_ = avfilter_graph_alloc();
 
     if (nb_threads_ > 0)
@@ -391,27 +382,35 @@ namespace yae
         AVFilterContext * filter_ctx = graph_->filters[i];
         YAE_ASSERT(!filter_ctx->hw_device_ctx);
         filter_ctx->hw_device_ctx = av_buffer_ref(device_ref);
-
-        bool hwdownload = strcmp(filter_ctx->filter->name, "hwdownload") == 0;
-        if (hwdownload)
-        {
-          break;
-        }
-
-        for (int j = 0; j < int(filter_ctx->nb_outputs); j++)
-        {
-          AVFilterLink * link = filter_ctx->outputs[j];
-          YAE_ASSERT(!link->hw_frames_ctx);
-          link->hw_frames_ctx = av_buffer_ref(hw_frames_.ref_);
-        }
       }
     }
+
+    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
+                      "buffer");
+    YAE_ASSERT(src_);
+
+    AVBufferSrcParameters * par = av_buffersrc_parameters_alloc();
+    par->width = src.width;
+    par->height = src.height;
+    par->format = src.format;
+    par->frame_rate = src_framerate_;
+    par->time_base = src_timebase_;
+
+    if (src.sample_aspect_ratio.num > 0 &&
+        src.sample_aspect_ratio.den > 0)
+    {
+      par->sample_aspect_ratio = src.sample_aspect_ratio;
+    }
+
+    par->hw_frames_ctx = hw_frames_.ref_;
+
+    err = av_buffersrc_parameters_set(src_, par);
+    av_freep(&par);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
-    src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
-                      "buffer");
     sink_ = lookup_sink(src_, "buffersink");
     YAE_ASSERT_OR_RETURN(src_ && sink_, false);
 

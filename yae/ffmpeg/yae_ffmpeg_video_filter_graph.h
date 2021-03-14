@@ -140,11 +140,6 @@ namespace yae
                // explicitly whether to add a separate scale filter:
                unsigned int setup_hints = 0);
 
-  protected:
-    // configure filter links hw_frames_ctx, finish avfilter graph setup:
-    bool setup_filter_links();
-
-  public:
     void push(AVFrame * in);
 
     // NOTE: a filter (yadif) may change the timebase of the output frame:
