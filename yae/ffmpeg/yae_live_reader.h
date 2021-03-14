@@ -65,6 +65,7 @@ namespace yae
     //! close currently open resource:
     virtual void close();
 
+    virtual const char * getResourcePath() const;
     virtual std::size_t getNumberOfPrograms() const;
     virtual bool getProgramInfo(std::size_t i, TProgramInfo & info) const;
 

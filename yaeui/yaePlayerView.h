@@ -170,6 +170,7 @@ namespace yae
 
     // menu actions:
     void playbackShowTimeline();
+    void playbackShowInFinder();
 
     void playbackCropFrameNone();
     void playbackCropFrame2_40();
@@ -231,6 +232,7 @@ namespace yae
 
   public:
     QAction * actionShowTimeline_;
+    QAction * actionShowInFinder_;
 
     QAction * actionPlay_;
     QAction * actionNextChapter_;

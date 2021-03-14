@@ -171,6 +171,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderFFMPEG::getResourcePath
+  //
+  const char *
+  ReaderFFMPEG::getResourcePath() const
+  {
+    return private_->movie_.getResourcePath();
+  }
+
+  //----------------------------------------------------------------
   // ReaderFFMPEG::getNumberOfPrograms
   //
   std::size_t

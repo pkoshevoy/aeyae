@@ -98,6 +98,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // showInFinder
+  //
+  void
+  showInFinder(const char * utf8_path)
+  {
+    NSString * path = [NSString stringWithUTF8String:utf8_path];
+    NSString * root = path.stringByDeletingLastPathComponent;
+    [[NSWorkspace sharedWorkspace]
+      selectFile:path
+      inFileViewerRootedAtPath:root];
+  }
+
+  //----------------------------------------------------------------
   // Mutex
   //
   struct Mutex

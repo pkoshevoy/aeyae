@@ -59,6 +59,9 @@ namespace yae
     bool open(const char * resourcePath);
     void close();
 
+    inline const char * getResourcePath() const
+    { return resourcePath_.empty() ? NULL : resourcePath_.c_str(); }
+
     inline const std::vector<TProgramInfo> & getPrograms() const
     { return programs_; }
 

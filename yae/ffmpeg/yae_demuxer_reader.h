@@ -63,6 +63,7 @@ namespace yae
     //! close currently open resource:
     virtual void close();
 
+    virtual const char * getResourcePath() const;
     virtual std::size_t getNumberOfPrograms() const;
     virtual bool getProgramInfo(std::size_t i, TProgramInfo & info) const;
 
@@ -191,6 +192,8 @@ namespace yae
     //! intentionally disabled:
     DemuxerReader(const DemuxerReader & f);
     DemuxerReader & operator = (const DemuxerReader & f);
+
+    std::string resourcePath_;
 
     // demuxer:
     TDemuxerInterfacePtr demuxer_;

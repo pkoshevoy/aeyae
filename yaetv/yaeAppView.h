@@ -82,7 +82,7 @@ namespace yae
     bool processMouseTracking(const TVec2D & mousePt);
 
     // virtual:
-    bool processRightClick();
+    // bool processRightClick();
 
     // helper:
     TRecPtr now_playing() const;

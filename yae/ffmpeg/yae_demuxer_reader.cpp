@@ -250,6 +250,7 @@ namespace yae
       return false;
     }
 
+    resourcePath_ = resourcePathUTF8;
     init(serial_demuxer);
     return !!demuxer_;
   }
@@ -261,6 +262,15 @@ namespace yae
   DemuxerReader::close()
   {
     threadStop();
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerReader::getResourcePath
+  //
+  const char *
+  DemuxerReader::getResourcePath() const
+  {
+    return resourcePath_.empty() ? NULL : resourcePath_.c_str();
   }
 
   //----------------------------------------------------------------

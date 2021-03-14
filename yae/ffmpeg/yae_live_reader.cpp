@@ -50,6 +50,9 @@ namespace yae
     Live();
     ~Live();
 
+    inline const char * getResourcePath() const
+    { return filepath_.empty() ? NULL : filepath_.c_str(); }
+
     bool open(const std::string & filepath);
     bool updateTimelinePositions();
     void calcTimeline(TTime & start, TTime & duration);
@@ -1073,6 +1076,15 @@ namespace yae
   LiveReader::close()
   {
     return private_->movie_.close();
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::getResourcePath
+  //
+  const char *
+  LiveReader::getResourcePath() const
+  {
+    return private_->getResourcePath();
   }
 
   //----------------------------------------------------------------

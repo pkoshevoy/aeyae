@@ -176,6 +176,9 @@ namespace yae
     actionShowTimeline_->setChecked(false);
     actionShowTimeline_->setShortcutContext(Qt::ApplicationShortcut);
 
+    actionShowInFinder_ = add<QAction>(this, "actionShowInFinder");
+    actionShowInFinder_->setCheckable(false);
+
 
     actionPlay_ = add<QAction>(this, "actionPlay");
     actionPlay_->setShortcutContext(Qt::ApplicationShortcut);
@@ -626,6 +629,10 @@ namespace yae
                  this, SLOT(playbackShowTimeline()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionShowInFinder_, SIGNAL(triggered()),
+                 this, SLOT(playbackShowInFinder()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionSkipColorConverter_, SIGNAL(triggered()),
                  this, SLOT(playbackColorConverter()));
     YAE_ASSERT(ok);
@@ -663,6 +670,12 @@ namespace yae
   {
     actionShowTimeline_->setText(trUtf8("Show &Timeline"));
     actionShowTimeline_->setShortcut(trUtf8("Ctrl+T"));
+
+#ifdef __APPLE__
+    actionShowInFinder_->setText(trUtf8("Show In Finder"));
+#else
+    actionShowInFinder_->setText(trUtf8("Show In File Explorer"));
+#endif
 
 
     actionPlay_->setText(trUtf8("Pause"));
@@ -804,6 +817,7 @@ namespace yae
   PlayerView::PlayerView():
     ItemView("PlayerView"),
     actionShowTimeline_(NULL),
+    actionShowInFinder_(NULL),
 
     actionPlay_(NULL),
     actionNextChapter_(NULL),
@@ -1791,6 +1805,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerView::playbackShowInFinder
+  //
+  void
+  PlayerView::playbackShowInFinder()
+  {
+    IReader * reader = get_reader();
+    if (!reader)
+    {
+      return;
+    }
+
+    const char * filePath = reader->getResourcePath();
+    if (!filePath)
+    {
+      return;
+    }
+
+#ifdef __APPLE__
+    yae::showInFinder(filePath);
+#endif
+  }
+
+  //----------------------------------------------------------------
   // PlayerView::audioDownmixToStereo
   //
   void
@@ -2128,6 +2165,11 @@ namespace yae
       {
         addMenuCopyTo(contextMenu_, menuChapters_);
       }
+
+#ifdef __APPLE__
+      contextMenu_->addSeparator();
+      contextMenu_->addAction(actionShowInFinder_);
+#endif
     }
   }
 

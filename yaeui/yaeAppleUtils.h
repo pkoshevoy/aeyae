@@ -24,6 +24,11 @@ namespace yae
   std::string absoluteUrlFrom(const char * utf8_url);
 
   //----------------------------------------------------------------
+  // showInFinder
+  //
+  void showInFinder(const char * utf8_path);
+
+  //----------------------------------------------------------------
   // PreventAppNap
   //
   struct PreventAppNap
