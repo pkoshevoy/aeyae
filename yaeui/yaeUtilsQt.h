@@ -26,6 +26,9 @@
 // Qt includes:
 #include <QAction>
 #include <QApplication>
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <QtDBus/QtDBus>
+#endif
 #include <QEvent>
 #include <QMenu>
 #include <QObject>
@@ -329,6 +332,12 @@ namespace yae
   //
   bool
   find_menu_breaks(const QMenu & menu, std::list<MenuBreak> & breaks);
+
+  //----------------------------------------------------------------
+  // show_in_file_manager
+  //
+  void
+  show_in_file_manager(const char * path_utf8);
 
 }
 

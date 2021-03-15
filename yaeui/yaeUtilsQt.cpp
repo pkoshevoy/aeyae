@@ -2150,6 +2150,29 @@ namespace yae
     return false;
   }
 
+  //----------------------------------------------------------------
+  // show_in_file_manager
+  //
+  void
+  show_in_file_manager(const char * path_utf8)
+  {
+#if !defined(__APPLE__) && !defined(_WIN32)
+    if (QDBusConnection::sessionBus().isConnected())
+    {
+      QDBusInterface file_manager("org.freedesktop.FileManager1",
+                                  "/org/freedesktop/FileManager1");
+      if (file_manager.isValid())
+      {
+        QStringList file_list;
+        file_list.push_back(QString::fromUtf8(path_utf8));
 
+        file_manager.call(QDBus::NoBlock,
+                          "ShowItems",
+                          QVariant(file_list),
+                          QVariant(QString()));
+      }
+    }
+#endif
+  }
 
 }

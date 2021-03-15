@@ -673,8 +673,10 @@ namespace yae
 
 #ifdef __APPLE__
     actionShowInFinder_->setText(trUtf8("Show In Finder"));
+#elif defined(_WIN32)
+    actionShowInFinder_->setText(trUtf8("Show In Explorer"));
 #else
-    actionShowInFinder_->setText(trUtf8("Show In File Explorer"));
+    actionShowInFinder_->setText(trUtf8("Show In File Manager"));
 #endif
 
 
@@ -1824,6 +1826,8 @@ namespace yae
 
 #ifdef __APPLE__
     yae::showInFinder(filePath);
+#else
+    yae::show_in_file_manager(filePath);
 #endif
   }
 
@@ -2166,7 +2170,7 @@ namespace yae
         addMenuCopyTo(contextMenu_, menuChapters_);
       }
 
-#ifdef __APPLE__
+#if defined(__APPLE__) || !defined(_WIN32)
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionShowInFinder_);
 #endif
