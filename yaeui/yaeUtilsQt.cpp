@@ -9,6 +9,11 @@
 // standard:
 #include <set>
 
+// system:
+#ifdef _WIN32
+#include <Shlobj.h>
+#endif
+
 // aeyae:
 #include "yae/video/yae_video.h"
 
@@ -2160,9 +2165,29 @@ namespace yae
   {
 #if defined(_WIN32)
     QString path = QString::fromUtf8(path_utf8);
-    QStringList args;
-    args << "/select," << QDir::toNativeSeparators(path);
-    QProcess::startDetached("explorer", args);
+    PIDLIST_ABSOLUTE pidl = NULL;
+    ULONG flags = 0;
+
+    // https://docs.microsoft.com/en-us/windows/win32/api/
+    //    shlobj_core/nf-shlobj_core-shparsedisplayname
+    //
+    // ... should call this function from a background thread.
+    // Failure to do so could cause the UI to stop responding.
+    //
+    HRESULT hr = SHParseDisplayName((PCWSTR)path.utf16(),
+                                    NULL,
+                                    &pidl,
+                                    0,
+                                    &flags);
+    if (hr == S_OK)
+    {
+      SHOpenFolderAndSelectItems(pidl, 0, NULL, 0);
+    }
+
+    if (pidl)
+    {
+      CoTaskMemFree(pidl);
+    }
 #elif !defined(__APPLE__)
     if (QDBusConnection::sessionBus().isConnected())
     {
