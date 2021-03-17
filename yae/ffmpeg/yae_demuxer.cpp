@@ -2584,8 +2584,39 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const AVStream * src = i->second;
+
+      if (src->codecpar->codec_type == AVMEDIA_TYPE_AUDIO &&
+          muxer->oformat->audio_codec == AV_CODEC_ID_NONE)
+      {
+        continue;
+      }
+
+      if (src->codecpar->codec_type == AVMEDIA_TYPE_VIDEO &&
+          muxer->oformat->video_codec == AV_CODEC_ID_NONE)
+      {
+        continue;
+      }
+
+      if (src->codecpar->codec_type == AVMEDIA_TYPE_SUBTITLE &&
+          muxer->oformat->subtitle_codec == AV_CODEC_ID_NONE)
+      {
+        continue;
+      }
+
+      if (src->codecpar->codec_type == AVMEDIA_TYPE_DATA &&
+          muxer->oformat->data_codec == AV_CODEC_ID_NONE)
+      {
+        continue;
+      }
+
+      if (src->codecpar->codec_type == AVMEDIA_TYPE_UNKNOWN &&
+          strcmp(muxer->oformat->name, "mpegts") != 0)
+      {
+        continue;
+      }
+
       AVStream * dst = avformat_new_stream(muxer, NULL);
-      lut[i->first] = dst;
+      lut[track_id] = dst;
 
       avcodec_parameters_copy(dst->codecpar, src->codecpar);
       dst->time_base = src->time_base;
@@ -2623,9 +2654,10 @@ namespace yae
       {
         const std::string & track_id = i->first;
         AVStream * dst = yae::get(lut, track_id);
-        YAE_ASSERT(dst);
-
-        av_program_add_stream_index(muxer, prog_id, dst->index);
+        if (dst)
+        {
+          av_program_add_stream_index(muxer, prog_id, dst->index);
+        }
       }
 
       setDictionary(p->metadata, info.metadata_);
@@ -2726,11 +2758,14 @@ namespace yae
       }
 
       AvPkt pkt(*packet_ptr);
-      AVPacket & packet = pkt.get();
-
       AVStream * dst = get(lut, pkt.trackId_);
-      packet.stream_index = dst->index;
+      if (!dst)
+      {
+        continue;
+      }
 
+      AVPacket & packet = pkt.get();
+      packet.stream_index = dst->index;
       packet.dts = av_rescale_q(packet.dts, src->time_base, dst->time_base);
       packet.pts = av_rescale_q(packet.pts, src->time_base, dst->time_base);
       packet.duration = av_rescale_q(packet.duration,
@@ -3192,7 +3227,6 @@ namespace yae
         const Timeline::Track & tt = j->second;
         if (!tt.find_samples_for(span, x))
         {
-          YAE_ASSERT(false);
           continue;
         }
 
@@ -3392,7 +3426,14 @@ namespace yae
         YAE_ASSERT(tt.dts_.size() == tt.pts_.size() &&
                    tt.dts_.size() == tt.dur_.size());
 
-        const Timeline::Track::Trim & x = yae::at(x_, track_id);
+        std::map<std::string, Timeline::Track::Trim>::const_iterator
+          found = x_.find(track_id);
+        if (found == x_.end())
+        {
+          continue;
+        }
+
+        const Timeline::Track::Trim & x = found->second;
 
         // NOTE: starting from keyframe ka to avoid decoding artifacts,
         // but not sure whether should be starting from ia instead...

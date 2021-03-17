@@ -1784,7 +1784,6 @@ namespace yae
     if (found == GOPs.end())
     {
       // no overlap:
-      YAE_ASSERT(false);
       return false;
     }
 
