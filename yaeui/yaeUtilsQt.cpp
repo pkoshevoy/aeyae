@@ -20,6 +20,7 @@
 
 // Qt:
 #include <QDateTime>
+#include <QDir>
 #include <QDirIterator>
 #include <QEvent>
 #include <QFile>
@@ -27,6 +28,7 @@
 #include <QMetaEnum>
 #include <QMouseEvent>
 #include <QPoint>
+#include <QProcess>
 #include <QRect>
 #include <QStringList>
 #include <QSettings>
@@ -2156,7 +2158,12 @@ namespace yae
   void
   show_in_file_manager(const char * path_utf8)
   {
-#if !defined(__APPLE__) && !defined(_WIN32)
+#if defined(_WIN32)
+    QString path = QString::fromUtf8(path_utf8);
+    QStringList args;
+    args << "/select," << QDir::toNativeSeparators(path);
+    QProcess::startDetached("explorer", args);
+#elif !defined(__APPLE__)
     if (QDBusConnection::sessionBus().isConnected())
     {
       QDBusInterface file_manager("org.freedesktop.FileManager1",

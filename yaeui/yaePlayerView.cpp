@@ -2170,10 +2170,8 @@ namespace yae
         addMenuCopyTo(contextMenu_, menuChapters_);
       }
 
-#if defined(__APPLE__) || !defined(_WIN32)
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionShowInFinder_);
-#endif
     }
   }
 
