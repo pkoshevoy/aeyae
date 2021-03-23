@@ -57,6 +57,9 @@ namespace yae
                       QEvent * event);
 
     // helpers:
+    void set_checked(bool checked);
+    void toggle();
+
     void animate_hover(bool force = false) const;
     void animate_click() const;
 

@@ -407,6 +407,7 @@ namespace yae
   {
     void extend(const DemuxerSummary & s,
                 const std::map<int, TTime> & prog_offset,
+                const std::set<std::string> & redacted_tracks,
                 double tolerance);
 
     // calculate packet duration for packets with zero duration,
@@ -815,6 +816,50 @@ namespace yae
   // TTrimmedDemuxerPtr
   //
   typedef yae::shared_ptr<TrimmedDemuxer, DemuxerInterface> TTrimmedDemuxerPtr;
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer
+  //
+  struct YAE_API RedactedDemuxer : DemuxerInterface
+  {
+    RedactedDemuxer(const TDemuxerInterfacePtr & src);
+
+    // deep copy:
+    RedactedDemuxer(const RedactedDemuxer & d);
+
+    // deep copy:
+    virtual RedactedDemuxer * clone() const
+    { return new RedactedDemuxer(*this); }
+
+    virtual void populate();
+
+    virtual int seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                     const TTime & dts,
+                     const std::string & trackId = std::string());
+
+    // lookup front packet, pass back its AVStream:
+    virtual TPacketPtr peek(AVStream *& src) const;
+
+    virtual void summarize(DemuxerSummary & summary,
+                           double tolerance = 0.1);
+
+    // helpers:
+    void redact(const std::string & track_id);
+    void unredact(const std::string & track_id);
+    void set_redacted(const std::set<std::string> & redacted);
+
+  protected:
+    TDemuxerInterfacePtr src_;
+
+    // redacted track ids:
+    std::set<std::string> redacted_;
+  };
+
+  //----------------------------------------------------------------
+  // TRedactedDemuxerPtr
+  //
+  typedef yae::shared_ptr<RedactedDemuxer, DemuxerInterface>
+  TRedactedDemuxerPtr;
 
   //----------------------------------------------------------------
   // decode_keyframe

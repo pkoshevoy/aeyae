@@ -361,17 +361,7 @@ namespace yae
                         const TVec2D & rootCSysPoint)
   {
     animate_click();
-
-    if (on_toggle_)
-    {
-      const Action & on_toggle = *on_toggle_;
-      on_toggle(*this);
-    }
-    else
-    {
-      checked_ = BoolRef::constant(!checked_.get());
-    }
-
+    toggle();
     return true;
   }
 
@@ -407,7 +397,7 @@ namespace yae
           key == Qt::Key_Return ||
           key == Qt::Key_Enter)
       {
-        checked_ = BoolRef::constant(!checked);
+        set_checked(!checked);
       }
       else if ((key == Qt::Key_Backspace ||
                 key == Qt::Key_Delete ||
@@ -415,13 +405,13 @@ namespace yae
                 key == Qt::Key_0) &&
                checked)
       {
-        checked_ = BoolRef::constant(false);
+        set_checked(false);
       }
       else if ((key == Qt::Key_Plus ||
                 key == Qt::Key_1) &&
                !checked)
       {
-        checked_ = BoolRef::constant(true);
+        set_checked(true);
       }
       else
       {
@@ -433,6 +423,39 @@ namespace yae
     }
 
     return false;
+  }
+
+
+  //----------------------------------------------------------------
+  // CheckboxItem::set_checked
+  //
+  void
+  CheckboxItem::set_checked(bool checked)
+  {
+    if (checked_.get() == checked)
+    {
+      return;
+    }
+
+    if (on_toggle_)
+    {
+      const Action & on_toggle = *on_toggle_;
+      on_toggle(*this);
+    }
+    else
+    {
+      checked_ = BoolRef::constant(checked);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // CheckboxItem::toggle
+  //
+  void
+  CheckboxItem::toggle()
+  {
+    bool checked = checked_.get();
+    set_checked(!checked);
   }
 
   //----------------------------------------------------------------

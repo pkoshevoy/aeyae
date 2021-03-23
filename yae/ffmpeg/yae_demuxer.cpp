@@ -1779,6 +1779,7 @@ namespace yae
   void
   DemuxerSummary::extend(const DemuxerSummary & s,
                          const std::map<int, TTime> & prog_offset,
+                         const std::set<std::string> & redacted_tracks,
                          double tolerance)
   {
     yae::extend(metadata_, s.metadata_);
@@ -1789,7 +1790,7 @@ namespace yae
       const std::string & track_id = i->first;
       const TDictionary & metadata = i->second;
 
-      if (metadata.empty())
+      if (metadata.empty() || yae::has(redacted_tracks, track_id))
       {
         continue;
       }
@@ -1802,7 +1803,7 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const AVStream * stream = i->second;
-      if (yae::get(streams_, track_id))
+      if (yae::get(streams_, track_id) || yae::has(redacted_tracks, track_id))
       {
         continue;
       }
@@ -1816,6 +1817,11 @@ namespace yae
       const std::string & track_id = i->first;
       const TrackPtr & decoder = i->second;
 
+      if (yae::has(redacted_tracks, track_id))
+      {
+        continue;
+      }
+
       TrackPtr found = yae::get(decoders_, track_id);
       if (found)
       {
@@ -1826,12 +1832,33 @@ namespace yae
       decoders_[track_id] = decoder;
     }
 
+    std::set<int> redacted_progs;
+    {
+      for (std::map<int, TProgramInfo>::const_iterator
+             i = s.programs_.begin(); i != s.programs_.end(); ++i)
+      {
+        const int & prog_id = i->first;
+        redacted_progs.insert(prog_id);
+      }
+
+      for (std::map<std::string, int>::const_iterator
+             i = s.trk_prog_.begin(); i != s.trk_prog_.end(); ++i)
+      {
+        const std::string & track_id = i->first;
+        const int & prog_id = i->second;
+        if (!yae::has(redacted_tracks, track_id))
+        {
+          redacted_progs.erase(prog_id);
+        }
+      }
+    }
+
     for (std::map<int, TProgramInfo>::const_iterator
            i = s.programs_.begin(); i != s.programs_.end(); ++i)
     {
       const int & prog_id = i->first;
       const TProgramInfo & info = i->second;
-      if (yae::has(programs_, prog_id))
+      if (yae::has(programs_, prog_id) || yae::has(redacted_progs, prog_id))
       {
         continue;
       }
@@ -1844,6 +1871,10 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const int & prog_id = i->second;
+      if (yae::has(redacted_tracks, track_id))
+      {
+        continue;
+      }
 
       std::map<std::string, int>::iterator found = trk_prog_.find(track_id);
       if (found == trk_prog_.end())
@@ -1867,6 +1898,11 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const FramerateEstimator & src = i->second;
+      if (yae::has(redacted_tracks, track_id))
+      {
+        continue;
+      }
+
       int prog_id = prog_offset.empty() ? 0 : s.find_program(track_id);
       TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
       fps_[track_id].add(src, offset);
@@ -1877,15 +1913,19 @@ namespace yae
     {
       const int & prog_id = i->first;
       const Timeline & timeline = i->second;
+      if (yae::has(redacted_progs, prog_id))
+      {
+        continue;
+      }
+
       TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
       timeline_[prog_id].extend(timeline, offset, tolerance);
     }
 
-    if (!s.chapters_.empty())
+    if (!s.chapters_.empty() && prog_offset.size() < 2)
     {
-      // chapters aren't stored per-program, so use any available program id.,
-      // but there should only be 1:
-      YAE_ASSERT(prog_offset.size() < 2);
+      // chapters aren't stored per-program, so use any available program id,
+      // but only if there is just 1 program:
 
       int prog_id = prog_offset.empty() ? 0 : prog_offset.begin()->first;
       TTime offset = -yae::get(prog_offset, prog_id, TTime(0, 1));
@@ -2479,7 +2519,8 @@ namespace yae
     {
       const DemuxerSummary & src = (*i)->summary();
       std::map<int, TTime> prog_offset;
-      summary.extend(src, prog_offset, tolerance);
+      std::set<std::string> redacted_tracks;
+      summary.extend(src, prog_offset, redacted_tracks, tolerance);
     }
 
     // get the track id and time position of the "first" packet:
@@ -3124,7 +3165,8 @@ namespace yae
         src_summary.chapters_[timeline.bbox_pts_.t0_] = c;
       }
 
-      summary.extend(src_summary, prog_offset, tolerance);
+      std::set<std::string> redacted_tracks;
+      summary.extend(src_summary, prog_offset, redacted_tracks, tolerance);
     }
 
     // get the track id and time position of the "first" packet:
@@ -3517,6 +3559,120 @@ namespace yae
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+  }
+
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::RedactedDemuxer
+  //
+  RedactedDemuxer::RedactedDemuxer(const TDemuxerInterfacePtr & src):
+    src_(src)
+  {}
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::RedactedDemuxer
+  //
+  RedactedDemuxer::RedactedDemuxer(const RedactedDemuxer & d)
+  {
+    src_.reset(d.src_->clone());
+    redacted_ = d.redacted_;
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::populate
+  //
+  void
+  RedactedDemuxer::populate()
+  {
+    DemuxerInterface & demuxer = *src_;
+    demuxer.populate();
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::seek
+  //
+  int
+  RedactedDemuxer::seek(int seekFlags, // AVSEEK_FLAG_* bitmask
+                        const TTime & dts,
+                        const std::string & trackId)
+  {
+    if (yae::has(redacted_, trackId))
+    {
+      return AVERROR_STREAM_NOT_FOUND;
+    }
+
+    DemuxerInterface & demuxer = *src_;
+    int err = demuxer.seek(seekFlags, dts, trackId);
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::peek
+  //
+  TPacketPtr
+  RedactedDemuxer::peek(AVStream *& stream) const
+  {
+    DemuxerInterface & demuxer = *src_;
+    TPacketPtr pkt;
+
+    while (true)
+    {
+      pkt = demuxer.peek(stream);
+      if (!pkt)
+      {
+        break;
+      }
+
+      if (!yae::has(redacted_, pkt->trackId_))
+      {
+        break;
+      }
+
+      // drop the redacted packet:
+      demuxer.pop(pkt);
+      demuxer.populate();
+    }
+
+    return pkt;
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::summarize
+  //
+  void
+  RedactedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
+  {
+    DemuxerInterface & demuxer = *src_;
+    const DemuxerSummary & src_summary = demuxer.summary();
+    std::map<int, TTime> prog_offset;
+    summary.extend(src_summary, prog_offset, redacted_, tolerance);
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::redact
+  //
+  void
+  RedactedDemuxer::redact(const std::string & track_id)
+  {
+    redacted_.insert(track_id);
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::unredact
+  //
+  void
+  RedactedDemuxer::unredact(const std::string & track_id)
+  {
+    redacted_.erase(track_id);
+  }
+
+  //----------------------------------------------------------------
+  // RedactedDemuxer::set_redacted
+  //
+  void
+  RedactedDemuxer::set_redacted(const std::set<std::string> & redacted)
+  {
+    redacted_ = redacted;
   }
 
 
