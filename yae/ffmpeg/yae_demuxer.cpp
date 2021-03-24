@@ -149,8 +149,11 @@ namespace yae
     // set analyze duration to 10 seconds:
     av_dict_set(&options, "analyzeduration", "10000000", 0);
 
-    // set genpts:
+    // set AVFMT_FLAG_GENPTS:
     av_dict_set(&options, "fflags", "genpts", 0);
+
+    // set AVFMT_FLAG_DISCARD_CORRUPT:
+    av_dict_set(&options, "fflags", "discardcorrupt", 0);
 
     AVFormatContext * ctx = NULL;
     int err = avformat_open_input(&ctx,
@@ -165,7 +168,11 @@ namespace yae
       return false;
     }
 
-    YAE_ASSERT(ctx->flags & AVFMT_FLAG_GENPTS);
+    YAE_ASSERT((ctx->flags & AVFMT_FLAG_GENPTS) ==
+               AVFMT_FLAG_GENPTS);
+
+    YAE_ASSERT((ctx->flags & AVFMT_FLAG_DISCARD_CORRUPT) ==
+               AVFMT_FLAG_DISCARD_CORRUPT);
 
     resourcePath_ = resourcePath;
     context_.reset(ctx);
