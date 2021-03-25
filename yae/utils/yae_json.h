@@ -39,6 +39,34 @@ namespace yae
   struct TTime;
   struct Timespan;
 
+  // std::map
+  template <typename TKey, typename TData>
+  void save(Json::Value & json, const std::map<TKey, TData> & kv);
+
+  template <typename TKey, typename TData>
+  void load(const Json::Value & json, std::map<TKey, TData> & kv);
+
+  // std::set
+  template <typename TData>
+  void save(Json::Value & json, const std::set<TData> & v);
+
+  template <typename TData>
+  void load(const Json::Value & json, std::set<TData> & v);
+
+  // std::list
+  template <typename TData>
+  void save(Json::Value & json, const std::list<TData> & v);
+
+  template <typename TData>
+  void load(const Json::Value & json, std::list<TData> & v);
+
+  // std::vector
+  template <typename TData>
+  void save(Json::Value & json, const std::vector<TData> & v);
+
+  template <typename TData>
+  void load(const Json::Value & json, std::vector<TData> & v);
+
   // struct tm:
   YAE_API void save(Json::Value & json, const struct tm & tm);
   YAE_API void load(const Json::Value & json, struct tm & tm);
@@ -140,6 +168,13 @@ namespace yae
   {
     return json[key].asBool();
   }
+
+  // Json::Value
+  inline void save(Json::Value & json, const Json::Value & v)
+  { json = v; }
+
+  inline void load(const Json::Value & json, Json::Value & v)
+  { v = json; }
 
   // uint8_t
   inline void save(Json::Value & json, uint8_t u8)
@@ -243,6 +278,98 @@ namespace yae
   {
     load(json[0], kv.first);
     load(json[1], kv.second);
+  }
+
+  // std::bitset
+  template <std::size_t nbits>
+  void
+  save(Json::Value & json, const std::bitset<nbits> & bits)
+  {
+    std::string str = bits.to_string();
+    save(json, str);
+  }
+
+  template <std::size_t nbits>
+  void
+  load(const Json::Value & json, std::bitset<nbits> & bits)
+  {
+    std::string str;
+    load(json, str);
+    bits = std::bitset<nbits>(str);
+  }
+
+  // yae::shared_ptr
+  template <typename TData>
+  void
+  save(Json::Value & json, const yae::shared_ptr<TData> & ptr)
+  {
+    if (ptr)
+    {
+      save(json, *ptr);
+    }
+    else
+    {
+      json = Json::Value::nullRef;
+    }
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, yae::shared_ptr<TData> & ptr)
+  {
+    if (json.isNull())
+    {
+      ptr.reset();
+    }
+    else
+    {
+      ptr.reset(new TData());
+      load(json, *ptr);
+    }
+  }
+
+  // yae::optional
+  template <typename TData>
+  void
+  save(Json::Value & json, const char * key, const yae::optional<TData> & opt)
+  {
+    if (opt)
+    {
+      save(json[key], *opt);
+    }
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, const char * key, yae::optional<TData> & opt)
+  {
+    if (json.isMember(key))
+    {
+      TData data;
+      load(json[key], data);
+      opt.reset(data);
+    }
+  }
+
+  // optional std::string
+  template <typename TContainer>
+  inline void
+  save(Json::Value & json, const char * key, const TContainer & opt)
+  {
+    if (!opt.empty())
+    {
+      save(json[key], opt);
+    }
+  }
+
+  template <typename TContainer>
+  inline void
+  load(const Json::Value & json, const char * key, TContainer & opt)
+  {
+    if (json.isMember(key))
+    {
+      load(json[key], opt);
+    }
   }
 
   // std::map
@@ -374,98 +501,6 @@ namespace yae
       TData value;
       load(*i, value);
       v.push_back(value);
-    }
-  }
-
-  // std::bitset
-  template <std::size_t nbits>
-  void
-  save(Json::Value & json, const std::bitset<nbits> & bits)
-  {
-    std::string str = bits.to_string();
-    save(json, str);
-  }
-
-  template <std::size_t nbits>
-  void
-  load(const Json::Value & json, std::bitset<nbits> & bits)
-  {
-    std::string str;
-    load(json, str);
-    bits = std::bitset<nbits>(str);
-  }
-
-  // yae::shared_ptr
-  template <typename TData>
-  void
-  save(Json::Value & json, const yae::shared_ptr<TData> & ptr)
-  {
-    if (ptr)
-    {
-      save(json, *ptr);
-    }
-    else
-    {
-      json = Json::Value::nullRef;
-    }
-  }
-
-  template <typename TData>
-  void
-  load(const Json::Value & json, yae::shared_ptr<TData> & ptr)
-  {
-    if (json.isNull())
-    {
-      ptr.reset();
-    }
-    else
-    {
-      ptr.reset(new TData());
-      load(json, *ptr);
-    }
-  }
-
-  // yae::optional
-  template <typename TData>
-  void
-  save(Json::Value & json, const char * key, const yae::optional<TData> & opt)
-  {
-    if (opt)
-    {
-      save(json[key], *opt);
-    }
-  }
-
-  template <typename TData>
-  void
-  load(const Json::Value & json, const char * key, yae::optional<TData> & opt)
-  {
-    if (json.isMember(key))
-    {
-      TData data;
-      load(json[key], data);
-      opt.reset(data);
-    }
-  }
-
-  // optional std::string
-  template <typename TContainer>
-  inline void
-  save(Json::Value & json, const char * key, const TContainer & opt)
-  {
-    if (!opt.empty())
-    {
-      save(json[key], opt);
-    }
-  }
-
-  template <typename TContainer>
-  inline void
-  load(const Json::Value & json, const char * key, TContainer & opt)
-  {
-    if (json.isMember(key))
-    {
-      load(json[key], opt);
     }
   }
 

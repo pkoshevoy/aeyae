@@ -23,6 +23,7 @@
 #include "yae/api/yae_version.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_remux.h"
+#include "yae/utils/yae_json.h"
 
 // namespace shortcuts:
 namespace fs = boost::filesystem;
@@ -157,6 +158,11 @@ namespace yae
     jv_doc["aeyae"] = jv_aeyae;
     jv_doc["clips"] = jv_clips;
 
+    if (!redacted_.empty())
+    {
+      yae::save(jv_doc["redacted"], redacted_);
+    }
+
     return Json::StyledWriter().write(jv_doc);
   }
 
@@ -166,6 +172,7 @@ namespace yae
   bool
   RemuxModel::parse_json_str(const std::string & json_str,
                              std::set<std::string> & sources,
+                             std::map<std::string, SetOfTracks> & redacted,
                              std::list<ClipInfo> & src_clips)
   {
     Json::Value jv_doc;
@@ -211,6 +218,12 @@ namespace yae
       src_clips.push_back(clip);
     }
 
+    if (jv_doc.isMember("redacted"))
+    {
+      Json::Value jv_redacted = jv_doc["redacted"];
+      yae::load(jv_redacted, redacted);
+    }
+
     return true;
   }
 
@@ -220,12 +233,13 @@ namespace yae
   //
   TDemuxerInterfacePtr
   load(const std::set<std::string> & sources,
+       const std::map<std::string, SetOfTracks> & redacted,
        const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration,
        const double discont_tolerance)
   {
-    std::map<std::string, TParallelDemuxerPtr> parallel_demuxers;
+    std::map<std::string, TDemuxerInterfacePtr> source_demuxers;
 
     for (std::set<std::string>::const_iterator i = sources.begin();
          i != sources.end(); ++i)
@@ -259,7 +273,20 @@ namespace yae
 
       // summarize the demuxer:
       parallel_demuxer->update_summary(discont_tolerance);
-      parallel_demuxers[filePath] = parallel_demuxer;
+
+      SetOfTracks redacted_tracks = yae::get(redacted, filePath);
+      if (redacted_tracks.empty())
+      {
+        source_demuxers[filePath] = parallel_demuxer;
+      }
+      else
+      {
+        TRedactedDemuxerPtr redacted_demuxer;
+        redacted_demuxer.reset(new RedactedDemuxer(parallel_demuxer));
+        redacted_demuxer->set_redacted(redacted_tracks);
+        redacted_demuxer->update_summary(discont_tolerance);
+        source_demuxers[filePath] = redacted_demuxer;
+      }
     }
 
     TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
@@ -269,8 +296,8 @@ namespace yae
     {
       const ClipInfo & trim = *i;
 
-      const TParallelDemuxerPtr & demuxer =
-        yae::at(parallel_demuxers, trim.source_);
+      const TDemuxerInterfacePtr & demuxer =
+        yae::at(source_demuxers, trim.source_);
 
       std::string track_id =
         trim.track_.empty() ? std::string("v:000") : trim.track_;
@@ -407,7 +434,19 @@ namespace yae
       // summarize the demuxer:
       parallel_demuxer->update_summary(discont_tolerance);
 
-      demuxers_[source] = parallel_demuxer;
+      SetOfTracks redacted_tracks = yae::get(redacted_, source);
+      if (redacted_tracks.empty())
+      {
+        demuxers_[source] = parallel_demuxer;
+      }
+      else
+      {
+        TRedactedDemuxerPtr redacted_demuxer;
+        redacted_demuxer.reset(new RedactedDemuxer(parallel_demuxer));
+        redacted_demuxer->set_redacted(redacted_tracks);
+        redacted_demuxer->update_summary(discont_tolerance);
+        demuxers_[source] = redacted_demuxer;
+      }
     }
 
     return demuxers_[source];
@@ -419,8 +458,6 @@ namespace yae
   void
   rx::Loader::load_sources()
   {
-    std::string track_id("v:000");
-
     for (std::set<std::string>::const_iterator
            i = sources_.begin(); i != sources_.end(); ++i)
     {
@@ -436,6 +473,18 @@ namespace yae
 
         // shortcut:
         const DemuxerSummary & summary = demuxer->summary();
+        std::string track_id = summary.first_video_track_id();
+
+        if (track_id.empty())
+        {
+          track_id = summary.first_audio_track_id();
+        }
+
+        if (track_id.empty())
+        {
+          continue;
+        }
+
         if (yae::has(summary.decoders_, track_id))
         {
           const Timeline::Track & track = summary.get_track_timeline(track_id);
@@ -472,15 +521,6 @@ namespace yae
       {
         const ClipInfo & trim = *i;
 
-        std::string track_id =
-          trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-        if (!al::starts_with(track_id, "v:"))
-        {
-          // not a video track:
-          continue;
-        }
-
         TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
         if (!demuxer)
         {
@@ -489,6 +529,18 @@ namespace yae
         }
 
         const DemuxerSummary & summary = demuxer->summary();
+        std::string track_id = trim.track_;
+
+        if (track_id.empty())
+        {
+          track_id = summary.first_video_track_id();
+        }
+
+        if (track_id.empty())
+        {
+          track_id = summary.first_audio_track_id();
+        }
+
         if (!yae::has(summary.decoders_, track_id))
         {
           // no such track:
@@ -498,19 +550,16 @@ namespace yae
         const Timeline::Track & track = summary.get_track_timeline(track_id);
         Timespan keep(track.pts_.front(), track.pts_.back());
 
-        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-        double fps = fe.best_guess();
-
         if (!trim.t0_.empty() &&
-            !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
+            !parse_time(keep.t0_, trim.t0_.c_str()))
         {
-         yae_elog("failed to parse %s", trim.t0_.c_str());
+          yae_elog("failed to parse %s", trim.t0_.c_str());
         }
 
         if (!trim.t1_.empty() &&
-            !parse_time(keep.t1_, trim.t1_.c_str(), NULL, NULL, fps))
+            !parse_time(keep.t1_, trim.t1_.c_str()))
         {
-         yae_elog("failed to parse %s", trim.t1_.c_str());
+          yae_elog("failed to parse %s", trim.t1_.c_str());
         }
 
         if (observer_)
@@ -572,8 +621,9 @@ namespace yae
     std::string json_str = TOpenFile(filename.c_str(), "rb").read();
 
     std::set<std::string> sources;
+    std::map<std::string, SetOfTracks> redacted;
     std::list<ClipInfo> src_clips;
-    if (!RemuxModel::parse_json_str(json_str, sources, src_clips))
+    if (!RemuxModel::parse_json_str(json_str, sources, redacted, src_clips))
     {
       return TSerialDemuxerPtr();
     }
@@ -583,6 +633,7 @@ namespace yae
       rx::Loader::TProgressObserverPtr observer(new ProgressObserver(model));
       rx::Loader loader(model.demuxer_,
                         sources,
+                        redacted,
                         src_clips,
                         observer);
       loader.run();

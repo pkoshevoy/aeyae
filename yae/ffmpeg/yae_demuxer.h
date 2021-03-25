@@ -420,6 +420,10 @@ namespace yae
     // lookup timeline for a given track ID:
     const Timeline::Track & get_track_timeline(const std::string & id) const;
 
+    // helpers:
+    std::string first_video_track_id() const;
+    std::string first_audio_track_id() const;
+
     // global metadata:
     TDictionary metadata_;
 

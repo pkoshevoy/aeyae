@@ -77,6 +77,11 @@ namespace yae
   typedef yae::shared_ptr<Clip> TClipPtr;
 
   //----------------------------------------------------------------
+  // SetOfTracks
+  //
+  typedef std::set<std::string> SetOfTracks;
+
+  //----------------------------------------------------------------
   // RemuxModel
   //
   struct YAE_API RemuxModel
@@ -87,6 +92,7 @@ namespace yae
 
     static bool parse_json_str(const std::string & json_str,
                                std::set<std::string> & sources,
+                               std::map<std::string, SetOfTracks> & redacted,
                                std::list<ClipInfo> & src_clips);
 
     // sources, in order of appearance:
@@ -98,6 +104,9 @@ namespace yae
     // source path, indexed by demuxer:
     std::map<TDemuxerInterfacePtr, std::string> source_;
 
+    // redacted tracks, per source path:
+    std::map<std::string, SetOfTracks> redacted_;
+
     // composition of the remuxed output:
     std::vector<TClipPtr> clips_;
   };
@@ -107,6 +116,7 @@ namespace yae
   //
   YAE_API TDemuxerInterfacePtr
   load(const std::set<std::string> & sources,
+       const std::map<std::string, SetOfTracks> & redacted,
        const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration = 1.0,
@@ -146,10 +156,12 @@ namespace yae
       //
       Loader(const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
              const std::set<std::string> & sources,
+             const std::map<std::string, SetOfTracks> & redacted,
              const std::list<ClipInfo> & src_clips,
              const TProgressObserverPtr & observer = TProgressObserverPtr()):
         demuxers_(demuxers),
         sources_(sources),
+        redacted_(redacted),
         src_clips_(src_clips),
         observer_(observer)
       {}
@@ -167,6 +179,7 @@ namespace yae
 
       std::map<std::string, TDemuxerInterfacePtr> demuxers_;
       std::set<std::string> sources_;
+      std::map<std::string, SetOfTracks> redacted_;
       std::list<ClipInfo> src_clips_;
       TProgressObserverPtr observer_;
     };

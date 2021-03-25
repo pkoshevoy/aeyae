@@ -1852,6 +1852,11 @@ namespace yae
              i = s.trk_prog_.begin(); i != s.trk_prog_.end(); ++i)
       {
         const std::string & track_id = i->first;
+        if (al::starts_with(track_id, "_:"))
+        {
+          continue;
+        }
+
         const int & prog_id = i->second;
         if (!yae::has(redacted_tracks, track_id))
         {
@@ -2040,6 +2045,50 @@ namespace yae
     const Timeline & timeline = yae::at(timeline_, program);
     const Timeline::Track & t = yae::at(timeline.tracks_, trackId);
     return t;
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::first_video_track_id
+  //
+  std::string
+  DemuxerSummary::first_video_track_id() const
+  {
+    for (std::map<std::string, int>::const_iterator
+           i = trk_prog_.begin(); i != trk_prog_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      if (!al::starts_with(track_id, "v:"))
+      {
+        // not a video track:
+        continue;
+      }
+
+      return track_id;
+    }
+
+    return std::string();
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::first_audio_track_id
+  //
+  std::string
+  DemuxerSummary::first_audio_track_id() const
+  {
+    for (std::map<std::string, int>::const_iterator
+           i = trk_prog_.begin(); i != trk_prog_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      if (!al::starts_with(track_id, "a:"))
+      {
+        // not an audio track:
+        continue;
+      }
+
+      return track_id;
+    }
+
+    return std::string();
   }
 
   //----------------------------------------------------------------

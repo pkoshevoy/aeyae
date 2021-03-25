@@ -414,6 +414,7 @@ mainMayThrowException(int argc, char ** argv)
   std::string curr_source;
   std::list<yae::ClipInfo> clips;
   std::set<std::string> clipped;
+  std::map<std::string, yae::SetOfTracks> redacted;
   std::string output_path;
   std::string curr_track;
   bool save_keyframes = false;
@@ -473,7 +474,7 @@ mainMayThrowException(int argc, char ** argv)
 
           std::set<std::string> s;
           std::list<yae::ClipInfo> c;
-          if (yae::RemuxModel::parse_json_str(json_str, s, c))
+          if (yae::RemuxModel::parse_json_str(json_str, s, redacted, c))
           {
             clips.clear();
             sources.clear();
@@ -524,9 +525,11 @@ mainMayThrowException(int argc, char ** argv)
     const double discont_tolerance = 0.017;
 
     // load the sources:
-    yae::TDemuxerInterfacePtr demuxer =
-      yae::load(sources, clips, buffer_duration, discont_tolerance);
-
+    yae::TDemuxerInterfacePtr demuxer = yae::load(sources,
+                                                  redacted,
+                                                  clips,
+                                                  buffer_duration,
+                                                  discont_tolerance);
     if (!demuxer)
     {
       usage(argv, "failed to import any source files, nothing to do now");
