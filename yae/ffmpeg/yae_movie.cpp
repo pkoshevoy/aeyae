@@ -153,10 +153,10 @@ namespace yae
     av_dict_set(&options, "analyzeduration", "20000000", 0);
 
     // set AVFMT_FLAG_GENPTS:
-    av_dict_set(&options, "fflags", "genpts", 0);
+    av_dict_set(&options, "fflags", "+genpts", AV_DICT_APPEND);
 
     // set AVFMT_FLAG_DISCARD_CORRUPT:
-    av_dict_set(&options, "fflags", "discardcorrupt", 0);
+    av_dict_set(&options, "fflags", "+discardcorrupt", AV_DICT_APPEND);
 
     resourcePath_ = resourcePath ? resourcePath : "";
     int err = avformat_open_input(&context_,
