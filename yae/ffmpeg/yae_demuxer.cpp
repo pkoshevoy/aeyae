@@ -2121,6 +2121,20 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DemuxerSummary::suggest_clip_track_id
+  //
+  std::string
+  DemuxerSummary::suggest_clip_track_id() const
+  {
+    std::string track_id = first_video_track_id();
+    if (track_id.empty())
+    {
+      track_id = first_audio_track_id();
+    }
+    return track_id;
+  }
+
+  //----------------------------------------------------------------
   // operator <<
   //
   std::ostream &

@@ -33,6 +33,39 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Clip::get
+  //
+  bool
+  Clip::get(const TDemuxerInterfacePtr & other_demuxer,
+            std::string & track_id,
+            Timespan & keep) const
+  {
+    const DemuxerSummary & other_summary = other_demuxer->summary();
+    if (other_summary.has_track(track_))
+    {
+      track_id = track_;
+      keep = keep_;
+      return true;
+    }
+
+    // find an alternative track:
+    track_id = other_summary.suggest_clip_track_id();
+    if (track_id.empty())
+    {
+      keep = Timespan();
+      return false;
+    }
+
+    const DemuxerSummary & demuxer_summary = demuxer_->summary();
+    TTime dt = demuxer_summary.get_timeline_diff(track_id, track_);
+
+    // adjust time span:
+    keep = keep_;
+    keep += dt;
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // RemuxModel::make_serial_demuxer
   //
   TSerialDemuxerPtr
@@ -73,30 +106,12 @@ namespace yae
             const SetOfTracks & redacted = found->second;
             TRedactedDemuxerPtr redacted_demuxer(new RedactedDemuxer(clone));
             redacted_demuxer->set_redacted(redacted);
-
             redacted_demuxer->update_summary();
-            const DemuxerSummary & redacted_summary =
-              redacted_demuxer->summary();
 
-            if (yae::has(redacted, clip.track_))
+            if (!clip.get(redacted_demuxer, clip_track, clip_keep))
             {
-              // update clip track_id and timespan:
-              clip_track = redacted_summary.first_video_track_id();
-
-              if (clip_track.empty())
-              {
-                clip_track = redacted_summary.first_audio_track_id();
-              }
-
-              if (clip_track.empty())
-              {
-                continue;
-              }
-
-              const DemuxerSummary & src_summary = clip.demuxer_->summary();
-              TTime dt = src_summary.get_timeline_diff(clip_track,
-                                                       clip.track_);
-              clip_keep += dt;
+              clone.reset();
+              continue;
             }
 
             clone = redacted_demuxer;
@@ -502,13 +517,7 @@ namespace yae
 
         // shortcut:
         const DemuxerSummary & summary = demuxer->summary();
-        std::string track_id = summary.first_video_track_id();
-
-        if (track_id.empty())
-        {
-          track_id = summary.first_audio_track_id();
-        }
-
+        std::string track_id = summary.suggest_clip_track_id();
         if (track_id.empty())
         {
           continue;
@@ -562,12 +571,7 @@ namespace yae
 
         if (track_id.empty())
         {
-          track_id = summary.first_video_track_id();
-        }
-
-        if (track_id.empty())
-        {
-          track_id = summary.first_audio_track_id();
+          track_id = summary.suggest_clip_track_id();
         }
 
         if (!yae::has(summary.decoders_, track_id))

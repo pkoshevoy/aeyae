@@ -62,6 +62,12 @@ namespace yae
       return demuxer_->summary().get_track_timeline(track_);
     }
 
+    // due to trimming/redacted track the initial track selection may become
+    // invalid, so use this to get adjusted track_id and time span:
+    bool get(const TDemuxerInterfacePtr & other_demuxer,
+             std::string & track_id,
+             Timespan & keep) const;
+
     TDemuxerInterfacePtr demuxer_;
     std::string track_;
 

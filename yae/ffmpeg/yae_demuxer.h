@@ -430,6 +430,10 @@ namespace yae
     // helpers:
     std::string first_video_track_id() const;
     std::string first_audio_track_id() const;
+    std::string suggest_clip_track_id() const;
+
+    inline bool has_track(const std::string & trackId) const
+    { return yae::has(trk_prog_, trackId); }
 
     // global metadata:
     TDictionary metadata_;
