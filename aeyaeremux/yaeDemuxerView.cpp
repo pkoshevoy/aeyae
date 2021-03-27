@@ -4330,12 +4330,19 @@ namespace yae
   {
     if (!output_clip_ && model_ && !model_->clips_.empty())
     {
-      serial_demuxer_ = model_->make_serial_demuxer(true);
-      const yae::DemuxerSummary & summary = serial_demuxer_->summary();
-      const std::string & track_id = model_->clips_.front()->track_;
-      const Timeline::Track & track = summary.get_track_timeline(track_id);
-      Timespan keep(track.pts_.front(), track.pts_.back());
-      output_clip_.reset(new Clip(serial_demuxer_, track_id, keep));
+      serial_demuxer_ = model_->make_serial_demuxer();
+
+      const Clip & clip = *(model_->clips_.front());
+      std::string track_id;
+      Timespan keep;
+
+      if (clip.get(serial_demuxer_, track_id, keep))
+      {
+        const yae::DemuxerSummary & summary = serial_demuxer_->summary();
+        const Timeline::Track & track = summary.get_track_timeline(track_id);
+        keep = Timespan(track.pts_.front(), track.pts_.back());
+        output_clip_.reset(new Clip(serial_demuxer_, track_id, keep));
+      }
     }
 
     return output_clip_;
