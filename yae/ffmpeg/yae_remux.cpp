@@ -36,7 +36,7 @@ namespace yae
   // RemuxModel::make_serial_demuxer
   //
   TSerialDemuxerPtr
-  RemuxModel::make_serial_demuxer() const
+  RemuxModel::make_serial_demuxer(bool unredacted) const
   {
     std::string prev_fn;
     std::string prev_track;
@@ -49,34 +49,63 @@ namespace yae
     // from the UI thread to fetch thumbnails, etc...):
     std::map<TDemuxerInterfacePtr, TDemuxerInterfacePtr> clones;
 
-    // re-use previousely created clones, if there are any:
     for (std::vector<TClipPtr>::const_iterator
            i = clips_.begin(); i != clips_.end(); ++i)
     {
       const Clip & clip = *(*i);
-      if (clip.trimmed_)
-      {
-        clones[clip.demuxer_] = clip.trimmed_->trim_src();
-      }
-    }
+      std::string clip_track = clip.track_;
+      Timespan clip_keep = clip.keep_;
 
-    for (std::vector<TClipPtr>::const_iterator
-           i = clips_.begin(); i != clips_.end(); ++i)
-    {
-      const Clip & clip = *(*i);
-
-      if (!clip.trimmed_)
+      TDemuxerInterfacePtr & clone = clones[clip.demuxer_];
+      if (!clone)
       {
-        TDemuxerInterfacePtr & clone = clones[clip.demuxer_];
-        if (!clone)
+        clone.reset(clip.demuxer_->clone());
+
+        if (!unredacted)
         {
-          clone.reset(clip.demuxer_->clone());
-        }
+          // adjust for redacted tracks:
+          const std::string & src_name = yae::at(source_, clip.demuxer_);
+          std::map<std::string, SetOfTracks>::const_iterator
+            found = redacted_.find(src_name);
 
-        clip.trimmed_.reset(new TrimmedDemuxer(clone, clip.track_));
+          if (found != redacted_.end())
+          {
+            const SetOfTracks & redacted = found->second;
+            TRedactedDemuxerPtr redacted_demuxer(new RedactedDemuxer(clone));
+            redacted_demuxer->set_redacted(redacted);
+
+            redacted_demuxer->update_summary();
+            const DemuxerSummary & redacted_summary =
+              redacted_demuxer->summary();
+
+            if (yae::has(redacted, clip.track_))
+            {
+              // update clip track_id and timespan:
+              clip_track = redacted_summary.first_video_track_id();
+
+              if (clip_track.empty())
+              {
+                clip_track = redacted_summary.first_audio_track_id();
+              }
+
+              if (clip_track.empty())
+              {
+                continue;
+              }
+
+              const DemuxerSummary & src_summary = clip.demuxer_->summary();
+              TTime dt = src_summary.get_timeline_diff(clip_track,
+                                                       clip.track_);
+              clip_keep += dt;
+            }
+
+            clone = redacted_demuxer;
+          }
+        }
       }
 
-      clip.trimmed_->set_pts_span(clip.keep_);
+      clip.trimmed_.reset(new TrimmedDemuxer(clone, clip_track));
+      clip.trimmed_->set_pts_span(clip_keep);
 
       std::string fn = yae::at(source_, clip.demuxer_);
       if (fn != prev_fn)
@@ -85,21 +114,21 @@ namespace yae
         prev_fn = fn;
       }
 
-      if (clip.track_ != prev_track)
+      if (clip_track != prev_track)
       {
-        oss << " -track " << clip.track_;
-        prev_track = clip.track_;
+        oss << " -track " << clip_track;
+        prev_track = clip_track;
       }
 
       const Timeline::Track & track =
-        clip.demuxer_->summary().get_track_timeline(clip.track_);
+        clip.demuxer_->summary().get_track_timeline(clip_track);
 
-      if (clip.keep_.t0_ > track.pts_.front() ||
-          clip.keep_.t1_ < track.pts_.back())
+      if (clip_keep.t0_ > track.pts_.front() ||
+          clip_keep.t1_ < track.pts_.back())
       {
         oss << " -t"
-            << " " << clip.keep_.t0_.to_hhmmss_ms()
-            << " " << clip.keep_.t1_.to_hhmmss_ms();
+            << " " << clip_keep.t0_.to_hhmmss_ms()
+            << " " << clip_keep.t1_.to_hhmmss_ms();
       }
 
       // summarize clip demuxer:

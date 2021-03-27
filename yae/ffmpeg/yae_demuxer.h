@@ -417,8 +417,15 @@ namespace yae
     // find the program ID associated with a given track ID:
     int find_program(const std::string & trackId) const;
 
-    // lookup timeline for a given track ID:
+    // lookup program timeline for a given track ID:
+    const Timeline & get_prog_timeline(const std::string & trackId) const;
+
+    // lookup track timeline for a given track ID:
     const Timeline::Track & get_track_timeline(const std::string & id) const;
+
+    // calculate track_a.dts_span_.t0_ - track_b.dts_span_.t0_
+    TTime get_timeline_diff(const std::string & track_a_id,
+                            const std::string & track_b_id) const;
 
     // helpers:
     std::string first_video_track_id() const;

@@ -86,7 +86,7 @@ namespace yae
   //
   struct YAE_API RemuxModel
   {
-    TSerialDemuxerPtr make_serial_demuxer() const;
+    TSerialDemuxerPtr make_serial_demuxer(bool unredacted = false) const;
 
     std::string to_json_str() const;
 

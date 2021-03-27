@@ -32,6 +32,87 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // IsRedacted
+  //
+  struct IsRedacted : TBoolExpr
+  {
+    IsRedacted(const RemuxView & view,
+               const std::string & src_name,
+               const std::string & track_id):
+      view_(view),
+      src_name_(src_name),
+      track_id_(track_id)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      RemuxModel * model = view_.model();
+      YAE_ASSERT(model);
+      if (!model)
+      {
+        result = false;
+        return;
+      }
+
+      std::map<std::string, SetOfTracks>::const_iterator
+        found = model->redacted_.find(src_name_);
+      if (found == model->redacted_.end())
+      {
+        result = false;
+        return;
+      }
+
+      const SetOfTracks & redacted = found->second;
+      result = yae::has(redacted, track_id_);
+    }
+
+    const RemuxView & view_;
+    std::string src_name_;
+    std::string track_id_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleRedacted
+  //
+  struct OnToggleRedacted : public CheckboxItem::Action
+  {
+    OnToggleRedacted(RemuxView & view,
+                     const std::string & src_name,
+                     const std::string & track_id):
+      view_(view),
+      src_name_(src_name),
+      track_id_(track_id)
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem & cbox) const
+    {
+      RemuxModel * model = view_.model();
+      YAE_ASSERT(model);
+      if (!model)
+      {
+        return;
+      }
+
+      SetOfTracks & redacted = model->redacted_[src_name_];
+      if (cbox.checked_.get())
+      {
+        redacted.insert(track_id_);
+      }
+      else
+      {
+        redacted.erase(track_id_);
+      }
+    }
+
+    RemuxView & view_;
+    std::string src_name_;
+    std::string track_id_;
+  };
+
+
+  //----------------------------------------------------------------
   // ClearTextInput
   //
   struct ClearTextInput : public InputArea
@@ -3161,8 +3242,9 @@ namespace yae
   // layout_source_item_track
   //
   static Item &
-  layout_source_item_track(ItemView & view,
+  layout_source_item_track(RemuxView & view,
                            Item & prog,
+                           const std::string & src_name,
                            const DemuxerSummary & summary,
                            const std::string & track_id,
                            const Timeline::Track & tt)
@@ -3229,6 +3311,8 @@ namespace yae
     cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
     cbox.height_ = ItemRef::reference(row.height_, 0.75);
     cbox.width_ = cbox.height_;
+    cbox.checked_ = cbox.addInverse(new IsRedacted(view, src_name, track_id));
+    cbox.on_toggle_.reset(new OnToggleRedacted(view, src_name, track_id));
 
     Text & text = row.addNew<Text>("text");
     text.anchors_.left_ = ItemRef::reference(cbox, kPropertyRight);
@@ -3258,7 +3342,7 @@ namespace yae
   // layout_source_item_prog
   //
   static Item *
-  layout_source_item_prog(ItemView & view,
+  layout_source_item_prog(RemuxView & view,
                           Item & src_item,
                           Item * prev_row,
                           const std::string & src_name,
@@ -3327,6 +3411,7 @@ namespace yae
       const Timeline::Track & track = j->second;
       Item & row = layout_source_item_track(view,
                                             prog,
+                                            src_name,
                                             summary,
                                             track_id,
                                             track);
@@ -3342,8 +3427,8 @@ namespace yae
     {
       // shortcuts:
       const std::string & track_id = j->first;
-      if (al::starts_with(track_id, "v:") ||
-          al::starts_with(track_id, "_:"))
+      if (// al::starts_with(track_id, "_:") ||
+          al::starts_with(track_id, "v:"))
       {
         continue;
       }
@@ -3351,6 +3436,7 @@ namespace yae
       const Timeline::Track & track = j->second;
       Item & row = layout_source_item_track(view,
                                             prog,
+                                            src_name,
                                             summary,
                                             track_id,
                                             track);
@@ -4244,7 +4330,7 @@ namespace yae
   {
     if (!output_clip_ && model_ && !model_->clips_.empty())
     {
-      serial_demuxer_ = model_->make_serial_demuxer();
+      serial_demuxer_ = model_->make_serial_demuxer(true);
       const yae::DemuxerSummary & summary = serial_demuxer_->summary();
       const std::string & track_id = model_->clips_.front()->track_;
       const Timeline::Track & track = summary.get_track_timeline(track_id);
@@ -4261,7 +4347,7 @@ namespace yae
   void
   RemuxView::capture_playhead_position()
   {
-    if (view_mode_ != kPlayerMode || !serial_demuxer_)
+    if (view_mode_ != kPlayerMode || !serial_demuxer_ || !reader_)
     {
       return;
     }

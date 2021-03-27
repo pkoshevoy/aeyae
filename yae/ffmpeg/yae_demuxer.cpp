@@ -1910,7 +1910,7 @@ namespace yae
     {
       const std::string & track_id = i->first;
       const FramerateEstimator & src = i->second;
-      if (yae::has(redacted_tracks, track_id))
+      if (!src.num_samples() || yae::has(redacted_tracks, track_id))
       {
         continue;
       }
@@ -2036,15 +2036,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DemuxerSummary::get_prog_timeline
+  //
+  const Timeline &
+  DemuxerSummary::get_prog_timeline(const std::string & trackId) const
+  {
+    int program = find_program(trackId);
+    const Timeline & timeline = yae::at(timeline_, program);
+    return timeline;
+  }
+
+  //----------------------------------------------------------------
   // DemuxerSummary::get_track_timeline
   //
   const Timeline::Track &
   DemuxerSummary::get_track_timeline(const std::string & trackId) const
   {
-    int program = find_program(trackId);
-    const Timeline & timeline = yae::at(timeline_, program);
+    const Timeline & timeline = get_prog_timeline(trackId);
     const Timeline::Track & t = yae::at(timeline.tracks_, trackId);
     return t;
+  }
+
+  //----------------------------------------------------------------
+  // DemuxerSummary::get_timeline_diff
+  //
+  TTime
+  DemuxerSummary::get_timeline_diff(const std::string & track_a_id,
+                                    const std::string & track_b_id) const
+  {
+    TTime dt(0, 1);
+
+    const Timeline::Track & ta = get_track_timeline(track_a_id);
+    const Timeline::Track & tb = get_track_timeline(track_b_id);
+    if (!ta.dts_span_.empty() && !tb.dts_span_.empty())
+    {
+      dt = ta.dts_span_.front().t0_ - tb.dts_span_.front().t0_;
+    }
+
+    return dt;
   }
 
   //----------------------------------------------------------------

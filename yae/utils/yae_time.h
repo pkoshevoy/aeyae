@@ -742,6 +742,9 @@ namespace yae
     inline const std::list<TTime> & dts() const
     { return dts_; }
 
+    inline std::size_t num_samples() const
+    { return num_; }
+
   protected:
     // a sliding window, for calculating a window average:
     std::list<TTime> dts_;
