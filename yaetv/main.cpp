@@ -64,15 +64,100 @@ namespace yae
   MainWindow * mainWindow = NULL;
 
   //----------------------------------------------------------------
+  // StreamDumper
+  //
+  struct StreamDumper : yae::mpeg_ts::IPacketHandler
+  {
+    yae::mpeg_ts::Context ctx_;
+
+    // buffer packets until we have enough info (EPG)
+    // to enable us to handle them properly:
+    yae::fifo<Packet> packets_;
+
+    // where to dump the programs:
+    std::string basedir_;
+
+    // record each (PMT) program separately:
+    std::map<uint16_t, yae::TOpenFilePtr> files_;
+
+    StreamDumper(const std::string & basedir):
+      packets_(400000), // 75.2MB
+      basedir_(basedir)
+    {}
+
+    ~StreamDumper()
+    {
+      handle_backlog();
+    }
+
+    // virtual:
+    void handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
+                const yae::mpeg_ts::Bucket & bucket,
+                uint32_t gps_time)
+    {
+      packets_.push(packet);
+
+      uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
+      if (!program_id)
+      {
+        return;
+      }
+
+      yae::TOpenFilePtr & file = files_[program_id];
+      if (!file)
+      {
+        std::string fn = yae::strfmt("pid-%04X.mpg", program_id);
+        std::string mpg = (fs::path(basedir_) / fn).string();
+        yae_info << "will write to " << mpg;
+
+        file = yae::get_open_file(mpg.c_str(), "wb");
+      }
+
+      if (!packets_.full())
+      {
+        return;
+      }
+
+      // consume the backlog:
+      handle_backlog();
+    }
+
+    void handle_backlog()
+    {
+      yae::mpeg_ts::IPacketHandler::Packet packet;
+      while (packets_.pop(packet))
+      {
+        const yae::IBuffer & data = *(packet.data_);
+
+        uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
+        if (!program_id)
+        {
+          for (std::map<uint16_t, yae::TOpenFilePtr>::const_iterator
+                 i = files_.begin(); i != files_.end(); ++i)
+          {
+            yae::TOpenFile & f = *(i->second);
+            f.write(data.get(), data.size());
+          }
+        }
+        else
+        {
+          yae::TOpenFile & f = *(files_[program_id]);
+          f.write(data.get(), data.size());
+        }
+      }
+    }
+  };
+
+  //----------------------------------------------------------------
   // parse_mpeg_ts
   //
   static void
-  parse_mpeg_ts(const char * fn)
+  parse_mpeg_ts(const char * fn, const char * dst_path)
   {
     yae::TOpenFile src(fn, "rb");
     YAE_THROW_IF(!src.is_open());
 
-    yae::mpeg_ts::Context ts_ctx;
+    StreamDumper handler(dst_path);
     while (!src.is_eof())
     {
       yae::Data data(12 + 7 * 188);
@@ -113,7 +198,10 @@ namespace yae
               continue;
             }
 
-            ts_ctx.push(pkt);
+            handler.ctx_.push(pkt);
+
+            yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);
+            handler.ctx_.handle(packet, handler);
           }
           catch (const std::exception & e)
           {
@@ -138,7 +226,8 @@ namespace yae
 
       yae::fseek64(src.file_, pos + offset, SEEK_SET);
     }
-    ts_ctx.dump();
+
+    handler.ctx_.dump();
   }
 
   //----------------------------------------------------------------
@@ -441,7 +530,10 @@ namespace yae
       << "\nUSAGE:\n"
       << argv
       << " -b " << (fs::path("path") / "to" / "storage" / "yaetv").string()
-      << " [--parse " << (fs::path("path") / "to" / "file.mpg").string() << "]"
+      << " [--parse "
+      << (fs::path("path") / "to" / "file.mpg").string()
+      << " "
+      << (fs::path("output") / "path").string() << "]"
       << " [--no-ui]"
       << "\n";
 
@@ -519,14 +611,13 @@ namespace yae
       }
       else if (strcmp(argv[i], "--parse") == 0)
       {
-        if (argc <= i + 1)
+        if (argc <= i + 2)
         {
-          usage(argv, "--parse parameter requires a /file/path/to/some.mpg");
+          usage(argv, "--parse needs 2 params: /path/input.mpg /output/path");
           return i;
         }
 
-        ++i;
-        parse_mpeg_ts(argv[i]);
+        parse_mpeg_ts(argv[i + 1], argv[i + 2]);
         return 0;
       }
 #ifdef __APPLE__

@@ -2472,6 +2472,18 @@ namespace yae
         pes_.clear();
       }
 
+      inline uint16_t lookup_pid_in_pmt(uint16_t pid) const
+      { return yae::get<uint16_t, uint16_t>(pid_pmt_, pid, 0); }
+
+      inline uint16_t lookup_pid_in_es(uint16_t pid) const
+      { return yae::get<uint16_t, uint16_t>(pid_es_, pid, 0); }
+
+      inline uint16_t lookup_program_id(uint16_t pid) const
+      {
+        uint16_t program_id = lookup_pid_in_es(pid);
+        return program_id ? program_id : lookup_pid_in_pmt(pid);
+      }
+
       // for more human-friendly logging:
       std::string log_prefix_;
 
