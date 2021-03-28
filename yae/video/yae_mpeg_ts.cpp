@@ -3628,13 +3628,17 @@ namespace yae
       }
 
       descriptor_loop_length_ = decrypted.read(16);
-      descriptor_.resize(descriptor_loop_length_);
+      descriptor_.clear();
 
-      for (std::size_t i = 0, n = descriptor_.size(); i < n; i++)
+      TBufferPtr desc_payload = decrypted.read_bytes(descriptor_loop_length_);
+      yae::Bitstream desc_reader(desc_payload);
+      while (desc_reader.has_enough_bytes(6))
       {
-        SpliceDescriptor & descriptor = descriptor_[i];
-        descriptor.load(decrypted);
+        descriptor_.push_back(SpliceDescriptor());
+        SpliceDescriptor & descriptor = descriptor_.back();
+        descriptor.load(desc_reader);
       }
+      YAE_ASSERT(desc_reader.exhausted());
 
       consumed_bytes = decrypted.position() >> 3;
       std::size_t stuffing_bytes = payload_size - consumed_bytes;
@@ -3695,10 +3699,14 @@ namespace yae
     SpliceInfoSection::SpliceTime::load(IBitstream & bin)
     {
       time_specified_flag_ = bin.read(1);
-      reserved_ = bin.read(6);
       if (time_specified_flag_)
       {
+        reserved_ = bin.read(6);
         pts_time_ = bin.read(33);
+      }
+      else
+      {
+        reserved_ = bin.read(7);
       }
     }
 
