@@ -277,7 +277,6 @@ namespace yae
   //
   TDemuxerInterfacePtr
   load(const std::set<std::string> & sources,
-       const std::map<std::string, SetOfTracks> & redacted,
        const std::list<ClipInfo> & clips,
        // these are expressed in seconds:
        const double buffer_duration,
@@ -317,20 +316,7 @@ namespace yae
 
       // summarize the demuxer:
       parallel_demuxer->update_summary(discont_tolerance);
-
-      SetOfTracks redacted_tracks = yae::get(redacted, filePath);
-      if (redacted_tracks.empty())
-      {
-        source_demuxers[filePath] = parallel_demuxer;
-      }
-      else
-      {
-        TRedactedDemuxerPtr redacted_demuxer;
-        redacted_demuxer.reset(new RedactedDemuxer(parallel_demuxer));
-        redacted_demuxer->set_redacted(redacted_tracks);
-        redacted_demuxer->update_summary(discont_tolerance);
-        source_demuxers[filePath] = redacted_demuxer;
-      }
+      source_demuxers[filePath] = parallel_demuxer;
     }
 
     TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
@@ -477,20 +463,7 @@ namespace yae
 
       // summarize the demuxer:
       parallel_demuxer->update_summary(discont_tolerance);
-
-      SetOfTracks redacted_tracks = yae::get(redacted_, source);
-      if (redacted_tracks.empty())
-      {
-        demuxers_[source] = parallel_demuxer;
-      }
-      else
-      {
-        TRedactedDemuxerPtr redacted_demuxer;
-        redacted_demuxer.reset(new RedactedDemuxer(parallel_demuxer));
-        redacted_demuxer->set_redacted(redacted_tracks);
-        redacted_demuxer->update_summary(discont_tolerance);
-        demuxers_[source] = redacted_demuxer;
-      }
+      demuxers_[source] = parallel_demuxer;
     }
 
     return demuxers_[source];
@@ -653,20 +626,21 @@ namespace yae
   {
     std::string json_str = TOpenFile(filename.c_str(), "rb").read();
 
+    RemuxModel model;
     std::set<std::string> sources;
-    std::map<std::string, SetOfTracks> redacted;
     std::list<ClipInfo> src_clips;
-    if (!RemuxModel::parse_json_str(json_str, sources, redacted, src_clips))
+    if (!RemuxModel::parse_json_str(json_str,
+                                    sources,
+                                    model.redacted_,
+                                    src_clips))
     {
       return TSerialDemuxerPtr();
     }
 
-    RemuxModel model;
     {
       rx::Loader::TProgressObserverPtr observer(new ProgressObserver(model));
       rx::Loader loader(model.demuxer_,
                         sources,
-                        redacted,
                         src_clips,
                         observer);
       loader.run();

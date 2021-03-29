@@ -339,11 +339,9 @@ namespace yae
   MainWindow::add(const std::set<std::string> & sources,
                   const std::list<ClipInfo> & src_clips)
   {
-    std::map<std::string, SetOfTracks> redacted;
     rx::Loader::TProgressObserverPtr cb(new LoaderProgressObserver(this));
     TAsyncTaskPtr t(new rx::Loader(model_.demuxer_,
                                    sources,
-                                   redacted,
                                    src_clips,
                                    cb));
     tasks_.push_back(t);

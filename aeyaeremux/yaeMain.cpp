@@ -469,28 +469,28 @@ mainMayThrowException(int argc, char ** argv)
 
       if (al::iends_with(arg, ".yaerx"))
       {
-          std::string fn = i->toUtf8().constData();
-          std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
+        std::string fn = i->toUtf8().constData();
+        std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
 
-          std::set<std::string> s;
-          std::list<yae::ClipInfo> c;
-          if (yae::RemuxModel::parse_json_str(json_str, s, redacted, c))
+        std::set<std::string> s;
+        std::list<yae::ClipInfo> c;
+        if (yae::RemuxModel::parse_json_str(json_str, s, redacted, c))
+        {
+          clips.clear();
+          sources.clear();
+          clipped.clear();
+
+          for (std::list<yae::ClipInfo>::const_iterator
+                 j = c.begin(); j != c.end(); ++j)
           {
-            clips.clear();
-            sources.clear();
-            clipped.clear();
-
-            for (std::list<yae::ClipInfo>::const_iterator
-                   j = c.begin(); j != c.end(); ++j)
-            {
-              const yae::ClipInfo & clip = *j;
-              clips.push_back(clip);
-              curr_source = clip.source_;
-              curr_track = clip.track_;
-              sources.insert(curr_source);
-              clipped.insert(curr_source);
-            }
+            const yae::ClipInfo & clip = *j;
+            clips.push_back(clip);
+            curr_source = clip.source_;
+            curr_track = clip.track_;
+            sources.insert(curr_source);
+            clipped.insert(curr_source);
           }
+        }
       }
       else
       {
@@ -526,7 +526,6 @@ mainMayThrowException(int argc, char ** argv)
 
     // load the sources:
     yae::TDemuxerInterfacePtr demuxer = yae::load(sources,
-                                                  redacted,
                                                   clips,
                                                   buffer_duration,
                                                   discont_tolerance);
@@ -572,6 +571,7 @@ mainMayThrowException(int argc, char ** argv)
                              SLOT(loadFile(const QString &)));
   YAE_ASSERT(ok);
 
+  yae::mainWindow->model().redacted_ = redacted;
   yae::mainWindow->add(sources, clips);
   yae::mainWindow->show();
 

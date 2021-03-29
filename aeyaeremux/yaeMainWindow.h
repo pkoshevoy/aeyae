@@ -91,6 +91,9 @@ namespace yae
              const std::list<yae::ClipInfo> & clips =
              std::list<yae::ClipInfo>());
 
+    inline RemuxModel & model()
+    { return model_; }
+
   signals:
     void setInPoint();
     void setOutPoint();

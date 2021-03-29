@@ -1077,10 +1077,10 @@ namespace yae
       packet.dts = av_rescale_q(dts.time_,
                                 Rational(1, dts.base_),
                                 stream->time_base);
-      YAE_ASSERT(packet.dts <= packet.pts);
+      YAE_ASSERT(packet.pts == AV_NOPTS_VALUE || packet.dts <= packet.pts);
     }
 
-    if (packet.pts < packet.dts)
+    if (packet.pts != AV_NOPTS_VALUE && packet.pts < packet.dts)
     {
       int64_t dts_next = av_rescale_q(next_dts.time_,
                                       Rational(1, next_dts.base_),
@@ -1104,7 +1104,7 @@ namespace yae
 
     num_packets_++;
 
-    YAE_ASSERT(packet.dts <= packet.pts);
+    YAE_ASSERT(packet.pts == AV_NOPTS_VALUE || packet.dts <= packet.pts);
     t0_ = std::min<TTime>(t0_, dts);
     t1_ = std::max<TTime>(t1_, dts);
 
@@ -3675,6 +3675,12 @@ namespace yae
   {
     src_.reset(d.src_->clone());
     redacted_ = d.redacted_;
+
+    if (d.summary_)
+    {
+      summary_.reset(new DemuxerSummary());
+      this->summarize(*summary_);
+    }
   }
 
   //----------------------------------------------------------------
