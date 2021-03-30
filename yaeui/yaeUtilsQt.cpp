@@ -2164,7 +2164,7 @@ namespace yae
   show_in_file_manager(const char * path_utf8)
   {
 #if defined(_WIN32)
-    QString path = QString::fromUtf8(path_utf8);
+    QString path = QDir::toNativeSeparators(QString::fromUtf8(path_utf8));
     PIDLIST_ABSOLUTE pidl = NULL;
     ULONG flags = 0;
 
