@@ -644,8 +644,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     {
       AVDictionary * opts = NULL;
       av_dict_set_int(&opts, "real_time", 1, 0);
+      av_dict_set(&opts, "sub_text_format", "ass", 0);
 
       ccDec = tryToOpen(codec, NULL, opts);
+#if 0
       AVCodecContext * cc = ccDec.get();
 
       if (cc)
@@ -653,6 +655,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         cc->pkt_timebase = timeBase;
         cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
       }
+#endif
     }
 
     return ccDec;

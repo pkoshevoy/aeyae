@@ -663,7 +663,7 @@ namespace yae
 
       if (decoded.pts == AV_NOPTS_VALUE)
       {
-        decoded.pts = decoded.pkt_pts;
+        decoded.pts = decoded.pkt_dts;
       }
 
       TTime t0(stream_->time_base.num * decoded.pts,

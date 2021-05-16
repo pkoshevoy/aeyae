@@ -253,7 +253,8 @@ namespace yae
       stream->discard = AVDISCARD_ALL;
 
       // check whether we have a decoder for this codec:
-      AVCodec * decoder = avcodec_find_decoder(stream->codecpar->codec_id);
+      const AVCodec * decoder =
+        avcodec_find_decoder(stream->codecpar->codec_id);
       if (!decoder && codecType != AVMEDIA_TYPE_SUBTITLE)
       {
         // unsupported codec, ignore it:

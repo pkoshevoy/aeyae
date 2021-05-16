@@ -107,10 +107,11 @@ namespace yae
     {
       av_log_set_level(AV_LOG_INFO);
       av_log_set_flags(AV_LOG_SKIP_REPEATED);
+#if 0
       avcodec_register_all();
       avfilter_register_all();
       av_register_all();
-
+#endif
       avformat_network_init();
 
 #if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(58, 9, 100)
