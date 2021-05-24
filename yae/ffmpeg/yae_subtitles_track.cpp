@@ -16,10 +16,10 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // parse_event_format
+  // parse_ass_event_format
   //
-  static std::vector<std::string>
-  parse_event_format(const char * event_format)
+  std::vector<std::string>
+  parse_ass_event_format(const char * event_format, bool drop_timing)
   {
     std::string key;
     std::vector<std::string> fields;
@@ -35,7 +35,11 @@ namespace yae
       if (c == ',')
       {
         // finish current token:
-        fields.push_back(key);
+        if (!drop_timing || (key != "Start" && key != "End"))
+        {
+          fields.push_back(key);
+        }
+
         key = std::string();
       }
       else
@@ -46,7 +50,11 @@ namespace yae
 
     if (!key.empty())
     {
-      fields.push_back(key);
+      if (!drop_timing || (key != "Start" && key != "End"))
+      {
+        fields.push_back(key);
+      }
+
       key = std::string();
     }
 
@@ -54,12 +62,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // parse_event
+  // parse_ass_event
   //
-  static void
-  parse_event(const char * event,
-              const std::vector<std::string> & event_format,
-              std::map<std::string, std::string> & fields)
+  void
+  parse_ass_event(const char * event,
+                  const std::vector<std::string> & event_format,
+                  std::map<std::string, std::string> & fields)
   {
     std::size_t max_tokens = event_format.size();
     std::size_t num_tokens = 0;
@@ -75,11 +83,10 @@ namespace yae
         fields[key] = token;
         token = std::string();
         num_tokens++;
+        continue;
       }
-      else
-      {
-        token.push_back(c);
-      }
+
+      token.push_back(c);
     }
 
     YAE_ASSERT(token.empty());
@@ -112,11 +119,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // find_events_format
+  // find_ass_events_format
   //
-  static bool
-  find_events_format(const char * subtitle_header,
-                     std::string & event_format)
+  bool
+  find_ass_events_format(const char * subtitle_header,
+                         std::string & event_format)
   {
     const char * start = strstr(subtitle_header, "[Events]");
     if (!start)
@@ -499,11 +506,10 @@ namespace yae
         std::string header((const char *)(ctx->subtitle_header),
                            (const char *)(ctx->subtitle_header +
                                           ctx->subtitle_header_size));
-
         std::string eventFormat;
-        if (find_events_format(header.c_str(), eventFormat))
+        if (find_ass_events_format(header.c_str(), eventFormat))
         {
-          outputEventFormat_ = parse_event_format(eventFormat.c_str());
+          setOutputEventFormat(eventFormat.c_str());
         }
       }
 
@@ -550,7 +556,16 @@ namespace yae
   void
   SubtitlesTrack::setInputEventFormat(const char * eventFormat)
   {
-    inputEventFormat_ = parse_event_format(eventFormat);
+    inputEventFormat_ = parse_ass_event_format(eventFormat, true);
+  }
+
+  //----------------------------------------------------------------
+  // SubtitlesTrack::setOutputEventFormat
+  //
+  void
+  SubtitlesTrack::setOutputEventFormat(const char * eventFormat)
+  {
+    outputEventFormat_ = parse_ass_event_format(eventFormat);
   }
 
   //----------------------------------------------------------------
@@ -583,11 +598,11 @@ namespace yae
       std::map<std::string, std::string> event;
       if (inputEventFormat_.empty())
       {
-        parse_event(r.ass, outputEventFormat_, event);
+        parse_ass_event(r.ass, outputEventFormat_, event);
       }
       else
       {
-        parse_event(r.ass, inputEventFormat_, event);
+        parse_ass_event(r.ass, inputEventFormat_, event);
       }
 
       // reformat:

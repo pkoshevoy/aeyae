@@ -34,6 +34,29 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // parse_ass_event_format
+  //
+  std::vector<std::string>
+  parse_ass_event_format(const char * event_format,
+                         bool drop_timing = false);
+
+  //----------------------------------------------------------------
+  // parse_ass_event
+  //
+  void
+  parse_ass_event(const char * event,
+                  const std::vector<std::string> & event_format,
+                  std::map<std::string, std::string> & key_value);
+
+  //----------------------------------------------------------------
+  // find_ass_events_format
+  //
+  bool
+  find_ass_events_format(const char * subtitle_header,
+                         std::string & event_format);
+
+
+  //----------------------------------------------------------------
   // TSubsPrivate
   //
   class YAE_API TSubsPrivate : public TSubsFrame::IPrivate
@@ -119,6 +142,7 @@ namespace yae
     void close();
 
     void setInputEventFormat(const char * eventFormat);
+    void setOutputEventFormat(const char * eventFormat);
     void addTimingEtc(TSubsFrame & sf);
 
     void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next);

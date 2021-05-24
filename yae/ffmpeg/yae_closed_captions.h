@@ -124,6 +124,9 @@ namespace yae
     // which channel to decode:
     unsigned int decode_;
 
+    // we change the Style of the captions a little:
+    std::string adjusted_subtitle_header_[4];
+
     // decoded captions will go here:
     SubtitlesTrack captions_[4];
 

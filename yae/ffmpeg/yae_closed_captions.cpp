@@ -647,15 +647,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       av_dict_set(&opts, "sub_text_format", "ass", 0);
 
       ccDec = tryToOpen(codec, NULL, opts);
-#if 0
-      AVCodecContext * cc = ccDec.get();
 
+      AVCodecContext * cc = ccDec.get();
       if (cc)
       {
         cc->pkt_timebase = timeBase;
-        cc->sub_text_format = FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS;
       }
-#endif
     }
 
     return ccDec;
@@ -762,71 +759,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   }
 
   //----------------------------------------------------------------
-  // parse_timespan
-  //
-  static bool
-  parse_timespan(const AVSubtitle & sub,
-                 TTime & tmin,
-                 TTime & tmax)
-  {
-    // std::vector<std::string> columns;
-
-    tmin = TTime::max_flicks();
-    tmax = TTime::min_flicks();
-
-    for (int r = 0; r < sub.num_rects; r++)
-    {
-      const AVSubtitleRect * rect = sub.rects[r];
-      if (rect)
-      {
-        std::vector<std::string> values;
-        yae::split(values, ",", rect->ass);
-
-        // NOTE: the values are assumed to match the [Events] Format:
-        // values[1] == Start and values[2] == End
-        if (values.size() < 3)
-        {
-          continue;
-        }
-
-        // shortcuts:
-        std::string & start = values[1];
-        std::string & end = values[2];
-
-        yae::strip_ws(start);
-        yae::strip_ws(end);
-
-        TTime t0;
-        if (yae::parse_time(t0, start.c_str(), ":", "."))
-        {
-          tmin = std::min(tmin, t0);
-        }
-
-        TTime t1;
-        if (yae::parse_time(t1, end.c_str(), ":", "."))
-        {
-          tmax = std::max(tmax, t1);
-        }
-      }
-    }
-
-    if (tmax <= tmin &&
-        sub.pts &&
-        sub.end_display_time != std::numeric_limits<uint32_t>::max())
-    {
-#if 0
-      tmax = tmin + TTime(sub.end_display_time - sub.start_display_time, 1000);
-      tmax = tmax.rebased(100);
-#else
-      tmin = tmax - TTime(sub.end_display_time - sub.start_display_time, 1000);
-      tmin = tmin.rebased(100);
-#endif
-    }
-
-    return tmin <= tmax;
-  }
-
-  //----------------------------------------------------------------
   // CaptionsDecoder::decode
   //
   void
@@ -867,7 +799,50 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 
       // instantiate the CC decoder on-demand:
-      cc_[n] || (cc_[n] = openClosedCaptionsDecoder(timeBase));
+      if (!cc_[n])
+      {
+        SubtitlesTrack & captions = captions_[n];
+        cc_[n] = openClosedCaptionsDecoder(timeBase);
+
+        const AVCodecContext * ccDec = cc_[n].get();
+        std::string & header = adjusted_subtitle_header_[n];
+
+        header.assign((const char *)(ccDec->subtitle_header),
+                      (const char *)(ccDec->subtitle_header +
+                                     ccDec->subtitle_header_size));
+
+        std::string eventFormat;
+        if (yae::find_ass_events_format(header.c_str(), eventFormat))
+        {
+          // ccaption_dec.c claims to output [Events] with
+          // Format: Layer, Start, End, Style, Name,            \
+          //         MarginL, MarginR, MarginV, Effect, Text
+          //
+          // but it actually outputs this:
+          // Format: ReadOrder, Layer, Style, Name,             \
+          //         MarginL, MarginR, MarginV, Effect, Text);
+          //
+          // Start and End are expected to be omitted since
+          // FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS was removed,
+          // but ReadOrder should really be mentioned
+          // in AVCodecContext.subtitle_header
+          //
+          if (!al::starts_with(eventFormat, "ReadOrder"))
+          {
+            eventFormat = "ReadOrder, " + eventFormat;
+          }
+
+          captions.setInputEventFormat(eventFormat.c_str());
+        }
+
+        // change style:
+        header = adjust_ass_header(header);
+
+        if (yae::find_ass_events_format(header.c_str(), eventFormat))
+        {
+          captions.setOutputEventFormat(eventFormat.c_str());
+        }
+      }
 
       // prevent captions decoder from being destroyed while it is used:
       AvCodecContextPtr keepAlive(cc_[n]);
@@ -885,38 +860,53 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         continue;
       }
 
+      TTime pts(sub.pts, AV_TIME_BASE);
+      TTime t0(sub.start_display_time, 1000);
+      TTime t1(t0);
+
+      if (sub.end_display_time != std::numeric_limits<uint32_t>::max())
+      {
+        t1.reset(sub.end_display_time, 1000);
+      }
+
+#if 0 // ndef NDEBUG
+      {
+        std::ostringstream oss;
+        oss << "CaptionsDecoder::decode -- ["
+            << (pts + t0).to_hhmmss_ms() << ", "
+            << (pts + t1).to_hhmmss_ms() << ")";
+
+        for (unsigned j = 0; j < sub.num_rects; j++)
+        {
+          const AVSubtitleRect & r = *(sub.rects[j]);
+          oss << ", r(" << j << ") = ";
+          if (r.type == SUBTITLE_BITMAP)
+          {
+            oss << "BITMAP";
+          }
+          else if (r.type == SUBTITLE_TEXT)
+          {
+            oss << r.text;
+          }
+          else if (r.type == SUBTITLE_ASS)
+          {
+            oss << r.ass;
+          }
+        }
+
+        yae_debug << oss.str();
+      }
+#endif
+
       // just parse the time stamp from the Dialogue, it's less broken
       TSubsFrame sf;
       sf.traits_ = kSubsCEA608;
       sf.render_ = true;
       sf.rewriteTimings_ = true;
+      sf.time_ = t0.rebased(30000);
+      sf.tEnd_ = std::max(t1.rebased(30000), sf.time_ + TTime(1001, 30000));
 
-      if (!parse_timespan(sub, sf.time_, sf.tEnd_) &&
-          packet.pts != AV_NOPTS_VALUE)
-      {
-        sf.time_.base_ = AV_TIME_BASE;
-        sf.tEnd_.base_ = AV_TIME_BASE;
-        sf.tEnd_.time_ = std::numeric_limits<int64>::max();
-
-        int64_t ptsPkt = av_rescale_q(packet.pts,
-                                      timeBase,
-                                      kAvTimeBase);
-        sf.time_.time_ = ptsPkt;
-
-        int64_t endPkt = av_rescale_q(packet.pts + packet.duration,
-                                      timeBase,
-                                      kAvTimeBase);
-        sf.tEnd_.time_ = endPkt;
-      }
-
-      sf.time_ = sf.time_.rebased(30000);
-      sf.tEnd_ = std::max(sf.tEnd_, sf.time_ + TTime(1001, 30000));
-
-      std::string header((const char *)(ccDec->subtitle_header),
-                         (const char *)(ccDec->subtitle_header +
-                                        ccDec->subtitle_header_size));
-      header = adjust_ass_header(header);
-
+      const std::string & header = adjusted_subtitle_header_[n];
       const unsigned char * hdr = (const unsigned char *)(&header[0]);
       std::size_t sz = header.size();
       sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
@@ -934,6 +924,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
 
         last = sf;
+        captions.addTimingEtc(sf);
         captions.push(sf, terminator);
       }
     }
