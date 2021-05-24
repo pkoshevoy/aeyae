@@ -130,10 +130,12 @@ namespace yae
     {
       av_packet_ref(packet_, pkt);
     }
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 0)
     else
     {
       av_init_packet(packet_);
     }
+#endif
   }
 
   //----------------------------------------------------------------
