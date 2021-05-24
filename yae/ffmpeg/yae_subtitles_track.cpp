@@ -509,6 +509,11 @@ namespace yae
         std::string eventFormat;
         if (find_ass_events_format(header.c_str(), eventFormat))
         {
+          if (inputEventFormat_.empty())
+          {
+            setInputEventFormat(eventFormat.c_str());
+          }
+
           setOutputEventFormat(eventFormat.c_str());
         }
       }
