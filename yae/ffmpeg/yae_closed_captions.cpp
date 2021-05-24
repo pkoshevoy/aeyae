@@ -814,12 +814,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         std::string eventFormat;
         if (yae::find_ass_events_format(header.c_str(), eventFormat))
         {
-          // ccaption_dec.c claims to output [Events] with
-          // Format: Layer, Start, End, Style, Name,            \
+          // ass.c claims to output [Events] with
+          // Format: Layer, Start, End, Style, Name, \
           //         MarginL, MarginR, MarginV, Effect, Text
           //
           // but it actually outputs this:
-          // Format: ReadOrder, Layer, Style, Name,             \
+          // Format: ReadOrder, Layer, Style, Name, \
           //         MarginL, MarginR, MarginV, Effect, Text);
           //
           // Start and End are expected to be omitted since

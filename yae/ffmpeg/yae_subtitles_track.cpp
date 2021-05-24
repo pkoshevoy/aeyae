@@ -511,7 +511,26 @@ namespace yae
         {
           if (inputEventFormat_.empty())
           {
-            setInputEventFormat(eventFormat.c_str());
+            // ass.c claims to output [Events] with
+            // Format: Layer, Start, End, Style, Name, \
+            //         MarginL, MarginR, MarginV, Effect, Text
+            //
+            // but it actually outputs this:
+            // Format: ReadOrder, Layer, Style, Name, \
+            //         MarginL, MarginR, MarginV, Effect, Text);
+            //
+            // Start and End are expected to be omitted since
+            // FF_SUB_TEXT_FMT_ASS_WITH_TIMINGS was removed,
+            // but ReadOrder should really be mentioned
+            // in AVCodecContext.subtitle_header
+            //
+            std::string inputFormat = eventFormat;
+            if (!al::starts_with(inputFormat, "ReadOrder"))
+            {
+              inputFormat = "ReadOrder, " + eventFormat;
+            }
+
+            setInputEventFormat(inputFormat.c_str());
           }
 
           setOutputEventFormat(eventFormat.c_str());
