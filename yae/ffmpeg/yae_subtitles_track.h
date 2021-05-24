@@ -118,6 +118,9 @@ namespace yae
 
     void close();
 
+    void setInputEventFormat(const char * eventFormat);
+    void addTimingEtc(TSubsFrame & sf);
+
     void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next);
     void fixupEndTimes(double v1, const TSubsFrame & last);
     void expungeOldSubs(double v0);
@@ -127,6 +130,15 @@ namespace yae
   private:
     SubtitlesTrack(const SubtitlesTrack & given);
     SubtitlesTrack & operator = (const SubtitlesTrack & given);
+
+  protected:
+    // initialized in open():
+    std::vector<std::string> outputEventFormat_;
+
+    // this is to undo Matrosk ASS/SSA [Events] Format: changes
+    // that (potentially) make decoded events incompatible with
+    // AVCodecContext.subtitle_header and unusable with libass:
+    std::vector<std::string> inputEventFormat_;
 
   public:
     bool render_;

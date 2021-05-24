@@ -945,6 +945,44 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::to_hmmss_cc
+  //
+  void
+  TTime::to_hmmss_cc(std::string & ts,
+                     const char * separator,
+                     const char * cc_separator) const
+  {
+    bool negative = (time_ < 0);
+    uint64_t t = negative ? -time_ : time_;
+
+    uint64_t remainder = t % base_;
+    uint64_t centiseconds = (100 * remainder) / base_;
+
+    // convert to seconds:
+    t /= base_;
+
+    uint64_t seconds = t % 60;
+    t /= 60;
+
+    uint64_t minutes = t % 60;
+    uint64_t hours = t / 60;
+
+    std::ostringstream os;
+
+    if (negative && (seconds || minutes || hours || centiseconds))
+    {
+      os << '-';
+    }
+
+    os << hours << separator
+       << std::setw(2) << std::setfill('0') << minutes << separator
+       << std::setw(2) << std::setfill('0') << seconds << cc_separator
+       << std::setw(2) << std::setfill('0') << centiseconds;
+
+    ts = std::string(os.str().c_str());
+  }
+
+  //----------------------------------------------------------------
   // to_short_txt
   //
   std::string

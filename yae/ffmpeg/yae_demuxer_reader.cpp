@@ -1635,6 +1635,8 @@ namespace yae
                     sf.tEnd_ += dt;
                   }
                 }
+
+                subs->addTimingEtc(sf);
               }
 
               err = 0;

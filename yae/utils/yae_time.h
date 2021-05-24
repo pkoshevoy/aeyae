@@ -263,6 +263,19 @@ namespace yae
                          const char * mm_separator = ":",
                          const char * ff_separator = ":") const;
 
+    // for ASS/SSA timestamps:
+    void to_hmmss_cc(std::string & ts,
+                     const char * mm_separator = ":",
+                     const char * cc_separator = ".") const;
+
+    inline std::string to_hmmss_cc(const char * mm_separator = ":",
+                                   const char * cc_separator = ".") const
+    {
+      std::string ts;
+      to_hmmss_cc(ts, mm_separator, cc_separator);
+      return ts;
+    }
+
     // return timestamp in hhmm format, rounded away from zero:
     inline std::string to_hhmm(const char * mm_separator = ":") const
     {

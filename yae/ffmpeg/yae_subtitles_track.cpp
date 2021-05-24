@@ -16,6 +16,133 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // parse_event_format
+  //
+  static std::vector<std::string>
+  parse_event_format(const char * event_format)
+  {
+    std::string key;
+    std::vector<std::string> fields;
+
+    for (const char * i = event_format; i && *i; ++i)
+    {
+      char c = *i;
+      if (c == ' ')
+      {
+        continue;
+      }
+
+      if (c == ',')
+      {
+        // finish current token:
+        fields.push_back(key);
+        key = std::string();
+      }
+      else
+      {
+        key.push_back(c);
+      }
+    }
+
+    if (!key.empty())
+    {
+      fields.push_back(key);
+      key = std::string();
+    }
+
+    return fields;
+  }
+
+  //----------------------------------------------------------------
+  // parse_event
+  //
+  static void
+  parse_event(const char * event,
+              const std::vector<std::string> & event_format,
+              std::map<std::string, std::string> & fields)
+  {
+    std::size_t max_tokens = event_format.size();
+    std::size_t num_tokens = 0;
+    std::string token;
+    const char * i = event;
+    for (; i && *i && num_tokens + 1 < max_tokens; ++i)
+    {
+      char c = *i;
+      if (c == ',')
+      {
+        // finish current token:
+        const std::string & key = event_format.at(num_tokens);
+        fields[key] = token;
+        token = std::string();
+        num_tokens++;
+      }
+      else
+      {
+        token.push_back(c);
+      }
+    }
+
+    YAE_ASSERT(token.empty());
+    const std::string & key = event_format.at(num_tokens);
+    fields[key] = std::string(i);
+  }
+
+  //----------------------------------------------------------------
+  // skip_whitespace
+  //
+  static const char *
+  skip_whitespace(const char * str)
+  {
+    const char * s = str;
+    for (; s && ::isspace(*s); ++s)
+    {}
+    return s;
+  }
+
+  //----------------------------------------------------------------
+  // skip_to_endl
+  //
+  static const char *
+  skip_to_endl(const char * str)
+  {
+    const char * s = str;
+    for (; s && *s && *s != '\r' && *s != '\n'; ++s)
+    {}
+    return s;
+  }
+
+  //----------------------------------------------------------------
+  // find_events_format
+  //
+  static bool
+  find_events_format(const char * subtitle_header,
+                     std::string & event_format)
+  {
+    const char * start = strstr(subtitle_header, "[Events]");
+    if (!start)
+    {
+      return false;
+    }
+
+    start += 8;
+    start = skip_whitespace(start);
+    start = strstr(start, "Format:");
+    if (!start)
+    {
+      return false;
+    }
+
+    start += 7;
+    start = skip_whitespace(start);
+
+    const char * end = skip_to_endl(start);
+    event_format = std::string(start, end);
+
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
   // TSubsPrivate::~TSubsPrivate
   //
   TSubsPrivate::~TSubsPrivate()
@@ -367,6 +494,19 @@ namespace yae
       const AVCodecParameters & codecParams = *(stream_->codecpar);
       format_ = getSubsFormat(codecParams.codec_id);
 
+      if (ctx && ctx->subtitle_header && ctx->subtitle_header_size)
+      {
+        std::string header((const char *)(ctx->subtitle_header),
+                           (const char *)(ctx->subtitle_header +
+                                          ctx->subtitle_header_size));
+
+        std::string eventFormat;
+        if (find_events_format(header.c_str(), eventFormat))
+        {
+          outputEventFormat_ = parse_event_format(eventFormat.c_str());
+        }
+      }
+
       if (ctx)
       {
         TPlanarBufferPtr buffer(new TPlanarBuffer(1),
@@ -402,6 +542,91 @@ namespace yae
   {
     clear();
     Track::close();
+  }
+
+  //----------------------------------------------------------------
+  // SubtitlesTrack::setInputEventFormat
+  //
+  void
+  SubtitlesTrack::setInputEventFormat(const char * eventFormat)
+  {
+    inputEventFormat_ = parse_event_format(eventFormat);
+  }
+
+  //----------------------------------------------------------------
+  // SubtitlesTrack::addTimingEtc
+  //
+  // add Dialogue:, add h:mm:ss.cc Start and End time,
+  // fix Event fields order to match AVCodecContext.subtitle_header
+  //
+  void
+  SubtitlesTrack::addTimingEtc(TSubsFrame & sf)
+  {
+    TSubsPrivatePtr sf_private =
+      boost::dynamic_pointer_cast<TSubsPrivate, TSubsFrame::IPrivate>
+      (sf.private_);
+
+    if (!sf_private)
+    {
+      return;
+    }
+
+    AVSubtitle & sub = sf_private->sub_;
+    for (unsigned int i = 0; i < sub.num_rects; i++)
+    {
+      AVSubtitleRect & r = *(sub.rects[i]);
+      if (r.type != SUBTITLE_ASS || !r.ass)
+      {
+        continue;
+      }
+
+      std::map<std::string, std::string> event;
+      if (inputEventFormat_.empty())
+      {
+        parse_event(r.ass, outputEventFormat_, event);
+      }
+      else
+      {
+        parse_event(r.ass, inputEventFormat_, event);
+      }
+
+      // reformat:
+      std::ostringstream oss;
+      oss << "Dialogue: ";
+
+      const char * separator = "";
+      for (std::size_t j = 0, n = outputEventFormat_.size(); j < n; j++)
+      {
+        const std::string & key = outputEventFormat_[j];
+        std::string value = yae::get(event, key);
+
+        if (value.empty())
+        {
+          if (key == "Start")
+          {
+            value = sf.time_.to_hmmss_cc();
+          }
+          else if (key == "End")
+          {
+            value = sf.tEnd_.to_hmmss_cc();
+          }
+          else if (key == "Name")
+          {
+            value = yae::get(event, std::string("Actor"));
+          }
+          else if (key == "Actor")
+          {
+            value = yae::get(event, std::string("Name"));
+          }
+        }
+
+        oss << separator << value;
+        separator = ",";
+      }
+
+      av_freep(&r.ass);
+      r.ass = av_strdup(oss.str().c_str());
+    }
   }
 
   //----------------------------------------------------------------

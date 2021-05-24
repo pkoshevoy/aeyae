@@ -354,6 +354,33 @@ namespace yae
             stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
           SubttTrackPtr subsTrk(new SubtitlesTrack(stream));
+
+          if (strcmp(context_->iformat->name, "matroska,webm") == 0)
+          {
+            // https://matroska.org/technical/subtitles.html
+            //
+            // matroska container does not store ASS/SSA Events
+            // as defined in the [Events] Format:, they remove
+            // timing info and store some fields in fixed order:
+            //   ReadOrder, Layer, Style, Name (or Actor),
+            //   MarginL, MarginR, MarginV, Effect, Text
+            //
+            // ffmpeg mkv demuxer does not account for the (potential)
+            // re-ordering of the [Events] Format: fields, it outputs
+            // events as-is, without timing info, and in all likelihood
+            // not matching the [Events] Format: defined in the
+            // AVCodecContext.subtitle_header.  This makes the decoded
+            // subtitles unusable with libass renderer.
+            //
+            // We will have to handle the re-ordering and adding the
+            // timing info ourselves, in order to be able to process
+            // these Events with libass
+
+            subsTrk->setInputEventFormat("ReadOrder, Layer, Style, "
+                                         "Name, MarginL, MarginR, "
+                                         "MarginV, Effect, Text");
+          }
+
           program_tracks.subtt_[stream->id].push_back(subsTrk);
         }
       }
@@ -949,13 +976,17 @@ namespace yae
                     double(tb_msec.num) /
                     double(tb_msec.den);
 
+#if 0
                   // avoid subs that are visible for more than 5 seconds:
                   if (dt > 0.5 && dt < 5.0)
+#endif
                   {
                     sf.tEnd_ = sf.time_;
                     sf.tEnd_ += dt;
                   }
                 }
+
+                subs->addTimingEtc(sf);
               }
 
               err = 0;

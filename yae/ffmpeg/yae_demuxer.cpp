@@ -328,6 +328,33 @@ namespace yae
           stream->discard = AVDISCARD_DEFAULT;
 
           SubttTrackPtr track(new SubtitlesTrack(stream));
+
+          if (strcmp(ctx->iformat->name, "matroska,webm") == 0)
+          {
+            // https://matroska.org/technical/subtitles.html
+            //
+            // matroska container does not store ASS/SSA Events
+            // as defined in the [Events] Format:, they remove
+            // timing info and store some fields in fixed order:
+            //   ReadOrder, Layer, Style, Name (or Actor),
+            //   MarginL, MarginR, MarginV, Effect, Text
+            //
+            // ffmpeg mkv demuxer does not account for the (potential)
+            // re-ordering of the [Events] Format: fields, it outputs
+            // events as-is, without timing info, and in all likelihood
+            // not matching the [Events] Format: defined in the
+            // AVCodecContext.subtitle_header.  This makes the decoded
+            // subtitles unusable with libass renderer.
+            //
+            // We will have to handle the re-ordering and adding the
+            // timing info ourselves, in order to be able to process
+            // these Events with libass
+
+            track->setInputEventFormat("ReadOrder, Layer, Style, "
+                                       "Name, MarginL, MarginR, "
+                                       "MarginV, Effect, Text");
+          }
+
           track->setId(make_track_id('s', to_ + subttTracks_.size()));
           streamIndex_[track->id()] = stream->index;
           trackId_[stream->index] = track->id();
