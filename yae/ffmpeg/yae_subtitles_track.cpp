@@ -773,15 +773,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SubtitlesTrack::push
+  // to_str
   //
-  void
-  SubtitlesTrack::push(const TSubsFrame & sf, QueueWaitMgr * terminator)
+  std::string
+  to_str(const TSubsFrame & sf)
   {
-#if 0 // ndef NDEBUG
     std::ostringstream oss;
     oss
-      << "SubtitlesTrack::push -- ["
+      << "["
       << sf.time_.to_hhmmss_frac(1000) << ", "
       << sf.tEnd_.to_hhmmss_frac(1000) << ")";
 
@@ -799,7 +798,17 @@ namespace yae
       }
     }
 
-    yae_debug << oss.str();
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
+  // SubtitlesTrack::push
+  //
+  void
+  SubtitlesTrack::push(const TSubsFrame & sf, QueueWaitMgr * terminator)
+  {
+#if 0 // ndef NDEBUG
+    yae_debug << "SubtitlesTrack::push " << to_str(sf).str();
 #endif
 
     queue_.push(sf, terminator);

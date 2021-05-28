@@ -644,6 +644,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     {
       AVDictionary * opts = NULL;
       av_dict_set_int(&opts, "real_time", 1, 0);
+      av_dict_set_int(&opts, "real_time_latency_msec", 0, 0);
       av_dict_set(&opts, "sub_text_format", "ass", 0);
 
       ccDec = tryToOpen(codec, NULL, opts);
@@ -861,6 +862,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 
       TTime pts(sub.pts, AV_TIME_BASE);
+
+      // start and end time are relative to pts:
       TTime t0(sub.start_display_time, 1000);
       TTime t1(t0);
 
@@ -869,12 +872,15 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         t1.reset(sub.end_display_time, 1000);
       }
 
+      t0 += pts;
+      t1 += pts;
+
 #if 0 // ndef NDEBUG
       {
         std::ostringstream oss;
         oss << "CaptionsDecoder::decode -- ["
-            << (pts + t0).to_hhmmss_ms() << ", "
-            << (pts + t1).to_hhmmss_ms() << ")";
+            << t0.to_hhmmss_ms() << ", "
+            << t1.to_hhmmss_ms() << ")";
 
         for (unsigned j = 0; j < sub.num_rects; j++)
         {
@@ -898,7 +904,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       }
 #endif
 
-      // just parse the time stamp from the Dialogue, it's less broken
       TSubsFrame sf;
       sf.traits_ = kSubsCEA608;
       sf.render_ = true;
@@ -925,10 +930,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         last = sf;
         captions.addTimingEtc(sf);
+
+        // yae_debug << "1. captions.push: " << to_str(sf);
+
         captions.push(sf, terminator);
       }
     }
-
+#if 1
     // extend the duration of the most recent caption to cover current frame:
     TTime ptsNow = TTime(pts * timeBase.num, timeBase.den).rebased(30000);
     TTime ptsNext = ptsNow + TTime(1001, 30000);
@@ -955,9 +963,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         // better to create short adjacent events instead:
         TSubsFrame sf(last);
         sf.time_ = ptsPrev;
+
+        // yae_debug << "2. captions.push: " << to_str(sf);
+
         captions.push(sf, terminator);
       }
     }
+#endif
   }
 
 }

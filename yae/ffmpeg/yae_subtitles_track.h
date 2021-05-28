@@ -125,6 +125,10 @@ namespace yae
   //
   typedef Queue<TSubsFrame> TSubsFrameQueue;
 
+  //----------------------------------------------------------------
+  // to_str
+  //
+  std::string to_str(const TSubsFrame & sf);
 
   //----------------------------------------------------------------
   // SubtitlesTrack
