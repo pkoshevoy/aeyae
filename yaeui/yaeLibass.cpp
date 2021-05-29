@@ -11,9 +11,10 @@
 #include <sstream>
 
 // Qt includes:
-#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QFont>
+#include <QGuiApplication>
 #include <QString>
 
 // yae includes:
@@ -44,17 +45,6 @@ namespace yae
     }
 #endif
 
-#if defined(__APPLE__)
-    fontsConf = "/opt/local/etc/fonts/fonts.conf";
-
-    if (QFileInfo(QString::fromUtf8(fontsConf.c_str())).exists())
-    {
-      // use the macports fontconfig file:
-      removeAfterUse = false;
-      return true;
-    }
-#endif
-
     removeAfterUse = true;
     int64 appPid = QCoreApplication::applicationPid();
 
@@ -73,17 +63,17 @@ namespace yae
        << QDir::toNativeSeparators(fontsDir).toUtf8().constData()
        << "</dir>\n";
 
-#ifdef __APPLE__
-    os << "\t<dir>/Library/Fonts</dir>\n"
-       << "\t<dir>~/Library/Fonts</dir>\n";
-#endif
-
 #ifndef _WIN32
     const char * fontdir[] = {
       "/usr/share/fonts",
       "/usr/X11R6/lib/X11/fonts",
       "/opt/kde3/share/fonts",
-      "/usr/local/share/fonts"
+      "/usr/local/share/fonts",
+      "/Library/Fonts",
+      "/Library/Application Support/Apple/Fonts/Language Support",
+      "/Library/Application Support/Apple/Fonts/iLife",
+      "/Library/Application Support/Apple/Fonts/iWork",
+      "/System/Library/Fonts"
     };
 
     std::size_t nfontdir = sizeof(fontdir) / sizeof(fontdir[0]);
@@ -325,9 +315,7 @@ namespace yae
   TLibass::setFrameSize(int w, int h)
   {
     ass_set_frame_size(renderer_, w, h);
-
-    double ar = double(w) / double(h);
-    ass_set_aspect_ratio(renderer_, ar, ar);
+    ass_set_pixel_aspect(renderer_, 1.0);
   }
 
   //----------------------------------------------------------------
@@ -366,15 +354,23 @@ namespace yae
     bool removeAfterUse = false;
     getFontsConf(fontsConf, removeAfterUse);
 
-    const char * defaultFont = NULL;
-    const char * defaultFamily = NULL;
-    int useFontconfig = 1;
+    std::string defaultFamily =
+      QGuiApplication::font().family().toUtf8().constData();
+
+#if 0 // def __APPLE__
+    // seems to have trouble with Italics
+    int fontProvider = ASS_FONTPROVIDER_CORETEXT;
+#elif defined(_WIN32)
+    int fontProvider = ASS_FONTPROVIDER_DIRECTWRITE;
+#else
+    int fontProvider = ASS_FONTPROVIDER_FONTCONFIG;
+#endif
     int updateFontCache = 1;
 
     ass_set_fonts(renderer_,
-                  defaultFont,
-                  defaultFamily,
-                  useFontconfig,
+                  NULL, // default font file
+                  defaultFamily.c_str(),
+                  fontProvider,
                   fontsConf.size() ? fontsConf.c_str() : NULL,
                   updateFontCache);
 
