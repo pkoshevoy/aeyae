@@ -11,10 +11,10 @@
 #include <sstream>
 
 // Qt includes:
+#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
-#include <QGuiApplication>
 #include <QString>
 
 // yae includes:
@@ -355,7 +355,7 @@ namespace yae
     getFontsConf(fontsConf, removeAfterUse);
 
     std::string defaultFamily =
-      QGuiApplication::font().family().toUtf8().constData();
+      QApplication::font().family().toUtf8().constData();
 
 #if 0 // def __APPLE__
     // seems to have trouble with Italics
