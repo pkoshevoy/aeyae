@@ -147,13 +147,31 @@ namespace yae
 
     void setInputEventFormat(const char * eventFormat);
     void setOutputEventFormat(const char * eventFormat);
-    void addTimingEtc(TSubsFrame & sf);
+    void setTimingEtc(TSubsFrame & sf, const std::vector<std::string> & evFmt);
 
     void fixupEndTime(double v1, TSubsFrame & prev, const TSubsFrame & next);
     void fixupEndTimes(double v1, const TSubsFrame & last);
     void expungeOldSubs(double v0);
     void get(double v0, double v1, std::list<TSubsFrame> & subs);
     void push(const TSubsFrame & sf, QueueWaitMgr * terminator);
+
+    inline void addTimingEtc(TSubsFrame & sf)
+    {
+      const std::vector<std::string> & eventFormat =
+        inputEventFormat_.empty() ? outputEventFormat_ : inputEventFormat_;
+      setTimingEtc(sf, eventFormat);
+    }
+
+    inline void replaceTimingEtc(TSubsFrame & sf)
+    {
+      setTimingEtc(sf, outputEventFormat_);
+    }
+
+    inline const std::vector<std::string> & getInputEventFormat() const
+    { return inputEventFormat_; }
+
+    inline const std::vector<std::string> & getOutputEventFormat() const
+    { return outputEventFormat_; }
 
   private:
     SubtitlesTrack(const SubtitlesTrack & given);

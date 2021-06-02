@@ -928,6 +928,11 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
           sf.time_ = last.tEnd_;
         }
 
+        if (sf.tEnd_ <= sf.time_)
+        {
+          sf.tEnd_ = sf.time_ + TTime(1001, 30000);
+        }
+
         last = sf;
         captions.addTimingEtc(sf);
 
@@ -966,6 +971,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         // yae_debug << "2. captions.push: " << to_str(sf);
 
+        captions.replaceTimingEtc(sf);
         captions.push(sf, terminator);
       }
     }

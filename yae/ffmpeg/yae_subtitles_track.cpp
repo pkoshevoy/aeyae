@@ -593,19 +593,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // SubtitlesTrack::addTimingEtc
+  // SubtitlesTrack::setTimingEtc
   //
   // add Dialogue:, add h:mm:ss.cc Start and End time,
   // fix Event fields order to match AVCodecContext.subtitle_header
   //
   void
-  SubtitlesTrack::addTimingEtc(TSubsFrame & sf)
+  SubtitlesTrack::setTimingEtc(TSubsFrame & sf,
+                               const std::vector<std::string> & eventFormat)
   {
     TSubsPrivatePtr sf_private =
       boost::dynamic_pointer_cast<TSubsPrivate, TSubsFrame::IPrivate>
       (sf.private_);
 
     if (!sf_private)
+    {
+      return;
+    }
+
+    YAE_ASSERT(!eventFormat.empty());
+    if (eventFormat.empty())
     {
       return;
     }
@@ -619,15 +626,15 @@ namespace yae
         continue;
       }
 
+      const char * dialogue = skip_whitespace(r.ass);
+      if (al::starts_with(dialogue, "Dialogue:"))
+      {
+        dialogue += 9;
+        dialogue = skip_whitespace(dialogue);
+      }
+
       std::map<std::string, std::string> event;
-      if (inputEventFormat_.empty())
-      {
-        parse_ass_event(r.ass, outputEventFormat_, event);
-      }
-      else
-      {
-        parse_ass_event(r.ass, inputEventFormat_, event);
-      }
+      parse_ass_event(dialogue, eventFormat, event);
 
       // reformat:
       std::ostringstream oss;
