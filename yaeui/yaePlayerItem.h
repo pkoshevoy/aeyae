@@ -210,6 +210,7 @@ namespace yae
     bool sel_video_initialized_;
     bool sel_audio_initialized_;
     bool sel_subtt_initialized_;
+    std::size_t sel_subtt_cc_;
 
     // selected track info is used to select matching track(s)
     // when loading next file:

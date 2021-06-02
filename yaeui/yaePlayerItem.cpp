@@ -29,7 +29,8 @@ namespace yae
     paused_(false),
     sel_video_initialized_(false),
     sel_audio_initialized_(false),
-    sel_subtt_initialized_(false)
+    sel_subtt_initialized_(false),
+    sel_subtt_cc_(0)
   {
     bool ok = true;
 
@@ -385,7 +386,7 @@ namespace yae
     subtt_format_ =  subsFormat;
 
     // keep track of current closed caption selection:
-    unsigned int cc = reader_ ? reader_->getRenderCaptions() : 0;
+    unsigned int cc = sel_subtt_cc_;
 
     std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
@@ -1145,6 +1146,7 @@ namespace yae
     {
       sel_subtt_.clear();
       sel_subtt_initialized_ = true;
+      sel_subtt_cc_ = index;
       return false;
     }
 
@@ -1559,6 +1561,7 @@ namespace yae
     const std::size_t nsubs = reader->subsCount();
     const std::size_t cc = nsubs < subtt_track ? subtt_track - nsubs : 0;
     reader->setRenderCaptions(cc);
+    sel_subtt_cc_ = cc;
 
     for (std::size_t i = 0; i < nsubs; i++)
     {
