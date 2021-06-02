@@ -465,6 +465,9 @@ namespace yae
     inline void flush()
     { if (file_) fflush(file_); }
 
+    inline int seek(int64 offset, int whence)
+    { return file_ ? yae::fseek64(file_, offset, whence) : -1; }
+
     // the file handle:
     FILE * file_;
 
