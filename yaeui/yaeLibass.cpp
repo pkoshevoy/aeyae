@@ -24,6 +24,11 @@
 #include "yaeLibass.h"
 #include "yaeUtilsQt.h"
 
+//----------------------------------------------------------------
+// YAE_DUMP_TMP_TRACK_ASS
+//
+// #define YAE_DUMP_TMP_TRACK_ASS
+
 
 namespace yae
 {
@@ -155,6 +160,11 @@ namespace yae
 #endif
       header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
 
+#ifdef YAE_DUMP_TMP_TRACK_ASS
+      TOpenFilePtr fout = yae::get_open_file("/tmp/track.ass", "w");
+      fout->seek(0, SEEK_SET);
+      fout->write(tmp);
+#endif
       ass_process_codec_private(track_,
                                 &header_[0],
                                 (int)(header_.size()));
@@ -203,6 +213,13 @@ namespace yae
 
 #if 0 // ndef NDEBUG
     yae_debug << "ass_process_data: " << line.data_;
+#endif
+
+#ifdef YAE_DUMP_TMP_TRACK_ASS
+    TOpenFilePtr fout = yae::get_open_file("/tmp/track.ass", "w");
+    fout->write(data, size);
+    fout->write("\r\n", 2);
+    fout->flush();
 #endif
 
     if (!buffer_.empty())
@@ -357,9 +374,11 @@ namespace yae
     std::string defaultFamily =
       QApplication::font().family().toUtf8().constData();
 
-#if 0 // def __APPLE__
+#ifdef __APPLE__
     // seems to have trouble with Italics
     int fontProvider = ASS_FONTPROVIDER_CORETEXT;
+    // disabling Harfbuzz appears to work around the problem:
+    ass_set_shaper(renderer_, ASS_SHAPING_SIMPLE);
 #elif defined(_WIN32)
     int fontProvider = ASS_FONTPROVIDER_DIRECTWRITE;
 #else
