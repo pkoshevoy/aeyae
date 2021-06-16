@@ -465,6 +465,8 @@ namespace yae
   {
     AvLog()
     {
+      ensure_ffmpeg_initialized();
+
       LogToFFmpeg * log_to_ffmpeg = new LogToFFmpeg();
 #ifdef NDEBUG
       log_to_ffmpeg->setPriorityThreshold(yae::TLog::kInfo);

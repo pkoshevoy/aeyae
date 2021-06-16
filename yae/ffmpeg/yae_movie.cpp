@@ -971,16 +971,13 @@ namespace yae
                 if (packet.pts != AV_NOPTS_VALUE &&
                     sub.end_display_time > sub.start_display_time)
                 {
-                  double dt =
-                    double(sub.end_display_time - sub.start_display_time) *
-                    double(tb_msec.num) /
-                    double(tb_msec.den);
-
-#if 0
-                  // avoid subs that are visible for more than 5 seconds:
-                  if (dt > 0.5 && dt < 5.0)
-#endif
+                  if (sub.end_display_time !=
+                      std::numeric_limits<uint32_t>::max())
                   {
+                    double dt =
+                      double(sub.end_display_time - sub.start_display_time) *
+                      double(tb_msec.num) /
+                      double(tb_msec.den);
                     sf.tEnd_ = sf.time_;
                     sf.tEnd_ += dt;
                   }

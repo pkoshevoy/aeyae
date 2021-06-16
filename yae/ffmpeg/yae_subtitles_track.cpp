@@ -815,7 +815,7 @@ namespace yae
   SubtitlesTrack::push(const TSubsFrame & sf, QueueWaitMgr * terminator)
   {
 #if 0 // ndef NDEBUG
-    yae_debug << "SubtitlesTrack::push " << to_str(sf).str();
+    yae_debug << "SubtitlesTrack::push " << to_str(sf);
 #endif
 
     queue_.push(sf, terminator);
