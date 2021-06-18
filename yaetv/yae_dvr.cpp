@@ -1829,6 +1829,7 @@ namespace yae
 
     yae_ilog("DVR start, recordings storage: %s", basedir.c_str());
     basedir_ = basedir.empty() ? yae::get_temp_dir_utf8() : basedir;
+    YAE_ASSERT(yae::mkdir_p(basedir_.string()));
 
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
