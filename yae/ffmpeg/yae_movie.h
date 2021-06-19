@@ -77,8 +77,8 @@ namespace yae
     inline std::size_t getSelectedAudioTrack() const
     { return selectedAudioTrack_; }
 
-    void getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
-    void getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
+    bool getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
+    bool getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
 
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);

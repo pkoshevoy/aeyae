@@ -73,6 +73,9 @@ namespace yae
     void destroy();
 
     // virtual:
+    boost::shared_ptr<TSubsFrame::IPrivate> clone() const;
+
+    // virtual:
     std::size_t headerSize() const;
 
     // virtual:

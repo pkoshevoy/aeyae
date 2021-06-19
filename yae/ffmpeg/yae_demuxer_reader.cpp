@@ -408,7 +408,7 @@ namespace yae
   //----------------------------------------------------------------
   // DemuxerReader::getSelectedVideoTrackInfo
   //
-  void
+  bool
   DemuxerReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
     info.nprograms_ = programs_.size();
@@ -426,13 +426,17 @@ namespace yae
 
       const std::string & track_id = track->id();
       info.program_ = yae::get(prog_lut_, track_id);
+
+      return true;
     }
+
+    return false;
   }
 
   //----------------------------------------------------------------
   // DemuxerReader::getSelectedAudioTrackInfo
   //
-  void
+  bool
   DemuxerReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
     info.nprograms_ = programs_.size();
@@ -450,7 +454,11 @@ namespace yae
 
       const std::string & track_id = track->id();
       info.program_ = yae::get(prog_lut_, track_id);
+
+      return true;
     }
+
+    return false;
   }
 
   //----------------------------------------------------------------

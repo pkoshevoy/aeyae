@@ -381,6 +381,7 @@ namespace yae
 
     TTrackInfo selSubs_;
     TSubsFormat selSubsFormat_;
+    std::size_t selClosedCaptions_;
 
     // update DVR live recordings duration:
     QTimer durationTimer_;

@@ -56,8 +56,22 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i) = 0;
     virtual bool selectAudioTrack(std::size_t i) = 0;
 
-    virtual void getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
-    virtual void getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
+    // helpers:
+    inline bool hasSelectedVideoTrack() const
+    {
+      return (this->getSelectedVideoTrackIndex() <
+              this->getNumberOfVideoTracks());
+    }
+
+    inline bool hasSelectedAudioTrack() const
+    {
+      return (this->getSelectedAudioTrackIndex() <
+              this->getNumberOfAudioTracks());
+    }
+
+    // NOTE: returns false if no track is currently selected:
+    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
+    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
@@ -129,6 +143,20 @@ namespace yae
     virtual TSubsFormat subsInfo(std::size_t i, TTrackInfo & info) const = 0;
     virtual void setSubsRender(std::size_t i, bool render) = 0;
     virtual bool getSubsRender(std::size_t i) const = 0;
+
+    // helper:
+    inline bool hasSelectedSubsTrack() const
+    {
+      for (std::size_t i = 0, n = this->subsCount(); i < n; i++)
+      {
+        if (this->getSubsRender(i))
+        {
+          return true;
+        }
+      }
+
+      return false;
+    }
 
     // chapter navigation:
     virtual std::size_t countChapters() const = 0;

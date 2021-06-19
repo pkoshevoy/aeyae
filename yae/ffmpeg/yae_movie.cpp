@@ -158,6 +158,9 @@ namespace yae
     // set AVFMT_FLAG_DISCARD_CORRUPT:
     av_dict_set(&options, "fflags", "+discardcorrupt", AV_DICT_APPEND);
 
+    // copied from ffprobe.c -- scan and combine all PMTs:
+    //  av_dict_set(&options, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
+
     resourcePath_ = resourcePath ? resourcePath : "";
     int err = avformat_open_input(&context_,
                                   resourcePath_.c_str(),
@@ -423,7 +426,7 @@ namespace yae
         {
           const VideoTrackPtr & track = *k;
           track->setId(make_track_id('v', videoTracks_.size()));
-          program->audio_.push_back(videoTracks_.size());
+          program->video_.push_back(videoTracks_.size());
           videoTracks_.push_back(track);
         }
       }
@@ -519,7 +522,7 @@ namespace yae
   //----------------------------------------------------------------
   // Movie::getVideoTrackInfo
   //
-  void
+  bool
   Movie::getVideoTrackInfo(std::size_t i, TTrackInfo & info) const
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
@@ -535,13 +538,16 @@ namespace yae
       info.setLang(t->getLang());
       info.setName(t->getName());
       info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      return true;
     }
+
+    return false;
   }
 
   //----------------------------------------------------------------
   // Movie::getAudioTrackInfo
   //
-  void
+  bool
   Movie::getAudioTrackInfo(std::size_t i, TTrackInfo & info) const
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
@@ -557,7 +563,10 @@ namespace yae
       info.setLang(t->getLang());
       info.setName(t->getName());
       info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      return true;
     }
+
+    return false;
   }
 
   //----------------------------------------------------------------

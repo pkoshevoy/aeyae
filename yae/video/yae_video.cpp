@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard C++ library:
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -785,5 +786,73 @@ namespace yae
     cc_(0),
     positionInSeconds_(0)
   {}
+
+
+  //----------------------------------------------------------------
+  // get_curr_program
+  //
+  std::size_t
+  get_curr_program(IReader * reader,
+                   TTrackInfo & vinfo,
+                   TTrackInfo & ainfo,
+                   TTrackInfo & sinfo)
+  {
+    vinfo = TTrackInfo(0, 0);
+    ainfo = TTrackInfo(0, 0);
+    sinfo = TTrackInfo(0, 0);
+
+    std::size_t ix_vtrack = reader->getSelectedVideoTrackIndex();
+    std::size_t n_vtracks = reader->getNumberOfVideoTracks();
+    if (ix_vtrack < n_vtracks)
+    {
+      reader->getSelectedVideoTrackInfo(vinfo);
+    }
+
+    std::size_t ix_atrack = reader->getSelectedAudioTrackIndex();
+    std::size_t n_atracks = reader->getNumberOfAudioTracks();
+    if (ix_atrack < n_atracks)
+    {
+      reader->getSelectedAudioTrackInfo(ainfo);
+    }
+
+    std::size_t n_subs = reader->subsCount();
+    for (std::size_t i = 0; i < n_subs; i++)
+    {
+      if (reader->getSubsRender(i))
+      {
+        reader->subsInfo(i, sinfo);
+        break;
+      }
+    }
+
+    return (vinfo.isValid() ? vinfo.program_ :
+            ainfo.isValid() ? ainfo.program_ :
+            sinfo.isValid() ? sinfo.program_ :
+            0);
+  }
+
+  //----------------------------------------------------------------
+  // find_matching_program
+  //
+  std::size_t
+  find_matching_program(const std::vector<TTrackInfo> & track_info,
+                        const TTrackInfo & target)
+  {
+    std::size_t program = std::numeric_limits<std::size_t>::max();
+    for (std::size_t i = 0, n = track_info.size(); i < n; i++)
+    {
+      const TTrackInfo & info = track_info[i];
+      if (target.nprograms_ == info.nprograms_ &&
+          target.program_ == info.program_ &&
+          target.ntracks_ == n)
+      {
+        return target.program_;
+      }
+
+      program = std::min(program, info.program_);
+    }
+
+    return track_info.empty() ? 0 : program;
+  }
 
 }

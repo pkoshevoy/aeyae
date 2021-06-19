@@ -265,21 +265,21 @@ namespace yae
   //----------------------------------------------------------------
   // ReaderFFMPEG::getSelectedVideoTrackName
   //
-  void
+  bool
   ReaderFFMPEG::getSelectedVideoTrackInfo(TTrackInfo & info) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
-    private_->movie_.getVideoTrackInfo(i, info);
+    return private_->movie_.getVideoTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::getSelectedAudioTrackInfo
   //
-  void
+  bool
   ReaderFFMPEG::getSelectedAudioTrackInfo(TTrackInfo & info) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
-    private_->movie_.getAudioTrackInfo(i, info);
+    return private_->movie_.getAudioTrackInfo(i, info);
   }
 
   //----------------------------------------------------------------

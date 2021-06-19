@@ -279,8 +279,8 @@
     <addaction name="actionRepeatPlaylist"/>
     <addaction name="separator"/>
     <addaction name="actionLoop"/>
-    <addaction name="actionSetInPoint"/>
-    <addaction name="actionSetOutPoint"/>
+    <addaction name="actionSetInPoint_"/>
+    <addaction name="actionSetOutPoint_"/>
     <addaction name="actionShowTimeline"/>
     <addaction name="separator"/>
     <addaction name="actionShrinkWrap"/>
@@ -289,14 +289,14 @@
     <addaction name="separator"/>
     <addaction name="menuPlaybackSpeed"/>
    </widget>
-   <widget class="QMenu" name="menuAudio">
+   <widget class="QMenu" name="menuAudio_">
     <property name="title">
      <string>&amp;Audio</string>
     </property>
     <addaction name="actionDownmixToStereo"/>
     <addaction name="separator"/>
    </widget>
-   <widget class="QMenu" name="menuVideo">
+   <widget class="QMenu" name="menuVideo_">
     <property name="title">
      <string>&amp;Video</string>
     </property>
@@ -351,12 +351,12 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
-   <widget class="QMenu" name="menuSubs">
+   <widget class="QMenu" name="menuSubs_">
     <property name="title">
      <string>&amp;Subtitles</string>
     </property>
    </widget>
-   <widget class="QMenu" name="menuChapters">
+   <widget class="QMenu" name="menuChapters_">
     <property name="title">
      <string>Chap&amp;ters</string>
     </property>
@@ -376,10 +376,10 @@
    <addaction name="menuFile"/>
    <addaction name="menuBookmarks"/>
    <addaction name="menuPlayback"/>
-   <addaction name="menuAudio"/>
-   <addaction name="menuVideo"/>
-   <addaction name="menuSubs"/>
-   <addaction name="menuChapters"/>
+   <addaction name="menuAudio_"/>
+   <addaction name="menuVideo_"/>
+   <addaction name="menuSubs_"/>
+   <addaction name="menuChapters_"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QDockWidget" name="playlistDock_">
@@ -957,7 +957,7 @@ QLineEdit QToolButton#clear_:pressed {
     <enum>Qt::ApplicationShortcut</enum>
    </property>
   </action>
-  <action name="actionSetInPoint">
+  <action name="actionSetInPoint_">
    <property name="text">
     <string>Set &amp;In Point</string>
    </property>
@@ -965,7 +965,7 @@ QLineEdit QToolButton#clear_:pressed {
     <string>I</string>
    </property>
   </action>
-  <action name="actionSetOutPoint">
+  <action name="actionSetOutPoint_">
    <property name="text">
     <string>Set &amp;Out Point</string>
    </property>

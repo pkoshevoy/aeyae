@@ -508,9 +508,10 @@ namespace yae
       virtual ~IPrivate() {}
 
     public:
-      virtual void destroy() = 0;
       static void deallocator(IPrivate * p);
 
+      virtual void destroy() = 0;
+      virtual boost::shared_ptr<IPrivate> clone() const = 0;
       virtual std::size_t headerSize() const = 0;
       virtual const unsigned char * header() const = 0;
 
@@ -707,6 +708,192 @@ namespace yae
     unsigned int cc_;
     double positionInSeconds_;
   };
+
+  //----------------------------------------------------------------
+  // get_curr_program
+  //
+  YAE_API std::size_t
+  get_curr_program(IReader * reader,
+                   TTrackInfo & vinfo,
+                   TTrackInfo & ainfo,
+                   TTrackInfo & sinfo);
+
+  //----------------------------------------------------------------
+  // find_matching_program
+  //
+  YAE_API std::size_t
+  find_matching_program(const std::vector<TTrackInfo> & track_info,
+                        const TTrackInfo & target);
+
+  //----------------------------------------------------------------
+  // find_matching_track
+  //
+  template <typename TTraits>
+  static std::size_t
+  find_matching_track(const std::vector<TTrackInfo> & trackInfo,
+                      const std::vector<TTraits> & trackTraits,
+                      const TTrackInfo & selInfo,
+                      const TTraits & selTraits,
+                      std::size_t program)
+  {
+    std::size_t n = trackInfo.size();
+
+    if (!selInfo.isValid())
+    {
+      // track was disabled, keep it disabled:
+      return n;
+    }
+
+    if (n == 1)
+    {
+      // only one candidate is available:
+      const TTrackInfo & info = trackInfo.front();
+      return info.index_;
+    }
+
+    // try to find a matching track:
+    std::vector<TTrackInfo> trkInfo = trackInfo;
+    std::vector<TTraits> trkTraits = trackTraits;
+
+    std::vector<TTrackInfo> tmpInfo;
+    std::vector<TTraits> tmpTraits;
+
+    // try to match the language code:
+    if (selInfo.hasLang())
+    {
+      const char * selLang = selInfo.lang();
+
+      for (std::size_t i = 0; i < n; i++)
+      {
+        const TTrackInfo & info = trkInfo[i];
+        if (program != info.program_)
+        {
+          continue;
+        }
+
+        const TTraits & traits = trkTraits[i];
+        if (info.hasLang() && strcmp(info.lang(), selLang) == 0)
+        {
+          tmpInfo.push_back(info);
+          tmpTraits.push_back(traits);
+        }
+      }
+
+      if (!tmpInfo.empty())
+      {
+        trkInfo = tmpInfo;
+        trkTraits = tmpTraits;
+        tmpInfo.clear();
+        tmpTraits.clear();
+      }
+    }
+
+    n = trkInfo.size();
+    if (n == 1)
+    {
+      // only one candidate is available:
+      const TTrackInfo & info = trkInfo.front();
+      return info.index_;
+    }
+
+    // try to match track name:
+    if (selInfo.hasName())
+    {
+      const char * selName = selInfo.name();
+
+      for (std::size_t i = 0; i < n; i++)
+      {
+        const TTrackInfo & info = trkInfo[i];
+        const TTraits & traits = trkTraits[i];
+
+        if (program != info.program_)
+        {
+          continue;
+        }
+
+        if (info.hasName() && strcmp(info.name(), selName) == 0)
+        {
+          tmpInfo.push_back(info);
+          tmpTraits.push_back(traits);
+        }
+      }
+
+      if (!tmpInfo.empty())
+      {
+        trkInfo = tmpInfo;
+        trkTraits = tmpTraits;
+        tmpInfo.clear();
+        tmpTraits.clear();
+      }
+    }
+
+    n = trkInfo.size();
+    if (n == 1)
+    {
+      // only one candidate is available:
+      const TTrackInfo & info = trkInfo.front();
+      return info.index_;
+    }
+
+    // try to match track traits:
+    for (std::size_t i = 0; i < n; i++)
+    {
+      const TTrackInfo & info = trkInfo[i];
+      const TTraits & traits = trkTraits[i];
+
+      if (program != info.program_)
+      {
+        continue;
+      }
+
+      if (selTraits == traits)
+      {
+        tmpInfo.push_back(info);
+        tmpTraits.push_back(traits);
+      }
+    }
+
+    if (!tmpInfo.empty())
+    {
+      trkInfo = tmpInfo;
+      trkTraits = tmpTraits;
+      tmpInfo.clear();
+      tmpTraits.clear();
+    }
+
+    n = trkInfo.size();
+    if (n == 1)
+    {
+      // only one candidate is available:
+      const TTrackInfo & info = trkInfo.front();
+      if (program == info.program_)
+      {
+        return info.index_;
+      }
+    }
+
+    // try to match track index:
+    if (trackInfo.size() == selInfo.ntracks_ &&
+        trackInfo[selInfo.index_].program_ == program)
+    {
+      return selInfo.index_;
+    }
+
+    // try to find the first track of the matching program:
+    n = trackInfo.size();
+    for (std::size_t i = 0; i < n; i++)
+    {
+      const TTrackInfo & info = trackInfo[i];
+      if (info.program_ == program)
+      {
+        return i;
+      }
+    }
+
+    // disable track:
+    return n;
+  }
+
 
 }
 

@@ -177,6 +177,86 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TSubsPrivate::clone
+  //
+  boost::shared_ptr<TSubsFrame::IPrivate>
+  TSubsPrivate::clone() const
+  {
+    TSubsPrivatePtr sp_ptr(new TSubsPrivate(*this),
+                           &TSubsPrivate::deallocator);
+    TSubsPrivate & sp = *sp_ptr;
+
+    // copy AVSubtitle
+    if (sub_.num_rects)
+    {
+      sp.sub_.rects = (AVSubtitleRect **)
+        av_malloc_array(sub_.num_rects, sizeof(*(sub_.rects)));
+
+      for (int i = 0; i < sub_.num_rects; i++)
+      {
+        sp.sub_.rects[i] = (AVSubtitleRect *)
+          av_mallocz(sizeof(*(sub_.rects[0])));
+
+        // shortcuts:
+        const AVSubtitleRect & src = *(sub_.rects[i]);
+        AVSubtitleRect & dst = *(sp.sub_.rects[i]);
+
+        // shallow copy:
+        dst = src;
+
+        // deep copy:
+        if (src.text)
+        {
+          dst.text = av_strdup(src.text);
+        }
+
+        if (src.ass)
+        {
+          dst.ass = av_strdup(src.ass);
+        }
+
+        // AVSubtitleRect.data is poorly documented:
+        if (src.data[0])
+        {
+          YAE_ASSERT(src.linesize[0]);
+          if (src.linesize[0])
+          {
+            std::size_t sz = src.linesize[0] * src.h;
+            dst.data[0] = (uint8_t *)av_mallocz(sz);
+            memcpy(dst.data[0], src.data[0], sz);
+          }
+          else
+          {
+            dst.data[0] =  NULL;
+          }
+        }
+
+        if (src.data[1])
+        {
+          YAE_ASSERT(!src.linesize[1]);
+          YAE_ASSERT(src.nb_colors);
+          if (src.nb_colors < AVPALETTE_SIZE)
+          {
+            dst.data[1] = (uint8_t *)av_mallocz(AVPALETTE_SIZE);
+            memcpy(dst.data[1], src.data[1], AVPALETTE_SIZE);
+          }
+          else
+          {
+            dst.data[1] =  NULL;
+          }
+        }
+
+        YAE_ASSERT(!src.data[2]);
+        YAE_ASSERT(!src.data[3]);
+        dst.data[2] = NULL;
+        dst.data[3] = NULL;
+      }
+    }
+
+    return sp_ptr;
+  }
+
+  //----------------------------------------------------------------
   // TSubsPrivate::headerSize
   //
   std::size_t

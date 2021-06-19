@@ -6,6 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/video/yae_video.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -162,199 +164,6 @@ namespace yae
     }
 
     canvas.paint_canvas(x, y, w, h);
-  }
-
-  //----------------------------------------------------------------
-  // find_matching_program
-  //
-  static std::size_t
-  find_matching_program(const std::vector<TTrackInfo> & track_info,
-                        const TTrackInfo & target)
-  {
-    std::size_t program = std::numeric_limits<std::size_t>::max();
-    for (std::size_t i = 0, n = track_info.size(); i < n; i++)
-    {
-      const TTrackInfo & info = track_info[i];
-      if (target.nprograms_ == info.nprograms_ &&
-          target.program_ == info.program_ &&
-          target.ntracks_ == n)
-      {
-        return target.program_;
-      }
-
-      program = std::min(program, info.program_);
-    }
-
-    return track_info.empty() ? 0 : program;
-  }
-
-  //----------------------------------------------------------------
-  // find_matching_track
-  //
-  template <typename TTraits>
-  static std::size_t
-  find_matching_track(const std::vector<TTrackInfo> & trackInfo,
-                      const std::vector<TTraits> & trackTraits,
-                      const TTrackInfo & selInfo,
-                      const TTraits & selTraits,
-                      std::size_t program)
-  {
-    std::size_t n = trackInfo.size();
-
-    if (!selInfo.isValid())
-    {
-      // track was disabled, keep it disabled:
-      return n;
-    }
-
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trackInfo.front();
-      return info.index_;
-    }
-
-    // try to find a matching track:
-    std::vector<TTrackInfo> trkInfo = trackInfo;
-    std::vector<TTraits> trkTraits = trackTraits;
-
-    std::vector<TTrackInfo> tmpInfo;
-    std::vector<TTraits> tmpTraits;
-
-    // try to match the language code:
-    if (selInfo.hasLang())
-    {
-      const char * selLang = selInfo.lang();
-
-      for (std::size_t i = 0; i < n; i++)
-      {
-        const TTrackInfo & info = trkInfo[i];
-        if (program != info.program_)
-        {
-          continue;
-        }
-
-        const TTraits & traits = trkTraits[i];
-        if (info.hasLang() && strcmp(info.lang(), selLang) == 0)
-        {
-          tmpInfo.push_back(info);
-          tmpTraits.push_back(traits);
-        }
-      }
-
-      if (!tmpInfo.empty())
-      {
-        trkInfo = tmpInfo;
-        trkTraits = tmpTraits;
-        tmpInfo.clear();
-        tmpTraits.clear();
-      }
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      return info.index_;
-    }
-
-    // try to match track name:
-    if (selInfo.hasName())
-    {
-      const char * selName = selInfo.name();
-
-      for (std::size_t i = 0; i < n; i++)
-      {
-        const TTrackInfo & info = trkInfo[i];
-        const TTraits & traits = trkTraits[i];
-
-        if (program != info.program_)
-        {
-          continue;
-        }
-
-        if (info.hasName() && strcmp(info.name(), selName) == 0)
-        {
-          tmpInfo.push_back(info);
-          tmpTraits.push_back(traits);
-        }
-      }
-
-      if (!tmpInfo.empty())
-      {
-        trkInfo = tmpInfo;
-        trkTraits = tmpTraits;
-        tmpInfo.clear();
-        tmpTraits.clear();
-      }
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      return info.index_;
-    }
-
-    // try to match track traits:
-    for (std::size_t i = 0; i < n; i++)
-    {
-      const TTrackInfo & info = trkInfo[i];
-      const TTraits & traits = trkTraits[i];
-
-      if (program != info.program_)
-      {
-        continue;
-      }
-
-      if (selTraits == traits)
-      {
-        tmpInfo.push_back(info);
-        tmpTraits.push_back(traits);
-      }
-    }
-
-    if (!tmpInfo.empty())
-    {
-      trkInfo = tmpInfo;
-      trkTraits = tmpTraits;
-      tmpInfo.clear();
-      tmpTraits.clear();
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      if (program == info.program_)
-      {
-        return info.index_;
-      }
-    }
-
-    // try to match track index:
-    if (trackInfo.size() == selInfo.ntracks_ &&
-        trackInfo[selInfo.index_].program_ == program)
-    {
-      return selInfo.index_;
-    }
-
-    // try to find the first track of the matching program:
-    n = trackInfo.size();
-    for (std::size_t i = 0; i < n; i++)
-    {
-      const TTrackInfo & info = trackInfo[i];
-      if (info.program_ == program)
-      {
-        return i;
-      }
-    }
-
-    // disable track:
-    return n;
   }
 
   //----------------------------------------------------------------
@@ -935,49 +744,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // get_curr_program
-  //
-  static std::size_t
-  get_curr_program(IReader * reader,
-                   TTrackInfo & vinfo,
-                   TTrackInfo & ainfo,
-                   TTrackInfo & sinfo)
-  {
-    vinfo = TTrackInfo(0, 0);
-    ainfo = TTrackInfo(0, 0);
-    sinfo = TTrackInfo(0, 0);
-
-    std::size_t ix_vtrack = reader->getSelectedVideoTrackIndex();
-    std::size_t n_vtracks = reader->getNumberOfVideoTracks();
-    if (ix_vtrack < n_vtracks)
-    {
-      reader->getSelectedVideoTrackInfo(vinfo);
-    }
-
-    std::size_t ix_atrack = reader->getSelectedAudioTrackIndex();
-    std::size_t n_atracks = reader->getNumberOfAudioTracks();
-    if (ix_atrack < n_atracks)
-    {
-      reader->getSelectedAudioTrackInfo(ainfo);
-    }
-
-    std::size_t n_subs = reader->subsCount();
-    for (std::size_t i = 0; i < n_subs; i++)
-    {
-      if (reader->getSubsRender(i))
-      {
-        reader->subsInfo(i, sinfo);
-        break;
-      }
-    }
-
-    return (vinfo.isValid() ? vinfo.program_ :
-            ainfo.isValid() ? ainfo.program_ :
-            sinfo.isValid() ? sinfo.program_ :
-            0);
-  }
-
-  //----------------------------------------------------------------
   // PlayerItem::audio_select_track
   //
   bool
@@ -1016,7 +782,8 @@ namespace yae
       if (vinfo.isValid())
       {
         // select another video track:
-        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        std::size_t i = program.video_.empty() ?
+          reader->getNumberOfVideoTracks() : program.video_.front();
         select_video_track(reader, i);
 
         reader->getSelectedVideoTrackInfo(sel_video_);
@@ -1027,7 +794,8 @@ namespace yae
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        std::size_t i = program.subs_.empty() ?
+          reader->subsCount() : program.subs_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
@@ -1095,7 +863,8 @@ namespace yae
       if (ainfo.isValid())
       {
         // select another audio track:
-        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        std::size_t i = program.audio_.empty() ?
+          reader->getNumberOfAudioTracks() : program.audio_.front();
         select_audio_track(reader, i);
 
         reader->getSelectedAudioTrackInfo(sel_audio_);
@@ -1106,7 +875,8 @@ namespace yae
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ? 0 : program.subs_.front();
+        std::size_t i = program.subs_.empty() ?
+          reader->subsCount() : program.subs_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
@@ -1173,7 +943,8 @@ namespace yae
       if (vinfo.isValid())
       {
         // select another video track:
-        std::size_t i = program.video_.empty() ? 0 : program.video_.front();
+        std::size_t i = program.video_.empty() ?
+          reader->getNumberOfVideoTracks() : program.video_.front();
         select_video_track(reader, i);
 
         reader->getSelectedVideoTrackInfo(sel_video_);
@@ -1184,7 +955,8 @@ namespace yae
       if (ainfo.isValid())
       {
         // select another audio track:
-        std::size_t i = program.audio_.empty() ? 0 : program.audio_.front();
+        std::size_t i = program.audio_.empty() ?
+          reader->getNumberOfAudioTracks() : program.audio_.front();
         select_audio_track(reader, i);
 
         reader->getSelectedAudioTrackInfo(sel_audio_);

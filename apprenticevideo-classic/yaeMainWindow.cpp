@@ -304,6 +304,7 @@ namespace yae
     selVideo_(0, 1),
     selAudio_(0, 1),
     selSubsFormat_(kSubsNone),
+    selClosedCaptions_(0),
     style_("classic", view_)
   {
 #ifdef __APPLE__
@@ -788,11 +789,11 @@ namespace yae
                  actionLoop, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionSetInPoint, SIGNAL(triggered()),
+    ok = connect(actionSetInPoint_, SIGNAL(triggered()),
                  this, SIGNAL(setInPoint()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionSetOutPoint, SIGNAL(triggered()),
+    ok = connect(actionSetOutPoint_, SIGNAL(triggered()),
                  this, SIGNAL(setOutPoint()));
     YAE_ASSERT(ok);
 
@@ -994,7 +995,7 @@ namespace yae
                  this, SLOT(bookmarksResumePlayback()));
     YAE_ASSERT(ok);
 
-    ok = connect(menuChapters, SIGNAL(aboutToShow()),
+    ok = connect(menuChapters_, SIGNAL(aboutToShow()),
                  this, SLOT(updateChaptersMenu()));
     YAE_ASSERT(ok);
 
@@ -1169,142 +1170,6 @@ namespace yae
     std::list<QString> playlist;
     yae::addToPlaylist(playlist, filename);
     this->setPlaylist(playlist);
-  }
-
-  //----------------------------------------------------------------
-  // findMatchingTrack
-  //
-  template <typename TTraits>
-  static std::size_t
-  findMatchingTrack(const std::vector<TTrackInfo> & trackInfo,
-                    const std::vector<TTraits> & trackTraits,
-                    const TTrackInfo & selInfo,
-                    const TTraits & selTraits)
-  {
-    std::size_t n = trackInfo.size();
-
-    if (!selInfo.isValid())
-    {
-      // video was disabled, keep it disabled:
-      return n;
-    }
-
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trackInfo.front();
-      return info.index_;
-    }
-
-    // try to find a matching track:
-    std::vector<TTrackInfo> trkInfo = trackInfo;
-    std::vector<TTraits> trkTraits = trackTraits;
-
-    std::vector<TTrackInfo> tmpInfo;
-    std::vector<TTraits> tmpTraits;
-
-    // try to match the language code:
-    if (selInfo.hasLang())
-    {
-      const char * selLang = selInfo.lang();
-
-      for (std::size_t i = 0; i < n; i++)
-      {
-        const TTrackInfo & info = trkInfo[i];
-        const TTraits & traits = trkTraits[i];
-        if (info.hasLang() && strcmp(info.lang(), selLang) == 0)
-        {
-          tmpInfo.push_back(info);
-          tmpTraits.push_back(traits);
-        }
-      }
-
-      if (!tmpInfo.empty())
-      {
-        trkInfo = tmpInfo;
-        trkTraits = tmpTraits;
-        tmpInfo.clear();
-        tmpTraits.clear();
-      }
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      return info.index_;
-    }
-
-    // try to match track name:
-    if (selInfo.hasName())
-    {
-      const char * selName = selInfo.name();
-
-      for (std::size_t i = 0; i < n; i++)
-      {
-        const TTrackInfo & info = trkInfo[i];
-        const TTraits & traits = trkTraits[i];
-        if (info.hasName() && strcmp(info.name(), selName) == 0)
-        {
-          tmpInfo.push_back(info);
-          tmpTraits.push_back(traits);
-        }
-      }
-
-      if (!tmpInfo.empty())
-      {
-        trkInfo = tmpInfo;
-        trkTraits = tmpTraits;
-        tmpInfo.clear();
-        tmpTraits.clear();
-      }
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      return info.index_;
-    }
-
-    // try to match track traits:
-    for (std::size_t i = 0; i < n; i++)
-    {
-      const TTrackInfo & info = trkInfo[i];
-      const TTraits & traits = trkTraits[i];
-      if (selTraits == traits)
-      {
-        tmpInfo.push_back(info);
-        tmpTraits.push_back(traits);
-      }
-    }
-
-    if (!tmpInfo.empty())
-    {
-      trkInfo = tmpInfo;
-      trkTraits = tmpTraits;
-      tmpInfo.clear();
-      tmpTraits.clear();
-    }
-
-    n = trkInfo.size();
-    if (n == 1)
-    {
-      // only one candidate is available:
-      const TTrackInfo & info = trkInfo.front();
-      return info.index_;
-    }
-
-    // try to match track index:
-    if (trackInfo.size() == selInfo.ntracks_)
-    {
-      return selInfo.index_;
-    }
-
-    // default to first track:
-    return 0;
   }
 
   //----------------------------------------------------------------
@@ -1529,10 +1394,13 @@ namespace yae
                       subsFormat);
 
     bool rememberSelectedVideoTrack = false;
-    std::size_t vtrack = findMatchingTrack<VideoTraits>(videoInfo,
-                                                        videoTraits,
-                                                        selVideo_,
-                                                        selVideoTraits_);
+    std::size_t program = find_matching_program(videoInfo, selVideo_);
+    std::size_t vtrack = find_matching_track<VideoTraits>(videoInfo,
+                                                          videoTraits,
+                                                          selVideo_,
+                                                          selVideoTraits_,
+                                                          program);
+
     if (bookmark && bookmark->vtrack_ <= numVideoTracks)
     {
       vtrack = bookmark->vtrack_;
@@ -1540,10 +1408,11 @@ namespace yae
     }
 
     bool rememberSelectedAudioTrack = false;
-    std::size_t atrack = findMatchingTrack<AudioTraits>(audioInfo,
-                                                        audioTraits,
-                                                        selAudio_,
-                                                        selAudioTraits_);
+    std::size_t atrack = find_matching_track<AudioTraits>(audioInfo,
+                                                          audioTraits,
+                                                          selAudio_,
+                                                          selAudioTraits_,
+                                                          program);
     if (bookmark && bookmark->atrack_ <= numAudioTracks)
     {
       atrack = bookmark->atrack_;
@@ -1585,27 +1454,36 @@ namespace yae
     }
 
     bool rememberSelectedSubtitlesTrack = false;
-    std::size_t strack = findMatchingTrack<TSubsFormat>(subsInfo,
-                                                        subsFormat,
-                                                        selSubs_,
-                                                        selSubsFormat_);
+    std::size_t strack = selClosedCaptions_ ?
+      (subsCount + selClosedCaptions_) :
+      find_matching_track<TSubsFormat>(subsInfo,
+                                       subsFormat,
+                                       selSubs_,
+                                       selSubsFormat_,
+                                       program);
+
     if (bookmark)
     {
       if (!bookmark->subs_.empty() &&
-          bookmark->subs_.front() < subsCount)
+          bookmark->subs_.front() != subsCount)
       {
         strack = bookmark->subs_.front();
         rememberSelectedSubtitlesTrack = true;
       }
       else if (bookmark->subs_.empty())
       {
-        strack = subsCount;
+        strack = subsCount + bookmark->cc_;
         rememberSelectedSubtitlesTrack = true;
       }
     }
 
     selectSubsTrack(reader, strack);
-    subsTrackGroup_->actions().at((int)strack)->setChecked(true);
+
+    int subsActionIndex =
+      (strack < subsCount) ? strack :
+      (subsCount < strack) ? strack - 1:
+      subsCount + 4;
+    subsTrackGroup_->actions().at(subsActionIndex)->setChecked(true);
 
     if (rememberSelectedSubtitlesTrack)
     {
@@ -2629,8 +2507,38 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    // detect current program selection change:
+    TTrackInfo prevSel = selAudio_;
+    if (!reader_->hasSelectedAudioTrack())
+    {
+      reader_->getSelectedVideoTrackInfo(prevSel);
+    }
+
     selectAudioTrack(reader_, index);
-    reader_->getSelectedAudioTrackInfo(selAudio_);
+    if (reader_->getSelectedAudioTrackInfo(selAudio_) &&
+        selAudio_.program_ != prevSel.program_)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader_->getProgramInfo(selAudio_.program_, program));
+
+      // must adjust other track selections to match the selected program:
+      if (reader_->hasSelectedVideoTrack())
+      {
+        std::size_t i = program.video_.empty() ?
+          reader_->getNumberOfVideoTracks() : program.video_.front();
+        selectVideoTrack(reader_, i);
+        videoTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+
+      if (reader_->hasSelectedSubsTrack())
+      {
+        std::size_t i = program.subs_.empty() ?
+          reader_->subsCount() : program.subs_.front();
+        selectSubsTrack(reader_, i);
+        subsTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+    }
+
     reader_->getAudioTraits(selAudioTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
@@ -2655,8 +2563,39 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    // detect current program selection change:
+    TTrackInfo prevSel = selVideo_;
+    if (!reader_->hasSelectedVideoTrack())
+    {
+      reader_->getSelectedAudioTrackInfo(prevSel);
+    }
+
     selectVideoTrack(reader_, index);
-    reader_->getSelectedVideoTrackInfo(selVideo_);
+
+    if (reader_->getSelectedVideoTrackInfo(selVideo_) &&
+        selVideo_.program_ != prevSel.program_)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader_->getProgramInfo(selVideo_.program_, program));
+
+      // must adjust other track selections to match the selected program:
+      if (reader_->hasSelectedAudioTrack())
+      {
+        std::size_t i = program.audio_.empty() ?
+          reader_->getNumberOfAudioTracks()  : program.audio_.front();
+        selectAudioTrack(reader_, i);
+        audioTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+
+      if (reader_->hasSelectedSubsTrack())
+      {
+        std::size_t i = program.subs_.empty() ?
+          reader_->subsCount() : program.subs_.front();
+        selectSubsTrack(reader_, i);
+        subsTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+    }
+
     reader_->getVideoTraits(selVideoTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
@@ -2681,8 +2620,40 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    // detect current program selection change:
+    TTrackInfo prevSel = selSubs_;
+    if (!reader_->hasSelectedSubsTrack())
+    {
+      reader_->getSelectedVideoTrackInfo(prevSel);
+    }
+
     selectSubsTrack(reader_, index);
     selSubsFormat_ = reader_->subsInfo(index, selSubs_);
+
+    if (selSubsFormat_ != kSubsNone &&
+        selSubs_.program_ != prevSel.program_)
+    {
+      TProgramInfo program;
+      YAE_ASSERT(reader_->getProgramInfo(selVideo_.program_, program));
+
+      // must adjust other track selections to match the selected program:
+      if (reader_->hasSelectedVideoTrack())
+      {
+        std::size_t i = program.video_.empty() ?
+          reader_->getNumberOfVideoTracks() : program.video_.front();
+        selectVideoTrack(reader_, i);
+        videoTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+
+      if (reader_->hasSelectedAudioTrack())
+      {
+        std::size_t i = program.audio_.empty() ?
+          reader_->getNumberOfAudioTracks() : program.audio_.front();
+        selectAudioTrack(reader_, i);
+        audioTrackGroup_->actions().at((int)i)->setChecked(true);
+      }
+    }
+
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
@@ -3683,8 +3654,8 @@ namespace yae
 
       contextMenu_->addSeparator();
       contextMenu_->addAction(actionLoop);
-      contextMenu_->addAction(actionSetInPoint);
-      contextMenu_->addAction(actionSetOutPoint);
+      contextMenu_->addAction(actionSetInPoint_);
+      contextMenu_->addAction(actionSetOutPoint_);
       contextMenu_->addAction(actionShowTimeline);
 
       contextMenu_->addSeparator();
@@ -3700,22 +3671,22 @@ namespace yae
       {
         if (numAudioTracks)
         {
-          addMenuCopyTo(contextMenu_, menuAudio);
+          addMenuCopyTo(contextMenu_, menuAudio_);
         }
 
         if (numVideoTracks)
         {
-          addMenuCopyTo(contextMenu_, menuVideo);
+          addMenuCopyTo(contextMenu_, menuVideo_);
         }
 
         if (numSubtitles)
         {
-          addMenuCopyTo(contextMenu_, menuSubs);
+          addMenuCopyTo(contextMenu_, menuSubs_);
         }
 
         if (numChapters)
         {
-          addMenuCopyTo(contextMenu_, menuChapters);
+          addMenuCopyTo(contextMenu_, menuChapters_);
         }
       }
 
@@ -4146,9 +4117,17 @@ namespace yae
                                 std::vector<TTrackInfo> & subsInfo,
                                 std::vector<TSubsFormat> & subsFormat)
   {
-    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
-    std::size_t subsCount = reader->subsCount();
+    std::size_t numVideoTracks =
+      reader ? reader->getNumberOfVideoTracks() : 0;
+
+    std::size_t numAudioTracks =
+      reader ? reader->getNumberOfAudioTracks() : 0;
+
+    std::size_t numSubtitles =
+      reader ? reader->subsCount() : 0;
+
+    std::size_t numChapters =
+      reader ? reader->countChapters() : 0;
 
     if (audioTrackGroup_)
     {
@@ -4159,7 +4138,7 @@ namespace yae
         QAction * action = actions.front();
         actions.pop_front();
 
-        menuAudio->removeAction(action);
+        menuAudio_->removeAction(action);
       }
     }
 
@@ -4172,7 +4151,7 @@ namespace yae
         QAction * action = actions.front();
         actions.pop_front();
 
-        menuVideo->removeAction(action);
+        menuVideo_->removeAction(action);
       }
     }
 
@@ -4185,7 +4164,7 @@ namespace yae
         QAction * action = actions.front();
         actions.pop_front();
 
-        menuSubs->removeAction(action);
+        menuSubs_->removeAction(action);
       }
     }
 
@@ -4198,7 +4177,7 @@ namespace yae
         QAction * action = actions.front();
         actions.pop_front();
 
-        menuChapters->removeAction(action);
+        menuChapters_->removeAction(action);
       }
     }
 
@@ -4274,11 +4253,21 @@ namespace yae
         trackName +=
           tr(", %1 Hz, %2 channels").
           arg(traits.sampleRate_).
-          arg(int(traits.channelLayout_));
+          arg(getNumberOfChannels(traits.channelLayout_));
+      }
+
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+      else if (info.nprograms_ > 1)
+      {
+        trackName += tr(", program %1").arg(info.program_);
       }
 
       QAction * trackAction = new QAction(trackName, this);
-      menuAudio->addAction(trackAction);
+      menuAudio_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       audioTrackGroup_->addAction(trackAction);
@@ -4292,7 +4281,7 @@ namespace yae
     // add an option to disable audio:
     {
       QAction * trackAction = new QAction(tr("Disabled"), this);
-      menuAudio->addAction(trackAction);
+      menuAudio_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       audioTrackGroup_->addAction(trackAction);
@@ -4343,8 +4332,18 @@ namespace yae
         }
       }
 
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+      else if (info.nprograms_ > 1)
+      {
+        trackName += tr(", program %1").arg(info.program_);
+      }
+
       QAction * trackAction = new QAction(trackName, this);
-      menuVideo->addAction(trackAction);
+      menuVideo_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       videoTrackGroup_->addAction(trackAction);
@@ -4358,7 +4357,7 @@ namespace yae
     // add an option to disable video:
     {
       QAction * trackAction = new QAction(tr("Disabled"), this);
-      menuVideo->addAction(trackAction);
+      menuVideo_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       videoTrackGroup_->addAction(trackAction);
@@ -4369,10 +4368,10 @@ namespace yae
       videoTrackMapper_->setMapping(trackAction, int(numVideoTracks));
     }
 
-    subsInfo = std::vector<TTrackInfo>(subsCount);
-    subsFormat = std::vector<TSubsFormat>(subsCount);
+    subsInfo = std::vector<TTrackInfo>(numSubtitles);
+    subsFormat = std::vector<TSubsFormat>(numSubtitles);
 
-    for (unsigned int i = 0; i < subsCount; i++)
+    for (unsigned int i = 0; i < numSubtitles; i++)
     {
       QString trackName = tr("Track %1").arg(i + 1);
 
@@ -4396,8 +4395,18 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(label));
       }
 
+      std::string serviceName = yae::get_program_name(*reader, info.program_);
+      if (serviceName.size())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(serviceName.c_str()));
+      }
+      else if (info.nprograms_ > 1)
+      {
+        trackName += tr(", program %1").arg(info.program_);
+      }
+
       QAction * trackAction = new QAction(trackName, this);
-      menuSubs->addAction(trackAction);
+      menuSubs_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       subsTrackGroup_->addAction(trackAction);
@@ -4408,10 +4417,12 @@ namespace yae
       subsTrackMapper_->setMapping(trackAction, i);
     }
 
-    // add an option to disable subs:
+    // add an option to show closed captions:
+    for (unsigned int i = 0; i < 4; i++)
     {
-      QAction * trackAction = new QAction(tr("Disabled"), this);
-      menuSubs->addAction(trackAction);
+      QAction * trackAction =
+        new QAction(tr("Closed Captions (CC%1)").arg(i + 1), this);
+      menuSubs_->addAction(trackAction);
 
       trackAction->setCheckable(true);
       subsTrackGroup_->addAction(trackAction);
@@ -4419,18 +4430,32 @@ namespace yae
       ok = connect(trackAction, SIGNAL(triggered()),
                    subsTrackMapper_, SLOT(map()));
       YAE_ASSERT(ok);
-      subsTrackMapper_->setMapping(trackAction, int(subsCount));
+      subsTrackMapper_->setMapping(trackAction, int(numSubtitles + i + 1));
+    }
+
+    // add an option to disable subs:
+    {
+      QAction * trackAction = new QAction(tr("Disabled"), this);
+      menuSubs_->addAction(trackAction);
+
+      trackAction->setCheckable(true);
+      subsTrackGroup_->addAction(trackAction);
+
+      ok = connect(trackAction, SIGNAL(triggered()),
+                   subsTrackMapper_, SLOT(map()));
+      YAE_ASSERT(ok);
+      subsTrackMapper_->setMapping(trackAction, int(numSubtitles));
     }
 
     // update the chapter menu:
-    std::size_t numChapters = reader->countChapters();
     for (std::size_t i = 0; i < numChapters; i++)
     {
       TChapter ch;
       ok = reader->getChapterInfo(i, ch);
       YAE_ASSERT(ok);
 
-      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + ch.t0_sec() * 1000.0));
+      double t0_sec = ch.t0_sec();
+      QTime t0 = QTime(0, 0).addMSecs((int)(0.5 + t0_sec * 1000.0));
 
       QString name =
         tr("%1   %2").
@@ -4438,7 +4463,7 @@ namespace yae
         arg(QString::fromUtf8(ch.name_.c_str()));
 
       QAction * chapterAction = new QAction(name, this);
-      menuChapters->addAction(chapterAction);
+      menuChapters_->addAction(chapterAction);
 
       chapterAction->setCheckable(true);
       chaptersGroup_->addAction(chapterAction);
@@ -4449,9 +4474,9 @@ namespace yae
       chapterMapper_->setMapping(chapterAction, (int)i);
     }
 
-    bool isSeekable = reader->isSeekable();
-    actionSetInPoint->setEnabled(isSeekable);
-    actionSetOutPoint->setEnabled(isSeekable);
+    bool isSeekable = reader ? reader->isSeekable() : false;
+    actionSetInPoint_->setEnabled(isSeekable);
+    actionSetOutPoint_->setEnabled(isSeekable);
     lineEditPlayhead_->setReadOnly(!isSeekable);
   }
 
@@ -4491,39 +4516,39 @@ namespace yae
 
     if (!numVideoTracks && numAudioTracks)
     {
-      menubar->removeAction(menuVideo->menuAction());
+      menubar->removeAction(menuVideo_->menuAction());
     }
 
-    if (!numSubtitles)
+    if (!numSubtitles && !numVideoTracks)
     {
-      menubar->removeAction(menuSubs->menuAction());
+      menubar->removeAction(menuSubs_->menuAction());
     }
 
     if (!numChapters)
     {
-      menubar->removeAction(menuChapters->menuAction());
+      menubar->removeAction(menuChapters_->menuAction());
     }
 
     if (numVideoTracks || !numAudioTracks)
     {
-      menubar->removeAction(menuVideo->menuAction());
-      menubar->insertMenu(menuHelp->menuAction(), menuVideo);
+      menubar->removeAction(menuVideo_->menuAction());
+      menubar->insertMenu(menuHelp->menuAction(), menuVideo_);
     }
 
-    if (numSubtitles || !(numVideoTracks || numAudioTracks))
+    if (numSubtitles || numVideoTracks)
     {
-      menubar->removeAction(menuSubs->menuAction());
-      menubar->insertMenu(menuHelp->menuAction(), menuSubs);
+      menubar->removeAction(menuSubs_->menuAction());
+      menubar->insertMenu(menuHelp->menuAction(), menuSubs_);
     }
 
     if (numChapters)
     {
-      menubar->removeAction(menuChapters->menuAction());
-      menubar->insertMenu(menuHelp->menuAction(), menuChapters);
+      menubar->removeAction(menuChapters_->menuAction());
+      menubar->insertMenu(menuHelp->menuAction(), menuChapters_);
     }
     else
     {
-      menubar->removeAction(menuChapters->menuAction());
+      menubar->removeAction(menuChapters_->menuAction());
     }
 
     if (videoTrackIndex >= numVideoTracks && numAudioTracks > 0)
@@ -4588,6 +4613,10 @@ namespace yae
   MainWindow::selectSubsTrack(IReader * reader, std::size_t subsTrackIndex)
   {
     const std::size_t nsubs = reader->subsCount();
+    const std::size_t cc = nsubs < subsTrackIndex ? subsTrackIndex - nsubs : 0;
+    reader->setRenderCaptions(cc);
+    selClosedCaptions_ = cc;
+
     for (std::size_t i = 0; i < nsubs; i++)
     {
       bool enable = (i == subsTrackIndex);

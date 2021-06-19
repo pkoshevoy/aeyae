@@ -969,6 +969,12 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         TSubsFrame sf(last);
         sf.time_ = ptsPrev;
 
+        // prevent sharing the same private details across several frames:
+        if (sf.private_)
+        {
+          sf.private_ = sf.private_->clone();
+        }
+
         // yae_debug << "2. captions.push: " << to_str(sf);
 
         captions.replaceTimingEtc(sf);
