@@ -30,6 +30,7 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
+#include <boost/shared_ptr.hpp>
 #endif
 
 // jsoncpp:
@@ -1370,7 +1371,7 @@ namespace yae
   dump(const TString & path, const void * data, std::size_t size)
   {
     std::string p(path);
-    boost::shared_ptr<TOpenFile> file = yae::get_open_file(p.c_str(), "wb");
+    TOpenFilePtr file = yae::get_open_file(p.c_str(), "wb");
     file->write(data, size);
     file->flush();
   }
@@ -1388,7 +1389,7 @@ namespace yae
     va_end(arglist);
 
     std::string p(path);
-    boost::shared_ptr<TOpenFile> file = yae::get_open_file(p.c_str(), "wb");
+    TOpenFilePtr file = yae::get_open_file(p.c_str(), "wb");
     file->write(txt);
     file->flush();
   }
