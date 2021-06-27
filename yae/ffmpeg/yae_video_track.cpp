@@ -999,7 +999,6 @@ namespace yae
     else
     {
       t.frameRate_ = 0.0;
-      YAE_ASSERT(false);
     }
 
     //! encoded frame size (including any padding):
