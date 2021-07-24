@@ -6,6 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// ffmpeg:
+extern "C"
+{
+#include <libavutil/channel_layout.h>
+}
+
 // yae includes:
 #include "yae/ffmpeg/yae_audio_track.h"
 #include "yae/utils/yae_utils.h"
