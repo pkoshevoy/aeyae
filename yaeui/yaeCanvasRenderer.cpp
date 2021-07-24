@@ -1086,15 +1086,14 @@ yae_assert_gl_no_error()
     return true;
   }
 
-  do
+  for (int i = 0; i < 10 && err != GL_NO_ERROR; i++)
   {
     yae_elog("glGetError: %i", err);
     err = YAE_OGL_11(glGetError());
-  } while (err != GL_NO_ERROR);
+  }
 
   // NOTE: don't call yae_assert_gl_no_error between glBegin/glEnd
 
-  YAE_ASSERT(false);
   // char *crash = NULL;
   // *crash = *crash;
   return false;

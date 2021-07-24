@@ -316,7 +316,16 @@ namespace yae
       {
         std::string name = folder.item_name();
         std::string path = folder.item_path();
-        bool is_subfolder = folder.item_is_folder();
+        bool is_subfolder = false;
+
+        try
+        {
+          is_subfolder = folder.item_is_folder();
+        }
+        catch (const std::exception & e)
+        {
+          continue;
+        }
 
         if (is_subfolder)
         {
