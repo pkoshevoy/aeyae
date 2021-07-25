@@ -141,15 +141,32 @@ yae_au_ctx_open_stream(void * context,
 {
   OSStatus err = noErr;
   yae_au_ctx_t * ctx = (yae_au_ctx_t *)context;
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
   ComponentDescription desc;
+#else
+  AudioComponentDescription desc;
+#endif
+
   memset(&desc, 0, sizeof(desc));
   desc.componentType = kAudioUnitType_Output;
   desc.componentSubType = kAudioUnitSubType_DefaultOutput;
   desc.componentManufacturer = kAudioUnitManufacturer_Apple;
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
   Component comp = FindNextComponent(NULL, &desc);
+#else
+  AudioComponent comp = AudioComponentFindNext(NULL, &desc);
+#endif
 
   memset(&ctx->au_, 0, sizeof(ctx->au_));
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
   err = OpenAComponent(comp, &ctx->au_);
+#else
+  err = AudioComponentInstanceNew(comp, &ctx->au_);
+#endif
+
   if (err)
   {
     return false;
@@ -211,7 +228,13 @@ yae_au_ctx_open_stream(void * context,
   if (err)
   {
     AudioUnitReset(ctx->au_, kAudioUnitScope_Global, 0);
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
     CloseComponent(ctx->au_);
+#else
+    AudioComponentInstanceDispose(ctx->au_);
+#endif
+
     memset(&ctx->au_, 0, sizeof(ctx->au_));
     return false;
   }
@@ -220,7 +243,13 @@ yae_au_ctx_open_stream(void * context,
   if (err)
   {
     AudioUnitReset(ctx->au_, kAudioUnitScope_Global, 0);
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < 1060
     CloseComponent(ctx->au_);
+#else
+    AudioComponentInstanceDispose(ctx->au_);
+#endif
+
     memset(&ctx->au_, 0, sizeof(ctx->au_));
     return false;
   }
