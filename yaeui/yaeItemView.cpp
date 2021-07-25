@@ -745,8 +745,6 @@ namespace yae
         return false;
       }
 
-      // FIXME: must add DPI-aware drag threshold to avoid triggering
-      // spurious drag events:
       for (TInputHandlerRIter i = inputHandlers_.rbegin();
            i != inputHandlers_.rend(); ++i)
       {
@@ -756,6 +754,15 @@ namespace yae
         if (!dragged_ && pressed_ && pressed_ != &handler &&
             ia && ia->onPress(handler.csysOrigin_, startPt_))
         {
+          // avoid changing clicked item due to an accidental drag,
+          // check the threshold:
+          double dist = (pt - startPt_).norm();
+          double dpi = delegate()->logical_dpi_y();
+          if (dist < dpi * 0.2)
+          {
+            continue;
+          }
+
           // previous handler didn't handle the drag event, try another:
           InputArea * pi = pressed_->inputArea();
           if (pi)
@@ -766,7 +773,8 @@ namespace yae
           pressed_ = &handler;
         }
 
-        if (ia && ia->onDrag(handler.csysOrigin_, startPt_, pt))
+        if (ia && pressed_ && pressed_ == &handler &&
+            ia->onDrag(handler.csysOrigin_, startPt_, pt))
         {
           dragged_ = &handler;
           return true;
