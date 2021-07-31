@@ -446,6 +446,9 @@ namespace yae
     {
       checked_ = BoolRef::constant(checked);
     }
+
+    view_.requestUncache(this);
+    view_.requestRepaint();
   }
 
   //----------------------------------------------------------------
