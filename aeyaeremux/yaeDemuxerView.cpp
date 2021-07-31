@@ -3247,8 +3247,16 @@ namespace yae
                            const std::string & src_name,
                            const DemuxerSummary & summary,
                            const std::string & track_id,
-                           const Timeline::Track & tt)
+                           const Timeline::Track & tt,
+                           bool redact_track)
   {
+    if (redact_track)
+    {
+      RemuxModel * model = view.model();
+      SetOfTracks & redacted = model->redacted_[src_name];
+      redacted.insert(track_id);
+    }
+
     // shortcuts:
     const ItemViewStyle & style = *(view.style());
     TrackPtr track = yae::get(summary.decoders_, track_id);
@@ -3349,7 +3357,8 @@ namespace yae
                           const DemuxerSummary & summary,
                           int prog_id,
                           const Timeline & timeline,
-                          double min_rows = 0.0)
+                          double min_rows = 0.0,
+                          bool redact_program = false)
   {
     // shortcut:
     const ItemViewStyle & style = *(view.style());
@@ -3414,7 +3423,8 @@ namespace yae
                                             src_name,
                                             summary,
                                             track_id,
-                                            track);
+                                            track,
+                                            redact_program);
       row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
       row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
       num_rows++;
@@ -3439,7 +3449,8 @@ namespace yae
                                             src_name,
                                             summary,
                                             track_id,
-                                            track);
+                                            track,
+                                            redact_program);
       row.anchors_.top_ = ItemRef::reference(*prev_row, kPropertyBottom);
       row.anchors_.left_ = ItemRef::reference(prog, kPropertyLeft);
       num_rows++;
@@ -3548,6 +3559,8 @@ namespace yae
     double rows_per_plot = 10.0;
     const DemuxerSummary & summary = src->summary();
 
+    bool redact_program = false;
+
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
     {
@@ -3561,7 +3574,9 @@ namespace yae
                               summary,
                               prog_id,
                               timeline,
-                              rows_per_plot);
+                              rows_per_plot,
+                              redact_program);
+      redact_program = true;
 
       std::string prog_str = str("prog_", prog_id);
       Item & tracks = src_item[prog_str.c_str()];
