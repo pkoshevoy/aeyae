@@ -35,6 +35,7 @@
 #include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
 #endif
 
@@ -152,7 +153,7 @@ namespace yae
   // parse_mpeg_ts
   //
   static void
-  parse_mpeg_ts(const char * fn, const char * dst_path)
+  parse_mpeg_ts(const char * fn, const char * dst_path, std::size_t pkt_size = 188)
   {
     yae::TOpenFile src(fn, "rb");
     YAE_THROW_IF(!src.is_open());
@@ -160,11 +161,11 @@ namespace yae
     StreamDumper handler(dst_path);
     while (!src.is_eof())
     {
-      yae::Data data(12 + 7 * 188);
+      yae::Data data(12 + 7 * pkt_size);
       uint64_t pos = yae::ftell64(src.file_);
 
       std::size_t n = src.read(data.get(), data.size());
-      if (n < 188)
+      if (n < pkt_size)
       {
         break;
       }
@@ -172,16 +173,18 @@ namespace yae
       data.truncate(n);
 
       std::size_t offset = 0;
-      while (offset + 188 <= n)
+      while (offset + pkt_size <= n)
       {
         // find to the the sync byte:
         if (data[offset] == 0x47 &&
-            (n - offset == 188 || data[offset + 188] == 0x47))
+            (n - offset == pkt_size || data[offset + pkt_size] == 0x47))
         {
           try
           {
             // attempt to parse the packet:
-            yae::TBufferPtr pkt_data = data.get(offset, 188);
+            yae::TBufferPtr pkt_data = data.get(offset, pkt_size);
+            pkt_data->truncate(188);
+
             yae::Bitstream bin(pkt_data);
 
             yae::mpeg_ts::TSPacket pkt;
@@ -190,11 +193,12 @@ namespace yae
             std::size_t end_pos = bin.position();
             std::size_t bytes_consumed = end_pos >> 3;
 
-            if (bytes_consumed != 188)
+            if (bytes_consumed < 188)
             {
               yae_wlog("TS packet too short (%i bytes), %s ...",
                        bytes_consumed,
                        yae::to_hex(pkt_data->get(), 32, 4).c_str());
+              offset += pkt_size;
               continue;
             }
 
@@ -216,7 +220,7 @@ namespace yae
           }
 
           // skip to next packet:
-          offset += 188;
+          offset += pkt_size;
         }
         else
         {
@@ -590,6 +594,7 @@ namespace yae
     // parse input parameters:
     std::string appearance;
     std::string basedir;
+    std::size_t pkt_size = 188;
     bool no_ui = false;
 
     for (int i = 1; i < argc; i++)
@@ -609,6 +614,17 @@ namespace yae
       {
         no_ui = true;
       }
+      else if (strcmp(argv[i], "--pkt-size") == 0)
+      {
+        if (argc <= i + 1)
+        {
+          usage(argv, "--pkt-size requires a value: 188");
+          return i;
+        }
+
+        ++i;
+        pkt_size = boost::lexical_cast<std::size_t>(argv[i]);
+      }
       else if (strcmp(argv[i], "--parse") == 0)
       {
         if (argc <= i + 2)
@@ -617,7 +633,7 @@ namespace yae
           return i;
         }
 
-        parse_mpeg_ts(argv[i + 1], argv[i + 2]);
+        parse_mpeg_ts(argv[i + 1], argv[i + 2], pkt_size);
         return 0;
       }
 #ifdef __APPLE__
