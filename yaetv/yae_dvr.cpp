@@ -2527,7 +2527,7 @@ namespace yae
 
       uint16_t major = yae::mpeg_ts::channel_major(ch_num);
       uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-
+#if 0
       if (has(blacklist.channels_, ch_num))
       {
         yae_ilog("skipping EPG update for blacklisted channel %i.%i",
@@ -2535,7 +2535,7 @@ namespace yae
                  int(minor));
         continue;
       }
-
+#endif
       // shortcut:
       std::string channels_str = dvr_.get_channels_str(frequency);
 
@@ -3764,7 +3764,7 @@ namespace yae
     {
       std::map<uint32_t, std::string> frequencies;
       DVR::get_channels(frequencies);
-      std::string frequency = yae::at(frequencies, live_ch);
+      std::string frequency = yae::get(frequencies, live_ch);
 
       boost::unique_lock<boost::mutex> lock(mutex_);
       TStreamPtr stream = stream_[frequency].lock();
