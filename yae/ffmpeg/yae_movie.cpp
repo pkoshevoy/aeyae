@@ -59,7 +59,7 @@ namespace yae
     videoQueueSize_.traits().setValue(kQueueSizeSmall);
 
     audioQueueSize_.traits().setValueMin(1);
-    audioQueueSize_.traits().setValue(kQueueSizeMedium);
+    audioQueueSize_.traits().setValue(kQueueSizeLarge);
   }
 
   //----------------------------------------------------------------

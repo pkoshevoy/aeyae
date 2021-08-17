@@ -253,7 +253,17 @@ namespace yae
     {
       yae_debug << "PTS OK: "
                 << nextPTS.time_ << "/" << nextPTS.base_
-                << " = " << nextPTS.to_hhmmss_frac(1000)
+                << " = " << nextPTS.to_hhmmss_us()
+                << ", " << debugMessage << "\n";
+    }
+    else if (debugMessage && hasPrevPTS)
+    {
+      yae_debug << "prev PTS: "
+                << prevPTS.time_ << "/" << prevPTS.base_
+                << " = " << prevPTS.to_hhmmss_us()
+                << ", next PTS: "
+                << nextPTS.time_ << "/" << nextPTS.base_
+                << " = " << nextPTS.to_hhmmss_us()
                 << ", " << debugMessage << "\n";
     }
 #else
@@ -628,6 +638,14 @@ namespace yae
       // of frames decoded successfully?
 
       received_++;
+#if 0
+      yae_wlog("%s decoded: %s",
+               id_.c_str(),
+               TTime(decodedFrame.pts *
+                     stream_->time_base.num,
+                     stream_->time_base.den).
+               to_hhmmss_us().c_str());
+#endif
       decodedFrame.pts = decodedFrame.best_effort_timestamp;
       handle(frm);
     }

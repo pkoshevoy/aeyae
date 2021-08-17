@@ -25,7 +25,7 @@ namespace yae
   //
   AudioTrack::AudioTrack(Track * track):
     Track(track),
-    frameQueue_(kQueueSizeMedium),
+    frameQueue_(kQueueSizeLarge),
     nativeChannels_(0),
     outputChannels_(0),
     nativeBytesPerSample_(0),

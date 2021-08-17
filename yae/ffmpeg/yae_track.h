@@ -55,15 +55,8 @@ namespace yae
   //
   enum
   {
-#if 1
-    kQueueSizeSmall = 30,
-    kQueueSizeMedium = 50,
-    kQueueSizeLarge = 120
-#else
-    kQueueSizeSmall = 1,
-    kQueueSizeMedium = 1,
-    kQueueSizeLarge = 1
-#endif
+    kQueueSizeSmall = 24, // 1s video at 24 fps
+    kQueueSizeLarge = 1200, // 1s audio at 40 samples per frame at 48 KHz
   };
 
 
