@@ -664,7 +664,14 @@ namespace yae
 
     // try to keep track of the original playing item,
     // its index may change:
-    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld = lookup(playing_);
+
+    // NOTE: must keep alive the group as well, because PlaylistItem
+    // has a reference to its group, so if the group is deleted
+    // it becomes a dangling reference:
+    TPlaylistGroupPtr keepAlivePlayingOldGroup;
+
+    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld =
+      lookup(playing_, &keepAlivePlayingOldGroup);
 
     for (int groupRow = groups_.size() - 1; groupRow >= 0; groupRow--)
     {
@@ -732,7 +739,14 @@ namespace yae
 
     // try to keep track of the original playing item,
     // its index may change:
-    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld = lookup(playing_);
+
+    // NOTE: must keep alive the group as well, because PlaylistItem
+    // has a reference to its group, so if the group is deleted
+    // it becomes a dangling reference:
+    TPlaylistGroupPtr keepAlivePlayingOldGroup;
+
+    yae::weak_ptr<PlaylistItem, PlaylistNode> playingOld =
+      lookup(playing_, &keepAlivePlayingOldGroup);
 
     if (itemPtr)
     {
