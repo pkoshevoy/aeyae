@@ -204,7 +204,6 @@ namespace yae
     bool looping_;
 
     bool mustStop_;
-    bool mustSeek_;
     TSeekPosPtr seekPos_;
 
     // shared clock used to synchronize the renderers:

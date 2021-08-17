@@ -722,7 +722,7 @@ namespace yae
 #ifndef NDEBUG
           else
           {
-            yae_debug << "AVERROR: " << yae::av_strerr(err);
+            yae_elog("AVERROR: %s", yae::av_strerr(err).c_str());
           }
 #endif
 
@@ -785,6 +785,14 @@ namespace yae
 
             videoTrack->frameQueue_.
               waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+          }
+
+          // check whether user tried to seek
+          // while we were waiting for the queues:
+          if (seekPos_)
+          {
+            err = 0;
+            continue;
           }
 
           // check whether user disabled playback while
