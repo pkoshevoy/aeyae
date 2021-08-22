@@ -3834,8 +3834,10 @@ namespace yae
     AVPixelFormat src_format = yae_to_ffmpeg(vf.traits_.pixelFormat_);
     dst.format = src_format;
 
-    dst.colorspace = to_ffmpeg_color_space(vf.traits_.colorSpace_);
-    dst.color_range = to_ffmpeg_color_range(vf.traits_.colorRange_);
+    dst.color_range = vf.traits_.av_rng_;
+    dst.color_primaries = vf.traits_.av_pri_;
+    dst.color_trc = vf.traits_.av_trc_;
+    dst.colorspace = vf.traits_.av_csp_;
     dst.sample_aspect_ratio.num = int(1000000 * vf.traits_.pixelAspectRatio_ +
                                       0.5);
     dst.sample_aspect_ratio.den = 1000000;

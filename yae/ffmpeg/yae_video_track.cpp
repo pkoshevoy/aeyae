@@ -939,15 +939,19 @@ namespace yae
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
-    AVPixelFormat pixelFormat = (AVPixelFormat)(codecParams.format);
+    t.av_fmt_ = (AVPixelFormat)(codecParams.format);
+    t.av_rng_ = codecParams.color_range;
+    t.av_pri_ = codecParams.color_primaries;
+    t.av_trc_ = codecParams.color_trc;
+    t.av_csp_ = codecParams.color_space;
+
+    t.colorspace_ = Colorspace::get(t.av_csp_, t.av_pri_, t.av_trc_);
+
+    // FIXME: remove this, use colorspace_ instead:
+    t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
 
     //! pixel format:
-    t.pixelFormat_ = ffmpeg_to_yae(pixelFormat);
-
-    //! for the color conversion coefficients:
-    t.colorSpace_ = to_yae_color_space(codecParams.color_space);
-    t.colorRange_ = to_yae_color_range(codecParams.color_range);
-    t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
+    t.pixelFormat_ = ffmpeg_to_yae(t.av_fmt_);
 
     //! frame rate:
     const AVRational & r_frame_rate = stream_->r_frame_rate;

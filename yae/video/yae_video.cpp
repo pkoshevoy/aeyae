@@ -209,9 +209,13 @@ namespace yae
   {
     memset(this, 0, sizeof(VideoTraits));
 
+    av_fmt_ = AV_PIX_FMT_NONE;
+    av_rng_ = AVCOL_RANGE_UNSPECIFIED;
+    av_pri_ = AVCOL_PRI_UNSPECIFIED;
+    av_trc_ = AVCOL_TRC_UNSPECIFIED;
+    av_csp_ = AVCOL_SPC_UNSPECIFIED;
+
     pixelFormat_ = kInvalidPixelFormat;
-    colorSpace_ = kColorSpaceUnspecified;
-    colorRange_ = kColorRangeUnspecified;
     pixelAspectRatio_ = 1.0;
   }
 
@@ -221,7 +225,8 @@ namespace yae
   bool
   VideoTraits::sameFrameSizeAndFormat(const VideoTraits & vt) const
   {
-    return (pixelFormat_ == vt.pixelFormat_ &&
+    return (av_fmt_ == vt.av_fmt_ &&
+            pixelFormat_ == vt.pixelFormat_ &&
             encodedWidth_ == vt.encodedWidth_ &&
             encodedHeight_ == vt.encodedHeight_ &&
             offsetTop_ == vt.offsetTop_ &&
@@ -239,8 +244,10 @@ namespace yae
   bool
   VideoTraits::sameColorSpaceAndRange(const VideoTraits & vt) const
   {
-    return (colorSpace_ == vt.colorSpace_ &&
-            colorRange_ == vt.colorRange_);
+    return (av_rng_ == vt.av_rng_ &&
+            av_pri_ == vt.av_pri_ &&
+            av_trc_ == vt.av_trc_ &&
+            av_csp_ == vt.av_csp_);
   }
 
   //----------------------------------------------------------------

@@ -16,6 +16,12 @@
 #include <string>
 #include <vector>
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavutil/pixfmt.h>
+}
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
@@ -26,6 +32,7 @@
 #include "../api/yae_api.h"
 #include "../utils/yae_time.h"
 #include "../utils/yae_utils.h"
+#include "../video/yae_colorspace.h"
 
 
 namespace yae
@@ -145,33 +152,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TColorSpaceId
-  //
-  enum TColorSpaceId
-  {
-    kColorSpaceRGB         =  0,
-    kColorSpaceBT709       =  1, // SMPTE RP177 Annex B
-    kColorSpaceUnspecified =  2,
-    kColorSpaceFCC         =  4,
-    kColorSpaceBT470BG     =  5, // BT601-6 625 PAL
-    kColorSpaceSMPTE170M   =  6, // BT601-6 525 NTSC
-    kColorSpaceSMPTE240M   =  7,
-    kColorSpaceYCOCG       =  8,
-    kColorSpaceBT2020NCL   =  9,
-    kColorSpaceBT2020CL    = 10
-  };
-
-  //----------------------------------------------------------------
-  // TColorRangeId
-  //
-  enum TColorRangeId
-  {
-    kColorRangeUnspecified = 0,
-    kColorRangeBroadcast   = 1, // 16..235, mpeg
-    kColorRangeFull        = 2, // 0...255, jpeg
-  };
-
-  //----------------------------------------------------------------
   // VideoTraits
   //
   struct YAE_API VideoTraits
@@ -186,13 +166,23 @@ namespace yae
     //! frame rate:
     double frameRate_;
 
-    //! frame color format:
+    //! ffmpeg pixel format:
+    AVPixelFormat av_fmt_;
+
+    //! color transform properties, expressed with ffmpeg types/constants:
+    AVColorSpace av_csp_;
+    AVColorPrimaries av_pri_;
+    AVColorTransferCharacteristic av_trc_;
+    AVColorRange av_rng_;
+
+    // helper object, configured according to the above
+    // colorspace specifications:
+    const Colorspace * colorspace_;
+
+    //! aeyae pixel format:
     TPixelFormatId pixelFormat_;
 
-    //! color transform hints:
-    TColorSpaceId colorSpace_;
-    TColorRangeId colorRange_;
-
+#if 1
     //----------------------------------------------------------------
     // TInitAbcToRgbMatrix
     //
@@ -213,6 +203,7 @@ namespace yae
     //! function pointer for the callback that can fill-in
     //! the color conversion matrix:
     TInitAbcToRgbMatrix initAbcToRgbMatrix_;
+#endif
 
     //! encoded frame size (including any padding):
     unsigned int encodedWidth_;

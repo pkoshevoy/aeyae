@@ -95,10 +95,10 @@ namespace yae
 
     inline Segment rounded(double margin = 2e-1) const
     {
-      double x = floor(log10(fabs(length_)));
-      double granularity = pow(10, x - 1);
-      double t0 = floor(origin_ / granularity - margin) * granularity;
-      double t1 = ceil(end() / granularity + margin) * granularity;
+      double x = std::floor(std::log10(std::fabs(length_)));
+      double granularity = std::pow(10, x - 1);
+      double t0 = std::floor(origin_ / granularity - margin) * granularity;
+      double t1 = std::ceil(end() / granularity + margin) * granularity;
       return Segment(t0, t1);
     }
 

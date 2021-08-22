@@ -1116,148 +1116,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // to_yae_color_space
-  //
-  TColorSpaceId
-  to_yae_color_space(AVColorSpace c)
-  {
-    switch (c)
-    {
-      case AVCOL_SPC_RGB:
-        return kColorSpaceRGB;
-
-      case AVCOL_SPC_BT709:
-        return kColorSpaceBT709;
-
-      case AVCOL_SPC_UNSPECIFIED:
-        return kColorSpaceUnspecified;
-
-      case AVCOL_SPC_FCC:
-        return kColorSpaceFCC;
-
-      case AVCOL_SPC_BT470BG:
-        return kColorSpaceBT470BG;
-
-      case AVCOL_SPC_SMPTE170M:
-        return kColorSpaceSMPTE170M;
-
-      case AVCOL_SPC_SMPTE240M:
-        return kColorSpaceSMPTE240M;
-
-      case AVCOL_SPC_YCOCG:
-        return kColorSpaceYCOCG;
-
-      case AVCOL_SPC_BT2020_NCL:
-        return kColorSpaceBT2020NCL;
-
-      case AVCOL_SPC_BT2020_CL:
-        return kColorSpaceBT2020CL;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return kColorSpaceUnspecified;
-  }
-
-  //----------------------------------------------------------------
-  // to_ffmpeg_color_space
-  //
-  AVColorSpace
-  to_ffmpeg_color_space(TColorSpaceId c)
-  {
-    switch (c)
-    {
-      case kColorSpaceRGB:
-        return AVCOL_SPC_RGB;
-
-      case kColorSpaceBT709:
-        return AVCOL_SPC_BT709;
-
-      case kColorSpaceUnspecified:
-        return AVCOL_SPC_UNSPECIFIED;
-
-      case kColorSpaceFCC:
-        return AVCOL_SPC_FCC;
-
-      case kColorSpaceBT470BG:
-        return AVCOL_SPC_BT470BG;
-
-      case kColorSpaceSMPTE170M:
-        return AVCOL_SPC_SMPTE170M;
-
-      case kColorSpaceSMPTE240M:
-        return AVCOL_SPC_SMPTE240M;
-
-      case kColorSpaceYCOCG:
-        return AVCOL_SPC_YCOCG;
-
-      case kColorSpaceBT2020NCL:
-        return AVCOL_SPC_BT2020_NCL;
-
-      case kColorSpaceBT2020CL:
-        return AVCOL_SPC_BT2020_CL;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return AVCOL_SPC_UNSPECIFIED;
-  }
-
-  //----------------------------------------------------------------
-  // to_yae_color_range
-  //
-  TColorRangeId
-  to_yae_color_range(AVColorRange r)
-  {
-    switch (r)
-    {
-      case AVCOL_RANGE_UNSPECIFIED:
-        return kColorRangeUnspecified;
-
-      case AVCOL_RANGE_MPEG:
-        return kColorRangeBroadcast;
-
-      case AVCOL_RANGE_JPEG:
-        return kColorRangeFull;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return kColorRangeUnspecified;
-  }
-
-  //----------------------------------------------------------------
-  // to_ffmpeg_color_range
-  //
-  AVColorRange
-  to_ffmpeg_color_range(TColorRangeId r)
-  {
-    switch (r)
-    {
-      case kColorRangeUnspecified:
-        return AVCOL_RANGE_UNSPECIFIED;
-
-      case kColorRangeBroadcast:
-        return AVCOL_RANGE_MPEG;
-
-      case kColorRangeFull:
-        return AVCOL_RANGE_JPEG;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return AVCOL_RANGE_UNSPECIFIED;
-  }
-
-  //----------------------------------------------------------------
   // fixed16_to_double
   //
   inline static double fixed16_to_double(int fixed16)
@@ -1295,7 +1153,7 @@ namespace yae
 
     if ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
     {
-      AVColorSpace color_space = to_ffmpeg_color_space(vtts.colorSpace_);
+      AVColorSpace color_space = vtts.av_csp_;
 
       if (color_space == AVCOL_SPC_UNSPECIFIED)
       {
@@ -1320,8 +1178,8 @@ namespace yae
       double gv = -fixed16_to_double(rv_bu_ngu_ngv[3]);
 
       // luma scale and shift:
-      double ls = (vtts.colorRange_ == kColorRangeFull) ? 1.0 : 255.0 / 219.0;
-      double bk = (vtts.colorRange_ == kColorRangeFull) ? 0.0 :  16.0 / 255.0;
+      double ls = (vtts.av_rng_ == AVCOL_RANGE_JPEG) ? 1.0 : 255.0 / 219.0;
+      double bk = (vtts.av_rng_ == AVCOL_RANGE_JPEG) ? 0.0 :  16.0 / 255.0;
 
       // red row:
       double * r = m3x4;
@@ -1344,7 +1202,7 @@ namespace yae
       b[2] = 0;
       b[3] = -ls * bk - 0.5 * bu;
     }
-    else if ((vtts.colorRange_ != kColorRangeFull) &&
+    else if ((vtts.av_rng_ != AVCOL_RANGE_JPEG) &&
              ((ptts->flags_ & pixelFormat::kRGB) ||
               ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ == 1) ||
               ((ptts->flags_ & pixelFormat::kAlpha) && ptts->channels_ == 2)))

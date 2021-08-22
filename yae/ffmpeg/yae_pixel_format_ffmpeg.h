@@ -40,30 +40,6 @@ namespace yae
   yae_to_ffmpeg(TPixelFormatId yaePixelFormat);
 
   //----------------------------------------------------------------
-  // to_yae_color_space
-  //
-  YAE_API TColorSpaceId
-  to_yae_color_space(AVColorSpace c);
-
-  //----------------------------------------------------------------
-  // to_ffmpeg_color_space
-  //
-  YAE_API AVColorSpace
-  to_ffmpeg_color_space(TColorSpaceId c);
-
-  //----------------------------------------------------------------
-  // to_yae_color_range
-  //
-  YAE_API TColorRangeId
-  to_yae_color_range(AVColorRange r);
-
-  //----------------------------------------------------------------
-  // to_ffmpeg_color_range
-  //
-  YAE_API AVColorRange
-  to_ffmpeg_color_range(TColorRangeId r);
-
-  //----------------------------------------------------------------
   // init_abc_to_rgb_matrix
   //
   // Fill in the m3x4 matrix for color conversion from

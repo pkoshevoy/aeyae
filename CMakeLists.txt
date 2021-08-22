@@ -249,6 +249,7 @@ add_library(${PROGNAME} SHARED
   yae/utils/yae_data.h
   yae/utils/yae_json.cpp
   yae/utils/yae_json.h
+  yae/utils/yae_linear_algebra.h
   yae/utils/yae_lru_cache.h
   yae/utils/yae_pgm_file.h
   yae/utils/yae_plugin_registry.cpp
@@ -269,6 +270,8 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_audio_renderer_input.h
   yae/video/yae_auto_crop.cpp
   yae/video/yae_auto_crop.h
+  yae/video/yae_colorspace.cpp
+  yae/video/yae_colorspace.h
   yae/video/yae_istream.h
   yae/video/yae_mpeg_ts.cpp
   yae/video/yae_mpeg_ts.h
