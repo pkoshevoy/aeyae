@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard:
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <string>
@@ -430,7 +431,7 @@ namespace yae
       virtual double eotf(double E) const
       {
         double E_inv_m2 = std::pow(E, inv_m2);
-        double Y = std::pow(std::fmax(E_inv_m2 - c1, 0.0) /
+        double Y = std::pow(std::max(E_inv_m2 - c1, 0.0) /
                             (c2 - c3 * E_inv_m2),
                             inv_m1);
         return Y;
@@ -476,7 +477,7 @@ namespace yae
       // inv(oetf):
       virtual double eotf(double V) const
       {
-        double x = std::fmax(0.0, (1.0 - beta_) * V + beta_);
+        double x = std::max(0.0, (1.0 - beta_) * V + beta_);
         double L =
           (x <= 0.5) ? (x * x) / 3.0 :
           (exp((x - c) / a) + b) / 12.0;

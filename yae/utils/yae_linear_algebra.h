@@ -10,6 +10,7 @@
 #define YAE_LINEAR_ALGEBRA_H_
 
 // standard:
+#include <algorithm>
 #include <assert.h>
 #include <cmath>
 
@@ -482,9 +483,9 @@ namespace yae
   inline v3x1_t
   clip(const v3x1_t & v, double v_min = 0.0, double v_max = 1.0)
   {
-    return make_v3x1(std::fmin(1.0, std::fmax(0.0, v[0])),
-                     std::fmin(1.0, std::fmax(0.0, v[1])),
-                     std::fmin(1.0, std::fmax(0.0, v[2])));
+    return make_v3x1(std::min(1.0, std::max(0.0, v[0])),
+                     std::min(1.0, std::max(0.0, v[1])),
+                     std::min(1.0, std::max(0.0, v[2])));
   }
 
   //----------------------------------------------------------------
