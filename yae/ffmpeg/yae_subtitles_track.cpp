@@ -691,7 +691,6 @@ namespace yae
       return;
     }
 
-    YAE_ASSERT(!eventFormat.empty());
     if (eventFormat.empty())
     {
       return;
