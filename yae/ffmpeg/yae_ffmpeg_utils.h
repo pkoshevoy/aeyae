@@ -353,6 +353,52 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // is_rgb
+  //
+  inline bool is_rgb(const AVPixFmtDescriptor & desc)
+  {
+    return ((desc.flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB &&
+            desc.nb_components == 3 &&
+            desc.log2_chroma_w == 0 &&
+            desc.log2_chroma_h == 0);
+  }
+
+  //----------------------------------------------------------------
+  // is_less_than
+  //
+  template <typename TFrame>
+  static inline bool is_less_than(const TFrame & f, int w, int h)
+  {
+    return (f.width * f.height) < (w * h);
+  }
+
+  //----------------------------------------------------------------
+  // is_leq
+  //
+  template <typename TFrame>
+  static inline bool is_leq(const TFrame & f, int w, int h)
+  {
+    return (f.width * f.height) <= (w * h);
+  }
+
+  //----------------------------------------------------------------
+  // has_color_specs
+  //
+  template <typename TFrame>
+  inline bool
+  has_color_specs(const TFrame & src)
+  {
+    return (src.colorspace != AVCOL_SPC_UNSPECIFIED &&
+            src.colorspace != AVCOL_SPC_RESERVED &&
+            src.color_primaries != AVCOL_PRI_UNSPECIFIED &&
+            src.color_primaries != AVCOL_PRI_RESERVED0 &&
+            src.color_primaries != AVCOL_PRI_RESERVED &&
+            src.color_trc != AVCOL_TRC_UNSPECIFIED &&
+            src.color_trc != AVCOL_TRC_RESERVED0 &&
+            src.color_trc != AVCOL_TRC_RESERVED);
+  }
+
+  //----------------------------------------------------------------
   // clear_specs
   //
   template <typename Specs>

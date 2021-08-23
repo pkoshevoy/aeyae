@@ -764,6 +764,12 @@ namespace yae
 
                                 // transfer functions:
                                 transfer_func);
+
+    if (av_csp == AVCOL_TRC_SMPTE170M)
+    {
+      colorspace->set_luma_coefficients(0.299, 0.587, 0.114);
+    }
+
     return colorspace;
   }
 

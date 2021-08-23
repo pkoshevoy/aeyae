@@ -679,44 +679,150 @@ namespace yae
   AvFrmSpecs
   guess_specs(const AvFrmSpecs & src)
   {
-    AvFrmSpecs specs = copy_specs(src);
-    AVPixelFormat pix_fmt = src.get_pix_fmt();
+    const AVPixelFormat pix_fmt = src.get_pix_fmt();
     const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
-    const AVComponentDescriptor & luma = desc->comp[0];
+    const bool is_rgb = desc ? yae::is_rgb(*desc) : false;
+
+    AvFrmSpecs specs = copy_specs(src);
 
     specs.color_range =
       (src.color_range != AVCOL_RANGE_UNSPECIFIED) ? src.color_range :
+      is_rgb ? AVCOL_RANGE_JPEG :
       AVCOL_RANGE_MPEG;
-
-    specs.colorspace =
-      (src.colorspace != AVCOL_SPC_UNSPECIFIED &&
-       src.colorspace != AVCOL_SPC_RESERVED) ? src.colorspace :
-      (luma.depth == 8) ? AVCOL_SPC_BT709 :
-      AVCOL_SPC_BT2020_NCL; // AVCOL_SPC_BT2020_CL?
-
-    specs.color_primaries =
-      (src.color_primaries != AVCOL_PRI_UNSPECIFIED &&
-       src.color_primaries != AVCOL_PRI_RESERVED0 &&
-       src.color_primaries != AVCOL_PRI_RESERVED) ? src.color_primaries :
-      (specs.colorspace == AVCOL_SPC_BT709 ||
-       luma.depth == 8) ? AVCOL_PRI_BT709 :
-      AVCOL_PRI_BT2020;
-
-    specs.color_trc =
-      (src.color_trc != AVCOL_TRC_UNSPECIFIED &&
-       src.color_trc != AVCOL_TRC_RESERVED0 &&
-       src.color_trc != AVCOL_TRC_RESERVED) ? src.color_trc :
-
-      (specs.colorspace == AVCOL_SPC_BT709 ||
-       luma.depth == 8) ? AVCOL_TRC_BT709 :
-
-      (luma.depth == 10) ? AVCOL_TRC_BT2020_10 :
-      (luma.depth == 12) ? AVCOL_TRC_BT2020_12 :
-      AVCOL_TRC_SMPTE2084;
 
     specs.chroma_location =
       (src.chroma_location != AVCHROMA_LOC_UNSPECIFIED) ? src.chroma_location :
       AVCHROMA_LOC_UNSPECIFIED;
+
+    bool has_colorspace = (src.colorspace != AVCOL_SPC_UNSPECIFIED &&
+                           src.colorspace != AVCOL_SPC_RESERVED);
+
+    bool has_primaries = (src.color_primaries != AVCOL_PRI_UNSPECIFIED &&
+                          src.color_primaries != AVCOL_PRI_RESERVED0 &&
+                          src.color_primaries != AVCOL_PRI_RESERVED);
+
+    bool has_trc = (src.color_trc != AVCOL_TRC_UNSPECIFIED &&
+                    src.color_trc != AVCOL_TRC_RESERVED0 &&
+                    src.color_trc != AVCOL_TRC_RESERVED);
+
+    if (has_colorspace && !has_primaries)
+    {
+      specs.color_primaries =
+        (src.colorspace == AVCOL_SPC_RGB ||
+         src.colorspace == AVCOL_SPC_BT709) ? AVCOL_PRI_BT709 :
+        (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_PRI_BT470M :
+        (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_PRI_BT470BG :
+        (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_PRI_SMPTE170M :
+        (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_PRI_SMPTE240M :
+        (src.colorspace == AVCOL_SPC_BT2020_NCL ||
+         src.colorspace == AVCOL_SPC_BT2020_CL ||
+         src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_PRI_BT2020 :
+        src.color_primaries;
+    }
+
+    if (has_colorspace && !has_trc)
+    {
+      specs.color_trc =
+        (src.colorspace == AVCOL_SPC_RGB) ? AVCOL_TRC_IEC61966_2_1 :
+        (src.colorspace == AVCOL_SPC_BT709) ? AVCOL_TRC_BT709 :
+        (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_TRC_GAMMA22 :
+        (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_TRC_GAMMA28 :
+        (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_TRC_SMPTE170M :
+        (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_TRC_SMPTE240M :
+        // just guessing here ... could be bt709 or ARIB STD-B67
+        (src.colorspace == AVCOL_SPC_BT2020_NCL ||
+         src.colorspace == AVCOL_SPC_BT2020_CL ||
+         src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_TRC_SMPTE2084 :
+        src.color_trc;
+    }
+
+    if (!has_colorspace && has_primaries && has_trc)
+    {
+      // derive based on primaries and trc:
+      specs.colorspace =
+        (src.color_primaries == AVCOL_PRI_BT709 &&
+         src.color_trc == AVCOL_TRC_BT709) ? AVCOL_SPC_BT709 :
+
+        (src.color_primaries == AVCOL_PRI_BT470M &&
+         src.color_trc == AVCOL_TRC_GAMMA22) ? AVCOL_SPC_FCC :
+
+        (src.color_primaries == AVCOL_PRI_BT470BG &&
+         src.color_trc == AVCOL_TRC_GAMMA28) ? AVCOL_SPC_BT470BG :
+
+        (src.color_primaries == AVCOL_PRI_SMPTE170M &&
+         src.color_trc == AVCOL_TRC_SMPTE170M) ? AVCOL_SPC_SMPTE170M :
+
+        (src.color_primaries == AVCOL_PRI_SMPTE240M &&
+         src.color_trc == AVCOL_TRC_SMPTE240M) ? AVCOL_SPC_SMPTE240M :
+
+        (src.color_primaries == AVCOL_PRI_BT2020 &&
+         (src.color_trc == AVCOL_TRC_BT2020_10 ||
+          src.color_trc == AVCOL_TRC_BT2020_12 ||
+          src.color_trc == AVCOL_TRC_SMPTE2084 ||
+          src.color_trc == AVCOL_TRC_ARIB_STD_B67)) ? AVCOL_SPC_BT2020_NCL :
+
+        (src.color_primaries == AVCOL_PRI_SMPTE428 &&
+         src.color_trc == AVCOL_TRC_SMPTE428) ? AVCOL_SPC_RGB :
+
+        src.colorspace;
+    }
+
+    if (yae::has_color_specs(specs))
+    {
+      return specs;
+    }
+
+    bool got_colorspace = (specs.colorspace != AVCOL_SPC_UNSPECIFIED &&
+                           specs.colorspace != AVCOL_SPC_RESERVED);
+
+    bool got_primaries = (specs.color_primaries != AVCOL_PRI_UNSPECIFIED &&
+                          specs.color_primaries != AVCOL_PRI_RESERVED0 &&
+                          specs.color_primaries != AVCOL_PRI_RESERVED);
+
+    bool got_trc = (specs.color_trc != AVCOL_TRC_UNSPECIFIED &&
+                    specs.color_trc != AVCOL_TRC_RESERVED0 &&
+                    specs.color_trc != AVCOL_TRC_RESERVED);
+
+    const bool is_sd =
+      (src.width && src.width < 1280) &&
+      (src.height && src.height < 720) &&
+      is_less_than(src, 1280, 720);
+
+    if (is_rgb)
+    {
+      specs.colorspace =
+        got_colorspace ? specs.colorspace : AVCOL_SPC_RGB;
+
+      specs.color_primaries =
+        got_primaries ? specs.color_primaries : AVCOL_PRI_BT709;
+
+      specs.color_trc =
+        got_trc ? specs.color_trc : AVCOL_TRC_IEC61966_2_1;
+    }
+    else if (is_sd)
+    {
+      // assume BT.601:
+      specs.colorspace =
+        got_colorspace ? specs.colorspace : AVCOL_SPC_SMPTE170M;
+
+      specs.color_primaries =
+        got_primaries ? specs.color_primaries : AVCOL_PRI_SMPTE170M;
+
+      specs.color_trc =
+        got_trc ? specs.color_trc : AVCOL_TRC_SMPTE170M;
+    }
+    else
+    {
+      // assume BT.709:
+      specs.colorspace =
+        got_colorspace ? specs.colorspace : AVCOL_SPC_BT709;
+
+      specs.color_primaries =
+        got_primaries ? specs.color_primaries : AVCOL_PRI_BT709;
+
+      specs.color_trc =
+        got_trc ? specs.color_trc : AVCOL_TRC_BT709;
+    }
 
     return specs;
   }

@@ -939,11 +939,24 @@ namespace yae
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
-    t.av_fmt_ = (AVPixelFormat)(codecParams.format);
-    t.av_rng_ = codecParams.color_range;
-    t.av_pri_ = codecParams.color_primaries;
-    t.av_trc_ = codecParams.color_trc;
-    t.av_csp_ = codecParams.color_space;
+
+    AvFrmSpecs specs;
+    specs.width = codecParams.width;
+    specs.height = codecParams.height;
+    specs.format = (AVPixelFormat)(codecParams.format);
+    specs.colorspace = codecParams.color_space;
+    specs.color_range = codecParams.color_range;
+    specs.color_primaries = codecParams.color_primaries;
+    specs.color_trc = codecParams.color_trc;
+    specs.chroma_location = codecParams.chroma_location;
+    specs.sample_aspect_ratio = codecParams.sample_aspect_ratio;
+    specs.guess_missing_specs();
+
+    t.av_fmt_ = specs.get_pix_fmt();
+    t.av_rng_ = specs.color_range;
+    t.av_pri_ = specs.color_primaries;
+    t.av_trc_ = specs.color_trc;
+    t.av_csp_ = specs.colorspace;
 
     t.colorspace_ = Colorspace::get(t.av_csp_, t.av_pri_, t.av_trc_);
 
