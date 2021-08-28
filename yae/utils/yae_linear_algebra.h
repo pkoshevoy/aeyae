@@ -334,6 +334,32 @@ namespace yae
       return out;
     }
 
+    //----------------------------------------------------------------
+    // operator Matrix
+    //
+    // This is for copying data to a Matrix of another size
+    //
+    // NOTE: out of bounds elements are filled with 1.0 on the diagonal
+    //       and 0 if off the diagonal
+    //
+    template <int out_rows, int out_cols>
+    operator Matrix<out_rows, out_cols, TData>() const
+    {
+      Matrix<out_rows, out_cols, TData> out;
+
+      for (int row = 0; row < out_rows; row++)
+      {
+        for (int col = 0; col < out_cols; col++)
+        {
+          out.at(row, col) =
+            (row < rows && col < cols) ? at(row, col) :
+            (row == col) ? TData(1) : TData(0);
+        }
+      }
+
+      return out;
+    }
+
   protected:
     TData data_[rows * cols];
   };
@@ -344,7 +370,7 @@ namespace yae
   typedef Matrix<3, 3> m3x3_t;
 
   //----------------------------------------------------------------
-  // m3x3
+  // make_m3x3
   //
   inline m3x3_t
   make_m3x3(double m00, double m01, double m02,
@@ -422,7 +448,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // v3x1
+  // make_v3x1
   //
   inline v3x1_t
   make_v3x1(double x, double y, double z)
@@ -487,6 +513,115 @@ namespace yae
                      std::min(1.0, std::max(0.0, v[1])),
                      std::min(1.0, std::max(0.0, v[2])));
   }
+
+
+  //----------------------------------------------------------------
+  // m4x4_t
+  //
+  typedef Matrix<4, 4> m4x4_t;
+
+  //----------------------------------------------------------------
+  // make_m4x4
+  //
+  inline m4x4_t
+  make_m4x4(double m00, double m01, double m02, double m03,
+            double m10, double m11, double m12, double m13,
+            double m20, double m21, double m22, double m23,
+            double m30, double m31, double m32, double m33)
+  {
+    m4x4_t m;
+    m[0] = m00;
+    m[1] = m01;
+    m[2] = m02;
+    m[3] = m03;
+    m[4] = m10;
+    m[5] = m11;
+    m[6] = m12;
+    m[7] = m13;
+    m[8] = m20;
+    m[9] = m21;
+    m[10] = m22;
+    m[11] = m23;
+    m[12] = m30;
+    m[13] = m31;
+    m[14] = m32;
+    m[15] = m33;
+    return m;
+  }
+
+  //----------------------------------------------------------------
+  // make_diagonal_m4x4
+  //
+  inline m4x4_t
+  make_diagonal_m4x4(double m00, double m11, double m22, double m33)
+  {
+    return make_m4x4(m00, 0.0, 0.0, 0.0,
+                     0.0, m11, 0.0, 0.0,
+                     0.0, 0.0, m22, 0.0,
+                     0.0, 0.0, 0.0, m33);
+  }
+
+  //----------------------------------------------------------------
+  // make_identity_m4x4
+  //
+  inline m4x4_t
+  make_identity_m4x4()
+  {
+    return make_diagonal_m4x4(1.0, 1.0, 1.0, 1.0);
+  }
+
+
+  //----------------------------------------------------------------
+  // v4x1_t
+  //
+  typedef Matrix<4, 1> v4x1_t;
+
+  //----------------------------------------------------------------
+  // make_diagonal_m4x4
+  //
+  inline m4x4_t
+  make_diagonal_m4x4(const v4x1_t & v)
+  {
+    return make_diagonal_m4x4(v[0], v[1], v[2], v[3]);
+  }
+
+  //----------------------------------------------------------------
+  // make_m4x4
+  //
+  // https://en.wikipedia.org/wiki/Rotation_matrix
+  //
+  inline m4x4_t
+  make_m4x4(// axis of rotation:
+            double x,
+            double y,
+            double z,
+            // angle of rotation:
+            double theta_radians)
+  {
+    const double ct = cos(theta_radians);
+    const double st = sin(theta_radians);
+    const double vt = 1.0 - ct; // versine of theta
+    return make_m4x4
+      (x * x * vt + ct,     x * y * vt - z * st, x * z * vt + y * st, 0.0,
+       x * y * vt + z * st, y * y * vt + ct,     y * z * vt - x * st, 0.0,
+       x * z * vt - y * st, y * z * vt + x * st, z * z * vt + ct, 0.0,
+       0.0, 0.0, 0.0, 1.0);
+  }
+
+  //----------------------------------------------------------------
+  // make_v4x1
+  //
+  inline v4x1_t
+  make_v4x1(double x, double y, double z, double w = 1.0)
+  {
+    v4x1_t v;
+    v[0] = x;
+    v[1] = y;
+    v[2] = z;
+    v[3] = w;
+    return v;
+  }
+
 
   //----------------------------------------------------------------
   // det

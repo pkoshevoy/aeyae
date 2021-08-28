@@ -20,6 +20,7 @@ extern "C"
 
 // yae includes:
 #include "yae_pixel_format_ffmpeg.h"
+#include "../utils/yae_linear_algebra.h"
 #include "../video/yae_pixel_format_traits.h"
 
 
@@ -1153,54 +1154,43 @@ namespace yae
 
     if ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
     {
-      AVColorSpace color_space = vtts.av_csp_;
+      const bool full_range = (vtts.av_rng_ == AVCOL_RANGE_JPEG);
 
-      if (color_space == AVCOL_SPC_UNSPECIFIED)
-      {
-        // use frame size heuristic as a hint:
-        if (vtts.encodedWidth_ < 1280 &&
-            vtts.encodedHeight_ < 720)
-        {
-          // SD video:
-          color_space = AVCOL_SPC_SMPTE170M;
-        }
-        else
-        {
-          // HD video:
-          color_space = AVCOL_SPC_BT709;
-        }
-      }
+      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(vtts.av_fmt_);
+      const AVComponentDescriptor & comp = desc->comp[0];
 
-      const int * rv_bu_ngu_ngv = sws_getCoefficients(color_space);
-      double rv =  fixed16_to_double(rv_bu_ngu_ngv[0]);
-      double bu =  fixed16_to_double(rv_bu_ngu_ngv[1]);
-      double gu = -fixed16_to_double(rv_bu_ngu_ngv[2]);
-      double gv = -fixed16_to_double(rv_bu_ngu_ngv[3]);
+      const unsigned int bit_depth = comp.shift + comp.depth;
+      const unsigned int y_full = ~((~0) << bit_depth);
+      const unsigned int lshift = bit_depth - 8;
 
-      // luma scale and shift:
-      double ls = (vtts.av_rng_ == AVCOL_RANGE_JPEG) ? 1.0 : 255.0 / 219.0;
-      double bk = (vtts.av_rng_ == AVCOL_RANGE_JPEG) ? 0.0 :  16.0 / 255.0;
+      const unsigned int y_min = full_range ? 0 : (16 << lshift);
+      const unsigned int y_rng = full_range ? y_full : (219 << lshift);
+      const unsigned int c_rng = full_range ? y_full : (224 << lshift);
 
-      // red row:
-      double * r = m3x4;
-      r[0] = ls;
-      r[1] = 0;
-      r[2] = rv;
-      r[3] = -ls * bk - 0.5 * rv;
+      double y_offset = double(y_min) / double(y_full);
+      double sy = double(y_full) / double(y_rng);
+      double sc = double(y_full) / double(c_rng);
+      double a = y_offset * sy;
+      double b = y_offset * sc + 0.5;
 
-      // green row:
-      double * g = m3x4 + 4;
-      g[0] = ls;
-      g[1] = gu;
-      g[2] = gv;
-      g[3] = -ls * bk - 0.5 * (gu + gv);
+      /*
+      double yp = (y - y_min) * y_scale;
+      double pb = (u - y_min) * c_scale;
+      double pr = (v - y_min) * c_scale;
+      */
 
-      // blue row:
-      double * b = m3x4 + 8;
-      b[0] = ls;
-      b[1] = bu;
-      b[2] = 0;
-      b[3] = -ls * bk - 0.5 * bu;
+      // affine transform from Y'CbCr to Y'PbPr
+      m4x4_t ycbcr_to_ypbpr = make_m4x4(sy,  0.0, 0.0, -a,
+                                        0.0, sc,  0.0, -b,
+                                        0.0, 0.0, sc,  -b,
+                                        0.0, 0.0, 0.0, 1.0);
+
+      m4x4_t ypbpr_to_rgb = vtts.colorspace_->ypbpr_to_rgb_;
+      m4x4_t ycbcr_to_rgb = ypbpr_to_rgb * ycbcr_to_ypbpr;
+
+      // NOTE: dropping the bottom row of ycbcr_to_rgb
+      // since the computed value would be discarded anyway
+      memcpy(m3x4, ycbcr_to_rgb.begin(), 3 * 4 * sizeof(double));
     }
     else if ((vtts.av_rng_ != AVCOL_RANGE_JPEG) &&
              ((ptts->flags_ & pixelFormat::kRGB) ||
