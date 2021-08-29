@@ -2483,9 +2483,9 @@ namespace yae
     {
       YAE_OPENGL_HERE();
 
-      if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
+      if (colorSpaceOrRangeChanged)
       {
-        frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
+        vtts.initAbcToRgbMatrix(&m34_to_rgb_[0]);
       }
 
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
@@ -3165,9 +3165,9 @@ namespace yae
     {
       YAE_OPENGL_HERE();
 
-      if (colorSpaceOrRangeChanged && frame->traits_.initAbcToRgbMatrix_)
+      if (colorSpaceOrRangeChanged)
       {
-        frame->traits_.initAbcToRgbMatrix_(&m34_to_rgb_[0], vtts);
+        vtts.initAbcToRgbMatrix(&m34_to_rgb_[0]);
       }
 
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));

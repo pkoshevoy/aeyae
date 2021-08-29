@@ -23,6 +23,7 @@ extern "C"
 #include "yae_pixel_format_ffmpeg.h"
 #include "../utils/yae_linear_algebra.h"
 #include "../video/yae_pixel_format_traits.h"
+#include "../video/yae_video.h"
 
 
 namespace yae
@@ -1143,9 +1144,9 @@ namespace yae
   //       however it doesn't have to be YUV.
   //
   bool
-  init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts)
+  VideoTraits::initAbcToRgbMatrix(double * m3x4) const
   {
-    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(vtts.av_fmt_);
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(this->av_fmt_);
     if (!desc)
     {
       return false;
@@ -1153,7 +1154,7 @@ namespace yae
 
     // shortcut:
     const bool narrow_range =
-      (vtts.av_rng_ == AVCOL_RANGE_MPEG);
+      (this->av_rng_ == AVCOL_RANGE_MPEG);
 
     const bool flag_rgb =
       (desc->flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB;
@@ -1190,7 +1191,7 @@ namespace yae
                                         0.0, sc,  0.0, b,
                                         0.0, 0.0, sc,  b,
                                         0.0, 0.0, 0.0, 1.0);
-      m4x4_t ypbpr_to_rgb = vtts.colorspace_->ypbpr_to_rgb_;
+      m4x4_t ypbpr_to_rgb = this->colorspace_->ypbpr_to_rgb_;
       m4x4_t ycbcr_to_rgb = ypbpr_to_rgb * ycbcr_to_ypbpr;
 
       // NOTE: dropping the bottom row of ycbcr_to_rgb

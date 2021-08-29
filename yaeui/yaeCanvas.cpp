@@ -1339,23 +1339,6 @@ namespace yae
     }
 
     TVideoFramePtr & vf = wrapper.getFrame();
-    VideoTraits & vtts = vf->traits_;
-    QImage & image = wrapper.getImage();
-
-#ifdef _BIG_ENDIAN
-    vtts.pixelFormat_ = kPixelFormatARGB;
-#else
-    vtts.pixelFormat_ = kPixelFormatBGRA;
-#endif
-    vtts.encodedWidth_ = image.bytesPerLine() / 4;
-    vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
-    vtts.offsetTop_ = 0;
-    vtts.offsetLeft_ = 0;
-    vtts.visibleWidth_ = (int)w;
-    vtts.visibleHeight_ = (int)h;
-    vtts.pixelAspectRatio_ = 1.0;
-    vtts.isUpsideDown_ = false;
-
     subsInOverlay_ = overlay_->loadFrame(context(), vf);
     YAE_ASSERT(subsInOverlay_);
     return subsInOverlay_;

@@ -778,7 +778,6 @@ namespace yae
           discarded_ = 0;
         }
 
-        YAE_ASSERT(output_.initAbcToRgbMatrix_);
         vf.traits_ = output_;
         vf.traits_.pixelFormat_ = ffmpeg_to_yae(yae::pix_fmt(output));
 
@@ -959,9 +958,6 @@ namespace yae
     t.av_csp_ = specs.colorspace;
 
     t.colorspace_ = Colorspace::get(t.av_csp_, t.av_pri_, t.av_trc_);
-
-    // FIXME: remove this, use colorspace_ instead:
-    t.initAbcToRgbMatrix_ = &init_abc_to_rgb_matrix;
 
     //! pixel format:
     t.pixelFormat_ = ffmpeg_to_yae(t.av_fmt_);

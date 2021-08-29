@@ -163,6 +163,23 @@ namespace yae
 
     bool operator == (const VideoTraits & vt) const;
 
+    //----------------------------------------------------------------
+    // initAbcToRgbMatrix
+    //
+    // Fill in the m3x4 matrix for color conversion from
+    // input color format ABC to full-range RGB:
+    //
+    // [R, G, B]T = m3x4 * [A, B, C, 1]T
+    //
+    // NOTE: ABC and RGB are expressed in the [0, 1] range,
+    //       not [0, 255].
+    //
+    // NOTE: Here ABC typically refers to YCbCr input color format,
+    //       however it can be RGB, Gray, or GrayAlpha,
+    //       either full or narrow range
+    //
+    bool initAbcToRgbMatrix(double * m3x4) const;
+
     //! frame rate:
     double frameRate_;
 
@@ -181,29 +198,6 @@ namespace yae
 
     //! aeyae pixel format:
     TPixelFormatId pixelFormat_;
-
-#if 1
-    //----------------------------------------------------------------
-    // TInitAbcToRgbMatrix
-    //
-    // Fill in the m3x4 matrix for color conversion from
-    // input color format ABC to full-range RGB:
-    //
-    // [R, G, B]T = m3x4 * [A, B, C, 1]T
-    //
-    // NOTE: ABC and RGB are expressed in the [0, 1] range,
-    //       not [0, 255].
-    //
-    // NOTE: Here ABC typically refers to YUV input color format,
-    //       however it doesn't have to be YUV.
-    //
-    typedef bool(*TInitAbcToRgbMatrix)(double * m3x4,
-                                       const VideoTraits & vtts);
-
-    //! function pointer for the callback that can fill-in
-    //! the color conversion matrix:
-    TInitAbcToRgbMatrix initAbcToRgbMatrix_;
-#endif
 
     //! encoded frame size (including any padding):
     unsigned int encodedWidth_;

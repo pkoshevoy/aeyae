@@ -6,6 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavutil/pixdesc.h>
+}
+
 // local includes:
 #include "yaeCanvasQPainterUtils.h"
 #include "yaeUtilsQt.h"
@@ -376,6 +382,32 @@ namespace yae
 
       frame_->data_.reset(imageBuffer);
     }
+
+    VideoTraits & vtts = frame_->traits_;
+#ifdef _BIG_ENDIAN
+    vtts.av_fmt_ = AV_PIX_FMT_ARGB;
+    vtts.pixelFormat_ = kPixelFormatARGB;
+#else
+    vtts.av_fmt_ = AV_PIX_FMT_BGRA;
+    vtts.pixelFormat_ = kPixelFormatBGRA;
+#endif
+    vtts.av_rng_ = AVCOL_RANGE_JPEG;
+    vtts.av_pri_ = AVCOL_PRI_BT709;
+    vtts.av_trc_ = AVCOL_TRC_LINEAR;
+    vtts.av_csp_ = AVCOL_SPC_RGB;
+    vtts.colorspace_ = Colorspace::get(vtts.av_csp_,
+                                       vtts.av_pri_,
+                                       vtts.av_trc_);
+
+    QImage & image = this->getImage();
+    vtts.encodedWidth_ = image.bytesPerLine() / 4;
+    vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
+    vtts.offsetTop_ = 0;
+    vtts.offsetLeft_ = 0;
+    vtts.visibleWidth_ = w_;
+    vtts.visibleHeight_ = h_;
+    vtts.pixelAspectRatio_ = 1.0;
+    vtts.isUpsideDown_ = false;
 
     return frame_;
   }
