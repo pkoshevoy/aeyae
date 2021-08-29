@@ -19,6 +19,7 @@ extern "C"
 }
 
 // yae includes:
+#include "yae_ffmpeg_utils.h"
 #include "yae_pixel_format_ffmpeg.h"
 #include "../utils/yae_linear_algebra.h"
 #include "../video/yae_pixel_format_traits.h"
@@ -1144,47 +1145,51 @@ namespace yae
   bool
   init_abc_to_rgb_matrix(double * m3x4, const VideoTraits & vtts)
   {
-    const pixelFormat::Traits * ptts =
-      pixelFormat::getTraits(vtts.pixelFormat_);
-
-    if (!ptts)
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(vtts.av_fmt_);
+    if (!desc)
     {
       return false;
     }
 
-    if ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ > 2)
+    // shortcut:
+    const bool narrow_range =
+      (vtts.av_rng_ == AVCOL_RANGE_MPEG);
+
+    const bool flag_rgb =
+      (desc->flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB;
+
+    const bool flag_alpha =
+      (desc->flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const unsigned int bit_depth = luma.shift + luma.depth;
+    const unsigned int y_full = ~((~0) << bit_depth);
+    const unsigned int lshift = bit_depth - 8;
+
+    const unsigned int y_min = narrow_range ? (16 << lshift) : 0;
+    const unsigned int y_rng = narrow_range ? (219 << lshift) : y_full;
+
+    const double y_offset = double(y_min) / double(y_full);
+    const double sy = double(y_full) / double(y_rng);
+    const double a = -y_offset * sy;
+
+    if (yae::is_ycbcr(*desc))
     {
-      const bool full_range = (vtts.av_rng_ == AVCOL_RANGE_JPEG);
-
-      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(vtts.av_fmt_);
-      const AVComponentDescriptor & comp = desc->comp[0];
-
-      const unsigned int bit_depth = comp.shift + comp.depth;
-      const unsigned int y_full = ~((~0) << bit_depth);
-      const unsigned int lshift = bit_depth - 8;
-
-      const unsigned int y_min = full_range ? 0 : (16 << lshift);
-      const unsigned int y_rng = full_range ? y_full : (219 << lshift);
-      const unsigned int c_rng = full_range ? y_full : (224 << lshift);
-
-      double y_offset = double(y_min) / double(y_full);
-      double sy = double(y_full) / double(y_rng);
-      double sc = double(y_full) / double(c_rng);
-      double a = y_offset * sy;
-      double b = y_offset * sc + 0.5;
+      const unsigned int c_rng = narrow_range ? (224 << lshift) : y_full;
+      const double sc = double(y_full) / double(c_rng);
+      const double b = -y_offset * sc - 0.5;
 
       /*
-      double yp = (y - y_min) * y_scale;
-      double pb = (u - y_min) * c_scale;
-      double pr = (v - y_min) * c_scale;
+        double Y' = (Y - y_offset) * scale_luma;
+        double Pb = (Cb - y_offset) * scale_chroma;
+        double Pr = (Cr - y_offset) * scale_chroma;
       */
 
       // affine transform from Y'CbCr to Y'PbPr
-      m4x4_t ycbcr_to_ypbpr = make_m4x4(sy,  0.0, 0.0, -a,
-                                        0.0, sc,  0.0, -b,
-                                        0.0, 0.0, sc,  -b,
+      m4x4_t ycbcr_to_ypbpr = make_m4x4(sy,  0.0, 0.0, a,
+                                        0.0, sc,  0.0, b,
+                                        0.0, 0.0, sc,  b,
                                         0.0, 0.0, 0.0, 1.0);
-
       m4x4_t ypbpr_to_rgb = vtts.colorspace_->ypbpr_to_rgb_;
       m4x4_t ycbcr_to_rgb = ypbpr_to_rgb * ycbcr_to_ypbpr;
 
@@ -1192,47 +1197,32 @@ namespace yae
       // since the computed value would be discarded anyway
       memcpy(m3x4, ycbcr_to_rgb.begin(), 3 * 4 * sizeof(double));
     }
-    else if ((vtts.av_rng_ != AVCOL_RANGE_JPEG) &&
-             ((ptts->flags_ & pixelFormat::kRGB) ||
-              ((ptts->flags_ & pixelFormat::kYUV) && ptts->channels_ == 1) ||
-              ((ptts->flags_ & pixelFormat::kAlpha) && ptts->channels_ == 2)))
+    else if (narrow_range &&
+             (flag_rgb ||
+              (desc->nb_components == 2 && flag_alpha) ||
+              (desc->nb_components == 1)))
     {
-      // luma scale and shift:
-      double ls = 255.0 / 219.0;
-      double bk = 16.0 / 255.0;
+      // affine transform from narrow range to full range
+      m4x4_t narrow_to_full = make_m4x4(sy,  0.0, 0.0, a,
+                                        0.0, sy,  0.0, a,
+                                        0.0, 0.0, sy,  a,
+                                        0.0, 0.0, 0.0, 1.0);
 
-      // red row:
-      double * r = m3x4;
-      r[0] = ls;
-      r[1] = 0;
-      r[2] = 0;
-      r[3] = -ls * bk;
-
-      // green row:
-      double * g = m3x4 + 4;
-      g[0] = 0;
-      g[1] = ls;
-      g[2] = 0;
-      g[3] = -ls * bk;
-
-      // blue row:
-      double * b = m3x4 + 8;
-      b[0] = 0;
-      b[1] = 0;
-      b[2] = ls;
-      b[3] = -ls * bk;
+      // NOTE: dropping the bottom row of ycbcr_to_rgb
+      // since the computed value would be discarded anyway
+      memcpy(m3x4, narrow_to_full.begin(), 3 * 4 * sizeof(double));
     }
     else
     {
-      YAE_ASSERT((ptts->flags_ & pixelFormat::kRGB) ||
-                 (ptts->flags_ == pixelFormat::kPlanar));
+      YAE_ASSERT(flag_rgb);
 
       // nothing to do, use the identity matrix:
-      const double identity[] = {
+      static const double identity[] = {
         1, 0, 0, 0,
         0, 1, 0, 0,
         0, 0, 1, 0
       };
+
       std::memcpy(m3x4, identity, sizeof(identity));
     }
 

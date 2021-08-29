@@ -350,13 +350,34 @@ namespace yae
         }
       }
 
-      if (src_pix_fmt != dst_pix_fmt)
+#if 0
+      // if the source (A)RGB pixel format bitdepth is less than 8
+      // then convert it (A)RGB:
+      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(dst_pix_fmt);
+      if (desc &&
+          desc->nb_components > 0 &&
+          desc->comp[0].depth < 8 &&
+          (desc->flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB)
       {
-        const char * dst_pix_fmt_txt = av_get_pix_fmt_name(dst_pix_fmt);
-        oss << ",format=pix_fmts=" << dst_pix_fmt_txt;
-      }
+#if AV_HAVE_BIGENDIAN
+        static const AVPixelFormat native_rgb = AV_PIX_FMT_RGB24;
+        static const AVPixelFormat native_argb = AV_PIX_FMT_ARGB;
+#else
+        static const AVPixelFormat native_rgb = AV_PIX_FMT_BGR24;
+        static const AVPixelFormat native_argb = AV_PIX_FMT_BGRA;
+#endif
+        const bool flag_alpha =
+          (desc->flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
 
-      oss << ",buffersink";
+        dst_pix_fmt = flag_alpha ? native_argb : native_rgb;
+      }
+#endif
+
+      // force the output pixel format, even if it's the same as source,
+      // because it's possible the format was changed by an upstream filter:
+      const char * dst_pix_fmt_txt = av_get_pix_fmt_name(dst_pix_fmt);
+      oss << ",format=pix_fmts=" << dst_pix_fmt_txt
+          << ",buffersink";
 
       filter_chain_ = filter_chain;
       filters_ = oss.str().c_str();
