@@ -487,6 +487,9 @@ namespace yae
     bool setFrame(const TVideoFramePtr & frame,
                   bool & colorSpaceOrRangeChanged);
 
+    // helper:
+    bool clearFrame();
+
     mutable boost::mutex mutex_;
     TVideoFramePtr frame_;
     TCropFrame crop_;
@@ -501,9 +504,13 @@ namespace yae
     // shader selected for current frame:
     const TFragmentShader * shader_;
 
-    // 3x4 matrix for color conversion to full-range RGB,
-    // including luma scale and shift:
+    // 3x4 matrix for transform from the input colorspace
+    // to full-range RGB, including luma scale and shift:
     double m34_to_rgb_[12];
+
+    // a sampling of the input colorspace EOTF:
+    float eotf_lut_[1024];
+    GLuint eotf_tex_id_;
   };
 
   //----------------------------------------------------------------
@@ -526,6 +533,8 @@ namespace yae
     void draw(double opacity) const;
 
   protected:
+
+    // 2D and Rect textures:
     std::vector<GLuint> texId_;
   };
 

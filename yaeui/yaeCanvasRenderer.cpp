@@ -1551,7 +1551,8 @@ namespace yae
     darCropped_(0.0),
     skipColorConverter_(false),
     verticalScalingEnabled_(false),
-    shader_(NULL)
+    shader_(NULL),
+    eotf_tex_id_(0)
   {
     double identity[] = {
       1, 0, 0, 0,
@@ -1560,6 +1561,7 @@ namespace yae
     };
 
     memcpy(m34_to_rgb_, identity, sizeof(m34_to_rgb_));
+    memset(eotf_lut_, 0, sizeof(eotf_lut_));
 
     typedef std::map<TPixelFormatId, const TFragmentShaderProgram *> TProgs;
     for (TProgs::const_iterator i = shaders.lut_.begin();
@@ -1996,7 +1998,7 @@ namespace yae
     {
       const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
       std::ostringstream oss;
-      ossr << "\n" << ptts->name_ << " FRAGMENT SHADER:";
+      oss << "\n" << ptts->name_ << " FRAGMENT SHADER:";
 
       if (found != shaders_.end())
       {
@@ -2150,8 +2152,98 @@ namespace yae
       colorSpaceOrRangeChanged = true;
     }
 
+    if (colorSpaceOrRangeChanged)
+    {
+      const VideoTraits & vtts = frame->traits_;
+
+      // update the ycbcr_to_rgb matrix:
+      vtts.initAbcToRgbMatrix(&m34_to_rgb_[0]);
+
+      // update the OETF(EOTF) LUT:
+#if 1
+      const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+                                                   AVCOL_PRI_BT709,
+                                                   AVCOL_TRC_IEC61966_2_1);
+#else
+      const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
+                                                   AVCOL_PRI_BT709,
+                                                   AVCOL_TRC_BT709);
+#endif
+      const Colorspace::TransferFunc & dst_trc = dst_csp->transfer_;
+      const Colorspace::TransferFunc & src_trc = vtts.colorspace_->transfer_;
+
+      static const double gamma = 1.8;
+      static const double gamma_inv = 1.0 / gamma;
+
+      static const double peak = 100.0; // hdr10
+      // static const double peak = 10.0; // hlg
+
+      for (int i = 0; i < 1024; i++)
+      {
+        double y = double(i) / double(1023);
+        // y = dst_trc.eotf(y);
+        y = src_trc.eotf(y);
+
+        // tone mapping:
+        // y *= 5.0;
+#if 0
+        y = std::pow(y, gamma_inv);
+#elif 0
+        y =
+          y > 0.05 ?
+          std::pow(y / peak, gamma_inv) :
+          y * std::pow(0.05 / peak, gamma_inv) / 0.05;
+#endif
+        y = dst_trc.oetf(y);
+        eotf_lut_[i] = std::min(1.f, std::max(0.f, float(y)));
+      }
+
+      if (!eotf_tex_id_)
+      {
+        YAE_OGL_11(glGenTextures(1, &eotf_tex_id_));
+      }
+
+      if (eotf_tex_id_)
+      {
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_1D, eotf_tex_id_));
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_1D,
+                                   GL_TEXTURE_WRAP_S, GL_CLAMP ));
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_1D,
+                                   GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+        YAE_OGL_11(glTexParameteri(GL_TEXTURE_1D,
+                                   GL_TEXTURE_MIN_FILTER, GL_NEAREST));
+
+        YAE_OGL_11(glTexImage1D(GL_TEXTURE_1D, // target
+                                0, // level
+                                GL_LUMINANCE16, // internalFormat
+                                1024, // width
+                                0, // border
+                                GL_LUMINANCE, // format
+                                GL_FLOAT, // type
+                                eotf_lut_)); // pixels
+      }
+    }
+
     frame_ = frame;
     return frameSizeOrFormatChanged;
+  }
+
+  //----------------------------------------------------------------
+  // TBaseCanvas::clearFrame
+  //
+  bool
+  TBaseCanvas::clearFrame()
+  {
+    if (eotf_tex_id_)
+    {
+      YAE_OGL_11(glDeleteTextures(1, &eotf_tex_id_));
+      eotf_tex_id_ = 0;
+    }
+
+    dar_ = 0.0;
+    darCropped_ = 0.0;
+    crop_.clear();
+    frame_ = TVideoFramePtr();
   }
 
 
@@ -2337,10 +2429,7 @@ namespace yae
       texId_.clear();
     }
 
-    dar_ = 0.0;
-    darCropped_ = 0.0;
-    crop_.clear();
-    frame_ = TVideoFramePtr();
+    TBaseCanvas::clearFrame();
   }
 
   //----------------------------------------------------------------
@@ -2482,11 +2571,6 @@ namespace yae
     if (shader_)
     {
       YAE_OPENGL_HERE();
-
-      if (colorSpaceOrRangeChanged)
-      {
-        vtts.initAbcToRgbMatrix(&m34_to_rgb_[0]);
-      }
 
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
       YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,
@@ -2759,6 +2843,8 @@ namespace yae
     TMakeCurrentContext currentContext(context);
     YAE_OGL_11_HERE();
 
+    TBaseCanvas::clearFrame();
+
     if (!texId_.empty())
     {
       YAE_OGL_11(glDeleteTextures((GLsizei)(texId_.size()),
@@ -2768,11 +2854,9 @@ namespace yae
 
     w_ = 0;
     h_ = 0;
-    dar_ = 0.0;
-    darCropped_ = 0.0;
-    crop_.clear();
     tiles_.clear();
-    frame_ = TVideoFramePtr();
+
+    TBaseCanvas::clearFrame();
   }
 
   //----------------------------------------------------------------
@@ -3164,11 +3248,6 @@ namespace yae
     if (shader_)
     {
       YAE_OPENGL_HERE();
-
-      if (colorSpaceOrRangeChanged)
-      {
-        vtts.initAbcToRgbMatrix(&m34_to_rgb_[0]);
-      }
 
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
       YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB,

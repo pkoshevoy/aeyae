@@ -1393,13 +1393,11 @@ namespace yae
       w = max_w;
     }
 
-    TVideoFramePtr vf(new TVideoFrame());
-    TQImageBuffer * imageBuffer =
-      new TQImageBuffer((int)w, (int)h, QImage::Format_ARGB32);
-    vf->data_.reset(imageBuffer);
+    TPainterWrapper wrapper((int)w, (int)h);
+    TVideoFramePtr & vf = wrapper.getFrame();
 
     // shortcut:
-    QImage & subsFrm = imageBuffer->qimg_;
+    QImage & subsFrm = wrapper.getImage();
     subsFrm.fill(QColor(0x00, 0x00, 0x00, 0xff).rgba()); // opaque black
 
     QPainter painter(&subsFrm);

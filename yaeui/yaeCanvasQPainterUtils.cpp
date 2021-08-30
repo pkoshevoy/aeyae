@@ -399,7 +399,8 @@ namespace yae
                                        vtts.av_pri_,
                                        vtts.av_trc_);
 
-    QImage & image = this->getImage();
+    TQImageBuffer * imageBuffer = (TQImageBuffer *)(frame_->data_.get());
+    QImage & image = imageBuffer->qimg_;
     vtts.encodedWidth_ = image.bytesPerLine() / 4;
     vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
     vtts.offsetTop_ = 0;
