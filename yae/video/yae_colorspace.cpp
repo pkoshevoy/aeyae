@@ -788,6 +788,10 @@ namespace yae
 
                          const TransferFunc & transfer):
     name_(name),
+    r_(make_v3x1(rx, ry, 1.0)),
+    g_(make_v3x1(gx, gy, 1.0)),
+    b_(make_v3x1(bx, by, 1.0)),
+    w_(make_v3x1(wx, wy, 1.0)),
     transfer_(transfer)
   {
     // from SMPTE RP 177-1993:
