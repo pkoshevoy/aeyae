@@ -39,7 +39,7 @@ extern "C"
   do {                                                  \
     if (err < 0)                                        \
     {                                                   \
-      yae_error << "AVERROR: " << yae::av_strerr(err);  \
+      yae_error << "AVERROR: " << yae::av_errstr(err);  \
       YAE_ASSERT(false);                                \
       return ret;                                       \
     }                                                   \
@@ -68,9 +68,9 @@ namespace yae
   ensure_ffmpeg_initialized();
 
   //----------------------------------------------------------------
-  // av_strerr
+  // av_errstr
   //
-  YAE_API std::string av_strerr(int errnum);
+  YAE_API std::string av_errstr(int errnum);
 
   //----------------------------------------------------------------
   // lookup_src
@@ -192,7 +192,7 @@ namespace yae
   //
   // ::AVBufferRef is basically an ffmpeg version of std::shared_ptr
   //
-  struct AvBufferRef
+  struct YAE_API AvBufferRef
   {
     // does not increment refcount:
     AvBufferRef():
@@ -289,7 +289,53 @@ namespace yae
     inline AVPixelFormat get_pix_fmt() const
     { return (AVPixelFormat)(get().format); }
 
+    // stop referencing any AVBuffers, reset to initial state:
+    inline void clear()
+    { *this = AvFrm(); }
+
+    // see if the frame has at least one plane of data:
+    inline bool has_data() const
+    { return ((frame_->buf[0] && frame_->buf[0]->data) || frame_->data[0]); }
+
+    inline const AVHWFramesContext * get_hw_frames_ctx() const
+    {
+      return (frame_->hw_frames_ctx ?
+              (const AVHWFramesContext *)(frame_->hw_frames_ctx->data) :
+              NULL);
+    }
+
+    inline int hwdownload()
+    { return this->hwframe_transfer_data(); }
+
     AVPixelFormat sw_pix_fmt() const;
+
+    // if a frame exists in hw context memory (on the GPU, etc...) and
+    // we need to manipulate it on the CPU, then call
+    // av_hwframe_transfer_data to download it to system memory:
+    int hwframe_transfer_data();
+
+    int hwupload(AVBufferRef * hw_frames_ctx);
+
+    int alloc_video_buffers(int format,
+                            int width,
+                            int height,
+                            int align = AV_INPUT_BUFFER_PADDING_SIZE);
+
+    int alloc_samples_buffer(int nb_channels,
+                             int nb_samples,
+                             AVSampleFormat sample_fmt = AV_SAMPLE_FMT_S16,
+                             // 0 == default alignment
+                             // 1 == no alignment
+                             int align = 0);
+
+    inline int get_buffer(int align = AV_INPUT_BUFFER_PADDING_SIZE)
+    { return av_frame_get_buffer(frame_, align); }
+
+    inline int is_writable() const
+    { return av_frame_is_writable(const_cast<AVFrame *>(frame_)); }
+
+    // ffmpegs copy-on-write mechanism:
+    int make_writable();
 
   protected:
     AVFrame * frame_;
@@ -694,6 +740,47 @@ namespace yae
 
     return false;
   }
+
+  //----------------------------------------------------------------
+  // make_avfrm
+  //
+  YAE_API AvFrm
+  make_avfrm(AVPixelFormat pix_fmt,
+             int luma_w,
+             int luma_h,
+             AVColorSpace csp = AVCOL_SPC_BT709,
+             AVColorPrimaries pri = AVCOL_PRI_BT709,
+             AVColorTransferCharacteristic trc = AVCOL_TRC_BT709,
+             AVColorRange rng = AVCOL_RANGE_MPEG,
+             int par_num = 1,
+             int par_den = 1,
+             unsigned char fill_luma = 0x7f,
+             unsigned char fill_chroma = 0x7f);
+
+  //----------------------------------------------------------------
+  // save_as
+  //
+  YAE_API bool
+  save_as(const std::string & path,
+          const yae::AvFrm & src,
+          const yae::TTime & frame_dur);
+
+  //----------------------------------------------------------------
+  // save_as_png
+  //
+  YAE_API bool
+  save_as_png(const yae::AvFrm & frm,
+              const std::string & prefix,
+              const yae::TTime & frame_dur);
+
+  //----------------------------------------------------------------
+  // make_hwframes_ctx
+  //
+  YAE_API yae::AvBufferRef
+  make_hwframes_ctx(AVBufferRef * device_ctx_ref,
+                    int width,
+                    int height,
+                    AVPixelFormat sw_format);
 
 }
 

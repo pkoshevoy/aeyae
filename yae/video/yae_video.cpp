@@ -862,4 +862,139 @@ namespace yae
     return track_info.empty() ? 0 : program;
   }
 
+  //----------------------------------------------------------------
+  // hsv_to_rgb
+  //
+  v3x1_t
+  hsv_to_rgb(const v3x1_t & HSV)
+  {
+    double H = HSV[0];
+    double S = HSV[1];
+    double V = HSV[2];
+
+    v3x1_t RGB;
+    double & R = RGB[0];
+    double & G = RGB[1];
+    double & B = RGB[2];
+
+    if (S == 0.0)
+    {
+      // monochromatic:
+      R = V;
+      G = V;
+      B = V;
+      return RGB;
+    }
+
+    H *= 6.0;
+    double i = floor(H);
+    double f = H - i;
+
+    double p = V * (1.0 - S);
+    double q = V * (1.0 - S * f);
+    double t = V * (1.0 - S * (1.0 - f));
+
+    if (i == 0.0)
+    {
+      R = V;
+      G = t;
+      B = p;
+    }
+    else if (i == 1.0)
+    {
+      R = q;
+      G = V;
+      B = p;
+    }
+    else if (i == 2.0)
+    {
+      R = p;
+      G = V;
+      B = t;
+    }
+    else if (i == 3.0)
+    {
+      R = p;
+      G = q;
+      B = V;
+    }
+    else if (i == 4.0)
+    {
+      R = t;
+      G = p;
+      B = V;
+    }
+    else
+    {
+      // i == 5.0
+      R = V;
+      G = p;
+      B = q;
+    }
+
+    return RGB;
+  }
+
+  //----------------------------------------------------------------
+  // rgb_to_hsv
+  //
+  v3x1_t
+  rgb_to_hsv(const v3x1_t & RGB)
+  {
+    double R = RGB[0];
+    double G = RGB[1];
+    double B = RGB[2];
+
+    v3x1_t HSV;
+    double & H = HSV[0];
+    double & S = HSV[1];
+    double & V = HSV[2];
+
+    double min = std::min(R, std::min(G, B));
+    double max = std::max(R, std::max(G, B));
+    V = max;
+
+    double delta = max - min;
+    if (max == 0)
+    {
+      S = 0;
+      H = -1;
+    }
+    else
+    {
+      S = delta / max;
+
+      if (delta == 0)
+      {
+        delta = 1;
+      }
+
+      if (R == max)
+      {
+        // between yellow & magenta
+        H = (G - B) / delta;
+      }
+      else if (G == max)
+      {
+        // between cyan & yellow
+        H = (B - R) / delta + 2;
+      }
+      else
+      {
+        // between magenta & cyan
+        H = (R - G) / delta + 4;
+      }
+
+      H /= 6.0;
+
+      if (H < 0.0)
+      {
+        H = H + 1.0;
+      }
+    }
+
+    return HSV;
+  }
+
+
 }

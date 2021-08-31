@@ -404,7 +404,7 @@ namespace yae
 
         yae_wlog("av_hwdevice_ctx_create failed for %s: %s",
                  av_hwdevice_get_type_name(hw->device_type),
-                 yae::av_strerr(err).c_str());
+                 yae::av_errstr(err).c_str());
         YAE_ASSERT(!hw_device_ctx.ref_);
       }
     }
@@ -441,7 +441,7 @@ namespace yae
     err = avcodec_open2(ctx, codec, &opts);
     if (err < 0)
     {
-      yae_elog("avcodec_open2 failed: %s", yae::av_strerr(err).c_str());
+      yae_elog("avcodec_open2 failed: %s", yae::av_errstr(err).c_str());
       return NULL;
     }
 
@@ -688,7 +688,7 @@ namespace yae
                id_.c_str(),
                packet.data,
                errSend,
-               av_strerr(errSend).c_str());
+               av_errstr(errSend).c_str());
 #endif
         errors_++;
         return errSend;
@@ -709,7 +709,7 @@ namespace yae
                  id_.c_str(),
                  packet.data,
                  errRecv,
-                 av_strerr(errRecv).c_str());
+                 av_errstr(errRecv).c_str());
         }
 #endif
         break;

@@ -529,7 +529,7 @@ namespace yae
       {
         av_log(NULL, AV_LOG_ERROR,
                "av_read_frame(%s) error %i: \"%s\"\n",
-               resourcePath_.c_str(), err, yae::av_strerr(err).c_str());
+               resourcePath_.c_str(), err, yae::av_errstr(err).c_str());
       }
     }
     else
@@ -634,7 +634,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_WARNING,
              "avformat_seek_file(%" PRId64 ") error %i: \"%s\"\n",
-             ts, err, yae::av_strerr(err).c_str());
+             ts, err, yae::av_errstr(err).c_str());
     }
 
     return err;
@@ -2895,7 +2895,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avio_open2(%s) error %i: \"%s\"\n",
-             output_path, err, yae::av_strerr(err).c_str());
+             output_path, err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return err;
     }
@@ -2906,7 +2906,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_header(%s) error %i: \"%s\"\n",
-             output_path, err, yae::av_strerr(err).c_str());
+             output_path, err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return err;
     }
@@ -2945,7 +2945,7 @@ namespace yae
       {
         av_log(NULL, AV_LOG_ERROR,
                "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
-               output_path, err, yae::av_strerr(err).c_str());
+               output_path, err, yae::av_errstr(err).c_str());
         YAE_ASSERT(false);
       }
     }
@@ -2955,7 +2955,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_trailer(%s) error %i: \"%s\"\n",
-             output_path, err, yae::av_strerr(err).c_str());
+             output_path, err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
     }
 
@@ -3998,7 +3998,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "convert_to(..) failed %i: \"%s\"\n",
-             err, yae::av_strerr(err).c_str());
+             err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4047,7 +4047,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_open2 error %i: \"%s\"\n",
-             err, yae::av_strerr(err).c_str());
+             err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4066,7 +4066,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_parameters_from_context error %i: \"%s\"\n",
-             err, yae::av_strerr(err).c_str());
+             err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4084,7 +4084,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avio_open2(%s) error %i: \"%s\"\n",
-             path.c_str(), err, yae::av_strerr(err).c_str());
+             path.c_str(), err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4099,7 +4099,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_header(%s) error %i: \"%s\"\n",
-             path.c_str(), err, yae::av_strerr(err).c_str());
+             path.c_str(), err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4115,7 +4115,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avcodec_send_frame error %i: \"%s\"\n",
-             err, yae::av_strerr(err).c_str());
+             err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }
@@ -4131,7 +4131,7 @@ namespace yae
         {
           av_log(NULL, AV_LOG_ERROR,
                  "avcodec_receive_packet error %i: \"%s\"\n",
-                 err, yae::av_strerr(err).c_str());
+                 err, yae::av_errstr(err).c_str());
           YAE_ASSERT(false);
         }
 
@@ -4150,7 +4150,7 @@ namespace yae
       {
         av_log(NULL, AV_LOG_ERROR,
                "av_interleaved_write_frame(%s) error %i: \"%s\"\n",
-               path.c_str(), err, yae::av_strerr(err).c_str());
+               path.c_str(), err, yae::av_errstr(err).c_str());
         YAE_ASSERT(false);
         return false;
       }
@@ -4164,7 +4164,7 @@ namespace yae
     {
       av_log(NULL, AV_LOG_ERROR,
              "avformat_write_trailer(%s) error %i: \"%s\"\n",
-             path.c_str(), err, yae::av_strerr(err).c_str());
+             path.c_str(), err, yae::av_errstr(err).c_str());
       YAE_ASSERT(false);
       return false;
     }

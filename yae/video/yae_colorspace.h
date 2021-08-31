@@ -9,7 +9,10 @@
 #ifndef YAE_COLORSPACE_H_
 #define YAE_COLORSPACE_H_
 
-// ffmpeg includes:
+// standard:
+#include <string>
+
+// ffmpeg:
 extern "C"
 {
 #include <libavutil/pixfmt.h>

@@ -285,6 +285,8 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_recording.h
   yae/video/yae_synchronous.cpp
   yae/video/yae_synchronous.h
+  yae/video/yae_texture_generator.cpp
+  yae/video/yae_texture_generator.h
   yae/video/yae_video.cpp
   yae/video/yae_video.h
   yae/video/yae_video_canvas.h

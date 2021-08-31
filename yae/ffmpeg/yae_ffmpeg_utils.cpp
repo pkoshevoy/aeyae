@@ -30,7 +30,9 @@ extern "C"
 }
 
 // aeyae:
+#include "yae_demuxer.h"
 #include "yae_ffmpeg_utils.h"
+#include "yae_track.h"
 #include "../utils/yae_time.h"
 
 // namespace shortcut:
@@ -125,10 +127,10 @@ namespace yae
   YAE_ENABLE_DEPRECATION_WARNINGS
 
   //----------------------------------------------------------------
-  // av_strerr
+  // av_errstr
   //
   std::string
-  av_strerr(int errnum)
+  av_errstr(int errnum)
   {
 #ifdef AV_ERROR_MAX_STRING_SIZE
     static const std::size_t buffer_size = AV_ERROR_MAX_STRING_SIZE;
@@ -593,6 +595,162 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AvFrm::hwframe_transfer_data
+  //
+  int
+  AvFrm::hwframe_transfer_data()
+  {
+    if (!frame_->hw_frames_ctx)
+    {
+      return 0;
+    }
+
+    AvFrm tmp;
+    int err = av_hwframe_transfer_data(tmp.frame_, frame_, 0);
+
+    if (err < 0)
+    {
+      yae_elog("av_hwframe_transfer_data failed, %s",
+               av_errstr(err).c_str());
+    }
+    else
+    {
+      av_frame_copy_props(tmp.frame_, frame_);
+      assign_frame(*frame_, *(tmp.frame_));
+    }
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::hwupload
+  //
+  int
+  AvFrm::hwupload(AVBufferRef * hw_frames_ctx)
+  {
+    if (hw_frames_ctx == frame_->hw_frames_ctx)
+    {
+      return 0;
+    }
+
+    YAE_ASSERT(hw_frames_ctx);
+    if (!hw_frames_ctx)
+    {
+      return AVERROR(ENOSYS);
+    }
+
+    const AVHWFramesContext * ctx =
+      (const AVHWFramesContext *)(hw_frames_ctx->data);
+
+    if (ctx->sw_format != get_pix_fmt() ||
+        ctx->width != frame_->width ||
+        ctx->height != frame_->height)
+    {
+      YAE_ASSERT(false);
+      return AVERROR(ENOSYS);
+    }
+
+    AvFrm tmp;
+    int err = av_hwframe_get_buffer(hw_frames_ctx, tmp.frame_, 0);
+    YAE_ASSERT(!err);
+
+    err = av_hwframe_transfer_data(tmp.frame_, frame_, 0);
+    YAE_ASSERT(!err);
+
+    if (!err)
+    {
+      av_frame_copy_props(tmp.frame_, frame_);
+      assign_frame(*frame_, *(tmp.frame_));
+    }
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::alloc_video_buffers
+  //
+  int
+  AvFrm::alloc_video_buffers(int format,
+                             int width,
+                             int height,
+                             int align)
+  {
+    int bufferSize = av_image_get_buffer_size((AVPixelFormat)format,
+                                              width,
+                                              height,
+                                              align);
+
+    YAE_ASSERT(!frame_->buf[0]);
+    frame_->buf[0] = av_buffer_alloc(bufferSize + AV_INPUT_BUFFER_PADDING_SIZE);
+    frame_->format = format;
+    frame_->width = width;
+    frame_->height = height;
+
+    return av_image_fill_arrays(frame_->data,
+                                frame_->linesize,
+                                frame_->buf[0]->data,
+                                (AVPixelFormat)format,
+                                width,
+                                height,
+                                align);
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::alloc_samples_buffer
+  //
+  int AvFrm::alloc_samples_buffer(int nb_channels,
+                                  int nb_samples,
+                                  AVSampleFormat sample_fmt,
+                                  int align)
+  {
+    int buf_size = av_samples_get_buffer_size(frame_->linesize,
+                                              nb_channels,
+                                              nb_samples,
+                                              sample_fmt,
+                                              align);
+    if (buf_size < 0)
+    {
+      return buf_size;
+    }
+
+    YAE_ASSERT(!frame_->buf[0]);
+    frame_->buf[0] = av_buffer_alloc(buf_size + AV_INPUT_BUFFER_PADDING_SIZE);
+    int err = av_samples_fill_arrays(frame_->data,
+                                     frame_->linesize,
+                                     frame_->buf[0]->data,
+                                     nb_channels,
+                                     nb_samples,
+                                     sample_fmt,
+                                     align);
+
+    frame_->format = sample_fmt;
+    frame_->channels = nb_channels;
+    frame_->nb_samples = nb_samples;
+
+    return err;
+  }
+
+  //----------------------------------------------------------------
+  // AvFrm::make_writable
+  //
+  int AvFrm::make_writable()
+  {
+    int err = 0;
+    if (!frame_->buf[0])
+    {
+      // first make it refcounted:
+      AvFrm tmp(*this);
+      err = av_frame_ref(frame_, tmp.frame_);
+      YAE_ASSERT(!err);
+    }
+
+    err = av_frame_make_writable(frame_);
+    YAE_ASSERT(!err);
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
   // AvFrmSpecs::AvFrmSpecs
   //
   AvFrmSpecs::AvFrmSpecs()
@@ -870,6 +1028,352 @@ namespace yae
     }
 
     return dst_specs;
+  }
+
+
+  //----------------------------------------------------------------
+  // make_avfrm
+  //
+  AvFrm
+  make_avfrm(AVPixelFormat pix_fmt,
+             int luma_w,
+             int luma_h,
+             AVColorSpace csp,
+             AVColorPrimaries pri,
+             AVColorTransferCharacteristic trc,
+             AVColorRange rng,
+             int par_num ,
+             int par_den,
+             unsigned char fill_luma,
+             unsigned char fill_chroma)
+  {
+    yae::AvFrm frm;
+    frm.alloc_video_buffers(pix_fmt, luma_w, luma_h);
+
+    AVFrame & frame = frm.get();
+    frame.colorspace = csp;
+    frame.color_primaries = pri;
+    frame.color_trc = trc;
+    frame.color_range = rng;
+    frame.sample_aspect_ratio.num = par_num;
+    frame.sample_aspect_ratio.den = par_den;
+    yae::add_missing_specs(frame, yae::guess_specs(frame));
+
+    const AVPixFmtDescriptor & desc = *(av_pix_fmt_desc_get(pix_fmt));
+    int chroma_h = AV_CEIL_RSHIFT(luma_h, desc.log2_chroma_h);
+
+    for (int i = 0; i < desc.nb_components; i++)
+    {
+      const AVComponentDescriptor & comp = desc.comp[i];
+      int h = i ? chroma_h : luma_h;
+      unsigned char fill = i ? fill_chroma : fill_luma;
+      memset(frame.data[comp.plane], fill, frame.linesize[comp.plane] * h);
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // save_as
+  //
+  bool
+  save_as(const std::string & path,
+          const yae::AvFrm & src,
+          const yae::TTime & frame_dur)
+  {
+    std::string url = al::starts_with(path, "file:") ? path : ("file:" + path);
+    yae::Rational framerate(frame_dur.base_, frame_dur.time_);
+    yae::Rational timebase(1, frame_dur.base_);
+
+    // setup output format:
+    yae::AvOutputContextPtr muxer_ptr(avformat_alloc_context());
+    AVFormatContext * muxer = muxer_ptr.get();
+    muxer->url = av_strndup(url.c_str(), url.size());
+    muxer->oformat = av_guess_format(NULL, path.c_str(), NULL);
+
+    AVCodecID codec_id =
+      al::ends_with(path, ".png") ? AV_CODEC_ID_PNG :
+      muxer->oformat->video_codec;
+
+    const AVCodec * codec = avcodec_find_encoder(codec_id);
+    if (!codec)
+    {
+      yae_elog("avcodec_find_encoder(%i) failed, %s\n",
+               muxer->oformat->video_codec, path.c_str());
+      return false;
+    }
+
+    yae::AvFrm frm = src;
+    AVFrame & frame = frm.get();
+    if (codec->pix_fmts && !yae::has(codec->pix_fmts, src.get_pix_fmt()))
+    {
+      // convert to pixel format supported by the encoder:
+      yae::AvFrmSpecs specs = src;
+      specs.format = codec->pix_fmts[0];
+      specs.colorspace = AVCOL_SPC_BT709;
+      specs.color_range = AVCOL_RANGE_JPEG;
+      specs.color_primaries = AVCOL_PRI_BT709;
+      specs.color_trc = AVCOL_TRC_BT709;
+
+      yae::VideoFilterGraph vf;
+      vf.setup(src, framerate, timebase, specs);
+
+      yae::AvFrm tmp = src;
+      vf.push(&tmp.get());
+      vf.push(NULL);
+
+      YAE_ASSERT(vf.pull(&frame, timebase));
+    }
+
+    // setup the encoder:
+    yae::AvCodecContextPtr encoder_ptr(avcodec_alloc_context3(codec));
+    if (!encoder_ptr)
+    {
+      yae_elog("avcodec_alloc_context3(%i) failed, %s\n",
+               muxer->oformat->video_codec, path.c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    AVCodecContext & encoder = *encoder_ptr;
+    encoder.bit_rate = frame.width * frame.height * 8;
+    // encoder.rc_max_rate = encoder.bit_rate * 2;
+    encoder.width = frame.width;
+    encoder.height = frame.height;
+    encoder.time_base.num = 1;
+    encoder.time_base.den = frame_dur.base_;
+    encoder.ticks_per_frame = frame_dur.time_;
+    encoder.framerate.num = frame_dur.base_;
+    encoder.framerate.den = frame_dur.time_;
+    encoder.gop_size = 1; // expressed as number of frames
+    encoder.max_b_frames = 0;
+    encoder.pix_fmt = (AVPixelFormat)(frame.format);
+    encoder.sample_aspect_ratio = frame.sample_aspect_ratio;
+
+    AVDictionary * encoder_opts = NULL;
+    int err = avcodec_open2(&encoder, codec, &encoder_opts);
+    av_dict_free(&encoder_opts);
+
+    if (err < 0)
+    {
+      yae_elog("avcodec_open2 error %i: \"%s\"\n",
+               err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // setup output streams:
+    AVStream * dst = avformat_new_stream(muxer, NULL);
+    dst->time_base.num = 1;
+    dst->time_base.den = frame_dur.base_;
+    dst->avg_frame_rate.num = frame_dur.base_;
+    dst->avg_frame_rate.den = frame_dur.time_;
+    dst->duration = 1;
+    dst->sample_aspect_ratio = frame.sample_aspect_ratio;
+
+    err = avcodec_parameters_from_context(dst->codecpar, &encoder);
+    if (err < 0)
+    {
+      yae_elog("avcodec_parameters_from_context error %i: \"%s\"\n",
+               err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // open the muxer:
+    AVDictionary * io_opts = NULL;
+    err = avio_open2(&(muxer->pb),
+                     path.c_str(),
+                     AVIO_FLAG_WRITE,
+                     NULL,
+                     &io_opts);
+    av_dict_free(&io_opts);
+
+    if (err < 0)
+    {
+      yae_elog("avio_open2(%s) error %i: \"%s\"\n",
+               path.c_str(), err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // write the header:
+    AVDictionary * muxer_opts = NULL;
+    av_dict_set_int(&muxer_opts, "update", 1, 0);
+    err = avformat_write_header(muxer, &muxer_opts);
+    av_dict_free(&muxer_opts);
+
+    if (err < 0)
+    {
+      yae_elog("avformat_write_header(%s) error %i: \"%s\"\n",
+               path.c_str(), err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    // send the frame to the encoder:
+    frame.key_frame = 1;
+    frame.pict_type = AV_PICTURE_TYPE_I;
+    frame.pts = av_rescale_q(frame.pts, timebase, dst->time_base);
+    err = avcodec_send_frame(&encoder, &frame);
+    if (err < 0)
+    {
+      yae_elog("avcodec_send_frame error %i: \"%s\"\n",
+               err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    while (!err)
+    {
+      yae::AvPkt pkt;
+      AVPacket & out = pkt.get();
+      err = avcodec_receive_packet(&encoder, &out);
+      if (err)
+      {
+        if (err < 0 && err != AVERROR(EAGAIN) && err != AVERROR_EOF)
+        {
+          yae_elog("avcodec_receive_packet error %i: \"%s\"\n",
+                   err, yae::av_errstr(err).c_str());
+          YAE_ASSERT(false);
+        }
+
+        break;
+      }
+
+      out.stream_index = dst->index;
+      out.dts = av_rescale_q(out.dts, encoder.time_base, dst->time_base);
+      out.pts = av_rescale_q(out.pts, encoder.time_base, dst->time_base);
+      out.duration = av_rescale_q(out.duration,
+                                  encoder.time_base,
+                                  dst->time_base);
+
+      err = av_interleaved_write_frame(muxer, &out);
+      if (err < 0)
+      {
+        yae_elog("av_interleaved_write_frame(%s) error %i: \"%s\"\n",
+                 path.c_str(), err, yae::av_errstr(err).c_str());
+        YAE_ASSERT(false);
+        return false;
+      }
+
+      // flush-out the encoder:
+      err = avcodec_send_frame(&encoder, NULL);
+    }
+
+    err = av_write_trailer(muxer);
+    if (err < 0)
+    {
+      yae_elog("avformat_write_trailer(%s) error %i: \"%s\"\n",
+               path.c_str(), err, yae::av_errstr(err).c_str());
+      YAE_ASSERT(false);
+      return false;
+    }
+
+    muxer_ptr.reset();
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // save_as_png
+  //
+  bool
+  save_as_png(const yae::AvFrm & frm,
+              const std::string & prefix,
+              const yae::TTime & frame_dur)
+  {
+    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
+    const AVFrame & frame = frm.get();
+
+    std::string path;
+    {
+      std::ostringstream oss;
+      oss << prefix
+          << pix_fmt_txt << '.'
+          << frame.width << '.'
+          << frame.height << ".png";
+      path = oss.str();
+    }
+
+    return save_as(path, frm, frame_dur);
+  }
+
+  //----------------------------------------------------------------
+  // make_hwframes_ctx
+  //
+  yae::AvBufferRef
+  make_hwframes_ctx(AVBufferRef * device_ctx_ref,
+                    int width,
+                    int height,
+                    AVPixelFormat sw_format)
+  {
+    if (!device_ctx_ref)
+    {
+      return yae::AvBufferRef();
+    }
+
+    yae::AvBufferRef hw(av_hwframe_ctx_alloc(device_ctx_ref));
+    AVHWFramesContext * hw_ctx = hw.get<AVHWFramesContext>();
+    if (!hw_ctx)
+    {
+      return yae::AvBufferRef();
+    }
+
+    int err = 0;
+    AVHWFramesConstraints * hw_caps =
+      av_hwdevice_get_hwframe_constraints(device_ctx_ref, NULL);
+
+    if (hw_caps &&
+        hw_caps->max_width >= width &&
+        hw_caps->max_height >= height)
+    {
+      hw_ctx->width = width;
+      hw_ctx->height = height;
+      hw_ctx->format = hw_caps->valid_hw_formats[0];
+
+      hw_ctx->sw_format = AV_PIX_FMT_NONE;
+      if (sw_format == AV_PIX_FMT_NONE)
+      {
+        hw_ctx->sw_format =
+          hw_caps->valid_sw_formats ?
+          hw_caps->valid_sw_formats[0] :
+          AV_PIX_FMT_NONE;
+      }
+      else
+      {
+        for (int i = 0; hw_caps->valid_sw_formats[i] != AV_PIX_FMT_NONE; i++)
+        {
+          if (hw_caps->valid_sw_formats[i] == sw_format)
+          {
+            hw_ctx->sw_format = sw_format;
+            break;
+          }
+        }
+      }
+
+      if (hw_ctx->sw_format != AV_PIX_FMT_NONE)
+      {
+        err = av_hwframe_ctx_init(hw.ref_);
+        YAE_ASSERT(!err);
+
+        if (err)
+        {
+          hw.reset();
+        }
+      }
+      else
+      {
+        hw.reset();
+      }
+    }
+
+    av_hwframe_constraints_free(&hw_caps);
+
+    if (!err)
+    {
+      return hw;
+    }
   }
 
 }

@@ -30,6 +30,7 @@ extern "C"
 // aeyae:
 #include "yae_pixel_formats.h"
 #include "../api/yae_api.h"
+#include "../utils/yae_linear_algebra.h"
 #include "../utils/yae_time.h"
 #include "../utils/yae_utils.h"
 #include "../video/yae_colorspace.h"
@@ -879,6 +880,15 @@ namespace yae
     return n;
   }
 
+  //----------------------------------------------------------------
+  // hsv_to_rgb
+  //
+  YAE_API v3x1_t hsv_to_rgb(const v3x1_t & HSV);
+
+  //----------------------------------------------------------------
+  // rgb_to_hsv
+  //
+  YAE_API v3x1_t rgb_to_hsv(const v3x1_t & RGB);
 
 }
 

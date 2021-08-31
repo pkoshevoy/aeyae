@@ -1253,7 +1253,7 @@ namespace yae
       av_log(NULL, AV_LOG_DEBUG,
              "avformat_seek_file (%s) returned %s (%i)",
              TTime(seekTime).to_hhmmss_ms().c_str(),
-             av_strerr(err).c_str(),
+             av_errstr(err).c_str(),
              err);
 #endif
 
@@ -1411,7 +1411,7 @@ namespace yae
           {
             av_log(NULL, AV_LOG_DEBUG,
                    "DemuxerReader::thread_loop, %s (%i)",
-                   av_strerr(err).c_str(), err);
+                   av_errstr(err).c_str(), err);
           }
 #endif
 

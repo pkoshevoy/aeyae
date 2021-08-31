@@ -722,7 +722,7 @@ namespace yae
 #ifndef NDEBUG
           else
           {
-            yae_elog("AVERROR: %s", yae::av_strerr(err).c_str());
+            yae_elog("AVERROR: %s", yae::av_errstr(err).c_str());
           }
 #endif
 
@@ -1272,7 +1272,7 @@ namespace yae
 #ifndef NDEBUG
       yae_debug
         << "avformat_seek_file (" << pos->to_str() << ") returned "
-        << yae::av_strerr(err)
+        << yae::av_errstr(err)
         << "\n";
 #endif
       return err;
