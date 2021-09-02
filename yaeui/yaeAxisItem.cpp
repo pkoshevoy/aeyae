@@ -77,7 +77,7 @@ namespace yae
     YAE_OGL_11(glVertex2d(r0, y1 - 1));
     YAE_OGL_11(glVertex2d(r1, y1 - 1));
 
-    for (std::size_t i = i0; i < i1; i++)
+    for (int i = i0; i < i1; i++)
     {
       double t = t0 - offset + double(i) * dt;
       double x = round(sx.get(t));
@@ -92,7 +92,7 @@ namespace yae
     int i00 = i0 - (i0 % mod_n);
     int i11 = i1 - (i1 % mod_n);
 
-    for (std::size_t i = i00; i <= i11; i += mod_n)
+    for (int i = i00; i <= i11; i += mod_n)
     {
       double t = t0 - offset + double(i) * dt;
       double x = round(sx.get(t));

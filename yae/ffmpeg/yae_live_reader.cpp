@@ -301,7 +301,7 @@ namespace yae
         }
 
         const AVStream * s =
-          (packet.stream_index < context->nb_streams) ?
+          ((unsigned int)(packet.stream_index) < context->nb_streams) ?
           context->streams[packet.stream_index] : NULL;
 
         if (s && stream && s->index != stream->index)

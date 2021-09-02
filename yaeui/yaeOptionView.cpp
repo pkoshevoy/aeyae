@@ -203,7 +203,7 @@ namespace yae
   void
   OptionView::set_selected(int index, bool is_done)
   {
-    if (index < options_.size())
+    if (index < int(options_.size()))
     {
       selected_ = index;
       emit option_selected(selected_);
@@ -222,8 +222,6 @@ namespace yae
   OptionView::sync_ui()
   {
     OptionView & view = *this;
-    const ItemViewStyle & style = *style_;
-    Item & root = *root_;
     Item & hidden = *hidden_;
     Item & panel = *panel_;
     panel.children_.clear();

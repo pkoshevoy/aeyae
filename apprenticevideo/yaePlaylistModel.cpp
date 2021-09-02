@@ -332,8 +332,8 @@ namespace yae
         int groupRow = -1;
         int itemRow = -1;
         playlist_.getCurrentItem(groupRow, itemRow);
-        return QVariant(parentGroup->row_ == groupRow &&
-                        item->row_ == itemRow);
+        return QVariant(int(parentGroup->row_) == groupRow &&
+                        int(item->row_) == itemRow);
       }
 
       if (role == kRoleSelected)

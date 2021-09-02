@@ -418,7 +418,7 @@ namespace yae
       for (TVideoTracks::const_iterator
              j = video_track_map.begin(); j != video_track_map.end(); ++j)
       {
-        int pid = j->first;
+        // int pid = j->first;
         const std::list<VideoTrackPtr> & video_tracks = j->second;
 
         for (std::list<VideoTrackPtr>::const_iterator
@@ -438,7 +438,7 @@ namespace yae
       for (TAudioTracks::const_iterator
              j = audio_track_map.begin(); j != audio_track_map.end(); ++j)
       {
-        int pid = j->first;
+        // int pid = j->first;
         const std::list<AudioTrackPtr> & audio_tracks = j->second;
 
         for (std::list<AudioTrackPtr>::const_iterator
@@ -458,7 +458,7 @@ namespace yae
       for (TSubttTracks::const_iterator
              j = subtt_track_map.begin(); j != subtt_track_map.end(); ++j)
       {
-        int pid = j->first;
+        // int pid = j->first;
         const std::list<SubttTrackPtr> & subtt_tracks = j->second;
 
         for (std::list<SubttTrackPtr>::const_iterator

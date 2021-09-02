@@ -902,11 +902,12 @@ namespace yae
     chapterMapper_(NULL),
 
     timelineTimer_(this),
-    enableBackArrowButton_(BoolRef::constant(false)),
-    enableDeleteFileButton_(BoolRef::constant(false)),
 
     scrollStart_(0.0),
-    scrollOffset_(0.0)
+    scrollOffset_(0.0),
+
+    enableBackArrowButton_(BoolRef::constant(false)),
+    enableDeleteFileButton_(BoolRef::constant(false))
   {
     init_actions();
     translate_ui();

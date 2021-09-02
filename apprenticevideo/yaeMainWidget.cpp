@@ -90,12 +90,12 @@ namespace yae
     actionSelectAll_(NULL),
     actionRemove_(NULL),
 
+    shortcutNext_(NULL),
+    shortcutPrev_(NULL),
+
     shortcutShowPlaylist_(NULL),
     shortcutSelectAll_(NULL),
     shortcutRemove_(NULL),
-
-    shortcutNext_(NULL),
-    shortcutPrev_(NULL),
 
     bookmarksGroup_(NULL),
     bookmarksMapper_(NULL),
@@ -1379,7 +1379,7 @@ namespace yae
       return false;
     }
 
-    IReader & reader = *reader_ptr;
+    // IReader & reader = *reader_ptr;
     PlayerView & player_view = PlayerWidget::view();
     bool start_from_zero_time = true;
     player_view.playback(reader_ptr, bookmark, start_from_zero_time);

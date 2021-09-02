@@ -192,7 +192,7 @@ namespace yae
       sp.sub_.rects = (AVSubtitleRect **)
         av_malloc_array(sub_.num_rects, sizeof(*(sub_.rects)));
 
-      for (int i = 0; i < sub_.num_rects; i++)
+      for (unsigned int i = 0; i < sub_.num_rects; i++)
       {
         sp.sub_.rects[i] = (AVSubtitleRect *)
           av_mallocz(sizeof(*(sub_.rects[0])));

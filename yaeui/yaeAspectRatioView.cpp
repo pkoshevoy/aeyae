@@ -150,7 +150,7 @@ namespace yae
     {
       std::size_t n = view_.options().size();
       double w = grid_.width();
-      double h = grid_.height();
+
       std::size_t rows = std::size_t(rows_.get());
       std::size_t cols = std::size_t(cols_.get());
       double size = size_.get();
@@ -196,7 +196,6 @@ namespace yae
     // virtual:
     void evaluate(double & result) const
     {
-      double w = grid_.width();
       double h = grid_.height();
       std::size_t rows = std::size_t(rows_.get());
       std::size_t cols = std::size_t(cols_.get());

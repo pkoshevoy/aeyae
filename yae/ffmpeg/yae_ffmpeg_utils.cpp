@@ -1741,10 +1741,7 @@ namespace yae
 
     av_hwframe_constraints_free(&hw_caps);
 
-    if (!err)
-    {
-      return hw;
-    }
+    return err ? yae::AvBufferRef() : hw;
   }
 
 }

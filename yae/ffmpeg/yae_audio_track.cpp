@@ -737,11 +737,11 @@ namespace yae
     int err = 0;
     if (stream_ && codecContext_)
     {
-      const AVCodec * codec = codecContext_->codec;
       AVCodecContext * ctx = codecContext_.get();
-
       avcodec_flush_buffers(ctx);
+
 #if 0
+      const AVCodec * codec = ctx->codec;
       avcodec_close(ctx);
       avcodec_parameters_to_context(ctx, stream_->codecpar);
       err = avcodec_open2(ctx, codec, NULL);
