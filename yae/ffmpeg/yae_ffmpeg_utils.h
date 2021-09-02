@@ -13,6 +13,7 @@
 #include "../api/yae_api.h"
 #include "../api/yae_log.h"
 #include "../api/yae_message_carrier_interface.h"
+#include "../video/yae_texture_generator.h"
 #include "../video/yae_video.h"
 
 // standard C++ library:
@@ -756,6 +757,16 @@ namespace yae
              int par_den = 1,
              unsigned char fill_luma = 0x7f,
              unsigned char fill_chroma = 0x7f);
+
+  //----------------------------------------------------------------
+  // make_textured_frame
+  //
+  YAE_API AvFrm
+  make_textured_frame(const TextureGenerator & tex_gen,
+                      AVPixelFormat pix_fmt,
+                      int luma_w,
+                      int luma_h,
+                      AVColorRange av_rng = AVCOL_RANGE_MPEG);
 
   //----------------------------------------------------------------
   // save_as

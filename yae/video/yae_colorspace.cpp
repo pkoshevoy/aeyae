@@ -754,6 +754,11 @@ namespace yae
     colorspace = new Colorspace(// name:
                                 key.c_str(),
 
+                                // ffmpeg color specs:
+                                av_csp,
+                                av_pri,
+                                av_trc,
+
                                 // primaries chromaticity coordinates:
                                 primaries.r_.x_, primaries.r_.y_,
                                 primaries.g_.x_, primaries.g_.y_,
@@ -778,6 +783,11 @@ namespace yae
   //
   Colorspace::Colorspace(const char * name,
 
+                         // corresponding ffmpeg color specs, if known:
+                         AVColorSpace av_csp,
+                         AVColorPrimaries av_pri,
+                         AVColorTransferCharacteristic av_trc,
+
                          // xyY coordinates of the primaries:
                          double rx, double ry,
                          double gx, double gy,
@@ -788,6 +798,9 @@ namespace yae
 
                          const TransferFunc & transfer):
     name_(name),
+    av_csp_(av_csp),
+    av_pri_(av_pri),
+    av_trc_(av_trc),
     r_(make_v3x1(rx, ry, 1.0)),
     g_(make_v3x1(gx, gy, 1.0)),
     b_(make_v3x1(bx, by, 1.0)),

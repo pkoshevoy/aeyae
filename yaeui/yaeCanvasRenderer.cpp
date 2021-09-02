@@ -2181,12 +2181,15 @@ namespace yae
       for (int i = 0; i < 1024; i++)
       {
         double y = double(i) / double(1023);
-        // y = dst_trc.eotf(y);
+        /*
+        y = dst_trc.eotf(y);
         y = src_trc.eotf(y);
 
         // tone mapping:
         // y *= 5.0;
 #if 0
+        y = tone_map(y, 10000.0, 100.0);
+#elif 0
         y = std::pow(y, gamma_inv);
 #elif 0
         y =
@@ -2195,6 +2198,7 @@ namespace yae
           y * std::pow(0.05 / peak, gamma_inv) / 0.05;
 #endif
         y = dst_trc.oetf(y);
+        */
         eotf_lut_[i] = std::min(1.f, std::max(0.f, float(y)));
       }
 

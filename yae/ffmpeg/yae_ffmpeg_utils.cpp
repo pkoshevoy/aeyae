@@ -1074,6 +1074,377 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // make_444
+  //
+  template <typename TData>
+  static AvFrm
+  make_rgb(const TextureGenerator & tex_gen,
+           AVPixelFormat pix_fmt,
+           int luma_w,
+           int luma_h)
+  {
+    // shortcuts:
+    const Colorspace & colorspace = *tex_gen.colorspace();
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    YAE_ASSERT(desc);
+
+    const bool is_rgb = desc ? yae::is_rgb(*desc) : false;
+    YAE_ASSERT(is_rgb);
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const double c1 = ~((~0) << luma.depth);
+
+    yae::AvFrm frm =
+      make_avfrm(pix_fmt,
+                 luma_w,
+                 luma_h,
+                 colorspace.av_csp_,
+                 colorspace.av_pri_,
+                 colorspace.av_trc_,
+                 AVCOL_RANGE_JPEG);
+
+    // shortcut:
+    AVFrame & frame = frm.get();
+
+    for (int row = 0; row < luma_h; row++)
+    {
+      uint8_t * rr = (frame.data[0] + row * frame.linesize[0] +
+                      desc->comp[0].offset);
+
+      uint8_t * gr = (frame.data[1] + row * frame.linesize[1] +
+                      desc->comp[1].offset);
+
+      uint8_t * br = (frame.data[2] + row * frame.linesize[2] +
+                      desc->comp[2].offset);
+
+      for (int col = 0; col < luma_w; col++)
+      {
+        v3x1_t rgb = tex_gen.get_rgb(row, col);
+        uint32_t r = uint32_t(c1 * rgb[0]);
+        uint32_t g = uint32_t(c1 * rgb[1]);
+        uint32_t b = uint32_t(c1 * rgb[2]);
+
+        *((TData *)(rr + col * desc->comp[0].step)) = r << luma.shift;
+        *((TData *)(gr + col * desc->comp[1].step)) = g << luma.shift;
+        *((TData *)(br + col * desc->comp[2].step)) = b << luma.shift;
+      }
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // make_444
+  //
+  template <typename TData>
+  static AvFrm
+  make_444(const TextureGenerator & tex_gen,
+           AVPixelFormat pix_fmt,
+           int luma_w,
+           int luma_h,
+           AVColorRange av_rng)
+  {
+    // shortcuts:
+    const Colorspace & colorspace = *tex_gen.colorspace();
+    const bool full_rng = av_rng == AVCOL_RANGE_JPEG;
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    YAE_ASSERT(desc);
+
+    const bool is_ycbcr = desc ? yae::is_ycbcr(*desc) : false;
+    YAE_ASSERT(is_ycbcr);
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const unsigned int full_luma = ~((~0) << luma.depth);
+    const unsigned int depth_8 = luma.depth - 8;
+
+    // min luma:
+    const double y0 = full_rng ? 0 : (16 << depth_8);
+
+    // max luma:
+    const double y1 = full_rng ? full_luma : (235 << depth_8);
+
+    // max chroma:
+    const double c1 = full_rng ? full_luma : (240 << depth_8);
+
+    yae::AvFrm frm =
+      make_avfrm(pix_fmt,
+                 luma_w,
+                 luma_h,
+                 colorspace.av_csp_,
+                 colorspace.av_pri_,
+                 colorspace.av_trc_,
+                 full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
+
+    // shortcut:
+    AVFrame & frame = frm.get();
+
+    for (int row = 0; row < luma_h; row++)
+    {
+      uint8_t * yr = (frame.data[0] + row * frame.linesize[0] +
+                      desc->comp[0].offset);
+
+      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+                      desc->comp[1].offset);
+
+      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+                      desc->comp[2].offset);
+
+      for (int col = 0; col < luma_w; col++)
+      {
+        v3x1_t ypbpr = tex_gen.get_ypbpr(row, col);
+        uint32_t y = uint32_t(y0 + (y1 - y0) * (ypbpr[0]));
+        uint32_t u = uint32_t(y0 + (c1 - y0) * (ypbpr[1] + 0.5));
+        uint32_t v = uint32_t(y0 + (c1 - y0) * (ypbpr[2] + 0.5));
+
+        *((TData *)(yr + col * desc->comp[0].step)) = y << luma.shift;
+        *((TData *)(ur + col * desc->comp[1].step)) = u << luma.shift;
+        *((TData *)(vr + col * desc->comp[2].step)) = v << luma.shift;
+      }
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // make_422
+  //
+  template <typename TData>
+  static AvFrm
+  make_422(const TextureGenerator & tex_gen,
+           AVPixelFormat pix_fmt,
+           int luma_w,
+           int luma_h,
+           AVColorRange av_rng)
+  {
+    // shortcuts:
+    const Colorspace & colorspace = *tex_gen.colorspace();
+    const bool full_rng = av_rng == AVCOL_RANGE_JPEG;
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    YAE_ASSERT(desc);
+
+    const bool is_ycbcr = desc ? yae::is_ycbcr(*desc) : false;
+    YAE_ASSERT(is_ycbcr);
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const unsigned int full_luma = ~((~0) << luma.depth);
+    const unsigned int depth_8 = luma.depth - 8;
+
+    // min luma:
+    const double y0 = full_rng ? 0 : (16 << depth_8);
+
+    // max luma:
+    const double y1 = full_rng ? full_luma : (235 << depth_8);
+
+    // max chroma:
+    const double c1 = full_rng ? full_luma : (240 << depth_8);
+
+    yae::AvFrm frm =
+      make_avfrm(pix_fmt,
+                 luma_w,
+                 luma_h,
+                 colorspace.av_csp_,
+                 colorspace.av_pri_,
+                 colorspace.av_trc_,
+                 full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
+
+    // shortcut:
+    AVFrame & frame = frm.get();
+    const int chroma_w = luma_w >> 1;
+
+    for (int row = 0; row < luma_h; row++)
+    {
+      uint8_t * yr = (frame.data[0] + row * frame.linesize[0] +
+                      desc->comp[0].offset);
+
+      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+                      desc->comp[1].offset);
+
+      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+                      desc->comp[2].offset);
+
+      for (int col = 0; col < chroma_w; col++)
+      {
+        // luma colums:
+        int col_0 = col << 1;
+        int col_1 = col_0 + 1;
+
+        v3x1_t ypbpr_00 = tex_gen.get_ypbpr(row, col_0);
+        v3x1_t ypbpr_01 = tex_gen.get_ypbpr(row, col_1);
+
+        uint32_t y_00 = uint32_t(y0 + (y1 - y0) * (ypbpr_00[0]));
+        uint32_t y_01 = uint32_t(y0 + (y1 - y0) * (ypbpr_01[0]));
+
+        uint32_t u = uint32_t(y0 + (c1 - y0) * ((ypbpr_00[1] +
+                                                 ypbpr_01[1]) * 0.5 +
+                                                0.5));
+
+        uint32_t v = uint32_t(y0 + (c1 - y0) * ((ypbpr_00[2] +
+                                                 ypbpr_01[2]) * 0.5 +
+                                                0.5));
+
+        *((TData *)(yr + col_0 * desc->comp[0].step)) = y_00 << luma.shift;
+        *((TData *)(yr + col_1 * desc->comp[0].step)) = y_01 << luma.shift;
+
+        *((TData *)(ur + col * desc->comp[1].step)) = u << luma.shift;
+        *((TData *)(vr + col * desc->comp[2].step)) = v << luma.shift;
+      }
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // make_420
+  //
+  template <typename TData>
+  static AvFrm
+  make_420(const TextureGenerator & tex_gen,
+           AVPixelFormat pix_fmt,
+           int luma_w,
+           int luma_h,
+           AVColorRange av_rng)
+  {
+    // shortcuts:
+    const Colorspace & colorspace = *tex_gen.colorspace();
+    const bool full_rng = av_rng == AVCOL_RANGE_JPEG;
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    YAE_ASSERT(desc);
+
+    const bool is_ycbcr = desc ? yae::is_ycbcr(*desc) : false;
+    YAE_ASSERT(is_ycbcr);
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const unsigned int full_luma = ~((~0) << luma.depth);
+    const unsigned int depth_8 = luma.depth - 8;
+
+    // min luma:
+    const double y0 = full_rng ? 0 : (16 << depth_8);
+
+    // max luma:
+    const double y1 = full_rng ? full_luma : (235 << depth_8);
+
+    // max chroma:
+    const double c1 = full_rng ? full_luma : (240 << depth_8);
+
+    yae::AvFrm frm =
+      make_avfrm(pix_fmt,
+                 luma_w,
+                 luma_h,
+                 colorspace.av_csp_,
+                 colorspace.av_pri_,
+                 colorspace.av_trc_,
+                 full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
+
+    // shortcut:
+    AVFrame & frame = frm.get();
+
+    const int chroma_w = luma_w >> 1;
+    const int chroma_h = luma_h >> 1;
+
+    for (int row = 0; row < chroma_h; row++)
+    {
+      // luma rows:
+      int row_0 = row << 1;
+      int row_1 = row_0 + 1;
+
+      uint8_t * yr_0 = (frame.data[0] + row_0 * frame.linesize[0] +
+                        desc->comp[0].offset);
+
+      uint8_t * yr_1 = (frame.data[0] + row_1 * frame.linesize[0] +
+                        desc->comp[0].offset);
+
+      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+                      desc->comp[1].offset);
+
+      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+                      desc->comp[2].offset);
+
+      for (int col = 0; col < chroma_w; col++)
+      {
+        // luma colums:
+        int col_0 = col << 1;
+        int col_1 = col_0 + 1;
+
+        v3x1_t ypbpr_00 = tex_gen.get_ypbpr(row_0, col_0);
+        v3x1_t ypbpr_01 = tex_gen.get_ypbpr(row_0, col_1);
+        v3x1_t ypbpr_10 = tex_gen.get_ypbpr(row_1, col_0);
+        v3x1_t ypbpr_11 = tex_gen.get_ypbpr(row_1, col_1);
+
+        uint32_t y_00 = uint32_t(y0 + (y1 - y0) * (ypbpr_00[0]));
+        uint32_t y_01 = uint32_t(y0 + (y1 - y0) * (ypbpr_01[0]));
+        uint32_t y_10 = uint32_t(y0 + (y1 - y0) * (ypbpr_10[0]));
+        uint32_t y_11 = uint32_t(y0 + (y1 - y0) * (ypbpr_11[0]));
+
+        uint32_t u = uint32_t(y0 + (c1 - y0) * ((ypbpr_00[1] +
+                                                 ypbpr_01[1] +
+                                                 ypbpr_10[1] +
+                                                 ypbpr_11[1]) * 0.25 +
+                                                0.5));
+        uint32_t v = uint32_t(y0 + (c1 - y0) * ((ypbpr_00[2] +
+                                                 ypbpr_01[2] +
+                                                 ypbpr_10[2] +
+                                                 ypbpr_11[2]) * 0.25 +
+                                                0.5));
+
+        *((TData *)(yr_0 + col_0 * desc->comp[0].step)) = y_00 << luma.shift;
+        *((TData *)(yr_0 + col_1 * desc->comp[0].step)) = y_01 << luma.shift;
+        *((TData *)(yr_1 + col_0 * desc->comp[0].step)) = y_10 << luma.shift;
+        *((TData *)(yr_1 + col_1 * desc->comp[0].step)) = y_11 << luma.shift;
+
+        *((TData *)(ur + col * desc->comp[1].step)) = u << luma.shift;
+        *((TData *)(vr + col * desc->comp[2].step)) = v << luma.shift;
+      }
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // make_textured_frame
+  //
+  AvFrm
+  make_textured_frame(const TextureGenerator & tex_gen,
+                      AVPixelFormat pix_fmt,
+                      int luma_w,
+                      int luma_h,
+                      AVColorRange av_rng)
+  {
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(pix_fmt);
+    YAE_ASSERT(desc);
+
+    const bool is_ycbcr = desc ? yae::is_ycbcr(*desc) : false;
+    const AVComponentDescriptor & luma = desc->comp[0];
+    const int depth = luma.depth + luma.shift;
+
+    YAE_ASSERT(desc->log2_chroma_h < 2);
+    const bool subsample_rows = desc->log2_chroma_h == 1;
+
+    YAE_ASSERT(desc->log2_chroma_h < 2);
+    const bool subsample_cols = desc->log2_chroma_h == 1;
+
+    return
+      (depth == 8) ?
+
+      (subsample_cols ?
+       (subsample_rows ?
+        make_420<uint8_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng) :
+        make_422<uint8_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng)) :
+
+       (is_ycbcr ?
+        make_444<uint8_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng) :
+        make_rgb<uint8_t>(tex_gen, pix_fmt, luma_w, luma_h))) :
+
+      (subsample_cols ?
+       (subsample_rows ?
+        make_420<uint16_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng) :
+        make_422<uint16_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng)) :
+
+       (is_ycbcr ?
+        make_444<uint16_t>(tex_gen, pix_fmt, luma_w, luma_h, av_rng) :
+        make_rgb<uint16_t>(tex_gen, pix_fmt, luma_w, luma_h)));
+  }
+
+  //----------------------------------------------------------------
   // save_as
   //
   bool

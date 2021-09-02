@@ -53,7 +53,9 @@ namespace yae
   //----------------------------------------------------------------
   // ColorbarsGenerator::ColorbarsGenerator
   //
-  ColorbarsGenerator::ColorbarsGenerator(int luma_w, int luma_h, const Colorspace * csp):
+  ColorbarsGenerator::ColorbarsGenerator(int luma_w,
+                                         int luma_h,
+                                         const Colorspace * csp):
     TextureGenerator(luma_w, luma_h, csp),
     ww_((luma_w + 1) >> 1),
     hh_((luma_h + 1) >> 1)
@@ -314,9 +316,7 @@ namespace yae
     v3x1_t ypbpr = get_ypbpr(row, col);
     v3x1_t rgb = csp_->ypbpr_to_rgb_ * ypbpr;
 
-    // not all YUV values can be represented in RGB due to clipping.
-    // to avoid expected:actual mismatches we should pre-clip the YUV
-    // values.
+    // not all YUV values can be represented in RGB due to clipping:
     rgb = yae::clip(rgb, 0.0, 1.0);
 
     return rgb;
@@ -357,15 +357,14 @@ namespace yae
     double t = double(row >> 1) / double((luma_h_ >> 1) - 1);
     double s = double(col >> 1) / double((luma_w_ >> 1) - 1);
 
-    // not all YUV values can be represented in RGB due to clipping.
-    // to avoid expected:actual mismatches we should pre-clip the YUV
-    // values.
     v3x1_t ypbpr = make_v3x1(t, s - 0.5, t - 0.5);
 
     // rotate chroma:
     ypbpr = rotate_chroma_ * ypbpr;
 
     v3x1_t rgb = csp_->ypbpr_to_rgb_ * ypbpr;
+
+    // not all YUV values can be represented in RGB due to clipping:
     rgb = yae::clip(rgb, 0.0, 1.0);
 
     return rgb;

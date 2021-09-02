@@ -178,6 +178,11 @@ namespace yae
     // from the Y row of the RGB to XYZ matrix:
     Colorspace(const char * name,
 
+               // corresponding ffmpeg color specs, if known:
+               AVColorSpace av_csp,
+               AVColorPrimaries av_pri,
+               AVColorTransferCharacteristic av_trc,
+
                // xyY coordinates of the primaries:
                double rx, double ry,
                double gx, double gy,
@@ -196,13 +201,18 @@ namespace yae
 
     const std::string name_;
 
+    // corresponding ffmpeg color specs, if known:
+    const AVColorSpace av_csp_;
+    const AVColorPrimaries av_pri_;
+    const AVColorTransferCharacteristic av_trc_;
+
     // xyY coordinates of the primaries:
-    v3x1_t r_;
-    v3x1_t g_;
-    v3x1_t b_;
+    const v3x1_t r_;
+    const v3x1_t g_;
+    const v3x1_t b_;
 
     // xyY coordinates of the reference white point:
-    v3x1_t w_;
+    const v3x1_t w_;
 
     // linear RGB transforms:
     m3x3_t rgb_to_xyz_;
