@@ -82,6 +82,10 @@ namespace yae
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
     YAE_OGL_11(glDeleteTextures(1, &texId));
     YAE_OGL_11(glGenTextures(1, &texId));
+    if (!texId)
+    {
+      return false;
+    }
 
     YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId));
     if (!YAE_OGL_11(glIsTexture(texId)))

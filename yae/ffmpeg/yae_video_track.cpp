@@ -17,6 +17,7 @@
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_texture_generator.h"
 
 // namespace shortcuts:
 namespace al = boost::algorithm;
@@ -455,6 +456,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // FrameGen
+  //
+  struct FrameGen
+  {
+    AvFrm get(const AvFrm & src) const
+    {
+      const AVFrame & frame = src.get();
+      const AVPixelFormat pix_fmt = src.get_pix_fmt();
+      const char * pix_fmt_name = av_get_pix_fmt_name(pix_fmt);
+      const Colorspace * csp = Colorspace::get(frame.colorspace,
+                                               frame.color_primaries,
+                                               frame.color_trc);
+      std::string key = yae::strfmt("%04ix%04i, %s, %s",
+                                    frame.width,
+                                    frame.height,
+                                    pix_fmt_name,
+                                    csp->name_.c_str());
+      AvFrm & frm = cache_[key];
+      if (!frm.has_data())
+      {
+        ColorbarsGenerator tex_gen(frame.width, frame.height, csp);
+        frm = make_textured_frame(tex_gen,
+                                  pix_fmt,
+                                  frame.width,
+                                  frame.height,
+                                  frame.color_range);
+        save_as_png(frm, std::string("/tmp/tex_gen_"), TTime(1, 60));
+      }
+
+      av_frame_copy_props(&frm.get(), &src.get());
+      return frm;
+    }
+
+    mutable std::map<std::string, AvFrm> cache_;
+  };
+
+  //----------------------------------------------------------------
   // VideoTrack::handle
   //
   void
@@ -464,7 +502,14 @@ namespace yae
 
     try
     {
+#if 0
+      // for debugging Colorspace and frame utils:
+      static const FrameGen frameGen;
+      AvFrm decodedFrameCopy = frameGen.get(decodedFrame);
+#else
       AvFrm decodedFrameCopy(decodedFrame);
+#endif
+
       AVFrame & decoded = decodedFrameCopy.get();
       framesDecoded_++;
 
