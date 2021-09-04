@@ -2970,11 +2970,11 @@ namespace yae
       std::size_t body_end = bin.position_plus_nbytes(n_bytes);
 
       reserved1_ = bin.read(3);
-      YAE_THROW_IF(reserved1_ != 0x7);
+      // YAE_THROW_IF(reserved1_ != 0x7);
 
       pcr_pid_ = bin.read(13);
       reserved2_ = bin.read(4);
-      YAE_THROW_IF(reserved2_ != 0xF);
+      // YAE_THROW_IF(reserved2_ != 0xF);
 
       program_info_length_ = bin.read(12);
       descriptor_.clear();
@@ -3015,11 +3015,11 @@ namespace yae
     {
       stream_type_ = bin.read(8);
       reserved1_ = bin.read(3);
-      YAE_THROW_IF(reserved1_ != 0x7);
+      // YAE_THROW_IF(reserved1_ != 0x7);
 
       elementary_pid_ = bin.read(13);
       reserved2_ = bin.read(4);
-      YAE_THROW_IF(reserved2_ != 0xF);
+      // YAE_THROW_IF(reserved2_ != 0xF);
 
       es_info_length_ = bin.read(12);
       descriptor_.clear();
@@ -3136,11 +3136,11 @@ namespace yae
     {
       table_type_ = bin.read(16);
       reserved1_ = bin.read(3);
-      YAE_THROW_IF(reserved1_ != 0x7);
+      // YAE_THROW_IF(reserved1_ != 0x7);
 
       table_type_pid_ = bin.read(13);
       reserved2_ = bin.read(3);
-      YAE_THROW_IF(reserved2_ != 0x7);
+      // YAE_THROW_IF(reserved2_ != 0x7);
 
       table_type_version_number_ = bin.read(5);
       number_bytes_ = bin.read(32);
@@ -3195,7 +3195,7 @@ namespace yae
             (channel.path_selected_ << 1) |
             (channel.out_of_band_);
 
-          YAE_THROW_IF(reserved != 0x3);
+          // YAE_THROW_IF(reserved != 0x3);
         }
       }
 
@@ -5100,7 +5100,7 @@ namespace yae
       // fields, if present, a valid value shall be encoded.
       //
       // The continuity_counter in a particular transport stream packet
-      /// is continuous when it differs by a positive value of one
+      // is continuous when it differs by a positive value of one
       // from the continuity_counter value in the previous transport stream
       // packet of the same PID, or when either of the non-incrementing
       // conditions (adaptation_field_control set to '00' or '10',
@@ -5130,7 +5130,10 @@ namespace yae
         if (pkt.continuity_counter_ != expected)
         {
           // discontinuity detected, dump the payload:
-          yae_wlog("%sdetected TSPacket discontinuity", log_prefix_.c_str());
+          yae_wlog("%sdetected TSPacket discontinuity, prev: %u, curr: %u",
+                   log_prefix_.c_str(),
+                   prev.continuity_counter_,
+                   pkt.continuity_counter_);
           pes_[pkt.pid_].clear();
         }
       }

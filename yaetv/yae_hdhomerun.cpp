@@ -46,6 +46,10 @@ extern "C" {
 // namespace shortcut:
 namespace fs = boost::filesystem;
 
+//----------------------------------------------------------------
+// YAE_DUMP_STREAM_TO_DISK
+//
+// #define YAE_DUMP_STREAM_TO_DISK
 
 
 //----------------------------------------------------------------
@@ -804,6 +808,15 @@ namespace yae
     hdhomerun_device_t * hd = session.hd_ptr_.get();
     yae::shared_ptr<StopStream> stop_stream;
 
+#ifdef YAE_DUMP_STREAM_TO_DISK
+    std::string fn = (fs::path(cache_dir_) /
+                      ("yaetv-" + device_name + "-" +
+                       tuner_name + "-" +
+                       frequency + ".mpg")).string();
+    yae_dlog("%p capturing stream to %s", this, fn.c_str());
+    TOpenFile out(fn, "wb");
+#endif
+
     try
     {
       std::string channel = "auto:" + frequency;
@@ -875,7 +888,6 @@ namespace yae
         SetThreadExecutionState(ES_SYSTEM_REQUIRED);
 #endif
 
-        static const std::size_t buffer_size_1s = VIDEO_DATA_BUFFER_SIZE_1S;
         std::size_t buffer_size = 0;
         uint8_t * buffer = NULL;
         {
@@ -884,7 +896,7 @@ namespace yae
                                       "hdhomerun_device_stream_recv");
 
           buffer = hdhomerun_device_stream_recv(hd,
-                                                buffer_size_1s,
+                                                VIDEO_DATA_BUFFER_SIZE_1S,
                                                 &buffer_size);
         }
 
@@ -911,6 +923,9 @@ namespace yae
 
         if (buffer)
         {
+#ifdef YAE_DUMP_STREAM_TO_DISK
+          out.write(buffer, buffer_size);
+#endif
           yae::Timesheet::Probe probe(session.timesheet_,
                                       "HDHomeRun::Private::capture",
                                       "stream.push");
@@ -942,7 +957,7 @@ namespace yae
             break;
           }
 
-          msleep_approx(64);
+          msleep_approx(15);
         }
       }
     }
