@@ -1246,6 +1246,11 @@ namespace yae
             continue;
           }
 
+          if (pkt.is_null_packet())
+          {
+            continue;
+          }
+
           ctx.push(pkt);
 
           yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);

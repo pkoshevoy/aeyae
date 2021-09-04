@@ -39,6 +39,12 @@
 #include <boost/thread/thread.hpp>
 #endif
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavutil/md5.h>
+}
+
 // aeyae:
 #include "yae/api/yae_log.h"
 #include "yae/api/yae_version.h"
@@ -153,7 +159,9 @@ namespace yae
   // parse_mpeg_ts
   //
   static void
-  parse_mpeg_ts(const char * fn, const char * dst_path, std::size_t pkt_size = 188)
+  parse_mpeg_ts(const char * fn,
+                const char * dst_path,
+                std::size_t pkt_size = 188)
   {
     yae::TOpenFile src(fn, "rb");
     YAE_THROW_IF(!src.is_open());
@@ -232,6 +240,84 @@ namespace yae
     }
 
     handler.ctx_.dump();
+  }
+
+  //----------------------------------------------------------------
+  // calc_pkt_md5
+  //
+  static void
+  calc_pkt_md5(const char * fn,
+               const char * dst_path,
+               std::size_t pkt_size = 188)
+  {
+    yae::TOpenFile src(fn, "rb");
+    YAE_THROW_IF(!src.is_open());
+
+    std::string fn_pos = std::string(dst_path) + ".pkt-pos";
+    yae::TOpenFile dst_pos(fn_pos.c_str(), "wb");
+    YAE_THROW_IF(!dst_pos.is_open());
+
+    std::string fn_md5 = std::string(dst_path) + ".pkt-md5";
+    yae::TOpenFile dst_md5(fn_md5.c_str(), "wb");
+    YAE_THROW_IF(!dst_md5.is_open());
+
+    unsigned char md5[16] = { 0 };
+    while (!src.is_eof())
+    {
+      yae::Data data(12 + 7 * pkt_size);
+      uint64_t pos = yae::ftell64(src.file_);
+
+      std::size_t n = src.read(data.get(), data.size());
+      if (n < pkt_size)
+      {
+        break;
+      }
+
+      data.truncate(n);
+
+      std::size_t offset = 0;
+      while (offset + pkt_size <= n)
+      {
+        // find to the the sync byte:
+        if (data[offset] == 0x47 &&
+            (n - offset == pkt_size || data[offset + pkt_size] == 0x47))
+        {
+          av_md5_sum(md5, data + offset, pkt_size - 1);
+
+          fprintf(dst_pos.file_, "%08x\n", pos + offset);
+          fprintf(dst_md5.file_,
+                  "%02x%02x%02x%02x "
+                  "%02x%02x%02x%02x "
+                  "%02x%02x%02x%02x "
+                  "%02x%02x%02x%02x\n",
+                  md5[0],
+                  md5[1],
+                  md5[2],
+                  md5[3],
+                  md5[4],
+                  md5[5],
+                  md5[6],
+                  md5[7],
+                  md5[8],
+                  md5[9],
+                  md5[10],
+                  md5[11],
+                  md5[12],
+                  md5[13],
+                  md5[14],
+                  md5[15]);
+
+          // skip to next packet:
+          offset += pkt_size;
+        }
+        else
+        {
+          offset++;
+        }
+      }
+
+      yae::fseek64(src.file_, pos + offset, SEEK_SET);
+    }
   }
 
   //----------------------------------------------------------------
@@ -532,14 +618,20 @@ namespace yae
   {
     std::cerr
       << "\nUSAGE:\n"
-      << argv
-      << " -b " << (fs::path("path") / "to" / "storage" / "yaetv").string()
-      << " [--parse "
+      << argv[0]
+      << " \\\n [--no-ui]"
+      << " \\\n [-b|--base-dir "
+      << (fs::path("path") / "to" / "storage" / "yaetv").string()
+      << "] \\\n [--pkt-size 188|192|204] "
+      << " \\\n [--pkt-md5 "
+      << (fs::path("path") / "to" / "file.mpg").string()
+      << " ["
+      << (fs::path("output") / "path").string()
+      << "]] \\\n [--parse "
       << (fs::path("path") / "to" / "file.mpg").string()
       << " "
-      << (fs::path("output") / "path").string() << "]"
-      << " [--no-ui]"
-      << "\n";
+      << (fs::path("output") / "path").string()
+      << "]\n";
 
     std::cerr
       << "\nVERSION: " << YAE_REVISION
@@ -599,7 +691,8 @@ namespace yae
 
     for (int i = 1; i < argc; i++)
     {
-      if (strcmp(argv[i], "-b") == 0)
+      if (strcmp(argv[i], "-b") == 0 ||
+          strcmp(argv[i], "--base-dir") == 0)
       {
         if (argc <= i + 1)
         {
@@ -624,6 +717,18 @@ namespace yae
 
         ++i;
         pkt_size = boost::lexical_cast<std::size_t>(argv[i]);
+      }
+      else if (strcmp(argv[i], "--pkt-md5") == 0)
+      {
+        const char * out_path = argv[i + 1];
+        if (i + 2 < argc)
+        {
+          out_path = argv[i + 2];
+          return i;
+        }
+
+        calc_pkt_md5(argv[i + 1], out_path, pkt_size);
+        return 0;
       }
       else if (strcmp(argv[i], "--parse") == 0)
       {
