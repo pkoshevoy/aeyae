@@ -2235,7 +2235,7 @@ namespace yae
   //----------------------------------------------------------------
   // TBaseCanvas::clearFrame
   //
-  bool
+  void
   TBaseCanvas::clearFrame()
   {
     if (eotf_tex_id_)

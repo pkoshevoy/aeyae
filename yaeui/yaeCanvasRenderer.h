@@ -488,7 +488,7 @@ namespace yae
                   bool & colorSpaceOrRangeChanged);
 
     // helper:
-    bool clearFrame();
+    void clearFrame();
 
     mutable boost::mutex mutex_;
     TVideoFramePtr frame_;
