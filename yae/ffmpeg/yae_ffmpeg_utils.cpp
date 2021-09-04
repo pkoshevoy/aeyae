@@ -1105,16 +1105,19 @@ namespace yae
 
     // shortcut:
     AVFrame & frame = frm.get();
+    const int r_plane = desc->comp[0].plane;
+    const int g_plane = desc->comp[1].plane;
+    const int b_plane = desc->comp[2].plane;
 
     for (int row = 0; row < luma_h; row++)
     {
-      uint8_t * rr = (frame.data[0] + row * frame.linesize[0] +
+      uint8_t * rr = (frame.data[r_plane] + row * frame.linesize[r_plane] +
                       desc->comp[0].offset);
 
-      uint8_t * gr = (frame.data[1] + row * frame.linesize[1] +
+      uint8_t * gr = (frame.data[g_plane] + row * frame.linesize[g_plane] +
                       desc->comp[1].offset);
 
-      uint8_t * br = (frame.data[2] + row * frame.linesize[2] +
+      uint8_t * br = (frame.data[b_plane] + row * frame.linesize[b_plane] +
                       desc->comp[2].offset);
 
       for (int col = 0; col < luma_w; col++)
@@ -1177,16 +1180,19 @@ namespace yae
 
     // shortcut:
     AVFrame & frame = frm.get();
+    const int y_plane = desc->comp[0].plane;
+    const int u_plane = desc->comp[1].plane;
+    const int v_plane = desc->comp[2].plane;
 
     for (int row = 0; row < luma_h; row++)
     {
-      uint8_t * yr = (frame.data[0] + row * frame.linesize[0] +
+      uint8_t * yr = (frame.data[y_plane] + row * frame.linesize[y_plane] +
                       desc->comp[0].offset);
 
-      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+      uint8_t * ur = (frame.data[u_plane] + row * frame.linesize[u_plane] +
                       desc->comp[1].offset);
 
-      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+      uint8_t * vr = (frame.data[v_plane] + row * frame.linesize[v_plane] +
                       desc->comp[2].offset);
 
       for (int col = 0; col < luma_w; col++)
@@ -1250,16 +1256,19 @@ namespace yae
     // shortcut:
     AVFrame & frame = frm.get();
     const int chroma_w = luma_w >> 1;
+    const int y_plane = desc->comp[0].plane;
+    const int u_plane = desc->comp[1].plane;
+    const int v_plane = desc->comp[2].plane;
 
     for (int row = 0; row < luma_h; row++)
     {
-      uint8_t * yr = (frame.data[0] + row * frame.linesize[0] +
+      uint8_t * yr = (frame.data[y_plane] + row * frame.linesize[y_plane] +
                       desc->comp[0].offset);
 
-      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+      uint8_t * ur = (frame.data[u_plane] + row * frame.linesize[u_plane] +
                       desc->comp[1].offset);
 
-      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+      uint8_t * vr = (frame.data[v_plane] + row * frame.linesize[v_plane] +
                       desc->comp[2].offset);
 
       for (int col = 0; col < chroma_w; col++)
@@ -1340,6 +1349,9 @@ namespace yae
 
     const int chroma_w = luma_w >> 1;
     const int chroma_h = luma_h >> 1;
+    const int y_plane = desc->comp[0].plane;
+    const int u_plane = desc->comp[1].plane;
+    const int v_plane = desc->comp[2].plane;
 
     for (int row = 0; row < chroma_h; row++)
     {
@@ -1347,16 +1359,16 @@ namespace yae
       int row_0 = row << 1;
       int row_1 = row_0 + 1;
 
-      uint8_t * yr_0 = (frame.data[0] + row_0 * frame.linesize[0] +
+      uint8_t * yr_0 = (frame.data[y_plane] + row_0 * frame.linesize[y_plane] +
                         desc->comp[0].offset);
 
-      uint8_t * yr_1 = (frame.data[0] + row_1 * frame.linesize[0] +
+      uint8_t * yr_1 = (frame.data[y_plane] + row_1 * frame.linesize[y_plane] +
                         desc->comp[0].offset);
 
-      uint8_t * ur = (frame.data[1] + row * frame.linesize[1] +
+      uint8_t * ur = (frame.data[u_plane] + row * frame.linesize[u_plane] +
                       desc->comp[1].offset);
 
-      uint8_t * vr = (frame.data[2] + row * frame.linesize[2] +
+      uint8_t * vr = (frame.data[v_plane] + row * frame.linesize[v_plane] +
                       desc->comp[2].offset);
 
       for (int col = 0; col < chroma_w; col++)

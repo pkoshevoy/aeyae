@@ -502,12 +502,12 @@ namespace yae
 
     try
     {
+      AvFrm decodedFrameCopy(decodedFrame);
+      decodedFrameCopy.hwdownload();
 #if 0
       // for debugging Colorspace and frame utils:
       static const FrameGen frameGen;
-      AvFrm decodedFrameCopy = frameGen.get(decodedFrame);
-#else
-      AvFrm decodedFrameCopy(decodedFrame);
+      decodedFrameCopy = frameGen.get(decodedFrameCopy);
 #endif
 
       AVFrame & decoded = decodedFrameCopy.get();
