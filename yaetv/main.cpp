@@ -284,7 +284,7 @@ namespace yae
         {
           av_md5_sum(md5, data + offset, pkt_size - 1);
 
-          fprintf(dst_pos.file_, "%08x\n", pos + offset);
+          fprintf(dst_pos.file_, "%016" PRIx64 "\n", pos + offset);
           fprintf(dst_md5.file_,
                   "%02x%02x%02x%02x "
                   "%02x%02x%02x%02x "
