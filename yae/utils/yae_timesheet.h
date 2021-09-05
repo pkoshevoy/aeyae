@@ -43,6 +43,7 @@ namespace yae
       inline yae::TTime avg_work() const
       { return TTime(n_ ? (work_.time_ / n_) : 0, work_.base_); }
 
+      std::list<yae::TTime> too_slow_;
       yae::TTime last_;
       yae::TTime wait_;
       yae::TTime work_;
@@ -57,33 +58,28 @@ namespace yae
       template <typename TWhere, typename TWhat>
       Probe(Timesheet & timesheet,
             const TWhere & where,
-            const TWhat & what):
+            const TWhat & what,
+            const TTime & expected_lifetime = TTime(0, 0)):
         timesheet_(&timesheet),
         where_(where),
         what_(what),
-        when_(yae::TTime::now())
+        when_(yae::TTime::now()),
+        expected_lifetime_(expected_lifetime)
       {}
 
       template <typename TWhere, typename TWhat>
       Probe(Timesheet * timesheet,
             const TWhere & where,
-            const TWhat & what):
+            const TWhat & what,
+            const TTime & expected_lifetime = TTime(0, 0)):
         timesheet_(timesheet),
         where_(where),
         what_(what),
-        when_(yae::TTime::now())
+        when_(yae::TTime::now()),
+        expected_lifetime_(expected_lifetime)
       {}
 
-      ~Probe()
-      {
-        if (timesheet_)
-        {
-          yae::TTime finish = yae::TTime::now();
-          Log & log = timesheet_->get(where_, what_);
-          log.n_++;
-          log.work_ += (finish - when_);
-        }
-      }
+      ~Probe();
 
     private:
       // intentionally disabled:
@@ -94,6 +90,7 @@ namespace yae
       std::string where_;
       std::string what_;
       yae::TTime when_;
+      yae::TTime expected_lifetime_;
     };
 
     Timesheet();
@@ -133,6 +130,13 @@ operator << (std::ostream & oss, const yae::Timesheet & timesheet)
   const yae::Timesheet::Probe var_name(timesheet, where, what)
 #else
 #define YAE_TIMESHEET_PROBE(var_name, timesheet, where, what)
+#endif
+
+#if YAE_TIMESHEET_ENABLED
+#define YAE_TIMESHEET_PROBE_TOO_SLOW(var_name, timesheet, where, what, dur) \
+  const yae::Timesheet::Probe var_name(timesheet, where, what, dur)
+#else
+#define YAE_TIMESHEET_PROBE_TOO_SLOW(var_name, timesheet, where, what, dur)
 #endif
 
 

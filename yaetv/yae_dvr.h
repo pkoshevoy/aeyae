@@ -416,6 +416,9 @@ namespace yae
       boost::random::mt11213b prng_;
       std::map<uint32_t, std::set<TRecordingPtr> > recordings_;
       uint32_t recordings_update_gps_time_;
+
+      // this will signal when channel guide is ready for this frequency:
+      mutable boost::condition_variable epg_ready_;
     };
 
     //----------------------------------------------------------------
@@ -447,9 +450,6 @@ namespace yae
       yae::HDHomeRun::TSessionPtr session_;
       std::string frequency_;
       TPacketHandlerPtr packet_handler_;
-
-      // this will signal when channel guide is ready for this frequency:
-      boost::condition_variable epg_ready_;
     };
 
     //----------------------------------------------------------------

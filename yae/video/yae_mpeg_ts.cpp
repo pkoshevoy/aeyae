@@ -6009,8 +6009,10 @@ namespace yae
     bool
     Context::channel_guide_overlaps(int64_t t) const
     {
-      YAE_TIMESHEET_PROBE(probe, timesheet_,
-                          "Context", "channel_guide_overlaps");
+      YAE_TIMESHEET_PROBE_TOO_SLOW(probe, timesheet_,
+                                   "mpeg_ts::Context",
+                                   "channel_guide_overlaps",
+                                   TTime(30, 1000));
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = yae::unix_epoch_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);

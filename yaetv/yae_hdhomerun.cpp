@@ -871,6 +871,11 @@ namespace yae
 
       while (true)
       {
+        YAE_TIMESHEET_PROBE_TOO_SLOW(probe, session.timesheet_,
+                                     "HDHomeRun::Private::capture",
+                                     "inner loop",
+                                     TTime(30, 1000));
+
         yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
         if (!stream_ptr)
         {
@@ -893,10 +898,6 @@ namespace yae
         std::size_t buffer_size = 0;
         uint8_t * buffer = NULL;
         {
-          YAE_TIMESHEET_PROBE(probe, session.timesheet_,
-                              "HDHomeRun::Private::capture",
-                              "hdhomerun_device_stream_recv");
-
           buffer = hdhomerun_device_stream_recv(hd,
                                                 VIDEO_DATA_BUFFER_SIZE_1S,
                                                 &buffer_size);
@@ -928,10 +929,6 @@ namespace yae
 #ifdef YAE_DUMP_STREAM_TO_DISK
           out.write(buffer, buffer_size);
 #endif
-          YAE_TIMESHEET_PROBE(probe, session.timesheet_,
-                              "HDHomeRun::Private::capture",
-                              "stream.push");
-
           if (!stream.push(buffer, buffer_size))
           {
             break;

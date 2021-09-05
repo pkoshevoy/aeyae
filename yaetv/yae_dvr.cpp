@@ -1276,6 +1276,16 @@ namespace yae
                    data_hex.c_str());
         }
       }
+
+      // check if Channel Guide extends to 9 hours from now
+      {
+        static const TTime nine_hours(9 * 60 * 60, 1);
+        int64_t t = (TTime::now() + nine_hours).get(1);
+        if (ctx.channel_guide_overlaps(t))
+        {
+          packet_handler_.epg_ready_.notify_all();
+        }
+      }
     }
   }
 
@@ -1577,7 +1587,7 @@ namespace yae
     packet_handler.ring_buffer_.close();
 
     // it's as ready as it's going to be:
-    epg_ready_.notify_all();
+    packet_handler.epg_ready_.notify_all();
 
     // get rid of the session so we don't end up with a stale tuner lock:
     session_.reset();
@@ -1619,7 +1629,9 @@ namespace yae
     PacketHandler & packet_handler = *packet_handler_;
     yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
-    YAE_TIMESHEET_PROBE(probe, ctx.timesheet_, "DVR::Stream", "push");
+    YAE_TIMESHEET_PROBE_TOO_SLOW(probe1, ctx.timesheet_,
+                                 "DVR::Stream", "push",
+                                 TTime(30, 1000));
 
 #if 0
     std::string data_hex =
@@ -1637,16 +1649,6 @@ namespace yae
       yae_wlog("%sring buffer occupancy: %f",
                ctx.log_prefix_.c_str(),
                ring_buffer_occupancy);
-    }
-
-    // check if Channel Guide extends to 9 hours from now
-    {
-      static const TTime nine_hours(9 * 60 * 60, 1);
-      int64_t t = (TTime::now() + nine_hours).get(1);
-      if (ctx.channel_guide_overlaps(t))
-      {
-        epg_ready_.notify_all();
-      }
     }
 
     if (packet_handler.worker_.is_idle())
@@ -2241,7 +2243,7 @@ namespace yae
 
       try
       {
-        if (stream.epg_ready_.timed_wait(lock, giveup_at))
+        if (packet_handler.epg_ready_.timed_wait(lock, giveup_at))
         {
           done = true;
           break;
@@ -2597,7 +2599,7 @@ namespace yae
 
             try
             {
-              if (stream.epg_ready_.timed_wait(lock, giveup_at))
+              if (packet_handler.epg_ready_.timed_wait(lock, giveup_at))
               {
                 break;
               }

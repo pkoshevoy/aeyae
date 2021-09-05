@@ -17,6 +17,7 @@
 #include <boost/thread.hpp>
 
 // aeyae:
+#include "../api/yae_log.h"
 #include "yae_timesheet.h"
 
 
@@ -91,6 +92,7 @@ namespace yae
       {
         const std::string & what = j->first;
         const Timesheet::Log & log = j->second;
+
         oss << "    " << std::right << std::setw(30) << what
             << ", count: " << std::setw(16) << std::left
             << log.n_
@@ -121,6 +123,19 @@ namespace yae
         {
           oss << " fps: " << fps_work;
         }
+
+        if (!log.too_slow_.empty())
+        {
+          const char * separator = " ";
+          oss << "; too slow, ms:";
+          for (std::list<yae::TTime>::const_iterator
+                 k = log.too_slow_.begin(); k != log.too_slow_.end(); ++k)
+          {
+            double s = k->sec();
+            oss << separator << int(s * 1000 + 0.5);
+            separator = ", ";
+          }
+        }
         oss << '\n';
       }
       oss << '\n';
@@ -129,6 +144,33 @@ namespace yae
     return std::string(oss.str().c_str());
   }
 
+  //----------------------------------------------------------------
+  // Timesheet::Probe::~Probe
+  //
+  Timesheet::Probe::~Probe()
+  {
+    if (timesheet_)
+    {
+      yae::TTime finish = yae::TTime::now();
+      yae::TTime elapsed = finish - when_;
+      Log & log = timesheet_->get(where_, what_);
+      log.n_++;
+      log.work_ += elapsed;
+
+      if (expected_lifetime_.valid())
+      {
+        yae::TTime expected_finish = when_ + expected_lifetime_;
+        if (expected_finish < finish)
+        {
+          log.too_slow_.push_back(elapsed);
+          yae_wlog("TOO SLOW: %s %s: %i msec",
+                   where_.c_str(),
+                   what_.c_str(),
+                   int(elapsed.sec() * 1000 + 0.5));
+        }
+      }
+    }
+  }
 
   //----------------------------------------------------------------
   // Timesheet::Timesheet
