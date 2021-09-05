@@ -4822,7 +4822,6 @@ namespace yae
         yae::Bitstream bin(payload);
         if (pid == 0x0000)
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PAT");
           PATSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4845,7 +4844,6 @@ namespace yae
         }
         else if (pid == 0x0001)
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "CAT");
           CATSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4855,7 +4853,6 @@ namespace yae
         }
         else if (pid == 0x0002)
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "TSD");
           TSDescSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4865,7 +4862,6 @@ namespace yae
         }
         else if (yae::has(pid_pmt_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PMT");
           TSectionPtr section = load_section(bin);
           PMTSectionPtr pmt_section = section;
           YAE_EXPECT(pmt_section);
@@ -4884,7 +4880,6 @@ namespace yae
         }
         else if (pid == 0x1FFB)
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "0x1FFB");
           TSectionPtr section = load_section(bin);
           MGTSectionPtr mgt_section = section;
           STTSectionPtr stt_section = section;
@@ -4897,29 +4892,24 @@ namespace yae
 
           if (stt_section)
           {
-            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "STT");
             consume_stt(stt_section);
           }
           else if (mgt_section)
           {
-            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "MGT");
             consume_mgt(mgt_section);
           }
           else if (vct_section)
           {
-            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "VCT");
             const VirtualChannelTable & vct = *vct_section;
             consume_vct(vct, pid);
           }
           else if (rrt_section)
           {
-            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "RRT");
             consume_rrt(rrt_section, pid);
           }
         }
         else if (yae::has(pid_vct_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "VCT0");
           VCTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4928,7 +4918,6 @@ namespace yae
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4937,7 +4926,6 @@ namespace yae
         }
         else if (yae::has(pid_eit_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "EIT");
           EITSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4946,7 +4934,6 @@ namespace yae
         }
         else if (yae::has(pid_event_ett_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4955,7 +4942,6 @@ namespace yae
         }
         else if (yae::has(pid_rrt_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "RRT0");
           RRTSectionPtr rrt_section = load_section(bin);
           YAE_THROW_IF(!rrt_section);
 
@@ -4964,34 +4950,28 @@ namespace yae
 #if 0
         else if (yae::has(pid_dccsct_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "DCCSCT");
           // NOTE: DCC is not implemented
           TSectionPtr section = load_section(bin);
           (void)section;
         }
         else if (yae::has(pid_dcct_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "DCCT");
           // NOTE: DCC is not implemented
           TSectionPtr section = load_section(bin);
           (void)section;
         }
         else if (bin.peek_bits(24) == 0x000001)
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PES");
           PESPacket pes_pkt;
           pes_pkt.load(bin);
         }
         else if (yae::has(pid_es_, pid))
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ES");
           TSectionPtr section = load_section(bin);
           (void)section;
         }
         else
         {
-          yae::Timesheet::Probe probe(timesheet_, "Context::consume",
-                                      strfmt("pid %04X", pid).c_str());
           // not a PES packet, not a PID we recognize -- skip it:
           std::string fn = yae::strfmt("/tmp/0x%04X.bin", pid);
           yae::dump(fn, payload.get(), payload.size());
@@ -5104,7 +5084,6 @@ namespace yae
     void
     Context::push(const TSPacket & pkt)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "push");
       YAE_EXPECT(!pkt.transport_error_indicator_);
 
       // In transport streams, duplicate packets may be sent as two,
@@ -5227,7 +5206,6 @@ namespace yae
     Context::handle(const IPacketHandler::Packet & packet,
                     IPacketHandler & handler) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "handle");
       boost::unique_lock<boost::mutex> lock(mutex_);
       YAE_ASSERT(packet.data_->size() == 188);
 
@@ -5265,7 +5243,6 @@ namespace yae
     void
     Context::consume_stt(const STTSectionPtr & stt_section)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_stt");
       stt_walltime_ = TTime::now();
       stt_ = stt_section;
 
@@ -5308,7 +5285,6 @@ namespace yae
     void
     Context::consume_mgt(const MGTSectionPtr & mgt_section)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_mgt");
       const MasterGuideTable & mgt = *mgt_section;
       YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
                    mgt.table_id_ > 0xCD);
@@ -5411,7 +5387,6 @@ namespace yae
     void
     Context::consume_vct(const VirtualChannelTable & vct, uint16_t pid)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_vct");
 #if 0
       std::ostringstream oss;
       oss << "VCT: channels: [";
@@ -5498,7 +5473,6 @@ namespace yae
     void
     Context::consume_rrt(const RRTSectionPtr & rrt_section, uint16_t pid)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_rrt");
       const RatingRegionTable & rrt = *(rrt_section);
 
 #if 0
@@ -5577,7 +5551,6 @@ namespace yae
     void
     Context::consume_eit(const EventInformationTable & eit, uint16_t pid)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_eit");
       uint8_t eit_index = yae::at(pid_eit_, pid);
 
 #if 0
@@ -5757,8 +5730,6 @@ namespace yae
     void
     Context::consume_ett(const ExtendedTextTable & ett, uint16_t pid)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "consume_ett");
-
 #if 0
       std::ostringstream oss;
       if (ett.etm_id_event_flag_)
@@ -5821,7 +5792,6 @@ namespace yae
     Context::dump(const std::vector<TDescriptorPtr> & descriptors,
                   std::ostream & oss) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "dump1");
       oss << "descriptors: [ ";
       const char * isep = "";
       for (std::vector<TDescriptorPtr>::const_iterator
@@ -5842,8 +5812,6 @@ namespace yae
     const Bucket &
     Context::get_epg_bucket_nolock(uint32_t gps_time) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context",
-                                  "get_epg_bucket_nolock");
       std::size_t bx = bucket_index_at(gps_time);
       yae::optional<std::size_t> bx_fallback;
 
@@ -5882,8 +5850,6 @@ namespace yae
                             yae::mpeg_ts::EPG & epg,
                             const std::string & lang) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg_nolock");
-
       for (std::map<uint32_t, ChannelGuide>::const_iterator
              i = bucket.guide_.begin(); i != bucket.guide_.end(); ++i)
       {
@@ -5947,7 +5913,6 @@ namespace yae
     Context::get_epg_now(yae::mpeg_ts::EPG & epg,
                          const std::string & lang) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = gps_time_now();
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
@@ -5960,7 +5925,6 @@ namespace yae
     void
     Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "get_epg");
       uint32_t gps_time = gps_time_now();
       std::size_t bx_now = bucket_index_at(gps_time);
       std::size_t num_bx = bucket_.size();
@@ -6009,8 +5973,6 @@ namespace yae
     bool
     Context::channel_guide_overlaps(int64_t t) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context",
-                                  "channel_guide_overlaps");
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = yae::unix_epoch_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
@@ -6023,7 +5985,6 @@ namespace yae
     void
     Context::save(Json::Value & json) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "save");
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::save(json["bucket"], bucket_);
     }
@@ -6034,7 +5995,6 @@ namespace yae
     void
     Context::load(const Json::Value & json)
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "load");
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::load(json["bucket"], bucket_);
       YAE_EXPECT(bucket_.size() == 32 * 8);
@@ -6047,7 +6007,6 @@ namespace yae
     void
     Context::dump(const std::string & lang) const
     {
-      yae::Timesheet::Probe probe(timesheet_, "Context", "dump2");
       EPG epg;
       get_epg_now(epg, lang);
 

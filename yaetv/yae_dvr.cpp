@@ -1622,10 +1622,6 @@ namespace yae
     yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
 
-    yae::Timesheet::Probe probe(ctx.timesheet_,
-                                "DVR::Stream",
-                                "push");
-
 #if 0
     std::string data_hex =
       yae::to_hex(data, std::min<std::size_t>(size, 32), 4);
