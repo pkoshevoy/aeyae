@@ -4822,6 +4822,7 @@ namespace yae
         yae::Bitstream bin(payload);
         if (pid == 0x0000)
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PAT");
           PATSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4844,6 +4845,7 @@ namespace yae
         }
         else if (pid == 0x0001)
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "CAT");
           CATSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4853,6 +4855,7 @@ namespace yae
         }
         else if (pid == 0x0002)
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "TSD");
           TSDescSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4862,6 +4865,7 @@ namespace yae
         }
         else if (yae::has(pid_pmt_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PMT");
           TSectionPtr section = load_section(bin);
           PMTSectionPtr pmt_section = section;
           YAE_EXPECT(pmt_section);
@@ -4880,6 +4884,7 @@ namespace yae
         }
         else if (pid == 0x1FFB)
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "0x1FFB");
           TSectionPtr section = load_section(bin);
           MGTSectionPtr mgt_section = section;
           STTSectionPtr stt_section = section;
@@ -4892,24 +4897,29 @@ namespace yae
 
           if (stt_section)
           {
+            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "STT");
             consume_stt(stt_section);
           }
           else if (mgt_section)
           {
+            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "MGT");
             consume_mgt(mgt_section);
           }
           else if (vct_section)
           {
+            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "VCT");
             const VirtualChannelTable & vct = *vct_section;
             consume_vct(vct, pid);
           }
           else if (rrt_section)
           {
+            yae::Timesheet::Probe probe(timesheet_, "Context::consume", "RRT");
             consume_rrt(rrt_section, pid);
           }
         }
         else if (yae::has(pid_vct_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "VCT0");
           VCTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4918,20 +4928,16 @@ namespace yae
         }
         else if (yae::has(pid_channel_ett_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
           const ExtendedTextTable & ett = *section;
           consume_ett(ett, pid);
         }
-        else if (yae::has(pid_dccsct_, pid))
-        {
-          // NOTE: DCC is not implemented
-          TSectionPtr section = load_section(bin);
-          (void)section;
-        }
         else if (yae::has(pid_eit_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "EIT");
           EITSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4940,6 +4946,7 @@ namespace yae
         }
         else if (yae::has(pid_event_ett_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
           YAE_THROW_IF(!section);
 
@@ -4948,35 +4955,48 @@ namespace yae
         }
         else if (yae::has(pid_rrt_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "RRT0");
           RRTSectionPtr rrt_section = load_section(bin);
           YAE_THROW_IF(!rrt_section);
 
           consume_rrt(rrt_section, pid);
         }
+#if 0
+        else if (yae::has(pid_dccsct_, pid))
+        {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "DCCSCT");
+          // NOTE: DCC is not implemented
+          TSectionPtr section = load_section(bin);
+          (void)section;
+        }
         else if (yae::has(pid_dcct_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "DCCT");
           // NOTE: DCC is not implemented
           TSectionPtr section = load_section(bin);
           (void)section;
         }
         else if (bin.peek_bits(24) == 0x000001)
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "PES");
           PESPacket pes_pkt;
           pes_pkt.load(bin);
         }
         else if (yae::has(pid_es_, pid))
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume", "ES");
           TSectionPtr section = load_section(bin);
           (void)section;
         }
         else
         {
+          yae::Timesheet::Probe probe(timesheet_, "Context::consume",
+                                      strfmt("pid %04X", pid).c_str());
           // not a PES packet, not a PID we recognize -- skip it:
-#if 0
           std::string fn = yae::strfmt("/tmp/0x%04X.bin", pid);
           yae::dump(fn, payload.get(), payload.size());
-#endif
         }
+#endif
       }
       catch (const std::exception & e)
       {

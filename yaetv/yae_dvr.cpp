@@ -2062,6 +2062,7 @@ namespace yae
         ph.worker_.stop();
         ph.worker_.wait_until_finished();
 
+#if YAE_TIMESHEET_ENABLED
         // save timesheet to disk:
         yae::mpeg_ts::Context & ctx = ph.ctx_;
         std::string timesheet = ctx.timesheet_.to_str();
@@ -2070,6 +2071,7 @@ namespace yae
         fn = sanitize_filename_utf8(fn);
         fn = (fs::path(yae::get_temp_dir_utf8()) / fn).string();
         yae::TOpenFile(fn, "ab").write(timesheet);
+#endif
       }
 
       TStreamPtr stream_ptr = stream_[frequency].lock();

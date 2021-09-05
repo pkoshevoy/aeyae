@@ -117,7 +117,9 @@ namespace yae
 
     void clear();
 
+#if YAE_TIMESHEET_ENABLED
     std::string to_str() const;
+#endif
 
   private:
     Timesheet(const Timesheet &);
@@ -128,6 +130,7 @@ namespace yae
   };
 }
 
+#if YAE_TIMESHEET_ENABLED
 //----------------------------------------------------------------
 // operator <<
 //
@@ -137,6 +140,6 @@ operator << (std::ostream & oss, const yae::Timesheet & timesheet)
   oss << timesheet.to_str();
   return oss;
 }
-
+#endif
 
 #endif // YAE_TIMESHEET_H_
