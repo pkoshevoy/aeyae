@@ -17,6 +17,11 @@
 #include "yae/api/yae_api.h"
 #include "yae/utils/yae_time.h"
 
+//----------------------------------------------------------------
+// YAE_TIMESHEET_ENABLED
+//
+#define YAE_TIMESHEET_ENABLED 0
+
 
 namespace yae
 {
@@ -52,25 +57,32 @@ namespace yae
       template <typename TWhere, typename TWhat>
       Probe(Timesheet & timesheet,
             const TWhere & where,
-            const TWhat & what):
+            const TWhat & what)
+#if YAE_TIMESHEET_ENABLED
+        :
         timesheet_(&timesheet),
         where_(where),
         what_(what),
         when_(yae::TTime::now())
+#endif
       {}
 
       template <typename TWhere, typename TWhat>
       Probe(Timesheet * timesheet,
             const TWhere & where,
-            const TWhat & what):
+            const TWhat & what)
+#if YAE_TIMESHEET_ENABLED
+        :
         timesheet_(timesheet),
         where_(where),
         what_(what),
         when_(yae::TTime::now())
+#endif
       {}
 
       ~Probe()
       {
+#if YAE_TIMESHEET_ENABLED
         if (timesheet_)
         {
           yae::TTime finish = yae::TTime::now();
@@ -78,6 +90,7 @@ namespace yae
           log.n_++;
           log.work_ += (finish - when_);
         }
+#endif
       }
 
     private:
@@ -85,10 +98,12 @@ namespace yae
       Probe(const Probe &);
       Probe & operator = (const Probe &);
 
+#if YAE_TIMESHEET_ENABLED
       Timesheet * timesheet_;
       std::string where_;
       std::string what_;
       yae::TTime when_;
+#endif
     };
 
     Timesheet();
