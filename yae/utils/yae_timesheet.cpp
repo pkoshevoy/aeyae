@@ -163,7 +163,6 @@ namespace yae
     private_->clear();
   }
 
-#if YAE_TIMESHEET_ENABLED
   //----------------------------------------------------------------
   // Timesheet::to_str
   //
@@ -172,6 +171,5 @@ namespace yae
   {
     return private_->to_str();
   }
-#endif
 
 }

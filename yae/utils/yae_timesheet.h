@@ -57,32 +57,25 @@ namespace yae
       template <typename TWhere, typename TWhat>
       Probe(Timesheet & timesheet,
             const TWhere & where,
-            const TWhat & what)
-#if YAE_TIMESHEET_ENABLED
-        :
+            const TWhat & what):
         timesheet_(&timesheet),
         where_(where),
         what_(what),
         when_(yae::TTime::now())
-#endif
       {}
 
       template <typename TWhere, typename TWhat>
       Probe(Timesheet * timesheet,
             const TWhere & where,
-            const TWhat & what)
-#if YAE_TIMESHEET_ENABLED
-        :
+            const TWhat & what):
         timesheet_(timesheet),
         where_(where),
         what_(what),
         when_(yae::TTime::now())
-#endif
       {}
 
       ~Probe()
       {
-#if YAE_TIMESHEET_ENABLED
         if (timesheet_)
         {
           yae::TTime finish = yae::TTime::now();
@@ -90,7 +83,6 @@ namespace yae
           log.n_++;
           log.work_ += (finish - when_);
         }
-#endif
       }
 
     private:
@@ -98,12 +90,10 @@ namespace yae
       Probe(const Probe &);
       Probe & operator = (const Probe &);
 
-#if YAE_TIMESHEET_ENABLED
       Timesheet * timesheet_;
       std::string where_;
       std::string what_;
       yae::TTime when_;
-#endif
     };
 
     Timesheet();
@@ -117,9 +107,7 @@ namespace yae
 
     void clear();
 
-#if YAE_TIMESHEET_ENABLED
     std::string to_str() const;
-#endif
 
   private:
     Timesheet(const Timesheet &);
@@ -130,7 +118,6 @@ namespace yae
   };
 }
 
-#if YAE_TIMESHEET_ENABLED
 //----------------------------------------------------------------
 // operator <<
 //
@@ -140,6 +127,13 @@ operator << (std::ostream & oss, const yae::Timesheet & timesheet)
   oss << timesheet.to_str();
   return oss;
 }
+
+#if YAE_TIMESHEET_ENABLED
+#define YAE_TIMESHEET_PROBE(var_name, timesheet, where, what) \
+  const yae::Timesheet::Probe var_name(timesheet, where, what)
+#else
+#define YAE_TIMESHEET_PROBE(var_name, timesheet, where, what)
 #endif
+
 
 #endif // YAE_TIMESHEET_H_

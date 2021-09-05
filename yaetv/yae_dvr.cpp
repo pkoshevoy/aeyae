@@ -1360,9 +1360,9 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     if (recordings_update_gps_time_ < gps_time)
     {
-      yae::Timesheet::Probe probe(ctx_.timesheet_,
-                                  "PacketHandler::handle_backlog",
-                                  "dvr_.schedule_.get");
+      YAE_TIMESHEET_PROBE(probe, ctx_.timesheet_,
+                          "PacketHandler::handle_backlog",
+                          "dvr_.schedule_.get");
 
       // wait 8..15s before re-caching scheduled recordings:
       uint32_t r = uint32_t(8.0 * (double(prng_()) / prng_max));
@@ -1389,10 +1389,8 @@ namespace yae
 #endif
     }
 
-    yae::Timesheet::Probe probe(ctx_.timesheet_,
-                                "PacketHandler::handle_backlog",
-                                "write");
-
+    YAE_TIMESHEET_PROBE(probe, ctx_.timesheet_,
+                        "PacketHandler::handle_backlog", "write");
 
     yae::mpeg_ts::IPacketHandler::Packet pkt;
     while (packets_.pop(pkt))
@@ -1621,6 +1619,7 @@ namespace yae
     PacketHandler & packet_handler = *packet_handler_;
     yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
+    YAE_TIMESHEET_PROBE(probe, ctx.timesheet_, "DVR::Stream", "push");
 
 #if 0
     std::string data_hex =

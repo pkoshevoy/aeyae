@@ -893,9 +893,9 @@ namespace yae
         std::size_t buffer_size = 0;
         uint8_t * buffer = NULL;
         {
-          yae::Timesheet::Probe probe(session.timesheet_,
-                                      "HDHomeRun::Private::capture",
-                                      "hdhomerun_device_stream_recv");
+          YAE_TIMESHEET_PROBE(probe, session.timesheet_,
+                              "HDHomeRun::Private::capture",
+                              "hdhomerun_device_stream_recv");
 
           buffer = hdhomerun_device_stream_recv(hd,
                                                 VIDEO_DATA_BUFFER_SIZE_1S,
@@ -928,9 +928,9 @@ namespace yae
 #ifdef YAE_DUMP_STREAM_TO_DISK
           out.write(buffer, buffer_size);
 #endif
-          yae::Timesheet::Probe probe(session.timesheet_,
-                                      "HDHomeRun::Private::capture",
-                                      "stream.push");
+          YAE_TIMESHEET_PROBE(probe, session.timesheet_,
+                              "HDHomeRun::Private::capture",
+                              "stream.push");
 
           if (!stream.push(buffer, buffer_size))
           {
