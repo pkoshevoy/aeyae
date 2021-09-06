@@ -5093,7 +5093,7 @@ namespace yae
     // Context::Context
     //
     Context::Context():
-      bucket_(256),
+      bucket_(4 * 8),
       network_pid_(0),
       stt_error_(0)
     {}
@@ -5849,7 +5849,7 @@ namespace yae
 
       // find a bucket with events, walking backwards
       // from the bucket that corresponds to the given timepoint:
-      for (std::size_t i = 0; i < 256; i++)
+      for (std::size_t i = 0, n = bucket_.size(); i < n; i++)
       {
         const Bucket & bucket = bucket_[bx];
         if (bucket.has_epg_for(gps_time))
@@ -5862,7 +5862,7 @@ namespace yae
           bx_fallback.reset(bx);
         }
 
-        bx = (bx + 0xFF) & 0xFF;
+        bx = (bx + n - 1) % n;
       }
 
       if (bx_fallback)
@@ -6039,8 +6039,8 @@ namespace yae
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "load");
       boost::unique_lock<boost::mutex> lock(mutex_);
       yae::load(json["bucket"], bucket_);
-      YAE_EXPECT(bucket_.size() == 32 * 8);
-      bucket_.resize(32 * 8);
+      YAE_EXPECT(bucket_.size() == 4 * 8);
+      bucket_.resize(4 * 8);
     }
 
     //----------------------------------------------------------------

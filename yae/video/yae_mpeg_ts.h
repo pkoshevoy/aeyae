@@ -2450,7 +2450,7 @@ namespace yae
       void dump(const std::string & lang = std::string("eng")) const;
 
       inline std::size_t bucket_index_at(uint32_t gps_time) const
-      { return (gps_time / 10800) & 0xFF; }
+      { return (gps_time / 10800) % bucket_.size(); }
 
       inline Bucket & get_current_bucket()
       {
@@ -2514,10 +2514,10 @@ namespace yae
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
 
-      // 32 days worth of channel guide data in 3 hour long chunks,
+      // 4 days worth of channel guide data in 3 hour long chunks,
       // indexed by an index derived from STT system time:
       //
-      std::vector<Bucket> bucket_; // 32 * 8
+      std::vector<Bucket> bucket_; // 4 * 8
 
       // unused:
       uint16_t network_pid_;
