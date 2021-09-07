@@ -41,13 +41,11 @@ namespace yae
     // Data Channel 2, C2
     // Data Channel 3, XDS
     return
-      (b0 == 0x10 || b0 == 0x11 || b0 == 0x12 || b0 == 0x13 ||
-       b0 == 0x14 || b0 == 0x15 || b0 == 0x16 || b0 == 0x17) ?
-      1 :
-      (b0 == 0x18 || b0 == 0x19 || b0 == 0x1A || b0 == 0x1B ||
-       b0 == 0x1C || b0 == 0x1D || b0 == 0x1E || b0 == 0x1F) ?
-      2 : (b0 < 0x10) ?
-      3 : 0;
+      (// b0 == 0x10 || b0 == 0x11 || b0 == 0x12 || b0 == 0x13 ||
+       b0 == 0x14 || b0 == 0x15 || b0 == 0x16 || b0 == 0x17) ? 1 :
+      (// b0 == 0x18 || b0 == 0x19 || b0 == 0x1A || b0 == 0x1B ||
+       b0 == 0x1C || b0 == 0x1D || b0 == 0x1E || b0 == 0x1F) ? 2 :
+      (b0 < 0x10) ? 3 : 0;
   }
 
   //----------------------------------------------------------------
@@ -133,7 +131,6 @@ namespace yae
 
     if (sz > size)
     {
-      YAE_ASSERT(false);
       return false;
     }
 
@@ -159,10 +156,28 @@ namespace yae
 
     while (data < end)
     {
+      const std::size_t data_size = end - data;
+
       qt_atom_t atom;
       if (!parse_qt_atom(data, end - data, atom))
       {
-        return false;
+        // data could be raw cc_data triplets:
+        if (data_size >= 3)
+        {
+          cc_data_pkt_t cc_pkt = *(const cc_data_pkt_t *)data;
+          if (cc_pkt.is_valid() && cc_pkt.is_cea608())
+          {
+            cc_pkt.b0 = set_odd_parity(cc_pkt.b0);
+            cc_pkt.b1 = set_odd_parity(cc_pkt.b1);
+            cc.push_back(cc_pkt);
+            data += 3;
+            continue;
+          }
+          else
+          {
+            return false;
+          }
+        }
       }
 
       unsigned char field =
@@ -185,8 +200,8 @@ namespace yae
       const uint8_t * tail = atom.data_ + atom.size_;
       for (; head < tail; head += 2)
       {
-        cc_data_pkt_t pkt;
-        pkt.cc = 0xFC | (field == 1 ? 0 : 1);
+        cc_data_pkt_t cc_pkt;
+        cc_pkt.cc = 0xFC | (field == 1 ? 0 : 1);
 
         uint8_t b0 = clear_odd_parity(head[0]);
         uint8_t b1 = clear_odd_parity(head[1]);
@@ -206,9 +221,9 @@ namespace yae
           b0 = 0x15;
         }
 
-        pkt.b0 = set_odd_parity(b0);
-        pkt.b1 = set_odd_parity(b1);
-        cc.push_back(pkt);
+        cc_pkt.b0 = set_odd_parity(b0);
+        cc_pkt.b1 = set_odd_parity(b1);
+        cc.push_back(cc_pkt);
       }
 
       data = tail;
@@ -322,15 +337,14 @@ namespace yae
     for (; cc_data_pkt < cc_data_end; ++cc_data_pkt)
     {
       // https://en.wikipedia.org/wiki/CEA-708
-      cc_data_pkt_t pkt = *cc_data_pkt;
+      cc_data_pkt_t cc_pkt = *cc_data_pkt;
 
-      bool valid = !!(pkt.cc & 4);
-      if (!valid)
+      if (!cc_pkt.is_valid())
       {
         continue;
       }
 
-      cc_data_pkt_type_t cc_type = (cc_data_pkt_type_t)(pkt.cc & 3);
+      cc_data_pkt_type_t cc_type = cc_pkt.cc_type();
       if (cc_type != NTSC_CC_FIELD_1 &&
           cc_type != NTSC_CC_FIELD_2)
       {
@@ -342,8 +356,8 @@ namespace yae
       unsigned char & prior_c0 = prior[cc_type][0];
       unsigned char & prior_c1 = prior[cc_type][1];
 
-      const bool odd_parity_b0 = parity_lut[pkt.b0];
-      const bool odd_parity_b1 = parity_lut[pkt.b1];
+      const bool odd_parity_b0 = parity_lut[cc_pkt.b0];
+      const bool odd_parity_b1 = parity_lut[cc_pkt.b1];
 
       if (!odd_parity_b0 && !odd_parity_b1)
       {
@@ -351,8 +365,8 @@ namespace yae
         continue;
       }
 
-      unsigned char b0 = clear_odd_parity(pkt.b0);
-      unsigned char b1 = clear_odd_parity(pkt.b1);
+      unsigned char b0 = clear_odd_parity(cc_pkt.b0);
+      unsigned char b1 = clear_odd_parity(cc_pkt.b1);
       unsigned short b01 = byte_pair(b0, b1);
 
       if (byte_pair_in_range(b01, 0x1020, 0x1f7f))
@@ -364,17 +378,19 @@ namespace yae
           continue;
         }
 
-        if (prior_c0 == pkt.b0 && prior_c1 == pkt.b1)
-        {
-          // ignore the redundant control code:
-          continue;
-        }
-
-        if (!odd_parity_b0 && prior_c1 == pkt.b1)
+        if (!odd_parity_b0 && prior_c1 == cc_pkt.b1)
         {
           // ignore failed redundant control code:
           continue;
         }
+      }
+
+      if (prior_c0 == cc_pkt.b0 && prior_c1 == cc_pkt.b1)
+      {
+        // ignore the redundant control code, once:
+        prior_c0 = 0;
+        prior_c1 = 0;
+        continue;
       }
 
       if (!odd_parity_b0)
@@ -392,8 +408,21 @@ namespace yae
       if (b01)
       {
         // update prior control codes:
-        prior_c0 = pkt.b0;
-        prior_c1 = pkt.b1;
+        prior_c0 = cc_pkt.b0;
+        prior_c1 = cc_pkt.b1;
+      }
+
+      if (field_number == 2)
+      {
+        // convert from field number 2 to field number 1:
+        if (byte_pair_in_range(b01, 0x1520, 0x152f))
+        {
+          b0 = 0x14;
+          b01 = byte_pair(b0, b1);
+          (void)b01;
+        }
+
+        cc_pkt.cc ^= (unsigned char)NTSC_CC_FIELD_2;
       }
 
       unsigned int data_channel = cc_data_channel(b0);
@@ -401,7 +430,7 @@ namespace yae
       {
         data_channel = dataChannel[field_number - 1];
       }
-      else if (data_channel < 3)
+      else if (data_channel <= 3)
       {
         dataChannel[field_number - 1] = data_channel;
       }
@@ -419,23 +448,10 @@ namespace yae
         continue;
       }
 
-      if (field_number == 2)
-      {
-        // convert from field number 2 to field number 1:
-        if (byte_pair_in_range(b01, 0x1520, 0x152f))
-        {
-          b0 = 0x14;
-          b01 = byte_pair(b0, b1);
-          (void)b01;
-        }
-
-        pkt.cc ^= (unsigned char)NTSC_CC_FIELD_2;
-      }
-
       unsigned int n = 2 * (field_number - 1) + (data_channel - 1);
-      pkt.b0 = set_odd_parity(b0);
-      pkt.b1 = set_odd_parity(b1);
-      cc[n].push_back(pkt);
+      cc_pkt.b0 = set_odd_parity(b0);
+      cc_pkt.b1 = set_odd_parity(b1);
+      cc[n].push_back(cc_pkt);
     }
 
     for (unsigned char i = 0; i < 4; i++)

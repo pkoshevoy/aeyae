@@ -47,6 +47,32 @@ namespace yae
     unsigned char cc;
     unsigned char b0;
     unsigned char b1;
+
+    inline cc_data_pkt_type_t cc_type() const
+    { return (cc_data_pkt_type_t)(cc & 3); }
+
+    inline bool is_valid() const
+    {
+      return (// '1' bit
+              (cc & 0x80) == 0x80 &&
+              // followed by '1111' reserved
+              // followed by cc_valid bit
+              (cc & 0x04) == 0x04);
+    }
+
+    inline bool is_cea608() const
+    {
+      cc_data_pkt_type_t cc_type = (cc_data_pkt_type_t)(cc & 3);
+      return (cc_type == NTSC_CC_FIELD_1 ||
+              cc_type == NTSC_CC_FIELD_2);
+    }
+
+    inline bool is_dtvcc() const
+    {
+      cc_data_pkt_type_t cc_type = (cc_data_pkt_type_t)(cc & 3);
+      return (cc_type == DTVCC_PACKET_DATA ||
+              cc_type == DTVCC_PACKET_START);
+    }
   };
 
   //----------------------------------------------------------------
