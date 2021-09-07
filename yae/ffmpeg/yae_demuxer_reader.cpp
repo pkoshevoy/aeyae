@@ -1560,17 +1560,21 @@ namespace yae
               sf.data_ = buffer;
             }
 
-            if (packet.side_data &&
-                packet.side_data->data &&
-                packet.side_data->size)
+            for (int i = 0; i < packet.side_data_elems; i++)
             {
+              const AVPacketSideData & side_data = packet.side_data[i];
+              if (side_data.type == AV_PKT_DATA_MPEGTS_STREAM_ID)
+              {
+                continue;
+              }
+
               TPlanarBufferPtr buffer(new TPlanarBuffer(1),
                                       &IPlanarBuffer::deallocator);
-              buffer->resize(0, packet.side_data->size, 1, 1);
+              buffer->resize(0, side_data.size, 1, 1);
               unsigned char * dst = buffer->data(0);
-              memcpy(dst, packet.side_data->data, packet.side_data->size);
+              memcpy(dst, side_data.data, side_data.size);
 
-              sf.sideData_ = buffer;
+              sf.sideData_[side_data.type].push_back(buffer);
             }
 
             if (subsDec)

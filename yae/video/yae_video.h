@@ -19,6 +19,7 @@
 // ffmpeg includes:
 extern "C"
 {
+#include <libavcodec/packet.h>
 #include <libavutil/pixfmt.h>
 }
 
@@ -524,7 +525,7 @@ namespace yae
     TIPlanarBufferPtr extraData_;
 
     // additional frame data:
-    TIPlanarBufferPtr sideData_;
+    std::map<AVPacketSideDataType, std::list<TIPlanarBufferPtr> > sideData_;
 
     // frame expiration time:
     TTime tEnd_;
