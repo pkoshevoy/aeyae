@@ -25,7 +25,6 @@ namespace yae
   //
   AudioTrack::AudioTrack(Track * track):
     Track(track),
-    frameQueue_(kQueueSizeLarge),
     nativeChannels_(0),
     outputChannels_(0),
     nativeBytesPerSample_(0),
@@ -36,9 +35,6 @@ namespace yae
     tempoFilter_(NULL)
   {
     YAE_ASSERT(stream_->codecpar->codec_type == AVMEDIA_TYPE_AUDIO);
-
-    // match output queue size to input queue size:
-    frameQueue_.setMaxSize(packetQueue_.getMaxSize());
   }
 
   //----------------------------------------------------------------
@@ -415,6 +411,10 @@ namespace yae
         yae_debug << "push audio frame: " << ts << "\n";
       }
 #endif
+
+      // match the output frame queue size to the input frame queue size,
+      // plus 10 percent:
+      frameQueue_.setMaxSize((packetQueue_.getMaxSize() * 11) / 10);
 
       // put the decoded frame into frame queue:
       if (!frameQueue_.push(afPtr, &terminator_))

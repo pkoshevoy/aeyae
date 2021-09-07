@@ -46,20 +46,9 @@ namespace yae
   //
   DemuxerReader::DemuxerReader(const TDemuxerInterfacePtr & demuxer):
     readerId_(std::numeric_limits<unsigned int>::max()),
-    thread_(this),
-    videoQueueSize_("video_queue_size"),
-    audioQueueSize_("audio_queue_size")
+    thread_(this)
   {
     ensure_ffmpeg_initialized();
-
-    settings_.traits().addSetting(&videoQueueSize_);
-    settings_.traits().addSetting(&audioQueueSize_);
-
-    videoQueueSize_.traits().setValueMin(1);
-    videoQueueSize_.traits().setValue(kQueueSizeSmall);
-
-    audioQueueSize_.traits().setValueMin(1);
-    audioQueueSize_.traits().setValue(kQueueSizeLarge);
 
     init(demuxer);
   }
@@ -366,7 +355,6 @@ namespace yae
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->enableClosedCaptions(enableClosedCaptions_);
     track->setSubs(&subtt_);
-    track->frameQueue_.setMaxSize(videoQueueSize_.traits().value());
 
     return track->initTraits();
   }
@@ -400,7 +388,6 @@ namespace yae
     track->setPlaybackInterval(TSeekPosPtr(new TimePos(timeIn_)),
                                TSeekPosPtr(new TimePos(timeOut_)),
                                playbackEnabled_);
-    track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
 
     return track->initTraits();
   }
@@ -619,10 +606,10 @@ namespace yae
       VideoTrackPtr videoTrack = selectedVideoTrack();
       if (videoTrack)
       {
-        videoTrack->packetQueue_.clear();
-        do { videoTrack->frameQueue_.clear(); }
-        while (!videoTrack->packetQueue_.waitForConsumerToBlock(1e-2));
-        videoTrack->frameQueue_.clear();
+        videoTrack->packetQueueClear();
+        do { videoTrack->frameQueueClear(); }
+        while (!videoTrack->packetQueueWaitForConsumerToBlock(1e-2));
+        videoTrack->frameQueueClear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         std::string ts = TTime(seekTime).to_hhmmss_ms();
@@ -635,10 +622,10 @@ namespace yae
       AudioTrackPtr audioTrack = selectedAudioTrack();
       if (audioTrack)
       {
-        audioTrack->packetQueue_.clear();
-        do { audioTrack->frameQueue_.clear(); }
-        while (!audioTrack->packetQueue_.waitForConsumerToBlock(1e-2));
-        audioTrack->frameQueue_.clear();
+        audioTrack->packetQueueClear();
+        do { audioTrack->frameQueueClear(); }
+        while (!audioTrack->packetQueueWaitForConsumerToBlock(1e-2));
+        audioTrack->frameQueueClear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         std::string ts = TTime(seekTime).to_hhmmss_ms();
@@ -757,14 +744,14 @@ namespace yae
     if (videoTrack)
     {
       videoTrack->threadStart();
-      videoTrack->packetQueue_.waitIndefinitelyForConsumerToBlock();
+      videoTrack->packetQueueWaitForConsumerToBlock();
     }
 
     AudioTrackPtr audioTrack = selectedAudioTrack();
     if (audioTrack)
     {
       audioTrack->threadStart();
-      audioTrack->packetQueue_.waitIndefinitelyForConsumerToBlock();
+      audioTrack->packetQueueWaitForConsumerToBlock();
     }
 
     outputTerminator_.stopWaiting(false);
@@ -1296,20 +1283,14 @@ namespace yae
     // wait for the the frame queues to empty out:
     if (audioTrack)
     {
-      audioTrack->packetQueue_.
-        waitIndefinitelyForConsumerToBlock();
-
-      audioTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+      audioTrack->packetQueueWaitForConsumerToBlock();
+      audioTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
     }
 
     if (videoTrack)
     {
-      videoTrack->packetQueue_.
-        waitIndefinitelyForConsumerToBlock();
-
-      videoTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+      videoTrack->packetQueueWaitForConsumerToBlock();
+      videoTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
     }
 
     boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
@@ -1425,13 +1406,13 @@ namespace yae
           if (audioTrack)
           {
             // flush out buffered frames with an empty packet:
-            audioTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            audioTrack->packetQueuePush(TPacketPtr(), &outputTerminator_);
           }
 
           if (videoTrack)
           {
             // flush out buffered frames with an empty packet:
-            videoTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            videoTrack->packetQueuePush(TPacketPtr(), &outputTerminator_);
           }
 
           if (!playbackEnabled_)
@@ -1453,20 +1434,14 @@ namespace yae
           // for all queues to empty:
           if (audioTrack)
           {
-            audioTrack->packetQueue_.
-              waitIndefinitelyForConsumerToBlock();
-
-            audioTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+            audioTrack->packetQueueWaitForConsumerToBlock();
+            audioTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
           }
 
           if (videoTrack)
           {
-            videoTrack->packetQueue_.
-              waitIndefinitelyForConsumerToBlock();
-
-            videoTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+            videoTrack->packetQueueWaitForConsumerToBlock();
+            videoTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
           }
 
           // check whether user disabled playback while
@@ -1496,7 +1471,7 @@ namespace yae
         if (videoTrack &&
             videoTrack->streamIndex() == packet.stream_index)
         {
-          if (!videoTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!videoTrack->packetQueuePush(packetPtr, &outputTerminator_))
           {
             break;
           }
@@ -1504,7 +1479,7 @@ namespace yae
         else if (audioTrack &&
                  audioTrack->streamIndex() == packet.stream_index)
         {
-          if (!audioTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!audioTrack->packetQueuePush(packetPtr, &outputTerminator_))
           {
             break;
           }

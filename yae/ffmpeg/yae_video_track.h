@@ -69,6 +69,14 @@ namespace yae
     // virtual:
     AVCodecContext * open();
 
+    // virtual:
+    bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
+    { return frameQueue_.waitIndefinitelyForConsumerToBlock(mgr); }
+
+    // virtual:
+    void frameQueueClear()
+    { frameQueue_.clear(); }
+
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);
     void skipNonReferenceFrames(bool skip);

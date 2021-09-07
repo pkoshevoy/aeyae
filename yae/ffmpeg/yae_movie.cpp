@@ -46,20 +46,9 @@ namespace yae
     interruptDemuxer_(false),
     playbackEnabled_(false),
     looping_(false),
-    mustStop_(true),
-    videoQueueSize_("video_queue_size"),
-    audioQueueSize_("audio_queue_size")
+    mustStop_(true)
   {
     ensure_ffmpeg_initialized();
-
-    settings_.traits().addSetting(&videoQueueSize_);
-    settings_.traits().addSetting(&audioQueueSize_);
-
-    videoQueueSize_.traits().setValueMin(1);
-    videoQueueSize_.traits().setValue(kQueueSizeSmall);
-
-    audioQueueSize_.traits().setValueMin(1);
-    audioQueueSize_.traits().setValue(kQueueSizeLarge);
   }
 
   //----------------------------------------------------------------
@@ -595,7 +584,6 @@ namespace yae
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->enableClosedCaptions(enableClosedCaptions_);
     track->setSubs(&subs_);
-    track->frameQueue_.setMaxSize(videoQueueSize_.traits().value());
 
     return track->initTraits();
   }
@@ -622,7 +610,6 @@ namespace yae
 
     AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
     track->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
-    track->frameQueue_.setMaxSize(audioQueueSize_.traits().value());
 
     return track->initTraits();
   }
@@ -743,13 +730,13 @@ namespace yae
           if (audioTrack)
           {
             // flush out buffered frames with an empty packet:
-            audioTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            audioTrack->packetQueuePush(TPacketPtr(), &outputTerminator_);
           }
 
           if (videoTrack)
           {
             // flush out buffered frames with an empty packet:
-            videoTrack->packetQueue_.push(TPacketPtr(), &outputTerminator_);
+            videoTrack->packetQueuePush(TPacketPtr(), &outputTerminator_);
           }
 
           if (!playbackEnabled_)
@@ -771,20 +758,14 @@ namespace yae
           // for all queues to empty:
           if (audioTrack)
           {
-            audioTrack->packetQueue_.
-              waitIndefinitelyForConsumerToBlock();
-
-            audioTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+            audioTrack->packetQueueWaitForConsumerToBlock();
+            audioTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
           }
 
           if (videoTrack)
           {
-            videoTrack->packetQueue_.
-              waitIndefinitelyForConsumerToBlock();
-
-            videoTrack->frameQueue_.
-              waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+            videoTrack->packetQueueWaitForConsumerToBlock();
+            videoTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
           }
 
           // check whether user tried to seek
@@ -859,7 +840,7 @@ namespace yae
         if (videoTrack &&
             videoTrack->streamIndex() == packet.stream_index)
         {
-          if (!videoTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!videoTrack->packetQueuePush(packetPtr, &outputTerminator_))
           {
             break;
           }
@@ -867,7 +848,7 @@ namespace yae
         else if (audioTrack &&
                  audioTrack->streamIndex() == packet.stream_index)
         {
-          if (!audioTrack->packetQueue_.push(packetPtr, &outputTerminator_))
+          if (!audioTrack->packetQueuePush(packetPtr, &outputTerminator_))
           {
             break;
           }
@@ -1068,14 +1049,14 @@ namespace yae
     {
       VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
       t->threadStart();
-      t->packetQueue_.waitIndefinitelyForConsumerToBlock();
+      t->packetQueueWaitForConsumerToBlock();
     }
 
     if (selectedAudioTrack_ < audioTracks_.size())
     {
       AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
       t->threadStart();
-      t->packetQueue_.waitIndefinitelyForConsumerToBlock();
+      t->packetQueueWaitForConsumerToBlock();
     }
 
     outputTerminator_.stopWaiting(false);
@@ -1181,10 +1162,10 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         videoTrack = videoTracks_[selectedVideoTrack_];
-        videoTrack->packetQueue_.clear();
-        do { videoTrack->frameQueue_.clear(); }
-        while (!videoTrack->packetQueue_.waitForConsumerToBlock(1e-2));
-        videoTrack->frameQueue_.clear();
+        videoTrack->packetQueueClear();
+        do { videoTrack->frameQueueClear(); }
+        while (!videoTrack->packetQueueWaitForConsumerToBlock(1e-2));
+        videoTrack->frameQueueClear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
        yae_debug << "\n\tCLEAR VIDEO FRAME QUEUE for seek: "
@@ -1195,10 +1176,10 @@ namespace yae
       if (selectedAudioTrack_ < audioTracks_.size())
       {
         audioTrack = audioTracks_[selectedAudioTrack_];
-        audioTrack->packetQueue_.clear();
-        do { audioTrack->frameQueue_.clear(); }
-        while (!audioTrack->packetQueue_.waitForConsumerToBlock(1e-2));
-        audioTrack->frameQueue_.clear();
+        audioTrack->packetQueueClear();
+        do { audioTrack->frameQueueClear(); }
+        while (!audioTrack->packetQueueWaitForConsumerToBlock(1e-2));
+        audioTrack->frameQueueClear();
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         yae_debug << "\n\tCLEAR AUDIO FRAME QUEUE for seek: "
@@ -1312,20 +1293,14 @@ namespace yae
     // wait for the the frame queues to empty out:
     if (audioTrack)
     {
-      audioTrack->packetQueue_.
-        waitIndefinitelyForConsumerToBlock();
-
-      audioTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+      audioTrack->packetQueueWaitForConsumerToBlock();
+      audioTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
     }
 
     if (videoTrack)
     {
-      videoTrack->packetQueue_.
-        waitIndefinitelyForConsumerToBlock();
-
-      videoTrack->frameQueue_.
-        waitIndefinitelyForConsumerToBlock(&framestepTerminator_);
+      videoTrack->packetQueueWaitForConsumerToBlock();
+      videoTrack->frameQueueWaitForConsumerToBlock(&framestepTerminator_);
     }
 
     boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);

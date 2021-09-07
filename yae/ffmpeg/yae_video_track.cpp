@@ -104,7 +104,6 @@ namespace yae
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     deinterlace_(false),
-    frameQueue_(kQueueSizeSmall),
     hasPrevPTS_(false),
     framesDecoded_(0),
     framesProduced_(0),
@@ -940,6 +939,10 @@ namespace yae
           yae_debug << "push video frame: " << ts << "\n";
         }
 #endif
+
+        // match the output frame queue size to the input frame queue size,
+        // plus 10 percent:
+        frameQueue_.setMaxSize((packetQueue_.getMaxSize() * 11) / 10);
 
         // put the output frame into frame queue:
         {

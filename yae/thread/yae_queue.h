@@ -136,7 +136,7 @@ namespace yae
     typedef bool(*TSortFunc)(const TData &, const TData &);
     typedef std::list<TData> TSequence;
 
-    Queue(std::size_t maxSize = 1):
+    Queue(std::size_t maxSize = 0):
       closed_(true),
       producerIsBlocked_(false),
       consumerIsBlocked_(false),
@@ -153,41 +153,41 @@ namespace yae
       closed_ = true;
     }
 
-    void setSortFunc(TSortFunc sortFunc)
+    inline void setSortFunc(TSortFunc sortFunc)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       sortFunc_ = sortFunc;
     }
 
-    void setMaxSizeUnlimited()
+    inline bool setMaxSizeUnlimited()
     {
-      // change max queue size:
-      {
-        boost::lock_guard<boost::mutex> lock(mutex_);
-        maxSize_ = std::numeric_limits<std::size_t>::max();
-      }
-
-      cond_.notify_all();
+      return setMaxSize(0);
     }
 
-    void setMaxSize(std::size_t maxSize)
+    bool setMaxSize(std::size_t maxSize)
     {
+      if (!maxSize)
+      {
+        maxSize = std::numeric_limits<std::size_t>::max();
+      }
+
       // change max queue size:
       {
         boost::lock_guard<boost::mutex> lock(mutex_);
         if (maxSize_ == maxSize)
         {
           // same size, nothing changed:
-          return;
+          return false;
         }
 
         maxSize_ = maxSize;
       }
 
       cond_.notify_all();
+      return true;
     }
 
-    std::size_t getMaxSize() const
+    inline std::size_t getMaxSize() const
     {
       // get max queue size:
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -195,14 +195,21 @@ namespace yae
     }
 
     // check whether the Queue is empty:
-    bool isEmpty() const
+    inline std::size_t getSize() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return size_;
+    }
+
+    // check whether the Queue is empty:
+    inline bool isEmpty() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       return !size_;
     }
 
     // check whether the queue is closed:
-    bool isClosed() const
+    inline bool isClosed() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       return closed_;
@@ -285,7 +292,8 @@ namespace yae
         // add to queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && size_ >= maxSize_ && terminator.keepWaiting())
+          while (!closed_ && maxSize_ && size_ >= maxSize_ &&
+                 terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
             yae_debug << this << " push wait, size " << size_;
@@ -294,7 +302,7 @@ namespace yae
             cond_.wait(lock);
           }
 
-          if (size_ >= maxSize_)
+          if (maxSize_ && size_ >= maxSize_)
           {
             return false;
           }
@@ -500,13 +508,13 @@ namespace yae
       return consumerIsBlocked_ || closed_;
     }
 
-    bool producerIsBlocked() const
+    inline bool producerIsBlocked() const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       return producerIsBlocked_;
     }
 
-    bool consumerIsBlocked() const
+    inline bool consumerIsBlocked() const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
       return consumerIsBlocked_;

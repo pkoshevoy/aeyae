@@ -251,8 +251,6 @@ namespace yae
 
     // top-level settings group:
     yae::TSettingGroup settings_;
-    yae::TSettingUInt32 videoQueueSize_;
-    yae::TSettingUInt32 audioQueueSize_;
   };
 
   //----------------------------------------------------------------

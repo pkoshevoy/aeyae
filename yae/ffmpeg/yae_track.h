@@ -30,6 +30,7 @@ extern "C"
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_time.h"
 #include "yae/video/yae_video.h"
 
 
@@ -48,17 +49,6 @@ namespace yae
   // kMinInt64
   //
   static const int64_t kMinInt64 = std::numeric_limits<int64_t>::min();
-
-
-  //----------------------------------------------------------------
-  // kQueueSizeSmall
-  //
-  enum
-  {
-    kQueueSizeSmall = 24, // 1s video at 24 fps
-    kQueueSizeLarge = 1200, // 1s audio at 40 samples per frame at 48 KHz
-  };
-
 
   //----------------------------------------------------------------
   // startNewSequence
@@ -295,6 +285,42 @@ namespace yae
     inline const AVStream & stream() const
     { return *stream_; }
 
+    inline bool packetQueueIsClosed() const
+    { return packetQueue_.isClosed(); }
+
+    void packetQueueOpen();
+    void packetQueueClose();
+
+    // estimate packet ingest rate
+    // and adjust Queue max size for 1s latency,
+    // then try to add the packet to the packet queue:
+    bool packetQueuePush(const TPacketPtr & packetPtr,
+                         QueueWaitMgr * waitMgr = NULL);
+
+    inline bool packetQueueProducerIsBlocked() const
+    { return packetQueue_.producerIsBlocked(); }
+
+    inline bool packetQueueConsumerIsBlocked() const
+    { return packetQueue_.consumerIsBlocked(); }
+
+    inline bool packetQueueWaitForConsumerToBlock(double sec)
+    { return packetQueue_.waitForConsumerToBlock(sec); }
+
+    inline bool packetQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
+    { return packetQueue_.waitIndefinitelyForConsumerToBlock(mgr); }
+
+    inline void packetQueueClear()
+    {
+      packetRateEstimator_.clear();
+      packetQueue_.clear();
+    }
+
+    virtual bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr)
+    { return true; }
+
+    virtual void frameQueueClear()
+    {}
+
   private:
     // intentionally disabled:
     Track(const Track &);
@@ -309,6 +335,9 @@ namespace yae
     void flush();
 
   protected:
+    FramerateEstimator packetRateEstimator_;
+    TPacketQueue packetQueue_;
+
     yae::AvBufferRef hw_device_ctx_;
     yae::AvBufferRef hw_frames_ctx_;
 
@@ -339,7 +368,6 @@ namespace yae
 
   public:
     uint64_t discarded_;
-    TPacketQueue packetQueue_;
   };
 
   //----------------------------------------------------------------
@@ -358,9 +386,9 @@ namespace yae
     PacketQueueCloseOnExit(TrackPtr track):
       track_(track)
     {
-      if (track_ && track_->packetQueue_.isClosed())
+      if (track_ && track_->packetQueueIsClosed())
       {
-        track_->packetQueue_.open();
+        track_->packetQueueOpen();
       }
     }
 
@@ -368,7 +396,7 @@ namespace yae
     {
       if (track_)
       {
-        track_->packetQueue_.close();
+        track_->packetQueueClose();
       }
     }
   };
@@ -391,8 +419,8 @@ namespace yae
       return false;
     }
 
-    bool blocked = (a->packetQueue_.producerIsBlocked() &&
-                    b->packetQueue_.consumerIsBlocked());
+    bool blocked = (a->packetQueueProducerIsBlocked() &&
+                    b->packetQueueConsumerIsBlocked());
     return blocked;
   }
 

@@ -710,6 +710,8 @@ namespace yae
   {
     FramerateEstimator(std::size_t buffer_size = 300);
 
+    void clear();
+
     void add(const FramerateEstimator & s, const TTime & offset);
 
     void push(const TTime & dts);
@@ -748,6 +750,9 @@ namespace yae
 
     // summarize framerate statistics, return best guess of the framerate:
     double get(Framerate & stats) const;
+
+    inline bool is_monotonically_increasing(const TTime & dts) const
+    { return dts_.empty() ? true : !(dts_.back() > dts); }
 
     inline const std::map<TTime, uint64_t> & durations() const
     { return dur_; }

@@ -3923,14 +3923,14 @@ namespace yae
       }
 
       decoder.threadStart();
-      decoder.packetQueue_.waitIndefinitelyForConsumerToBlock();
+      decoder.packetQueueWaitForConsumerToBlock();
     }
 
     // feed the decoder:
-    decoder.packetQueue_.push(packet_ptr);
+    decoder.packetQueuePush(packet_ptr);
 
     // flush, so we don't get stuck:
-    decoder.packetQueue_.push(TPacketPtr());
+    decoder.packetQueuePush(TPacketPtr());
 
     TVideoFramePtr vf_ptr;
     decoder.frameQueue_.pop(vf_ptr);

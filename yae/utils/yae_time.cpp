@@ -2382,6 +2382,18 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // FramerateEstimator::clear
+  //
+  void
+  FramerateEstimator::clear()
+  {
+    dts_.clear();
+    dur_.clear();
+    sum_.clear();
+    num_ = 0;
+  }
+
+  //----------------------------------------------------------------
   // FramerateEstimator::add
   //
   void

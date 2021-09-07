@@ -148,6 +148,14 @@ namespace yae
 
     void close();
 
+    // virtual:
+    bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
+    { return queue_.waitIndefinitelyForConsumerToBlock(mgr); }
+
+    // virtual:
+    void frameQueueClear()
+    { queue_.clear(); }
+
     void setInputEventFormat(const char * eventFormat);
     void setOutputEventFormat(const char * eventFormat);
     void setTimingEtc(TSubsFrame & sf, const std::vector<std::string> & evFmt);

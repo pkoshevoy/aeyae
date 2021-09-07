@@ -284,6 +284,7 @@ namespace yae
   // Track::Track
   //
   Track::Track(AVFormatContext * context, AVStream * stream):
+    packetRateEstimator_(600),
     thread_(this),
     context_(context),
     stream_(stream),
@@ -295,8 +296,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
-    discarded_(0),
-    packetQueue_(kQueueSizeLarge)
+    discarded_(0)
   {
     if (context_ && stream_)
     {
@@ -308,6 +308,8 @@ namespace yae
   // Track::Track
   //
   Track::Track(Track * track):
+    packetRateEstimator_(600),
+    packetQueue_(track->packetQueue_.getMaxSize()),
     thread_(this),
     context_(NULL),
     stream_(NULL),
@@ -319,8 +321,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
-    discarded_(0),
-    packetQueue_(kQueueSizeLarge)
+    discarded_(0)
   {
     std::swap(hw_device_ctx_, track->hw_device_ctx_);
     std::swap(hw_frames_ctx_, track->hw_frames_ctx_);
@@ -609,6 +610,82 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Track::packetQueueOpen
+  //
+  void
+  Track::packetQueueOpen()
+  {
+    packetQueue_.open();
+  }
+
+  //----------------------------------------------------------------
+  // Track::packetQueueClose
+  //
+  void
+  Track::packetQueueClose()
+  {
+    packetQueue_.close();
+  }
+
+  //----------------------------------------------------------------
+  // Track::packetQueuePush
+  //
+  bool
+  Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
+  {
+    if (packetPtr)
+    {
+      const AvPkt & pkt = *packetPtr;
+      const AVPacket & packet = pkt.get();
+
+      TTime dts(int64_t(stream_->time_base.num) * packet.dts,
+                uint64_t(stream_->time_base.den));
+
+      if (!packetRateEstimator_.is_monotonically_increasing(dts))
+      {
+        packetRateEstimator_.clear();
+      }
+
+      packetRateEstimator_.push(dts);
+
+      const double rate = packetRateEstimator_.window_avg();
+      if (rate > 0.0)
+      {
+        const uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
+        const uint64_t max_queue_size = packetQueue_.getMaxSize();
+
+        const uint64_t diff =
+          (new_queue_size < max_queue_size) ?
+          max_queue_size - new_queue_size :
+          new_queue_size - max_queue_size;
+
+        // avoid log span due to flip-flopping queue size:
+        static const uint64_t padding = 10;
+
+        const uint64_t percent_padding =
+          (new_queue_size < max_queue_size) ?
+          (100 * diff) / max_queue_size :
+          (100 * padding) / (new_queue_size + padding);
+
+        if ((new_queue_size > max_queue_size ||
+             (diff > padding && percent_padding > 15)) &&
+            packetQueue_.setMaxSize(new_queue_size + padding))
+        {
+          yae_dlog("%s: estimated packet queue max size: %" PRIu64
+                   ", current occupancy: %" PRIu64
+                   ", percent padding: %" PRIu64,
+                   id_.c_str(),
+                   uint64_t(new_queue_size),
+                   uint64_t(packetQueue_.getSize()),
+                   percent_padding);
+        }
+      }
+    }
+
+    return packetQueue_.push(packetPtr, waitMgr);
+  }
+
+  //----------------------------------------------------------------
   // Track::decoderPull
   //
   int
@@ -757,7 +834,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::thread_loop
+  // Track::thread_loop
   //
   void
   Track::thread_loop()

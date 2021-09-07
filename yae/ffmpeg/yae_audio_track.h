@@ -48,6 +48,14 @@ namespace yae
     AVCodecContext * open();
 
     // virtual:
+    bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
+    { return frameQueue_.waitIndefinitelyForConsumerToBlock(mgr); }
+
+    // virtual:
+    void frameQueueClear()
+    { frameQueue_.clear(); }
+
+    // virtual:
     bool decoderStartup();
     bool decoderShutdown();
     void handle(const AvFrm & decodedFrame);
