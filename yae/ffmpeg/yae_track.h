@@ -290,6 +290,7 @@ namespace yae
 
     void packetQueueOpen();
     void packetQueueClose();
+    void packetQueueClear();
 
     // estimate packet ingest rate
     // and adjust Queue max size for 1s latency,
@@ -308,12 +309,6 @@ namespace yae
 
     inline bool packetQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
     { return packetQueue_.waitIndefinitelyForConsumerToBlock(mgr); }
-
-    inline void packetQueueClear()
-    {
-      packetRateEstimator_.clear();
-      packetQueue_.clear();
-    }
 
     virtual bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr)
     { return true; }
@@ -335,6 +330,7 @@ namespace yae
     void flush();
 
   protected:
+    mutable boost::mutex packetRateMutex_;
     FramerateEstimator packetRateEstimator_;
     TPacketQueue packetQueue_;
 
