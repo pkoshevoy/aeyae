@@ -166,11 +166,6 @@ namespace yae
 
     bool setMaxSize(std::size_t maxSize)
     {
-      if (!maxSize)
-      {
-        maxSize = std::numeric_limits<std::size_t>::max();
-      }
-
       // change max queue size:
       {
         boost::lock_guard<boost::mutex> lock(mutex_);

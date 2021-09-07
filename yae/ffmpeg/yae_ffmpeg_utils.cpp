@@ -398,7 +398,11 @@ namespace yae
     threshold_ = priority;
 
     int level =
+#ifdef NDEBUG
       priority < TLog::kInfo ? AV_LOG_DEBUG :
+#else
+      priority < TLog::kInfo ? AV_LOG_INFO :
+#endif
       priority < TLog::kWarning ? AV_LOG_INFO :
       priority < TLog::kError ? AV_LOG_WARNING :
       AV_LOG_ERROR;
@@ -420,7 +424,11 @@ namespace yae
     }
 
     int log_level =
+#ifdef NDEBUG
       priority < TLog::kInfo ? AV_LOG_DEBUG :
+#else
+      priority < TLog::kInfo ? AV_LOG_INFO :
+#endif
       priority < TLog::kWarning ? AV_LOG_INFO :
       priority < TLog::kError ? AV_LOG_WARNING :
       AV_LOG_ERROR;
