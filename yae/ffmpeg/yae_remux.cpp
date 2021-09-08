@@ -646,8 +646,21 @@ namespace yae
       loader.run();
     }
 
-    TSerialDemuxerPtr serial_demuxer = model.make_serial_demuxer();
-    return serial_demuxer;
+    try
+    {
+      TSerialDemuxerPtr serial_demuxer = model.make_serial_demuxer();
+      return serial_demuxer;
+    }
+    catch (const std::exception & e)
+    {
+      yae_elog("make_serial_demuxer exception: %s", e.what());
+    }
+    catch (...)
+    {
+      yae_elog("make_serial_demuxer unexpected exception");
+    }
+
+    return TSerialDemuxerPtr();
   }
 
 }
