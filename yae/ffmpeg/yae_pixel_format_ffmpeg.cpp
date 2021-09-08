@@ -1215,8 +1215,6 @@ namespace yae
     }
     else
     {
-      YAE_ASSERT(flag_rgb);
-
       // nothing to do, use the identity matrix:
       static const double identity[] = {
         1, 0, 0, 0,
