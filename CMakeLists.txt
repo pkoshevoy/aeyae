@@ -272,6 +272,8 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_auto_crop.h
   yae/video/yae_colorspace.cpp
   yae/video/yae_colorspace.h
+  yae/video/yae_color_transform.cpp
+  yae/video/yae_color_transform.h
   yae/video/yae_istream.h
   yae/video/yae_mpeg_ts.cpp
   yae/video/yae_mpeg_ts.h

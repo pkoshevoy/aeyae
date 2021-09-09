@@ -931,6 +931,8 @@ namespace yae
          src.color_trc == AVCOL_TRC_SMPTE428) ? AVCOL_SPC_RGB :
 
         src.colorspace;
+
+      YAE_ASSERT(specs.colorspace != AVCOL_SPC_RGB || is_rgb);
     }
 
     if (yae::has_color_specs(specs))
