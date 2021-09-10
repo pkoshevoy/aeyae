@@ -25,6 +25,7 @@ include_directories(AFTER
 
 add_executable(aeyae-tests
   yae_benchmark_tests.cpp
+  yae_color_transform_tests.cpp
   yae_data_tests.cpp
   yae_lru_cache_tests.cpp
   yae_settings_tests.cpp

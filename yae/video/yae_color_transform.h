@@ -27,8 +27,6 @@ extern "C"
 namespace yae
 {
 
-  // FIXME: pkoshevoy: these need some unit tests:
-
   //----------------------------------------------------------------
   // get_ycbcr_to_ypbpr
   //
