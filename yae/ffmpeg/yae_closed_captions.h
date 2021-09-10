@@ -161,10 +161,6 @@ namespace yae
 
     // for keeping track of previous/current CEA-608 data channel:
     unsigned char dataChannel_[2];
-
-    // for keeping track of prior byte pairs (for error correction),
-    // per field:
-    unsigned char prior_[2][2];
   };
 
 }

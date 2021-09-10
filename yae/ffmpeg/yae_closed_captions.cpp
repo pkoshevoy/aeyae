@@ -329,7 +329,6 @@ namespace yae
   split_cc_packets_by_channel(int64_t pts,
                               const cc_data_pkt_t * cc_data_pkt,
                               const cc_data_pkt_t * cc_data_end,
-                              unsigned char prior[2][2],
                               unsigned char dataChannel[2],
                               std::map<unsigned char, AvPkt> & pkt)
   {
@@ -353,8 +352,6 @@ namespace yae
 
       // shortcuts:
       unsigned char field_number = 1 + (unsigned char)cc_type;
-      unsigned char & prior_c0 = prior[cc_type][0];
-      unsigned char & prior_c1 = prior[cc_type][1];
 
       const bool odd_parity_b0 = parity_lut[cc_pkt.b0];
       const bool odd_parity_b1 = parity_lut[cc_pkt.b1];
@@ -369,30 +366,6 @@ namespace yae
       unsigned char b1 = clear_odd_parity(cc_pkt.b1);
       unsigned short b01 = byte_pair(b0, b1);
 
-      if (byte_pair_in_range(b01, 0x1020, 0x1f7f))
-      {
-        if (!odd_parity_b1)
-        {
-          // if the second byte of the control code fails parity
-          // then ignore the control code:
-          continue;
-        }
-
-        if (!odd_parity_b0 && prior_c1 == cc_pkt.b1)
-        {
-          // ignore failed redundant control code:
-          continue;
-        }
-      }
-
-      if (prior_c0 == cc_pkt.b0 && prior_c1 == cc_pkt.b1)
-      {
-        // ignore the redundant control code, once:
-        prior_c0 = 0;
-        prior_c1 = 0;
-        continue;
-      }
-
       if (!odd_parity_b0)
       {
         b0 = 0x7f;
@@ -404,13 +377,6 @@ namespace yae
       }
 
       b01 = byte_pair(b0, b1);
-
-      if (b01)
-      {
-        // update prior control codes:
-        prior_c0 = cc_pkt.b0;
-        prior_c1 = cc_pkt.b1;
-      }
 
       if (field_number == 2)
       {
@@ -485,7 +451,6 @@ namespace yae
   //
   static bool
   split_cc_packets_by_channel(const AVPacket & src,
-                              unsigned char prior[2][2],
                               unsigned char dataChannel[2],
                               std::map<unsigned char, AvPkt> & cc)
   {
@@ -497,7 +462,6 @@ namespace yae
     if (!split_cc_packets_by_channel(src.pts,
                                      cc_data_pkt,
                                      cc_data_end,
-                                     prior,
                                      dataChannel,
                                      cc))
     {
@@ -701,8 +665,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     // for each field:
     for (unsigned char i = 0; i < 2; i++)
     {
-      prior_[i][0] = 0;
-      prior_[i][1] = 0;
       dataChannel_[i] = 1;
     }
   }
@@ -724,7 +686,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   //
   static bool
   makeCcPkt(const AVFrame & frame,
-            unsigned char prior[2][2],
             unsigned char dataChannel[2],
             std::map<unsigned char, AvPkt> & pkt)
   {
@@ -753,7 +714,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
       split_cc_packets_by_channel(frame.pts,
                                   cc_data_pkt,
                                   cc_data_end,
-                                  prior,
                                   dataChannel,
                                   pkt);
     }
@@ -771,7 +731,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                           QueueWaitMgr * terminator)
   {
     std::map<unsigned char, AvPkt> cc;
-    makeCcPkt(frame, prior_, dataChannel_, cc);
+    makeCcPkt(frame, dataChannel_, cc);
     decode(frame.pts, timeBase, cc, terminator);
   }
 
@@ -784,7 +744,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
                           QueueWaitMgr * terminator)
   {
     std::map<unsigned char, AvPkt> cc;
-    split_cc_packets_by_channel(packet, prior_, dataChannel_, cc);
+    split_cc_packets_by_channel(packet, dataChannel_, cc);
     decode(packet.pts, timeBase, cc, terminator);
   }
 
