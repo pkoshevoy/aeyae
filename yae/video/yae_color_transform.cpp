@@ -246,12 +246,13 @@ namespace yae
   //----------------------------------------------------------------
   // ColorTransform::ColorTransform
   //
-  ColorTransform::ColorTransform(unsigned int log2_size):
-    size_3d_(1ull << (log2_size * 3)),
-    size_2d_(1ull << (log2_size * 2)),
-    size_1d_(1ull << (log2_size))
+  ColorTransform::ColorTransform(unsigned int log2_edge):
+    log2_edge_(log2_edge),
+    size_3d_(1ull << (log2_edge * 3)),
+    size_2d_(1ull << (log2_edge * 2)),
+    size_1d_(1ull << (log2_edge))
   {
-    YAE_ASSERT(log2_size < 11);
+    YAE_ASSERT(log2_edge < 11);
     cube_.resize(size_3d_);
   }
 

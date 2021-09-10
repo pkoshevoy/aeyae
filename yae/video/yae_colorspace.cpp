@@ -739,11 +739,11 @@ namespace yae
 
     boost::unique_lock<boost::mutex> lock(mutex_);
 
-    static std::map<std::string, Colorspace *> cache_;
-    Colorspace *& colorspace = cache_[key];
-    if (colorspace)
+    static std::map<std::string, yae::shared_ptr<Colorspace> > cache_;
+    yae::shared_ptr<Colorspace> & csp_ptr = cache_[key];
+    if (csp_ptr)
     {
-      return colorspace;
+      return csp_ptr.get();
     }
 
     const Colorspace::TransferFunc & transfer_func = get_transfer_func(av_trc);
@@ -751,24 +751,27 @@ namespace yae
     Primaries primaries;
     get_primaries(av_pri, primaries);
 
-    colorspace = new Colorspace(// name:
-                                key.c_str(),
+    csp_ptr.reset(new Colorspace(// name:
+                                 key.c_str(),
 
-                                // ffmpeg color specs:
-                                av_csp,
-                                av_pri,
-                                av_trc,
+                                 // ffmpeg color specs:
+                                 av_csp,
+                                 av_pri,
+                                 av_trc,
 
-                                // primaries chromaticity coordinates:
-                                primaries.r_.x_, primaries.r_.y_,
-                                primaries.g_.x_, primaries.g_.y_,
-                                primaries.b_.x_, primaries.b_.y_,
+                                 // primaries chromaticity coordinates:
+                                 primaries.r_.x_, primaries.r_.y_,
+                                 primaries.g_.x_, primaries.g_.y_,
+                                 primaries.b_.x_, primaries.b_.y_,
 
-                                // white point chromaticity coordinates:
-                                primaries.w_.x_, primaries.w_.y_,
+                                 // white point chromaticity coordinates:
+                                 primaries.w_.x_, primaries.w_.y_,
 
-                                // transfer functions:
-                                transfer_func);
+                                 // transfer functions:
+                                 transfer_func));
+
+    // shortcut:
+    Colorspace * colorspace = csp_ptr.get();
 
     if (av_trc == AVCOL_TRC_SMPTE170M)
     {

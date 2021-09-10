@@ -218,3 +218,36 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
     }
   }
 }
+
+
+BOOST_AUTO_TEST_CASE(yae_color_transform)
+{
+  const Colorspace * csp_hlg = Colorspace::get(AVCOL_SPC_BT2020_NCL,
+                                               AVCOL_PRI_BT2020,
+                                               AVCOL_TRC_ARIB_STD_B67);
+  BOOST_CHECK(!!csp_hlg);
+
+  const Colorspace * csp_sdr = Colorspace::get(AVCOL_SPC_BT709,
+                                               AVCOL_PRI_BT709,
+                                               AVCOL_TRC_BT709);
+  BOOST_CHECK(!!csp_sdr);
+
+  m4x4_t src_to_ypbpr;
+  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
+                                 AV_PIX_FMT_P010,
+                                 AVCOL_RANGE_MPEG));
+
+  m4x4_t ypbpr_to_dst;
+  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
+                                 AV_PIX_FMT_NV12,
+                                 AVCOL_RANGE_MPEG));
+
+  ToneMapGamma tone_map(1000, 1.8);
+
+  ColorTransform color_transform;
+  color_transform.fill(*csp_hlg,
+                       *csp_sdr,
+                       src_to_ypbpr,
+                       ypbpr_to_dst,
+                       &tone_map);
+}

@@ -55,7 +55,7 @@ namespace yae
   struct YAE_API ToneMap
   {
     virtual ~ToneMap() {}
-    virtual void apply(const double * rgb, double * out) const = 0;
+    virtual void apply(const double * src_rgb, double * dst_rgb) const = 0;
   };
 
   //----------------------------------------------------------------
@@ -100,7 +100,7 @@ namespace yae
     //
     ColorTransform(// log base 2 of 3D LUT cube edge size,
                    // default is 6, for 64 x 64 x 64 cube:
-                   unsigned int log2_size = 6);
+                   unsigned int log2_edge = 6);
 
     void fill(const Colorspace & src_csp,
               const Colorspace & dst_csp,
@@ -117,10 +117,12 @@ namespace yae
               // optional, for HDR -> SDR conversion:
               const ToneMap * tone_map = NULL);
 
-  protected:
+    const unsigned int log2_edge_;
     const std::size_t size_3d_;
     const std::size_t size_2d_;
     const std::size_t size_1d_;
+
+  protected:
     std::vector<Pixel> cube_;
   };
 
