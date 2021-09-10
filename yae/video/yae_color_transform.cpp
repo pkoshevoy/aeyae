@@ -323,6 +323,9 @@ namespace yae
           // tranform to output space:
           output = to_dst * rgb;
 
+          // clamp to [0, 1] output range:
+          output = clip(output, 0.0, 1.0);
+
           // memoize the output value:
           pixel[0] = float(output[0]);
           pixel[1] = float(output[1]);

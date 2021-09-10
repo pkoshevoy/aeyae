@@ -1052,7 +1052,7 @@ namespace yae
              AVColorPrimaries pri,
              AVColorTransferCharacteristic trc,
              AVColorRange rng,
-             int par_num ,
+             int par_num,
              int par_den,
              unsigned char fill_luma,
              unsigned char fill_chroma)

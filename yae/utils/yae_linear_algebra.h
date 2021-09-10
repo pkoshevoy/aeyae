@@ -622,6 +622,49 @@ namespace yae
     return v;
   }
 
+  //----------------------------------------------------------------
+  // dot_product
+  //
+  inline double
+  dot_product(const v4x1_t & a, const v4x1_t & b)
+  { return a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3]; }
+
+  //----------------------------------------------------------------
+  // norm_squared
+  //
+  inline double
+  norm_squared(const v4x1_t & v)
+  { return dot_product(v, v); }
+
+  //----------------------------------------------------------------
+  // norm
+  //
+  inline double
+  norm(const v4x1_t & v)
+  { return sqrt(norm_squared(v)); }
+
+  //----------------------------------------------------------------
+  // pow
+  //
+  inline v4x1_t
+  pow(const v4x1_t & v, double t)
+  { return make_v4x1(std::pow(v[0], t),
+                     std::pow(v[1], t),
+                     std::pow(v[2], t),
+                     std::pow(v[3], t)); }
+
+  //----------------------------------------------------------------
+  // clip
+  //
+  inline v4x1_t
+  clip(const v4x1_t & v, double v_min = 0.0, double v_max = 1.0)
+  {
+    return make_v4x1(std::min(1.0, std::max(0.0, v[0])),
+                     std::min(1.0, std::max(0.0, v[1])),
+                     std::min(1.0, std::max(0.0, v[2])),
+                     std::min(1.0, std::max(0.0, v[3])));
+  }
+
 
   //----------------------------------------------------------------
   // det

@@ -117,6 +117,13 @@ namespace yae
               // optional, for HDR -> SDR conversion:
               const ToneMap * tone_map = NULL);
 
+    // accessors:
+    inline const Pixel * get_data() const
+    { return &cube_[0]; }
+
+    inline const Pixel & at(std::size_t offset) const
+    { return cube_.at(offset); }
+
     const unsigned int log2_edge_;
     const std::size_t size_3d_;
     const std::size_t size_2d_;

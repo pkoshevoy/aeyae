@@ -13,6 +13,7 @@
 #include <boost/test/unit_test.hpp>
 
 // aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/video/yae_color_transform.h"
 
 // namespace access:
@@ -244,10 +245,51 @@ BOOST_AUTO_TEST_CASE(yae_color_transform)
 
   ToneMapGamma tone_map(1000, 1.8);
 
-  ColorTransform color_transform;
-  color_transform.fill(*csp_hlg,
-                       *csp_sdr,
-                       src_to_ypbpr,
-                       ypbpr_to_dst,
-                       &tone_map);
+  ColorTransform lut3d;
+  lut3d.fill(*csp_hlg,
+             *csp_sdr,
+             src_to_ypbpr,
+             ypbpr_to_dst,
+             &tone_map);
+
+  // convert 3D LUT to a 2D CLUT:
+  const unsigned int log2_h = lut3d.log2_edge_ + lut3d.log2_edge_ / 2;
+  const unsigned int log2_w = lut3d.log2_edge_ * 3 - log2_h;
+
+  const unsigned int clut_h = 1 << log2_h;
+  const unsigned int clut_w = 1 << log2_w;
+
+  AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
+                         clut_w,
+                         clut_h,
+                         csp_sdr->av_csp_,
+                         csp_sdr->av_pri_,
+                         csp_sdr->av_trc_,
+                         AVCOL_RANGE_MPEG);
+
+  AVFrame & frame = frm.get();
+  for (unsigned int i = 0; i < clut_h; i++)
+  {
+    for (unsigned int j = 0; j < clut_w; j++)
+    {
+      const unsigned int offset = i * clut_w + j;
+      if (offset >= lut3d.size_3d_)
+      {
+        break;
+      }
+
+      const ColorTransform::Pixel & pixel = lut3d.at(offset);
+
+      unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
+      unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
+      unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
+
+      *dst_y = (unsigned char)(255.0 * pixel.data_[0]);
+      *dst_u = (unsigned char)(255.0 * pixel.data_[1]);
+      *dst_v = (unsigned char)(255.0 * pixel.data_[2]);
+    }
+  }
+
+  BOOST_CHECK(save_as_png(frm, std::string("/tmp/clut-"), TTime(1, 30)));
+
 }

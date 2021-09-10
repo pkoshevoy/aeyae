@@ -70,17 +70,14 @@ namespace yae
       return;
     }
 
-    for (unsigned int i = 0; i < ctx->nb_streams; i++)
-    {
-      av_freep(&(ctx->streams[i]));
-    }
+    AVIOContext * pb = ctx->pb;;
 
-    if (ctx->pb)
-    {
-      avio_close(ctx->pb);
-    }
+    avformat_free_context(ctx);
 
-    av_freep(&ctx);
+    if (pb)
+    {
+      avio_close(pb);
+    }
   }
 
 
