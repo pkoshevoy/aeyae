@@ -70,14 +70,7 @@ namespace yae
       return;
     }
 
-    AVIOContext * pb = ctx->pb;;
-
-    avformat_free_context(ctx);
-
-    if (pb)
-    {
-      avio_close(pb);
-    }
+    avformat_close_input(&ctx);
   }
 
 
