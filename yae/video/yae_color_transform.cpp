@@ -244,6 +244,61 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ToneMapPiecewise::ToneMapPiecewise
+  //
+  // Ls: dynamic range of the source signal, cd/m2
+  // Ld: dynamic range of the output signal, cd/m2
+  //
+  ToneMapPiecewise::ToneMapPiecewise(double src_peak_cdm2,
+                                     double dst_peak_cdm2):
+    peak_ratio_(src_peak_cdm2 / dst_peak_cdm2)
+  {}
+
+  //----------------------------------------------------------------
+  // ToneMapPiecewise::apply
+  //
+  void
+  ToneMapPiecewise::apply(const double * src_rgb, double * dst_rgb) const
+  {
+    // pick the brightest component:
+    const double src = std::max(src_rgb[0], std::max(src_rgb[1], src_rgb[2]));
+    double out = src;
+
+    double t = src * peak_ratio_;
+
+    if (t <= 1.0)
+    {
+      // 0-100 cd/m2 --> 0-75 cd/m2
+      out = t * 0.75;
+    }
+    else if (t <= 2.0)
+    {
+      out = 0.75 + 0.10 * (t - 1.0);
+    }
+    else if (t <= 3.0)
+    {
+      out = 0.85 + 0.05 * (t - 2.0);
+    }
+    else if (t <= 4.0)
+    {
+      out = 0.90 + 0.03 * (t - 3.0);
+    }
+    else if (t <= 5.0)
+    {
+      out = 0.93 + 0.02 * (t - 5.0);
+    }
+    else
+    {
+      out = 0.95 + 0.05 * (t - 5.0) / 5.0;
+    }
+
+    const double rescale = out / src;
+    dst_rgb[0] = src_rgb[0] * rescale;
+    dst_rgb[1] = src_rgb[1] * rescale;
+    dst_rgb[2] = src_rgb[2] * rescale;
+  }
+
+  //----------------------------------------------------------------
   // ColorTransform::ColorTransform
   //
   ColorTransform::ColorTransform(unsigned int log2_edge):

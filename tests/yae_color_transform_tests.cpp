@@ -21,6 +21,26 @@ using namespace yae;
 
 
 //----------------------------------------------------------------
+// yae_colorspace_transfer_eotf_oetf
+//
+BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf)
+{
+  for (int i = AVCOL_TRC_RESERVED0; i < AVCOL_TRC_NB; i++)
+  {
+    AVColorTransferCharacteristic av_trc = (AVColorTransferCharacteristic)i;
+    const Colorspace::TransferFunc & transfer = get_transfer_func(av_trc);
+
+    for (int j = 0; j <= 100; j++)
+    {
+      double non_linear_in = double(j) / 100.0;
+      double linear_cdm2 = transfer.eotf(non_linear_in);
+      double non_linear_out = transfer.oetf(linear_cdm2);
+      BOOST_CHECK(fabs(non_linear_in - non_linear_out) < 1e-6);
+    }
+  }
+}
+
+//----------------------------------------------------------------
 // ycbcr_to_ypbpr_to_ycbcr_narrow_8bit
 //
 BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_narrow_8bit)
@@ -220,8 +240,8 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
   }
 }
 
-
-BOOST_AUTO_TEST_CASE(yae_color_transform)
+#if 1
+BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv)
 {
   const Colorspace * csp_hlg = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
@@ -245,7 +265,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform)
 
   ToneMapGamma tone_map(1000, 1.8);
 
-  ColorTransform lut3d;
+  ColorTransform lut3d(7);
   lut3d.fill(*csp_hlg,
              *csp_sdr,
              src_to_ypbpr,
@@ -253,8 +273,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform)
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
-  const unsigned int log2_h = lut3d.log2_edge_ + lut3d.log2_edge_ / 2;
-  const unsigned int log2_w = lut3d.log2_edge_ * 3 - log2_h;
+  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
 
   const unsigned int clut_h = 1 << log2_h;
   const unsigned int clut_w = 1 << log2_w;
@@ -291,5 +311,75 @@ BOOST_AUTO_TEST_CASE(yae_color_transform)
   }
 
   BOOST_CHECK(save_as_png(frm, std::string("/tmp/clut-"), TTime(1, 30)));
+}
+#endif
 
+BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb)
+{
+  const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
+                                               AVCOL_PRI_BT2020,
+                                               AVCOL_TRC_SMPTEST2084);
+  BOOST_CHECK(!!csp_hdr10);
+
+  const Colorspace * csp_sdr = Colorspace::get(AVCOL_SPC_RGB,
+                                               AVCOL_PRI_BT709,
+                                               AVCOL_TRC_BT709);
+  BOOST_CHECK(!!csp_sdr);
+
+  m4x4_t src_to_ypbpr;
+  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
+                                 AV_PIX_FMT_P010,
+                                 AVCOL_RANGE_MPEG));
+
+  m4x4_t ypbpr_to_dst;
+  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
+                                 AV_PIX_FMT_RGB24,
+                                 AVCOL_RANGE_JPEG));
+
+  ToneMapPiecewise tone_map(10000, 100);
+
+  ColorTransform lut3d(7);
+  lut3d.fill(*csp_hdr10,
+             *csp_sdr,
+             src_to_ypbpr,
+             ypbpr_to_dst,
+             &tone_map);
+
+  // convert 3D LUT to a 2D CLUT:
+  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+  const unsigned int clut_h = 1 << log2_h;
+  const unsigned int clut_w = 1 << log2_w;
+
+  AvFrm frm = make_avfrm(AV_PIX_FMT_RGB24,
+                         clut_w,
+                         clut_h,
+                         csp_sdr->av_csp_,
+                         csp_sdr->av_pri_,
+                         csp_sdr->av_trc_,
+                         AVCOL_RANGE_MPEG);
+
+  AVFrame & frame = frm.get();
+  for (unsigned int i = 0; i < clut_h; i++)
+  {
+    for (unsigned int j = 0; j < clut_w; j++)
+    {
+      const unsigned int offset = i * clut_w + j;
+      if (offset >= lut3d.size_3d_)
+      {
+        break;
+      }
+
+      const ColorTransform::Pixel & pixel = lut3d.at(offset);
+
+      unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
+
+      rgb[0] = (unsigned char)(255.0 * pixel.data_[0]);
+      rgb[1] = (unsigned char)(255.0 * pixel.data_[1]);
+      rgb[2] = (unsigned char)(255.0 * pixel.data_[2]);
+    }
+  }
+
+  BOOST_CHECK(save_as_png(frm, std::string("/tmp/clut-"), TTime(1, 30)));
 }

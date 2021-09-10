@@ -570,7 +570,10 @@ namespace yae
       return hlg_;
     }
 
-    YAE_ASSERT(av_trc == AVCOL_TRC_LINEAR);
+    YAE_ASSERT(av_trc == AVCOL_TRC_RESERVED0 ||
+               av_trc == AVCOL_TRC_UNSPECIFIED ||
+               av_trc == AVCOL_TRC_RESERVED ||
+               av_trc == AVCOL_TRC_LINEAR);
     static const linear::TransferFunc linear_;
     return linear_;
   }

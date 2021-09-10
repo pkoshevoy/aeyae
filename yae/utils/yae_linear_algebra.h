@@ -19,6 +19,16 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // clip
+  //
+  template <typename TData>
+  inline TData
+  clip(const TData & v, TData v_min, TData v_max)
+  {
+    return std::min<TData>(v_max, std::max<TData>(v_min, v));
+  }
+
+  //----------------------------------------------------------------
   // Matrix
   //
   template <int rows, int cols, typename TData = double>

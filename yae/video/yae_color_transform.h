@@ -69,7 +69,6 @@ namespace yae
     // virtual:
     void apply(const double * src_rgb, double * dst_rgb) const;
 
-  protected:
     // how much brighter is the source luma relative to
     // the SDR nominal peak brightness of 100 cd/m2 ...
     //
@@ -78,6 +77,21 @@ namespace yae
 
     // 1 / gamma
     const double inv_gamma_;
+  };
+
+
+  //----------------------------------------------------------------
+  // ToneMapPiecewise
+  //
+  struct YAE_API ToneMapPiecewise : ToneMap
+  {
+    ToneMapPiecewise(double src_peak_cdm2,
+                     double dst_peak_cdm2);
+
+    // virtual:
+    void apply(const double * src_rgb, double * dst_rgb) const;
+
+    const double peak_ratio_;
   };
 
 

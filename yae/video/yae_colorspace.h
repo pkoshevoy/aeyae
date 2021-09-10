@@ -247,6 +247,12 @@ namespace yae
     double kb_;
   };
 
+  //----------------------------------------------------------------
+  // get_transfer_func
+  //
+  const Colorspace::TransferFunc &
+  get_transfer_func(AVColorTransferCharacteristic av_trc);
+
 }
 
 
