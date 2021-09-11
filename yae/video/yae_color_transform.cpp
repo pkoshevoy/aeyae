@@ -331,11 +331,20 @@ namespace yae
                        const ToneMap * tone_map)
   {
     // shortcuts:
-    m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_) * src_ycbcr_to_ypbpr;
-    m4x4_t to_dst = dst_ypbpr_to_ycbcr * m4x4_t(dst_csp.rgb_to_ypbpr_);
+    bool is_src_rgb = src_csp.av_csp_ == AVCOL_SPC_RGB;
+    bool is_dst_rgb = dst_csp.av_csp_ == AVCOL_SPC_RGB;
+    m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_);
+
+    m4x4_t to_dst =
+      is_dst_rgb ?
+      // leave it as R'G'B', just rescale min/max:
+      dst_ypbpr_to_ycbcr :
+      // transform to Y'PbPr, transform to Y'CbCr:
+      dst_ypbpr_to_ycbcr * m4x4_t(dst_csp.rgb_to_ypbpr_);
 
     Pixel * cube = &cube_[0];
     v4x1_t input;
+    v4x1_t ypbpr;
     v4x1_t rgb;
     v4x1_t output;
     double rescale = double(size_1d_ - 1);
@@ -357,8 +366,22 @@ namespace yae
           float * pixel = (line + k)->data_;
           src[2] = double(k) / rescale;
 
+          // transform to Y'PbPr:
+          ypbpr = src_ycbcr_to_ypbpr * input;
+
+          // clip out-of-range values:
+          ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
+          ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
+          ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
+
           // transform to input non-linear R'G'B':
-          rgb = to_rgb * input;
+          rgb = is_src_rgb ? ypbpr : to_rgb * ypbpr;
+
+          // NOTE: ST 2084 EOTF expects input in the [0, 1] range,
+          // but xvYCC (wide gammut) supports negative RGB values...
+          //
+          // Therefore, it is up to the TransferFunc to do input parameter
+          // sanitization (as in rgb = clip(rgb, 0.0, 1.0))
 
           // transform to linear RGB:
           rgb[0] = src_csp.transfer_.eotf(rgb[0]);

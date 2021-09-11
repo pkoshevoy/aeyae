@@ -247,6 +247,7 @@ namespace yae
       // inv(oetf):
       virtual double eotf(double V) const
       {
+        V = clip(V, 0.0, 1.0);
         double L = (std::pow(V, 2.6) * 52.37) / 48.0;
         return L;
       }
@@ -362,6 +363,7 @@ namespace yae
       // inv(oetf):
       virtual double eotf(double V) const
       {
+        V = clip(V, 0.0, 1.0);
         double L = std::pow(V, gamma_);
         return L;
       }
@@ -430,6 +432,7 @@ namespace yae
       // inv(oetf):
       virtual double eotf(double E) const
       {
+        E = clip(E, 0.0, 1.0);
         double E_inv_m2 = std::pow(E, inv_m2);
         double Y = std::pow(std::max(E_inv_m2 - c1, 0.0) /
                             (c2 - c3 * E_inv_m2),

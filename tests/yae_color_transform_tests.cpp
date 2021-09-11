@@ -241,7 +241,7 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
 }
 
 #if 1
-BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv)
+BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
 {
   const Colorspace * csp_hlg = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
@@ -309,12 +309,88 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv)
       *dst_v = (unsigned char)(255.0 * pixel.data_[2]);
     }
   }
-
-  BOOST_CHECK(save_as_png(frm, std::string("/tmp/clut-"), TTime(1, 30)));
+  std::string fn_prefix = "/tmp/clut-hlg-to-sdr-";
+  BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 #endif
 
-BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb)
+#if 1
+BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
+{
+  const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
+                                                 AVCOL_PRI_BT2020,
+                                                 AVCOL_TRC_SMPTEST2084);
+  BOOST_CHECK(!!csp_hdr10);
+
+  const Colorspace * csp_sdr = Colorspace::get(AVCOL_SPC_BT709,
+                                               AVCOL_PRI_BT709,
+                                               AVCOL_TRC_BT709);
+  BOOST_CHECK(!!csp_sdr);
+
+  m4x4_t src_to_ypbpr;
+  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
+                                 AV_PIX_FMT_P010,
+                                 AVCOL_RANGE_MPEG));
+
+  m4x4_t ypbpr_to_dst;
+  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
+                                 AV_PIX_FMT_YUV444P,
+                                 AVCOL_RANGE_MPEG));
+
+  ToneMapPiecewise tone_map(10000, 100);
+
+  ColorTransform lut3d(7);
+  lut3d.fill(*csp_hdr10,
+             *csp_sdr,
+             src_to_ypbpr,
+             ypbpr_to_dst,
+             &tone_map);
+
+  // convert 3D LUT to a 2D CLUT:
+  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+  const unsigned int clut_h = 1 << log2_h;
+  const unsigned int clut_w = 1 << log2_w;
+
+  AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
+                         clut_w,
+                         clut_h,
+                         csp_sdr->av_csp_,
+                         csp_sdr->av_pri_,
+                         csp_sdr->av_trc_,
+                         AVCOL_RANGE_MPEG);
+
+  AVFrame & frame = frm.get();
+  for (unsigned int i = 0; i < clut_h; i++)
+  {
+    for (unsigned int j = 0; j < clut_w; j++)
+    {
+      const unsigned int offset = i * clut_w + j;
+      if (offset >= lut3d.size_3d_)
+      {
+        break;
+      }
+
+      const ColorTransform::Pixel & pixel = lut3d.at(offset);
+
+      unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
+      unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
+      unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
+
+      *dst_y = (unsigned char)(255.0 * pixel.data_[0]);
+      *dst_u = (unsigned char)(255.0 * pixel.data_[1]);
+      *dst_v = (unsigned char)(255.0 * pixel.data_[2]);
+    }
+  }
+
+  std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
+  BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
+}
+#endif
+
+#if 1
+BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
 {
   const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
@@ -358,7 +434,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb)
                          csp_sdr->av_csp_,
                          csp_sdr->av_pri_,
                          csp_sdr->av_trc_,
-                         AVCOL_RANGE_MPEG);
+                         AVCOL_RANGE_JPEG);
 
   AVFrame & frame = frm.get();
   for (unsigned int i = 0; i < clut_h; i++)
@@ -381,5 +457,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb)
     }
   }
 
-  BOOST_CHECK(save_as_png(frm, std::string("/tmp/clut-"), TTime(1, 30)));
+  std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
+  BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
+#endif
