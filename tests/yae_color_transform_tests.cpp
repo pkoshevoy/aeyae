@@ -292,7 +292,15 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
   {
     for (unsigned int j = 0; j < clut_w; j++)
     {
-      const unsigned int offset = i * clut_w + j;
+      const unsigned int slice =
+        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+        (j / lut3d.size_1d_);
+
+      const unsigned int offset =
+        slice * lut3d.size_2d_ +
+        (i % lut3d.size_1d_) * lut3d.size_1d_ +
+        (j % lut3d.size_1d_);
+
       if (offset >= lut3d.size_3d_)
       {
         break;
@@ -366,7 +374,15 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
   {
     for (unsigned int j = 0; j < clut_w; j++)
     {
-      const unsigned int offset = i * clut_w + j;
+      const unsigned int slice =
+        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+        (j / lut3d.size_1d_);
+
+      const unsigned int offset =
+        slice * lut3d.size_2d_ +
+        (i % lut3d.size_1d_) * lut3d.size_1d_ +
+        (j % lut3d.size_1d_);
+
       if (offset >= lut3d.size_3d_)
       {
         break;
@@ -412,7 +428,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ToneMapPiecewise tone_map(10000, 100);
+  // ToneMapPiecewise tone_map(10000, 100);
+  ToneMapGamma tone_map(10000, 1.8);
 
   ColorTransform lut3d(7);
   lut3d.fill(*csp_hdr10,
@@ -441,12 +458,19 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   {
     for (unsigned int j = 0; j < clut_w; j++)
     {
-      const unsigned int offset = i * clut_w + j;
+      const unsigned int slice =
+        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+        (j / lut3d.size_1d_);
+
+      const unsigned int offset =
+        slice * lut3d.size_2d_ +
+        (i % lut3d.size_1d_) * lut3d.size_1d_ +
+        (j % lut3d.size_1d_);
+
       if (offset >= lut3d.size_3d_)
       {
         break;
       }
-
       const ColorTransform::Pixel & pixel = lut3d.at(offset);
 
       unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
