@@ -398,7 +398,11 @@ namespace yae
                             rgb_cdm2.begin(),
                             rgb_cdm2.begin());
           }
-
+#if 0
+          clip(rgb_cdm2[0], dst_ctx.Lb_, dst_ctx.Lw_);
+          clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
+          clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
+#endif
           // transform to output non-linear R'G'B':
           dst_csp.transfer_.oetf_rgb(dst_csp,
                                      dst_ctx,
@@ -407,10 +411,10 @@ namespace yae
 
           // tranform to output space:
           output = to_dst * rgb;
-#if 1
+
           // clamp to [0, 1] output range:
           output = clip(output, 0.0, 1.0);
-#endif
+
           // memoize the output value:
           pixel[0] = float(output[0]);
           pixel[1] = float(output[1]);

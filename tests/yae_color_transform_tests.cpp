@@ -457,8 +457,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  // ToneMapPiecewise tone_map;
-  ToneMapGamma tone_map(1.8);
+  ToneMapPiecewise tone_map;
+  // ToneMapGamma tone_map(1.8);
 
   ColorTransform lut3d(7);
   lut3d.fill(*csp_hdr10,
@@ -466,8 +466,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
              src_ctx,
              dst_ctx,
              src_to_ypbpr,
-             ypbpr_to_dst/*,
-                           &tone_map*/);
+             ypbpr_to_dst,
+             &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
   const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
