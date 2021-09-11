@@ -209,9 +209,7 @@ namespace yae
   //----------------------------------------------------------------
   // ToneMapGamma::ToneMapGamma
   //
-  ToneMapGamma::ToneMapGamma(double src_peak_luma_cdm2,
-                             double gamma):
-    inv_src_peak_luma_ratio_(100.0 / src_peak_luma_cdm2),
+  ToneMapGamma::ToneMapGamma(double gamma):
     inv_gamma_(1.0 / gamma)
   {}
 
@@ -219,53 +217,48 @@ namespace yae
   // ToneMapGamma::apply
   //
   void
-  ToneMapGamma::apply(const double * src_rgb, double * dst_rgb) const
+  ToneMapGamma::apply(const Colorspace::TransferFunc::Context & src_ctx,
+                      const Colorspace::TransferFunc::Context & dst_ctx,
+                      const double * src_rgb_cdm2,
+                      double * dst_rgb_cdm2) const
   {
-    static const double near_black = 1e-6;
-
-    // pick the brightest component:
-    const double src = std::max(std::max(near_black, src_rgb[0]),
-                                std::max(src_rgb[1], src_rgb[2]));
+    // pick the brightest component, normalize to [0, 1] range:
+    const double src =
+      std::max(std::max(src_ctx.Lb_, src_rgb_cdm2[0]),
+               std::max(src_rgb_cdm2[1], src_rgb_cdm2[2])) /
+      src_ctx.Lw_;
 
     // threshold for linear portion of the curve:
     static const double threshold = 0.05;
 
     const double out =
-      (src > threshold) ? std::pow(src * inv_src_peak_luma_ratio_,
-                                   inv_gamma_) :
-      (src / threshold) * std::pow(threshold * inv_src_peak_luma_ratio_,
-                                   inv_gamma_);
+      (src > threshold) ? std::pow(src, inv_gamma_) :
+      (src / threshold) * std::pow(threshold, inv_gamma_);
 
-    const double rescale = out / src;
-    dst_rgb[0] = src_rgb[0] * rescale;
-    dst_rgb[1] = src_rgb[1] * rescale;
-    dst_rgb[2] = src_rgb[2] * rescale;
+    const double rescale = (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+    dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
+    dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
+    dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
   }
 
-
-  //----------------------------------------------------------------
-  // ToneMapPiecewise::ToneMapPiecewise
-  //
-  // Ls: dynamic range of the source signal, cd/m2
-  // Ld: dynamic range of the output signal, cd/m2
-  //
-  ToneMapPiecewise::ToneMapPiecewise(double src_peak_cdm2,
-                                     double dst_peak_cdm2):
-    peak_ratio_(src_peak_cdm2 / dst_peak_cdm2)
-  {}
 
   //----------------------------------------------------------------
   // ToneMapPiecewise::apply
   //
   void
-  ToneMapPiecewise::apply(const double * src_rgb, double * dst_rgb) const
+  ToneMapPiecewise::apply(const Colorspace::TransferFunc::Context & src_ctx,
+                          const Colorspace::TransferFunc::Context & dst_ctx,
+                          const double * src_rgb_cdm2,
+                          double * dst_rgb_cdm2) const
   {
     // pick the brightest component:
-    const double src = std::max(src_rgb[0], std::max(src_rgb[1], src_rgb[2]));
+    const double src = std::max(std::max(src_rgb_cdm2[0], src_rgb_cdm2[1]),
+                                src_rgb_cdm2[2]) / src_ctx.Lw_;
+
+    const double peak_ratio = src_ctx.Lw_ / dst_ctx.Lw_;
+    const double t = src * peak_ratio;
+
     double out = src;
-
-    double t = src * peak_ratio_;
-
     if (t <= 1.0)
     {
       // 0-100 cd/m2 --> 0-75 cd/m2
@@ -292,11 +285,12 @@ namespace yae
       out = 0.95 + 0.05 * (t - 5.0) / 5.0;
     }
 
-    const double rescale = out / src;
-    dst_rgb[0] = src_rgb[0] * rescale;
-    dst_rgb[1] = src_rgb[1] * rescale;
-    dst_rgb[2] = src_rgb[2] * rescale;
+    const double rescale = (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+    dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
+    dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
+    dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
   }
+
 
   //----------------------------------------------------------------
   // ColorTransform::ColorTransform
@@ -317,6 +311,9 @@ namespace yae
   void
   ColorTransform::fill(const Colorspace & src_csp,
                        const Colorspace & dst_csp,
+
+                       const Colorspace::TransferFunc::Context & src_ctx,
+                       const Colorspace::TransferFunc::Context & dst_ctx,
 
                        // pre-transform, maps from source full/narrow
                        // range normalized [0, 1] pixel values to Y'PbPr
@@ -342,14 +339,17 @@ namespace yae
       // transform to Y'PbPr, transform to Y'CbCr:
       dst_ypbpr_to_ycbcr * m4x4_t(dst_csp.rgb_to_ypbpr_);
 
-    Pixel * cube = &cube_[0];
-    v4x1_t input;
-    v4x1_t ypbpr;
-    v4x1_t rgb;
-    v4x1_t output;
+    // temporaries:
+    v4x1_t input = make_v4x1(0, 0, 0, 1);
+    v4x1_t ypbpr = make_v4x1(0, 0, 0, 1);
+    v4x1_t rgb = make_v4x1(0, 0, 0, 1);
+    v4x1_t rgb_cdm2 = make_v4x1(0, 0, 0, 1);
+    v4x1_t output = make_v4x1(0, 0, 0, 1);
+
+    // shortcuts:
     double rescale = double(size_1d_ - 1);
     double * src = input.begin();
-    src[3] = 1.0;
+    Pixel * cube = &cube_[0];
 
     for (std::size_t i = 0; i < size_1d_; i++)
     {
@@ -383,27 +383,34 @@ namespace yae
           // Therefore, it is up to the TransferFunc to do input parameter
           // sanitization (as in rgb = clip(rgb, 0.0, 1.0))
 
+          // YAE_BREAKPOINT_IF(i == 127 && j >= 62 && k >= 62);
+
           // transform to linear RGB:
-          rgb[0] = src_csp.transfer_.eotf(rgb[0]);
-          rgb[1] = src_csp.transfer_.eotf(rgb[1]);
-          rgb[2] = src_csp.transfer_.eotf(rgb[2]);
+          src_csp.transfer_.eotf_rgb(src_csp,
+                                     src_ctx,
+                                     rgb.begin(),
+                                     rgb_cdm2.begin());
 
           if (tone_map)
           {
-            tone_map->apply(rgb.begin(), rgb.begin());
+            tone_map->apply(src_ctx,
+                            dst_ctx,
+                            rgb_cdm2.begin(),
+                            rgb_cdm2.begin());
           }
 
           // transform to output non-linear R'G'B':
-          rgb[0] = dst_csp.transfer_.oetf(rgb[0]);
-          rgb[1] = dst_csp.transfer_.oetf(rgb[1]);
-          rgb[2] = dst_csp.transfer_.oetf(rgb[2]);
+          dst_csp.transfer_.oetf_rgb(dst_csp,
+                                     dst_ctx,
+                                     rgb_cdm2.begin(),
+                                     rgb.begin());
 
           // tranform to output space:
           output = to_dst * rgb;
-
+#if 1
           // clamp to [0, 1] output range:
           output = clip(output, 0.0, 1.0);
-
+#endif
           // memoize the output value:
           pixel[0] = float(output[0]);
           pixel[1] = float(output[1]);

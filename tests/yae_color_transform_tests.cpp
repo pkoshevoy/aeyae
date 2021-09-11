@@ -25,6 +25,15 @@ using namespace yae;
 //
 BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf)
 {
+  const Colorspace::TransferFunc::Context ctx(1000.0);
+  const Colorspace * csp = Colorspace::get(AVCOL_SPC_BT2020_NCL,
+                                           AVCOL_PRI_BT2020,
+                                           AVCOL_TRC_ARIB_STD_B67);
+
+  double rgb_in[3];
+  double rgb_out[3];
+  double rgb_cdm2[3];
+
   for (int i = AVCOL_TRC_RESERVED0; i < AVCOL_TRC_NB; i++)
   {
     AVColorTransferCharacteristic av_trc = (AVColorTransferCharacteristic)i;
@@ -32,10 +41,16 @@ BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf)
 
     for (int j = 0; j <= 100; j++)
     {
-      double non_linear_in = double(j) / 100.0;
-      double linear_cdm2 = transfer.eotf(non_linear_in);
-      double non_linear_out = transfer.oetf(linear_cdm2);
-      BOOST_CHECK(fabs(non_linear_in - non_linear_out) < 1e-6);
+      const double s = double(j) / 100.0;
+      rgb_in[0] = s;
+      rgb_in[1] = s;
+      rgb_in[2] = s;
+
+      transfer.eotf_rgb(*csp, ctx, rgb_in, rgb_cdm2);
+      transfer.oetf_rgb(*csp, ctx, rgb_cdm2, rgb_out);
+      YAE_ASSERT(fabs(rgb_in[0] - rgb_out[0]) < 1e-6);
+      YAE_ASSERT(fabs(rgb_in[1] - rgb_out[1]) < 1e-6);
+      YAE_ASSERT(fabs(rgb_in[2] - rgb_out[2]) < 1e-6);
     }
   }
 }
@@ -243,6 +258,9 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
 #if 1
 BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
 {
+  const Colorspace::TransferFunc::Context src_ctx(1000.0);
+  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+
   const Colorspace * csp_hlg = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
                                                AVCOL_TRC_ARIB_STD_B67);
@@ -263,11 +281,14 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
                                  AV_PIX_FMT_NV12,
                                  AVCOL_RANGE_MPEG));
 
-  ToneMapGamma tone_map(1000, 1.8);
+  ToneMapGamma tone_map(1.8);
+  // ToneMapPiecewise tone_map;
 
   ColorTransform lut3d(7);
   lut3d.fill(*csp_hlg,
              *csp_sdr,
+             src_ctx,
+             dst_ctx,
              src_to_ypbpr,
              ypbpr_to_dst,
              &tone_map);
@@ -325,6 +346,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
 #if 1
 BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
 {
+  const Colorspace::TransferFunc::Context src_ctx(10000.0);
+  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+
   const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                  AVCOL_PRI_BT2020,
                                                  AVCOL_TRC_SMPTEST2084);
@@ -345,11 +369,13 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
                                  AV_PIX_FMT_YUV444P,
                                  AVCOL_RANGE_MPEG));
 
-  ToneMapPiecewise tone_map(10000, 100);
+  ToneMapPiecewise tone_map;
 
   ColorTransform lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
+             src_ctx,
+             dst_ctx,
              src_to_ypbpr,
              ypbpr_to_dst,
              &tone_map);
@@ -408,6 +434,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
 #if 1
 BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
 {
+  const Colorspace::TransferFunc::Context src_ctx(10000.0);
+  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+
   const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
                                                AVCOL_TRC_SMPTEST2084);
@@ -428,15 +457,17 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  // ToneMapPiecewise tone_map(10000, 100);
-  ToneMapGamma tone_map(10000, 1.8);
+  // ToneMapPiecewise tone_map;
+  ToneMapGamma tone_map(1.8);
 
   ColorTransform lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
+             src_ctx,
+             dst_ctx,
              src_to_ypbpr,
-             ypbpr_to_dst,
-             &tone_map);
+             ypbpr_to_dst/*,
+                           &tone_map*/);
 
   // convert 3D LUT to a 2D CLUT:
   const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;

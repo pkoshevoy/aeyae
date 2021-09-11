@@ -55,7 +55,10 @@ namespace yae
   struct YAE_API ToneMap
   {
     virtual ~ToneMap() {}
-    virtual void apply(const double * src_rgb, double * dst_rgb) const = 0;
+    virtual void apply(const Colorspace::TransferFunc::Context & src_ctx,
+                       const Colorspace::TransferFunc::Context & dst_ctx,
+                       const double * src_rgb_cdm2,
+                       double * dst_rgb_cdm2) const = 0;
   };
 
   //----------------------------------------------------------------
@@ -63,19 +66,15 @@ namespace yae
   //
   struct YAE_API ToneMapGamma : ToneMap
   {
-    ToneMapGamma(double src_peak_luma_cdm2 = 100.0,
-                 double gamma = 1.8);
+    ToneMapGamma(double gamma = 1.8);
 
     // virtual:
-    void apply(const double * src_rgb, double * dst_rgb) const;
+    void apply(const Colorspace::TransferFunc::Context & src_ctx,
+               const Colorspace::TransferFunc::Context & dst_ctx,
+               const double * src_rgb_cdm2,
+               double * dst_rgb_cdm2) const;
 
-    // how much brighter is the source luma relative to
-    // the SDR nominal peak brightness of 100 cd/m2 ...
-    //
-    // stored as 100.0 / src_peak_luma_cdm2:
-    const double inv_src_peak_luma_ratio_;
-
-    // 1 / gamma
+    // 1.0/gamma
     const double inv_gamma_;
   };
 
@@ -85,13 +84,11 @@ namespace yae
   //
   struct YAE_API ToneMapPiecewise : ToneMap
   {
-    ToneMapPiecewise(double src_peak_cdm2,
-                     double dst_peak_cdm2);
-
     // virtual:
-    void apply(const double * src_rgb, double * dst_rgb) const;
-
-    const double peak_ratio_;
+    void apply(const Colorspace::TransferFunc::Context & src_ctx,
+               const Colorspace::TransferFunc::Context & dst_ctx,
+               const double * src_rgb_cdm2,
+               double * dst_rgb_cdm2) const;
   };
 
 
@@ -118,6 +115,9 @@ namespace yae
 
     void fill(const Colorspace & src_csp,
               const Colorspace & dst_csp,
+
+              const Colorspace::TransferFunc::Context & src_ctx,
+              const Colorspace::TransferFunc::Context & dst_ctx,
 
               // pre-transform, maps from source full/narrow
               // range normalized [0, 1] pixel values to Y'PbPr

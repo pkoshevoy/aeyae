@@ -141,6 +141,17 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // get_hlg_gamma
+  //
+  YAE_API double get_hlg_gamma(double Lw);
+
+  //----------------------------------------------------------------
+  // get_hlg_beta
+  //
+  YAE_API double get_hlg_beta(double Lw, double Lb, double gamma);
+
+
+  //----------------------------------------------------------------
   // Colorspace
   //
   // linuxtv.org/downloads/v4l-dvb-apis/userspace-api/v4l/colorspaces.html
@@ -167,11 +178,66 @@ namespace yae
     {
       virtual ~TransferFunc() {}
 
-      // linear RGB components to non-linear encoded R'G'B':
-      virtual double oetf(double L) const = 0;
+      //----------------------------------------------------------------
+      // Context
+      //
+      struct YAE_API Context
+      {
+        Context(double cdm2_nominal_peak_luminance_of_the_display = 100.0,
+                double cdm2_display_luminance_for_black = 0.0044):
+          Lw_(cdm2_nominal_peak_luminance_of_the_display),
+          Lb_(cdm2_display_luminance_for_black),
+          gamma_(yae::get_hlg_gamma(Lw_)),
+          beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_))
+        {}
 
-      // non-linear encoded R'G'B' to linear cd/m2 RGB components:
-      virtual double eotf(double V) const = 0;
+        // nominal peak luminance of the display in cd/m2:
+        const double Lw_;
+
+        // nominal peak luminance of the display in cd/m2:
+        const double Lb_;
+
+        // precomputed constants for HLG EOTF, OETF...
+        // see Rec. ITU-R BT.2100-2
+        const double gamma_;
+        const double beta_;
+      };
+
+      // linear cd/m2 RGB components to non-linear encoded R'G'B'.
+      // default implementation rescales and delegates to normalized oetf:
+      virtual void oetf_rgb(const Colorspace & csp,
+                            const Context & ctx,
+                            const double * rgb_cdm2,
+                            double * rgb) const
+      {
+        (void) csp;
+        rgb[0] = this->oetf(rgb_cdm2[0] / ctx.Lw_);
+        rgb[1] = this->oetf(rgb_cdm2[1] / ctx.Lw_);
+        rgb[2] = this->oetf(rgb_cdm2[2] / ctx.Lw_);
+      }
+
+      // non-linear encoded R'G'B' to linear cd/m2 RGB components.
+      // default implementation delegates to normalized eotf and rescales:
+      virtual void eotf_rgb(const Colorspace & csp,
+                            const Context & ctx,
+                            const double * rgb,
+                            double * rgb_cdm2) const
+      {
+        (void) csp;
+        rgb_cdm2[0] = this->eotf(rgb[0]) * ctx.Lw_;
+        rgb_cdm2[1] = this->eotf(rgb[1]) * ctx.Lw_;
+        rgb_cdm2[2] = this->eotf(rgb[2]) * ctx.Lw_;
+      }
+
+      // normalized [0, 1] linear RGB components to non-linear encoded R'G'B'.
+      // default implementation is linear ... output same as input:
+      virtual double oetf(double L) const
+      { return L; }
+
+      // non-linear encoded R'G'B' to normalized [0, 1] linear RGB components.
+      // default implementation is linear ... output same as input:
+      virtual double eotf(double V) const
+      { return V; }
     };
 
     // NOTE: this will derive the luma coefficients (kr, kg, kb)
