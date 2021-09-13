@@ -185,6 +185,9 @@ namespace yae
     //! frame rate:
     double frameRate_;
 
+    // cd/m2 (for HDR), etc... may change at runtime:
+    double max_cll_;
+
     //! ffmpeg pixel format:
     AVPixelFormat av_fmt_;
 

@@ -103,6 +103,12 @@ namespace yae
     //
     struct YAE_API Pixel
     {
+      operator v3x1_t() const
+      { return make_v3x1(data_[0], data_[1], data_[2]); }
+
+      operator v4x1_t() const
+      { return make_v4x1(data_[0], data_[1], data_[2], 1.0); }
+
       float data_[3];
     };
 
@@ -138,10 +144,74 @@ namespace yae
     inline const Pixel & at(std::size_t offset) const
     { return cube_.at(offset); }
 
+    inline const Pixel & at(std::size_t i,
+                            std::size_t j,
+                            std::size_t k) const
+    {
+      std::size_t offset = k + size_1d_ * (j + size_1d_ * i);
+      return cube_.at(offset);
+    }
+
+    inline const Pixel & get_nn(double u,
+                                double v,
+                                double w) const
+    {
+      std::size_t i = std::size_t(u * z1_);
+      std::size_t j = std::size_t(v * z1_);
+      std::size_t k = std::size_t(w * z1_);
+      return this->at(i, j, k);
+    }
+
+    inline const v3x1_t get(double u,
+                            double v,
+                            double w) const
+    {
+      u *= z1_;
+      v *= z1_;
+      w *= z1_;
+
+      std::size_t i0 = std::size_t(u);
+      std::size_t j0 = std::size_t(v);
+      std::size_t k0 = std::size_t(w);
+      std::size_t i1 = std::min(i0 + 1, size_1d_ - 1);
+      std::size_t j1 = std::min(j0 + 1, size_1d_ - 1);
+      std::size_t k1 = std::min(k0 + 1, size_1d_ - 1);
+
+      double u1 = u - i0;
+      double v1 = v - j0;
+      double w1 = w - k0;
+
+      double u0 = 1.0 - u1;
+      double v0 = 1.0 - v1;
+      double w0 = 1.0 - w1;
+
+      v3x1_t p000 = this->at(i0, j0, k0);
+      v3x1_t p001 = this->at(i0, j0, k1);
+      v3x1_t p010 = this->at(i0, j1, k0);
+      v3x1_t p011 = this->at(i0, j1, k1);
+      v3x1_t p100 = this->at(i1, j0, k0);
+      v3x1_t p101 = this->at(i1, j0, k1);
+      v3x1_t p110 = this->at(i1, j1, k0);
+      v3x1_t p111 = this->at(i1, j1, k1);
+
+      v3x1_t p00 = p000 * u0 + p100 * u1;
+      v3x1_t p01 = p001 * u0 + p101 * u1;
+      v3x1_t p10 = p010 * u0 + p110 * u1;
+      v3x1_t p11 = p011 * u0 + p111 * u1;
+
+      v3x1_t p0 = p00 * v0 + p10 * v1;
+      v3x1_t p1 = p01 * v0 + p11 * v1;
+
+      v3x1_t p = p0 * w0 + p1 * w1;
+      return p;
+    }
+
     const unsigned int log2_edge_;
     const std::size_t size_3d_;
     const std::size_t size_2d_;
     const std::size_t size_1d_;
+    const double granularity_; // 1 / size_1d_
+    const double z1_; // size_1d_ - 1
 
   protected:
     std::vector<Pixel> cube_;

@@ -209,6 +209,9 @@ namespace yae
   {
     memset(this, 0, sizeof(VideoTraits));
 
+    // default to SDR:
+    max_cll_ = 100.0;
+
     av_fmt_ = AV_PIX_FMT_NONE;
     av_rng_ = AVCOL_RANGE_UNSPECIFIED;
     av_pri_ = AVCOL_PRI_UNSPECIFIED;
@@ -244,7 +247,8 @@ namespace yae
   bool
   VideoTraits::sameColorSpaceAndRange(const VideoTraits & vt) const
   {
-    return (av_rng_ == vt.av_rng_ &&
+    return (max_cll_ == vt.max_cll_ &&
+            av_rng_ == vt.av_rng_ &&
             av_pri_ == vt.av_pri_ &&
             av_trc_ == vt.av_trc_ &&
             av_csp_ == vt.av_csp_);

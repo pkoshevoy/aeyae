@@ -158,6 +158,11 @@ namespace yae
   //
   namespace xvYCC
   {
+    // https://en.wikipedia.org/wiki/Rec._709
+    static const double beta = 0.018053968510807; // 0.018
+    static const double alpha = 1.0 + 5.5 * beta; // 1.099
+    static const double alpha1 = alpha - 1; // alpha1
+
     struct TransferFunc : yae::Colorspace::TransferFunc
     {
       // linear RGB to non-linear R'G'B'
@@ -165,9 +170,9 @@ namespace yae
       {
         double V =
           (fabs(L) < 0.018) ? (4.5 * L) :
-          (0.018 <= L) ? (1.099 * std::pow(L, 0.45) - 0.099) :
+          (0.018 <= L) ? (alpha * std::pow(L, 0.45) - alpha1) :
           // for xvYCC, https://en.wikipedia.org/wiki/XvYCC
-          (-1.099) * std::pow(-L, 0.45) + 0.099;
+          (-alpha) * std::pow(-L, 0.45) + alpha1;
         return V;
       }
 
@@ -175,10 +180,10 @@ namespace yae
       virtual double eotf(double V) const
       {
         double L =
-          (fabs(V) < 4.5 * 0.018) ? (V / 4.5) :
-          (4.5 * 0.018 <= V) ? std::pow((V + 0.099) / 1.099, 1.0 / 0.45) :
+          (fabs(V) < 0.081) ? (V / 4.5) :
+          (0.081 <= V) ? std::pow((V + alpha1) / alpha, 1.0 / 0.45) :
           // for xvYCC, https://en.wikipedia.org/wiki/XvYCC
-          -std::pow((V - 0.099) / -4.5, 1.0 / 0.45);
+          -std::pow((V - alpha1) / -alpha, 1.0 / 0.45);
         return L;
       }
     };

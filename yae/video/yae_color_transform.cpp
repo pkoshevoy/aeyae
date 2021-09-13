@@ -299,7 +299,9 @@ namespace yae
     log2_edge_(log2_edge),
     size_3d_(1ull << (log2_edge * 3)),
     size_2d_(1ull << (log2_edge * 2)),
-    size_1d_(1ull << (log2_edge))
+    size_1d_(1ull << (log2_edge)),
+    granularity_(1.0 / size_1d_),
+    z1_(size_1d_ - 1)
   {
     YAE_ASSERT(log2_edge < 11);
     cube_.resize(size_3d_);
@@ -331,13 +333,7 @@ namespace yae
     bool is_src_rgb = src_csp.av_csp_ == AVCOL_SPC_RGB;
     bool is_dst_rgb = dst_csp.av_csp_ == AVCOL_SPC_RGB;
     m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_);
-
-    m4x4_t to_dst =
-      is_dst_rgb ?
-      // leave it as R'G'B', just rescale min/max:
-      dst_ypbpr_to_ycbcr :
-      // transform to Y'PbPr, transform to Y'CbCr:
-      dst_ypbpr_to_ycbcr * m4x4_t(dst_csp.rgb_to_ypbpr_);
+    m4x4_t to_ypbpr = m4x4_t(dst_csp.rgb_to_ypbpr_);
 
     // temporaries:
     v4x1_t input = make_v4x1(0, 0, 0, 1);
@@ -369,21 +365,34 @@ namespace yae
           // transform to Y'PbPr:
           ypbpr = src_ycbcr_to_ypbpr * input;
 
-          // clip out-of-range values:
-          ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
-          ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
-          ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
+          if (is_src_rgb)
+          {
+#if 0
+            // clip out-of-range values:
+            ypbpr[0] = clip(ypbpr[0], 0.0, 1.0);
+            ypbpr[1] = clip(ypbpr[1], 0.0, 1.0);
+            ypbpr[2] = clip(ypbpr[2], 0.0, 1.0);
+#endif
+          }
+          else
+          {
+            // clip out-of-range values:
+            ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
+            ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
+            ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
+          }
 
           // transform to input non-linear R'G'B':
-          rgb = is_src_rgb ? ypbpr : to_rgb * ypbpr;
-
+          rgb = is_src_rgb ? ypbpr : (to_rgb * ypbpr);
+#if 1
           // NOTE: ST 2084 EOTF expects input in the [0, 1] range,
           // but xvYCC (wide gammut) supports negative RGB values...
           //
           // Therefore, it is up to the TransferFunc to do input parameter
           // sanitization (as in rgb = clip(rgb, 0.0, 1.0))
 
-          // YAE_BREAKPOINT_IF(i == 127 && j >= 62 && k >= 62);
+          // YAE_BREAKPOINT_IF(i == 23 && j == 130 && k == 153);
+          // YAE_BREAKPOINT_IF(i == 1 && j == 0 && k == 69);
 
           // transform to linear RGB:
           src_csp.transfer_.eotf_rgb(src_csp,
@@ -398,19 +407,37 @@ namespace yae
                             rgb_cdm2.begin(),
                             rgb_cdm2.begin());
           }
-#if 0
+
           clip(rgb_cdm2[0], dst_ctx.Lb_, dst_ctx.Lw_);
           clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
           clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
-#endif
+
           // transform to output non-linear R'G'B':
           dst_csp.transfer_.oetf_rgb(dst_csp,
                                      dst_ctx,
                                      rgb_cdm2.begin(),
                                      rgb.begin());
+#endif
+          ypbpr = is_dst_rgb ? rgb : (to_ypbpr * rgb);
 
-          // tranform to output space:
-          output = to_dst * rgb;
+          if (is_dst_rgb)
+          {
+#if 0
+            // clip out-of-range values:
+            ypbpr[0] = clip(ypbpr[0], 0.0, 1.0);
+            ypbpr[1] = clip(ypbpr[1], 0.0, 1.0);
+            ypbpr[2] = clip(ypbpr[2], 0.0, 1.0);
+#endif
+          }
+          else
+          {
+            // clip out-of-range values:
+            ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
+            ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
+            ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
+          }
+
+          output = dst_ypbpr_to_ycbcr * ypbpr;
 
           // clamp to [0, 1] output range:
           output = clip(output, 0.0, 1.0);

@@ -9,6 +9,12 @@
 // boost library:
 #include <boost/algorithm/string.hpp>
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavutil/mastering_display_metadata.h>
+}
+
 // yae includes:
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
@@ -876,6 +882,29 @@ namespace yae
           }
         }
 
+        // check for content light level:
+        {
+          const AVFrameSideData * side_data = NULL;
+          if ((side_data = av_frame_get_side_data
+               (&output, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL)))
+          {
+            const AVContentLightMetadata * metadata =
+              (const AVContentLightMetadata *)(side_data->data);
+
+            vf.traits_.max_cll_ = metadata->MaxCLL;
+          }
+          else if ((side_data = av_frame_get_side_data
+                    (&output, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA)))
+          {
+            const AVMasteringDisplayMetadata * metadata =
+              (const AVMasteringDisplayMetadata *)(side_data->data);
+            if (metadata->has_luminance)
+            {
+              vf.traits_.max_cll_ = av_q2d(metadata->max_luminance);
+            }
+          }
+        }
+
         // use AVFrame directly:
         TIPlanarBufferPtr sampleBuffer(new TAVFrameBuffer(&output),
                                        &IPlanarBuffer::deallocator);
@@ -1006,6 +1035,17 @@ namespace yae
     t.av_csp_ = specs.colorspace;
 
     t.colorspace_ = Colorspace::get(t.av_csp_, t.av_pri_, t.av_trc_);
+
+    if (t.av_trc_ == AVCOL_TRC_SMPTE2084)
+    {
+      // HDR10, DolbyVision:
+      t.max_cll_ = 10000.0; // cd/m2
+    }
+    else if (t.av_trc_ == AVCOL_TRC_ARIB_STD_B67)
+    {
+      // HLG:
+      t.max_cll_ = 1000.0; // cd/m2
+    }
 
     //! pixel format:
     t.pixelFormat_ = ffmpeg_to_yae(t.av_fmt_);
