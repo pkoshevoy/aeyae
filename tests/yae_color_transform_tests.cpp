@@ -374,50 +374,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
-  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
-  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+  AvFrm frm = lut_3d_to_2d_yuv(lut3d, *csp_sdr);
 
-  const unsigned int clut_h = 1 << log2_h;
-  const unsigned int clut_w = 1 << log2_w;
-
-  AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
-                         clut_w,
-                         clut_h,
-                         csp_sdr->av_csp_,
-                         csp_sdr->av_pri_,
-                         csp_sdr->av_trc_,
-                         AVCOL_RANGE_MPEG);
-
-  AVFrame & frame = frm.get();
-  for (unsigned int i = 0; i < clut_h; i++)
-  {
-    for (unsigned int j = 0; j < clut_w; j++)
-    {
-      const unsigned int slice =
-        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
-        (j / lut3d.size_1d_);
-
-      const unsigned int offset =
-        slice * lut3d.size_2d_ +
-        (i % lut3d.size_1d_) * lut3d.size_1d_ +
-        (j % lut3d.size_1d_);
-
-      if (offset >= lut3d.size_3d_)
-      {
-        break;
-      }
-
-      const ColorTransform::Pixel & pixel = lut3d.at(offset);
-
-      unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
-      unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
-      unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
-
-      *dst_y = (unsigned char)(255.0 * pixel.data_[0]);
-      *dst_u = (unsigned char)(255.0 * pixel.data_[1]);
-      *dst_v = (unsigned char)(255.0 * pixel.data_[2]);
-    }
-  }
   std::string fn_prefix = "/tmp/clut-hlg-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
@@ -462,50 +420,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
-  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
-  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
-
-  const unsigned int clut_h = 1 << log2_h;
-  const unsigned int clut_w = 1 << log2_w;
-
-  AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
-                         clut_w,
-                         clut_h,
-                         csp_sdr->av_csp_,
-                         csp_sdr->av_pri_,
-                         csp_sdr->av_trc_,
-                         AVCOL_RANGE_MPEG);
-
-  AVFrame & frame = frm.get();
-  for (unsigned int i = 0; i < clut_h; i++)
-  {
-    for (unsigned int j = 0; j < clut_w; j++)
-    {
-      const unsigned int slice =
-        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
-        (j / lut3d.size_1d_);
-
-      const unsigned int offset =
-        slice * lut3d.size_2d_ +
-        (i % lut3d.size_1d_) * lut3d.size_1d_ +
-        (j % lut3d.size_1d_);
-
-      if (offset >= lut3d.size_3d_)
-      {
-        break;
-      }
-
-      const ColorTransform::Pixel & pixel = lut3d.at(offset);
-
-      unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
-      unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
-      unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
-
-      *dst_y = (unsigned char)(255.0 * pixel.data_[0]);
-      *dst_u = (unsigned char)(255.0 * pixel.data_[1]);
-      *dst_v = (unsigned char)(255.0 * pixel.data_[2]);
-    }
-  }
+  AvFrm frm = lut_3d_to_2d_yuv(lut3d, *csp_sdr);
 
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
@@ -552,47 +467,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
-  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
-  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
-
-  const unsigned int clut_h = 1 << log2_h;
-  const unsigned int clut_w = 1 << log2_w;
-
-  AvFrm frm = make_avfrm(AV_PIX_FMT_RGB24,
-                         clut_w,
-                         clut_h,
-                         csp_sdr->av_csp_,
-                         csp_sdr->av_pri_,
-                         csp_sdr->av_trc_,
-                         AVCOL_RANGE_JPEG);
-
-  AVFrame & frame = frm.get();
-  for (unsigned int i = 0; i < clut_h; i++)
-  {
-    for (unsigned int j = 0; j < clut_w; j++)
-    {
-      const unsigned int slice =
-        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
-        (j / lut3d.size_1d_);
-
-      const unsigned int offset =
-        slice * lut3d.size_2d_ +
-        (i % lut3d.size_1d_) * lut3d.size_1d_ +
-        (j % lut3d.size_1d_);
-
-      if (offset >= lut3d.size_3d_)
-      {
-        break;
-      }
-      const ColorTransform::Pixel & pixel = lut3d.at(offset);
-
-      unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
-
-      rgb[0] = (unsigned char)(255.0 * pixel.data_[0]);
-      rgb[1] = (unsigned char)(255.0 * pixel.data_[1]);
-      rgb[2] = (unsigned char)(255.0 * pixel.data_[2]);
-    }
-  }
+  AvFrm frm = lut_3d_to_2d_rgb(lut3d, *csp_sdr);
 
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
@@ -635,47 +510,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
              ypbpr_to_dst);
 
   // convert 3D LUT to a 2D CLUT:
-  const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
-  const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
-
-  const unsigned int clut_h = 1 << log2_h;
-  const unsigned int clut_w = 1 << log2_w;
-
-  AvFrm frm = make_avfrm(AV_PIX_FMT_RGB24,
-                         clut_w,
-                         clut_h,
-                         dst_csp->av_csp_,
-                         dst_csp->av_pri_,
-                         dst_csp->av_trc_,
-                         AVCOL_RANGE_JPEG);
-
-  AVFrame & frame = frm.get();
-  for (unsigned int i = 0; i < clut_h; i++)
-  {
-    for (unsigned int j = 0; j < clut_w; j++)
-    {
-      const unsigned int slice =
-        (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
-        (j / lut3d.size_1d_);
-
-      const unsigned int offset =
-        slice * lut3d.size_2d_ +
-        (i % lut3d.size_1d_) * lut3d.size_1d_ +
-        (j % lut3d.size_1d_);
-
-      if (offset >= lut3d.size_3d_)
-      {
-        break;
-      }
-      const ColorTransform::Pixel & pixel = lut3d.at(offset);
-
-      unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
-
-      rgb[0] = (unsigned char)(255.0 * pixel.data_[0]);
-      rgb[1] = (unsigned char)(255.0 * pixel.data_[1]);
-      rgb[2] = (unsigned char)(255.0 * pixel.data_[2]);
-    }
-  }
+  AvFrm frm = lut_3d_to_2d_rgb(lut3d, *dst_csp);
 
   std::string fn_prefix = "/tmp/clut-sdr-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));

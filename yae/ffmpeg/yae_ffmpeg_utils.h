@@ -13,6 +13,7 @@
 #include "../api/yae_api.h"
 #include "../api/yae_log.h"
 #include "../api/yae_message_carrier_interface.h"
+#include "../video/yae_color_transform.h"
 #include "../video/yae_texture_generator.h"
 #include "../video/yae_video.h"
 
@@ -767,6 +768,26 @@ namespace yae
                       int luma_w,
                       int luma_h,
                       AVColorRange av_rng = AVCOL_RANGE_MPEG);
+
+  //----------------------------------------------------------------
+  // lut_3d_to_2d_yuv
+  //
+  // convert 3D LUT to a 8-bit YUV444P 2D CLUT image:
+  //
+  YAE_API AvFrm
+  lut_3d_to_2d_yuv(const ColorTransform & lut3d,
+                   const Colorspace & dst_csp,
+                   AVColorRange av_rng = AVCOL_RANGE_MPEG);
+
+  //----------------------------------------------------------------
+  // lut_3d_to_2d_rgb
+  //
+  // convert 3D LUT to a 8-bit RGB24 2D CLUT image:
+  //
+  YAE_API AvFrm
+  lut_3d_to_2d_rgb(const ColorTransform & lut3d,
+                   const Colorspace & dst_csp,
+                   AVColorRange av_rng = AVCOL_RANGE_JPEG);
 
   //----------------------------------------------------------------
   // save_as
