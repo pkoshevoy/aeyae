@@ -362,19 +362,10 @@ namespace yae
           float * pixel = (line + k)->data_;
           src[2] = double(k) / rescale;
 
-          // transform to Y'PbPr:
+          // transform to Y'PbPr (or full-range R'G'B')
           ypbpr = src_ycbcr_to_ypbpr * input;
 
-          if (is_src_rgb)
-          {
-#if 0
-            // clip out-of-range values:
-            ypbpr[0] = clip(ypbpr[0], 0.0, 1.0);
-            ypbpr[1] = clip(ypbpr[1], 0.0, 1.0);
-            ypbpr[2] = clip(ypbpr[2], 0.0, 1.0);
-#endif
-          }
-          else
+          if (!is_src_rgb)
           {
             // clip out-of-range values:
             ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
@@ -420,23 +411,7 @@ namespace yae
 #endif
           ypbpr = is_dst_rgb ? rgb : (to_ypbpr * rgb);
 
-          if (is_dst_rgb)
-          {
-#if 0
-            // clip out-of-range values:
-            ypbpr[0] = clip(ypbpr[0], 0.0, 1.0);
-            ypbpr[1] = clip(ypbpr[1], 0.0, 1.0);
-            ypbpr[2] = clip(ypbpr[2], 0.0, 1.0);
-#endif
-          }
-          else
-          {
-            // clip out-of-range values:
-            ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
-            ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
-            ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
-          }
-
+          // transform to Y'CbCr (or intended range R'G'B')
           output = dst_ypbpr_to_ycbcr * ypbpr;
 
           // clamp to [0, 1] output range:

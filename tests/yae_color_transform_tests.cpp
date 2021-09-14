@@ -15,11 +15,13 @@
 // aeyae:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/video/yae_color_transform.h"
+#include "yae/video/yae_texture_generator.h"
 
 // namespace access:
 using namespace yae;
 
 
+#if 1
 //----------------------------------------------------------------
 // yae_colorspace_transfer_eotf_oetf
 //
@@ -131,7 +133,6 @@ BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf_hlg)
   }
 }
 
-#if 0
 //----------------------------------------------------------------
 // ycbcr_to_ypbpr_to_ycbcr_narrow_8bit
 //
@@ -235,9 +236,7 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_narrow_8bit)
     }
   }
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
 // ycbcr_to_ypbpr_to_ycbcr_full_8bit
 //
@@ -333,9 +332,7 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
     }
   }
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
 // yae_color_transform_hlg_to_sdr_yuv444
 //
@@ -424,9 +421,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
   std::string fn_prefix = "/tmp/clut-hlg-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
 // yae_color_transform_hdr10_to_sdr_yuv444
 //
@@ -515,9 +510,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
 // yae_color_transform_hdr10_to_sdr_rgb24
 //
@@ -604,9 +597,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
 // yae_color_transform_sdr_to_sdr_rgb24
 //
@@ -623,7 +614,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
   const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
-  BOOST_CHECK(!!csp_sdr);
+  BOOST_CHECK(!!dst_csp);
 
   m4x4_t src_to_ypbpr;
   BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
@@ -689,11 +680,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
   std::string fn_prefix = "/tmp/clut-sdr-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
-// yae_color_transform_sdr_to_sdr_rgb24
+// yae_color_transform_sdr_to_sdr_color_check_ycbcr
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
 {
@@ -783,11 +772,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
     }
   }
 }
-#endif
 
-#if 1
 //----------------------------------------------------------------
-// yae_color_transform_sdr_to_sdr_rgb24
+// yae_color_transform_sdr_to_sdr_color_check_grayscale
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
 {
@@ -877,11 +864,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
     YAE_ASSERT(fabs(rgb_expect[2] - rgb_actual[2]) < 2e-3);
   }
 }
-#endif
 
-#if 0
 //----------------------------------------------------------------
-// yae_color_transform_sdr_to_sdr_rgb24
+// yae_color_transform_sdr_to_sdr_color_check_rgb
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
 {
@@ -898,13 +883,13 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
+  m4x4_t src_ycbcr_to_ypbpr;
+  BOOST_CHECK(get_ycbcr_to_ypbpr(src_ycbcr_to_ypbpr,
                                  AV_PIX_FMT_NV12,
                                  AVCOL_RANGE_JPEG));
 
-  m4x4_t ypbpr_to_src;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_src,
+  m4x4_t src_ypbpr_to_ycbcr;
+  BOOST_CHECK(get_ypbpr_to_ycbcr(src_ypbpr_to_ycbcr,
                                  AV_PIX_FMT_NV12,
                                  AVCOL_RANGE_JPEG));
 
@@ -914,7 +899,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
                                  AVCOL_RANGE_JPEG));
 
   m4x4_t dst_to_ypbpr;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(dst_to_ypbpr,
+  BOOST_CHECK(get_ycbcr_to_ypbpr(dst_to_ypbpr,
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
@@ -923,7 +908,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
              *dst_csp,
              src_ctx,
              dst_ctx,
-             src_to_ypbpr,
+             src_ycbcr_to_ypbpr,
              ypbpr_to_dst);
 
   v4x1_t rgb_sample = make_v4x1(0, 0, 0, 1);
@@ -935,8 +920,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
   double * yuv = ycbcr.begin();
 
   const m4x4_t to_ypbpr = m4x4_t(src_csp->rgb_to_ypbpr_);
-  const m4x4_t from_rgb = m4x4_t(dst_csp->ypbpr_to_rgb_);
-  const m4x4_t to_rgb = m4x4_t(dst_csp->rgb_to_ypbpr_);
+  const m4x4_t from_rgb = m4x4_t(dst_csp->rgb_to_ypbpr_);
+  const m4x4_t to_rgb = m4x4_t(dst_csp->ypbpr_to_rgb_);
 
   for (int i = 0; i < lut3d.size_1d_; i++)
   {
@@ -960,7 +945,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
         ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
         ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
 
-        ycbcr = ypbpr_to_src * ypbpr;
+        ycbcr = src_ypbpr_to_ycbcr * ypbpr;
 
         rgb_expect = to_rgb * ypbpr;
 
@@ -971,16 +956,95 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
 
         // YAE_BREAKPOINT_IF(i == 1 && j == 0 && k == 69);
 
-        const ColorTransform::Pixel & p000 = lut3d.get_nn(yuv[0],
-                                                          yuv[1],
-                                                          yuv[2]);
-        rgb_actual = v4x1_t(p000);
+        v3x1_t trilinear_approx = lut3d.get(yuv[0], yuv[1], yuv[2]);
+        rgb_actual = v4x1_t(trilinear_approx);
 
-        YAE_ASSERT(fabs(rgb_expect[0] - rgb_actual[0]) < 2e-2);
-        YAE_ASSERT(fabs(rgb_expect[1] - rgb_actual[1]) < 2e-2);
-        YAE_ASSERT(fabs(rgb_expect[2] - rgb_actual[2]) < 2e-2);
+        YAE_ASSERT(fabs(rgb_expect[0] - rgb_actual[0]) < 4e-3);
+        YAE_ASSERT(fabs(rgb_expect[1] - rgb_actual[1]) < 4e-3);
+        YAE_ASSERT(fabs(rgb_expect[2] - rgb_actual[2]) < 4e-3);
       }
     }
   }
 }
 #endif
+
+//----------------------------------------------------------------
+// yae_color_transform_sdr_to_sdr_color_check_rgb
+//
+BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
+{
+  const Colorspace::TransferFunc::Context src_ctx(100.0);
+  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+
+  const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
+                                               AVCOL_PRI_BT709,
+                                               AVCOL_TRC_BT709);
+  BOOST_CHECK(!!src_csp);
+
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+                                               AVCOL_PRI_BT709,
+                                               AVCOL_TRC_BT709);
+  BOOST_CHECK(!!dst_csp);
+
+  m4x4_t src_to_ypbpr;
+  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
+                                 AV_PIX_FMT_YUV444P,
+                                 AVCOL_RANGE_MPEG));
+
+  m4x4_t ypbpr_to_dst;
+  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
+                                 AV_PIX_FMT_RGB24,
+                                 AVCOL_RANGE_JPEG));
+
+  ColorTransform lut3d(7);
+  lut3d.fill(*src_csp,
+             *dst_csp,
+             src_ctx,
+             dst_ctx,
+             src_to_ypbpr,
+             ypbpr_to_dst);
+
+  const int w = 1280;
+  const int h = 720;
+  ColorbarsGenerator tex_gen(w, h, src_csp);
+
+  AvFrm yuv_frm = make_textured_frame(tex_gen, AV_PIX_FMT_YUV444P, w, h);
+  const AVFrame & yuv_frame = yuv_frm.get();
+
+  std::string fn_prefix_yuv = "/tmp/colorbars-source-";
+  BOOST_CHECK(save_as_png(yuv_frm, fn_prefix_yuv, TTime(1, 30)));
+
+  AvFrm rgb_frm = make_avfrm(AV_PIX_FMT_RGB24,
+                             w,
+                             h,
+                             AVCOL_SPC_RGB,
+                             AVCOL_PRI_BT709,
+                             AVCOL_TRC_BT709,
+                             AVCOL_RANGE_JPEG);
+  const AVFrame & rgb_frame = rgb_frm.get();
+
+  // copy data from YUV frame to the RGB frame,
+  // using the LUT to convert from from YUV to RGB:
+  for (int i = 0; i < h; i++)
+  {
+    const uint8_t * y_data = yuv_frame.data[0] + i * yuv_frame.linesize[0];
+    const uint8_t * u_data = yuv_frame.data[1] + i * yuv_frame.linesize[1];
+    const uint8_t * v_data = yuv_frame.data[2] + i * yuv_frame.linesize[2];
+    uint8_t * rgb_data = rgb_frame.data[0] + i * rgb_frame.linesize[0];
+
+    for (int j = 0; j < w; j++, y_data++, u_data++, v_data++, rgb_data += 3)
+    {
+      double y = double(*y_data) / 255.0;
+      double u = double(*u_data) / 255.0;
+      double v = double(*v_data) / 255.0;
+
+      v3x1_t rgb = lut3d.get(y, u, v);
+      rgb_data[0] = uint8_t(rgb[0] * 255.0);
+      rgb_data[1] = uint8_t(rgb[1] * 255.0);
+      rgb_data[2] = uint8_t(rgb[2] * 255.0);
+    }
+  }
+
+  std::string fn_prefix_rgb = "/tmp/colorbars-output-";
+  BOOST_CHECK(save_as_png(rgb_frm, fn_prefix_rgb, TTime(1, 30)));
+}

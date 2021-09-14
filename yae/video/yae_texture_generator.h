@@ -40,10 +40,11 @@ namespace yae
     inline const Colorspace * colorspace() const
     { return csp_; }
 
-  protected:
     const Colorspace * csp_;
     const unsigned int luma_w_;
     const unsigned int luma_h_;
+
+  protected:
     unsigned int offset_;
   };
 
@@ -63,7 +64,6 @@ namespace yae
     v3x1_t get_ypbpr(int row, int col) const;
     v3x1_t get_rgb(int row, int col) const;
 
-  protected:
     const unsigned int ww_;
     const unsigned int hh_;
   };
@@ -97,7 +97,6 @@ namespace yae
     // virtual:
     v3x1_t get_rgb(int row, int col) const;
 
-  protected:
     const unsigned int ww_;
     const unsigned int hh_;
   };
