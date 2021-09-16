@@ -100,6 +100,31 @@ namespace yae
     }
 
     //----------------------------------------------------------------
+    // operator ==
+    //
+    bool
+    operator == (const TSelf & m) const
+    {
+      const TData * a = begin();
+      const TData * b = m.begin();
+      const TData * end = m.end();
+
+      bool same = true;
+      for (; b < end && same; ++a, ++b)
+      {
+        same = (*a == *b);
+      }
+
+      return same;
+    }
+
+    //----------------------------------------------------------------
+    // operator !=
+    //
+    inline bool operator != (const TSelf & m) const
+    { return !(this->operator == (m)); }
+
+    //----------------------------------------------------------------
     // operator +=
     //
     TSelf &

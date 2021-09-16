@@ -235,7 +235,10 @@ namespace yae
       (src > threshold) ? std::pow(src, inv_gamma_) :
       (src / threshold) * std::pow(threshold, inv_gamma_);
 
-    const double rescale = (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+    const double rescale =
+      (src == 0.0) ? 0.0 :
+      (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+
     dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
     dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
     dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
@@ -285,7 +288,10 @@ namespace yae
       out = 0.95 + 0.05 * (t - 5.0) / 5.0;
     }
 
-    const double rescale = (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+    const double rescale =
+      (src == 0.0) ? 0.0 :
+      (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
+
     dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
     dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
     dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
@@ -330,10 +336,24 @@ namespace yae
                        const ToneMap * tone_map)
   {
     // shortcuts:
-    bool is_src_rgb = src_csp.av_csp_ == AVCOL_SPC_RGB;
-    bool is_dst_rgb = dst_csp.av_csp_ == AVCOL_SPC_RGB;
-    m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_);
-    m4x4_t to_ypbpr = m4x4_t(dst_csp.rgb_to_ypbpr_);
+    const bool is_src_rgb = src_csp.av_csp_ == AVCOL_SPC_RGB;
+    const bool is_dst_rgb = dst_csp.av_csp_ == AVCOL_SPC_RGB;
+    const m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_);
+    const m4x4_t to_ypbpr = m4x4_t(dst_csp.rgb_to_ypbpr_);
+    const m4x4_t src_rgb_to_xyz = m4x4_t(src_csp.rgb_to_xyz_);
+    const m4x4_t dst_xyz_to_rgb = m4x4_t(dst_csp.xyz_to_rgb_);
+    const v3x1_t src_w_xyz = xyY_to_XYZ(src_csp.w_);
+    const v3x1_t dst_w_xyz = xyY_to_XYZ(dst_csp.w_);
+
+    const m4x4_t xyz_src_to_dst =
+      (src_csp.w_ == dst_csp.w_) ? make_identity_m4x4() :
+      m4x4_t(get_xyz_to_xyz(src_w_xyz, dst_w_xyz));
+
+    const m4x4_t rgb_to_xyz_to_rgb =
+      (src_csp.r_ == dst_csp.r_ &&
+       src_csp.g_ == dst_csp.g_ &&
+       src_csp.b_ == dst_csp.b_) ? make_identity_m4x4() :
+      (dst_xyz_to_rgb * xyz_src_to_dst * src_rgb_to_xyz);
 
     // temporaries:
     v4x1_t input = make_v4x1(0, 0, 0, 1);
@@ -343,7 +363,7 @@ namespace yae
     v4x1_t output = make_v4x1(0, 0, 0, 1);
 
     // shortcuts:
-    double rescale = double(size_1d_ - 1);
+    const double rescale = double(size_1d_ - 1);
     double * src = input.begin();
     Pixel * cube = &cube_[0];
 
@@ -364,7 +384,7 @@ namespace yae
 
           // transform to Y'PbPr (or full-range R'G'B')
           ypbpr = src_ycbcr_to_ypbpr * input;
-
+#if 0
           if (!is_src_rgb)
           {
             // clip out-of-range values:
@@ -372,6 +392,7 @@ namespace yae
             ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
             ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
           }
+#endif
 
           // transform to input non-linear R'G'B':
           rgb = is_src_rgb ? ypbpr : (to_rgb * ypbpr);
@@ -381,9 +402,6 @@ namespace yae
           //
           // Therefore, it is up to the TransferFunc to do input parameter
           // sanitization (as in rgb = clip(rgb, 0.0, 1.0))
-
-          // YAE_BREAKPOINT_IF(i == 23 && j == 130 && k == 153);
-          // YAE_BREAKPOINT_IF(i == 1 && j == 0 && k == 69);
 
           // transform to linear RGB:
           src_csp.transfer_.eotf_rgb(src_csp,
@@ -399,9 +417,20 @@ namespace yae
                             rgb_cdm2.begin());
           }
 
-          clip(rgb_cdm2[0], dst_ctx.Lb_, dst_ctx.Lw_);
-          clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
-          clip(rgb_cdm2[1], dst_ctx.Lb_, dst_ctx.Lw_);
+#ifndef NDEBUG
+          // check for NaN:
+          YAE_ASSERT(rgb_cdm2[0] == rgb_cdm2[0]);
+          YAE_ASSERT(rgb_cdm2[1] == rgb_cdm2[1]);
+          YAE_ASSERT(rgb_cdm2[2] == rgb_cdm2[2]);
+#endif
+
+          // transform RGB to XYZ to RGB:
+          rgb_cdm2 = rgb_to_xyz_to_rgb * rgb_cdm2;
+
+#ifndef NDEBUG
+          // check for NaN:
+          YAE_ASSERT(rgb_cdm2[3] == rgb_cdm2[3]);
+#endif
 
           // transform to output non-linear R'G'B':
           dst_csp.transfer_.oetf_rgb(dst_csp,
@@ -416,11 +445,16 @@ namespace yae
 
           // clamp to [0, 1] output range:
           output = clip(output, 0.0, 1.0);
-
+#if 1
           // memoize the output value:
           pixel[0] = float(output[0]);
           pixel[1] = float(output[1]);
           pixel[2] = float(output[2]);
+#else
+          pixel[0] = float(src[0]);
+          pixel[1] = float(src[1]);
+          pixel[2] = float(src[2]);
+#endif
         }
       }
     }

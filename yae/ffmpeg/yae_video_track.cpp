@@ -891,16 +891,24 @@ namespace yae
             const AVContentLightMetadata * metadata =
               (const AVContentLightMetadata *)(side_data->data);
 
-            vf.traits_.max_cll_ = metadata->MaxCLL;
+            if (metadata->MaxCLL > 100)
+            {
+              vf.traits_.max_cll_ = metadata->MaxCLL;
+            }
           }
-          else if ((side_data = av_frame_get_side_data
-                    (&output, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA)))
+
+          if ((side_data = av_frame_get_side_data
+               (&output, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA)))
           {
             const AVMasteringDisplayMetadata * metadata =
               (const AVMasteringDisplayMetadata *)(side_data->data);
             if (metadata->has_luminance)
             {
-              vf.traits_.max_cll_ = av_q2d(metadata->max_luminance);
+              double max_luminance = av_q2d(metadata->max_luminance);
+              if (max_luminance > 100.0)
+              {
+                vf.traits_.max_cll_ = max_luminance;
+              }
             }
           }
         }

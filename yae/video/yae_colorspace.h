@@ -86,6 +86,18 @@ namespace yae
     return XYZ_to_xyY(xyz[0], xyz[1], xyz[2]);
   }
 
+  //----------------------------------------------------------------
+  // get_xyz_to_xyz
+  //
+  // Chromatic Adaptation
+  //
+  // http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
+  //
+  m3x3_t
+  get_xyz_to_xyz(// CIE XYZ source reference white point:
+                 const v3x1_t & w_src_xyz,
+                 // CIE XYZ destination reference white point:
+                 const v3x1_t & w_dst_xyz);
 
   //----------------------------------------------------------------
   // get_ypbpr_to_rgb

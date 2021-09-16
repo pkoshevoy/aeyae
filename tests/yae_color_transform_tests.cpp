@@ -425,6 +425,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
+#endif
 
 //----------------------------------------------------------------
 // yae_color_transform_hdr10_to_sdr_rgb24
@@ -473,6 +474,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
+#if 1
 //----------------------------------------------------------------
 // yae_color_transform_sdr_to_sdr_rgb24
 //
@@ -801,7 +803,6 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
     }
   }
 }
-#endif
 
 //----------------------------------------------------------------
 // yae_color_transform_sdr_to_sdr_color_check_rgb
@@ -883,3 +884,4 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
   std::string fn_prefix_rgb = "/tmp/colorbars-output-";
   BOOST_CHECK(save_as_png(rgb_frm, fn_prefix_rgb, TTime(1, 30)));
 }
+#endif

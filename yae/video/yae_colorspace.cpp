@@ -30,88 +30,41 @@ extern "C"
 
 namespace yae
 {
-  //----------------------------------------------------------------
-  // make_rgb_to_xyz
-  //
-  // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-  // linuxtv.org/downloads/v4l-dvb-apis/userspace-api/v4l/colorspaces.html
-  //
-  m3x3_t
-  make_rgb_to_xyz(// CIE XYZ chromaticity coordinates of RGB system:
-                  const v3x1_t & R,
-                  const v3x1_t & G,
-                  const v3x1_t & B,
-                  // CIE XYZ reference white point of RGB system:
-                  const v3x1_t & W)
-  {
-    m3x3_t XYZ = make_m3x3(R[0], G[0], B[0],
-                           R[1], G[1], B[1],
-                           R[2], G[2], B[2]);
-
-    m3x3_t inv_XYZ = inv(XYZ);
-    v3x1_t S = inv_XYZ * W;
-    m3x3_t M = XYZ * make_diagonal_m3x3(S);
-
-    return M;
-  }
-
 
   //----------------------------------------------------------------
-  // make_rgb_to_xyz
-  //
-  // http://www.brucelindbloom.com/index.html?Eqn_RGB_XYZ_Matrix.html
-  // linuxtv.org/downloads/v4l-dvb-apis/userspace-api/v4l/colorspaces.html
-  //
-  m3x3_t
-  make_rgb_to_xyz(// CIE xyY chromaticity coordinates of RGB system:
-                  double xr, double yr,
-                  double xg, double yg,
-                  double xb, double yb,
-                  // CIE xyY reference white point of RGB system:
-                  double xw, double yw)
-  {
-    v3x1_t R = xyY_to_XYZ(xr, yr);
-    v3x1_t G = xyY_to_XYZ(xg, yg);
-    v3x1_t B = xyY_to_XYZ(xb, yb);
-    v3x1_t W = xyY_to_XYZ(xw, yw);
-
-    return make_rgb_to_xyz(R, G, B, W);
-  }
-
-  //----------------------------------------------------------------
-  // make_xyz_to_xyz
+  // get_xyz_to_xyz
   //
   // http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
   //
   m3x3_t
-  make_xyz_to_xyz(// CIE XYZ source reference white point:
-                  const v3x1_t & ws,
-                  // CIE XYZ destination reference white point:
-                  const v3x1_t & wd)
+  get_xyz_to_xyz(// CIE XYZ source reference white point:
+                 const v3x1_t & ws,
+                 // CIE XYZ destination reference white point:
+                 const v3x1_t & wd)
   {
 #if 1
     // The Bradford method is the newest of the three methods,
     // and is considered by most experts to be the best of them.
     static const m3x3_t Ma =
-      make_m3x3(0.8951000, 0.2664000,-0.1614000,
-                -0.7502000, 1.7135000, 0.0367000,
-                0.0389000, -0.0685000, 1.0296000);
+      make_m3x3( 0.8951000,  0.2664000, -0.1614000,
+                -0.7502000,  1.7135000,  0.0367000,
+                 0.0389000, -0.0685000,  1.0296000);
 
     static const m3x3_t inv_Ma =
-      make_m3x3(0.9869929, -0.1470543, 0.1599627,
-                0.4323053, 0.5183603, 0.0492912,
-                -0.0085287, 0.0400428, 0.9684867);
+      make_m3x3( 0.9869929, -0.1470543, 0.1599627,
+                 0.4323053,  0.5183603, 0.0492912,
+                -0.0085287,  0.0400428, 0.9684867);
 #elif 1
     // Von Kries:
     static const m3x3_t Ma =
-      make_m3x3(0.4002400, 0.7076000, -0.0808100,
-                -0.2263000, 1.1653200, 0.0457000,
-                0.0000000, 0.0000000, 0.9182200);
+      make_m3x3( 0.4002400, 0.7076000, -0.0808100,
+                -0.2263000, 1.1653200,  0.0457000,
+                 0.0000000, 0.0000000,  0.9182200);
 
     static const m3x3_t inv_Ma =
-      make_m3x3(1.8599364, -1.1293816, 0.2198974,
-                0.3611914, 0.6388125, -0.0000064,
-                0.0000000, 0.0000000, 1.0890636);
+      make_m3x3(1.8599364, -1.1293816,  0.2198974,
+                0.3611914,  0.6388125, -0.0000064,
+                0.0000000,  0.0000000,  1.0890636);
 #else // XYZ Scaling
     static const m3x3_t Ma = make_identity_m3x3();
     static const m3x3_t inv_Ma = make_identity_m3x3();
@@ -125,22 +78,6 @@ namespace yae
 
     m3x3_t M = inv_Ma * S * Ma;
     return M;
-  }
-
-  //----------------------------------------------------------------
-  // make_xyz_to_xyz
-  //
-  // http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
-  //
-  m3x3_t
-  make_xyz_to_xyz(// CIE xyY source reference white point:
-                  double xws, double yws,
-                  // CIE xyY destination reference white point:
-                  double xwd, double ywd)
-  {
-    v3x1_t ws = xyY_to_XYZ(xws, yws);
-    v3x1_t wd = xyY_to_XYZ(xwd, ywd);
-    return make_xyz_to_xyz(ws, wd);
   }
 
 
