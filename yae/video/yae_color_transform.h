@@ -156,9 +156,9 @@ namespace yae
                                 double v,
                                 double w) const
     {
-      std::size_t i = std::size_t(u * z1_);
-      std::size_t j = std::size_t(v * z1_);
-      std::size_t k = std::size_t(w * z1_);
+      std::size_t i = std::size_t(u * z2_);
+      std::size_t j = std::size_t(v * z2_);
+      std::size_t k = std::size_t(w * z2_);
       return this->at(i, j, k);
     }
 
@@ -166,9 +166,9 @@ namespace yae
                             double v,
                             double w) const
     {
-      u *= z1_;
-      v *= z1_;
-      w *= z1_;
+      u *= z2_;
+      v *= z2_;
+      w *= z2_;
 
       std::size_t i0 = std::size_t(u);
       std::size_t j0 = std::size_t(v);
@@ -210,8 +210,29 @@ namespace yae
     const std::size_t size_3d_;
     const std::size_t size_2d_;
     const std::size_t size_1d_;
-    const double granularity_; // 1 / size_1d_
-    const double z1_; // size_1d_ - 1
+
+    // The [0, 1] sampling of the input domain maps to [0, z2]
+    // cube coordinates -- z1 coordinate maps outside the [0, 1]
+    // input domain.  This is done in order to exactly represent
+    // samples with 0.5 coordinates because they have special
+    // significance in Y'CbCr for representing pure black and
+    // pure white precisely.
+    //
+    // The cube actually represents a sampling of the
+    // [0, 1 + dz] x [0, 1 + dz] x [0, 1 + dz] input space.
+    //
+    // Direct access to the cube data should be adjusted accordingly.
+    // This is mainly of interest to OpenGL fragment shaders as they'll
+    // need to scale the texture coordinates by 1 / (1 + dz)
+    // in order to access the intended region of the cube (3D texture).
+    //
+    // This also constrains the minimum size of the cube to 4x4x4,
+    // which corresponds to log2_edge = 2
+    //
+    const double z1_; // size_1d - 1
+    const double z2_; // size_1d - 2
+    const double dz_; // 1 / z2
+    const double zs_; // z2 / z1
 
   protected:
     std::vector<Pixel> cube_;

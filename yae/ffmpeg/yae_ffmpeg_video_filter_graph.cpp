@@ -16,8 +16,321 @@
 #include "yae/utils/yae_benchmark.h"
 
 
+//----------------------------------------------------------------
+// YAE_ENABLE_ZSCALE
+//
+#define YAE_ENABLE_ZSCALE 1
+
 namespace yae
 {
+
+#if !YAE_ENABLE_ZSCALE
+  //----------------------------------------------------------------
+  // to_colorspace_trc
+  //
+  static AVColorTransferCharacteristic
+  to_colorspace_trc(AVColorTransferCharacteristic color_trc)
+  {
+    return (// vf_colorspace doesn't support HLG,
+            // but HLG is suposed to be somewhat compatible
+            // with existing HDTV sets so use the BT.709 trc:
+            color_trc == AVCOL_TRC_ARIB_STD_B67 ? AVCOL_TRC_BT709 :
+            color_trc);
+  }
+
+  //----------------------------------------------------------------
+  // to_colorspace_trc_name
+  //
+  static const char *
+  to_colorspace_trc_name(AVColorTransferCharacteristic color_trc)
+  {
+    return av_color_transfer_name(to_colorspace_trc(color_trc));
+  }
+
+  //----------------------------------------------------------------
+  // colorspace_filter_chain
+  //
+  static std::string
+  colorspace_filter_chain(const yae::AvFrmSpecs & src_specs,
+                          const yae::AvFrmSpecs & dst_specs)
+  {
+    AVPixelFormat src_pix_fmt = src_specs.get_pix_fmt();
+    AVPixelFormat dst_pix_fmt = dst_specs.get_pix_fmt();
+    AVPixelFormat out_pix_fmt =
+      (dst_pix_fmt == AV_PIX_FMT_NONE) ? src_pix_fmt : dst_pix_fmt;
+
+    AVColorRange out_color_range =
+      dst_specs.color_range == AVCOL_RANGE_UNSPECIFIED ?
+      src_specs.color_range : dst_specs.color_range;
+
+    AVColorSpace out_colorspace =
+      dst_specs.colorspace == AVCOL_SPC_UNSPECIFIED ?
+      src_specs.colorspace : dst_specs.colorspace;
+
+    AVColorPrimaries out_color_primaries =
+      dst_specs.color_primaries == AVCOL_PRI_UNSPECIFIED ?
+      src_specs.color_primaries : dst_specs.color_primaries;
+
+    AVColorTransferCharacteristic out_color_trc =
+      dst_specs.color_trc == AVCOL_TRC_UNSPECIFIED ?
+      src_specs.color_trc : dst_specs.color_trc;
+
+    if (src_specs.format == out_pix_fmt &&
+        src_specs.color_range == out_color_range &&
+        src_specs.colorspace == out_colorspace &&
+        src_specs.color_primaries == out_color_primaries &&
+        src_specs.color_trc == out_color_trc)
+    {
+      // nothing to do:
+      return std::string();
+    }
+
+    std::ostringstream oss;
+    oss << "colorspace=";
+
+    // colorspace:
+    oss << "ispace=" << av_color_space_name(src_specs.colorspace)
+        << ":space=" << av_color_space_name(out_colorspace);
+
+    // color primaries:
+    oss << ":iprimaries=" << av_color_primaries_name(src_specs.color_primaries)
+        << ":primaries=" << av_color_primaries_name(out_color_primaries);
+
+    // transfer characteristic:
+    oss << ":itrc=" << to_colorspace_trc_name(src_specs.color_trc)
+        << ":trc=" << to_colorspace_trc_name(out_color_trc);
+
+    // color range:
+    oss << ":irange=" << av_color_range_name(src_specs.color_range)
+        << ":range=" << av_color_range_name(out_color_range);
+
+    // dithering:
+    if (src_pix_fmt != out_pix_fmt)
+    {
+      const AVPixFmtDescriptor * src_desc = av_pix_fmt_desc_get(src_pix_fmt);
+      const AVPixFmtDescriptor * out_desc = av_pix_fmt_desc_get(out_pix_fmt);
+
+      if (out_desc->comp[0].depth < src_desc->comp[0].depth)
+      {
+        // avoid introducing banding artifacts when reducing bitdepth:
+        oss << ":dither=fsb";
+      }
+    }
+
+    return oss.str();
+  }
+
+#elif YAE_ENABLE_ZSCALE
+
+  //----------------------------------------------------------------
+  // get_zscale_range
+  //
+  static const char *
+  to_zscale_range(AVColorRange color_range)
+  {
+    return (color_range == AVCOL_RANGE_JPEG ? "full" : "limited");
+  }
+
+  //----------------------------------------------------------------
+  // to_zscale_primaries
+  //
+  static const char *
+  to_zscale_primaries(AVColorPrimaries color_primaries)
+  {
+    return (color_primaries == AVCOL_PRI_BT709 ? "709" :
+            color_primaries == AVCOL_PRI_SMPTE170M ? "170m" :
+            color_primaries == AVCOL_PRI_SMPTE240M ? "240m" :
+            color_primaries == AVCOL_PRI_BT2020 ? "2020" :
+            "input");
+  }
+
+  //----------------------------------------------------------------
+  // to_zscale_matrix
+  //
+  static const char *
+  to_zscale_matrix(AVColorSpace colorspace)
+  {
+    return (colorspace == AVCOL_SPC_BT709 ? "709" :
+            colorspace == AVCOL_SPC_BT470BG ? "470bg" :
+            colorspace == AVCOL_SPC_SMPTE170M ? "170m" :
+            colorspace == AVCOL_SPC_BT2020_NCL ? "2020_ncl" :
+            colorspace == AVCOL_SPC_BT2020_CL ? "2020_cl" :
+            "input");
+  }
+
+  //----------------------------------------------------------------
+  // to_zscale_transfer
+  //
+  static const char *
+  to_zscale_transfer(AVColorTransferCharacteristic color_trc)
+  {
+    return (color_trc == AVCOL_TRC_BT709 ? "709" :
+            color_trc == AVCOL_TRC_SMPTE170M ? "601" :
+            color_trc == AVCOL_TRC_LINEAR ? "linear" :
+            color_trc == AVCOL_TRC_BT2020_10 ? "2020_10" :
+            color_trc == AVCOL_TRC_BT2020_12 ? "2020_12" :
+            color_trc == AVCOL_TRC_SMPTE2084 ? "smpte2084" :
+            color_trc == AVCOL_TRC_IEC61966_2_1 ? "iec61966-2-1" :
+            color_trc == AVCOL_TRC_ARIB_STD_B67 ? "arib-std-b67" :
+            "input");
+  }
+
+  //----------------------------------------------------------------
+  // to_zscale_location
+  //
+  static const char *
+  to_zscale_location(AVChromaLocation chroma_loc)
+  {
+    return (chroma_loc == AVCHROMA_LOC_LEFT ? "left" :
+            chroma_loc == AVCHROMA_LOC_CENTER ? "center" :
+            chroma_loc == AVCHROMA_LOC_TOPLEFT ? "topleft" :
+            chroma_loc == AVCHROMA_LOC_TOP ? "top" :
+            chroma_loc == AVCHROMA_LOC_BOTTOMLEFT ? "bottomleft" :
+            chroma_loc == AVCHROMA_LOC_BOTTOM ? "bottom" :
+            "input");
+  }
+
+  //----------------------------------------------------------------
+  // get_nominal_peak_luminance_cd_m2
+  //
+  static double
+  get_nominal_peak_luminance_cd_m2(const AVColorTransferCharacteristic trc)
+  {
+    uint32_t cd_m2 =
+      (trc == AVCOL_TRC_SMPTE2084) ? 10000.0 :
+      (trc == AVCOL_TRC_BT2020_10 ||
+       trc == AVCOL_TRC_BT2020_12 ||
+       trc == AVCOL_TRC_ARIB_STD_B67) ? 1000.0 :
+      100.0;
+    return cd_m2;
+  }
+
+  //----------------------------------------------------------------
+  // zscale_filter_chain
+  //
+  static std::string
+  zscale_filter_chain(const yae::AvFrmSpecs & src_specs,
+                      const yae::AvFrmSpecs & dst_specs)
+  {
+    AVPixelFormat src_pix_fmt = src_specs.get_pix_fmt();
+    AVPixelFormat dst_pix_fmt = dst_specs.get_pix_fmt();
+
+    yae::AvFrmSpecs out_specs = dst_specs;
+    out_specs.format =
+      (dst_pix_fmt == AV_PIX_FMT_NONE) ? src_pix_fmt : dst_pix_fmt;
+
+    out_specs.color_range =
+      dst_specs.color_range == AVCOL_RANGE_UNSPECIFIED ?
+      src_specs.color_range : dst_specs.color_range;
+
+    out_specs.colorspace =
+      dst_specs.colorspace == AVCOL_SPC_UNSPECIFIED ?
+      src_specs.colorspace : dst_specs.colorspace;
+
+    out_specs.color_primaries =
+      dst_specs.color_primaries == AVCOL_PRI_UNSPECIFIED ?
+      src_specs.color_primaries : dst_specs.color_primaries;
+
+    out_specs.color_trc =
+      dst_specs.color_trc == AVCOL_TRC_UNSPECIFIED ?
+      src_specs.color_trc : dst_specs.color_trc;
+
+    if (src_specs.format == out_specs.format &&
+        src_specs.color_range == out_specs.color_range &&
+        src_specs.colorspace == out_specs.colorspace &&
+        src_specs.color_primaries == out_specs.color_primaries &&
+        src_specs.color_trc == out_specs.color_trc)
+    {
+      // nothing to do:
+      return std::string();
+    }
+
+    double dst_cd_m2 = get_nominal_peak_luminance_cd_m2(out_specs.color_trc);
+
+    // https://movielabs.com/ngvideo/MovieLabs_Mapping_BT.709_to_HDR10_v1.0.pdf
+    if (src_specs.is_sdr() && out_specs.is_hdr())
+    {
+      dst_cd_m2 = 203.0;
+    }
+
+    std::ostringstream oss;
+
+    // yuv -> linear rgb
+    oss << "zscale=";
+
+    // input colorspace:
+    oss << "min=" << to_zscale_matrix(src_specs.colorspace);
+
+    // input color range:
+    if (src_specs.color_range != AVCOL_RANGE_UNSPECIFIED)
+    {
+      oss << ":rin=" << to_zscale_range(src_specs.color_range);
+    }
+
+    // input color primaries:
+    if (src_specs.color_primaries != AVCOL_PRI_UNSPECIFIED)
+    {
+      oss << ":pin=" << to_zscale_primaries(src_specs.color_primaries);
+    }
+
+    // input transfer characteristic:
+    if (src_specs.color_trc != AVCOL_TRC_UNSPECIFIED)
+    {
+      oss << ":tin=" << to_zscale_transfer(src_specs.color_trc);
+    }
+
+    // input chroma location:
+    if (src_specs.chroma_location != AVCHROMA_LOC_UNSPECIFIED)
+    {
+      oss << ":cin=" << to_zscale_location(src_specs.chroma_location);
+    }
+
+    // output float rgb with linear color transfer characteristics
+    oss << ":t=linear,format=gbrpf32le";
+
+    if (src_specs.is_hdr() && out_specs.is_sdr())
+    {
+      oss << ",tonemap=gamma";
+    }
+
+    // linear rgb -> yuv
+    oss << ",zscale=tin=linear";
+
+    if (src_specs.is_hdr() != out_specs.is_hdr())
+    {
+      oss << ":npl=" << dst_cd_m2;
+    }
+
+    // output color primaries:
+    oss << ":p=" << to_zscale_primaries(out_specs.color_primaries);
+
+    // output colorspace:
+    oss << ":m=" << to_zscale_matrix(out_specs.colorspace);
+
+    // output color range:
+    oss << ":r=" << to_zscale_range(out_specs.color_range);
+
+    // output transfer characteristic:
+    oss << ":t=" << to_zscale_transfer(out_specs.color_trc);
+
+    // dithering:
+    if (src_pix_fmt != out_specs.format)
+    {
+      const AVPixFmtDescriptor * src_desc =
+        av_pix_fmt_desc_get(src_pix_fmt);
+      const AVPixFmtDescriptor * out_desc =
+        av_pix_fmt_desc_get(out_specs.format);
+
+      if (out_desc->comp[0].depth < src_desc->comp[0].depth)
+      {
+        // avoid introducing banding artifacts when reducing bitdepth:
+        oss << ":dither=ordered";
+      }
+    }
+
+    return oss.str();
+  }
+#endif // YAE_ENABLE_ZSCALE
 
   //----------------------------------------------------------------
   // scale_filter_chain
@@ -372,6 +685,20 @@ namespace yae
         dst_pix_fmt = flag_alpha ? native_argb : native_rgb;
       }
 #endif
+
+      const bool same_color_specs = yae::same_color_specs(src, dst_specs_);
+      if (!same_color_specs)
+      {
+#if YAE_ENABLE_ZSCALE
+        std::string color_xform = zscale_filter_chain(src, dst_specs_);
+#else
+        std::string color_xform = colorspace_filter_chain(src, dst_specs_);
+#endif
+        if (!color_xform.empty())
+        {
+          oss << "," << color_xform;
+        }
+      }
 
       // force the output pixel format, even if it's the same as source,
       // because it's possible the format was changed by an upstream filter:

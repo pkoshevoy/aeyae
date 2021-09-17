@@ -425,7 +425,6 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
   std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
-#endif
 
 //----------------------------------------------------------------
 // yae_color_transform_hdr10_to_sdr_rgb24
@@ -474,7 +473,6 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
-#if 1
 //----------------------------------------------------------------
 // yae_color_transform_sdr_to_sdr_rgb24
 //
@@ -567,20 +565,21 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
 
   const m4x4_t to_ypbpr = m4x4_t(src_csp->rgb_to_ypbpr_);
   const m4x4_t to_rgb = m4x4_t(dst_csp->ypbpr_to_rgb_);
+  const int n = lut3d.size_1d_ - 1;
 
-  for (int i = 0; i < lut3d.size_1d_; i++)
+  for (int i = 0; i < n; i++)
   {
-    const double y = double(i) / lut3d.z1_;
+    const double y = double(i) / lut3d.z2_;
     yuv[0] = y;
 
-    for (int j = 0; j < lut3d.size_1d_; j++)
+    for (int j = 0; j < n; j++)
     {
-      const double u = double(j) / lut3d.z1_;
+      const double u = double(j) / lut3d.z2_;
       yuv[1] = u;
 
-      for (int k = 0; k < lut3d.size_1d_; k++)
+      for (int k = 0; k < n; k++)
       {
-        const double v = double(k) / lut3d.z1_;
+        const double v = double(k) / lut3d.z2_;
         yuv[2] = v;
 
         ypbpr = src_to_ypbpr * ycbcr;
@@ -667,10 +666,11 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
   const m4x4_t to_ypbpr = m4x4_t(src_csp->rgb_to_ypbpr_);
   const m4x4_t from_rgb = m4x4_t(dst_csp->rgb_to_ypbpr_);
   const m4x4_t to_rgb = m4x4_t(dst_csp->ypbpr_to_rgb_);
+  const int n = lut3d.size_1d_ - 1;
 
-  for (int i = 0; i < lut3d.size_1d_; i++)
+  for (int i = 0; i < n; i++)
   {
-    const double s = double(i) / lut3d.z1_;
+    const double s = double(i) / lut3d.z2_;
     rgb[0] = s;
     rgb[1] = s;
     rgb[2] = s;
@@ -759,20 +759,21 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
   const m4x4_t to_ypbpr = m4x4_t(src_csp->rgb_to_ypbpr_);
   const m4x4_t from_rgb = m4x4_t(dst_csp->rgb_to_ypbpr_);
   const m4x4_t to_rgb = m4x4_t(dst_csp->ypbpr_to_rgb_);
+  const int n = lut3d.size_1d_ - 1;
 
-  for (int i = 0; i < lut3d.size_1d_; i++)
+  for (int i = 0; i < n; i++)
   {
-    const double r = double(i) / lut3d.z1_;
+    const double r = double(i) / lut3d.z2_;
     rgb[0] = r;
 
-    for (int j = 0; j < lut3d.size_1d_; j++)
+    for (int j = 0; j < n; j++)
     {
-      const double g = double(j) / lut3d.z1_;
+      const double g = double(j) / lut3d.z2_;
       rgb[1] = g;
 
-      for (int k = 0; k < lut3d.size_1d_; k++)
+      for (int k = 0; k < n; k++)
       {
-        const double b = double(k) / lut3d.z1_;
+        const double b = double(k) / lut3d.z2_;
         rgb[2] = b;
 
         ypbpr = from_rgb * rgb_sample;
@@ -803,7 +804,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
     }
   }
 }
-
+#endif
+#if 1
 //----------------------------------------------------------------
 // yae_color_transform_sdr_to_sdr_color_check_rgb
 //
@@ -832,7 +834,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(7);
+  ColorTransform lut3d(6);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,
@@ -848,7 +850,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
   const AVFrame & yuv_frame = yuv_frm.get();
 
   std::string fn_prefix_yuv = "/tmp/colorbars-source-";
-  BOOST_CHECK(save_as_png(yuv_frm, fn_prefix_yuv, TTime(1, 30)));
+  BOOST_CHECK(save_as_png(yuv_frm, fn_prefix_yuv));
 
   AvFrm rgb_frm = make_avfrm(AV_PIX_FMT_RGB24,
                              w,
@@ -882,6 +884,6 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
   }
 
   std::string fn_prefix_rgb = "/tmp/colorbars-output-";
-  BOOST_CHECK(save_as_png(rgb_frm, fn_prefix_rgb, TTime(1, 30)));
+  BOOST_CHECK(save_as_png(rgb_frm, fn_prefix_rgb));
 }
 #endif

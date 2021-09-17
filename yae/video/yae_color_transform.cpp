@@ -306,9 +306,12 @@ namespace yae
     size_3d_(1ull << (log2_edge * 3)),
     size_2d_(1ull << (log2_edge * 2)),
     size_1d_(1ull << (log2_edge)),
-    granularity_(1.0 / size_1d_),
-    z1_(size_1d_ - 1)
+    z1_(size_1d_ - 1),
+    z2_(size_1d_ - 2),
+    dz_(1.0 / z2_),
+    zs_(z2_ / z1_)
   {
+    YAE_ASSERT(log2_edge > 1);
     YAE_ASSERT(log2_edge < 11);
     cube_.resize(size_3d_);
   }
@@ -363,7 +366,7 @@ namespace yae
     v4x1_t output = make_v4x1(0, 0, 0, 1);
 
     // shortcuts:
-    const double rescale = double(size_1d_ - 1);
+    const double rescale = double(size_1d_ - 2);
     double * src = input.begin();
     Pixel * cube = &cube_[0];
 

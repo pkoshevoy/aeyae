@@ -165,23 +165,6 @@ namespace yae
 
     bool operator == (const VideoTraits & vt) const;
 
-    //----------------------------------------------------------------
-    // initAbcToRgbMatrix
-    //
-    // Fill in the m3x4 matrix for color conversion from
-    // input color format ABC to full-range RGB:
-    //
-    // [R, G, B]T = m3x4 * [A, B, C, 1]T
-    //
-    // NOTE: ABC and RGB are expressed in the [0, 1] range,
-    //       not [0, 255].
-    //
-    // NOTE: Here ABC typically refers to YCbCr input color format,
-    //       however it can be RGB, Gray, or GrayAlpha,
-    //       either full or narrow range
-    //
-    bool initAbcToRgbMatrix(double * m3x4) const;
-
     //! frame rate:
     double frameRate_;
 

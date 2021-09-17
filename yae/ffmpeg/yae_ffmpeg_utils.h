@@ -363,6 +363,15 @@ namespace yae
     inline AVPixelFormat get_pix_fmt() const
     { return format; }
 
+    inline bool is_hdr() const
+    {
+      return (colorspace == AVCOL_SPC_BT2020_NCL ||
+              colorspace == AVCOL_SPC_BT2020_CL);
+    }
+
+    inline bool is_sdr() const
+    { return !is_hdr(); }
+
     int width;
     int height;
     AVPixelFormat format;
@@ -795,7 +804,7 @@ namespace yae
   YAE_API bool
   save_as(const std::string & path,
           const yae::AvFrm & src,
-          const yae::TTime & frame_dur);
+          const yae::TTime & frame_dur = yae::TTime(1, 25));
 
   //----------------------------------------------------------------
   // save_as_png
@@ -803,7 +812,23 @@ namespace yae
   YAE_API bool
   save_as_png(const yae::AvFrm & frm,
               const std::string & prefix,
-              const yae::TTime & frame_dur);
+              const yae::TTime & frame_dur = yae::TTime(1, 25));
+
+  //----------------------------------------------------------------
+  // save_as_jpg
+  //
+  YAE_API bool
+  save_as_jpg(const yae::AvFrm & frm,
+              const std::string & prefix,
+              const yae::TTime & frame_dur = yae::TTime(1, 25));
+
+  //----------------------------------------------------------------
+  // save_as_tiff
+  //
+  YAE_API bool
+  save_as_tiff(const yae::AvFrm & frm,
+               const std::string & prefix,
+               const yae::TTime & frame_dur = yae::TTime(1, 25));
 
   //----------------------------------------------------------------
   // make_hwframes_ctx

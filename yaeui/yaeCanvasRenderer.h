@@ -34,6 +34,7 @@
 
 // yae includes:
 #include "yae/video/yae_auto_crop.h"
+#include "yae/video/yae_color_transform.h"
 #include "yae/video/yae_pixel_format_traits.h"
 #include "yae/video/yae_video.h"
 
@@ -504,13 +505,9 @@ namespace yae
     // shader selected for current frame:
     const TFragmentShader * shader_;
 
-    // 3x4 matrix for transform from the input colorspace
-    // to full-range RGB, including luma scale and shift:
-    double m34_to_rgb_[12];
-
-    // a sampling of the input colorspace EOTF:
-    float eotf_lut_[1024];
-    GLuint eotf_tex_id_;
+    // a 3D LUT to transform any input to BT.709 R'G'B':
+    ColorTransform clut_;
+    GLuint clut_tex_id_;
   };
 
   //----------------------------------------------------------------

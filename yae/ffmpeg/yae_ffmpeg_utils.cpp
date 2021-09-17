@@ -1609,18 +1609,27 @@ namespace yae
 
     yae::AvFrm frm = src;
     AVFrame & frame = frm.get();
-    if (codec->pix_fmts && !yae::has(codec->pix_fmts, src.get_pix_fmt()))
+    // convert to full-range, and pixel format supported by the encoder:
     {
-      // convert to pixel format supported by the encoder:
       yae::AvFrmSpecs specs = src;
-      specs.format = codec->pix_fmts[0];
-      specs.colorspace = AVCOL_SPC_BT709;
+
+      specs.format =
+        yae::has(codec->pix_fmts, src.get_pix_fmt()) ? src.get_pix_fmt() :
+        codec->pix_fmts[0];
+
+      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(specs.format);
+      const bool is_rgb = desc ? yae::is_rgb(*desc) : false;
+
+      specs.colorspace = is_rgb ? AVCOL_SPC_RGB : AVCOL_SPC_BT709;
       specs.color_range = AVCOL_RANGE_JPEG;
       specs.color_primaries = AVCOL_PRI_BT709;
       specs.color_trc = AVCOL_TRC_BT709;
 
       yae::VideoFilterGraph vf;
-      vf.setup(src, framerate, timebase, specs);
+      if (vf.setup(src, framerate, timebase, specs))
+      {
+        yae_dlog("save_as: filters: %s", vf.get_filters().c_str());
+      }
 
       yae::AvFrm tmp = src;
       vf.push(&tmp.get());
@@ -1653,6 +1662,10 @@ namespace yae
     encoder.max_b_frames = 0;
     encoder.pix_fmt = (AVPixelFormat)(frame.format);
     encoder.sample_aspect_ratio = frame.sample_aspect_ratio;
+    encoder.color_primaries = frame.color_primaries;
+    encoder.color_range = frame.color_range;
+    encoder.color_trc = frame.color_trc;
+    encoder.colorspace = frame.colorspace;
 
     AVDictionary * encoder_opts = NULL;
     int err = avcodec_open2(&encoder, codec, &encoder_opts);
@@ -1797,6 +1810,56 @@ namespace yae
           << pix_fmt_txt << '.'
           << frame.width << '.'
           << frame.height << ".png";
+      path = oss.str();
+    }
+
+    return save_as(path, frm, frame_dur);
+  }
+
+  //----------------------------------------------------------------
+  // save_as_jpg
+  //
+  bool
+  save_as_jpg(const yae::AvFrm & frm,
+              const std::string & prefix,
+              const yae::TTime & frame_dur)
+  {
+    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
+    const AVFrame & frame = frm.get();
+
+    std::string path;
+    {
+      std::ostringstream oss;
+      oss << prefix
+          << pix_fmt_txt << '.'
+          << frame.width << '.'
+          << frame.height << ".jpg";
+      path = oss.str();
+    }
+
+    return save_as(path, frm, frame_dur);
+  }
+
+  //----------------------------------------------------------------
+  // save_as_tiff
+  //
+  bool
+  save_as_tiff(const yae::AvFrm & frm,
+               const std::string & prefix,
+               const yae::TTime & frame_dur)
+  {
+    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
+    const AVFrame & frame = frm.get();
+
+    std::string path;
+    {
+      std::ostringstream oss;
+      oss << prefix
+          << pix_fmt_txt << '.'
+          << frame.width << '.'
+          << frame.height << ".tiff";
       path = oss.str();
     }
 
