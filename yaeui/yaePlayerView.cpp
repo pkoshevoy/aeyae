@@ -2404,25 +2404,8 @@ namespace yae
       VideoTraits & traits = videoTraits[i];
       if (reader->getVideoTraits(traits))
       {
-        double par = (traits.pixelAspectRatio_ != 0.0 &&
-                      traits.pixelAspectRatio_ != 1.0 ?
-                      traits.pixelAspectRatio_ : 1.0);
-
-        unsigned int w = (unsigned int)(0.5 + par * traits.visibleWidth_);
-        trackName +=
-          tr(", %1 x %2, %3 fps").
-          arg(w).
-          arg(traits.visibleHeight_).
-          arg(traits.frameRate_);
-
-        if (traits.cameraRotation_)
-        {
-          static const char * degree_utf8 = "\xc2""\xb0";
-          trackName +=
-            tr(", rotated %1%2").
-            arg(traits.cameraRotation_).
-            arg(QString::fromUtf8(degree_utf8));
-        }
+        std::string summary = traits.summary();
+        trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
       }
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);

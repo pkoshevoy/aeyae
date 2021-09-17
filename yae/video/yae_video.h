@@ -160,6 +160,8 @@ namespace yae
   {
     VideoTraits();
 
+    std::string summary() const;
+
     bool sameFrameSizeAndFormat(const VideoTraits & vt) const;
     bool sameColorSpaceAndRange(const VideoTraits & vt) const;
 

@@ -17,6 +17,12 @@
 #include <string.h>
 #include <math.h>
 
+// ffmpeg includes:
+extern "C"
+{
+#include <libavutil/pixdesc.h>
+}
+
 // yae includes:
 #include "yae_video.h"
 #include "yae_reader.h"
@@ -220,6 +226,72 @@ namespace yae
 
     pixelFormat_ = kInvalidPixelFormat;
     pixelAspectRatio_ = 1.0;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::txt_summary
+  //
+  std::string
+  VideoTraits::summary() const
+  {
+    std::ostringstream oss;
+
+    double par = (pixelAspectRatio_ != 0.0 &&
+                  pixelAspectRatio_ != 1.0 ?
+                  pixelAspectRatio_ : 1.0);
+
+    unsigned int w = (unsigned int)(0.5 + par * visibleWidth_);
+    oss << yae::strfmt("%.2f", frameRate_) << " fps, "
+        << w << "x" << visibleHeight_;
+
+    if (cameraRotation_)
+    {
+      static const char * degree_utf8 = "\xc2""\xb0";
+      oss << " rotated " << cameraRotation_ << degree_utf8;
+    }
+
+    std::string csp;
+    if (av_csp_ == AVCOL_SPC_BT2020_NCL &&
+        av_pri_ == AVCOL_PRI_BT2020 &&
+        av_trc_ == AVCOL_TRC_SMPTEST2084)
+    {
+      csp = "HDR10";
+    }
+    else if (av_csp_ == AVCOL_SPC_BT2020_NCL &&
+             av_pri_ == AVCOL_PRI_BT2020 &&
+             av_trc_ == AVCOL_TRC_ARIB_STD_B67)
+    {
+      csp = "HLG";
+    }
+    else if (av_csp_ == AVCOL_SPC_BT709 &&
+             av_pri_ == AVCOL_PRI_BT709 &&
+             av_trc_ == AVCOL_TRC_BT709)
+    {
+      csp = "BT.709";
+    }
+
+    if (!csp.empty())
+    {
+      oss << " " << csp;
+    }
+
+    const char * pix_fmt = av_get_pix_fmt_name(av_fmt_);
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(av_fmt_);
+    const AVComponentDescriptor & luma = desc->comp[0];
+
+    oss << ", " << luma.depth << "-bit "
+        << (av_rng_ == AVCOL_RANGE_JPEG ? "full" : "narrow")
+        << " range" << " " << pix_fmt;
+
+    if (csp.empty())
+    {
+      oss << ", csp: " << av_color_space_name(av_csp_)
+          << ", pri: " << av_color_primaries_name(av_pri_)
+          << ", trc: " << av_color_transfer_name(av_trc_);
+    }
+
+
+    return oss.str();
   }
 
   //----------------------------------------------------------------
