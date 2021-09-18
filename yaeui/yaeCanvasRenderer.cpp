@@ -2110,20 +2110,14 @@ namespace yae
     // NOTE: this assumes that the mutex is already locked:
     bool frameSizeOrFormatChanged = false;
 
-    colorSpaceOrRangeChanged =
-      (!frame_ || !frame ||
-       !frame_->traits_.sameColorSpaceAndRange(frame->traits_));
-
-    if (!frame_ || !frame ||
-        !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
-    {
-      crop_.clear();
-      frameSizeOrFormatChanged = true;
-      colorSpaceOrRangeChanged = true;
-    }
+    colorSpaceOrRangeChanged = frame &&
+      !(frame_ && frame_->traits_.sameColorSpaceAndRange(frame->traits_));
 
     if (colorSpaceOrRangeChanged)
     {
+      crop_.clear();
+      frameSizeOrFormatChanged = true;
+
       const VideoTraits & vtts = frame->traits_;
 
       // update the color transform LUT:
@@ -2156,8 +2150,7 @@ namespace yae
                  ypbpr_to_dst,
                  (peak_ratio < 1.5) ? NULL : &tone_map);
 
-#if 1
-      // FIXME: pkoshevoy: for debugging only:
+#if 0 // for debugging only:
       {
         AvFrm frm = lut_3d_to_2d_rgb(clut_, *dst_colorspace);
         std::string fn_prefix = "/tmp/clut-canvas-renderer-";
