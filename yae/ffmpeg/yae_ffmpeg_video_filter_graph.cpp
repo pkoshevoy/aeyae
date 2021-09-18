@@ -16,43 +16,15 @@
 #include "yae/utils/yae_benchmark.h"
 
 
-//----------------------------------------------------------------
-// YAE_ENABLE_ZSCALE
-//
-#define YAE_ENABLE_ZSCALE 1
-
 namespace yae
 {
 
-#if !YAE_ENABLE_ZSCALE
   //----------------------------------------------------------------
-  // to_colorspace_trc
-  //
-  static AVColorTransferCharacteristic
-  to_colorspace_trc(AVColorTransferCharacteristic color_trc)
-  {
-    return (// vf_colorspace doesn't support HLG,
-            // but HLG is suposed to be somewhat compatible
-            // with existing HDTV sets so use the BT.709 trc:
-            color_trc == AVCOL_TRC_ARIB_STD_B67 ? AVCOL_TRC_BT709 :
-            color_trc);
-  }
-
-  //----------------------------------------------------------------
-  // to_colorspace_trc_name
-  //
-  static const char *
-  to_colorspace_trc_name(AVColorTransferCharacteristic color_trc)
-  {
-    return av_color_transfer_name(to_colorspace_trc(color_trc));
-  }
-
-  //----------------------------------------------------------------
-  // colorspace_filter_chain
+  // color_scale_filter
   //
   static std::string
-  colorspace_filter_chain(const yae::AvFrmSpecs & src_specs,
-                          const yae::AvFrmSpecs & dst_specs)
+  color_scale_filter(const yae::AvFrmSpecs & src_specs,
+                     const yae::AvFrmSpecs & dst_specs)
   {
     AVPixelFormat src_pix_fmt = src_specs.get_pix_fmt();
     AVPixelFormat dst_pix_fmt = dst_specs.get_pix_fmt();
@@ -67,60 +39,27 @@ namespace yae
       dst_specs.colorspace == AVCOL_SPC_UNSPECIFIED ?
       src_specs.colorspace : dst_specs.colorspace;
 
-    AVColorPrimaries out_color_primaries =
-      dst_specs.color_primaries == AVCOL_PRI_UNSPECIFIED ?
-      src_specs.color_primaries : dst_specs.color_primaries;
-
-    AVColorTransferCharacteristic out_color_trc =
-      dst_specs.color_trc == AVCOL_TRC_UNSPECIFIED ?
-      src_specs.color_trc : dst_specs.color_trc;
-
     if (src_specs.format == out_pix_fmt &&
         src_specs.color_range == out_color_range &&
-        src_specs.colorspace == out_colorspace &&
-        src_specs.color_primaries == out_color_primaries &&
-        src_specs.color_trc == out_color_trc)
+        src_specs.colorspace == out_colorspace)
     {
       // nothing to do:
       return std::string();
     }
 
     std::ostringstream oss;
-    oss << "colorspace=";
+    oss << "scale=";
 
     // colorspace:
-    oss << "ispace=" << av_color_space_name(src_specs.colorspace)
-        << ":space=" << av_color_space_name(out_colorspace);
-
-    // color primaries:
-    oss << ":iprimaries=" << av_color_primaries_name(src_specs.color_primaries)
-        << ":primaries=" << av_color_primaries_name(out_color_primaries);
-
-    // transfer characteristic:
-    oss << ":itrc=" << to_colorspace_trc_name(src_specs.color_trc)
-        << ":trc=" << to_colorspace_trc_name(out_color_trc);
+    oss << "in_color_matrix=" << av_color_space_name(src_specs.colorspace)
+        << ":out_color_matrix=" << av_color_space_name(out_colorspace);
 
     // color range:
-    oss << ":irange=" << av_color_range_name(src_specs.color_range)
-        << ":range=" << av_color_range_name(out_color_range);
-
-    // dithering:
-    if (src_pix_fmt != out_pix_fmt)
-    {
-      const AVPixFmtDescriptor * src_desc = av_pix_fmt_desc_get(src_pix_fmt);
-      const AVPixFmtDescriptor * out_desc = av_pix_fmt_desc_get(out_pix_fmt);
-
-      if (out_desc->comp[0].depth < src_desc->comp[0].depth)
-      {
-        // avoid introducing banding artifacts when reducing bitdepth:
-        oss << ":dither=fsb";
-      }
-    }
+    oss << ":in_range=" << av_color_range_name(src_specs.color_range)
+        << ":out_range=" << av_color_range_name(out_color_range);
 
     return oss.str();
   }
-
-#elif YAE_ENABLE_ZSCALE
 
   //----------------------------------------------------------------
   // get_zscale_range
@@ -330,7 +269,7 @@ namespace yae
 
     return oss.str();
   }
-#endif // YAE_ENABLE_ZSCALE
+
 
   //----------------------------------------------------------------
   // scale_filter_chain
@@ -686,14 +625,18 @@ namespace yae
       }
 #endif
 
+      const bool same_color_space = yae::same_color_space(src, dst_specs_);
       const bool same_color_specs = yae::same_color_specs(src, dst_specs_);
+
       if (!same_color_specs)
       {
-#if YAE_ENABLE_ZSCALE
-        std::string color_xform = zscale_filter_chain(src, dst_specs_);
-#else
-        std::string color_xform = colorspace_filter_chain(src, dst_specs_);
-#endif
+        static const AVFilter * has_zscale = avfilter_get_by_name("zscale");
+
+        std::string color_xform =
+          (has_zscale && !same_color_space) ?
+          zscale_filter_chain(src, dst_specs_) :
+          color_scale_filter(src, dst_specs_);
+
         if (!color_xform.empty())
         {
           oss << "," << color_xform;

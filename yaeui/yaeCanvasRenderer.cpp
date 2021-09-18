@@ -2209,7 +2209,7 @@ namespace yae
                               clut_.size_1d_, // depth
                               0, // border
                               GL_RGB, // format
-                              GL_FLOAT, // type
+                              GL_UNSIGNED_BYTE, // type
                               clut_.get_data())); // pixels
       yae_assert_gl_no_error();
       YAE_OGL_11(glDisable(GL_TEXTURE_3D));

@@ -648,16 +648,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // same_color_space
+  //
+  template <typename ASpecs, typename BSpecs>
+  bool
+  same_color_space(const ASpecs & a, const BSpecs & b)
+  {
+    return (a.colorspace == b.colorspace &&
+            a.color_primaries == b.color_primaries &&
+            a.color_trc == b.color_trc);
+  }
+
+  //----------------------------------------------------------------
   // same_color_specs
   //
   template <typename ASpecs, typename BSpecs>
   bool
   same_color_specs(const ASpecs & a, const BSpecs & b)
   {
-    return (a.colorspace == b.colorspace &&
-            a.color_range == b.color_range &&
-            a.color_primaries == b.color_primaries &&
-            a.color_trc == b.color_trc);
+    return (a.color_range == b.color_range &&
+            same_color_space(a, b));
   }
 
   //----------------------------------------------------------------
@@ -783,20 +793,121 @@ namespace yae
   //
   // convert 3D LUT to a 8-bit YUV444P 2D CLUT image:
   //
-  YAE_API AvFrm
-  lut_3d_to_2d_yuv(const ColorTransform & lut3d,
+  template <typename TPixel>
+  AvFrm
+  lut_3d_to_2d_yuv(const ColorTransform<TPixel> & lut3d,
                    const Colorspace & dst_csp,
-                   AVColorRange av_rng = AVCOL_RANGE_MPEG);
+                   AVColorRange av_rng = AVCOL_RANGE_MPEG)
+  {
+    const double rescale = 255.0 / TPixel::Max;
+
+    const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+    const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+    const unsigned int clut_h = 1 << log2_h;
+    const unsigned int clut_w = 1 << log2_w;
+
+    AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
+                           clut_w,
+                           clut_h,
+                           dst_csp.av_csp_,
+                           dst_csp.av_pri_,
+                           dst_csp.av_trc_,
+                           av_rng);
+
+    AVFrame & frame = frm.get();
+    for (unsigned int i = 0; i < clut_h; i++)
+    {
+      for (unsigned int j = 0; j < clut_w; j++)
+      {
+        const unsigned int slice =
+          (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+          (j / lut3d.size_1d_);
+
+        const unsigned int offset =
+          slice * lut3d.size_2d_ +
+          (i % lut3d.size_1d_) * lut3d.size_1d_ +
+          (j % lut3d.size_1d_);
+
+        if (offset >= lut3d.size_3d_)
+        {
+          // shouldn't happen with power-of-two LUT sizes:
+          YAE_ASSERT(false);
+          break;
+        }
+
+        const TPixel & pixel = lut3d.at(offset);
+
+        unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
+        unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
+        unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
+
+        *dst_y = (unsigned char)(rescale * pixel.data_[0]);
+        *dst_u = (unsigned char)(rescale * pixel.data_[1]);
+        *dst_v = (unsigned char)(rescale * pixel.data_[2]);
+      }
+    }
+
+    return frm;
+  }
 
   //----------------------------------------------------------------
   // lut_3d_to_2d_rgb
   //
   // convert 3D LUT to a 8-bit RGB24 2D CLUT image:
   //
-  YAE_API AvFrm
-  lut_3d_to_2d_rgb(const ColorTransform & lut3d,
+  template <typename TPixel>
+  AvFrm
+  lut_3d_to_2d_rgb(const ColorTransform<TPixel> & lut3d,
                    const Colorspace & dst_csp,
-                   AVColorRange av_rng = AVCOL_RANGE_JPEG);
+                   AVColorRange av_rng = AVCOL_RANGE_JPEG)
+  {
+    const double rescale = 255.0 / TPixel::Max;
+
+    const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+    const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+    const unsigned int clut_h = 1 << log2_h;
+    const unsigned int clut_w = 1 << log2_w;
+
+    AvFrm frm = make_avfrm(AV_PIX_FMT_RGB24,
+                           clut_w,
+                           clut_h,
+                           dst_csp.av_csp_,
+                           dst_csp.av_pri_,
+                           dst_csp.av_trc_,
+                           av_rng);
+
+    AVFrame & frame = frm.get();
+    for (unsigned int i = 0; i < clut_h; i++)
+    {
+      for (unsigned int j = 0; j < clut_w; j++)
+      {
+        const unsigned int slice =
+          (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+          (j / lut3d.size_1d_);
+
+        const unsigned int offset =
+          slice * lut3d.size_2d_ +
+          (i % lut3d.size_1d_) * lut3d.size_1d_ +
+          (j % lut3d.size_1d_);
+
+        if (offset >= lut3d.size_3d_)
+        {
+          break;
+        }
+        const TPixel & pixel = lut3d.at(offset);
+
+        unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
+
+        rgb[0] = (unsigned char)(rescale * pixel.data_[0]);
+        rgb[1] = (unsigned char)(rescale * pixel.data_[1]);
+        rgb[2] = (unsigned char)(rescale * pixel.data_[2]);
+      }
+    }
+
+    return frm;
+  }
 
   //----------------------------------------------------------------
   // save_as

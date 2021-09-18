@@ -364,7 +364,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
   ToneMapGamma tone_map(1.8);
   // ToneMapPiecewise tone_map;
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hlg,
              *csp_sdr,
              src_ctx,
@@ -410,7 +410,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
 
   ToneMapPiecewise tone_map;
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
              src_ctx,
@@ -457,7 +457,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   ToneMapPiecewise tone_map;
   // ToneMapGamma tone_map(1.8);
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
              src_ctx,
@@ -501,7 +501,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,
@@ -549,7 +549,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,
@@ -596,9 +596,9 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
 
         // YAE_BREAKPOINT_IF(i == 1 && j == 0 && k == 69);
 
-        const ColorTransform::Pixel & p000 = lut3d.get_nn(yuv[0],
-                                                          yuv[1],
-                                                          yuv[2]);
+        const TColorTransform3f32::TPixel & p000 = lut3d.get_nn(yuv[0],
+                                                                yuv[1],
+                                                                yuv[2]);
         rgb_actual = v4x1_t(p000);
 
         YAE_ASSERT(fabs(rgb_expect[0] - rgb_actual[0]) < 1e-6);
@@ -647,7 +647,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(8);
+  TColorTransform3f32 lut3d(8);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,
@@ -740,7 +740,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(7);
+  TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,
@@ -834,7 +834,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
                                  AV_PIX_FMT_RGB24,
                                  AVCOL_RANGE_JPEG));
 
-  ColorTransform lut3d(6);
+  TColorTransform3f32 lut3d(6);
   lut3d.fill(*src_csp,
              *dst_csp,
              src_ctx,

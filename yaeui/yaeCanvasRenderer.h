@@ -507,7 +507,7 @@ namespace yae
 
     // a 3D LUT to transform any input to BT.709 R'G'B':
     VideoTraits clut_input_;
-    ColorTransform clut_;
+    TColorTransform3u8 clut_;
     GLuint clut_tex_id_;
   };
 
