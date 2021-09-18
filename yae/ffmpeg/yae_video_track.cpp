@@ -12,6 +12,7 @@
 // ffmpeg includes:
 extern "C"
 {
+#include <libavutil/display.h>
 #include <libavutil/mastering_display_metadata.h>
 }
 
@@ -1144,6 +1145,20 @@ namespace yae
 
     //! check for rotation:
     {
+#if 0
+      AVDictionaryEntry * md = NULL;
+      while (true)
+      {
+        md = av_dict_get(stream_->metadata, "", md, AV_DICT_IGNORE_SUFFIX);
+        if (!md)
+        {
+          break;
+        }
+
+        yae_dlog("VideoTrack metadata: %s = %s", md->key, md->value);
+      }
+#endif
+
       AVDictionaryEntry * rotate =
         av_dict_get(stream_->metadata, "rotate", NULL, 0);
 
@@ -1153,7 +1168,18 @@ namespace yae
       }
       else
       {
-        t.cameraRotation_ = 0;
+        // check the side data:
+        const int32_t * display_matrix = (const int32_t *)
+          av_stream_get_side_data(stream_, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+
+        if (display_matrix)
+        {
+          t.cameraRotation_ = -av_display_rotation_get(display_matrix);
+        }
+        else
+        {
+          t.cameraRotation_ = 0;
+        }
       }
     }
 

@@ -236,19 +236,27 @@ namespace yae
   {
     std::ostringstream oss;
 
-    double par = (pixelAspectRatio_ != 0.0 &&
-                  pixelAspectRatio_ != 1.0 ?
-                  pixelAspectRatio_ : 1.0);
-
-    unsigned int w = (unsigned int)(0.5 + par * visibleWidth_);
-    oss << yae::strfmt("%.2f", frameRate_) << " fps, "
-        << w << "x" << visibleHeight_;
+    if (frameRate_ == int(frameRate_))
+    {
+      oss << int(frameRate_);
+    }
+    else
+    {
+      oss << std::fixed << std::setprecision(2) << frameRate_;
+    }
+    oss << " fps, ";
 
     if (cameraRotation_)
     {
       static const char * degree_utf8 = "\xc2""\xb0";
-      oss << " rotated " << cameraRotation_ << degree_utf8;
+      oss << cameraRotation_ << degree_utf8 << " rotated ";
     }
+
+    double par = (pixelAspectRatio_ != 0.0 &&
+                  pixelAspectRatio_ != 1.0 ?
+                  pixelAspectRatio_ : 1.0);
+    unsigned int w = (unsigned int)(0.5 + par * visibleWidth_);
+    oss << w << "x" << visibleHeight_;
 
     std::string csp;
     if (av_csp_ == AVCOL_SPC_BT2020_NCL &&
@@ -268,6 +276,18 @@ namespace yae
              av_trc_ == AVCOL_TRC_BT709)
     {
       csp = "BT.709";
+    }
+    else if (av_csp_ == AVCOL_SPC_SMPTE170M &&
+             av_pri_ == AVCOL_PRI_SMPTE170M &&
+             av_trc_ == AVCOL_TRC_SMPTE170M)
+    {
+      csp = "BT.601";
+    }
+    else if (av_csp_ == AVCOL_SPC_BT470BG &&
+             av_pri_ == AVCOL_PRI_BT470BG &&
+             av_trc_ == AVCOL_TRC_GAMMA28)
+    {
+      csp = "BT.470BG";
     }
 
     if (!csp.empty())

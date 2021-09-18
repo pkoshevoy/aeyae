@@ -504,8 +504,7 @@ namespace yae
     if (av_trc == AVCOL_TRC_BT709 ||
         av_trc == AVCOL_TRC_SMPTE170M ||
         av_trc == AVCOL_TRC_IEC61966_2_4 ||
-        av_trc == AVCOL_TRC_BT2020_10 ||
-        av_trc == AVCOL_TRC_IEC61966_2_4)
+        av_trc == AVCOL_TRC_BT2020_10)
     {
       static const xvYCC::TransferFunc xvYCC_709_;
       return xvYCC_709_;

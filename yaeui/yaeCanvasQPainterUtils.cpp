@@ -391,10 +391,10 @@ namespace yae
     vtts.av_fmt_ = AV_PIX_FMT_BGRA;
     vtts.pixelFormat_ = kPixelFormatBGRA;
 #endif
-    vtts.av_rng_ = AVCOL_RANGE_JPEG;
-    vtts.av_pri_ = AVCOL_PRI_BT709;
-    vtts.av_trc_ = AVCOL_TRC_LINEAR;
     vtts.av_csp_ = AVCOL_SPC_RGB;
+    vtts.av_pri_ = AVCOL_PRI_BT709;
+    vtts.av_trc_ = AVCOL_TRC_BT709;
+    vtts.av_rng_ = AVCOL_RANGE_JPEG;
     vtts.colorspace_ = Colorspace::get(vtts.av_csp_,
                                        vtts.av_pri_,
                                        vtts.av_trc_);
