@@ -506,6 +506,7 @@ namespace yae
     const TFragmentShader * shader_;
 
     // a 3D LUT to transform any input to BT.709 R'G'B':
+    VideoTraits clut_input_;
     ColorTransform clut_;
     GLuint clut_tex_id_;
   };

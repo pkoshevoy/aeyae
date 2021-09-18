@@ -2110,15 +2110,21 @@ namespace yae
     // NOTE: this assumes that the mutex is already locked:
     bool frameSizeOrFormatChanged = false;
 
-    colorSpaceOrRangeChanged = frame &&
-      !(frame_ && frame_->traits_.sameColorSpaceAndRange(frame->traits_));
-
-    if (colorSpaceOrRangeChanged)
+    if (!frame_ || !frame ||
+        !frame_->traits_.sameFrameSizeAndFormat(frame->traits_))
     {
       crop_.clear();
       frameSizeOrFormatChanged = true;
+    }
 
+    colorSpaceOrRangeChanged =
+      frame && !clut_input_.sameColorSpaceAndRange(frame->traits_);
+
+    bool upload_clut_texture = colorSpaceOrRangeChanged;
+    if (colorSpaceOrRangeChanged)
+    {
       const VideoTraits & vtts = frame->traits_;
+      clut_input_ = vtts;
 
       // update the color transform LUT:
       const Colorspace * dst_colorspace =
@@ -2157,53 +2163,56 @@ namespace yae
         YAE_ASSERT(save_as_png(frm, fn_prefix, TTime(1, 30)));
       }
 #endif
+    }
 
-      if (!clut_tex_id_)
-      {
-        YAE_OGL_11(glGenTextures(1, &clut_tex_id_));
-      }
+    if (!clut_tex_id_)
+    {
+      YAE_OGL_11(glGenTextures(1, &clut_tex_id_));
+      upload_clut_texture = true;
+    }
 
-      if (clut_tex_id_)
-      {
-        YAE_OGL_11(glEnable(GL_TEXTURE_3D));
-        YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
-#if 1
-        YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
-        YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
-        YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE));
-        YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
-                                   GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-        YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
-                                   GL_TEXTURE_MIN_FILTER, GL_LINEAR));
-#endif
+    if (clut_tex_id_ && upload_clut_texture)
+    {
+      YAE_OGL_11(glEnable(GL_TEXTURE_3D));
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
 
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE));
-        yae_assert_gl_no_error();
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S,
+                                 GL_CLAMP_TO_EDGE));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T,
+                                 GL_CLAMP_TO_EDGE));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,
+                                 GL_CLAMP_TO_EDGE));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
+                                 GL_TEXTURE_MAG_FILTER, GL_LINEAR));
+      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
+                                 GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
-        yae_assert_gl_no_error();
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE));
+      yae_assert_gl_no_error();
 
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH,
-                                 (GLint)(clut_.size_1d_)));
-        yae_assert_gl_no_error();
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+      yae_assert_gl_no_error();
 
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_IMAGE_HEIGHT,
-                                 (GLint)(clut_.size_1d_)));
-        yae_assert_gl_no_error();
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH,
+                               (GLint)(clut_.size_1d_)));
+      yae_assert_gl_no_error();
 
-        YAE_OGL_11(glTexImage3D(GL_TEXTURE_3D, // target
-                                0, // level
-                                GL_RGB, // internalFormat
-                                clut_.size_1d_, // width
-                                clut_.size_1d_, // height
-                                clut_.size_1d_, // depth
-                                0, // border
-                                GL_RGB, // format
-                                GL_FLOAT, // type
-                                clut_.get_data())); // pixels
-        yae_assert_gl_no_error();
-        YAE_OGL_11(glDisable(GL_TEXTURE_3D));
-      }
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_IMAGE_HEIGHT,
+                               (GLint)(clut_.size_1d_)));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexImage3D(GL_TEXTURE_3D, // target
+                              0, // level
+                              GL_RGB, // internalFormat
+                              clut_.size_1d_, // width
+                              clut_.size_1d_, // height
+                              clut_.size_1d_, // depth
+                              0, // border
+                              GL_RGB, // format
+                              GL_FLOAT, // type
+                              clut_.get_data())); // pixels
+      yae_assert_gl_no_error();
+      YAE_OGL_11(glDisable(GL_TEXTURE_3D));
     }
 
     frame_ = frame;
