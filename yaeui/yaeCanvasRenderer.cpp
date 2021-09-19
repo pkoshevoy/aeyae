@@ -80,12 +80,10 @@ yae_show_program_listing(std::ostream & ostr,
 static const char * yae_gl_arb_passthrough_2d =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM rescale_to_16bit = program.local[1];\n"
   "TEMP rgba_in;\n"
   "TEX rgba_in, fragment.texcoord[0], texture[0], 2D;\n"
   "TEMP rgba;\n"
   "MOV rgba, rgba_in.zyxw;\n"
-  "MUL rgba, rgba, rescale_to_16bit;\n"
   "MUL rgba, rgba, rescale_to_clut;\n"
   "TEX rgba, rgba, texture[1], 3D;\n"
   "MOV rgba.a, rgba_in.a;\n"
@@ -102,42 +100,6 @@ static const char * yae_gl_arb_yuv_to_rgb_2d =
   "TEX yuv.z, fragment.texcoord[0], texture[0], 2D;\n"
   "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
   "TEX yuv.x, fragment.texcoord[0], texture[2], 2D;\n"
-  "MUL yuv, yuv, rescale_to_clut;\n"
-  "TEMP rgba;\n"
-  "TEX rgba, yuv, texture[3], 3D;\n"
-  "MOV rgba.a, 1.0;\n"
-  "MUL result.color, fragment.color, rgba;\n"
-  "END\n";
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuv_p9_to_rgb_2d
-//
-static const char * yae_gl_arb_yuv_p9_to_rgb_2d =
-  "!!ARBfp1.0\n"
-  "PARAM rescale_to_clut = program.local[0];\n"
-  "TEMP yuv;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[0], 2D;\n"
-  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[2], 2D;\n"
-  "MUL yuv, yuv, 128.0;\n"
-  "MUL yuv, yuv, rescale_to_clut;\n"
-  "TEMP rgba;\n"
-  "TEX rgba, yuv, texture[3], 3D;\n"
-  "MOV rgba.a, 1.0;\n"
-  "MUL result.color, fragment.color, rgba;\n"
-  "END\n";
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuv_p10_to_rgb_2d
-//
-static const char * yae_gl_arb_yuv_p10_to_rgb_2d =
-  "!!ARBfp1.0\n"
-  "PARAM rescale_to_clut = program.local[0];\n"
-  "TEMP yuv;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[0], 2D;\n"
-  "TEX yuv.y, fragment.texcoord[0], texture[1], 2D;\n"
-  "TEX yuv.x, fragment.texcoord[0], texture[2], 2D;\n"
-  "MUL yuv, yuv, 64.0;\n"
   "MUL yuv, yuv, rescale_to_clut;\n"
   "TEMP rgba;\n"
   "TEX rgba, yuv, texture[3], 3D;\n"
@@ -206,12 +168,10 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
 static const char * yae_gl_arb_passthrough =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM rescale_to_16bit = program.local[1];\n"
   "TEMP rgba_in;\n"
   "TEX rgba_in, fragment.texcoord[0], texture[0], RECT;\n"
   "TEMP rgba;\n"
   "MOV rgba, rgba_in.zyxw;\n"
-  "MUL rgba, rgba, rescale_to_16bit;\n"
   "MUL rgba, rgba, rescale_to_clut;\n"
   "TEX rgba, rgba, texture[1], 3D;\n"
   "MOV rgba.a, rgba_in.a;\n"
@@ -224,7 +184,7 @@ static const char * yae_gl_arb_passthrough =
 static const char * yae_gl_arb_yuv_to_rgb =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM subsample_uv = program.local[2];\n"
+  "PARAM subsample_uv = program.local[1];\n"
   "TEMP yuv;\n"
   "TEMP coord_uv;\n"
   "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
@@ -244,7 +204,7 @@ static const char * yae_gl_arb_yuv_to_rgb =
 static const char * yae_gl_arb_yuva_to_rgba =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM subsample_uv = program.local[2];\n"
+  "PARAM subsample_uv = program.local[1];\n"
   "TEMP yuv;\n"
   "TEMP coord_uv;\n"
   "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
@@ -255,27 +215,6 @@ static const char * yae_gl_arb_yuva_to_rgba =
   "TEMP rgba;\n"
   "TEX rgba, yuv, texture[4], 3D;\n"
   "TEX rgba.a, fragment.texcoord[0], texture[3], RECT;\n"
-  "MUL result.color, fragment.color, rgba;\n"
-  "END\n";
-
-//----------------------------------------------------------------
-// yae_gl_arb_yuv_p10_to_rgb
-//
-static const char * yae_gl_arb_yuv_p10_to_rgb =
-  "!!ARBfp1.0\n"
-  "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM subsample_uv = program.local[2];\n"
-  "TEMP yuv;\n"
-  "TEMP coord_uv;\n"
-  "MUL coord_uv, fragment.texcoord[0], subsample_uv;\n"
-  "TEX yuv.z, fragment.texcoord[0], texture[0], RECT;\n"
-  "TEX yuv.y, coord_uv, texture[1], RECT;\n"
-  "TEX yuv.x, coord_uv, texture[2], RECT;\n"
-  "MUL yuv, yuv, 64.0;\n"
-  "MUL yuv, yuv, rescale_to_clut;\n"
-  "TEMP rgba;\n"
-  "TEX rgba, yuv, texture[3], 3D;\n"
-  "MOV rgba.a, 1.0;\n"
   "MUL result.color, fragment.color, rgba;\n"
   "END\n";
 
@@ -570,7 +509,7 @@ static const char * yae_gl_arb_uyvy_to_rgb =
 static const char * yae_gl_arb_nv12_to_rgb =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM subsample_uv = program.local[2];\n"
+  "PARAM subsample_uv = program.local[1];\n"
   "TEMP yuv;\n"
   "TEMP uv;\n"
   "TEMP coord_uv;\n"
@@ -592,7 +531,7 @@ static const char * yae_gl_arb_nv12_to_rgb =
 static const char * yae_gl_arb_nv21_to_rgb =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
-  "PARAM subsample_uv = program.local[2];\n"
+  "PARAM subsample_uv = program.local[1];\n"
   "TEMP yuv;\n"
   "TEMP uv;\n"
   "TEMP coord_uv;\n"
@@ -2300,7 +2239,22 @@ namespace yae
       kPixelFormatYUVJ420P,
       kPixelFormatYUVJ422P,
       kPixelFormatYUVJ444P,
-      kPixelFormatYUVJ440P
+      kPixelFormatYUVJ440P,
+      kPixelFormatYUV420P9,
+      kPixelFormatYUV422P9,
+      kPixelFormatYUV444P9,
+      kPixelFormatYUV420P10,
+      kPixelFormatYUV422P10,
+      kPixelFormatYUV444P10,
+      kPixelFormatYUV420P12,
+      kPixelFormatYUV422P12,
+      kPixelFormatYUV444P12,
+      kPixelFormatYUV420P14,
+      kPixelFormatYUV422P14,
+      kPixelFormatYUV444P14,
+      kPixelFormatYUV420P16,
+      kPixelFormatYUV422P16,
+      kPixelFormatYUV444P16
     };
 
     s.createShaderProgramsFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
@@ -2313,16 +2267,6 @@ namespace yae
 
     s.createShaderProgramsFor(yuva, sizeof(yuva) / sizeof(yuva[0]),
                               yae_gl_arb_yuva_to_rgba);
-
-    // for YUVP10 formats:
-    static const TPixelFormatId yuv_p10[] = {
-      kPixelFormatYUV420P10,
-      kPixelFormatYUV422P10,
-      kPixelFormatYUV444P10
-    };
-
-    s.createShaderProgramsFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
-                              yae_gl_arb_yuv_p10_to_rgb);
 
     // for YUYV formats:
     static const TPixelFormatId yuyv[] = {
@@ -2545,6 +2489,22 @@ namespace yae
         YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, (GLint)(rowSize)));
         yae_assert_gl_no_error();
 
+        YAE_OGL_11(glPixelTransferi(GL_RED_SCALE,
+                                    1u << ptts->datatype_lpad_[0]));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelTransferi(GL_GREEN_SCALE,
+                                    1u << ptts->datatype_lpad_[1]));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelTransferi(GL_BLUE_SCALE,
+                                    1u << ptts->datatype_lpad_[2]));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelTransferi(GL_ALPHA_SCALE,
+                                    1u << ptts->datatype_lpad_[3]));
+        yae_assert_gl_no_error();
+
         YAE_OGL_11(glTexImage2D(GL_TEXTURE_RECTANGLE_ARB,
                                 0, // always 0 for GL_TEXTURE_RECTANGLE_ARB
                                 shader.internalFormatGL_[i],
@@ -2577,23 +2537,13 @@ namespace yae
                                                  0, lut_rescale_yuv));
         yae_assert_gl_no_error();
 
-        // scale yuv 9,10,12,14-bit samples to 16-bit, etc...
-        YAE_OPENGL(glProgramLocalParameter4dARB
-                   (GL_FRAGMENT_PROGRAM_ARB,
-                    1,
-                    double(1u << ptts->datatype_lpad_[0]),
-                    double(1u << ptts->datatype_lpad_[1]),
-                    double(1u << ptts->datatype_lpad_[2]),
-                    double(1u << ptts->datatype_lpad_[3])));
-        yae_assert_gl_no_error();
-
         // pass the chroma subsampling factors to the shader:
         GLdouble subsample_uv[4] = { 1.0 };
         subsample_uv[0] = 1.0 / double(ptts->chromaBoxW_);
         subsample_uv[1] = 1.0 / double(ptts->chromaBoxH_);
 
         YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
-                                                 2, subsample_uv));
+                                                 1, subsample_uv));
         yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
@@ -2770,33 +2720,25 @@ namespace yae
       kPixelFormatYUVJ422P,
       kPixelFormatYUVJ444P,
       kPixelFormatYUVJ440P,
+      kPixelFormatYUV420P9,
+      kPixelFormatYUV422P9,
+      kPixelFormatYUV444P9,
+      kPixelFormatYUV420P10,
+      kPixelFormatYUV422P10,
+      kPixelFormatYUV444P10,
+      kPixelFormatYUV420P12,
+      kPixelFormatYUV422P12,
+      kPixelFormatYUV444P12,
+      kPixelFormatYUV420P14,
+      kPixelFormatYUV422P14,
+      kPixelFormatYUV444P14,
       kPixelFormatYUV420P16,
       kPixelFormatYUV422P16,
-      kPixelFormatYUV444P16,
+      kPixelFormatYUV444P16
     };
 
     s.createShaderProgramsFor(yuv, sizeof(yuv) / sizeof(yuv[0]),
                               yae_gl_arb_yuv_to_rgb_2d);
-
-    // for YUV formats:
-    static const TPixelFormatId yuv_p9[] = {
-      kPixelFormatYUV420P9,
-      kPixelFormatYUV422P9,
-      kPixelFormatYUV444P9,
-    };
-
-    s.createShaderProgramsFor(yuv_p9, sizeof(yuv_p9) / sizeof(yuv_p9[0]),
-                              yae_gl_arb_yuv_p9_to_rgb_2d);
-
-    // for YUV formats:
-    static const TPixelFormatId yuv_p10[] = {
-      kPixelFormatYUV420P10,
-      kPixelFormatYUV422P10,
-      kPixelFormatYUV444P10,
-    };
-
-    s.createShaderProgramsFor(yuv_p10, sizeof(yuv_p10) / sizeof(yuv_p10[0]),
-                              yae_gl_arb_yuv_p10_to_rgb_2d);
 
     // for YUVA formats:
     static const TPixelFormatId yuva[] = {
@@ -3126,6 +3068,22 @@ namespace yae
                                (GLint)(rowSize)));
       yae_assert_gl_no_error();
 
+      YAE_OGL_11(glPixelTransferi(GL_RED_SCALE,
+                                  1u << ptts->datatype_lpad_[0]));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelTransferi(GL_GREEN_SCALE,
+                                  1u << ptts->datatype_lpad_[1]));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelTransferi(GL_BLUE_SCALE,
+                                  1u << ptts->datatype_lpad_[2]));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelTransferi(GL_ALPHA_SCALE,
+                                  1u << ptts->datatype_lpad_[3]));
+      yae_assert_gl_no_error();
+
       for (std::size_t i = 0; i < tiles_.size(); ++i)
       {
         const TFrameTile & tile = tiles_[i];
@@ -3260,16 +3218,6 @@ namespace yae
         lut_rescale_yuv[2] = clut_.zs_;
         YAE_OPENGL(glProgramLocalParameter4dvARB(GL_FRAGMENT_PROGRAM_ARB,
                                                  0, lut_rescale_yuv));
-        yae_assert_gl_no_error();
-
-        // scale yuv 9,10,12,14-bit samples to 16-bit, etc...
-        YAE_OPENGL(glProgramLocalParameter4dARB
-                   (GL_FRAGMENT_PROGRAM_ARB,
-                    1,
-                    double(1u << ptts->datatype_lpad_[0]),
-                    double(1u << ptts->datatype_lpad_[1]),
-                    double(1u << ptts->datatype_lpad_[2]),
-                    double(1u << ptts->datatype_lpad_[3])));
         yae_assert_gl_no_error();
       }
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
