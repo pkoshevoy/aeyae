@@ -63,27 +63,21 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // ToneMapGamma
+  // ToneMapPiecewise
   //
-  struct YAE_API ToneMapGamma : ToneMap
+  struct YAE_API ToneMapPiecewise : ToneMap
   {
-    ToneMapGamma(double gamma = 1.8);
-
     // virtual:
     void apply(const Colorspace::TransferFunc::Context & src_ctx,
                const Colorspace::TransferFunc::Context & dst_ctx,
                const double * src_rgb_cdm2,
                double * dst_rgb_cdm2) const;
-
-    // 1.0/gamma
-    const double inv_gamma_;
   };
 
-
   //----------------------------------------------------------------
-  // ToneMapPiecewise
+  // ToneMapLog
   //
-  struct YAE_API ToneMapPiecewise : ToneMap
+  struct YAE_API ToneMapLog : ToneMap
   {
     // virtual:
     void apply(const Colorspace::TransferFunc::Context & src_ctx,

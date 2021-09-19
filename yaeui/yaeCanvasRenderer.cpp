@@ -2146,8 +2146,8 @@ namespace yae
                                     AVCOL_RANGE_JPEG));
 
       const double peak_ratio = src_ctx.Lw_ / dst_ctx.Lw_;
-      ToneMapPiecewise tone_map;
-      // ToneMapGamma tone_map;
+      // ToneMapPiecewise tone_map;
+      ToneMapLog tone_map;
       clut_.fill(*vtts.colorspace_,
                  *dst_colorspace,
                  src_ctx,

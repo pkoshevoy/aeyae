@@ -207,45 +207,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ToneMapGamma::ToneMapGamma
-  //
-  ToneMapGamma::ToneMapGamma(double gamma):
-    inv_gamma_(1.0 / gamma)
-  {}
-
-  //----------------------------------------------------------------
-  // ToneMapGamma::apply
-  //
-  void
-  ToneMapGamma::apply(const Colorspace::TransferFunc::Context & src_ctx,
-                      const Colorspace::TransferFunc::Context & dst_ctx,
-                      const double * src_rgb_cdm2,
-                      double * dst_rgb_cdm2) const
-  {
-    // pick the brightest component, normalize to [0, 1] range:
-    const double src =
-      std::max(std::max(src_ctx.Lb_, src_rgb_cdm2[0]),
-               std::max(src_rgb_cdm2[1], src_rgb_cdm2[2])) /
-      src_ctx.Lw_;
-
-    // threshold for linear portion of the curve:
-    static const double threshold = 0.05;
-
-    const double out =
-      (src > threshold) ? std::pow(src, inv_gamma_) :
-      (src / threshold) * std::pow(threshold, inv_gamma_);
-
-    const double rescale =
-      (src == 0.0) ? 0.0 :
-      (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
-
-    dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
-    dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
-    dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
-  }
-
-
-  //----------------------------------------------------------------
   // ToneMapPiecewise::apply
   //
   void
@@ -292,6 +253,41 @@ namespace yae
       (src == 0.0) ? 0.0 :
       (out / src) * (dst_ctx.Lw_ / src_ctx.Lw_);
 
+    dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
+    dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
+    dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
+  }
+
+
+  //----------------------------------------------------------------
+  // ToneMapLog::apply
+  //
+  void
+  ToneMapLog::apply(const Colorspace::TransferFunc::Context & src_ctx,
+                    const Colorspace::TransferFunc::Context & dst_ctx,
+                    const double * src_rgb_cdm2,
+                    double * dst_rgb_cdm2) const
+  {
+    // pick the brightest component:
+    const double src = std::max(std::max(src_rgb_cdm2[0], src_rgb_cdm2[1]),
+                                src_rgb_cdm2[2]);
+    double out = src;
+
+    static const double knee = 10; // cd/m2
+    static const double n = 5;
+    static const double m = -0.5;
+    static const double e = 2.7182818284590452354;
+    static const double em = std::pow(e, m);
+    static const double en = std::pow(e, n);
+    static const double en_inv = 1.0 / en;
+    if (knee <= src)
+    {
+      out = knee +
+        (n + std::log(en_inv + (em - en_inv) * (src - knee) / src_ctx.Lw_)) *
+        (dst_ctx.Lw_ - knee) / (n + m);
+    }
+
+    const double rescale = (src == 0.0) ? 0.0 : (out / src);
     dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
     dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
     dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;

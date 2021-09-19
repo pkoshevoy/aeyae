@@ -361,7 +361,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
                                  AV_PIX_FMT_NV12,
                                  AVCOL_RANGE_MPEG));
 
-  ToneMapGamma tone_map(1.8);
+  ToneMapLog tone_map;
   // ToneMapPiecewise tone_map;
 
   TColorTransform3f32 lut3d(7);
@@ -455,7 +455,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
                                  AVCOL_RANGE_JPEG));
 
   ToneMapPiecewise tone_map;
-  // ToneMapGamma tone_map(1.8);
+  // ToneMapLog tone_map;
 
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hdr10,
@@ -807,7 +807,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
 #endif
 #if 1
 //----------------------------------------------------------------
-// yae_color_transform_sdr_to_sdr_color_check_rgb
+// yae_color_transform_yuv_to_rgb_colorbars
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
 {

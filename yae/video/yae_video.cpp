@@ -283,6 +283,12 @@ namespace yae
     {
       csp = "BT.601";
     }
+    else if (av_csp_ == AVCOL_SPC_SMPTE240M &&
+             av_pri_ == AVCOL_PRI_SMPTE240M &&
+             av_trc_ == AVCOL_TRC_SMPTE240M)
+    {
+      csp = "SMPTE ST 240M";
+    }
     else if (av_csp_ == AVCOL_SPC_BT470BG &&
              av_pri_ == AVCOL_PRI_BT470BG &&
              av_trc_ == AVCOL_TRC_GAMMA28)
