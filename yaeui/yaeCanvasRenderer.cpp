@@ -2092,7 +2092,7 @@ namespace yae
 
       // update the color transform LUT:
       const Colorspace * dst_colorspace =
-        Colorspace::get(AVCOL_SPC_RGB,
+        Colorspace::get(AVCOL_SPC_BT709,
                         AVCOL_PRI_BT709,
                         AVCOL_TRC_BT709);
 
