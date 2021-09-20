@@ -34,13 +34,14 @@ extern "C"
 #include "../utils/yae_linear_algebra.h"
 #include "../utils/yae_time.h"
 #include "../utils/yae_utils.h"
-#include "../video/yae_colorspace.h"
 
 
 namespace yae
 {
   // forward declarations:
   struct IReader;
+  struct Colorspace;
+
 
   //----------------------------------------------------------------
   // get_timeline
@@ -166,6 +167,8 @@ namespace yae
     bool sameColorSpaceAndRange(const VideoTraits & vt) const;
 
     bool operator == (const VideoTraits & vt) const;
+
+    void setPixelFormat(TPixelFormatId fmt);
 
     //! frame rate:
     double frameRate_;

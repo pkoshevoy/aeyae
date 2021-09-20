@@ -16,10 +16,12 @@
 extern "C"
 {
 #include <libavutil/pixfmt.h>
+#include <libavutil/pixdesc.h>
 }
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/utils/yae_linear_algebra.h"
 
 
@@ -164,6 +166,48 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // get_ycbcr_to_ypbpr
+  //
+  // setup an affine transform to from full/narrow
+  // range normalized [0, 1] pixel values to Y'PbPr
+  // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
+  //
+  YAE_API m4x4_t
+  get_ycbcr_to_ypbpr(const AVPixFmtDescriptor * desc,
+                     AVColorRange av_rng);
+
+  //----------------------------------------------------------------
+  // get_ypbpr_to_ycbcr
+  //
+  // setup an affine transform to map from Y'PbPr
+  // to [0, 1] normalized full/narrow range:
+  //
+  YAE_API m4x4_t
+  get_ypbpr_to_ycbcr(const AVPixFmtDescriptor * desc,
+                     AVColorRange av_rng);
+
+  //----------------------------------------------------------------
+  // get_ycbcr_to_ypbpr
+  //
+  // setup an affine transform to from full/narrow
+  // range normalized [0, 1] pixel values to Y'PbPr
+  // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
+  //
+  YAE_API bool get_ycbcr_to_ypbpr(m4x4_t & ycbcr_to_ypbpr,
+                                  AVPixelFormat av_fmt,
+                                  AVColorRange av_rng);
+
+  //----------------------------------------------------------------
+  // get_ypbpr_to_ycbcr
+  //
+  // setup an affine transform to map from Y'PbPr
+  // to [0, 1] normalized full/narrow range:
+  //
+  YAE_API bool get_ypbpr_to_ycbcr(m4x4_t & ypbpr_to_ycbcr,
+                                  AVPixelFormat av_fmt,
+                                  AVColorRange av_rng);
+
+  //----------------------------------------------------------------
   // Colorspace
   //
   // linuxtv.org/downloads/v4l-dvb-apis/userspace-api/v4l/colorspaces.html
@@ -184,41 +228,73 @@ namespace yae
                                   AVColorTransferCharacteristic av_trc);
 
     //----------------------------------------------------------------
+    // Format
+    //
+    struct YAE_API Format
+    {
+      Format(AVPixelFormat av_fmt, AVColorRange av_rng);
+
+      inline bool is_narrow_range() const
+      { return (av_rng_ == AVCOL_RANGE_MPEG); }
+
+      inline bool is_rgb() const
+      { return desc_ ? yae::is_rgb(*desc_) : false; }
+
+      inline bool is_ycbcr() const
+      { return desc_ ? yae::is_ycbcr(*desc_) : false; }
+
+      inline bool has_alpha() const
+      { return desc_ ? yae::has_alpha(*desc_) : false; }
+
+      const AVPixFmtDescriptor * desc_;
+      const AVPixelFormat av_fmt_;
+      const AVColorRange av_rng_;
+
+      // pre-transform, maps from source full/narrow range
+      // normalized [0, 1] pixel values to Y'PbPr (or R'G'B')
+      // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]:
+      const m4x4_t native_to_full_;
+
+      // inverse of the above:
+      const m4x4_t full_to_native_;
+    };
+
+    //----------------------------------------------------------------
+    // DynamicRange
+    //
+    struct YAE_API DynamicRange
+    {
+      DynamicRange(double cdm2_nominal_peak_luminance_of_the_display = 100.0,
+                   double cdm2_display_luminance_for_black = 0.0044):
+        Lw_(cdm2_nominal_peak_luminance_of_the_display),
+        Lb_(cdm2_display_luminance_for_black),
+        gamma_(yae::get_hlg_gamma(Lw_)),
+        beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_))
+      {}
+
+      // nominal peak luminance of the scene/display in cd/m2:
+      const double Lw_;
+
+      // nominal black luminance of the scene/display in cd/m2:
+      const double Lb_;
+
+      // precomputed constants for HLG EOTF, OETF...
+      // see Rec. ITU-R BT.2100-2
+      const double gamma_;
+      const double beta_;
+    };
+
+    //----------------------------------------------------------------
     // TransferFunc
     //
     struct YAE_API TransferFunc
     {
       virtual ~TransferFunc() {}
 
-      //----------------------------------------------------------------
-      // Context
-      //
-      struct YAE_API Context
-      {
-        Context(double cdm2_nominal_peak_luminance_of_the_display = 100.0,
-                double cdm2_display_luminance_for_black = 0.0044):
-          Lw_(cdm2_nominal_peak_luminance_of_the_display),
-          Lb_(cdm2_display_luminance_for_black),
-          gamma_(yae::get_hlg_gamma(Lw_)),
-          beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_))
-        {}
-
-        // nominal peak luminance of the display in cd/m2:
-        const double Lw_;
-
-        // nominal peak luminance of the display in cd/m2:
-        const double Lb_;
-
-        // precomputed constants for HLG EOTF, OETF...
-        // see Rec. ITU-R BT.2100-2
-        const double gamma_;
-        const double beta_;
-      };
-
       // linear cd/m2 RGB components to non-linear encoded R'G'B'.
       // default implementation rescales and delegates to normalized oetf:
       virtual void oetf_rgb(const Colorspace & csp,
-                            const Context & ctx,
+                            const DynamicRange & ctx,
                             const double * rgb_cdm2,
                             double * rgb) const
       {
@@ -231,7 +307,7 @@ namespace yae
       // non-linear encoded R'G'B' to linear cd/m2 RGB components.
       // default implementation delegates to normalized eotf and rescales:
       virtual void eotf_rgb(const Colorspace & csp,
-                            const Context & ctx,
+                            const DynamicRange & ctx,
                             const double * rgb,
                             double * rgb_cdm2) const
       {

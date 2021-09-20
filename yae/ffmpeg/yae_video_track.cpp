@@ -510,6 +510,9 @@ namespace yae
     {
       AvFrm decodedFrameCopy(decodedFrame);
       decodedFrameCopy.hwdownload();
+
+      add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_));
+
 #if 0
       // for debugging Colorspace and frame utils:
       static const FrameGen frameGen;
@@ -785,7 +788,10 @@ namespace yae
 
       // decode CEA-608 packets, if there are any:
       cc_.decode(stream_->time_base, decoded, &terminator_);
-
+#if 0
+      std::string fn_prefix = "/tmp/video-filter-push-";
+      YAE_ASSERT(save_as_png(decodedFrameCopy, fn_prefix, TTime(1, 30)));
+#endif
       filterGraph_.push(&decoded);
 
       while (true)
@@ -798,7 +804,10 @@ namespace yae
         {
           break;
         }
-
+#if 0
+        std::string fn_prefix = "/tmp/video-filter-pull-";
+        YAE_ASSERT(save_as_png(frm, fn_prefix, TTime(1, 30)));
+#endif
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 

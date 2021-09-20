@@ -15,6 +15,7 @@
 // ffmpeg includes:
 extern "C"
 {
+#include <libavutil/pixfmt.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -79,6 +80,244 @@ namespace yae
     m3x3_t M = inv_Ma * S * Ma;
     return M;
   }
+
+
+  //----------------------------------------------------------------
+  // identity_m4x4
+  //
+  static const m4x4_t identity_m4x4 = make_identity_m4x4();
+
+  //----------------------------------------------------------------
+  // get_ycbcr_to_ypbpr
+  //
+  // setup an affine transform to from full/narrow
+  // range normalized [0, 1] pixel values to Y'PbPr
+  // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
+  //
+  m4x4_t
+  get_ycbcr_to_ypbpr(const AVPixFmtDescriptor * desc, AVColorRange av_rng)
+  {
+    if (!desc)
+    {
+      return identity_m4x4;
+    }
+
+    // shortcut:
+    const bool narrow_range =
+      (av_rng == AVCOL_RANGE_MPEG);
+
+    const bool flag_rgb =
+      (desc->flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB;
+
+    const bool flag_alpha =
+      (desc->flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+
+    // is accounting for bitdepth greater than 8 bits actually correct?
+    // it affects the scaling factors, and IDK if that is intended or
+    // if those are supposed to be the same regardless of the bitdepth...
+#if 1
+    const unsigned int bit_depth = luma.shift + luma.depth;
+#else
+    const unsigned int bit_depth = 8;
+#endif
+
+    const unsigned int y_full = ~((~0) << bit_depth);
+    const unsigned int lshift = bit_depth - 8;
+
+    const unsigned int y_min = narrow_range ? (16 << lshift) : 0;
+    const unsigned int y_rng = narrow_range ? (219 << lshift) : y_full;
+
+    const double y_offset = double(y_min) / double(y_full);
+    const double sy = double(y_full) / double(y_rng);
+    const double a = -y_offset * sy;
+
+    m4x4_t ycbcr_to_ypbpr;
+
+    if (yae::is_ycbcr(*desc))
+    {
+      const unsigned int c_rng = narrow_range ? (224 << lshift) : y_full;
+      const double sc = double(y_full) / double(c_rng);
+      const double b = -y_offset * sc - 0.5;
+
+      /*
+        double Y' = (Y - y_offset) * scale_luma;
+        double Pb = (Cb - y_offset) * scale_chroma - 0.5;
+        double Pr = (Cr - y_offset) * scale_chroma - 0.5;
+      */
+
+      // affine transform from Y'CbCr to Y'PbPr:
+      ycbcr_to_ypbpr = make_m4x4(sy,  0.0, 0.0, a,
+                                 0.0, sc,  0.0, b,
+                                 0.0, 0.0, sc,  b,
+                                 0.0, 0.0, 0.0, 1.0);
+    }
+    else if (narrow_range &&
+             (flag_rgb ||
+              (desc->nb_components == 2 && flag_alpha) ||
+              (desc->nb_components == 1)))
+    {
+      // NOTE: the input is not actually Y'CbCr, and the output won't be Y'PbPr
+      //       so treat "chroma" the same as "luma"
+
+      // affine transform from narrow range to full range:
+      ycbcr_to_ypbpr = make_m4x4(sy,  0.0, 0.0, a,
+                                 0.0, sy,  0.0, a,
+                                 0.0, 0.0, sy,  a,
+                                 0.0, 0.0, 0.0, 1.0);
+    }
+    else
+    {
+      // nothing to do, use the identity matrix:
+      ycbcr_to_ypbpr = identity_m4x4;
+    }
+
+    return ycbcr_to_ypbpr;
+  }
+
+  //----------------------------------------------------------------
+  // get_ypbpr_to_ycbcr
+  //
+  // setup an affine transform to map from Y'PbPr
+  // to [0, 1] normalized full/narrow range:
+  //
+  m4x4_t
+  get_ypbpr_to_ycbcr(const AVPixFmtDescriptor * desc, AVColorRange av_rng)
+  {
+    if (!desc)
+    {
+      return identity_m4x4;
+    }
+
+    // shortcut:
+    const bool narrow_range =
+      (av_rng == AVCOL_RANGE_MPEG);
+
+    const bool flag_rgb =
+      (desc->flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB;
+
+    const bool flag_alpha =
+      (desc->flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
+
+    const AVComponentDescriptor & luma = desc->comp[0];
+
+    // is accounting for bitdepth greater than 8 bits actually correct?
+    // it affects the scaling factors, and IDK if that is intended or
+    // if those are supposed to be the same regardless of the bitdepth...
+#if 1
+    const unsigned int bit_depth = luma.shift + luma.depth;
+#else
+    const unsigned int bit_depth = 8;
+#endif
+
+    const unsigned int y_full = ~((~0) << bit_depth);
+    const unsigned int lshift = bit_depth - 8;
+
+    const unsigned int y_min = narrow_range ? (16 << lshift) : 0;
+    const unsigned int y_rng = narrow_range ? (219 << lshift) : y_full;
+
+    const double y_offset = double(y_min) / double(y_full);
+    const double sy = double(y_rng) / double(y_full);
+    const double a = y_offset;
+
+    m4x4_t ypbpr_to_ycbcr;
+
+    if (yae::is_ycbcr(*desc))
+    {
+      const unsigned int c_rng = narrow_range ? (224 << lshift) : y_full;
+      const double sc = double(c_rng) / double(y_full);
+      const double b = 0.5 * sc + y_offset;
+
+      /*
+        double Y' = Y * scale_luma + y_offset;
+        double Cb = (Cb + 0.5) * scale_chroma + y_offset;
+        double Cr = (Cr + 0.5) * scale_chroma + y_offset;
+      */
+
+      // affine transform from Y'CbCr to Y'PbPr:
+      ypbpr_to_ycbcr = make_m4x4(sy,  0.0, 0.0, a,
+                                 0.0, sc,  0.0, b,
+                                 0.0, 0.0, sc,  b,
+                                 0.0, 0.0, 0.0, 1.0);
+    }
+    else if (narrow_range &&
+             (flag_rgb ||
+              (desc->nb_components == 2 && flag_alpha) ||
+              (desc->nb_components == 1)))
+    {
+      // NOTE: the input is not actually Y'PbPr, and the output won't be Y'CbCr
+      //       so treat "chroma" the same as "luma"
+
+      // affine transform from narrow range to full range:
+      ypbpr_to_ycbcr = make_m4x4(sy,  0.0, 0.0, a,
+                                 0.0, sy,  0.0, a,
+                                 0.0, 0.0, sy,  a,
+                                 0.0, 0.0, 0.0, 1.0);
+    }
+    else
+    {
+      // nothing to do, use the identity matrix:
+      ypbpr_to_ycbcr = identity_m4x4;
+    }
+
+    return ypbpr_to_ycbcr;
+  }
+
+  //----------------------------------------------------------------
+  // get_ycbcr_to_ypbpr
+  //
+  // setup an affine transform to from full/narrow
+  // range normalized [0, 1] pixel values to Y'PbPr
+  // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
+  //
+  bool
+  get_ycbcr_to_ypbpr(m4x4_t & ycbcr_to_ypbpr,
+                     AVPixelFormat av_fmt,
+                     AVColorRange av_rng)
+  {
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(av_fmt);
+    if (!desc)
+    {
+      return false;
+    }
+
+    ycbcr_to_ypbpr = get_ycbcr_to_ypbpr(desc, av_rng);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // get_ypbpr_to_ycbcr
+  //
+  // setup an affine transform to map from Y'PbPr
+  // to [0, 1] normalized full/narrow range:
+  //
+  bool
+  get_ypbpr_to_ycbcr(m4x4_t & ypbpr_to_ycbcr,
+                     AVPixelFormat av_fmt,
+                     AVColorRange av_rng)
+  {
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(av_fmt);
+    if (!desc)
+    {
+      return false;
+    }
+
+    ypbpr_to_ycbcr = get_ypbpr_to_ycbcr(desc, av_rng);
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
+  // Colorspace::Format::Format
+  //
+  Colorspace::Format::Format(AVPixelFormat av_fmt, AVColorRange av_rng):
+    desc_(av_pix_fmt_desc_get(av_fmt)),
+    av_fmt_(av_fmt),
+    av_rng_(av_rng),
+    native_to_full_(get_ycbcr_to_ypbpr(desc_, av_rng)),
+    full_to_native_(get_ypbpr_to_ycbcr(desc_, av_rng))
+  {}
 
 
   //----------------------------------------------------------------
@@ -423,7 +662,7 @@ namespace yae
       // linear cd/m2 RGB components to non-linear encoded R'G'B'.
       // default implementation rescales and delegates to normalized oetf:
       virtual void oetf_rgb(const Colorspace & csp,
-                            const Context & ctx,
+                            const Colorspace::DynamicRange & ctx,
                             const double * rgb_cdm2,
                             double * rgb) const
       {
@@ -462,7 +701,7 @@ namespace yae
       // non-linear encoded R'G'B' to linear cd/m2 RGB components.
       // default implementation delegates to normalized eotf and rescales:
       virtual void eotf_rgb(const Colorspace & csp,
-                            const Context & ctx,
+                            const Colorspace::DynamicRange & ctx,
                             const double * rgb,
                             double * rgb_cdm2) const
       {

@@ -24,8 +24,9 @@ extern "C"
 }
 
 // yae includes:
-#include "yae_video.h"
-#include "yae_reader.h"
+#include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
 
 
 namespace yae
@@ -360,6 +361,17 @@ namespace yae
   {
     return memcmp(this, &vt, sizeof(VideoTraits)) == 0;
   }
+
+  //----------------------------------------------------------------
+  // VideoTraits::setPixelFormat
+  //
+  void
+  VideoTraits::setPixelFormat(TPixelFormatId fmt)
+  {
+    pixelFormat_ = fmt;
+    av_fmt_ = yae_to_ffmpeg(fmt);
+  }
+
 
   //----------------------------------------------------------------
   // IPlanarBuffer::~IPlanarBuffer

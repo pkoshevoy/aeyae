@@ -1298,7 +1298,7 @@ namespace yae
           canvasRenderer()->
           adjustPixelFormatForOpenGL(skip_color_converter, vtts, format))
       {
-        vtts.pixelFormat_ = format;
+        vtts.setPixelFormat(format);
 
         // NOTE: overriding frame size implies scaling, so don't do it
         // unless you really want to scale the images in the reader;

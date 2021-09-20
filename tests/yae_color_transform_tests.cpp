@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(yae_colorspace_rgb_to_ypbpr_to_rgb)
 //
 BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf_bt709)
 {
-  const Colorspace::TransferFunc::Context ctx(1000.0);
+  const Colorspace::DynamicRange ctx(1000.0);
   const Colorspace * csp = Colorspace::get(AVCOL_SPC_BT709,
                                            AVCOL_PRI_BT709,
                                            AVCOL_TRC_BT709);
@@ -103,7 +103,7 @@ BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf_bt709)
 //
 BOOST_AUTO_TEST_CASE(yae_colorspace_transfer_eotf_oetf_hlg)
 {
-  const Colorspace::TransferFunc::Context ctx(1000.0);
+  const Colorspace::DynamicRange ctx(1000.0);
   const Colorspace * csp = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                            AVCOL_PRI_BT2020,
                                            AVCOL_TRC_ARIB_STD_B67);
@@ -338,8 +338,8 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
 {
-  const Colorspace::TransferFunc::Context src_ctx(1000.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(1000.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * csp_hlg = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                AVCOL_PRI_BT2020,
@@ -351,15 +351,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!csp_sdr);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_P010,
-                                 AVCOL_RANGE_MPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_MPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_P010, AVCOL_RANGE_MPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_NV12, AVCOL_RANGE_MPEG);
 
   ToneMapLog tone_map;
   // ToneMapPiecewise tone_map;
@@ -367,10 +360,10 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hlg,
              *csp_sdr,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst,
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range,
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
@@ -385,8 +378,8 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
 {
-  const Colorspace::TransferFunc::Context src_ctx(10000.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(10000.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                  AVCOL_PRI_BT2020,
@@ -398,25 +391,18 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!csp_sdr);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_P010,
-                                 AVCOL_RANGE_MPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_YUV444P,
-                                 AVCOL_RANGE_MPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_P010, AVCOL_RANGE_MPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_YUV444P, AVCOL_RANGE_MPEG);
 
   ToneMapPiecewise tone_map;
 
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst,
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range,
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
@@ -431,28 +417,21 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
 {
-  const Colorspace::TransferFunc::Context src_ctx(10000.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(10000.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * csp_hdr10 = Colorspace::get(AVCOL_SPC_BT2020_NCL,
                                                  AVCOL_PRI_BT2020,
                                                  AVCOL_TRC_SMPTEST2084);
   BOOST_CHECK(!!csp_hdr10);
 
-  const Colorspace * csp_sdr = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * csp_sdr = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!csp_sdr);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_P010,
-                                 AVCOL_RANGE_MPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_P010, AVCOL_RANGE_MPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   ToneMapPiecewise tone_map;
   // ToneMapLog tone_map;
@@ -460,10 +439,10 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*csp_hdr10,
              *csp_sdr,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst,
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range,
              &tone_map);
 
   // convert 3D LUT to a 2D CLUT:
@@ -478,36 +457,29 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
 {
-  const Colorspace::TransferFunc::Context src_ctx(100.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(100.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!src_csp);
 
-  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_MPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_NV12, AVCOL_RANGE_MPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst);
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range);
 
   // convert 3D LUT to a 2D CLUT:
   AvFrm frm = lut_3d_to_2d_rgb(lut3d, *dst_csp);
@@ -521,41 +493,29 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
 {
-  const Colorspace::TransferFunc::Context src_ctx(100.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(100.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!src_csp);
 
-  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t ypbpr_to_src;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_src,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_NV12, AVCOL_RANGE_JPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst);
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range);
 
   v4x1_t rgb_expect = make_v4x1(0, 0, 0, 1);
   v4x1_t rgb_actual = make_v4x1(0, 0, 0, 1);
@@ -582,7 +542,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
         const double v = double(k) / lut3d.z2_;
         yuv[2] = v;
 
-        ypbpr = src_to_ypbpr * ycbcr;
+        ypbpr = src_format.native_to_full_ * ycbcr;
 
         // clip out-of-range values:
         ypbpr[0] = clip(ypbpr[0],  0.0, 1.0);
@@ -614,46 +574,29 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_ycbcr)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
 {
-  const Colorspace::TransferFunc::Context src_ctx(100.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(100.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!src_csp);
 
-  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_ycbcr_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_ycbcr_to_ypbpr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t src_ypbpr_to_ycbcr;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(src_ypbpr_to_ycbcr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t dst_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(dst_to_ypbpr,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_NV12, AVCOL_RANGE_JPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   TColorTransform3f32 lut3d(8);
   lut3d.fill(*src_csp,
              *dst_csp,
-             src_ctx,
-             dst_ctx,
-             src_ycbcr_to_ypbpr,
-             ypbpr_to_dst);
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range);
 
   v4x1_t rgb_sample = make_v4x1(0, 0, 0, 1);
   v4x1_t rgb_expect = make_v4x1(0, 0, 0, 1);
@@ -682,7 +625,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
     ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
     ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
 
-    ycbcr = src_ypbpr_to_ycbcr * ypbpr;
+    ycbcr = src_format.full_to_native_ * ypbpr;
 
     rgb_expect = to_rgb * ypbpr;
 
@@ -707,46 +650,29 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_grayscale)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
 {
-  const Colorspace::TransferFunc::Context src_ctx(100.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(100.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!src_csp);
 
-  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_ycbcr_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_ycbcr_to_ypbpr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t src_ypbpr_to_ycbcr;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(src_ypbpr_to_ycbcr,
-                                 AV_PIX_FMT_NV12,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
-
-  m4x4_t dst_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(dst_to_ypbpr,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_NV12, AVCOL_RANGE_JPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   TColorTransform3f32 lut3d(7);
   lut3d.fill(*src_csp,
              *dst_csp,
-             src_ctx,
-             dst_ctx,
-             src_ycbcr_to_ypbpr,
-             ypbpr_to_dst);
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range);
 
   v4x1_t rgb_sample = make_v4x1(0, 0, 0, 1);
   v4x1_t rgb_expect = make_v4x1(0, 0, 0, 1);
@@ -783,7 +709,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
         ypbpr[1] = clip(ypbpr[1], -0.5, 0.5);
         ypbpr[2] = clip(ypbpr[2], -0.5, 0.5);
 
-        ycbcr = src_ypbpr_to_ycbcr * ypbpr;
+        ycbcr = src_format.full_to_native_ * ypbpr;
 
         rgb_expect = to_rgb * ypbpr;
 
@@ -811,36 +737,29 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_color_check_rgb)
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
 {
-  const Colorspace::TransferFunc::Context src_ctx(100.0);
-  const Colorspace::TransferFunc::Context dst_ctx(100.0);
+  const Colorspace::DynamicRange src_dynamic_range(100.0);
+  const Colorspace::DynamicRange dst_dynamic_range(100.0);
 
   const Colorspace * src_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!src_csp);
 
-  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_RGB,
+  const Colorspace * dst_csp = Colorspace::get(AVCOL_SPC_BT709,
                                                AVCOL_PRI_BT709,
                                                AVCOL_TRC_BT709);
   BOOST_CHECK(!!dst_csp);
 
-  m4x4_t src_to_ypbpr;
-  BOOST_CHECK(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                 AV_PIX_FMT_YUV444P,
-                                 AVCOL_RANGE_MPEG));
-
-  m4x4_t ypbpr_to_dst;
-  BOOST_CHECK(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                 AV_PIX_FMT_RGB24,
-                                 AVCOL_RANGE_JPEG));
+  Colorspace::Format src_format(AV_PIX_FMT_YUV444P, AVCOL_RANGE_MPEG);
+  Colorspace::Format dst_format(AV_PIX_FMT_RGB24, AVCOL_RANGE_JPEG);
 
   TColorTransform3f32 lut3d(6);
   lut3d.fill(*src_csp,
              *dst_csp,
-             src_ctx,
-             dst_ctx,
-             src_to_ypbpr,
-             ypbpr_to_dst);
+             src_format,
+             dst_format,
+             src_dynamic_range,
+             dst_dynamic_range);
 
   const int w = 1280;
   const int h = 720;
@@ -855,7 +774,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
   AvFrm rgb_frm = make_avfrm(AV_PIX_FMT_RGB24,
                              w,
                              h,
-                             AVCOL_SPC_RGB,
+                             AVCOL_SPC_BT709,
                              AVCOL_PRI_BT709,
                              AVCOL_TRC_BT709,
                              AVCOL_RANGE_JPEG);

@@ -1963,7 +1963,11 @@ namespace yae
     {
       shader = &builtinShader_;
 #if 0 // !defined(NDEBUG)
-      yae_debug << "WILL USE PASS-THROUGH SHADER\n";
+      const pixelFormat::Traits * ptts = pixelFormat::getTraits(format);
+      std::ostringstream oss;
+      oss << "WILL USE PASS-THROUGH SHADER for " << ptts->name_ << "\n";
+      yae_show_program_listing(oss, shader->program_->code_);
+      yae_debug << oss.str();
 #endif
     }
 
@@ -2077,7 +2081,8 @@ namespace yae
     }
 
     colorSpaceOrRangeChanged =
-      frame && !clut_input_.sameColorSpaceAndRange(frame->traits_);
+      frame && !(clut_input_.sameColorSpaceAndRange(frame->traits_) &&
+                 clut_input_.av_fmt_ == frame->traits_.av_fmt_);
 
     bool upload_clut_texture = colorSpaceOrRangeChanged;
     if (colorSpaceOrRangeChanged)
@@ -2091,28 +2096,23 @@ namespace yae
                         AVCOL_PRI_BT709,
                         AVCOL_TRC_BT709);
 
-      Colorspace::TransferFunc::Context src_ctx(vtts.max_cll_);
-      Colorspace::TransferFunc::Context dst_ctx(100.0); // SDR
+      Colorspace::Format src_format(vtts.av_fmt_, vtts.av_rng_);
+      static const Colorspace::Format dst_format(AV_PIX_FMT_RGB24,
+                                                 AVCOL_RANGE_JPEG);
 
-      m4x4_t src_to_ypbpr;
-      YAE_ASSERT(get_ycbcr_to_ypbpr(src_to_ypbpr,
-                                    vtts.av_fmt_,
-                                    vtts.av_rng_));
+      Colorspace::DynamicRange src_dynamic_range(vtts.max_cll_);
+      Colorspace::DynamicRange dst_dynamic_range(100.0); // SDR
 
-      m4x4_t ypbpr_to_dst;
-      YAE_ASSERT(get_ypbpr_to_ycbcr(ypbpr_to_dst,
-                                    AV_PIX_FMT_RGB24,
-                                    AVCOL_RANGE_JPEG));
+      const double peak_ratio = src_dynamic_range.Lw_ / dst_dynamic_range.Lw_;
 
-      const double peak_ratio = src_ctx.Lw_ / dst_ctx.Lw_;
       // ToneMapPiecewise tone_map;
       ToneMapLog tone_map;
       clut_.fill(*vtts.colorspace_,
                  *dst_colorspace,
-                 src_ctx,
-                 dst_ctx,
-                 src_to_ypbpr,
-                 ypbpr_to_dst,
+                 src_format,
+                 dst_format,
+                 src_dynamic_range,
+                 dst_dynamic_range,
                  (peak_ratio < 1.5) ? NULL : &tone_map);
 
 #if 0 // for debugging only:

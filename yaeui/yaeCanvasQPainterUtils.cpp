@@ -12,7 +12,10 @@ extern "C"
 #include <libavutil/pixdesc.h>
 }
 
-// local includes:
+// aeyae:
+#include "yae/video/yae_colorspace.h"
+
+// yaeui:
 #include "yaeCanvasQPainterUtils.h"
 #include "yaeUtilsQt.h"
 

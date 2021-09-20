@@ -21,6 +21,7 @@ extern "C"
 // aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_assert.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/utils/yae_linear_algebra.h"
 #include "yae/video/yae_colorspace.h"
 
@@ -29,35 +30,13 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // get_ycbcr_to_ypbpr
-  //
-  // setup an affine transform to from full/narrow
-  // range normalized [0, 1] pixel values to Y'PbPr
-  // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
-  //
-  YAE_API bool get_ycbcr_to_ypbpr(m4x4_t & ycbcr_to_ypbpr,
-                                  AVPixelFormat av_fmt,
-                                  AVColorRange av_rng);
-
-  //----------------------------------------------------------------
-  // get_ypbpr_to_ycbcr
-  //
-  // setup an affine transform to map from Y'PbPr
-  // to [0, 1] normalized full/narrow range:
-  //
-  YAE_API bool get_ypbpr_to_ycbcr(m4x4_t & ypbpr_to_ycbcr,
-                                  AVPixelFormat av_fmt,
-                                  AVColorRange av_rng);
-
-
-  //----------------------------------------------------------------
   // ToneMap
   //
   struct YAE_API ToneMap
   {
     virtual ~ToneMap() {}
-    virtual void apply(const Colorspace::TransferFunc::Context & src_ctx,
-                       const Colorspace::TransferFunc::Context & dst_ctx,
+    virtual void apply(const Colorspace::DynamicRange & src_dynamic_range,
+                       const Colorspace::DynamicRange & dst_dynamic_range,
                        const double * src_rgb_cdm2,
                        double * dst_rgb_cdm2) const = 0;
   };
@@ -68,8 +47,8 @@ namespace yae
   struct YAE_API ToneMapPiecewise : ToneMap
   {
     // virtual:
-    void apply(const Colorspace::TransferFunc::Context & src_ctx,
-               const Colorspace::TransferFunc::Context & dst_ctx,
+    void apply(const Colorspace::DynamicRange & src_dynamic_range,
+               const Colorspace::DynamicRange & dst_dynamic_range,
                const double * src_rgb_cdm2,
                double * dst_rgb_cdm2) const;
   };
@@ -80,8 +59,8 @@ namespace yae
   struct YAE_API ToneMapLog : ToneMap
   {
     // virtual:
-    void apply(const Colorspace::TransferFunc::Context & src_ctx,
-               const Colorspace::TransferFunc::Context & dst_ctx,
+    void apply(const Colorspace::DynamicRange & src_dynamic_range,
+               const Colorspace::DynamicRange & dst_dynamic_range,
                const double * src_rgb_cdm2,
                double * dst_rgb_cdm2) const;
   };
@@ -155,24 +134,18 @@ namespace yae
     void fill(const Colorspace & src_csp,
               const Colorspace & dst_csp,
 
-              const Colorspace::TransferFunc::Context & src_ctx,
-              const Colorspace::TransferFunc::Context & dst_ctx,
+              const Colorspace::Format & src_format,
+              const Colorspace::Format & dst_format,
 
-              // pre-transform, maps from source full/narrow
-              // range normalized [0, 1] pixel values to Y'PbPr
-              // where Y is [0, 1] and Pb,Pr are [-0.5, 0.5]
-              const m4x4_t & src_ycbcr_to_ypbpr,
-
-              // post-transform, maps from output Y'PbPr to
-              // normalized full/narrow [0, 1] range:
-              const m4x4_t & dst_ypbpr_to_ycbcr,
+              const Colorspace::DynamicRange & src_dynamic_range,
+              const Colorspace::DynamicRange & dst_dynamic_range,
 
               // optional, for HDR -> SDR conversion:
               const ToneMap * tone_map = NULL)
     {
       // shortcuts:
-      const bool is_src_rgb = src_csp.av_csp_ == AVCOL_SPC_RGB;
-      const bool is_dst_rgb = dst_csp.av_csp_ == AVCOL_SPC_RGB;
+      const bool is_src_rgb = src_format.is_rgb();
+      const bool is_dst_rgb = dst_format.is_rgb();
       const m4x4_t to_rgb = m4x4_t(src_csp.ypbpr_to_rgb_);
       const m4x4_t to_ypbpr = m4x4_t(dst_csp.rgb_to_ypbpr_);
       const m4x4_t src_rgb_to_xyz = m4x4_t(src_csp.rgb_to_xyz_);
@@ -218,7 +191,7 @@ namespace yae
             src[2] = double(k) / rescale;
 
             // transform to Y'PbPr (or full-range R'G'B')
-            ypbpr = src_ycbcr_to_ypbpr * input;
+            ypbpr = src_format.native_to_full_ * input;
 
             // transform to input non-linear R'G'B':
             rgb = is_src_rgb ? ypbpr : (to_rgb * ypbpr);
@@ -231,14 +204,14 @@ namespace yae
 
             // transform to linear RGB:
             src_csp.transfer_.eotf_rgb(src_csp,
-                                       src_ctx,
+                                       src_dynamic_range,
                                        rgb.begin(),
                                        rgb_cdm2.begin());
 
             if (tone_map)
             {
-              tone_map->apply(src_ctx,
-                              dst_ctx,
+              tone_map->apply(src_dynamic_range,
+                              dst_dynamic_range,
                               rgb_cdm2.begin(),
                               rgb_cdm2.begin());
             }
@@ -257,14 +230,14 @@ namespace yae
 #endif
             // transform to output non-linear R'G'B':
             dst_csp.transfer_.oetf_rgb(dst_csp,
-                                       dst_ctx,
+                                       dst_dynamic_range,
                                        rgb_cdm2.begin(),
                                        rgb.begin());
 
             ypbpr = is_dst_rgb ? rgb : (to_ypbpr * rgb);
 
             // transform to Y'CbCr (or intended range R'G'B')
-            output = dst_ypbpr_to_ycbcr * ypbpr;
+            output = dst_format.full_to_native_ * ypbpr;
 
             // clamp to [0, 1] output range:
             output = clip(output, 0.0, 1.0);
@@ -394,6 +367,127 @@ namespace yae
   // TColorTransform3u8
   //
   typedef ColorTransform<TPixel3u8> TColorTransform3u8;
+
+  //----------------------------------------------------------------
+  // lut_3d_to_2d_yuv
+  //
+  // convert 3D LUT to a 8-bit YUV444P 2D CLUT image:
+  //
+  template <typename TPixel>
+  AvFrm
+  lut_3d_to_2d_yuv(const ColorTransform<TPixel> & lut3d,
+                   const Colorspace & dst_csp,
+                   AVColorRange av_rng = AVCOL_RANGE_MPEG)
+  {
+    const double rescale = 255.0 / TPixel::Max;
+
+    const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+    const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+    const unsigned int clut_h = 1 << log2_h;
+    const unsigned int clut_w = 1 << log2_w;
+
+    AvFrm frm = make_avfrm(AV_PIX_FMT_YUV444P,
+                           clut_w,
+                           clut_h,
+                           dst_csp.av_csp_,
+                           dst_csp.av_pri_,
+                           dst_csp.av_trc_,
+                           av_rng);
+
+    AVFrame & frame = frm.get();
+    for (unsigned int i = 0; i < clut_h; i++)
+    {
+      for (unsigned int j = 0; j < clut_w; j++)
+      {
+        const unsigned int slice =
+          (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+          (j / lut3d.size_1d_);
+
+        const unsigned int offset =
+          slice * lut3d.size_2d_ +
+          (i % lut3d.size_1d_) * lut3d.size_1d_ +
+          (j % lut3d.size_1d_);
+
+        if (offset >= lut3d.size_3d_)
+        {
+          // shouldn't happen with power-of-two LUT sizes:
+          YAE_ASSERT(false);
+          break;
+        }
+
+        const TPixel & pixel = lut3d.at(offset);
+
+        unsigned char * dst_y = frame.data[0] + frame.linesize[0] * i + j;
+        unsigned char * dst_u = frame.data[1] + frame.linesize[1] * i + j;
+        unsigned char * dst_v = frame.data[2] + frame.linesize[2] * i + j;
+
+        *dst_y = (unsigned char)(rescale * pixel.data_[0]);
+        *dst_u = (unsigned char)(rescale * pixel.data_[1]);
+        *dst_v = (unsigned char)(rescale * pixel.data_[2]);
+      }
+    }
+
+    return frm;
+  }
+
+  //----------------------------------------------------------------
+  // lut_3d_to_2d_rgb
+  //
+  // convert 3D LUT to a 8-bit RGB24 2D CLUT image:
+  //
+  template <typename TPixel>
+  AvFrm
+  lut_3d_to_2d_rgb(const ColorTransform<TPixel> & lut3d,
+                   const Colorspace & dst_csp,
+                   AVColorRange av_rng = AVCOL_RANGE_JPEG)
+  {
+    const double rescale = 255.0 / TPixel::Max;
+
+    const unsigned int log2_w = lut3d.log2_edge_ + (lut3d.log2_edge_ + 1) / 2;
+    const unsigned int log2_h = lut3d.log2_edge_ * 3 - log2_w;
+
+    const unsigned int clut_h = 1 << log2_h;
+    const unsigned int clut_w = 1 << log2_w;
+
+    AvFrm frm = make_avfrm(AV_PIX_FMT_RGB24,
+                           clut_w,
+                           clut_h,
+                           dst_csp.av_csp_,
+                           dst_csp.av_pri_,
+                           dst_csp.av_trc_,
+                           av_rng);
+
+    AVFrame & frame = frm.get();
+    for (unsigned int i = 0; i < clut_h; i++)
+    {
+      for (unsigned int j = 0; j < clut_w; j++)
+      {
+        const unsigned int slice =
+          (i / lut3d.size_1d_) * (clut_w / lut3d.size_1d_) +
+          (j / lut3d.size_1d_);
+
+        const unsigned int offset =
+          slice * lut3d.size_2d_ +
+          (i % lut3d.size_1d_) * lut3d.size_1d_ +
+          (j % lut3d.size_1d_);
+
+        if (offset >= lut3d.size_3d_)
+        {
+          break;
+        }
+        const TPixel & pixel = lut3d.at(offset);
+
+        unsigned char * rgb = frame.data[0] + frame.linesize[0] * i + j * 3;
+
+        rgb[0] = (unsigned char)(rescale * pixel.data_[0]);
+        rgb[1] = (unsigned char)(rescale * pixel.data_[1]);
+        rgb[2] = (unsigned char)(rescale * pixel.data_[2]);
+      }
+    }
+
+    return frm;
+  }
 
 }
 

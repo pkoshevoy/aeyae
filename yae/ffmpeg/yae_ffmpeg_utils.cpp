@@ -30,10 +30,11 @@ extern "C"
 }
 
 // aeyae:
-#include "yae_demuxer.h"
-#include "yae_ffmpeg_utils.h"
-#include "yae_track.h"
-#include "../utils/yae_time.h"
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/utils/yae_time.h"
+#include "yae/video/yae_texture_generator.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;
@@ -783,6 +784,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AvFrmSpecs::AvFrmSpecs
+  //
+  AvFrmSpecs::AvFrmSpecs(const VideoTraits & vtts)
+  {
+    width = vtts.encodedWidth_;
+    height = vtts.encodedHeight_;
+    format = vtts.av_fmt_;
+    colorspace = vtts.av_csp_;
+    color_range = vtts.av_rng_;
+    color_primaries = vtts.av_pri_;
+    color_trc = vtts.av_trc_;
+    chroma_location = AVCHROMA_LOC_UNSPECIFIED;
+    sample_aspect_ratio = av_d2q(vtts.pixelAspectRatio_,
+                                 std::numeric_limits<int>::max());
+  }
+
+  //----------------------------------------------------------------
   // AvFrmSpecs::clear
   //
   void
@@ -1503,16 +1521,9 @@ namespace yae
       yae::AvFrmSpecs specs = src;
 
       specs.format =
-        yae::has(codec->pix_fmts, src.get_pix_fmt()) ? src.get_pix_fmt() :
+        (src.get_pix_fmt() != AV_PIX_FMT_PAL8 &&
+         yae::has(codec->pix_fmts, src.get_pix_fmt())) ? src.get_pix_fmt() :
         codec->pix_fmts[0];
-
-      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(specs.format);
-      const bool is_rgb = desc ? yae::is_rgb(*desc) : false;
-
-      specs.colorspace = is_rgb ? AVCOL_SPC_RGB : AVCOL_SPC_BT709;
-      specs.color_range = AVCOL_RANGE_JPEG;
-      specs.color_primaries = AVCOL_PRI_BT709;
-      specs.color_trc = AVCOL_TRC_BT709;
 
       yae::VideoFilterGraph vf;
       if (vf.setup(src, framerate, timebase, specs))
