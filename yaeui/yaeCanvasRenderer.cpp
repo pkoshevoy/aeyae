@@ -1482,16 +1482,11 @@ namespace yae
     darCropped_(0.0),
     skipColorConverter_(false),
     verticalScalingEnabled_(false),
+    supports_16bit_textures_(false),
     shader_(NULL),
     clut_(5),
     clut_tex_id_(0)
   {
-    double identity[] = {
-      1, 0, 0, 0,
-      0, 1, 0, 0,
-      0, 0, 1, 0
-    };
-
     typedef std::map<TPixelFormatId, const TFragmentShaderProgram *> TProgs;
     for (TProgs::const_iterator i = shaders.lut_.begin();
          i != shaders.lut_.end(); ++i)
@@ -1505,6 +1500,58 @@ namespace yae
     {
       builtinShader_.program_ = &(shaders.builtin_);
     }
+
+    // check if 16-bit textures are supported:
+    YAE_OPENGL_HERE();
+    YAE_OGL_11_HERE();
+    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+    GLuint tex_id = 0;
+    YAE_OGL_11(glGenTextures(1, &tex_id));
+    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, tex_id));
+
+    if (YAE_OGL_11(glIsTexture(tex_id)))
+    {
+      TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+      std::vector<uint16_t> data;
+      data.assign(64 * 64, 0xFF);
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 2));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, 64));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                              0, // mipmap level
+                              GL_LUMINANCE16,
+                              64,
+                              64,
+                              0, // border width
+                              GL_LUMINANCE,
+                              GL_UNSIGNED_SHORT,
+                              &data[0]));
+      yae_assert_gl_no_error();
+
+      YAE_OGL_11(glGetTexImage(GL_TEXTURE_2D,
+                               0, // level
+                               GL_LUMINANCE,
+                               GL_UNSIGNED_SHORT,
+                               &data[0]));
+      yae_assert_gl_no_error();
+
+      supports_16bit_textures_ = data[0] == 0xFF;
+      YAE_ASSERT(supports_16bit_textures_);
+      glDeleteTextures(1, &tex_id);
+    }
+
+    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
   }
 
   //----------------------------------------------------------------
@@ -3725,10 +3772,62 @@ namespace yae
                                              TPixelFormatId & output) const
   {
     TBaseCanvas * renderer = rendererFor(vtts);
-    return adjust_pixel_format_for_opengl(renderer,
-                                          skipColorConverter,
-                                          vtts.pixelFormat_,
-                                          output);
+    if (adjust_pixel_format_for_opengl(renderer,
+                                        skipColorConverter,
+                                        vtts.pixelFormat_,
+                                        output))
+    {
+      // native pixel format not supported:
+      return true;
+    }
+
+    // native pixel format supported, but check for 16-bit texture support:
+    if (!supports_16bit_textures())
+    {
+      // if 16-bit textures are not supported then
+      // don't accept higher than 8-bit pixel formats:
+      const pixelFormat::Traits * ptts = pixelFormat::getTraits(output);
+      if (ptts->depth_[0] > 8)
+      {
+        bool has_alpha = ptts->has_alpha();
+        bool is_rgb = ptts->is_rgb();
+        bool is_yuv = ptts->is_rgb();
+        bool is_420 = ptts->is_420();
+        bool is_422 = ptts->is_422();
+        bool is_444 = ptts->is_444();
+
+        if (is_rgb)
+        {
+          output = has_alpha ? kPixelFormatBGRA : kPixelFormatBGR24;
+        }
+        else if (is_yuv && has_alpha)
+        {
+          output =
+            is_444 ? kPixelFormatYUVA444P :
+            is_422 ? kPixelFormatYUVA422P :
+            kPixelFormatYUVA420P;
+        }
+        else if (is_yuv)
+        {
+          output =
+            is_444 ? kPixelFormatYUV444P :
+            is_422 ? kPixelFormatYUV422P :
+            kPixelFormatYUV420P;
+        }
+        else if (has_alpha)
+        {
+          output = kPixelFormatY400A;
+        }
+        else
+        {
+          output = kPixelFormatGRAY8;
+        }
+
+        return true;
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------

@@ -129,11 +129,29 @@ namespace yae
       // sample set stride (in bits) per sample plane:
       unsigned char getPlanes(unsigned char stride[4]) const;
 
+      inline bool has_alpha() const
+      { return ((flags_ & kAlpha) == kAlpha); }
+
       inline bool is_packed() const
       { return ((flags_ & kPacked) == kPacked); }
 
       inline bool is_planar() const
       { return ((flags_ & kPlanar) == kPlanar); }
+
+      inline bool is_rgb() const
+      { return ((flags_ & kRGB) == kRGB) && channels_ > 2; }
+
+      inline bool is_yuv() const
+      { return ((flags_ & kYUV) == kYUV) && channels_ > 2; }
+
+      inline bool is_420() const
+      { return chromaBoxW_ == 2 && chromaBoxH_ == 2; }
+
+      inline bool is_422() const
+      { return chromaBoxW_ == 2 && chromaBoxH_ == 1; }
+
+      inline bool is_444() const
+      { return chromaBoxW_ == 1 && chromaBoxH_ == 1; }
     };
 
     //----------------------------------------------------------------
