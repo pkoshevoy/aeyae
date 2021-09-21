@@ -668,6 +668,8 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
     case yae::kPixelFormatYUVA420P:
       //! planar YUV 4:2:0, 20bpp, (1 Cr & Cb sample per 2x2 Y & A
       //! samples)
+    case yae::kPixelFormatYUVA422P:
+    case yae::kPixelFormatYUVA444P:
     case yae::kPixelFormatYUVJ420P:
       //! planar YUV 4:2:0, 12bpp, (1 Cr & Cb sample per 2x2 Y samples), JPEG
     case yae::kPixelFormatYUVJ422P:
@@ -3772,62 +3774,10 @@ namespace yae
                                              TPixelFormatId & output) const
   {
     TBaseCanvas * renderer = rendererFor(vtts);
-    if (adjust_pixel_format_for_opengl(renderer,
-                                        skipColorConverter,
-                                        vtts.pixelFormat_,
-                                        output))
-    {
-      // native pixel format not supported:
-      return true;
-    }
-
-    // native pixel format supported, but check for 16-bit texture support:
-    if (!supports_16bit_textures())
-    {
-      // if 16-bit textures are not supported then
-      // don't accept higher than 8-bit pixel formats:
-      const pixelFormat::Traits * ptts = pixelFormat::getTraits(output);
-      if (ptts->depth_[0] > 8)
-      {
-        bool has_alpha = ptts->has_alpha();
-        bool is_rgb = ptts->is_rgb();
-        bool is_yuv = ptts->is_rgb();
-        bool is_420 = ptts->is_420();
-        bool is_422 = ptts->is_422();
-        bool is_444 = ptts->is_444();
-
-        if (is_rgb)
-        {
-          output = has_alpha ? kPixelFormatBGRA : kPixelFormatBGR24;
-        }
-        else if (is_yuv && has_alpha)
-        {
-          output =
-            is_444 ? kPixelFormatYUVA444P :
-            is_422 ? kPixelFormatYUVA422P :
-            kPixelFormatYUVA420P;
-        }
-        else if (is_yuv)
-        {
-          output =
-            is_444 ? kPixelFormatYUV444P :
-            is_422 ? kPixelFormatYUV422P :
-            kPixelFormatYUV420P;
-        }
-        else if (has_alpha)
-        {
-          output = kPixelFormatY400A;
-        }
-        else
-        {
-          output = kPixelFormatGRAY8;
-        }
-
-        return true;
-      }
-    }
-
-    return false;
+    return adjust_pixel_format_for_opengl(renderer,
+                                          skipColorConverter,
+                                          vtts.pixelFormat_,
+                                          output);
   }
 
   //----------------------------------------------------------------
@@ -3901,6 +3851,51 @@ namespace yae
           {
             outputFormat = kPixelFormatBGR24;
           }
+        }
+      }
+    }
+
+    if (!renderer->supports_16bit_textures())
+    {
+      // if 16-bit textures are not supported then
+      // don't accept higher than 8-bit pixel formats:
+      const pixelFormat::Traits * ptts = pixelFormat::getTraits(outputFormat);
+      if (ptts->depth_[0] > 8)
+      {
+        unsupported = true;
+
+        bool has_alpha = ptts->has_alpha();
+        bool is_rgb = ptts->is_rgb();
+        bool is_yuv = ptts->is_rgb();
+        bool is_420 = ptts->is_420();
+        bool is_422 = ptts->is_422();
+        bool is_444 = ptts->is_444();
+
+        if (is_rgb)
+        {
+          outputFormat = has_alpha ? kPixelFormatBGRA : kPixelFormatBGR24;
+        }
+        else if (is_yuv && has_alpha)
+        {
+          outputFormat =
+            is_444 ? kPixelFormatYUVA444P :
+            is_422 ? kPixelFormatYUVA422P :
+            kPixelFormatYUVA420P;
+        }
+        else if (is_yuv)
+        {
+          outputFormat =
+            is_444 ? kPixelFormatYUV444P :
+            is_422 ? kPixelFormatYUV422P :
+            kPixelFormatYUV420P;
+        }
+        else if (has_alpha)
+        {
+          outputFormat = kPixelFormatY400A;
+        }
+        else
+        {
+          outputFormat = kPixelFormatGRAY8;
         }
       }
     }
