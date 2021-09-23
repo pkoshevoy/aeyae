@@ -21,6 +21,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 
 
 namespace yae
@@ -135,53 +136,6 @@ namespace yae
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // StackFrame
-  //
-  struct YAE_API StackFrame
-  {
-    std::string module_;
-    std::string func_;
-    std::string offset_;
-    std::string address_;
-  };
-
-  //----------------------------------------------------------------
-  // operator <<
-  //
-  YAE_API std::ostream &
-  operator << (std::ostream & os, const StackFrame & f);
-
-  //----------------------------------------------------------------
-  // demangle
-  //
-  YAE_API void
-  demangle(StackFrame & frame, const char * line);
-
-  //----------------------------------------------------------------
-  // capture_backtrace
-  //
-  YAE_API void
-  capture_backtrace(std::list<StackFrame> & backtrace, std::size_t offset = 2);
-
-  //----------------------------------------------------------------
-  // dump
-  //
-  YAE_API std::ostream &
-  dump(std::ostream & os, const std::list<StackFrame> & traceback);
-
-  //----------------------------------------------------------------
-  // dump_stacktrace
-  //
-  YAE_API std::ostream &
-  dump_stacktrace(std::ostream & os);
-
-  //----------------------------------------------------------------
-  // get_stacktrace_str
-  //
-  YAE_API std::string get_stacktrace_str();
-
 
 #ifdef YAE_ENABLE_MEMORY_FOOTPRINT_ANALYSIS
   //----------------------------------------------------------------

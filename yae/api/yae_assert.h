@@ -10,11 +10,63 @@
 #define YAE_ASSERT_H_
 
 // standard:
+#include <iostream>
+#include <list>
 #include <stdexcept>
+#include <string>
 
 // aeyae:
 #include "../api/yae_log.h"
 
+namespace yae
+{
+  //----------------------------------------------------------------
+  // StackFrame
+  //
+  struct YAE_API StackFrame
+  {
+    std::string module_;
+    std::string func_;
+    std::string offset_;
+    std::string address_;
+  };
+
+  //----------------------------------------------------------------
+  // operator <<
+  //
+  YAE_API std::ostream &
+  operator << (std::ostream & os, const StackFrame & f);
+
+  //----------------------------------------------------------------
+  // demangle
+  //
+  YAE_API void
+  demangle(StackFrame & frame, const char * line);
+
+  //----------------------------------------------------------------
+  // capture_backtrace
+  //
+  YAE_API void
+  capture_backtrace(std::list<StackFrame> & backtrace, std::size_t offset = 2);
+
+  //----------------------------------------------------------------
+  // dump
+  //
+  YAE_API std::ostream &
+  dump(std::ostream & os, const std::list<StackFrame> & traceback);
+
+  //----------------------------------------------------------------
+  // dump_stacktrace
+  //
+  YAE_API std::ostream &
+  dump_stacktrace(std::ostream & os);
+
+  //----------------------------------------------------------------
+  // get_stacktrace_str
+  //
+  YAE_API std::string get_stacktrace_str();
+
+}
 
 //----------------------------------------------------------------
 // YAE_BREAKPOINT
@@ -52,12 +104,13 @@
 //----------------------------------------------------------------
 // YAE_ASSERT
 //
-#define YAE_ASSERT(expr) if (!(expr)) do {       \
-      yae::log(yae::TLog::kError,                \
-               __FILE__ ":" YAE_STR(__LINE__),   \
-               "assertion failed: %s",           \
-               YAE_STR(expr));                   \
-      YAE_BREAKPOINT_IF_DEBUG_BUILD();           \
+#define YAE_ASSERT(expr) if (!(expr)) do {              \
+      yae::log(yae::TLog::kError,                       \
+               __FILE__ ":" YAE_STR(__LINE__),          \
+               "assertion failed: %s, stacktrace:\n%s", \
+               YAE_STR(expr),                           \
+               yae::get_stacktrace_str().c_str());      \
+      YAE_BREAKPOINT_IF_DEBUG_BUILD();                  \
     } while (false)
 
 //----------------------------------------------------------------
