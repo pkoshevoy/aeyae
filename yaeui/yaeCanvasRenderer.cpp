@@ -3474,6 +3474,9 @@ namespace yae
     }
 
     renderer_ = legacy_;
+
+    // cache the GL_LUMINANCE16 status:
+    get_supports_luminance16();
   }
 
   //----------------------------------------------------------------
