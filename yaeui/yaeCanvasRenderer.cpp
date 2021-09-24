@@ -2978,7 +2978,7 @@ namespace yae
   //----------------------------------------------------------------
   // get_supports_luminance16
   //
-  static bool
+  bool
   get_supports_luminance16()
   {
     static CheckLuminance16 luminance16;

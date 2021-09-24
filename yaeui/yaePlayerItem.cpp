@@ -1290,22 +1290,61 @@ namespace yae
     VideoTraits vtts;
     if (canvas && reader->getVideoTraits(vtts))
     {
+      const bool luminance16_not_supported = !yae::get_supports_luminance16();
+
       bool skip_color_converter = skip_color_converter_.get();
       canvas->skipColorConverter(skip_color_converter);
 
       TPixelFormatId format = kInvalidPixelFormat;
       if (canvas->
           canvasRenderer()->
-          adjustPixelFormatForOpenGL(skip_color_converter, vtts, format))
+          adjustPixelFormatForOpenGL(skip_color_converter, vtts, format) ||
+          luminance16_not_supported)
       {
+        const pixelFormat::Traits * ptts_native =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+
+        const pixelFormat::Traits * ptts_output =
+          pixelFormat::getTraits(format);
+
+        const bool adjusted_pixel_format = (format != vtts.pixelFormat_);
         vtts.setPixelFormat(format);
 
-        // NOTE: overriding frame size implies scaling, so don't do it
-        // unless you really want to scale the images in the reader;
-        // In general, leave scaling to OpenGL:
-        vtts.encodedWidth_ = 0;
-        vtts.encodedHeight_ = 0;
+        const unsigned int native_w = vtts.encodedWidth_;
+        const unsigned int native_h = vtts.encodedHeight_;
+
+        if (luminance16_not_supported)
+        {
+          while (vtts.encodedWidth_ > 1280 ||
+                 vtts.encodedHeight_ > 720)
+          {
+            vtts.encodedWidth_ >>= 1;
+            vtts.encodedHeight_ >>= 1;
+            vtts.offsetTop_ >>= 1;
+            vtts.offsetLeft_ >>= 1;
+            vtts.visibleWidth_ >>= 1;
+            vtts.visibleHeight_ >>= 1;
+          }
+        }
+        else
+        {
+          // NOTE: overriding frame size implies scaling, so don't do it
+          // unless you really want to scale the images in the reader;
+          // In general, leave scaling to OpenGL:
+          vtts.encodedWidth_ = 0;
+          vtts.encodedHeight_ = 0;
+        }
+
+        // preserve pixel aspect ratio:
         vtts.pixelAspectRatio_ = 0.0;
+
+        yae_dlog("native: %s %ux%u, output: %s %ux%u",
+                 ptts_native->name_,
+                 native_w,
+                 native_h,
+                 ptts_output->name_,
+                 vtts.encodedWidth_ ? vtts.encodedWidth_ : native_w,
+                 vtts.encodedHeight_ ? vtts.encodedHeight_ : native_h);
 
         reader->setVideoTraitsOverride(vtts);
       }

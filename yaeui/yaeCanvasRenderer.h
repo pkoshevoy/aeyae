@@ -257,7 +257,7 @@ namespace yae
   //----------------------------------------------------------------
   // TMakeCurrentContext
   //
-  struct TMakeCurrentContext
+  struct YAEUI_API TMakeCurrentContext
   {
     TMakeCurrentContext(IOpenGLContext & context):
       context_(context)
@@ -276,7 +276,7 @@ namespace yae
   //----------------------------------------------------------------
   // TGLSaveState
   //
-  struct TGLSaveState
+  struct YAEUI_API TGLSaveState
   {
     TGLSaveState(GLbitfield mask);
     ~TGLSaveState();
@@ -288,7 +288,7 @@ namespace yae
   //----------------------------------------------------------------
   // TGLSaveClientState
   //
-  struct TGLSaveClientState
+  struct YAEUI_API TGLSaveClientState
   {
     TGLSaveClientState(GLbitfield mask);
     ~TGLSaveClientState();
@@ -300,7 +300,7 @@ namespace yae
   //----------------------------------------------------------------
   // TGLSaveMatrixState
   //
-  struct TGLSaveMatrixState
+  struct YAEUI_API TGLSaveMatrixState
   {
     TGLSaveMatrixState(GLenum mode);
     ~TGLSaveMatrixState();
@@ -347,7 +347,7 @@ namespace yae
   //----------------------------------------------------------------
   // alignmentFor
   //
-  extern int
+  YAEUI_API int
   alignmentFor(const unsigned char * data, std::size_t rowBytes);
 
 
@@ -421,9 +421,15 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // get_supports_luminance16
+  //
+  YAEUI_API bool get_supports_luminance16();
+
+
+  //----------------------------------------------------------------
   // TBaseCanvas
   //
-  struct TBaseCanvas
+  struct YAEUI_API TBaseCanvas
   {
     TBaseCanvas(const ShaderPrograms & shaders);
     virtual ~TBaseCanvas();
@@ -514,7 +520,7 @@ namespace yae
   //----------------------------------------------------------------
   // TModernCanvas
   //
-  struct TModernCanvas : public TBaseCanvas
+  struct YAEUI_API TModernCanvas : public TBaseCanvas
   {
     TModernCanvas();
 
@@ -540,7 +546,7 @@ namespace yae
   //----------------------------------------------------------------
   // TEdge
   //
-  struct TEdge
+  struct YAEUI_API TEdge
   {
     // texture:
     GLsizei offset_;
@@ -559,7 +565,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFrameTile
   //
-  struct TFrameTile
+  struct YAEUI_API TFrameTile
   {
     TEdge x_;
     TEdge y_;
@@ -568,7 +574,7 @@ namespace yae
   //----------------------------------------------------------------
   // calculateEdges
   //
-  extern void
+  YAEUI_API void
   calculateEdges(std::deque<TEdge> & edges,
                  GLsizei edgeSize,
                  GLsizei textureEdgeMax);
@@ -579,7 +585,7 @@ namespace yae
   // This is a subclass implementing frame rendering on OpenGL
   // hardware that doesn't support GL_EXT_texture_rectangle
   //
-  struct TLegacyCanvas : public TBaseCanvas
+  struct YAEUI_API TLegacyCanvas : public TBaseCanvas
   {
     TLegacyCanvas();
 
@@ -608,7 +614,7 @@ namespace yae
   //----------------------------------------------------------------
   // CanvasRenderer
   //
-  class CanvasRenderer
+  class YAEUI_API CanvasRenderer
   {
     TLegacyCanvas * legacy_;
     TModernCanvas * modern_;
@@ -678,7 +684,7 @@ namespace yae
   //----------------------------------------------------------------
   // adjust_pixel_format_for_opengl
   //
-  bool
+  YAEUI_API bool
   adjust_pixel_format_for_opengl(const TBaseCanvas * canvas,
                                  bool skipColorConverter,
                                  TPixelFormatId nativeFormat,
