@@ -1484,7 +1484,6 @@ namespace yae
     darCropped_(0.0),
     skipColorConverter_(false),
     verticalScalingEnabled_(false),
-    supports_16bit_textures_(false),
     shader_(NULL),
     clut_(5),
     clut_tex_id_(0)
@@ -1502,58 +1501,6 @@ namespace yae
     {
       builtinShader_.program_ = &(shaders.builtin_);
     }
-
-    // check if 16-bit textures are supported:
-    YAE_OPENGL_HERE();
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-
-    GLuint tex_id = 0;
-    YAE_OGL_11(glGenTextures(1, &tex_id));
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, tex_id));
-
-    if (YAE_OGL_11(glIsTexture(tex_id)))
-    {
-      TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
-      std::vector<uint16_t> data;
-      data.assign(64 * 64, 0xFF);
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 2));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, 64));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
-                              0, // mipmap level
-                              GL_LUMINANCE16,
-                              64,
-                              64,
-                              0, // border width
-                              GL_LUMINANCE,
-                              GL_UNSIGNED_SHORT,
-                              &data[0]));
-      yae_assert_gl_no_error();
-
-      YAE_OGL_11(glGetTexImage(GL_TEXTURE_2D,
-                               0, // level
-                               GL_LUMINANCE,
-                               GL_UNSIGNED_SHORT,
-                               &data[0]));
-      yae_assert_gl_no_error();
-
-      supports_16bit_textures_ = data[0] == 0xFF;
-      YAE_ASSERT(supports_16bit_textures_);
-      glDeleteTextures(1, &tex_id);
-    }
-
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
   }
 
   //----------------------------------------------------------------
@@ -2920,7 +2867,7 @@ namespace yae
   //----------------------------------------------------------------
   // getTextureEdgeMax
   //
-  GLsizei
+  static GLsizei
   getTextureEdgeMax()
   {
     static GLsizei edgeMax = 64;
@@ -2959,7 +2906,83 @@ namespace yae
       }
     }
 
+    yae_dlog("GL_RGBA 2D texture size max: %i x %i", edgeMax, edgeMax);
     return edgeMax;
+  }
+
+  //----------------------------------------------------------------
+  // CheckLuminance16
+  //
+  struct CheckLuminance16
+  {
+    bool supported_;
+
+    CheckLuminance16():
+      supported_(false)
+    {
+      // check if 16-bit textures are supported:
+      YAE_OPENGL_HERE();
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
+
+      GLuint tex_id = 0;
+      YAE_OGL_11(glGenTextures(1, &tex_id));
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, tex_id));
+
+      if (YAE_OGL_11(glIsTexture(tex_id)))
+      {
+        TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
+        std::vector<uint16_t> data;
+        uint32_t edge_max = getTextureEdgeMax();
+        data.assign(edge_max * edge_max, 0xFF);
+
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 2));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, edge_max));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
+        yae_assert_gl_no_error();
+
+        YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
+                                0, // mipmap level
+                                GL_LUMINANCE16,
+                                edge_max,
+                                edge_max,
+                                0, // border width
+                                GL_LUMINANCE,
+                                GL_UNSIGNED_SHORT,
+                                &data[0]));
+        yae_assert_gl_no_error();
+
+        data.assign(edge_max * edge_max, 0x00);
+        YAE_OGL_11(glGetTexImage(GL_TEXTURE_2D,
+                                 0, // level
+                                 GL_LUMINANCE,
+                                 GL_UNSIGNED_SHORT,
+                                 &data[0]));
+        yae_assert_gl_no_error();
+
+        supported_ = (data[0] == 0xFF);
+        glDeleteTextures(1, &tex_id);
+      }
+      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+      yae_dlog("GL_LUMINANCE16: %s", supported_ ? "yes" : "no");
+    }
+  };
+
+  //----------------------------------------------------------------
+  // get_supports_luminance16
+  //
+  static bool
+  get_supports_luminance16()
+  {
+    static CheckLuminance16 luminance16;
+    return luminance16.supported_;
   }
 
   //----------------------------------------------------------------
@@ -3855,21 +3878,29 @@ namespace yae
       }
     }
 
-    if (!renderer->supports_16bit_textures())
+    if (!get_supports_luminance16())
     {
       // if 16-bit textures are not supported then
       // don't accept higher than 8-bit pixel formats:
-      const pixelFormat::Traits * ptts = pixelFormat::getTraits(outputFormat);
       if (ptts->depth_[0] > 8)
       {
         unsupported = true;
 
         bool has_alpha = ptts->has_alpha();
         bool is_rgb = ptts->is_rgb();
-        bool is_yuv = ptts->is_rgb();
+        bool is_yuv = ptts->is_yuv();
         bool is_420 = ptts->is_420();
         bool is_422 = ptts->is_422();
         bool is_444 = ptts->is_444();
+
+        yae_debug
+          << "native format: " << ptts->name_
+          << ", alpha: " << has_alpha
+          << ", rgb: " << is_rgb
+          << ", yuv: " << is_yuv
+          << ", 420: " << is_420
+          << ", 422: " << is_422
+          << ", 444: " << is_444;
 
         if (is_rgb)
         {

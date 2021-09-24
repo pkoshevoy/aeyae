@@ -479,9 +479,6 @@ namespace yae
                     double h_max,
                     double opacity = 1.0) const;
 
-    inline bool supports_16bit_textures() const
-    { return supports_16bit_textures_; }
-
   protected:
     // helper:
     const TFragmentShader *
@@ -501,11 +498,6 @@ namespace yae
     double darCropped_;
     bool skipColorConverter_;
     bool verticalScalingEnabled_;
-
-    // sometimes GL_LUMINANCE16 is stored as 8-bit
-    // which is bad news for 10-bit pixel formats
-    // because that leaves us with 2-bit pixels:
-    bool supports_16bit_textures_;
 
     TFragmentShader builtinShader_;
     std::map<TPixelFormatId, TFragmentShader> shaders_;
@@ -580,12 +572,6 @@ namespace yae
   calculateEdges(std::deque<TEdge> & edges,
                  GLsizei edgeSize,
                  GLsizei textureEdgeMax);
-
-  //----------------------------------------------------------------
-  // getTextureEdgeMax
-  //
-  extern GLsizei
-  getTextureEdgeMax();
 
   //----------------------------------------------------------------
   // TLegacyCanvas
@@ -681,12 +667,6 @@ namespace yae
                            double opacity = 1.0) const
 
     { renderer_->paintImage(x, y, w_max, h_max, opacity); }
-
-    // if 16-bit textures are not supported
-    // then the reader should convert to 8-bit
-    // before sending frames to the canvas:
-    inline bool supports_16bit_textures() const
-    { return legacy_->supports_16bit_textures(); }
 
     // helper, selects a renderer based on image size,
     // then calls adjust_pixel_format_for_opengl:
