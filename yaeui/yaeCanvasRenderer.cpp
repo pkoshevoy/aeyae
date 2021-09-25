@@ -2865,10 +2865,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // getTextureEdgeMax
+  // get_max_texture_2d
   //
-  static GLsizei
-  getTextureEdgeMax()
+  GLsizei
+  get_max_texture_2d()
   {
     static GLsizei edgeMax = 64;
 
@@ -2906,74 +2906,20 @@ namespace yae
       }
     }
 
-    yae_dlog("GL_RGBA 2D texture size max: %i x %i", edgeMax, edgeMax);
+    yae_ilog("GL_RGBA 2D texture size max: %i x %i", edgeMax, edgeMax);
     return edgeMax;
   }
 
   //----------------------------------------------------------------
-  // CheckLuminance16
+  // get_supports_texture_rectangle
   //
-  struct CheckLuminance16
+  bool
+  get_supports_texture_rectangle()
   {
-    bool supported_;
-
-    CheckLuminance16():
-      supported_(false)
-    {
-      // check if 16-bit textures are supported:
-      YAE_OPENGL_HERE();
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-
-      GLuint tex_id = 0;
-      YAE_OGL_11(glGenTextures(1, &tex_id));
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, tex_id));
-
-      if (YAE_OGL_11(glIsTexture(tex_id)))
-      {
-        TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
-        std::vector<uint16_t> data;
-        uint32_t edge_max = getTextureEdgeMax();
-        data.assign(edge_max * edge_max, 0xFF);
-
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 2));
-        yae_assert_gl_no_error();
-
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH, edge_max));
-        yae_assert_gl_no_error();
-
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_PIXELS, 0));
-        yae_assert_gl_no_error();
-
-        YAE_OGL_11(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
-        yae_assert_gl_no_error();
-
-        YAE_OGL_11(glTexImage2D(GL_TEXTURE_2D,
-                                0, // mipmap level
-                                GL_LUMINANCE16,
-                                edge_max,
-                                edge_max,
-                                0, // border width
-                                GL_LUMINANCE,
-                                GL_UNSIGNED_SHORT,
-                                &data[0]));
-        yae_assert_gl_no_error();
-
-        data.assign(edge_max * edge_max, 0x00);
-        YAE_OGL_11(glGetTexImage(GL_TEXTURE_2D,
-                                 0, // level
-                                 GL_LUMINANCE,
-                                 GL_UNSIGNED_SHORT,
-                                 &data[0]));
-        yae_assert_gl_no_error();
-
-        supported_ = (data[0] == 0xFF);
-        glDeleteTextures(1, &tex_id);
-      }
-      YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-      yae_dlog("GL_LUMINANCE16: %s", supported_ ? "yes" : "no");
-    }
-  };
+    static bool texture_rectangle =
+      yae_is_opengl_extension_supported("GL_ARB_texture_rectangle");
+    return texture_rectangle;
+  }
 
   //----------------------------------------------------------------
   // get_supports_luminance16
@@ -2981,8 +2927,10 @@ namespace yae
   bool
   get_supports_luminance16()
   {
-    static CheckLuminance16 luminance16;
-    return luminance16.supported_;
+    // don't really know how to check for GL_LUMINANCE16 support reliably
+    // ... glTexImage2D followed by glGetTexImage didn't work
+    return (get_supports_texture_rectangle() &&
+            get_max_texture_2d() > 2048);
   }
 
   //----------------------------------------------------------------
@@ -3016,7 +2964,7 @@ namespace yae
 
     // avoid creating excessively oversized tiles:
     static const GLsizei textureEdgeMax =
-      std::min<GLsizei>(4096, std::max<GLsizei>(64, getTextureEdgeMax() / 2));
+      std::min<GLsizei>(4096, std::max<GLsizei>(64, get_max_texture_2d() / 2));
 
     // take the new frame:
     bool colorSpaceOrRangeChanged = false;
@@ -3509,7 +3457,7 @@ namespace yae
       // frames with width/height in excess of this value will be processed
       // using the legacy canvas renderer, which cuts frames into tiles
       // of supported size and renders them seamlessly:
-      unsigned int maxTexSize = getTextureEdgeMax();
+      unsigned int maxTexSize = get_max_texture_2d();
 
       if (renderer_ == modern_)
       {

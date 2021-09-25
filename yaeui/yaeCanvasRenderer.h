@@ -419,6 +419,15 @@ namespace yae
     GLint shouldSwapBytes_[4];
   };
 
+  //----------------------------------------------------------------
+  // get_max_texture_2d
+  //
+  YAEUI_API GLsizei get_max_texture_2d();
+
+  //----------------------------------------------------------------
+  // get_supports_texture_rectangle
+  //
+  YAEUI_API bool get_supports_texture_rectangle();
 
   //----------------------------------------------------------------
   // get_supports_luminance16
