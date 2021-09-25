@@ -132,7 +132,9 @@ namespace yae
       double x = src_rgb_cdm2[i] * rescale;
       double t = std::fabs(x);
       double s = std::pow(t, gamma_inv) * k;
-      s = std::min(1.0, std::max(0.0, x * (s / t)));
+      s = x * (s / t);
+      s = std::min(1.0, s);
+      s = std::max(0.0, s);
       dst_rgb_cdm2[i] = s * dst_dynamic_range.max_cll_;
     }
   }
