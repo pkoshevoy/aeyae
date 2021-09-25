@@ -9,12 +9,6 @@
 #ifndef YAE_FFMPEG_UTILS_H_
 #define YAE_FFMPEG_UTILS_H_
 
-// aeyae:
-#include "../api/yae_api.h"
-#include "../api/yae_log.h"
-#include "../api/yae_message_carrier_interface.h"
-#include "../video/yae_video.h"
-
 // standard C++ library:
 #include <string>
 #include <iostream>
@@ -30,6 +24,12 @@ extern "C"
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 }
+
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_log.h"
+#include "yae/api/yae_message_carrier_interface.h"
+#include "yae/video/yae_video.h"
 
 
 //----------------------------------------------------------------
@@ -411,82 +411,6 @@ namespace yae
   YAE_API AVPixelFormat
   sw_pix_fmt(const ::AVFrame & frame);
 
-
-  //----------------------------------------------------------------
-  // is_nv12
-  //
-  inline bool is_nv12(const AVPixFmtDescriptor & desc)
-  {
-    return (desc.log2_chroma_w == 1 &&
-            desc.log2_chroma_h == 1 &&
-            desc.comp[0].plane == 0 &&
-            desc.comp[1].plane == 1 &&
-            desc.comp[2].plane == 1);
-  }
-
-  //----------------------------------------------------------------
-  // is_yuv420p
-  //
-  inline bool is_yuv420p(const AVPixFmtDescriptor & desc)
-  {
-    return (desc.log2_chroma_w == 1 &&
-            desc.log2_chroma_h == 1 &&
-            desc.comp[0].plane == 0 &&
-            desc.comp[1].plane == 1 &&
-            desc.comp[2].plane == 2);
-  }
-
-  //----------------------------------------------------------------
-  // is_yuv422p
-  //
-  inline bool is_yuv422p(const AVPixFmtDescriptor & desc)
-  {
-    return (desc.log2_chroma_w == 1 &&
-            desc.log2_chroma_h == 0 &&
-            desc.comp[0].plane == 0 &&
-            desc.comp[1].plane == 1 &&
-            desc.comp[2].plane == 2);
-  }
-
-  //----------------------------------------------------------------
-  // is_yuv444p
-  //
-  inline bool is_yuv444p(const AVPixFmtDescriptor & desc)
-  {
-    return (desc.log2_chroma_w == 0 &&
-            desc.log2_chroma_h == 0 &&
-            desc.comp[0].plane == 0 &&
-            desc.comp[1].plane == 1 &&
-            desc.comp[2].plane == 2);
-  }
-
-  //----------------------------------------------------------------
-  // is_ycbcr
-  //
-  inline bool is_ycbcr(const AVPixFmtDescriptor & desc)
-  {
-    return ((desc.flags & AV_PIX_FMT_FLAG_RGB) == 0 &&
-            desc.nb_components > 2);
-  }
-
-  //----------------------------------------------------------------
-  // is_rgb
-  //
-  inline bool is_rgb(const AVPixFmtDescriptor & desc)
-  {
-    return ((desc.flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB &&
-            desc.nb_components >= 3 &&
-            desc.log2_chroma_w == 0 &&
-            desc.log2_chroma_h == 0);
-  }
-
-  //----------------------------------------------------------------
-  // has_alpha
-  //
-  inline bool has_alpha(const AVPixFmtDescriptor & desc)
-  {
-    return (desc.flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
-  }
 
   //----------------------------------------------------------------
   // is_less_than

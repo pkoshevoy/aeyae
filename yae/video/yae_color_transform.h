@@ -207,7 +207,21 @@ namespace yae
                                        src_dynamic_range,
                                        rgb.begin(),
                                        rgb_cdm2.begin());
+#ifdef YAE_DEBUG_COLOR_TRANSFORM
+            v4x1_t src_cdm2 = rgb_cdm2;
+#endif
 
+            // transform RGB to XYZ to RGB:
+            rgb_cdm2 = rgb_to_xyz_to_rgb * rgb_cdm2;
+
+#ifndef NDEBUG
+            // check for NaN:
+            YAE_ASSERT(rgb_cdm2[3] == rgb_cdm2[3]);
+#endif
+
+#ifdef YAE_DEBUG_COLOR_TRANSFORM
+            v4x1_t dst_cdm2 = rgb_cdm2;
+#endif
             if (tone_map)
             {
               tone_map->apply(src_dynamic_range,
@@ -222,12 +236,16 @@ namespace yae
             YAE_ASSERT(rgb_cdm2[1] == rgb_cdm2[1]);
             YAE_ASSERT(rgb_cdm2[2] == rgb_cdm2[2]);
 #endif
-            // transform RGB to XYZ to RGB:
-            rgb_cdm2 = rgb_to_xyz_to_rgb * rgb_cdm2;
-#ifndef NDEBUG
-            // check for NaN:
-            YAE_ASSERT(rgb_cdm2[3] == rgb_cdm2[3]);
+
+#ifdef YAE_DEBUG_COLOR_TRANSFORM
+            yae_dlog("RGB(%.2f, %.2f, %.2f) to "
+                     "RGB(%.2f, %.2f, %.2f) to "
+                     "RGB(%.2f, %.2f, %.2f)",
+                     src_cdm2[0], src_cdm2[1], src_cdm2[2],
+                     dst_cdm2[0], dst_cdm2[1], dst_cdm2[2],
+                     rgb_cdm2[0], rgb_cdm2[1], rgb_cdm2[2]);
 #endif
+
             // transform to output non-linear R'G'B':
             dst_csp.transfer_.oetf_rgb(dst_csp,
                                        dst_dynamic_range,

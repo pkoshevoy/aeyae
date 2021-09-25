@@ -895,32 +895,72 @@ namespace yae
         // check for content light level:
         {
           const AVFrameSideData * side_data = NULL;
+#if 0
+          if ((side_data = av_frame_get_side_data
+               (&output, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA)))
+          {
+            const AVMasteringDisplayMetadata * metadata =
+              (const AVMasteringDisplayMetadata *)(side_data->data);
+
+#ifndef NDEBUG
+            if (metadata->has_primaries)
+            {
+              yae_dlog("primaries xyY: "
+                       "W (%.4f, %.4f), "
+                       "R (%.3f, %.3f), "
+                       "G (%.3f, %.3f), "
+                       "B (%.3f, %.3f)",
+                       av_q2d(metadata->white_point[0]),
+                       av_q2d(metadata->white_point[1]),
+                       av_q2d(metadata->display_primaries[0][0]),
+                       av_q2d(metadata->display_primaries[0][1]),
+                       av_q2d(metadata->display_primaries[1][0]),
+                       av_q2d(metadata->display_primaries[1][1]),
+                       av_q2d(metadata->display_primaries[2][0]),
+                       av_q2d(metadata->display_primaries[2][1]));
+            }
+
+            if (metadata->has_luminance)
+            {
+              yae_dlog("min luminance: %f cd/m2, max luminance %f cd/m2",
+                       av_q2d(metadata->min_luminance),
+                       av_q2d(metadata->max_luminance));
+            }
+#endif
+
+            if (metadata->has_luminance)
+            {
+              double max_luminance = av_q2d(metadata->max_luminance);
+              if (max_luminance > 100.0)
+              {
+                vf.traits_.dynamic_range_.max_cll_ = max_luminance;
+              }
+            }
+          }
+#endif
+#if 1
           if ((side_data = av_frame_get_side_data
                (&output, AV_FRAME_DATA_CONTENT_LIGHT_LEVEL)))
           {
             const AVContentLightMetadata * metadata =
               (const AVContentLightMetadata *)(side_data->data);
 
-            if (metadata->MaxCLL > 100)
+#ifndef NDEBUG
+            yae_dlog("MaxFALL: %u cd/m2, MaxCLL: %u cd/m2",
+                     metadata->MaxFALL,
+                     metadata->MaxCLL);
+#endif
+            if (metadata->MaxCLL > 0)
             {
-              vf.traits_.max_cll_ = metadata->MaxCLL;
+              vf.traits_.dynamic_range_.max_cll_ = metadata->MaxCLL;
             }
-          }
 
-          if ((side_data = av_frame_get_side_data
-               (&output, AV_FRAME_DATA_MASTERING_DISPLAY_METADATA)))
-          {
-            const AVMasteringDisplayMetadata * metadata =
-              (const AVMasteringDisplayMetadata *)(side_data->data);
-            if (metadata->has_luminance)
+            if (metadata->MaxFALL > 0)
             {
-              double max_luminance = av_q2d(metadata->max_luminance);
-              if (max_luminance > 100.0)
-              {
-                vf.traits_.max_cll_ = max_luminance;
-              }
+              vf.traits_.dynamic_range_.max_fall_ = metadata->MaxFALL;
             }
           }
+#endif
         }
 
         // use AVFrame directly:
@@ -1057,12 +1097,23 @@ namespace yae
     if (t.av_trc_ == AVCOL_TRC_SMPTE2084)
     {
       // HDR10, DolbyVision:
-      t.max_cll_ = 10000.0; // cd/m2
+      t.dynamic_range_.Lw_ = 10000.0; // cd/m2
+      t.dynamic_range_.max_cll_ = 4000.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 380.0; // cd/m2
     }
     else if (t.av_trc_ == AVCOL_TRC_ARIB_STD_B67)
     {
       // HLG:
-      t.max_cll_ = 1000.0; // cd/m2
+      t.dynamic_range_.Lw_ = 1000.0; // cd/m2
+      t.dynamic_range_.max_cll_ = 1000.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 380.0; // cd/m2
+    }
+    else
+    {
+      // SDR?
+      t.dynamic_range_.Lw_ = 100.0; // cd/m2
+      t.dynamic_range_.max_cll_ = 100.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 80.0; // cd/m2
     }
 
     //! pixel format:

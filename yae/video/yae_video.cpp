@@ -212,22 +212,25 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTraits::VideoTraits
   //
-  VideoTraits::VideoTraits()
-  {
-    memset(this, 0, sizeof(VideoTraits));
-
-    // default to SDR:
-    max_cll_ = 100.0;
-
-    av_fmt_ = AV_PIX_FMT_NONE;
-    av_rng_ = AVCOL_RANGE_UNSPECIFIED;
-    av_pri_ = AVCOL_PRI_UNSPECIFIED;
-    av_trc_ = AVCOL_TRC_UNSPECIFIED;
-    av_csp_ = AVCOL_SPC_UNSPECIFIED;
-
-    pixelFormat_ = kInvalidPixelFormat;
-    pixelAspectRatio_ = 1.0;
-  }
+  VideoTraits::VideoTraits():
+    frameRate_(0.0),
+    av_fmt_(AV_PIX_FMT_NONE),
+    av_csp_(AVCOL_SPC_UNSPECIFIED),
+    av_pri_(AVCOL_PRI_UNSPECIFIED),
+    av_trc_(AVCOL_TRC_UNSPECIFIED),
+    av_rng_(AVCOL_RANGE_UNSPECIFIED),
+    colorspace_(NULL),
+    pixelFormat_(kInvalidPixelFormat),
+    encodedWidth_(0),
+    encodedHeight_(0),
+    offsetTop_(0),
+    offsetLeft_(0),
+    visibleWidth_(0),
+    visibleHeight_(0),
+    pixelAspectRatio_(1.0),
+    cameraRotation_(0),
+    isUpsideDown_(false)
+  {}
 
   //----------------------------------------------------------------
   // VideoTraits::txt_summary
@@ -346,7 +349,7 @@ namespace yae
   bool
   VideoTraits::sameColorSpaceAndRange(const VideoTraits & vt) const
   {
-    return (max_cll_ == vt.max_cll_ &&
+    return (dynamic_range_ == vt.dynamic_range_ &&
             av_rng_ == vt.av_rng_ &&
             av_pri_ == vt.av_pri_ &&
             av_trc_ == vt.av_trc_ &&

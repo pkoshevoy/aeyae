@@ -21,12 +21,87 @@ extern "C"
 
 // aeyae:
 #include "yae/api/yae_api.h"
-#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/utils/yae_linear_algebra.h"
 
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // is_nv12
+  //
+  inline bool is_nv12(const AVPixFmtDescriptor & desc)
+  {
+    return (desc.log2_chroma_w == 1 &&
+            desc.log2_chroma_h == 1 &&
+            desc.comp[0].plane == 0 &&
+            desc.comp[1].plane == 1 &&
+            desc.comp[2].plane == 1);
+  }
+
+  //----------------------------------------------------------------
+  // is_yuv420p
+  //
+  inline bool is_yuv420p(const AVPixFmtDescriptor & desc)
+  {
+    return (desc.log2_chroma_w == 1 &&
+            desc.log2_chroma_h == 1 &&
+            desc.comp[0].plane == 0 &&
+            desc.comp[1].plane == 1 &&
+            desc.comp[2].plane == 2);
+  }
+
+  //----------------------------------------------------------------
+  // is_yuv422p
+  //
+  inline bool is_yuv422p(const AVPixFmtDescriptor & desc)
+  {
+    return (desc.log2_chroma_w == 1 &&
+            desc.log2_chroma_h == 0 &&
+            desc.comp[0].plane == 0 &&
+            desc.comp[1].plane == 1 &&
+            desc.comp[2].plane == 2);
+  }
+
+  //----------------------------------------------------------------
+  // is_yuv444p
+  //
+  inline bool is_yuv444p(const AVPixFmtDescriptor & desc)
+  {
+    return (desc.log2_chroma_w == 0 &&
+            desc.log2_chroma_h == 0 &&
+            desc.comp[0].plane == 0 &&
+            desc.comp[1].plane == 1 &&
+            desc.comp[2].plane == 2);
+  }
+
+  //----------------------------------------------------------------
+  // is_ycbcr
+  //
+  inline bool is_ycbcr(const AVPixFmtDescriptor & desc)
+  {
+    return ((desc.flags & AV_PIX_FMT_FLAG_RGB) == 0 &&
+            desc.nb_components > 2);
+  }
+
+  //----------------------------------------------------------------
+  // is_rgb
+  //
+  inline bool is_rgb(const AVPixFmtDescriptor & desc)
+  {
+    return ((desc.flags & AV_PIX_FMT_FLAG_RGB) == AV_PIX_FMT_FLAG_RGB &&
+            desc.nb_components >= 3 &&
+            desc.log2_chroma_w == 0 &&
+            desc.log2_chroma_h == 0);
+  }
+
+  //----------------------------------------------------------------
+  // has_alpha
+  //
+  inline bool has_alpha(const AVPixFmtDescriptor & desc)
+  {
+    return (desc.flags & AV_PIX_FMT_FLAG_ALPHA) == AV_PIX_FMT_FLAG_ALPHA;
+  }
 
   //----------------------------------------------------------------
   // xyY_to_XYZ
@@ -265,23 +340,38 @@ namespace yae
     struct YAE_API DynamicRange
     {
       DynamicRange(double cdm2_nominal_peak_luminance_of_the_display = 100.0,
-                   double cdm2_display_luminance_for_black = 0.0044):
+                   double cdm2_display_luminance_for_black = 0.0044,
+                   double max_fall = 33.0,
+                   double max_cll = 100.0):
         Lw_(cdm2_nominal_peak_luminance_of_the_display),
         Lb_(cdm2_display_luminance_for_black),
         gamma_(yae::get_hlg_gamma(Lw_)),
-        beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_))
+        beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_)),
+        max_fall_(max_fall),
+        max_cll_(max_cll)
       {}
 
+      inline bool operator == (const DynamicRange & r) const
+      {
+        return (Lw_ == r.Lw_ &&
+                Lb_ == r.Lb_ &&
+                max_fall_ == r.max_fall_ &&
+                max_cll_ == r.max_cll_);
+      }
+
       // nominal peak luminance of the scene/display in cd/m2:
-      const double Lw_;
+      double Lw_;
 
       // nominal black luminance of the scene/display in cd/m2:
-      const double Lb_;
+      double Lb_;
 
       // precomputed constants for HLG EOTF, OETF...
       // see Rec. ITU-R BT.2100-2
-      const double gamma_;
-      const double beta_;
+      double gamma_;
+      double beta_;
+
+      double max_fall_;
+      double max_cll_;
     };
 
     //----------------------------------------------------------------

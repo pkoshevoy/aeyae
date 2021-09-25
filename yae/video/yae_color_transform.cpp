@@ -61,9 +61,14 @@ namespace yae
       out = 0.95 + 0.05 * (t - 5.0) / 5.0;
     }
 
+    const double src_peak =
+      src_dynamic_range.max_cll_ ?
+      src_dynamic_range.max_cll_ :
+      src_dynamic_range.Lw_;
+
     const double rescale =
       (src == 0.0) ? 0.0 :
-      (out / src) * (dst_dynamic_range.Lw_ / src_dynamic_range.Lw_);
+      (out / src) * (dst_dynamic_range.Lw_ / src_peak);
 
     dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
     dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
@@ -80,32 +85,24 @@ namespace yae
                     const double * src_rgb_cdm2,
                     double * dst_rgb_cdm2) const
   {
-    static const double knee = 10; // cd/m2
-    static const double n = 5;
-    static const double m = -0.5;
     static const double e = 2.7182818284590452354;
+    static const double m = -0.5;
+    static const double n = e;
     static const double em = std::pow(e, m);
     static const double en = std::pow(e, n);
     static const double en_inv = 1.0 / en;
 
-    // pick the brightest component:
-    const double src = std::max(std::max(src_rgb_cdm2[0], src_rgb_cdm2[1]),
-                                src_rgb_cdm2[2]);
-    double out = src;
+    const double rescale = 1.0 / src_dynamic_range.max_fall_;
 
-    if (knee <= src)
+    for (int i = 0; i < 3; i++)
     {
-      out = knee +
-        (n + std::log(en_inv +
-                      (em - en_inv) * (src - knee) /
-                      src_dynamic_range.Lw_)) *
-        (dst_dynamic_range.Lw_ - knee) / (n + m);
-    }
+      double x = src_rgb_cdm2[i] * rescale;
+      double t = std::fabs(x);
+      double s = (n + std::log(en_inv + (em - en_inv) * t)) / (n + m);
 
-    const double rescale = (src == 0.0) ? 0.0 : (out / src);
-    dst_rgb_cdm2[0] = src_rgb_cdm2[0] * rescale;
-    dst_rgb_cdm2[1] = src_rgb_cdm2[1] * rescale;
-    dst_rgb_cdm2[2] = src_rgb_cdm2[2] * rescale;
+      s = std::min(1.0, std::max(0.0, x * (s / t)));
+      dst_rgb_cdm2[i] = s * dst_dynamic_range.max_cll_;
+    }
   }
 
 }

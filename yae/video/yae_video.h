@@ -29,18 +29,18 @@ extern "C"
 #endif
 
 // aeyae:
-#include "yae_pixel_formats.h"
-#include "../api/yae_api.h"
-#include "../utils/yae_linear_algebra.h"
-#include "../utils/yae_time.h"
-#include "../utils/yae_utils.h"
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_linear_algebra.h"
+#include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_colorspace.h"
+#include "yae/video/yae_pixel_formats.h"
 
 
 namespace yae
 {
   // forward declarations:
   struct IReader;
-  struct Colorspace;
 
 
   //----------------------------------------------------------------
@@ -173,8 +173,8 @@ namespace yae
     //! frame rate:
     double frameRate_;
 
-    // cd/m2 (for HDR), etc... may change at runtime:
-    double max_cll_;
+    // for HDR, etc... may change at runtime:
+    Colorspace::DynamicRange dynamic_range_;
 
     //! ffmpeg pixel format:
     AVPixelFormat av_fmt_;

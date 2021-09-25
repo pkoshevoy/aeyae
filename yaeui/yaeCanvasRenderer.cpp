@@ -1488,6 +1488,8 @@ namespace yae
     clut_(5),
     clut_tex_id_(0)
   {
+    clut_input_.av_fmt_ = AV_PIX_FMT_NONE;
+
     typedef std::map<TPixelFormatId, const TFragmentShaderProgram *> TProgs;
     for (TProgs::const_iterator i = shaders.lut_.begin();
          i != shaders.lut_.end(); ++i)
@@ -2096,10 +2098,8 @@ namespace yae
       static const Colorspace::Format dst_format(AV_PIX_FMT_RGB24,
                                                  AVCOL_RANGE_JPEG);
 
-      Colorspace::DynamicRange src_dynamic_range(vtts.max_cll_);
-      Colorspace::DynamicRange dst_dynamic_range(100.0); // SDR
-
-      const double peak_ratio = src_dynamic_range.Lw_ / dst_dynamic_range.Lw_;
+      static const Colorspace::DynamicRange dst_dynamic_range(100.0); // SDR
+      const double peak_ratio = vtts.dynamic_range_.Lw_ / dst_dynamic_range.Lw_;
 
       // ToneMapPiecewise tone_map;
       ToneMapLog tone_map;
@@ -2107,7 +2107,7 @@ namespace yae
                  *dst_colorspace,
                  src_format,
                  dst_format,
-                 src_dynamic_range,
+                 vtts.dynamic_range_,
                  dst_dynamic_range,
                  (peak_ratio < 1.5) ? NULL : &tone_map);
 
