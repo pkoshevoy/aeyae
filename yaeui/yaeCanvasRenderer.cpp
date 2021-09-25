@@ -2102,7 +2102,8 @@ namespace yae
       const double peak_ratio = vtts.dynamic_range_.Lw_ / dst_dynamic_range.Lw_;
 
       // ToneMapPiecewise tone_map;
-      ToneMapLog tone_map;
+      // ToneMapLog tone_map;
+      ToneMapGamma tone_map;
       clut_.fill(*vtts.colorspace_,
                  *dst_colorspace,
                  src_format,

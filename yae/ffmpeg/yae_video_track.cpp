@@ -1099,21 +1099,21 @@ namespace yae
       // HDR10, DolbyVision:
       t.dynamic_range_.Lw_ = 10000.0; // cd/m2
       t.dynamic_range_.max_cll_ = 4000.0; // cd/m2
-      t.dynamic_range_.max_fall_ = 380.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 400.0; // cd/m2
     }
     else if (t.av_trc_ == AVCOL_TRC_ARIB_STD_B67)
     {
       // HLG:
       t.dynamic_range_.Lw_ = 1000.0; // cd/m2
       t.dynamic_range_.max_cll_ = 1000.0; // cd/m2
-      t.dynamic_range_.max_fall_ = 380.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 400.0; // cd/m2
     }
     else
     {
       // SDR?
       t.dynamic_range_.Lw_ = 100.0; // cd/m2
       t.dynamic_range_.max_cll_ = 100.0; // cd/m2
-      t.dynamic_range_.max_fall_ = 80.0; // cd/m2
+      t.dynamic_range_.max_fall_ = 33.0; // cd/m2
     }
 
     //! pixel format:

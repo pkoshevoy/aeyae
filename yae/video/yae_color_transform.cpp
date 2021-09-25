@@ -99,7 +99,39 @@ namespace yae
       double x = src_rgb_cdm2[i] * rescale;
       double t = std::fabs(x);
       double s = (n + std::log(en_inv + (em - en_inv) * t)) / (n + m);
+      s = std::min(1.0, std::max(0.0, x * (s / t)));
+      dst_rgb_cdm2[i] = s * dst_dynamic_range.max_cll_;
+    }
+  }
 
+
+  //----------------------------------------------------------------
+  // ToneMapGamma::apply
+  //
+  void
+  ToneMapGamma::apply(const Colorspace::DynamicRange & src_dynamic_range,
+                      const Colorspace::DynamicRange & dst_dynamic_range,
+                      const double * src_rgb_cdm2,
+                      double * dst_rgb_cdm2) const
+  {
+#if 1
+    const double k = 1.0 + ((src_dynamic_range.max_cll_ * 2.0) /
+                            (src_dynamic_range.max_cll_ +
+                             src_dynamic_range.max_fall_));
+#else
+    const double k = 2.5;
+#endif
+    const double rescale = 1.0 / (src_dynamic_range.max_cll_ * k);
+    const double gamma_inv = ((dst_dynamic_range.max_cll_ +
+                               src_dynamic_range.max_cll_) /
+                              (src_dynamic_range.max_cll_ +
+                               src_dynamic_range.max_cll_));
+
+    for (int i = 0; i < 3; i++)
+    {
+      double x = src_rgb_cdm2[i] * rescale;
+      double t = std::fabs(x);
+      double s = std::pow(t, gamma_inv) * k;
       s = std::min(1.0, std::max(0.0, x * (s / t)));
       dst_rgb_cdm2[i] = s * dst_dynamic_range.max_cll_;
     }

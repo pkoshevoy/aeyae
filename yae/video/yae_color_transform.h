@@ -25,6 +25,12 @@ extern "C"
 #include "yae/utils/yae_linear_algebra.h"
 #include "yae/video/yae_colorspace.h"
 
+//----------------------------------------------------------------
+// YAE_DEBUG_COLOR_TRANSFORM
+//
+#ifndef NDEBUG
+#define YAE_DEBUG_COLOR_TRANSFORM
+#endif
 
 namespace yae
 {
@@ -57,6 +63,18 @@ namespace yae
   // ToneMapLog
   //
   struct YAE_API ToneMapLog : ToneMap
+  {
+    // virtual:
+    void apply(const Colorspace::DynamicRange & src_dynamic_range,
+               const Colorspace::DynamicRange & dst_dynamic_range,
+               const double * src_rgb_cdm2,
+               double * dst_rgb_cdm2) const;
+  };
+
+  //----------------------------------------------------------------
+  // ToneMapGamma
+  //
+  struct YAE_API ToneMapGamma : ToneMap
   {
     // virtual:
     void apply(const Colorspace::DynamicRange & src_dynamic_range,
