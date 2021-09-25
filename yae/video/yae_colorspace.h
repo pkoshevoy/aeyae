@@ -170,7 +170,7 @@ namespace yae
   //
   // http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
   //
-  m3x3_t
+  YAE_API m3x3_t
   get_xyz_to_xyz(// CIE XYZ source reference white point:
                  const v3x1_t & w_src_xyz,
                  // CIE XYZ destination reference white point:
@@ -494,7 +494,7 @@ namespace yae
   //----------------------------------------------------------------
   // get_transfer_func
   //
-  const Colorspace::TransferFunc &
+  YAE_API const Colorspace::TransferFunc &
   get_transfer_func(AVColorTransferCharacteristic av_trc);
 
 }
