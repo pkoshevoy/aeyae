@@ -653,20 +653,29 @@ namespace yae
       const AvPkt & pkt = *packetPtr;
       const AVPacket & packet = pkt.get();
 
-      TTime dts(int64_t(stream_->time_base.num) * packet.dts,
-                uint64_t(stream_->time_base.den));
-
       double rate = 0.0;
 
       // this can be called on the main thread, when seeking:
       {
         boost::lock_guard<boost::mutex> lock(packetRateMutex_);
-        if (!packetRateEstimator_.is_monotonically_increasing(dts))
+
+        if (packet.dts != AV_NOPTS_VALUE)
         {
-          packetRateEstimator_.clear();
+          TTime dts(int64_t(stream_->time_base.num) * packet.dts,
+                    uint64_t(stream_->time_base.den));
+
+          if (!packetRateEstimator_.is_monotonically_increasing(dts))
+          {
+            packetRateEstimator_.clear();
+          }
+
+          packetRateEstimator_.push(dts);
+        }
+        else
+        {
+          packetRateEstimator_.push_same_as_last();
         }
 
-        packetRateEstimator_.push(dts);
         rate = packetRateEstimator_.window_avg();
       }
 

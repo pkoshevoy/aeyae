@@ -716,6 +716,14 @@ namespace yae
 
     void push(const TTime & dts);
 
+    inline void push_same_as_last()
+    {
+      if (!dts_.empty())
+      {
+        push(dts_.back());
+      }
+    }
+
     // average fps calculated from a sliding window buffer of DTS:
     double window_avg() const;
 
