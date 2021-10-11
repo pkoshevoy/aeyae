@@ -284,7 +284,7 @@ namespace yae
   // Track::Track
   //
   Track::Track(AVFormatContext * context, AVStream * stream):
-    packetRateEstimator_(600),
+    packetRateEstimator_(1536),
     thread_(this),
     context_(context),
     stream_(stream),
@@ -308,7 +308,7 @@ namespace yae
   // Track::Track
   //
   Track::Track(Track * track):
-    packetRateEstimator_(600),
+    packetRateEstimator_(1536),
     packetQueue_(track->packetQueue_.getMaxSize()),
     thread_(this),
     context_(NULL),
