@@ -682,15 +682,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   }
 
   //----------------------------------------------------------------
-  // makeCcPkt
+  // CaptionsDecoder::decode
   //
-  static bool
-  makeCcPkt(const AVFrame & frame,
-            unsigned char dataChannel[2],
-            std::map<unsigned char, AvPkt> & pkt)
+  void
+  CaptionsDecoder::decode(const AVRational & timeBase,
+                          const AVFrame & frame,
+                          QueueWaitMgr * terminator)
   {
-    int found = 0;
-
     for (int i = 0; i < frame.nb_side_data; i++)
     {
       const AVFrameSideData * s = frame.side_data[i];
@@ -699,40 +697,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         continue;
       }
 
-      found++;
-
-      if (found > 1)
-      {
-        YAE_ASSERT(false);
-        continue;
-      }
-
       // s->data consists of CEA-708 cc_data_pkt's
       const cc_data_pkt_t * cc_data_pkt = (const cc_data_pkt_t *)(s->data);
       const cc_data_pkt_t * cc_data_end = (const cc_data_pkt_t *)(s->data +
                                                                   s->size);
+      std::map<unsigned char, AvPkt> cc;
       split_cc_packets_by_channel(frame.pts,
                                   cc_data_pkt,
                                   cc_data_end,
-                                  dataChannel,
-                                  pkt);
+                                  dataChannel_,
+                                  cc);
+
+      decode(frame.pts, timeBase, cc, terminator);
     }
-
-    YAE_ASSERT(found <= 1);
-    return !pkt.empty();
-  }
-
-  //----------------------------------------------------------------
-  // CaptionsDecoder::decode
-  //
-  void
-  CaptionsDecoder::decode(const AVRational & timeBase,
-                          const AVFrame & frame,
-                          QueueWaitMgr * terminator)
-  {
-    std::map<unsigned char, AvPkt> cc;
-    makeCcPkt(frame, dataChannel_, cc);
-    decode(frame.pts, timeBase, cc, terminator);
   }
 
   //----------------------------------------------------------------
