@@ -616,31 +616,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // get_hlg_gamma
-  //
-  double
-  get_hlg_gamma(double Lw)
-  {
-    static const double k = 1.111;
-    static const double log_2 = std::log(2.0);
-
-    return
-      (400.0 <= Lw && Lw <= 2000.0) ?
-      (1.2 + 0.42 * std::log10(Lw / 1000.0)) :
-      (1.2 * std::pow(k, std::log(Lw / 1000.0) / log_2));
-  }
-
-  //----------------------------------------------------------------
-  // get_hlg_beta
-  //
-  double
-  get_hlg_beta(double Lw, double Lb, double gamma)
-  {
-    return sqrt(3.0 * std::pow(Lb / Lw, 1.0 / gamma));
-  }
-
-
-  //----------------------------------------------------------------
   // hlg::TransferFunc
   //
   // aka ARIB STD-B67
@@ -657,10 +632,64 @@ namespace yae
     static const double b = 1.0 - 4.0 * a;
     static const double c = 0.5 - a * std::log(4.0 * a);
 
+    //----------------------------------------------------------------
+    // get_gamma
+    //
+    double
+    get_gamma(double Lw)
+    {
+      static const double k = 1.111;
+      static const double log_2 = std::log(2.0);
+
+      return
+        (400.0 <= Lw && Lw <= 2000.0) ?
+        (1.2 + 0.42 * std::log10(Lw / 1000.0)) :
+        (1.2 * std::pow(k, std::log(Lw / 1000.0) / log_2));
+    }
+
+    //----------------------------------------------------------------
+    // get_beta
+    //
+    double
+    get_beta(double Lw, double Lb, double gamma)
+    {
+      return sqrt(3.0 * std::pow(Lb / Lw, 1.0 / gamma));
+    }
+
+    //----------------------------------------------------------------
+    // oetf
+    //
+    // normalized [0, 1] linear RGB to non-linear R'G'B'
+    //
+    double
+    oetf(double v, double beta)
+    {
+      double x =
+        (v <= 1.0 / 12.0) ? sqrt(3.0 * v) :
+        a * std::log(12.0 * v - b) + c;
+      double E = std::max(0.0, (x - beta) / (1.0 - beta));
+      return E;
+    }
+
+    //----------------------------------------------------------------
+    // oetf_inv
+    //
+    double
+    oetf_inv(double E, double beta)
+    {
+      double x = std::max(0.0, (1.0 - beta) * E + beta);
+      double v =
+        (x <= 0.5) ? (x * x) / 3.0 :
+        (exp((x - c) / a) + b) / 12.0;
+      return v;
+    }
+
+    //----------------------------------------------------------------
+    // TransferFunc
+    //
     struct TransferFunc : yae::Colorspace::TransferFunc
     {
       // linear cd/m2 RGB components to non-linear encoded R'G'B'.
-      // default implementation rescales and delegates to normalized oetf:
       virtual void oetf_rgb(const Colorspace & csp,
                             const Colorspace::DynamicRange & ctx,
                             const double * rgb_cdm2,
@@ -683,32 +712,21 @@ namespace yae
         const double Bs =
           Yd_alpha_to_1_minus_gamma_over_gamma_over_alpha * rgb_cdm2[2];
 
-        rgb[0] = this->oetf(Rs, ctx.beta_);
-        rgb[1] = this->oetf(Gs, ctx.beta_);
-        rgb[2] = this->oetf(Bs, ctx.beta_);
-      }
-
-      // normalized [0, 1] linear RGB to non-linear R'G'B'
-      virtual double oetf(double v, double beta) const
-      {
-        double x =
-          (v <= 1.0 / 12.0) ? sqrt(3.0 * v) :
-          a * std::log(12.0 * v - b) + c;
-        double E = std::max(0.0, (x - beta) / (1.0 - beta));
-        return E;
+        rgb[0] = hlg::oetf(Rs, ctx.beta_);
+        rgb[1] = hlg::oetf(Gs, ctx.beta_);
+        rgb[2] = hlg::oetf(Bs, ctx.beta_);
       }
 
       // non-linear encoded R'G'B' to linear cd/m2 RGB components.
-      // default implementation delegates to normalized eotf and rescales:
       virtual void eotf_rgb(const Colorspace & csp,
                             const Colorspace::DynamicRange & ctx,
                             const double * rgb,
                             double * rgb_cdm2) const
       {
         // inv(OETF):
-        const double Rs = this->oetf_inv(clip(rgb[0], 0.0, 1.0), ctx.beta_);
-        const double Gs = this->oetf_inv(clip(rgb[1], 0.0, 1.0), ctx.beta_);
-        const double Bs = this->oetf_inv(clip(rgb[2], 0.0, 1.0), ctx.beta_);
+        const double Rs = hlg::oetf_inv(clip(rgb[0], 0.0, 1.0), ctx.beta_);
+        const double Gs = hlg::oetf_inv(clip(rgb[1], 0.0, 1.0), ctx.beta_);
+        const double Bs = hlg::oetf_inv(clip(rgb[2], 0.0, 1.0), ctx.beta_);
 
         // OOTF:
         const double Ys = (csp.kr_ * Rs +
@@ -721,15 +739,6 @@ namespace yae
         rgb_cdm2[0] = alpha_times_Ys_to_gamma_minus_1 * Rs;
         rgb_cdm2[1] = alpha_times_Ys_to_gamma_minus_1 * Gs;
         rgb_cdm2[2] = alpha_times_Ys_to_gamma_minus_1 * Bs;
-      }
-
-      inline static double oetf_inv(double E, double beta)
-      {
-        double x = std::max(0.0, (1.0 - beta) * E + beta);
-        double v =
-          (x <= 0.5) ? (x * x) / 3.0 :
-          (exp((x - c) / a) + b) / 12.0;
-        return v;
       }
     };
   }

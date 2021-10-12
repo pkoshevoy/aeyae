@@ -228,18 +228,6 @@ namespace yae
                      0.5, 0.5 * kg / (kr - 1), 0.5 * kb / (kr - 1));
   }
 
-
-  //----------------------------------------------------------------
-  // get_hlg_gamma
-  //
-  YAE_API double get_hlg_gamma(double Lw);
-
-  //----------------------------------------------------------------
-  // get_hlg_beta
-  //
-  YAE_API double get_hlg_beta(double Lw, double Lb, double gamma);
-
-
   //----------------------------------------------------------------
   // get_ycbcr_to_ypbpr
   //
@@ -281,6 +269,29 @@ namespace yae
   YAE_API bool get_ypbpr_to_ycbcr(m4x4_t & ypbpr_to_ycbcr,
                                   AVPixelFormat av_fmt,
                                   AVColorRange av_rng);
+
+  namespace hlg
+  {
+    //----------------------------------------------------------------
+    // get_gamma
+    //
+    YAE_API double get_gamma(double Lw);
+
+    //----------------------------------------------------------------
+    // get_beta
+    //
+    YAE_API double get_beta(double Lw, double Lb, double gamma);
+
+    //----------------------------------------------------------------
+    // oetf
+    //
+    YAE_API double oetf(double v, double beta);
+
+    //----------------------------------------------------------------
+    // oetf_inv
+    //
+    YAE_API double oetf_inv(double E, double beta);
+  }
 
   //----------------------------------------------------------------
   // Colorspace
@@ -345,8 +356,8 @@ namespace yae
                    double max_cll = 100.0):
         Lw_(cdm2_nominal_peak_luminance_of_the_display),
         Lb_(cdm2_display_luminance_for_black),
-        gamma_(yae::get_hlg_gamma(Lw_)),
-        beta_(yae::get_hlg_beta(Lw_, Lb_, gamma_)),
+        gamma_(yae::hlg::get_gamma(Lw_)),
+        beta_(yae::hlg::get_beta(Lw_, Lb_, gamma_)),
         max_fall_(max_fall),
         max_cll_(max_cll)
       {}
