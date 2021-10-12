@@ -376,7 +376,7 @@ namespace yae
     int err = 0;
     yae::AvBufferRef hw_device_ctx;
 
-#ifndef __APPLE__
+#if 1 // ndef __APPLE__
     int hw_config_index = 0;
     while (params.width > 640 && params.height > 360)
     {
