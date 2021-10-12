@@ -28,7 +28,7 @@ extern "C"
 //----------------------------------------------------------------
 // YAE_DEBUG_COLOR_TRANSFORM
 //
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
 #define YAE_DEBUG_COLOR_TRANSFORM
 #endif
 

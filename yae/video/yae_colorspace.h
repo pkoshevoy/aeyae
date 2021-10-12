@@ -340,7 +340,7 @@ namespace yae
     struct YAE_API DynamicRange
     {
       DynamicRange(double cdm2_nominal_peak_luminance_of_the_display = 100.0,
-                   double cdm2_display_luminance_for_black = 0.0044,
+                   double cdm2_display_luminance_for_black = 1e-6,
                    double max_fall = 33.0,
                    double max_cll = 100.0):
         Lw_(cdm2_nominal_peak_luminance_of_the_display),
@@ -370,8 +370,13 @@ namespace yae
       double gamma_;
       double beta_;
 
-      double max_fall_;
-      double max_cll_;
+      // Maximum Frame Average Light Level, indicates the maximum value
+      // of the frame average light level of the entire playback sequence:
+      double max_fall_; // cd/m2
+
+      // Maximum Content Light Level, indicates the maximum light level
+      // of any single pixel of the entire playback sequence:
+      double max_cll_; // cd/m2
     };
 
     //----------------------------------------------------------------

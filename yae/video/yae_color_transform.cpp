@@ -114,28 +114,20 @@ namespace yae
                       const double * src_rgb_cdm2,
                       double * dst_rgb_cdm2) const
   {
-#if 1
-    const double k = 1.0 + ((src_dynamic_range.max_cll_ * 2.0) /
-                            (src_dynamic_range.max_cll_ +
-                             src_dynamic_range.max_fall_));
-#else
-    const double k = 2.5;
-#endif
-    const double rescale = 1.0 / (src_dynamic_range.max_cll_ * k);
-    const double gamma_inv = ((dst_dynamic_range.max_cll_ +
-                               src_dynamic_range.max_cll_) /
-                              (src_dynamic_range.max_cll_ +
-                               src_dynamic_range.max_cll_));
+    static const double z = 1e-9;
+    const double k = 0.3;
+    const double rescale = k / src_dynamic_range.max_fall_;
+    const double gamma_inv = ((dst_dynamic_range.max_fall_ * 60.0 +
+                               src_dynamic_range.max_fall_ * 40.0 ) /
+                              (src_dynamic_range.max_fall_ * 100.0));
 
     for (int i = 0; i < 3; i++)
     {
-      double x = src_rgb_cdm2[i] * rescale;
-      double t = std::fabs(x);
-      double s = std::pow(t, gamma_inv) * k;
+      double x = (src_rgb_cdm2[i]) * rescale;
+      double t = std::fabs(x) + z;
+      double s = std::pow(t, gamma_inv);
       s = x * (s / t);
-      s = std::min(1.0, s);
-      s = std::max(0.0, s);
-      dst_rgb_cdm2[i] = s * dst_dynamic_range.max_cll_;
+      dst_rgb_cdm2[i] = s * (dst_dynamic_range.max_fall_ / k);
     }
   }
 
