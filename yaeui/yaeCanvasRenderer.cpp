@@ -2103,7 +2103,13 @@ namespace yae
 
       // ToneMapPiecewise tone_map;
       // ToneMapLog tone_map;
-      ToneMapGamma tone_map;
+      ToneMapGamma tone_map(vtts.dynamic_range_, dst_dynamic_range);
+
+      if (vtts.colorspace_->av_trc_ == AVCOL_TRC_ARIB_STD_B67)
+      {
+        tone_map.tune_for_hlg(vtts.dynamic_range_, dst_dynamic_range);
+      }
+
       clut_.fill(*vtts.colorspace_,
                  *dst_colorspace,
                  src_format,

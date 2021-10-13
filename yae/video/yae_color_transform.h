@@ -76,6 +76,18 @@ namespace yae
   //
   struct YAE_API ToneMapGamma : ToneMap
   {
+    double k_;
+    double offset_cdm2_;
+    double rescale_;
+    double gamma_inv_;
+
+    ToneMapGamma(const Colorspace::DynamicRange & src,
+                 const Colorspace::DynamicRange & dst);
+
+    // helper:
+    void tune_for_hlg(const Colorspace::DynamicRange & src,
+                      const Colorspace::DynamicRange & dst);
+
     // virtual:
     void apply(const Colorspace::DynamicRange & src_dynamic_range,
                const Colorspace::DynamicRange & dst_dynamic_range,

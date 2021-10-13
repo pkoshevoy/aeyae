@@ -106,28 +106,51 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ToneMapGamma::ToneMapGamma
+  //
+  ToneMapGamma::ToneMapGamma(const Colorspace::DynamicRange & src,
+                             const Colorspace::DynamicRange & dst):
+    k_((std::log(src.max_fall_) /
+        std::log(src.max_cll_)) * 0.41529),
+    offset_cdm2_(0),
+    rescale_(k_ / (src.max_fall_ - offset_cdm2_)),
+    gamma_inv_((dst.max_fall_ * 60.0 +
+                src.max_fall_ * 40.0 ) /
+               (src.max_fall_ * 100.0))
+  {}
+
+  //----------------------------------------------------------------
+  // ToneMapGamma::tune_for_hlg
+  //
+  void
+  ToneMapGamma::tune_for_hlg(const Colorspace::DynamicRange & src,
+                             const Colorspace::DynamicRange & dst)
+  {
+    k_ = (std::log(src.max_fall_) /
+          std::log(src.max_cll_)) * 0.3;
+    offset_cdm2_ = -10.0;
+    rescale_ = k_ / (src.max_fall_ - offset_cdm2_);
+    gamma_inv_ = ((dst.max_fall_ + src.max_fall_) /
+                  (src.max_fall_ * 2.0));
+  }
+
+  //----------------------------------------------------------------
   // ToneMapGamma::apply
   //
   void
-  ToneMapGamma::apply(const Colorspace::DynamicRange & src_dynamic_range,
-                      const Colorspace::DynamicRange & dst_dynamic_range,
+  ToneMapGamma::apply(const Colorspace::DynamicRange & src,
+                      const Colorspace::DynamicRange & dst,
                       const double * src_rgb_cdm2,
                       double * dst_rgb_cdm2) const
   {
     static const double z = 1e-9;
-    const double k = 0.3;
-    const double rescale = k / src_dynamic_range.max_fall_;
-    const double gamma_inv = ((dst_dynamic_range.max_fall_ * 60.0 +
-                               src_dynamic_range.max_fall_ * 40.0 ) /
-                              (src_dynamic_range.max_fall_ * 100.0));
-
     for (int i = 0; i < 3; i++)
     {
-      double x = (src_rgb_cdm2[i]) * rescale;
+      double x = (src_rgb_cdm2[i] - offset_cdm2_) * rescale_;
       double t = std::fabs(x) + z;
-      double s = std::pow(t, gamma_inv);
+      double s = std::pow(t, gamma_inv_);
       s = x * (s / t);
-      dst_rgb_cdm2[i] = s * (dst_dynamic_range.max_fall_ / k);
+      dst_rgb_cdm2[i] = offset_cdm2_ + s * (dst.max_fall_ / k_);
     }
   }
 
