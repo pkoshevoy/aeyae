@@ -421,7 +421,7 @@ namespace yae
       ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
     }
 
-#if 0
+#if 1
     ctx->skip_frame = AVDISCARD_DEFAULT;
     ctx->error_concealment = 3;
     ctx->err_recognition = AV_EF_CAREFUL;
@@ -438,6 +438,9 @@ namespace yae
 
     AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);
+
+    ctx->thread_count = nthreads;
+    ctx->thread_type = FF_THREAD_SLICE;
 
     err = avcodec_open2(ctx, codec, &opts);
     if (err < 0)
