@@ -400,6 +400,8 @@ namespace yae
                                      0); // flags
         if (err >= 0)
         {
+          yae_ilog("av_hwdevice_ctx_create succeeded for %s",
+                   av_hwdevice_get_type_name(hw->device_type));
           break;
         }
 
