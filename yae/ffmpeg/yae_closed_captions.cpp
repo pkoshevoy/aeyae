@@ -41,9 +41,9 @@ namespace yae
     // Data Channel 2, C2
     // Data Channel 3, XDS
     return
-      (// b0 == 0x10 || b0 == 0x11 || b0 == 0x12 || b0 == 0x13 ||
+      (b0 == 0x10 || b0 == 0x11 || b0 == 0x12 || b0 == 0x13 ||
        b0 == 0x14 || b0 == 0x15 || b0 == 0x16 || b0 == 0x17) ? 1 :
-      (// b0 == 0x18 || b0 == 0x19 || b0 == 0x1A || b0 == 0x1B ||
+      (b0 == 0x18 || b0 == 0x19 || b0 == 0x1A || b0 == 0x1B ||
        b0 == 0x1C || b0 == 0x1D || b0 == 0x1E || b0 == 0x1F) ? 2 :
       (b0 < 0x10) ? 3 : 0;
   }
@@ -377,6 +377,10 @@ namespace yae
       }
 
       b01 = byte_pair(b0, b1);
+      if (!b01)
+      {
+        continue;
+      }
 
       if (field_number == 2)
       {

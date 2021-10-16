@@ -836,7 +836,17 @@ namespace yae
           dtsBytePos_ = packet.pos;
           dtsStreamIndex_ = packet.stream_index;
         }
-
+#if 0 // ndef NDEBUG
+        for (int i = 0; i < packet.side_data_elems; i++)
+        {
+          const AVPacketSideData & side_data = packet.side_data[i];
+          yae_dlog("stream %i packet side data %i: %s, size %i",
+                   packet.stream_index,
+                   i,
+                   av_packet_side_data_name(side_data.type),
+                   side_data.size);
+        }
+#endif
         if (videoTrack &&
             videoTrack->streamIndex() == packet.stream_index)
         {

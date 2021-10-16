@@ -757,6 +757,21 @@ namespace yae
                to_hhmmss_us().c_str());
 #endif
       decodedFrame.pts = decodedFrame.best_effort_timestamp;
+
+#if 0 // ndef NDEBUG
+      for (int i = 0; i < decodedFrame.nb_side_data; i++)
+      {
+        const AVFrameSideData & sd = *(decodedFrame.side_data[i]);
+        yae_dlog("%s frame side data %i: %s, size %i, %s",
+                 id_.c_str(),
+                 i,
+                 av_frame_side_data_name(sd.type),
+                 sd.size,
+                 yae::to_hex(sd.data, std::min<std::size_t>(sd.size, 64)).
+                 c_str());
+      }
+#endif
+
       handle(frm);
     }
 
