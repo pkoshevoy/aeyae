@@ -442,7 +442,8 @@ namespace yae
     av_dict_set_int(&opts, "threads", nthreads, 0);
 
     ctx->thread_count = nthreads;
-    ctx->thread_type = FF_THREAD_SLICE;
+    // ctx->thread_type = FF_THREAD_SLICE;
+    // ctx->thread_type = FF_THREAD_FRAME;
 
     err = avcodec_open2(ctx, codec, &opts);
     if (err < 0)
