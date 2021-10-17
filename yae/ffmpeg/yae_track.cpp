@@ -433,10 +433,10 @@ namespace yae
     ctx->pkt_timebase = stream_->time_base;
 
     int nthreads = boost::thread::hardware_concurrency();
-    /* nthreads =
+    nthreads =
       ctx->hw_device_ctx ?
-      std::min(8, nthreads) :
-      std::max(1, nthreads); */
+      std::min(24, nthreads) :
+      std::max(1, nthreads);
 
     AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);
