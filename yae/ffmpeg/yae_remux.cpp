@@ -138,8 +138,8 @@ namespace yae
       const Timeline::Track & track =
         clip.demuxer_->summary().get_track_timeline(clip_track);
 
-      if (clip_keep.t0_ > track.pts_.front() ||
-          clip_keep.t1_ < track.pts_.back())
+      if (clip_keep.t0_ > track.pts_span_.front().t0_ ||
+          clip_keep.t1_ < track.pts_span_.back().t1_)
       {
         oss << " -t"
             << " " << clip_keep.t0_.to_hhmmss_ms()
@@ -181,8 +181,8 @@ namespace yae
       const Timeline::Track & track =
         clip.demuxer_->summary().get_track_timeline(clip.track_);
 
-      if (clip.keep_.t0_ > track.pts_.front() ||
-          clip.keep_.t1_ < track.pts_.back())
+      if (clip.keep_.t0_ > track.pts_span_.front().t0_ ||
+          clip.keep_.t1_ < track.pts_span_.back().t1_)
       {
         Json::Value jv_keep;
         jv_keep["t0"] = clip.keep_.t0_.to_hhmmss_ms();
@@ -346,7 +346,8 @@ namespace yae
       }
 
       const Timeline::Track & track = summary.get_track_timeline(track_id);
-      Timespan keep(track.pts_.front(), track.pts_.back());
+      Timespan keep(track.pts_span_.front().t0_,
+                    track.pts_span_.back().t1_);
 
       const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
       double fps = fe.best_guess();
@@ -499,7 +500,8 @@ namespace yae
         if (yae::has(summary.decoders_, track_id))
         {
           const Timeline::Track & track = summary.get_track_timeline(track_id);
-          Timespan keep(track.pts_.front(), track.pts_.back());
+          Timespan keep(track.pts_span_.front().t0_,
+                        track.pts_span_.back().t1_);
           TClipPtr clip(new Clip(demuxer, track_id, keep));
 
           if (observer_)
@@ -554,7 +556,8 @@ namespace yae
         }
 
         const Timeline::Track & track = summary.get_track_timeline(track_id);
-        Timespan keep(track.pts_.front(), track.pts_.back());
+        Timespan keep(track.pts_span_.front().t0_,
+                      track.pts_span_.back().t1_);
 
         if (!trim.t0_.empty() &&
             !parse_time(keep.t0_, trim.t0_.c_str()))

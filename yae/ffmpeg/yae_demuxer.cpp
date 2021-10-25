@@ -1342,6 +1342,35 @@ namespace yae
       const AVPacket & head = pkts.front()->get();
       const AVPacket & tail = pkts.back()->get();
 
+      if (&head == &tail)
+      {
+        // just one packet in the buffer ...
+
+        if (stream->time_base.num)
+        {
+          if (tail.duration > 0)
+          {
+            // use the packet duration, if available
+            TTime dt(stream->time_base.num * tail.duration,
+                     stream->time_base.den);
+            sum += dt.sec();
+          }
+          else
+          {
+            // if packet duration is not available, count 1 tick:
+            sum += TTime(stream->time_base.num, stream->time_base.den).sec();
+          }
+        }
+        else
+        {
+          // just increment it, because we don't want to return 0
+          // if the track actualy has 1 or more packets:
+          sum += 1e-6;
+        }
+
+        continue;
+      }
+
       TTime t0;
       bool ok = get_dts(t0, stream, head) || get_pts(t0, stream, head);
       YAE_ASSERT(ok);
@@ -1360,7 +1389,7 @@ namespace yae
       }
     }
 
-    double avg = num ? sum / double(num) : 0.0;
+    double avg = (num > 1) ? sum / double(num) : sum;
     return avg;
   }
 
@@ -1638,8 +1667,8 @@ namespace yae
         (packet.flags & AV_PKT_FLAG_KEY);
       yae_debug
         << "PacketBuffer::populate: " << pkt.trackId_
-        << ", dts: " << Timespan(dts, dts + dur)
-        << ", pts: " << Timespan(pts, pts + dur)
+        << ", dts(" << dts.time_ << "): " << Timespan(dts, dts + dur)
+        << ", pts(" << pts.time_ << "): " << Timespan(pts, pts + dur)
         << (keyframe ? ", keyframe" : "");
 #endif
     }
@@ -2381,8 +2410,8 @@ namespace yae
             bool keyframe = al::starts_with(pkt.trackId_, "v:") && (packet.flags & AV_PKT_FLAG_KEY);
             yae_debug
               << "DemuxerBuffer::peek: " << pkt.trackId_
-              << ", dts: " << Timespan(dts, dts + dur)
-              << ", pts: " << Timespan(pts, pts + dur)
+              << ", dts(" << dts.time_ << "): " << Timespan(dts, dts + dur)
+              << ", pts(" << pts.time_ << "): " << Timespan(pts, pts + dur)
               << (keyframe ? ", keyframe" : "");
 #endif
             return packet_ptr;
@@ -3338,6 +3367,35 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TrimmedDemuxer::Trim::Trim
+  //
+  // convert x: ia 277, ib 299, ka 277, kb 300, kc 277, kd 300
+  // to segments: re-encode [a, b), copy [b, c), re-encode [c, d)
+  //
+  TrimmedDemuxer::Trim
+  TrimmedDemuxer::to_trim(const Timeline::Track & tt,
+                          const Timeline::Track::Trim & x) const
+  {
+    static const TTime tolerance(1, 1000);
+    TrimmedDemuxer::Trim trim;
+
+    // first, figure out what we can copy without re-encoding:
+    trim.b_ = tt.get_dts(x.ia_);
+    trim.c_ =
+      (x.kb_ < x.kc_) ? tt.get_dts(x.kc_) :
+      tt.get_dts(x.ib_) + tt.get_dur(x.ib_);
+
+    // figure out the segments that must be re-encoded:
+    trim.a_ =
+      ((timespan_.t0_ + tolerance) < trim.b_) ? timespan_.t0_ : trim.b_;
+
+    trim.d_ =
+      ((timespan_.t1_ - tolerance) <= trim.c_) ? trim.c_ : timespan_.t1_;
+
+    return trim;
+  }
+
+  //----------------------------------------------------------------
   // TrimmedDemuxer::set_pts_span
   //
   void
@@ -3356,10 +3414,7 @@ namespace yae
       }
 
       origin_[program_] = tt.get_pts(x.ka_);
-      trim_[track_] = Trim(tt.get_dts(x.ka_),
-                           tt.get_dts(x.kb_),
-                           tt.get_dts(x.kc_),
-                           tt.get_dts(x.ib_));
+      trim_[track_] = to_trim(tt, x);
       x_[track_] = x;
     }
 
@@ -3394,10 +3449,7 @@ namespace yae
           origin_[program] = tt.get_pts(x.ka_);
         }
 
-        trim_[track_id] = Trim(tt.get_dts(x.ka_),
-                               tt.get_dts(x.kb_),
-                               tt.get_dts(x.kc_),
-                               tt.get_dts(x.ib_));
+        trim_[track_id] = to_trim(tt, x);
         x_[track_id] = x;
       }
     }

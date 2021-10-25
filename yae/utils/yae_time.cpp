@@ -1813,12 +1813,14 @@ namespace yae
                                          std::size_t & kc,
                                          std::size_t & kd) const
   {
+    static const TTime tolerance(1, 1000);
+
     // generate a lookup map for GOPs, indexed by PTS value:
     std::map<TTime, std::size_t> GOPs;
     generate_gops(GOPs);
 
     std::map<TTime, std::size_t>::const_iterator
-      found = GOPs.upper_bound(pts_span.t0_);
+      found = GOPs.upper_bound(pts_span.t0_ + tolerance);
     if (found == GOPs.end())
     {
       // no overlap:
@@ -1832,7 +1834,7 @@ namespace yae
     }
     ka = found->second;
 
-    found = GOPs.lower_bound(pts_span.t1_);
+    found = GOPs.lower_bound(pts_span.t1_ - tolerance);
     if (found == GOPs.end())
     {
       kc = pts_.size();
@@ -1875,7 +1877,7 @@ namespace yae
       const TTime & dt = dur_[ia];
       TTime t1 = t0 + dt;
 
-      if (t0 <= pts_span.t0_ && pts_span.t0_ < t1)
+      if (pts_span.t0_ < t1)
       {
         break;
       }
@@ -1889,7 +1891,7 @@ namespace yae
       const TTime & dt = dur_[ib];
       TTime t1 = t0 + dt;
 
-      if (t1 < pts_span.t1_)
+      if (t1 <= pts_span.t1_)
       {
         break;
       }

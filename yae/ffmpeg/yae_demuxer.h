@@ -817,6 +817,11 @@ namespace yae
     { return program_; }
 
   protected:
+    // helper:
+    TrimmedDemuxer::Trim
+    to_trim(const Timeline::Track & tt,
+            const Timeline::Track::Trim & x) const;
+
     TDemuxerInterfacePtr src_;
     DemuxerSummary src_summary_;
     std::string track_;

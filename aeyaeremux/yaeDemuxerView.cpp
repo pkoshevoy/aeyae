@@ -174,14 +174,7 @@ namespace yae
       const Clip * clip = view_.selected_clip().get();
       if (clip)
       {
-        selected = clip->keep_.contains(span_.t1_);
-
-        TVideoFramePtr vf_ptr = item_.videoFrame();
-        if (vf_ptr)
-        {
-          TTime frame_t1 = vf_ptr->time_ + span_.dt();
-          selected = clip->keep_.contains(frame_t1);
-        }
+        selected = clip->keep_.contains(span_.t0_);
       }
 
       result = selected ? keep_ : drop_;
