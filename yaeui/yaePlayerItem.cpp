@@ -425,6 +425,11 @@ namespace yae
       }
     }
 
+    // replace the previous reader before we start the new reader,
+    // in case it's a DemuxerReader that shares some Tracks
+    // with previous DemuxerReader instance:
+    reader_ = reader;
+
     // renderers have to be started before the reader, because they
     // may need to specify reader output format override, which is
     // too late if the reader already started the decoding loops;
@@ -435,9 +440,6 @@ namespace yae
     // this opens the output frame queues for renderers
     // and starts the decoding loops:
     reader->threadStart();
-
-    // replace the previous reader:
-    reader_ = reader;
 
     // allow renderers to read from output frame queues:
     resume_renderers(true);
