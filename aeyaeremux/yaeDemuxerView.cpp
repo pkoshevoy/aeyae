@@ -688,12 +688,8 @@ namespace yae
       dts.font_ = style.font_large_;
       dts.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
       dts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
-#if 1
       dts.text_ = TVarRef::constant
         (TVar(str("DTS ", track.dts_[j].to_hhmmss_ms()).c_str()));
-#else
-      dts.text_ = TVarRef::constant(TVar(track.pts_[j].to_hhmmss_ms().c_str()));
-#endif
       dts.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
       dts.elide_ = Qt::ElideNone;
       dts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
@@ -701,13 +697,8 @@ namespace yae
 
       Text & pts = frame.addNew<Text>("pts");
       pts.font_ = style.font_large_;
-#if 0
-      pts.anchors_.bottom_ = ItemRef::reference(frame, kPropertyBottom, 1, -5);
-      pts.anchors_.right_ = ItemRef::reference(frame, kPropertyRight, 1, -5);
-#else
       pts.anchors_.bottom_ = ItemRef::reference(frame, kPropertyBottom, 1, -5);
       pts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
-#endif
       pts.visible_ = pts.addExpr(new HasFramePts(video));
       pts.text_ = pts.addExpr(new GetFramePts(video));
       pts.fontSize_ = dts.fontSize_;
@@ -721,6 +712,26 @@ namespace yae
                                style.cursor_.get(),
                                style.scrollbar_.get()));
       frame.color_.disableCaching();
+
+      // highlight the GOP start (the keyframe, usually)
+      if (j == gop.i0_)
+      {
+        Rectangle & gs_bg = frame.addNew<Rectangle>("gs_bg");
+        Text & gs = frame.addNew<Text>("gs");
+        gs.font_ = style.font_large_;
+        gs.anchors_.top_ = ItemRef::reference(frame, kPropertyTop, 1, 5);
+        gs.anchors_.right_ = ItemRef::reference(frame, kPropertyRight, 1, -5);
+
+        const char * txt =
+          yae::has(track.keyframes_, gop.i0_) ? "KEY" : "GOP";
+        gs.text_ = TVarRef::constant(TVar(txt));
+        gs.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
+        gs.elide_ = Qt::ElideNone;
+        gs.color_ =  gs.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
+        gs.background_ = ColorRef::constant(style.fg_timecode_.get().opaque());
+        gs_bg.anchors_.offset(gs, -3, 3, 0, 0);
+        gs_bg.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
+      }
     }
   }
 
