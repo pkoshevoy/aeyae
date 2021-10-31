@@ -1657,7 +1657,7 @@ namespace yae
 
       YAE_ASSERT(!pkt.trackId_.empty());
       program->push(packet_ptr, stream);
-#if 0
+#if 0 // ndef NDEBUG
       TTime dts(packet.dts * stream->time_base.num, stream->time_base.den);
       TTime pts(packet.pts * stream->time_base.num, stream->time_base.den);
       TTime dur(stream->time_base.num * packet.duration,
@@ -2401,7 +2401,7 @@ namespace yae
           if (!stream.empty())
           {
             TPacketPtr packet_ptr = found->second.front();
-#if 0
+#if 0 // ndef NDEBUG
             const AvPkt & pkt = *packet_ptr;
             const AVPacket & packet = pkt.get();
             TTime dts(packet.dts * src->time_base.num, src->time_base.den);
@@ -3367,7 +3367,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TrimmedDemuxer::Trim::Trim
+  // TrimmedDemuxer::to_trim
   //
   // convert x: ia 277, ib 299, ka 277, kb 300, kc 277, kd 300
   // to segments: re-encode [a, b), copy [b, c), re-encode [c, d)
@@ -3505,7 +3505,9 @@ namespace yae
     const Trim & trim = yae::at(trim_, track_id);
     const TTime & origin = yae::at(origin_, program);
 
-    TTime ts = (dts.time_ < 0) ? origin : dts + origin;
+    TTime ts =
+      (dts.time_ > TTime::min_flicks().time_) ?
+      (dts + origin) : trim.a_;
 
     // clamp to trimmed region:
     ts = std::min(trim.d_, std::max(trim.a_, ts));
@@ -3537,38 +3539,41 @@ namespace yae
       const Trim & trim = yae::at(trim_, pkt.trackId_);
       const TTime & origin = yae::at(origin_, pkt.program_);
 
-      TTime t0(packet.dts * src->time_base.num, src->time_base.den);
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
-      TTime t1 = t0 + dt;
+      TTime d0(packet.dts * src->time_base.num, src->time_base.den);
+      TTime p0(packet.pts * src->time_base.num, src->time_base.den);
+      TTime d1 = d0 + dt;
+      TTime p1 = p0 + dt;
 
-      if (t1 <= trim.a_)
+      if (p1 <= timespan_.t0_)
       {
         TTime pts(packet.pts * src->time_base.num, src->time_base.den);
         TTime end = pts + dt;
 
-        if (timespan_.overlaps(Timespan(pts, end)) && keyframe)
-        {
-          YAE_ASSERT(false);
-          av_log(NULL, AV_LOG_WARNING,
-                 "TrimmedDemuxer::peek, dropping keyframe PTS [%s, %s)",
-                 pts.to_hhmmss_ms().c_str(),
-                 end.to_hhmmss_ms().c_str());
-        }
-#if 0
+        YAE_ASSERT(!(timespan_.overlaps(Timespan(pts, end)) && keyframe));
+#if 0 // ndef NDEBUG
         yae_debug
-          << "TrimmedDemuxer::peek: packet too old: "
-          << t1 << " <= " << trim.a_;
+          << "TrimmedDemuxer::peek: " << pkt.trackId_
+          << " src dts(" << d0.time_ << "): " << Timespan(d0, d1)
+          << ", pts(" << p0.time_ << "): " << Timespan(p0, p1)
+          << (keyframe ? ", keyframe" : "")
+          << ", trim pts: " << timespan_
+          << " -- packet too old";
 #endif
         src_->get(src);
         continue;
       }
 
-      if (trim.d_ <= t0)
+      if (timespan_.t1_ <= p0)
       {
-#if 0
+#if 0 // ndef NDEBUG
         yae_debug
-          << "TrimmedDemuxer::peek: packet beyond trim end: "
-          << trim.d_ << " <= " << t0;
+          << "TrimmedDemuxer::peek: " << pkt.trackId_
+          << " src dts(" << d0.time_ << "): " << Timespan(d0, d1)
+          << ", pts(" << p0.time_ << "): " << Timespan(p0, p1)
+          << (keyframe ? ", keyframe" : "")
+          << ", trim pts: " << timespan_
+          << " -- packet beyond trim end";
 #endif
         if (pkt.trackId_ == track_)
         {
@@ -3579,21 +3584,31 @@ namespace yae
         continue;
       }
 
+#if 0 // ndef NDEBUG
+      yae_debug
+        << "TrimmedDemuxer::peek: " << pkt.trackId_
+        << " src dts(" << d0.time_ << "): " << Timespan(d0, d1)
+        << ", pts(" << p0.time_ << "): " << Timespan(p0, p1)
+        << (keyframe ? ", keyframe" : "")
+        << ", trim pts: " << timespan_;
+#endif
+
       // adjust pts/dts:
       int64_t shift = av_rescale_q(-origin.time_,
                                    Rational(1, origin.base_),
                                    src->time_base);
       packet.pts += shift;
       packet.dts += shift;
-#if 0
+
+#if 0 // ndef NDEBUG
       TTime dts(packet.dts * src->time_base.num, src->time_base.den);
       TTime pts(packet.pts * src->time_base.num, src->time_base.den);
       TTime dur(packet.duration * src->time_base.num, src->time_base.den);
 
       yae_debug
-        << "TrimmedDemuxer::peek: out: " << pkt.trackId_
-        << ", dts: " << Timespan(dts, dts + dur)
-        << ", pts: " << Timespan(pts, pts + dur)
+        << "TrimmedDemuxer::peek: " << pkt.trackId_
+        << " out dts(" << dts.time_ << "): " << Timespan(dts, dts + dur)
+        << ", pts(" << pts.time_ << "): " << Timespan(pts, pts + dur)
         << (keyframe ? ", keyframe" : "");
 #endif
       break;
@@ -3664,6 +3679,13 @@ namespace yae
           if (is_subtt_track && pts < origin)
           {
             // don't bother with partial subs:
+            continue;
+          }
+
+          if (timespan_.t1_ <= pts ||
+              pts + dur <= timespan_.t0_)
+          {
+            // PTS outside trimmed PTS time span:
             continue;
           }
 

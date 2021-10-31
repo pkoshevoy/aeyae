@@ -4169,10 +4169,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // get_cursor_pts
+  // get_cursor_dst_pts
   //
   static bool
-  get_cursor_pts(const RemuxView & view, TTime & pts)
+  get_cursor_dst_pts(const RemuxView & view,
+                     TTime & dts,
+                     TTime & pts,
+                     const Gop *& gop_ptr,
+                     std::size_t & dts_order_index,
+                     std::size_t & pts_order_index)
   {
     if (!view.model())
     {
@@ -4197,26 +4202,30 @@ namespace yae
         return false;
       }
 
+      dts = track.dts_span_.back().t1_ + track.dur_.back();
       pts = track.pts_span_.back().t1_ + track.dur_.back();
       return true;
     }
 
     const Gop & gop = gop_item->gop();
+    gop_ptr = &gop;
+
     std::vector<std::size_t> lut;
     get_pts_order_lut(gop, lut);
 
-    std::size_t i = frame->frameIndex();
-    std::size_t k = i - gop.i0_;
-    std::size_t j = lut[k];
-    pts = track.pts_[j];
-
+    pts_order_index = frame->frameIndex();
+    std::size_t k = pts_order_index - gop.i0_;
+    dts_order_index = lut[k];
+    dts = track.dts_[dts_order_index];
+    pts = track.pts_[dts_order_index];
+#if 0
     // use the decoded PTS time, if available:
     TVideoFramePtr vf = frame->videoFrame();
     if (vf)
     {
       pts = vf->time_;
     }
-
+#endif
     return true;
   }
 
@@ -4226,8 +4235,18 @@ namespace yae
   void
   RemuxView::set_in_point()
   {
+    if (view_mode_ != RemuxView::kLayoutMode)
+    {
+      return;
+    }
+
+    TTime dts;
     TTime pts;
-    if (view_mode_ != RemuxView::kLayoutMode || !get_cursor_pts(*this, pts))
+    const Gop * gop = NULL;
+    std::size_t dts_order_ix = std::numeric_limits<std::size_t>::max();
+    std::size_t pts_order_ix = std::numeric_limits<std::size_t>::max();
+
+    if (!get_cursor_dst_pts(*this, dts, pts, gop, dts_order_ix, pts_order_ix))
     {
       return;
     }
@@ -4254,8 +4273,18 @@ namespace yae
   void
   RemuxView::set_out_point()
   {
+    if (view_mode_ != RemuxView::kLayoutMode)
+    {
+      return;
+    }
+
+    TTime dts;
     TTime pts;
-    if (view_mode_ != RemuxView::kLayoutMode || !get_cursor_pts(*this, pts))
+    const Gop * gop = NULL;
+    std::size_t dts_order_ix = std::numeric_limits<std::size_t>::max();
+    std::size_t pts_order_ix = std::numeric_limits<std::size_t>::max();
+
+    if (!get_cursor_dst_pts(*this, dts, pts, gop, dts_order_ix, pts_order_ix))
     {
       return;
     }
