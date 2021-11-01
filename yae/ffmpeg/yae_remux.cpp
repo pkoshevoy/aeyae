@@ -33,6 +33,17 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // Clip::Clip
+  //
+  Clip::Clip(const TDemuxerInterfacePtr & demuxer,
+             const std::string & track,
+             const Timespan & keep):
+      demuxer_(demuxer),
+      track_(track),
+      keep_(keep)
+  {}
+
+  //----------------------------------------------------------------
   // Clip::get
   //
   bool
@@ -64,6 +75,29 @@ namespace yae
     keep += dt;
     return true;
   }
+
+  //----------------------------------------------------------------
+  // Clip::change_track_id
+  //
+  bool
+  Clip::change_track_id(const std::string & track_id)
+  {
+    if (track_ == track_id)
+    {
+      return false;
+    }
+
+    const DemuxerSummary & summary = demuxer_->summary();
+    TTime dt = summary.get_timeline_diff(track_id, track_);
+
+    // change reference track:
+    track_ = track_id;
+
+    // adjust time span:
+    keep_ += dt;
+    return true;
+  }
+
 
   //----------------------------------------------------------------
   // RemuxModel::make_serial_demuxer
@@ -271,6 +305,68 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // RemuxModel::get_unredacted_track_ids
+  //
+  void
+  RemuxModel::get_unredacted_track_ids(const std::string & src_name,
+                                       std::set<std::string> & unredacted_ids,
+                                       const char * track_type) const
+  {
+    SetOfTracks redacted = yae::get(redacted_, src_name, SetOfTracks());
+    TDemuxerInterfacePtr demuxer = yae::at(demuxer_, src_name);
+    const DemuxerSummary & summary = demuxer->summary();
+
+    for (std::map<int, Timeline>::const_iterator
+           i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
+    {
+      const Timeline & timeline = i->second;
+      for (Timeline::TTracks::const_iterator
+             j = timeline.tracks_.begin(); j != timeline.tracks_.end(); ++j)
+      {
+        const std::string & track_id = j->first;
+        if (track_type &&
+            *track_type &&
+            !al::starts_with(track_id, track_type))
+        {
+          continue;
+        }
+
+        if (yae::has(redacted, track_id))
+        {
+          continue;
+        }
+
+        unredacted_ids.insert(track_id);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // RemuxModel::change_clip_track_id
+  //
+  bool
+  RemuxModel::change_clip_track_id(const std::string & src_name,
+                                   const std::string & track_id)
+  {
+    bool changed = false;
+
+    TDemuxerInterfacePtr demuxer = yae::at(demuxer_, src_name);
+    for (std::vector<TClipPtr>::iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      Clip & clip = *(*i);
+
+      if (!clip.change_track_id(track_id))
+      {
+        continue;
+      }
+
+      changed = true;
+    }
+
+    return changed;
+  }
 
   //----------------------------------------------------------------
   // load

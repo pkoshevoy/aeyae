@@ -283,6 +283,8 @@ namespace yae
     void remove_clip(std::size_t index);
     void repeat_clip();
 
+    void relayout_gops(const TDemuxerInterfacePtr & src);
+
     // helper:
     inline TClipPtr selected_clip() const
     {
@@ -296,6 +298,10 @@ namespace yae
     {
       return (view_mode_ == kLayoutMode) ? selected_clip() : output_clip();
     }
+
+    // lookup GOPs container item for a given clip:
+    inline ItemPtr get_gops_container(const TClipPtr & clip) const
+    { return yae::get(clips_, clip, ItemPtr()); }
 
     // accessor:
     inline ViewMode view_mode() const
@@ -354,6 +360,9 @@ namespace yae
 
     QAction actionSetInPoint_;
     QAction actionSetOutPoint_;
+
+    // LUT of top level clip container items:
+    std::map<TClipPtr, ItemPtr> clips_;
 
     // share the same GOP layout between clips of the same source:
     std::map<TDemuxerInterfacePtr, ItemPtr> gops_;

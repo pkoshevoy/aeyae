@@ -51,11 +51,7 @@ namespace yae
   {
     Clip(const TDemuxerInterfacePtr & demuxer = TDemuxerInterfacePtr(),
          const std::string & track = std::string(),
-         const Timespan & keep = Timespan()):
-      demuxer_(demuxer),
-      track_(track),
-      keep_(keep)
-    {}
+         const Timespan & keep = Timespan());
 
     inline const Timeline::Track & get_track_timeline() const
     {
@@ -67,6 +63,8 @@ namespace yae
     bool get(const TDemuxerInterfacePtr & other_demuxer,
              std::string & track_id,
              Timespan & keep) const;
+
+    bool change_track_id(const std::string & track_id);
 
     TDemuxerInterfacePtr demuxer_;
     std::string track_;
@@ -100,6 +98,13 @@ namespace yae
                                std::set<std::string> & sources,
                                std::map<std::string, SetOfTracks> & redacted,
                                std::list<ClipInfo> & src_clips);
+
+    void get_unredacted_track_ids(const std::string & src_name,
+                                  std::set<std::string> & track_ids,
+                                  const char * track_type = NULL) const;
+
+    bool change_clip_track_id(const std::string & src_name,
+                              const std::string & track_id);
 
     // sources, in order of appearance:
     std::list<std::string> sources_;

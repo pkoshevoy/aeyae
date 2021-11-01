@@ -95,6 +95,9 @@ namespace yae
         return;
       }
 
+      std::set<std::string> prev;
+      model->get_unredacted_track_ids(src_name_, prev, "v:");
+
       SetOfTracks & redacted = model->redacted_[src_name_];
       if (cbox.checked_.get())
       {
@@ -103,6 +106,18 @@ namespace yae
       else
       {
         redacted.erase(track_id_);
+      }
+
+      std::set<std::string> curr;
+      model->get_unredacted_track_ids(src_name_, curr, "v:");
+
+      // if video track selection changed -- update the GOP view:
+      if (curr.size() == 1 &&
+          curr != prev &&
+          model->change_clip_track_id(src_name_, *curr.begin()))
+      {
+        TDemuxerInterfacePtr demuxer = yae::at(model->demuxer_, src_name_);
+        view_.relayout_gops(demuxer);
       }
     }
 
@@ -1020,7 +1035,7 @@ namespace yae
   //----------------------------------------------------------------
   // layout_gops
   //
-  static void
+  static ItemPtr
   layout_gops(RemuxModel & model,
               RemuxView & view,
               const RemuxViewStyle & style,
@@ -1159,6 +1174,8 @@ namespace yae
     cursor.margins_.set_left(ItemRef::constant(-1));
     cursor.margins_.set_bottom(ItemRef::constant(1));
     cursor.margins_.set_right(ItemRef::constant(1));
+
+    return root.self_.lock();
   }
 
   //----------------------------------------------------------------
@@ -2441,28 +2458,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // find_gops_item
-  //
-  static std::vector<ItemPtr>::iterator
-  find_gops_item(Item & gops, const TClipPtr & clip)
-  {
-    for (std::vector<ItemPtr>::iterator
-           i = gops.children_.begin(); i != gops.children_.end(); ++i)
-    {
-      const Item & item = *(*i);
-      const IsCurrentClip * found =
-        dynamic_cast<const IsCurrentClip *>(item.visible_.ref());
-
-      if (found && found->clip_ == clip)
-      {
-        return i;
-      }
-    }
-
-    return gops.children_.end();
-  }
-
-  //----------------------------------------------------------------
   // get_cursor_item
   //
   static GopCursorItem *
@@ -2479,14 +2474,13 @@ namespace yae
                    root["preview"]);
 
     TClipPtr clip = view.current_clip();
-    std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
-
-    if (found == gops.children_.end())
+    ItemPtr container = view.get_gops_container(clip);
+    if (!container)
     {
       return NULL;
     }
 
-    Scrollview & sview = (*found)->get<Scrollview>("clip_layout.scrollview");
+    Scrollview & sview = container->get<Scrollview>("clip_layout.scrollview");
     if (sv)
     {
       *sv = &sview;
@@ -3562,8 +3556,7 @@ namespace yae
     // layout the source programs and program track plots:
     double rows_per_plot = 10.0;
     const DemuxerSummary & summary = src->summary();
-
-    bool redact_program = false;
+    const std::string clip_track_id = summary.suggest_clip_track_id();
 
     for (std::map<int, Timeline>::const_iterator
            i = summary.timeline_.begin(); i != summary.timeline_.end(); ++i)
@@ -3571,6 +3564,7 @@ namespace yae
       int prog_id = i->first;
       const Timeline & timeline = i->second;
 
+      bool redact_program = !yae::has(timeline.tracks_, clip_track_id);
       layout_source_item_prog(view,
                               src_item,
                               prev_row,
@@ -3580,8 +3574,6 @@ namespace yae
                               timeline,
                               rows_per_plot,
                               redact_program);
-      redact_program = true;
-
       std::string prog_str = str("prog_", prog_id);
       Item & tracks = src_item[prog_str.c_str()];
 
@@ -3742,7 +3734,7 @@ namespace yae
     layout_clip(model, view, *style_, row, index);
 
     Item & gops = root["layout"]["gops"];
-    layout_gops(model, view, *style_, gops, clip);
+    clips_[clip] = layout_gops(model, view, *style_, gops, clip);
 
     capture_playhead_position();
     maybe_layout_gops();
@@ -3870,15 +3862,17 @@ namespace yae
 
     RemuxModel & model = *model_;
     TClipPtr clip = model.clips_[index];
-    std::vector<ItemPtr>::iterator found = find_gops_item(gops, clip);
 
-    if (found == gops.children_.end())
+    ItemPtr container = get_gops_container(clip);
+    YAE_ASSERT(container);
+    if (!container)
     {
-      YAE_ASSERT(false);
       return;
     }
 
-    gops.children_.erase(found);
+    gops.remove(container);
+    clips_.erase(clip);
+
     model.clips_.erase(model.clips_.begin() + index);
     selected_ = std::min(index, model.clips_.size() - 1);
     prune(model, *this);
@@ -3964,6 +3958,53 @@ namespace yae
 
     // select the new clip:
     selected_ = new_index;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::relayout_gops
+  //
+  void
+  RemuxView::relayout_gops(const TDemuxerInterfacePtr & demuxer)
+  {
+    RemuxModel & model = *model_;
+    RemuxView & view = *this;
+    Item & root = *root_;
+    Item & gops = root["layout"]["gops"];
+
+    for (std::map<TClipPtr, ItemPtr>::iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const TClipPtr & clip_ptr = i->first;
+      if (clip_ptr->demuxer_ != demuxer)
+      {
+        continue;
+      }
+
+      ItemPtr & container = i->second;
+      gops.remove(container);
+      container.reset();
+    }
+
+    gops_.erase(demuxer);
+    gops_row_lut_.erase(demuxer);
+
+    TGopCache & cache = gop_cache();
+    cache.purge_unreferenced_entries();
+
+    for (std::map<TClipPtr, ItemPtr>::iterator
+           i = clips_.begin(); i != clips_.end(); ++i)
+    {
+      const TClipPtr & clip_ptr = i->first;
+      if (clip_ptr->demuxer_ != demuxer)
+      {
+        continue;
+      }
+
+      ItemPtr & container = i->second;
+      container = layout_gops(model, view, *style_, gops, clip_ptr);
+    }
+
+    model_json_str_.clear();
   }
 
   //----------------------------------------------------------------
@@ -4454,6 +4495,7 @@ namespace yae
       // remove cached layout data for serial demuxer:
       gops_.erase(serial_demuxer_);
       gops_row_lut_.erase(serial_demuxer_);
+      clips_.erase(output_clip_);
 
       model_json_str_ = model_json_str;
       output_clip_.reset();
@@ -4464,7 +4506,7 @@ namespace yae
     TClipPtr clip = output_clip();
     if (clip && view_mode_ == kPreviewMode && preview.children_.empty())
     {
-      layout_gops(*model_, *this, *style_, preview, clip);
+      clips_[clip] = layout_gops(*model_, *this, *style_, preview, clip);
     }
 
     preview.uncache();

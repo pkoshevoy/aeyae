@@ -2120,6 +2120,19 @@ namespace yae
       dt = ta.dts_span_.front().t0_ - tb.dts_span_.front().t0_;
     }
 
+    // if possible, try to do something smarter:
+    // 1. find relative offset from 1st keyframe dts of track a
+    // 2. apply same offset to 1st keyframe dts of track b
+    if (al::starts_with(track_a_id, "v:") &&
+        al::starts_with(track_b_id, "v:") &&
+        !ta.keyframes_.empty() &&
+        !tb.keyframes_.empty())
+    {
+      const TTime & dts_a = ta.dts_.at(*ta.keyframes_.begin());
+      const TTime & dts_b = tb.dts_.at(*tb.keyframes_.begin());
+      dt = dts_a - dts_b;
+    }
+
     return dt;
   }
 
