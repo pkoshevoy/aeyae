@@ -430,7 +430,7 @@ namespace yae
     QMainWindow(NULL, 0),
     contextMenu_(NULL),
     shortcutExit_(NULL),
-    preferencesDialog_(this),
+    preferencesDialog_(NULL),
     playerWidget_(NULL),
     playerWindow_(this),
     readerFactory_(new LiveReaderFactory),
@@ -440,6 +440,9 @@ namespace yae
   {
     setupUi(this);
     setAcceptDrops(false);
+
+    playerWindow_.menubar->insertAction(NULL, menuFile->menuAction());
+    playerWindow_.menubar->insertAction(NULL, menuHelp->menuAction());
 
     start_live_playback_.setInterval(1000);
 
@@ -684,7 +687,7 @@ namespace yae
     static AboutDialog * about = NULL;
     if (!about)
     {
-      about = new AboutDialog(this);
+      about = new AboutDialog(NULL);
       about->setWindowTitle(tr("yaetv (%1)").
                             arg(QString::fromUtf8(YAE_REVISION)));
     }
@@ -802,6 +805,9 @@ namespace yae
     playerWidget_->show();
 
     yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
+    playerView.insert_menus(reader,
+                            playerWindow_.menubar,
+                            menuHelp->menuAction());
     playerWindow_.playback(playerWidget_, reader, bookmark.get());
 
     return reader;

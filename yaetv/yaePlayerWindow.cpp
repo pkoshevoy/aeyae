@@ -53,10 +53,6 @@ namespace yae
                          bool start_from_zero_time)
   {
     playerWidget_ = playerWidget;
-
-    PlayerView & view = playerWidget->view();
-    view.insert_menus(reader, menubar);
-
     playerWidget->playback(reader, bookmark, start_from_zero_time);
   }
 
