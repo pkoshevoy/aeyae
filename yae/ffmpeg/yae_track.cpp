@@ -434,8 +434,10 @@ namespace yae
 
     int nthreads = boost::thread::hardware_concurrency();
     nthreads =
+#ifndef __APPLE_
       ctx->hw_device_ctx ?
       std::min(16, nthreads) :
+#endif
       std::max(1, nthreads);
 
     AVDictionary * opts = NULL;
