@@ -3902,7 +3902,23 @@ namespace yae
     if (lastmod.invalid() || lastmod < epg_lastmod_)
     {
       lastmod = epg_lastmod_;
-      epg = epg_;
+      epg.channels_.clear();
+
+      for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
+             i = epg_.channels_.begin(); i != epg_.channels_.end(); ++i)
+      {
+        const uint32_t ch_num = i->first;
+        const yae::mpeg_ts::EPG::Channel & channel = i->second;
+
+        if (!yae::has(channel_frequency_lut_, ch_num))
+        {
+          // don't list channels that disappeared:
+          continue;
+        }
+
+        epg.channels_[ch_num] = channel;
+      }
+
       return true;
     }
 
@@ -4034,6 +4050,18 @@ namespace yae
         }
       }
     }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_channel_luts
+  //
+  void
+  DVR::get_channel_luts(std::map<uint32_t, std::string> & chan_freq,
+                        std::map<std::string, TChannels> & freq_chan) const
+  {
+    boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+    chan_freq = channel_frequency_lut_;
+    freq_chan = frequency_channel_lut_;
   }
 
   //----------------------------------------------------------------

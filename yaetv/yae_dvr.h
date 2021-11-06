@@ -658,6 +658,8 @@ namespace yae
 
   public:
     // fill in the major.minor -> frequency lookup table:
+    void get_channel_luts(std::map<uint32_t, std::string> & chan_freq,
+                          std::map<std::string, TChannels> & freq_chan) const;
     void get_channels(std::map<uint32_t, std::string> & chan_freq) const;
     void get_channels(std::map<std::string, TChannels> & channels) const;
     bool get_channels(const std::string & freq, TChannels & channels) const;

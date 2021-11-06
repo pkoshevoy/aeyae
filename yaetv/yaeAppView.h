@@ -178,6 +178,8 @@ namespace yae
     yae::TTime epg_lastmod_;
 
     DVR::Blacklist blacklist_;
+
+    // frequency -> major:minor:name:
     std::map<std::string, TChannels> channels_;
 
     std::map<std::string, Wishlist::Item> wishlist_;
