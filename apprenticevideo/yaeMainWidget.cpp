@@ -1367,8 +1367,12 @@ namespace yae
   bool
   MainWidget::load(const QString & path, const TBookmark * bookmark)
   {
-    IReaderPtr reader_ptr =
-      canaryTest(path) ? yae::openFile(readerFactory_, path) : IReaderPtr();
+    IReaderPtr reader_ptr;
+    if (canaryTest(path))
+    {
+      bool hwdec = true;
+      reader_ptr = yae::openFile(readerFactory_, path, hwdec);
+    }
 
     if (!reader_ptr)
     {

@@ -760,9 +760,11 @@ namespace yae
 
     const Recording::Rec & rec = *rec_ptr;
     std::string path = rec.get_filepath(dvr_.basedir_.string());
+    bool hwdec = true;
 
     IReaderPtr reader = yae::openFile(readerFactory_,
-                                      QString::fromUtf8(path.c_str()));
+                                      QString::fromUtf8(path.c_str()),
+                                      hwdec);
     if (!reader)
     {
       return IReaderPtr();

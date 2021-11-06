@@ -30,14 +30,16 @@ namespace yae
   struct YAE_API DemuxerReader : public IReader
   {
   protected:
-    DemuxerReader(const TDemuxerInterfacePtr & src = TDemuxerInterfacePtr());
+    DemuxerReader(const TDemuxerInterfacePtr & src = TDemuxerInterfacePtr(),
+                  bool hwdec = false);
     virtual ~DemuxerReader();
 
-    void init(const TDemuxerInterfacePtr & src);
+    void init(const TDemuxerInterfacePtr & src, bool hwdec);
 
   public:
     static DemuxerReader * create(const TDemuxerInterfacePtr & demuxer =
-                                  TDemuxerInterfacePtr());
+                                  TDemuxerInterfacePtr(),
+                                  bool hwdec = false);
     virtual void destroy();
 
     //! prototype factory method that returns a new instance of DemuxerReader,
@@ -58,7 +60,7 @@ namespace yae
     virtual bool getUrlProtocols(std::list<std::string> & protocols) const;
 
     //! open a resource specified by the resourcePath such as filepath or URL:
-    virtual bool open(const char * resourcePathUTF8);
+    virtual bool open(const char * resourcePathUTF8, bool hwdec);
 
     //! close currently open resource:
     virtual void close();
@@ -201,6 +203,9 @@ namespace yae
     // reader id:
     unsigned int readerId_;
 
+    // enable/disable hardware accelerated decoding:
+    bool hwdec_;
+
     // these are derived from demuxer summary:
     std::vector<TProgramInfo> programs_;
     std::map<std::string, std::size_t> prog_lut_;
@@ -263,7 +268,7 @@ namespace yae
   // make_yaerx_reader
   //
   YAE_API DemuxerReaderPtr
-  make_yaerx_reader(const std::string & yaerx_path);
+  make_yaerx_reader(const std::string & yaerx_path, bool hwdec);
 
 }
 

@@ -56,7 +56,7 @@ namespace yae
 
     bool getUrlProtocols(std::list<std::string> & protocols) const;
 
-    bool open(const char * resourcePath);
+    bool open(const char * resourcePath, bool hwdec);
     void close();
 
     inline const char * getResourcePath() const
@@ -176,6 +176,9 @@ namespace yae
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
     std::size_t selectedAudioTrack_;
+
+    // hw accelerated decoding is optional:
+    bool hwdec_;
 
     // these are used to speed up video decoding:
     bool skipLoopFilter_;

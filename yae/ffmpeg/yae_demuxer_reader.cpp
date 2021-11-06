@@ -44,21 +44,23 @@ namespace yae
   //----------------------------------------------------------------
   // DemuxerReader::DemuxerReader
   //
-  DemuxerReader::DemuxerReader(const TDemuxerInterfacePtr & demuxer):
+  DemuxerReader::DemuxerReader(const TDemuxerInterfacePtr & demuxer,
+                               bool hwdec):
     readerId_(std::numeric_limits<unsigned int>::max()),
     thread_(this)
   {
     ensure_ffmpeg_initialized();
 
-    init(demuxer);
+    init(demuxer, hwdec);
   }
 
   //----------------------------------------------------------------
   // DemuxerReader::init
   //
   void
-  DemuxerReader::init(const TDemuxerInterfacePtr & demuxer_ptr)
+  DemuxerReader::init(const TDemuxerInterfacePtr & demuxer_ptr, bool hwdec)
   {
+    hwdec_ = hwdec;
     demuxer_ = demuxer_ptr;
     selectedVideoTrack_ = std::numeric_limits<std::size_t>::max();
     selectedAudioTrack_ = std::numeric_limits<std::size_t>::max();
@@ -101,6 +103,8 @@ namespace yae
       {
         continue;
       }
+
+      decoder->maybe_reopen(hwdec);
 
       int prog_id = yae::at(summary.trk_prog_, track_id);
       prog_lut_[track_id] = yae::at(index_lut, prog_id);
@@ -155,9 +159,9 @@ namespace yae
   // DemuxerReader::create
   //
   DemuxerReader *
-  DemuxerReader::create(const TDemuxerInterfacePtr & demuxer)
+  DemuxerReader::create(const TDemuxerInterfacePtr & demuxer, bool hwdec)
   {
-    return new DemuxerReader(demuxer);
+    return new DemuxerReader(demuxer, hwdec);
   }
 
   //----------------------------------------------------------------
@@ -175,7 +179,7 @@ namespace yae
   DemuxerReader *
   DemuxerReader::clone() const
   {
-    return DemuxerReader::create(demuxer_);
+    return DemuxerReader::create(demuxer_, hwdec_);
   }
 
   //----------------------------------------------------------------
@@ -225,7 +229,7 @@ namespace yae
   // DemuxerReader::open
   //
   bool
-  DemuxerReader::open(const char * resourcePathUTF8)
+  DemuxerReader::open(const char * resourcePathUTF8, bool hwdec)
   {
     if (!al::ends_with(resourcePathUTF8, ".yaerx"))
     {
@@ -240,7 +244,7 @@ namespace yae
     }
 
     resourcePath_ = resourcePathUTF8;
-    init(serial_demuxer);
+    init(serial_demuxer, hwdec);
     return !!demuxer_;
   }
 
@@ -1670,10 +1674,10 @@ namespace yae
   // make_yaerx_reader
   //
   DemuxerReaderPtr
-  make_yaerx_reader(const std::string & yaerx_path)
+  make_yaerx_reader(const std::string & yaerx_path, bool hwdec)
   {
     TSerialDemuxerPtr serial_demuxer = load_yaerx(yaerx_path);
-    DemuxerReaderPtr reader_ptr(DemuxerReader::create(serial_demuxer));
+    DemuxerReaderPtr reader_ptr(DemuxerReader::create(serial_demuxer, hwdec));
     return reader_ptr;
   }
 

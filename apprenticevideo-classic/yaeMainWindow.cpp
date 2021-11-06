@@ -1173,89 +1173,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // kNormalizationForm
-  //
-  static const QString::NormalizationForm kNormalizationForm[] =
-  {
-    QString::NormalizationForm_D,
-    QString::NormalizationForm_C,
-    QString::NormalizationForm_KD,
-    QString::NormalizationForm_KC
-  };
-
-  //----------------------------------------------------------------
-  // kNumNormalizationForms
-  //
-  static const std::size_t kNumNormalizationForms =
-    sizeof(kNormalizationForm) / sizeof(kNormalizationForm[0]);
-
-  //----------------------------------------------------------------
-  // MainWindow::openFile
-  //
-  IReader *
-  MainWindow::openFile(const QString & path)
-  {
-    QString fn = path;
-    QFileInfo fi(fn);
-
-    if (fi.suffix() == kExtEyetv)
-    {
-      std::list<QString> found;
-      findFiles(found, path, false);
-
-      if (!found.empty())
-      {
-        fn = found.front();
-      }
-    }
-
-    ReaderFFMPEG * reader = ReaderFFMPEG::create();
-
-    for (std::size_t i = 0; reader && i < kNumNormalizationForms; i++)
-    {
-      // find UNICODE NORMALIZATION FORM that works
-      // http://www.unicode.org/reports/tr15/
-      QString tmp = fn.normalized(kNormalizationForm[i]);
-      std::string filename = tmp.toUtf8().constData();
-
-      if (reader->open(filename.c_str()))
-      {
-        return reader;
-      }
-    }
-
-    reader->destroy();
-    return NULL;
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::testEachFile
-  //
-  bool
-  MainWindow::testEachFile(const std::list<QString> & playlist)
-  {
-    std::size_t numOpened = 0;
-    std::size_t numTotal = 0;
-
-    for (std::list<QString>::const_iterator j = playlist.begin();
-         j != playlist.end(); ++j)
-    {
-      const QString & fn = *j;
-      numTotal++;
-
-      IReader * reader = MainWindow::openFile(fn);
-      if (reader)
-      {
-        numOpened++;
-        reader->destroy();
-      }
-    }
-
-    bool ok = (numOpened == numTotal);
-    return ok;
-  }
-
-  //----------------------------------------------------------------
   // hasFileExt
   //
   inline static bool
@@ -1349,8 +1266,12 @@ namespace yae
 
     actionPlay->setEnabled(false);
 
-    IReaderPtr reader_ptr =
-      canaryTest(path) ? yae::openFile(readerFactory_, path) : IReaderPtr();
+    IReaderPtr reader_ptr;
+    if (canaryTest(path))
+    {
+      bool hwdec = true;
+      reader_ptr = yae::openFile(readerFactory_, path, hwdec);
+    }
 
     if (!reader_ptr)
     {
@@ -4311,25 +4232,8 @@ namespace yae
       VideoTraits & traits = videoTraits[i];
       if (reader->getVideoTraits(traits))
       {
-        double par = (traits.pixelAspectRatio_ != 0.0 &&
-                      traits.pixelAspectRatio_ != 1.0 ?
-                      traits.pixelAspectRatio_ : 1.0);
-
-        unsigned int w = (unsigned int)(0.5 + par * traits.visibleWidth_);
-        trackName +=
-          tr(", %1 x %2, %3 fps").
-          arg(w).
-          arg(traits.visibleHeight_).
-          arg(traits.frameRate_);
-
-        if (traits.cameraRotation_)
-        {
-          static const char * degree_utf8 = "\xc2""\xb0";
-          trackName +=
-            tr(", rotated %1%2").
-            arg(traits.cameraRotation_).
-            arg(QString::fromUtf8(degree_utf8));
-        }
+        std::string summary = traits.summary();
+        trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
       }
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);

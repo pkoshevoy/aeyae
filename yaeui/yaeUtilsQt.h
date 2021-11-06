@@ -177,7 +177,8 @@ namespace yae
   //
   YAEUI_API IReaderPtr
   openFile(const yae::TReaderFactoryPtr & readerFactory,
-           const QString & fn);
+           const QString & fn,
+           bool hwdec = false);
 
   //----------------------------------------------------------------
   // testEachFile

@@ -4530,7 +4530,8 @@ namespace yae
     Item & root = *root_;
     Item & player = root["player"];
 
-    reader_.reset(DemuxerReader::create(serial_demuxer_));
+    bool hwdec = true;
+    reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
     player_->playback(reader_);
 
     TTime playhead_pts = playhead_.pts_;

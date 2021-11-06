@@ -536,7 +536,7 @@ namespace yae
   // SubtitlesTrack::SubtitlesTrack
   //
   SubtitlesTrack::SubtitlesTrack(AVStream * stream):
-    Track(NULL, stream),
+    Track(NULL, stream, false),
     render_(false),
     format_(kSubsNone)
   {

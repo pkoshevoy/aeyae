@@ -283,9 +283,10 @@ namespace yae
   //----------------------------------------------------------------
   // Track::Track
   //
-  Track::Track(AVFormatContext * context, AVStream * stream):
+  Track::Track(AVFormatContext * context, AVStream * stream, bool hwdec):
     packetRateEstimator_(1536),
     thread_(this),
+    hwdec_(hwdec),
     context_(context),
     stream_(stream),
     sent_(0),
@@ -310,6 +311,7 @@ namespace yae
   Track::Track(Track * track):
     packetRateEstimator_(1536),
     packetQueue_(track->packetQueue_.getMaxSize()),
+    hwdec_(false),
     thread_(this),
     context_(NULL),
     stream_(NULL),
@@ -323,6 +325,7 @@ namespace yae
     tempo_(1.0),
     discarded_(0)
   {
+    std::swap(hwdec_, track->hwdec_);
     std::swap(hw_device_ctx_, track->hw_device_ctx_);
     std::swap(hw_frames_ctx_, track->hw_frames_ctx_);
     std::swap(context_, track->context_);
@@ -376,9 +379,8 @@ namespace yae
     int err = 0;
     yae::AvBufferRef hw_device_ctx;
 
-#if 1 // ndef __APPLE__
     int hw_config_index = 0;
-    while (params.width > 640 && params.height > 360)
+    while (hwdec_ && params.width > 640 && params.height > 360)
     {
       const AVCodecHWConfig * hw =
         avcodec_get_hw_config(codec, hw_config_index);
@@ -411,7 +413,6 @@ namespace yae
         YAE_ASSERT(!hw_device_ctx.ref_);
       }
     }
-#endif
 
     AvCodecContextPtr ctx_ptr(avcodec_alloc_context3(codec));
     AVCodecContext * ctx = ctx_ptr.get();
@@ -475,6 +476,22 @@ namespace yae
     {
       codecContext_.reset();
     }
+  }
+
+  //----------------------------------------------------------------
+  // Track::maybe_reopen
+  //
+  void
+  Track::maybe_reopen(bool hwdec)
+  {
+    if (hwdec_ == hwdec)
+    {
+      return;
+    }
+
+    hwdec_ = hwdec;
+    close();
+    open();
   }
 
   //----------------------------------------------------------------

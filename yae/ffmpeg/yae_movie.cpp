@@ -33,6 +33,7 @@ namespace yae
     context_(NULL),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
+    hwdec_(false),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     enableClosedCaptions_(0),
@@ -121,10 +122,12 @@ namespace yae
   // Movie::open
   //
   bool
-  Movie::open(const char * resourcePath)
+  Movie::open(const char * resourcePath, bool hwdec)
   {
     // FIXME: avoid closing/reopening the same resource:
     close();
+
+    hwdec_ = hwdec;
 
     YAE_ASSERT(!context_);
     context_ = avformat_alloc_context();
@@ -295,7 +298,7 @@ namespace yae
         continue;
       }
 
-      TrackPtr baseTrack(new Track(context_, stream));
+      TrackPtr baseTrack(new Track(context_, stream, hwdec_));
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {

@@ -38,7 +38,7 @@ namespace yae
     virtual bool getUrlProtocols(std::list<std::string> & protocols) const = 0;
 
     //! open a resource specified by the resourcePath such as filepath or URL:
-    virtual bool open(const char * resourcePathUTF8) = 0;
+    virtual bool open(const char * resourcePathUTF8, bool hwdec) = 0;
 
     //! close currently open resource:
     virtual void close() = 0;

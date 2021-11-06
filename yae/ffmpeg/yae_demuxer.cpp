@@ -258,7 +258,7 @@ namespace yae
         continue;
       }
 
-      TrackPtr baseTrack(new Track(ctx, stream));
+      TrackPtr baseTrack(new Track(ctx, stream, false));
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {

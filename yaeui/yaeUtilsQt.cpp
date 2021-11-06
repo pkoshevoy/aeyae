@@ -2016,7 +2016,9 @@ namespace yae
   // openFile
   //
   IReaderPtr
-  openFile(const yae::TReaderFactoryPtr & readerFactory, const QString & path)
+  openFile(const yae::TReaderFactoryPtr & readerFactory,
+           const QString & path,
+           bool hwdec)
   {
     QString fn = path;
     QFileInfo fi(fn);
@@ -2036,7 +2038,7 @@ namespace yae
     if (convert_path_to_utf8(fn, filepath))
     {
       IReaderPtr reader = readerFactory->create(filepath);
-      if (reader->open(filepath.c_str()))
+      if (reader->open(filepath.c_str(), hwdec))
       {
         return reader;
       }

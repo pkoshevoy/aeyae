@@ -208,7 +208,7 @@ namespace yae
   struct YAE_API Track
   {
     // NOTE: constructor does not open the stream:
-    Track(AVFormatContext * context, AVStream * stream);
+    Track(AVFormatContext * context, AVStream * stream, bool hwdec);
 
     // not-quiet a "move" constructor:
     Track(Track * track);
@@ -224,6 +224,9 @@ namespace yae
 
     // close the stream:
     virtual void close();
+
+    // helper:
+    void maybe_reopen(bool hwdec);
 
     // accessors to the global track id of this track.
     //
@@ -334,6 +337,7 @@ namespace yae
     FramerateEstimator packetRateEstimator_;
     TPacketQueue packetQueue_;
 
+    bool hwdec_;
     yae::AvBufferRef hw_device_ctx_;
     yae::AvBufferRef hw_frames_ctx_;
 

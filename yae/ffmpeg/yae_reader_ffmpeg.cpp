@@ -156,9 +156,9 @@ namespace yae
   // ReaderFFMPEG::open
   //
   bool
-  ReaderFFMPEG::open(const char * resourcePathUTF8)
+  ReaderFFMPEG::open(const char * resourcePathUTF8, bool hwdec)
   {
-    return private_->movie_.open(resourcePathUTF8);
+    return private_->movie_.open(resourcePathUTF8, hwdec);
   }
 
   //----------------------------------------------------------------

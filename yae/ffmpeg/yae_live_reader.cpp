@@ -53,7 +53,7 @@ namespace yae
     inline const char * getResourcePath() const
     { return filepath_.empty() ? NULL : filepath_.c_str(); }
 
-    bool open(const std::string & filepath);
+    bool open(const std::string & filepath, bool hwdec);
     bool updateTimelinePositions();
     void calcTimeline(TTime & start, TTime & duration);
     TSeekPosPtr getPosition(double t);
@@ -424,7 +424,7 @@ namespace yae
   // Live::open
   //
   bool
-  Live::open(const std::string & filepath)
+  Live::open(const std::string & filepath, bool hwdec)
   {
     filepath_ = filepath;
     segments_.clear();
@@ -468,7 +468,7 @@ namespace yae
       }
     }
 
-    return movie_.open(filepath.c_str());
+    return movie_.open(filepath.c_str(), hwdec);
   }
 
   //----------------------------------------------------------------
@@ -1064,9 +1064,9 @@ namespace yae
   // LiveReader::open
   //
   bool
-  LiveReader::open(const char * resourcePathUTF8)
+  LiveReader::open(const char * resourcePathUTF8, bool hwdec)
   {
-    return private_->open(std::string(resourcePathUTF8));
+    return private_->open(std::string(resourcePathUTF8), hwdec);
   }
 
   //----------------------------------------------------------------
