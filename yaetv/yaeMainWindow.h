@@ -154,7 +154,18 @@ namespace yae
     QShortcut * shortcutExit_;
 
   public:
-    PreferencesDialog preferencesDialog_;
+
+    inline PreferencesDialog & preferencesDialog()
+    {
+      if (!preferencesDialog_)
+      {
+        preferencesDialog_ = new PreferencesDialog(this);
+      }
+
+      return *preferencesDialog_;
+    }
+
+    PreferencesDialog * preferencesDialog_;
     PlayerWidget * playerWidget_;
     PlayerWindow playerWindow_;
 

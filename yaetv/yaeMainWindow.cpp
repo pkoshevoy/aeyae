@@ -441,8 +441,8 @@ namespace yae
     setupUi(this);
     setAcceptDrops(false);
 
-    playerWindow_.menubar->insertAction(NULL, menuFile->menuAction());
-    playerWindow_.menubar->insertAction(NULL, menuHelp->menuAction());
+    playerWindow_.menubar->addAction(menuFile->menuAction());
+    playerWindow_.menubar->addAction(menuHelp->menuAction());
 
     start_live_playback_.setInterval(1000);
 
@@ -629,8 +629,9 @@ namespace yae
 
     if (!dvr_.has_preferences())
     {
-      preferencesDialog_.init(dvr_);
-      preferencesDialog_.exec();
+      PreferencesDialog & d = preferencesDialog();
+      d.init(dvr_);
+      d.exec();
     }
   }
 
@@ -674,8 +675,9 @@ namespace yae
   void
   MainWindow::editPreferences()
   {
-    preferencesDialog_.init(dvr_);
-    preferencesDialog_.show();
+    PreferencesDialog & d = preferencesDialog();
+    d.init(dvr_);
+    d.show();
   }
 
   //----------------------------------------------------------------
@@ -687,7 +689,7 @@ namespace yae
     static AboutDialog * about = NULL;
     if (!about)
     {
-      about = new AboutDialog(NULL);
+      about = new AboutDialog(this);
       about->setWindowTitle(tr("yaetv (%1)").
                             arg(QString::fromUtf8(YAE_REVISION)));
     }
