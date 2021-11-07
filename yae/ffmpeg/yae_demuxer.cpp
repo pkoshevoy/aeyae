@@ -3555,7 +3555,17 @@ namespace yae
       bool keyframe = (al::starts_with(pkt.trackId_, "v:") &&
                        (packet.flags & AV_PKT_FLAG_KEY));
 
-      const Trim & trim = yae::at(trim_, pkt.trackId_);
+      std::map<std::string, Trim>::const_iterator
+        found = trim_.find(pkt.trackId_);
+      if (found == trim_.end())
+      {
+        // some packets (SCTE) don't have monotonically increasing timestamps
+        // (could be all 0 timestamp, etc...)
+        // return those as-is, untrimmed:
+        return packet_ptr;
+      }
+
+      const Trim & trim = found->second;
       const TTime & origin = yae::at(origin_, pkt.program_);
 
       TTime dt(packet.duration * src->time_base.num, src->time_base.den);
