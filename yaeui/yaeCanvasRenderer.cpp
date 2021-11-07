@@ -79,6 +79,18 @@ yae_show_program_listing(std::ostream & ostr,
 //
 static const char * yae_gl_arb_passthrough_2d =
   "!!ARBfp1.0\n"
+  "PARAM rescale = program.local[1];\n"
+  "TEMP rgba;\n"
+  "TEX rgba, fragment.texcoord[0], texture[0], 2D;\n"
+  "MUL rgba, rgba, rescale;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_passthrough_clut_2d
+//
+static const char * yae_gl_arb_passthrough_clut_2d =
+  "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
   "PARAM rescale_to_full = program.local[1];\n"
   "TEMP rgba_in;\n"
@@ -176,6 +188,18 @@ static const char * yae_gl_arb_yuva_to_rgba_2d =
 // yae_gl_arb_passthrough
 //
 static const char * yae_gl_arb_passthrough =
+  "!!ARBfp1.0\n"
+  "PARAM rescale = program.local[1];\n"
+  "TEMP rgba;\n"
+  "TEX rgba, fragment.texcoord[0], texture[0], RECT;\n"
+  "MUL rgba, rgba, rescale;\n"
+  "MUL result.color, fragment.color, rgba;\n"
+  "END\n";
+
+//----------------------------------------------------------------
+// yae_gl_arb_passthrough_clut
+//
+static const char * yae_gl_arb_passthrough_clut =
   "!!ARBfp1.0\n"
   "PARAM rescale_to_clut = program.local[0];\n"
   "PARAM rescale_to_full = program.local[1];\n"
@@ -2082,8 +2106,10 @@ namespace yae
       frame && !(clut_input_.sameColorSpaceAndRange(frame->traits_) &&
                  clut_input_.av_fmt_ == frame->traits_.av_fmt_);
 
-    bool upload_clut_texture = colorSpaceOrRangeChanged;
-    if (colorSpaceOrRangeChanged)
+    bool upload_clut_texture =
+      colorSpaceOrRangeChanged && !skipColorConverter_;
+
+    if (upload_clut_texture)
     {
       const VideoTraits & vtts = frame->traits_;
       clut_input_ = vtts;
@@ -2127,7 +2153,7 @@ namespace yae
 #endif
     }
 
-    if (!clut_tex_id_)
+    if (!clut_tex_id_ && !skipColorConverter_)
     {
       YAE_OGL_11(glGenTextures(1, &clut_tex_id_));
       upload_clut_texture = true;
@@ -2338,7 +2364,39 @@ namespace yae
     s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
                               yae_gl_arb_nv21_to_rgb);
 
-    // for natively supported formats:
+    // for natively supported formats, with CLUT:
+    static const TPixelFormatId native[] = {
+      kPixelFormatRGB24,
+      kPixelFormatBGR24,
+      kPixelFormatRGB8,
+      kPixelFormatBGR8,
+      kPixelFormatARGB,
+      kPixelFormatRGBA,
+      kPixelFormatABGR,
+      kPixelFormatBGRA,
+      kPixelFormatY400A,
+      kPixelFormatGRAY16BE,
+      kPixelFormatGRAY16LE,
+      kPixelFormatRGB48BE,
+      kPixelFormatRGB48LE,
+      kPixelFormatRGB565BE,
+      kPixelFormatRGB565LE,
+      kPixelFormatBGR565BE,
+      kPixelFormatBGR565LE,
+      kPixelFormatRGB555BE,
+      kPixelFormatRGB555LE,
+      kPixelFormatBGR555BE,
+      kPixelFormatBGR555LE,
+      kPixelFormatRGB444BE,
+      kPixelFormatRGB444LE,
+      kPixelFormatBGR444BE,
+      kPixelFormatBGR444LE,
+    };
+
+    s.createShaderProgramsFor(native, sizeof(native) / sizeof(native[0]),
+                              yae_gl_arb_passthrough_clut);
+
+    // for natively supported formats, without CLUT:
     s.createBuiltinShaderProgram(yae_gl_arb_passthrough);
 
     initialized = true;
@@ -2636,7 +2694,10 @@ namespace yae
         YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, texId_[i]));
       }
 
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
+      if (clut_tex_id_)
+      {
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
+      }
 
       YAE_OGL_11(glBegin(GL_QUADS));
       {
@@ -2784,7 +2845,39 @@ namespace yae
     s.createShaderProgramsFor(nv21, sizeof(nv21) / sizeof(nv21[0]),
                               yae_gl_arb_nv21_to_rgb_2d);
 
-    // for natively supported formats:
+    // for natively supported formats, with CLUT:
+    static const TPixelFormatId native[] = {
+      kPixelFormatRGB24,
+      kPixelFormatBGR24,
+      kPixelFormatRGB8,
+      kPixelFormatBGR8,
+      kPixelFormatARGB,
+      kPixelFormatRGBA,
+      kPixelFormatABGR,
+      kPixelFormatBGRA,
+      kPixelFormatY400A,
+      kPixelFormatGRAY16BE,
+      kPixelFormatGRAY16LE,
+      kPixelFormatRGB48BE,
+      kPixelFormatRGB48LE,
+      kPixelFormatRGB565BE,
+      kPixelFormatRGB565LE,
+      kPixelFormatBGR565BE,
+      kPixelFormatBGR565LE,
+      kPixelFormatRGB555BE,
+      kPixelFormatRGB555LE,
+      kPixelFormatBGR555BE,
+      kPixelFormatBGR555LE,
+      kPixelFormatRGB444BE,
+      kPixelFormatRGB444LE,
+      kPixelFormatBGR444BE,
+      kPixelFormatBGR444LE,
+    };
+
+    s.createShaderProgramsFor(native, sizeof(native) / sizeof(native[0]),
+                              yae_gl_arb_passthrough_clut_2d);
+
+    // for natively supported formats, without CLUT:
     s.createBuiltinShaderProgram(yae_gl_arb_passthrough_2d);
 
     initialized = true;
@@ -3337,7 +3430,10 @@ namespace yae
                                  texId_[i * shader.numPlanes_]));
       }
 
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
+      if (clut_tex_id_)
+      {
+        YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
+      }
 
       YAE_OGL_11(glBegin(GL_QUADS));
       {

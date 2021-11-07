@@ -252,7 +252,11 @@ namespace yae
       }
 
       renderer_.reset(new TLegacyCanvas());
-      renderer_->loadFrame(*(layer->context()), frames[i]);
+      {
+        IOpenGLContext & context = *(layer->context());
+        renderer_->skipColorConverter(context, true);
+        renderer_->loadFrame(context, frames[i]);
+      }
 
       Text & pts = parent_->get<Text>("pts");
       pts.uncache();
@@ -1065,13 +1069,25 @@ namespace yae
         VideoTraits vtts;
         decoder->getTraits(vtts);
 
-        TMakeCurrentContext currentContext(*view.context());
-        TLegacyCanvas renderer;
-        bool skipColorConverter = false;
-        adjust_pixel_format_for_opengl(&renderer,
-                                       skipColorConverter,
-                                       vtts.pixelFormat_,
-                                       outputFormat);
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+
+        if (ptts)
+        {
+          if ((ptts->flags_ & pixelFormat::kAlpha) &&
+              (ptts->flags_ & pixelFormat::kColor))
+          {
+            outputFormat = kPixelFormatBGRA;
+          }
+          else
+          {
+            outputFormat = kPixelFormatBGR24;
+          }
+        }
+        else
+        {
+          outputFormat = vtts.pixelFormat_;
+        }
       }
     }
 
