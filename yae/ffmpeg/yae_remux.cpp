@@ -386,7 +386,7 @@ namespace yae
       const std::string & filePath = *i;
 
       std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(filePath, demuxers))
+      if (!open_primary_and_aux_demuxers(filePath, demuxers, true))
       {
         // failed to open the primary resource:
         av_log(NULL, AV_LOG_WARNING,
@@ -531,7 +531,7 @@ namespace yae
       }
 
       std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(source, demuxers))
+      if (!open_primary_and_aux_demuxers(source, demuxers, true))
       {
         // failed to open the primary resource:
        yae_wlog("failed to open %s, skipping...",

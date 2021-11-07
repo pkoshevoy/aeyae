@@ -78,7 +78,7 @@ namespace yae
             std::size_t track_offset = 0);
     ~Demuxer();
 
-    bool open(const char * resourcePath);
+    bool open(const char * resourcePath, bool hwdec);
     void close();
 
     bool isSeekable() const;
@@ -91,6 +91,9 @@ namespace yae
     // NOTE: this returns ffmpeg error code verbatim,
     // the caller must handle the error and retry as necessary:
     int demux(AvPkt & pkt);
+
+    inline bool hwdec() const
+    { return hwdec_; }
 
     inline const std::vector<TProgramInfo> & programs() const
     { return programs_; }
@@ -209,6 +212,8 @@ namespace yae
     // this flag is observed from a callback passed to ffmpeg;
     // this is used to interrupt blocking ffmpeg APIs:
     bool interruptDemuxer_;
+
+    bool hwdec_;
   };
 
   //----------------------------------------------------------------
@@ -220,7 +225,9 @@ namespace yae
   // open_demuxer
   //
   YAE_API TDemuxerPtr
-  open_demuxer(const char * resourcePath, std::size_t track_offset = 0);
+  open_demuxer(const char * resourcePath,
+               std::size_t track_offset,
+               bool hwdec);
 
   //----------------------------------------------------------------
   // open_primary_and_aux_demuxers
@@ -239,7 +246,8 @@ namespace yae
   //
   YAE_API bool
   open_primary_and_aux_demuxers(const std::string & filePath,
-                                std::list<yae::TDemuxerPtr> & src);
+                                std::list<yae::TDemuxerPtr> & src,
+                                bool hwdec);
 
   //----------------------------------------------------------------
   // get_dts

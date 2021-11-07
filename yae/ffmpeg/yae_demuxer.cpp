@@ -81,7 +81,8 @@ namespace yae
                    std::size_t track_offset):
     ix_(demuxer_index),
     to_(track_offset),
-    interruptDemuxer_(false)
+    interruptDemuxer_(false),
+    hwdec_(false)
   {
     ensure_ffmpeg_initialized();
   }
@@ -123,13 +124,15 @@ namespace yae
   // Demuxer::open
   //
   bool
-  Demuxer::open(const char * resourcePath)
+  Demuxer::open(const char * resourcePath, bool hwdec)
   {
     // FIXME: avoid closing/reopening the same resource:
     close();
 
     YAE_ASSERT(!context_);
     YAE_ASSERT(!interruptDemuxer_);
+
+    hwdec_ = hwdec;
 
     AVDictionary * options = NULL;
 
@@ -258,7 +261,7 @@ namespace yae
         continue;
       }
 
-      TrackPtr baseTrack(new Track(ctx, stream, false));
+      TrackPtr baseTrack(new Track(ctx, stream, hwdec));
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
@@ -770,7 +773,7 @@ namespace yae
   // open_demuxer
   //
   TDemuxerPtr
-  open_demuxer(const char * resourcePath, std::size_t track_offset)
+  open_demuxer(const char * resourcePath, std::size_t track_offset, bool hwdec)
   {
     YAE_ASSERT(!(track_offset % 100));
     TDemuxerPtr demuxer(new Demuxer(track_offset / 100, track_offset));
@@ -788,7 +791,7 @@ namespace yae
       }
     }
 
-    if (!demuxer->open(path.c_str()))
+    if (!demuxer->open(path.c_str(), hwdec))
     {
       return TDemuxerPtr();
     }
@@ -801,7 +804,8 @@ namespace yae
   //
   bool
   open_primary_and_aux_demuxers(const std::string & filePath,
-                                std::list<TDemuxerPtr> & src)
+                                std::list<TDemuxerPtr> & src,
+                                bool hwdec)
   {
     std::string folderPath;
     std::string fileName;
@@ -816,7 +820,7 @@ namespace yae
       baseName += '.';
     }
 
-    src.push_back(open_demuxer(filePath.c_str()));
+    src.push_back(open_demuxer(filePath.c_str(), 0, hwdec));
     if (!src.back())
     {
       // failed to open the primary resource:
@@ -848,7 +852,8 @@ namespace yae
         }
 
         src.push_back(open_demuxer(folder.item_path().c_str(),
-                                   trackOffset));
+                                   trackOffset,
+                                   hwdec));
         if (!src.back())
         {
           src.pop_back();
@@ -1464,7 +1469,8 @@ namespace yae
     {
       const Demuxer & d = *(pb.demuxer());
       demuxer_ = open_demuxer(d.resourcePath().c_str(),
-                              d.track_offset());
+                              d.track_offset(),
+                              d.hwdec());
       if (!demuxer_)
       {
         std::ostringstream oss;
