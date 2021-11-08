@@ -84,251 +84,6 @@ namespace yae
   {
     greeting_ = tr("hello");
 
-    // when in fullscreen mode the menubar is hidden and all actions
-    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
-    // so I am creating these shortcuts as a workaround:
-    bool ok = true;
-
-    ok = connect(&view_, SIGNAL(select_frame_crop()),
-                 this, SLOT(showFrameCropSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(select_aspect_ratio()),
-                 this, SLOT(showAspectRatioSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(select_video_track()),
-                 this, SLOT(showVideoTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(select_audio_track()),
-                 this, SLOT(showAudioTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(select_subtt_track()),
-                 this, SLOT(showSubttTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&view_, SIGNAL(adjust_canvas_height()),
-                 this, SLOT(adjustCanvasHeight()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionVerticalScaling_, SIGNAL(triggered()),
-                 this, SLOT(playbackVerticalScaling()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionShrinkWrap_, SIGNAL(triggered()),
-                 this, SLOT(playbackShrinkWrap()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionFullScreen_, SIGNAL(triggered()),
-                 this, SLOT(playbackFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionFillScreen_, SIGNAL(triggered()),
-                 this, SLOT(playbackFillScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionAspectRatioOther_, SIGNAL(triggered()),
-                 this, SLOT(playbackAspectRatioOther()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionCropFrameOther_, SIGNAL(triggered()),
-                 this, SLOT(playbackCropFrameOther()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionHalfSize_, SIGNAL(triggered()),
-                 this, SLOT(windowHalfSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionFullSize_, SIGNAL(triggered()),
-                 this, SLOT(windowFullSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionDoubleSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDoubleSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionDecreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDecreaseSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(view_.actionIncreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowIncreaseSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&cropView_, SIGNAL(cropped(const TVideoFramePtr &,
-                                            const TCropFrame &)),
-                 &view_, SLOT(cropped(const TVideoFramePtr &,
-                                      const TCropFrame &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&cropView_, SIGNAL(done()),
-                 this, SLOT(dismissFrameCropView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&frameCropSelectionView_,
-                 SIGNAL(selected(const AspectRatio &)),
-                 this,
-                 SLOT(selectFrameCrop(const AspectRatio &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&frameCropSelectionView_, SIGNAL(done()),
-                 this, SLOT(dismissFrameCropSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&aspectRatioSelectionView_,
-                 SIGNAL(selected(const AspectRatio &)),
-                 this,
-                 SLOT(selectAspectRatio(const AspectRatio &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&aspectRatioSelectionView_,
-                 SIGNAL(aspectRatio(double)),
-                 this,
-                 SLOT(setAspectRatio(double)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&aspectRatioSelectionView_, SIGNAL(done()),
-                 this, SLOT(dismissAspectRatioSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&videoTrackSelectionView_, SIGNAL(option_selected(int)),
-                 this, SLOT(videoTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&videoTrackSelectionView_, SIGNAL(done()),
-                 this, SLOT(dismissVideoTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&audioTrackSelectionView_, SIGNAL(option_selected(int)),
-                 this, SLOT(audioTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&audioTrackSelectionView_, SIGNAL(done()),
-                 this, SLOT(dismissAudioTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&subttTrackSelectionView_, SIGNAL(option_selected(int)),
-                 this, SLOT(subttTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&subttTrackSelectionView_, SIGNAL(done()),
-                 this, SLOT(dismissSubttTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    shortcutFullScreen_ = new QShortcut(this);
-    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 view_.actionFullScreen_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutFillScreen_ = new QShortcut(this);
-    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
-                 view_.actionFillScreen_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutShowTimeline_ = new QShortcut(this);
-    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
-                 view_.actionShowTimeline_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutPlay_ = new QShortcut(this);
-    shortcutPlay_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutPlay_, SIGNAL(activated()),
-                 view_.actionPlay_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutNextChapter_ = new QShortcut(this);
-    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
-                 view_.actionNextChapter_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutLoop_ = new QShortcut(this);
-    shortcutLoop_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutLoop_, SIGNAL(activated()),
-                 view_.actionLoop_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCropNone_ = new QShortcut(this);
-    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCropNone_, SIGNAL(activated()),
-                 view_.actionCropFrameNone_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_33_ = new QShortcut(this);
-    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
-                 view_.actionCropFrame1_33_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_78_ = new QShortcut(this);
-    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
-                 view_.actionCropFrame1_78_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_85_ = new QShortcut(this);
-    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
-                 view_.actionCropFrame1_85_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop2_40_ = new QShortcut(this);
-    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
-                 view_.actionCropFrame2_40_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCropOther_ = new QShortcut(this);
-    shortcutCropOther_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCropOther_, SIGNAL(activated()),
-                 view_.actionCropFrameOther_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAutoCrop_ = new QShortcut(this);
-    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
-                 view_.actionCropFrameAutoDetect_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatioNone_ = new QShortcut(this);
-    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
-                 view_.actionAspectRatioAuto_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatio1_33_ = new QShortcut(this);
-    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
-                 view_.actionAspectRatio1_33_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatio1_78_ = new QShortcut(this);
-    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
-                 view_.actionAspectRatio1_78_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     QVBoxLayout * canvasLayout = new QVBoxLayout(this);
     canvasLayout->setMargin(0);
     canvasLayout->setSpacing(0);
@@ -353,6 +108,8 @@ namespace yae
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
 
+    bool ok = true;
+
     ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
                  this, SLOT(focusChanged(QWidget *, QWidget *)));
     YAE_ASSERT(ok);
@@ -363,10 +120,6 @@ namespace yae
 
     ok = connect(&(canvas_->sigs_), SIGNAL(escLong()),
                  this, SLOT(requestToggleFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
-                 &view_, SIGNAL(toggle_playlist()));
     YAE_ASSERT(ok);
 
     ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
@@ -425,6 +178,7 @@ namespace yae
     canvas_->setGreeting(greeting_);
     canvas_->append(&view_);
 
+    // FIXME: this functionality belongs in PlayerUxItem:
     canvas_->append(&spinner_);
     canvas_->append(&confirm_);
     canvas_->append(&cropView_);
@@ -498,13 +252,266 @@ namespace yae
     onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
     canvas_->addLoadFrameObserver(onLoadFrame_);
 
+    // shortcut:
+    yae::PlayerUxItem * pl_ux = view_.player_ux();
+
+    // when in fullscreen mode the menubar is hidden and all actions
+    // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
+    // so I am creating these shortcuts as a workaround:
     bool ok = true;
+
+    ok = connect(pl_ux, SIGNAL(select_frame_crop()),
+                 this, SLOT(showFrameCropSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(select_aspect_ratio()),
+                 this, SLOT(showAspectRatioSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(select_video_track()),
+                 this, SLOT(showVideoTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(select_audio_track()),
+                 this, SLOT(showAudioTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(select_subtt_track()),
+                 this, SLOT(showSubttTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(adjust_canvas_height()),
+                 this, SLOT(adjustCanvasHeight()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionVerticalScaling_, SIGNAL(triggered()),
+                 this, SLOT(playbackVerticalScaling()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionShrinkWrap_, SIGNAL(triggered()),
+                 this, SLOT(playbackShrinkWrap()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionFullScreen_, SIGNAL(triggered()),
+                 this, SLOT(playbackFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionFillScreen_, SIGNAL(triggered()),
+                 this, SLOT(playbackFillScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionAspectRatioOther_, SIGNAL(triggered()),
+                 this, SLOT(playbackAspectRatioOther()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionCropFrameOther_, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameOther()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionHalfSize_, SIGNAL(triggered()),
+                 this, SLOT(windowHalfSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionFullSize_, SIGNAL(triggered()),
+                 this, SLOT(windowFullSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionDoubleSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDoubleSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionDecreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux->actionIncreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&cropView_, SIGNAL(cropped(const TVideoFramePtr &,
+                                            const TCropFrame &)),
+                 pl_ux, SLOT(cropped(const TVideoFramePtr &,
+                                      const TCropFrame &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&cropView_, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&frameCropSelectionView_,
+                 SIGNAL(selected(const AspectRatio &)),
+                 this,
+                 SLOT(selectFrameCrop(const AspectRatio &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&frameCropSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_,
+                 SIGNAL(selected(const AspectRatio &)),
+                 this,
+                 SLOT(selectAspectRatio(const AspectRatio &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_,
+                 SIGNAL(aspectRatio(double)),
+                 this,
+                 SLOT(setAspectRatio(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspectRatioSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissAspectRatioSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&videoTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(videoTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&videoTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissVideoTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&audioTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(audioTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&audioTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissAudioTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&subttTrackSelectionView_, SIGNAL(option_selected(int)),
+                 this, SLOT(subttTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&subttTrackSelectionView_, SIGNAL(done()),
+                 this, SLOT(dismissSubttTrackSelectionView()));
+    YAE_ASSERT(ok);
+
+    // FIXME: these belong in PlayerUxItem:
+    shortcutFullScreen_ = new QShortcut(this);
+    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
+                 pl_ux->actionFullScreen_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutFillScreen_ = new QShortcut(this);
+    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
+                 pl_ux->actionFillScreen_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutShowTimeline_ = new QShortcut(this);
+    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
+                 pl_ux->actionShowTimeline_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutPlay_ = new QShortcut(this);
+    shortcutPlay_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutPlay_, SIGNAL(activated()),
+                 pl_ux->actionPlay_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutNextChapter_ = new QShortcut(this);
+    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
+                 pl_ux->actionNextChapter_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutLoop_ = new QShortcut(this);
+    shortcutLoop_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutLoop_, SIGNAL(activated()),
+                 pl_ux->actionLoop_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCropNone_ = new QShortcut(this);
+    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCropNone_, SIGNAL(activated()),
+                 pl_ux->actionCropFrameNone_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCrop1_33_ = new QShortcut(this);
+    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
+                 pl_ux->actionCropFrame1_33_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCrop1_78_ = new QShortcut(this);
+    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
+                 pl_ux->actionCropFrame1_78_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCrop1_85_ = new QShortcut(this);
+    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
+                 pl_ux->actionCropFrame1_85_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCrop2_40_ = new QShortcut(this);
+    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
+                 pl_ux->actionCropFrame2_40_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutCropOther_ = new QShortcut(this);
+    shortcutCropOther_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutCropOther_, SIGNAL(activated()),
+                 pl_ux->actionCropFrameOther_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutAutoCrop_ = new QShortcut(this);
+    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
+                 pl_ux->actionCropFrameAutoDetect_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutAspectRatioNone_ = new QShortcut(this);
+    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
+                 pl_ux->actionAspectRatioAuto_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutAspectRatio1_33_ = new QShortcut(this);
+    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
+                 pl_ux->actionAspectRatio1_33_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    shortcutAspectRatio1_78_ = new QShortcut(this);
+    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
+
+    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
+                 pl_ux->actionAspectRatio1_78_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
+                 pl_ux, SIGNAL(toggle_playlist()));
+    YAE_ASSERT(ok);
+
+
     ok = connect(this, SIGNAL(setInPoint()),
-                 &view_.timeline_model(), SLOT(setInPoint()));
+                 &(pl_ux->timeline_model()), SLOT(setInPoint()));
     YAE_ASSERT(ok);
 
     ok = connect(this, SIGNAL(setOutPoint()),
-                 &view_.timeline_model(), SLOT(setOutPoint()));
+                 &(pl_ux->timeline_model()), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
 
     view_.setEnabled(true);
@@ -518,9 +525,12 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     dismissSelectionViews();
     view_.setEnabled(true);
-    view_.playback(reader, bookmark, start_from_zero_time);
+    pl_ux.playback(reader, bookmark, start_from_zero_time);
   }
 
   //----------------------------------------------------------------
@@ -529,7 +539,10 @@ namespace yae
   void
   PlayerWidget::stop()
   {
-    view_.stopPlayback();
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    pl_ux.stopPlayback();
     dismissSelectionViews();
   }
 
@@ -539,8 +552,11 @@ namespace yae
   void
   PlayerWidget::playbackVerticalScaling()
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     canvasSizeBackup();
-    bool enable = view_.actionVerticalScaling_->isChecked();
+    bool enable = pl_ux.actionVerticalScaling_->isChecked();
     canvas().enableVerticalScaling(enable);
     canvasSizeRestore();
   }
@@ -551,12 +567,15 @@ namespace yae
   void
   PlayerWidget::playbackShrinkWrap()
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     if (window()->isFullScreen())
     {
       return;
     }
 
-    IReader * reader = view_.get_reader();
+    IReader * reader = pl_ux.get_reader();
     if (!reader)
     {
       return;
@@ -635,6 +654,9 @@ namespace yae
   void
   PlayerWidget::enterFullScreen(Canvas::TRenderMode renderMode)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     bool is_fullscreen = window()->isFullScreen();
     if (is_fullscreen && renderMode_ == renderMode)
     {
@@ -646,19 +668,19 @@ namespace yae
 
     SignalBlocker blockSignals;
     blockSignals
-      << view_.actionFullScreen_
-      << view_.actionFillScreen_;
+      << pl_ux.actionFullScreen_
+      << pl_ux.actionFillScreen_;
 
     if (renderMode == Canvas::kScaleToFit)
     {
-      view_.actionFullScreen_->setChecked(true);
-      view_.actionFillScreen_->setChecked(false);
+      pl_ux.actionFullScreen_->setChecked(true);
+      pl_ux.actionFillScreen_->setChecked(false);
     }
 
     if (renderMode == Canvas::kCropToFill)
     {
-      view_.actionFillScreen_->setChecked(true);
-      view_.actionFullScreen_->setChecked(false);
+      pl_ux.actionFillScreen_->setChecked(true);
+      pl_ux.actionFullScreen_->setChecked(false);
     }
 
     canvas_->setRenderMode(renderMode);
@@ -670,7 +692,7 @@ namespace yae
     }
 
     // enter full screen rendering:
-    view_.actionShrinkWrap_->setEnabled(false);
+    pl_ux.actionShrinkWrap_->setEnabled(false);
 
     window()->showFullScreen();
     // swapShortcuts();
@@ -682,6 +704,9 @@ namespace yae
   void
   PlayerWidget::exitFullScreen()
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     if (!window()->isFullScreen())
     {
       return;
@@ -690,12 +715,12 @@ namespace yae
     // exit full screen rendering:
     SignalBlocker blockSignals;
     blockSignals
-      << view_.actionFullScreen_
-      << view_.actionFillScreen_;
+      << pl_ux.actionFullScreen_
+      << pl_ux.actionFillScreen_;
 
-    view_.actionFullScreen_->setChecked(false);
-    view_.actionFillScreen_->setChecked(false);
-    view_.actionShrinkWrap_->setEnabled(true);
+    pl_ux.actionFullScreen_->setChecked(false);
+    pl_ux.actionFillScreen_->setChecked(false);
+    pl_ux.actionShrinkWrap_->setEnabled(true);
 
     window()->showNormal();
     canvas_->setRenderMode(Canvas::kScaleToFit);
@@ -712,6 +737,9 @@ namespace yae
   void
   PlayerWidget::playbackAspectRatioOther()
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     if (aspectRatioSelectionView_.isEnabled())
     {
       return;
@@ -733,7 +761,7 @@ namespace yae
     current_ar = current_ar ? current_ar : 1.0;
     aspectRatioSelectionView_.setAspectRatio(current_ar);
 
-    if (view_.actionAspectRatioAuto_->isChecked())
+    if (pl_ux.actionAspectRatioAuto_->isChecked())
     {
       aspectRatioSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
     }
@@ -749,46 +777,49 @@ namespace yae
   void
   PlayerWidget::selectAspectRatio(const AspectRatio & option)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     // update Aspect Ratio menu item selection
     double ar = option.ar_;
 
     if (option.category_ == AspectRatio::kNone)
     {
       ar = 0.0;
-      view_.actionAspectRatioAuto_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatioAuto_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
     {
-      view_.actionAspectRatio1_33_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio1_33_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 1.6, 1e-2))
     {
-      view_.actionAspectRatio1_60_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio1_60_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
     {
-      view_.actionAspectRatio1_78_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio1_78_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 1.85, 1e-2))
     {
-      view_.actionAspectRatio1_85_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio1_85_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 2.35, 1e-2))
     {
-      view_.actionAspectRatio2_35_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio2_35_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 2.4, 1e-2))
     {
-      view_.actionAspectRatio2_40_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatio2_40_->activate(QAction::Trigger);
     }
     else if (option.category_ == AspectRatio::kOther)
     {
       ar = aspectRatioSelectionView_.currentAspectRatio();
-      view_.actionAspectRatioOther_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
     }
     else
     {
-      view_.actionAspectRatioOther_->activate(QAction::Trigger);
+      pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
     }
 
     canvas().overrideDisplayAspectRatio(ar);
@@ -800,8 +831,11 @@ namespace yae
   void
   PlayerWidget::setAspectRatio(double ar)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     // update Aspect Ratio menu item selection
-    view_.actionAspectRatioOther_->activate(QAction::Trigger);
+    pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
     canvas().overrideDisplayAspectRatio(ar);
   }
 
@@ -856,55 +890,58 @@ namespace yae
   void
   PlayerWidget::selectFrameCrop(const AspectRatio & option)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     // update Crop menu item selection
     if (option.category_ == AspectRatio::kNone)
     {
-      view_.actionCropFrameNone_->activate(QAction::Trigger);
+      pl_ux.actionCropFrameNone_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
     {
-      view_.actionCropFrame1_33_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame1_33_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 1.6, 1e-2))
     {
-      view_.actionCropFrame1_60_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame1_60_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
     {
-      view_.actionCropFrame1_78_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame1_78_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 1.85, 1e-2))
     {
-      view_.actionCropFrame1_85_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame1_85_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 2.35, 1e-2))
     {
-      view_.actionCropFrame2_35_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame2_35_->activate(QAction::Trigger);
     }
     else if (close_enough(option.ar_, 2.4, 1e-2))
     {
-      view_.actionCropFrame2_40_->activate(QAction::Trigger);
+      pl_ux.actionCropFrame2_40_->activate(QAction::Trigger);
     }
     else if (option.category_ == AspectRatio::kAuto)
     {
-      view_.actionCropFrameAutoDetect_->activate(QAction::Trigger);
+      pl_ux.actionCropFrameAutoDetect_->activate(QAction::Trigger);
     }
     else if (option.category_ == AspectRatio::kOther)
     {
-      view_.actionCropFrameOther_->activate(QAction::Trigger);
+      pl_ux.actionCropFrameOther_->activate(QAction::Trigger);
     }
     else
     {
       bool ok = true;
 
-      ok = disconnect(view_.actionCropFrameOther_, SIGNAL(triggered()),
+      ok = disconnect(pl_ux.actionCropFrameOther_, SIGNAL(triggered()),
                       this, SLOT(playbackCropFrameOther()));
       YAE_ASSERT(ok);
 
-      view_.canvas().cropFrame(option.ar_);
-      view_.actionCropFrameOther_->activate(QAction::Trigger);
+      pl_ux.canvas().cropFrame(option.ar_);
+      pl_ux.actionCropFrameOther_->activate(QAction::Trigger);
 
-      ok = connect(view_.actionCropFrameOther_, SIGNAL(triggered()),
+      ok = connect(pl_ux.actionCropFrameOther_, SIGNAL(triggered()),
                    this, SLOT(playbackCropFrameOther()));
       YAE_ASSERT(ok);
     }
@@ -916,6 +953,9 @@ namespace yae
   void
   PlayerWidget::showFrameCropSelectionView()
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     if (frameCropSelectionView_.isEnabled())
     {
       return;
@@ -935,11 +975,11 @@ namespace yae
     current_ar = current_ar ? current_ar : 1.0;
     frameCropSelectionView_.setAspectRatio(current_ar);
 
-    if (view_.actionCropFrameNone_->isChecked())
+    if (pl_ux.actionCropFrameNone_->isChecked())
     {
       frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
     }
-    else if (view_.actionCropFrameAutoDetect_->isChecked())
+    else if (pl_ux.actionCropFrameAutoDetect_->isChecked())
     {
       frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kAuto);
     }
@@ -964,7 +1004,9 @@ namespace yae
   void
   PlayerWidget::showVideoTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
+    // shortcuts:
+    PlayerUxItem & pl_ux = get_player_ux();
+    const PlayerItem & player = *(pl_ux.player_);
     IReaderPtr reader = player.reader();
 
     const std::vector<TTrackInfo> & tracks = player.video_tracks_info();
@@ -1049,7 +1091,9 @@ namespace yae
   void
   PlayerWidget::showAudioTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
+    // shortcuts:
+    PlayerUxItem & pl_ux = get_player_ux();
+    const PlayerItem & player = *(pl_ux.player_);
     IReaderPtr reader = player.reader();
 
     const std::vector<TTrackInfo> & tracks = player.audio_tracks_info();
@@ -1126,7 +1170,9 @@ namespace yae
   void
   PlayerWidget::showSubttTrackSelectionView()
   {
-    const PlayerItem & player = *(view_.player_);
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+    const PlayerItem & player = *(pl_ux.player_);
     IReaderPtr reader = player.reader();
 
     const std::vector<TTrackInfo> & tracks = player.subtt_tracks_info();
@@ -1358,14 +1404,17 @@ namespace yae
   void
   PlayerWidget::videoTrackSelectedOption(int option_index)
   {
-    if (!view_.videoTrackGroup_)
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    if (!pl_ux.videoTrackGroup_)
     {
       return;
     }
 
-    if (option_index < view_.videoTrackGroup_->actions().size())
+    if (option_index < pl_ux.videoTrackGroup_->actions().size())
     {
-      view_.videoTrackGroup_->actions()[option_index]->trigger();
+      pl_ux.videoTrackGroup_->actions()[option_index]->trigger();
     }
   }
 
@@ -1375,14 +1424,17 @@ namespace yae
   void
   PlayerWidget::audioTrackSelectedOption(int option_index)
   {
-    if (!view_.audioTrackGroup_)
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    if (!pl_ux.audioTrackGroup_)
     {
       return;
     }
 
-    if (option_index < view_.audioTrackGroup_->actions().size())
+    if (option_index < pl_ux.audioTrackGroup_->actions().size())
     {
-      view_.audioTrackGroup_->actions()[option_index]->trigger();
+      pl_ux.audioTrackGroup_->actions()[option_index]->trigger();
     }
   }
 
@@ -1392,14 +1444,17 @@ namespace yae
   void
   PlayerWidget::subttTrackSelectedOption(int option_index)
   {
-    if (!view_.subsTrackGroup_)
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    if (!pl_ux.subsTrackGroup_)
     {
       return;
     }
 
-    if (option_index < view_.subsTrackGroup_->actions().size())
+    if (option_index < pl_ux.subsTrackGroup_->actions().size())
     {
-      view_.subsTrackGroup_->actions()[option_index]->trigger();
+      pl_ux.subsTrackGroup_->actions()[option_index]->trigger();
     }
   }
 
@@ -1409,7 +1464,10 @@ namespace yae
   void
   PlayerWidget::adjustCanvasHeight()
   {
-    IReader * reader = view_.get_reader();
+    // shortcuts:
+    PlayerUxItem & pl_ux = get_player_ux();
+    IReader * reader = pl_ux.get_reader();
+
     if (!reader)
     {
       return;
@@ -1487,22 +1545,26 @@ namespace yae
   void
   PlayerWidget::swapShortcuts()
   {
-    yae::swapShortcuts(shortcutFullScreen_, view_.actionFullScreen_);
-    yae::swapShortcuts(shortcutFillScreen_, view_.actionFillScreen_);
-    yae::swapShortcuts(shortcutShowTimeline_, view_.actionShowTimeline_);
-    yae::swapShortcuts(shortcutPlay_, view_.actionPlay_);
-    yae::swapShortcuts(shortcutLoop_, view_.actionLoop_);
-    yae::swapShortcuts(shortcutCropNone_, view_.actionCropFrameNone_);
-    yae::swapShortcuts(shortcutCrop1_33_, view_.actionCropFrame1_33_);
-    yae::swapShortcuts(shortcutCrop1_78_, view_.actionCropFrame1_78_);
-    yae::swapShortcuts(shortcutCrop1_85_, view_.actionCropFrame1_85_);
-    yae::swapShortcuts(shortcutCrop2_40_, view_.actionCropFrame2_40_);
-    yae::swapShortcuts(shortcutCropOther_, view_.actionCropFrameOther_);
-    yae::swapShortcuts(shortcutAutoCrop_, view_.actionCropFrameAutoDetect_);
-    yae::swapShortcuts(shortcutNextChapter_, view_.actionNextChapter_);
-    yae::swapShortcuts(shortcutAspectRatioNone_, view_.actionAspectRatioAuto_);
-    yae::swapShortcuts(shortcutAspectRatio1_33_, view_.actionAspectRatio1_33_);
-    yae::swapShortcuts(shortcutAspectRatio1_78_, view_.actionAspectRatio1_78_);
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    // FIXME: this belongs in PlayerUxItem:
+    yae::swapShortcuts(shortcutFullScreen_, pl_ux.actionFullScreen_);
+    yae::swapShortcuts(shortcutFillScreen_, pl_ux.actionFillScreen_);
+    yae::swapShortcuts(shortcutShowTimeline_, pl_ux.actionShowTimeline_);
+    yae::swapShortcuts(shortcutPlay_, pl_ux.actionPlay_);
+    yae::swapShortcuts(shortcutLoop_, pl_ux.actionLoop_);
+    yae::swapShortcuts(shortcutCropNone_, pl_ux.actionCropFrameNone_);
+    yae::swapShortcuts(shortcutCrop1_33_, pl_ux.actionCropFrame1_33_);
+    yae::swapShortcuts(shortcutCrop1_78_, pl_ux.actionCropFrame1_78_);
+    yae::swapShortcuts(shortcutCrop1_85_, pl_ux.actionCropFrame1_85_);
+    yae::swapShortcuts(shortcutCrop2_40_, pl_ux.actionCropFrame2_40_);
+    yae::swapShortcuts(shortcutCropOther_, pl_ux.actionCropFrameOther_);
+    yae::swapShortcuts(shortcutAutoCrop_, pl_ux.actionCropFrameAutoDetect_);
+    yae::swapShortcuts(shortcutNextChapter_, pl_ux.actionNextChapter_);
+    yae::swapShortcuts(shortcutAspectRatioNone_, pl_ux.actionAspectRatioAuto_);
+    yae::swapShortcuts(shortcutAspectRatio1_33_, pl_ux.actionAspectRatio1_33_);
+    yae::swapShortcuts(shortcutAspectRatio1_78_, pl_ux.actionAspectRatio1_78_);
   }
 
   //----------------------------------------------------------------
@@ -1511,7 +1573,10 @@ namespace yae
   void
   PlayerWidget::populateContextMenu()
   {
-    view_.populateContextMenu();
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
+    pl_ux.populateContextMenu();
   }
 
   //----------------------------------------------------------------
@@ -1575,6 +1640,9 @@ namespace yae
   bool
   PlayerWidget::processMousePressEvent(QMouseEvent * event)
   {
+    // shortcut:
+    PlayerUxItem & pl_ux = get_player_ux();
+
     if (event->button() == Qt::RightButton)
     {
       QPoint localPt = event->pos();
@@ -1582,7 +1650,7 @@ namespace yae
 
       populateContextMenu();
 
-      view_.contextMenu_->popup(globalPt);
+      pl_ux.contextMenu_->popup(globalPt);
       return true;
     }
 

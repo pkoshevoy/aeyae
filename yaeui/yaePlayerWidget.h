@@ -70,6 +70,9 @@ namespace yae
     inline PlayerView & view()
     { return view_; }
 
+    inline PlayerUxItem & get_player_ux() const
+    { return *(view_.player_ux()); }
+
   signals:
     void setInPoint();
     void setOutPoint();

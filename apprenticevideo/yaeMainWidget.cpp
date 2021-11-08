@@ -179,124 +179,6 @@ namespace yae
     bookmarksMenuSeparator_ = menuBookmarks_->addSeparator();
     menuBookmarks_->addAction(actionRemoveBookmarkNowPlaying_);
     menuBookmarks_->addAction(actionRemoveBookmarks_);
-
-    PlayerView & player_view = PlayerWidget::view();
-    QMenu & playback_menu = *(player_view.menuPlayback_);
-    QAction * before = playback_menu.insertSeparator(player_view.actionLoop_);
-    playback_menu.insertAction(before, actionPrev_);
-    playback_menu.insertAction(before, actionNext_);
-    playback_menu.insertAction(before, actionShowPlaylist_);
-    playback_menu.insertAction(before, actionRepeatPlaylist_);
-
-    bool ok = true;
-
-    ok = connect(&player_view, SIGNAL(playback_finished(TTime)),
-                 this, SLOT(playbackFinished(TTime)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(video_track_selected()),
-                 this, SLOT(adjustPlaylistStyle()));
-    YAE_ASSERT(ok);
-
-    // show playlist:
-    ok = connect(actionShowPlaylist_, SIGNAL(toggled(bool)),
-                 this, SLOT(playbackShowPlaylist()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
-                 actionShowPlaylist_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(toggle_playlist()),
-                 actionShowPlaylist_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(rc_menu_button_pressed()),
-                 actionShowPlaylist_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&playlistView_, SIGNAL(rc_menu_button_pressed()),
-                 actionShowPlaylist_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    // select all:
-    ok = connect(actionSelectAll_, SIGNAL(triggered()),
-                 &playlistModel_, SLOT(selectAll()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutSelectAll_, SIGNAL(activated()),
-                 &playlistModel_, SLOT(selectAll()));
-    YAE_ASSERT(ok);
-
-    // remove selected:
-    ok = connect(actionRemove_, SIGNAL(triggered()),
-                 &playlistModel_, SLOT(removeSelected()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutRemove_, SIGNAL(activated()),
-                 &playlistModel_, SLOT(removeSelected()));
-    YAE_ASSERT(ok);
-
-    // playlist model:
-    ok = connect(&playlistModel_, SIGNAL(itemCountChanged()),
-                 this, SLOT(fixupNextPrev()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&playlistModel_,
-                 SIGNAL(playingItemChanged(const QModelIndex &)),
-                 this,
-                 SLOT(setPlayingItem(const QModelIndex &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(fixup_next_prev()),
-                 this, SLOT(fixupNextPrev()));
-    YAE_ASSERT(ok);
-
-    // bookmarks:
-    ok = connect(actionAutomaticBookmarks_, SIGNAL(triggered()),
-                 this, SLOT(bookmarksAutomatic()));
-    YAE_ASSERT(ok);
-
-    ok = connect(menuBookmarks_, SIGNAL(aboutToShow()),
-                 this, SLOT(bookmarksPopulate()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionRemoveBookmarkNowPlaying_, SIGNAL(triggered()),
-                 this, SLOT(bookmarksRemoveNowPlaying()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionRemoveBookmarks_, SIGNAL(triggered()),
-                 this, SLOT(bookmarksRemove()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionResumeFromBookmark_, SIGNAL(triggered()),
-                 this, SLOT(bookmarksResumePlayback()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(save_bookmark()),
-                 this, SLOT(saveBookmark()));
-    YAE_ASSERT(ok);
-
-    // playlist navigation:
-    ok = connect(actionNext_, SIGNAL(triggered()),
-                 this, SLOT(playbackNext()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionPrev_, SIGNAL(triggered()),
-                 this, SLOT(playbackPrev()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutNext_, SIGNAL(activated()),
-                 actionNext_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutPrev_, SIGNAL(activated()),
-                 actionPrev_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&player_view, SIGNAL(playback_next()),
-                 actionNext_, SLOT(trigger()));
-    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -407,8 +289,8 @@ namespace yae
   static void
   toggle_playlist(void * context)
   {
-    PlayerView * view = (PlayerView *)context;
-    yae::queue_call(*view, &PlayerView::emit_toggle_playlist);
+    PlayerUxItem * pl_ux = (PlayerUxItem *)context;
+    yae::queue_call(*pl_ux, &PlayerUxItem::emit_toggle_playlist);
   }
 
   //----------------------------------------------------------------
@@ -469,6 +351,126 @@ namespace yae
     playlistView_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
     playlistView_.query_fullscreen_.reset(&context_query_fullscreen, this);
 
+    PlayerView & player_view = PlayerWidget::view();
+    PlayerUxItem * pl_ux = player_view.player_ux();
+
+    QMenu & playback_menu = *(pl_ux->menuPlayback_);
+    QAction * before = playback_menu.insertSeparator(pl_ux->actionLoop_);
+    playback_menu.insertAction(before, actionPrev_);
+    playback_menu.insertAction(before, actionNext_);
+    playback_menu.insertAction(before, actionShowPlaylist_);
+    playback_menu.insertAction(before, actionRepeatPlaylist_);
+
+    bool ok = true;
+
+    ok = connect(pl_ux, SIGNAL(playback_finished(TTime)),
+                 this, SLOT(playbackFinished(TTime)));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(video_track_selected()),
+                 this, SLOT(adjustPlaylistStyle()));
+    YAE_ASSERT(ok);
+
+    // show playlist:
+    ok = connect(actionShowPlaylist_, SIGNAL(toggled(bool)),
+                 this, SLOT(playbackShowPlaylist()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutShowPlaylist_, SIGNAL(activated()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(toggle_playlist()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(rc_menu_button_pressed()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlistView_, SIGNAL(rc_menu_button_pressed()),
+                 actionShowPlaylist_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    // select all:
+    ok = connect(actionSelectAll_, SIGNAL(triggered()),
+                 &playlistModel_, SLOT(selectAll()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutSelectAll_, SIGNAL(activated()),
+                 &playlistModel_, SLOT(selectAll()));
+    YAE_ASSERT(ok);
+
+    // remove selected:
+    ok = connect(actionRemove_, SIGNAL(triggered()),
+                 &playlistModel_, SLOT(removeSelected()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutRemove_, SIGNAL(activated()),
+                 &playlistModel_, SLOT(removeSelected()));
+    YAE_ASSERT(ok);
+
+    // playlist model:
+    ok = connect(&playlistModel_, SIGNAL(itemCountChanged()),
+                 this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&playlistModel_,
+                 SIGNAL(playingItemChanged(const QModelIndex &)),
+                 this,
+                 SLOT(setPlayingItem(const QModelIndex &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(fixup_next_prev()),
+                 this, SLOT(fixupNextPrev()));
+    YAE_ASSERT(ok);
+
+    // bookmarks:
+    ok = connect(actionAutomaticBookmarks_, SIGNAL(triggered()),
+                 this, SLOT(bookmarksAutomatic()));
+    YAE_ASSERT(ok);
+
+    ok = connect(menuBookmarks_, SIGNAL(aboutToShow()),
+                 this, SLOT(bookmarksPopulate()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionRemoveBookmarkNowPlaying_, SIGNAL(triggered()),
+                 this, SLOT(bookmarksRemoveNowPlaying()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionRemoveBookmarks_, SIGNAL(triggered()),
+                 this, SLOT(bookmarksRemove()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionResumeFromBookmark_, SIGNAL(triggered()),
+                 this, SLOT(bookmarksResumePlayback()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(save_bookmark()),
+                 this, SLOT(saveBookmark()));
+    YAE_ASSERT(ok);
+
+    // playlist navigation:
+    ok = connect(actionNext_, SIGNAL(triggered()),
+                 this, SLOT(playbackNext()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionPrev_, SIGNAL(triggered()),
+                 this, SLOT(playbackPrev()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutNext_, SIGNAL(activated()),
+                 actionNext_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(shortcutPrev_, SIGNAL(activated()),
+                 actionPrev_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(playback_next()),
+                 actionNext_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
     // add image://thumbnails/... provider:
     boost::shared_ptr<ThumbnailProvider::GetFilePath>
       getFilePath(new PlaylistItemFilePath(playlistModel_));
@@ -481,8 +483,7 @@ namespace yae
     PlayerWidget::canvas_->prepend(&playlistView_);
     playlistView_.setEnabled(false);
 
-    PlayerView & player_view = PlayerWidget::view_;
-    TimelineItem & timeline = *(player_view.timeline_);
+    TimelineItem & timeline = *(pl_ux->timeline_);
     timeline.back_to_prev_cb_.
       reset(&yae::playlist_back_to_prev, this);
     timeline.skip_to_next_cb_.
@@ -492,7 +493,7 @@ namespace yae
     timeline.remove_sel_cb_.
       reset(&yae::playlist_remove_selected, this);
     timeline.toggle_playlist_.
-      reset(&yae::toggle_playlist, &player_view);
+      reset(&yae::toggle_playlist, pl_ux);
     timeline.query_playlist_visible_.
       reset(&yae::context_query_playlist_visible, this);
 
@@ -832,8 +833,8 @@ namespace yae
 
     playlistView_.setEnabled(showPlaylist);
 
-    PlayerView & player_view = PlayerWidget::view();
-    TimelineItem & timeline = *(player_view.timeline_);
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
+    TimelineItem & timeline = *(pl_ux.timeline_);
     timeline.showPlaylist(showPlaylist);
   }
 
@@ -843,8 +844,8 @@ namespace yae
   void
   MainWidget::adjustPlaylistStyle()
   {
-    const PlayerView & player_view = PlayerWidget::view();
-    IReaderPtr reader_ptr = player_view.player_->reader();
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
+    IReaderPtr reader_ptr = pl_ux.player_->reader();
     IReader & reader = *reader_ptr;
 
     std::size_t numAudioTracks = reader.getNumberOfAudioTracks();
@@ -920,12 +921,12 @@ namespace yae
   void
   MainWidget::playbackStop()
   {
-    PlayerView & player_view = PlayerWidget::view();
-    player_view.player_->playback_stop();
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
+    pl_ux.player_->playback_stop();
 
     window()->setWindowTitle(tr("Apprentice Video"));
 
-    player_view.adjustMenuActions();
+    pl_ux.adjustMenuActions();
 
     IReaderPtr no_reader;
     emit adjust_menus(no_reader);
@@ -1125,8 +1126,8 @@ namespace yae
       return;
     }
 
-    const PlayerView & player_view = PlayerWidget::view();
-    IReaderPtr reader_ptr = player_view.player_->reader();
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
+    IReaderPtr reader_ptr = pl_ux.player_->reader();
     if (!(reader_ptr && reader_ptr->isSeekable()))
     {
       return;
@@ -1138,7 +1139,7 @@ namespace yae
 
     if (group && item)
     {
-      const TimelineModel & timeline = player_view.timeline_model();
+      const TimelineModel & timeline = pl_ux.timeline_model();
       double positionInSeconds = timeline.currentTime();
       yae::saveBookmark(group->hash_,
                         item->hash_,
@@ -1259,10 +1260,10 @@ namespace yae
   {
     PlayerWidget::populateContextMenu();
 
-    PlayerView & player_view = PlayerWidget::view();
-    QMenu & context_menu = *(player_view.contextMenu_);
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
+    QMenu & context_menu = *(pl_ux.contextMenu_);
     QAction * separator = context_menu.
-      insertSeparator(player_view.actionLoop_);
+      insertSeparator(pl_ux.actionLoop_);
     context_menu.insertAction(separator, actionPrev_);
     context_menu.insertAction(separator, actionNext_);
     context_menu.insertAction(separator, actionShowPlaylist_);
@@ -1384,9 +1385,9 @@ namespace yae
     }
 
     // IReader & reader = *reader_ptr;
-    PlayerView & player_view = PlayerWidget::view();
+    PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
     bool start_from_zero_time = true;
-    player_view.playback(reader_ptr, bookmark, start_from_zero_time);
+    pl_ux.playback(reader_ptr, bookmark, start_from_zero_time);
 
     window()->setWindowTitle(tr("Apprentice Video: %1").
                              arg(QFileInfo(path).fileName()));

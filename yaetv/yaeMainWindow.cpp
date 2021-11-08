@@ -483,10 +483,10 @@ namespace yae
     canvasContainer_->setCurrentWidget(canvas_);
 
     // shortcut:
-    PlayerView & playerView = playerWidget_->view();
-    playerView.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
-    playerView.enableBackArrowButton_ = BoolRef::constant(true);
-    playerView.enableDeleteFileButton_ = BoolRef::constant(true);
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
+    pl_ux.enableBackArrowButton_ = BoolRef::constant(true);
+    pl_ux.enableDeleteFileButton_ = BoolRef::constant(true);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -551,27 +551,27 @@ namespace yae
                  this, SLOT(playerExitingFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(playback_finished(TTime)),
+    ok = connect(&pl_ux, SIGNAL(playback_finished(TTime)),
                  this, SLOT(playbackFinished(TTime)));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(save_bookmark()),
+    ok = connect(&pl_ux, SIGNAL(save_bookmark()),
                  this, SLOT(saveBookmark()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(save_bookmark_at(double)),
+    ok = connect(&pl_ux, SIGNAL(save_bookmark_at(double)),
                  this, SLOT(saveBookmarkAt(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(on_back_arrow()),
+    ok = connect(&pl_ux, SIGNAL(on_back_arrow()),
                  this, SLOT(backToPlaylist()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(delete_playing_file()),
+    ok = connect(&pl_ux, SIGNAL(delete_playing_file()),
                  this, SLOT(confirmDeletePlayingRecording()));
     YAE_ASSERT(ok);
 
-    ok = connect(&playerView, SIGNAL(toggle_playlist()),
+    ok = connect(&pl_ux, SIGNAL(toggle_playlist()),
                  &playerWindow_, SLOT(stopAndHide()));
     YAE_ASSERT(ok);
 
@@ -725,8 +725,8 @@ namespace yae
 
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 
-    PlayerView & playerView = playerWidget_->view();
-    playerView.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
 
     if (window()->isFullScreen())
     {
@@ -791,8 +791,8 @@ namespace yae
                                time_str.c_str());
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 
-    PlayerView & playerView = playerWidget_->view();
-    playerView.insert_menus(reader, menuBar(), menuHelp->menuAction());
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(reader, menuBar(), menuHelp->menuAction());
 
     if (window()->isFullScreen())
     {
@@ -809,9 +809,9 @@ namespace yae
     playerWidget_->show();
 
     yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
-    playerView.insert_menus(reader,
-                            playerWindow_.menubar,
-                            menuHelp->menuAction());
+    pl_ux.insert_menus(reader,
+                       playerWindow_.menubar,
+                       menuHelp->menuAction());
     playerWindow_.playback(playerWidget_, reader, bookmark.get());
 
     return reader;
@@ -1055,8 +1055,8 @@ namespace yae
       return;
     }
 
-    const PlayerView & view = playerWidget_->view();
-    const TimelineModel & timeline = view.timeline_model();
+    const PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    const TimelineModel & timeline = pl_ux.timeline_model();
     saveBookmarkAt(timeline.currentTime());
   }
 
@@ -1073,8 +1073,8 @@ namespace yae
     }
 
     const Recording::Rec & rec = *now_playing;
-    const PlayerView & view = playerWidget_->view();
-    const IReader * reader = view.get_reader();
+    const PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    const IReader * reader = pl_ux.get_reader();
     save_bookmark(dvr_, rec, reader, position_in_sec);
   }
 
@@ -1320,9 +1320,9 @@ namespace yae
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
 
-      PlayerView & playerView = playerWidget_->view();
-      playerView.populateContextMenu();
-      playerView.contextMenu_->popup(globalPt);
+      PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+      pl_ux.populateContextMenu();
+      pl_ux.contextMenu_->popup(globalPt);
       e->accept();
       return;
     }

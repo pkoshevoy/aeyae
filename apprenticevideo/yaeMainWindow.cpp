@@ -165,8 +165,6 @@ namespace yae
     ok = connect(playerWidget_, SIGNAL(swap_shortcuts()),
                  this, SLOT(swapShortcuts()));
     YAE_ASSERT(ok);
-
-    adjustMenus(IReaderPtr());
   }
 
   //----------------------------------------------------------------
@@ -188,6 +186,7 @@ namespace yae
   MainWindow::initItemViews()
   {
     playerWidget_->initItemViews();
+    adjustMenus(IReaderPtr());
   }
 
   //----------------------------------------------------------------
@@ -217,8 +216,8 @@ namespace yae
   void
   MainWindow::playbackSetTempo(double percentTempo)
   {
-    PlayerView & player_view = playerWidget_->view();
-    player_view.playbackSetTempo(percentTempo);
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.playbackSetTempo(percentTempo);
   }
 
   //----------------------------------------------------------------
@@ -389,8 +388,8 @@ namespace yae
     QAction * before = menuHelp->menuAction();
     menubar->insertAction(before, playerWidget_->menuBookmarks_->menuAction());
 
-    PlayerView & playerView = playerWidget_->view();
-    playerView.insert_menus(reader_ptr, menubar, before);
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(reader_ptr, menubar, before);
   }
 
   //----------------------------------------------------------------

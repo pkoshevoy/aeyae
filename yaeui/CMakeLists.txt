@@ -88,6 +88,7 @@ set(project_moc_hxx
   # remux:
   yaeSpinnerView.h
   yaePlayerItem.h
+  yaePlayerUxItem.h
 
   # yaetv:
   yaeAspectRatioView.h
@@ -191,6 +192,8 @@ set(project_sources
   yaeLShape.h
   yaePlayerItem.cpp
   yaePlayerItem.h
+  yaePlayerUxItem.cpp
+  yaePlayerUxItem.h
   yaePlotItem.cpp
   yaePlotItem.h
   yaeSpinnerView.cpp
