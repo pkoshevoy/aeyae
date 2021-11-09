@@ -673,12 +673,15 @@ namespace yae
     static const QString filter =
       tr("movies ("
          "*.avi "
+         "*.mpeg "
+         "*.mpg "
          "*.mkv "
          "*.mov "
          "*.mp4 "
          "*.nut "
          "*.ogm "
          "*.ts "
+         "*.* "
          ")");
 
     QString startHere = YAE_STANDARD_LOCATION(MoviesLocation);
