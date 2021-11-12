@@ -208,6 +208,8 @@ set(project_sources
   yaeConfirmView.h
   yaeOptionView.cpp
   yaeOptionView.h
+  yaePlayerShortcuts.cpp
+  yaePlayerShortcuts.h
   yaePlayerStyle.cpp
   yaePlayerStyle.h
   yaePlayerView.cpp

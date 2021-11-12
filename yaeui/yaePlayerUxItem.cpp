@@ -1303,6 +1303,118 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerUxItem::set_shortcuts
+  //
+  void
+  PlayerUxItem::set_shortcuts(const yae::shared_ptr<PlayerShortcuts> & sc)
+  {
+    shortcuts_ = sc;
+
+    if (!sc)
+    {
+      return;
+    }
+
+    PlayerShortcuts & shortcut = *shortcuts_;
+    bool ok = true;
+
+    ok = connect(&shortcut.fullScreen_, SIGNAL(activated()),
+                 actionFullScreen_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.fillScreen_, SIGNAL(activated()),
+                 actionFillScreen_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.showTimeline_, SIGNAL(activated()),
+                 actionShowTimeline_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.play_, SIGNAL(activated()),
+                 actionPlay_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.nextChapter_, SIGNAL(activated()),
+                 actionNextChapter_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.loop_, SIGNAL(activated()),
+                 actionLoop_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.cropNone_, SIGNAL(activated()),
+                 actionCropFrameNone_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.crop1_33_, SIGNAL(activated()),
+                 actionCropFrame1_33_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.crop1_78_, SIGNAL(activated()),
+                 actionCropFrame1_78_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.crop1_85_, SIGNAL(activated()),
+                 actionCropFrame1_85_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.crop2_40_, SIGNAL(activated()),
+                 actionCropFrame2_40_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.cropOther_, SIGNAL(activated()),
+                 actionCropFrameOther_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.autoCrop_, SIGNAL(activated()),
+                 actionCropFrameAutoDetect_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.aspectRatioNone_, SIGNAL(activated()),
+                 actionAspectRatioAuto_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.aspectRatio1_33_, SIGNAL(activated()),
+                 actionAspectRatio1_33_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&shortcut.aspectRatio1_78_, SIGNAL(activated()),
+                 actionAspectRatio1_78_, SLOT(trigger()));
+    YAE_ASSERT(ok);
+
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::swap_shortcuts
+  //
+  void
+  PlayerUxItem::swap_shortcuts()
+  {
+    if (!shortcuts_)
+    {
+      return;
+    }
+
+    PlayerShortcuts & shortcut = *shortcuts_;
+    yae::swapShortcuts(&shortcut.fullScreen_, actionFullScreen_);
+    yae::swapShortcuts(&shortcut.fillScreen_, actionFillScreen_);
+    yae::swapShortcuts(&shortcut.showTimeline_, actionShowTimeline_);
+    yae::swapShortcuts(&shortcut.play_, actionPlay_);
+    yae::swapShortcuts(&shortcut.loop_, actionLoop_);
+    yae::swapShortcuts(&shortcut.cropNone_, actionCropFrameNone_);
+    yae::swapShortcuts(&shortcut.crop1_33_, actionCropFrame1_33_);
+    yae::swapShortcuts(&shortcut.crop1_78_, actionCropFrame1_78_);
+    yae::swapShortcuts(&shortcut.crop1_85_, actionCropFrame1_85_);
+    yae::swapShortcuts(&shortcut.crop2_40_, actionCropFrame2_40_);
+    yae::swapShortcuts(&shortcut.cropOther_, actionCropFrameOther_);
+    yae::swapShortcuts(&shortcut.autoCrop_, actionCropFrameAutoDetect_);
+    yae::swapShortcuts(&shortcut.nextChapter_, actionNextChapter_);
+    yae::swapShortcuts(&shortcut.aspectRatioNone_, actionAspectRatioAuto_);
+    yae::swapShortcuts(&shortcut.aspectRatio1_33_, actionAspectRatio1_33_);
+    yae::swapShortcuts(&shortcut.aspectRatio1_78_, actionAspectRatio1_78_);
+ }
+
+  //----------------------------------------------------------------
   // PlayerUxItem::insert_menus
   //
   void

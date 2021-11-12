@@ -19,6 +19,7 @@
 #include "yaeConfirmView.h"
 #include "yaeFrameCropView.h"
 #include "yaeOptionView.h"
+#include "yaePlayerShortcuts.h"
 #include "yaePlayerView.h"
 #include "yaeSpinnerView.h"
 
@@ -158,23 +159,7 @@ namespace yae
 #endif
 
     // shortcuts used during full-screen mode (when menubar is invisible)
-    QShortcut * shortcutFullScreen_;
-    QShortcut * shortcutFillScreen_;
-    QShortcut * shortcutShowTimeline_;
-    QShortcut * shortcutPlay_;
-    QShortcut * shortcutLoop_;
-    QShortcut * shortcutCropNone_;
-    QShortcut * shortcutAutoCrop_;
-    QShortcut * shortcutCrop1_33_;
-    QShortcut * shortcutCrop1_78_;
-    QShortcut * shortcutCrop1_85_;
-    QShortcut * shortcutCrop2_40_;
-    QShortcut * shortcutCropOther_;
-    QShortcut * shortcutNextChapter_;
-    QShortcut * shortcutAspectRatioNone_;
-    QShortcut * shortcutAspectRatio1_33_;
-    QShortcut * shortcutAspectRatio1_78_;
-
+    yae::shared_ptr<PlayerShortcuts> shortcuts_;
 
   public:
 

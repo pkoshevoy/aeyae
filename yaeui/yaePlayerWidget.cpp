@@ -61,22 +61,6 @@ namespace yae
 #ifdef __APPLE__
     appleRemoteControl_(NULL),
 #endif
-    shortcutFullScreen_(NULL),
-    shortcutFillScreen_(NULL),
-    shortcutShowTimeline_(NULL),
-    shortcutPlay_(NULL),
-    shortcutLoop_(NULL),
-    shortcutCropNone_(NULL),
-    shortcutAutoCrop_(NULL),
-    shortcutCrop1_33_(NULL),
-    shortcutCrop1_78_(NULL),
-    shortcutCrop1_85_(NULL),
-    shortcutCrop2_40_(NULL),
-    shortcutCropOther_(NULL),
-    shortcutNextChapter_(NULL),
-    shortcutAspectRatioNone_(NULL),
-    shortcutAspectRatio1_33_(NULL),
-    shortcutAspectRatio1_78_(NULL),
     canvas_(NULL),
     renderMode_(Canvas::kScaleToFit),
     xexpand_(1.0),
@@ -388,119 +372,6 @@ namespace yae
                  this, SLOT(dismissSubttTrackSelectionView()));
     YAE_ASSERT(ok);
 
-    // FIXME: these belong in PlayerUxItem:
-    shortcutFullScreen_ = new QShortcut(this);
-    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 pl_ux->actionFullScreen_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutFillScreen_ = new QShortcut(this);
-    shortcutFillScreen_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutFillScreen_, SIGNAL(activated()),
-                 pl_ux->actionFillScreen_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutShowTimeline_ = new QShortcut(this);
-    shortcutShowTimeline_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutShowTimeline_, SIGNAL(activated()),
-                 pl_ux->actionShowTimeline_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutPlay_ = new QShortcut(this);
-    shortcutPlay_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutPlay_, SIGNAL(activated()),
-                 pl_ux->actionPlay_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutNextChapter_ = new QShortcut(this);
-    shortcutNextChapter_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutNextChapter_, SIGNAL(activated()),
-                 pl_ux->actionNextChapter_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutLoop_ = new QShortcut(this);
-    shortcutLoop_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutLoop_, SIGNAL(activated()),
-                 pl_ux->actionLoop_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCropNone_ = new QShortcut(this);
-    shortcutCropNone_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCropNone_, SIGNAL(activated()),
-                 pl_ux->actionCropFrameNone_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_33_ = new QShortcut(this);
-    shortcutCrop1_33_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_33_, SIGNAL(activated()),
-                 pl_ux->actionCropFrame1_33_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_78_ = new QShortcut(this);
-    shortcutCrop1_78_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_78_, SIGNAL(activated()),
-                 pl_ux->actionCropFrame1_78_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop1_85_ = new QShortcut(this);
-    shortcutCrop1_85_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop1_85_, SIGNAL(activated()),
-                 pl_ux->actionCropFrame1_85_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCrop2_40_ = new QShortcut(this);
-    shortcutCrop2_40_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCrop2_40_, SIGNAL(activated()),
-                 pl_ux->actionCropFrame2_40_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutCropOther_ = new QShortcut(this);
-    shortcutCropOther_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutCropOther_, SIGNAL(activated()),
-                 pl_ux->actionCropFrameOther_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAutoCrop_ = new QShortcut(this);
-    shortcutAutoCrop_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAutoCrop_, SIGNAL(activated()),
-                 pl_ux->actionCropFrameAutoDetect_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatioNone_ = new QShortcut(this);
-    shortcutAspectRatioNone_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatioNone_, SIGNAL(activated()),
-                 pl_ux->actionAspectRatioAuto_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatio1_33_ = new QShortcut(this);
-    shortcutAspectRatio1_33_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatio1_33_, SIGNAL(activated()),
-                 pl_ux->actionAspectRatio1_33_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
-    shortcutAspectRatio1_78_ = new QShortcut(this);
-    shortcutAspectRatio1_78_->setContext(Qt::ApplicationShortcut);
-
-    ok = connect(shortcutAspectRatio1_78_, SIGNAL(activated()),
-                 pl_ux->actionAspectRatio1_78_, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
                  pl_ux, SIGNAL(toggle_playlist()));
     YAE_ASSERT(ok);
@@ -513,6 +384,9 @@ namespace yae
     ok = connect(this, SIGNAL(setOutPoint()),
                  &(pl_ux->timeline_model()), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
+
+    shortcuts_.reset(new PlayerShortcuts(this));
+    pl_ux->set_shortcuts(shortcuts_);
 
     view_.setEnabled(true);
   }
@@ -1548,23 +1422,7 @@ namespace yae
     // shortcut:
     PlayerUxItem & pl_ux = get_player_ux();
 
-    // FIXME: this belongs in PlayerUxItem:
-    yae::swapShortcuts(shortcutFullScreen_, pl_ux.actionFullScreen_);
-    yae::swapShortcuts(shortcutFillScreen_, pl_ux.actionFillScreen_);
-    yae::swapShortcuts(shortcutShowTimeline_, pl_ux.actionShowTimeline_);
-    yae::swapShortcuts(shortcutPlay_, pl_ux.actionPlay_);
-    yae::swapShortcuts(shortcutLoop_, pl_ux.actionLoop_);
-    yae::swapShortcuts(shortcutCropNone_, pl_ux.actionCropFrameNone_);
-    yae::swapShortcuts(shortcutCrop1_33_, pl_ux.actionCropFrame1_33_);
-    yae::swapShortcuts(shortcutCrop1_78_, pl_ux.actionCropFrame1_78_);
-    yae::swapShortcuts(shortcutCrop1_85_, pl_ux.actionCropFrame1_85_);
-    yae::swapShortcuts(shortcutCrop2_40_, pl_ux.actionCropFrame2_40_);
-    yae::swapShortcuts(shortcutCropOther_, pl_ux.actionCropFrameOther_);
-    yae::swapShortcuts(shortcutAutoCrop_, pl_ux.actionCropFrameAutoDetect_);
-    yae::swapShortcuts(shortcutNextChapter_, pl_ux.actionNextChapter_);
-    yae::swapShortcuts(shortcutAspectRatioNone_, pl_ux.actionAspectRatioAuto_);
-    yae::swapShortcuts(shortcutAspectRatio1_33_, pl_ux.actionAspectRatio1_33_);
-    yae::swapShortcuts(shortcutAspectRatio1_78_, pl_ux.actionAspectRatio1_78_);
+    pl_ux.swap_shortcuts();
   }
 
   //----------------------------------------------------------------

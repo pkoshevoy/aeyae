@@ -26,6 +26,7 @@
 #endif
 #include "yaeItemView.h"
 #include "yaePlayerItem.h"
+#include "yaePlayerShortcuts.h"
 #include "yaeTimelineItem.h"
 
 
@@ -92,7 +93,10 @@ namespace yae
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
 
-    // helper:
+    // helpers:
+    void set_shortcuts(const yae::shared_ptr<PlayerShortcuts> & sc);
+    void swap_shortcuts();
+
     void insert_menus(const IReaderPtr & reader,
                       QMenuBar * menubar,
                       QAction * before = NULL);
@@ -225,6 +229,8 @@ namespace yae
 
   public:
     ItemView & view_;
+
+    yae::shared_ptr<PlayerShortcuts> shortcuts_;
 
     QAction * actionShowTimeline_;
     QAction * actionShowInFinder_;
