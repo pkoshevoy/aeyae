@@ -21,7 +21,6 @@
 #include "yaeOptionView.h"
 #include "yaePlayerShortcuts.h"
 #include "yaePlayerView.h"
-#include "yaeSpinnerView.h"
 
 namespace yae
 {
@@ -171,7 +170,6 @@ namespace yae
 
     // player views:
     PlayerView view_;
-    SpinnerView spinner_;
     ConfirmView confirm_;
     FrameCropView cropView_;
     AspectRatioView frameCropSelectionView_;

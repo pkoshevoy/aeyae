@@ -111,7 +111,6 @@ namespace yae
     YAE_ASSERT(ok);
 
     view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    spinner_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     frameCropSelectionView_.toggle_fullscreen_.
@@ -126,7 +125,6 @@ namespace yae
       reset(&player_toggle_fullscreen, this);
 
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    spinner_.query_fullscreen_.reset(&player_query_fullscreen, this);
     confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
     cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
     frameCropSelectionView_.query_fullscreen_.
@@ -163,7 +161,6 @@ namespace yae
     canvas_->append(&view_);
 
     // FIXME: this functionality belongs in PlayerUxItem:
-    canvas_->append(&spinner_);
     canvas_->append(&confirm_);
     canvas_->append(&cropView_);
     canvas_->append(&frameCropSelectionView_);
@@ -172,7 +169,6 @@ namespace yae
     canvas_->append(&audioTrackSelectionView_);
     canvas_->append(&subttTrackSelectionView_);
 
-    spinner_.setStyle(view_.style());
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
 
