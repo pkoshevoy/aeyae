@@ -2250,6 +2250,7 @@ namespace yae
         {
           if (rc->pressedDown_ && !rc->heldDown_)
           {
+            yae::PlayerUxItem * player_ux = player_->player_ux();
             QModelIndex currentIndex = model_->currentItem();
             QModelIndex playingIndex = model_->playingItem();
 
@@ -2257,14 +2258,14 @@ namespace yae
             {
               model_->setPlayingItem(currentIndex);
 
-              if (player_->is_playback_paused())
+              if (player_ux->is_playback_paused())
               {
-                player_->togglePlayback();
+                player_ux->togglePlayback();
               }
             }
             else
             {
-              player_->togglePlayback();
+              player_ux->togglePlayback();
             }
 
             return true;
