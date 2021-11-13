@@ -1124,6 +1124,11 @@ namespace yae
     Transition & transition_;
   };
 
+  //----------------------------------------------------------------
+  // TransitionItemPtr
+  //
+  typedef yae::shared_ptr<TransitionItem, Item> TransitionItemPtr;
+
 
   //----------------------------------------------------------------
   // Periodic

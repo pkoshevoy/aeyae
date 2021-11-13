@@ -3902,6 +3902,9 @@ namespace yae
     sv.content_->dump(std::cerr);
 #endif
 
+    AsyncTaskQueue & queue = async_task_queue();
+    queue.wait_until_empty();
+
     dataChanged();
   }
 

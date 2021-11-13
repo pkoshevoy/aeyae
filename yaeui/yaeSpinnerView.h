@@ -16,6 +16,7 @@
 // local:
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
+#include "yaeSpinnerItem.h"
 
 
 namespace yae
@@ -55,7 +56,7 @@ namespace yae
 
   protected:
     ItemViewStyle * style_;
-    TAnimatorPtr animator_;
+    SpinnerItemPtr spinner_;
     QString text_;
   };
 

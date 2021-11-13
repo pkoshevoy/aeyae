@@ -196,6 +196,8 @@ set(project_sources
   yaePlayerUxItem.h
   yaePlotItem.cpp
   yaePlotItem.h
+  yaeSpinnerItem.cpp
+  yaeSpinnerItem.h
   yaeSpinnerView.cpp
   yaeSpinnerView.h
   yaeTabRect.cpp

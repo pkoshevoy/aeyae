@@ -129,6 +129,7 @@ namespace yae
 
     void pause();
     void resume();
+    void wait_until_empty();
 
     //----------------------------------------------------------------
     // Pause

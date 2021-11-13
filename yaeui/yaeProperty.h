@@ -113,6 +113,7 @@ namespace yae
     kPropertyColorSelBg,
     kPropertyColorNoFocusBg,
     kPropertyColorOnFocusBg,
+    kPropertyColorOfText,
     kPropertyCursorWidth,
     kPropertyHasText,
     kPropertyText,

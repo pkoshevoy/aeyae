@@ -296,9 +296,8 @@ namespace yae
           signal_.notify_all();
 
           Todo todo = todo_.front();
-          todo_.pop_front();
-
           yae::shared_ptr<Task> task = todo.task_.lock();
+
           if (task)
           {
             lock.unlock();
@@ -324,8 +323,23 @@ namespace yae
             lock.lock();
           }
 
+          todo_.pop_front();
           boost::this_thread::interruption_point();
         }
+      }
+    }
+
+    void wait_until_empty()
+    {
+      while (true)
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        if (stop_ || todo_.empty())
+        {
+          return;
+        }
+
+        signal_.wait(lock);
       }
     }
 
@@ -392,6 +406,15 @@ namespace yae
   AsyncTaskQueue::resume()
   {
     private_->resume();
+  }
+
+  //----------------------------------------------------------------
+  // AsyncTaskQueue::wait_until_empty
+  //
+  void
+  AsyncTaskQueue::wait_until_empty()
+  {
+    private_->wait_until_empty();
   }
 
 }
