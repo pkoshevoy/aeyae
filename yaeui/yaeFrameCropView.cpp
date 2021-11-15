@@ -84,7 +84,7 @@ namespace yae
   void
   LetterBoxItem::get(Property property, double & value) const
   {
-    const BBox & bbox = expression_.get();
+    const BBox & bbox = ref_.get();
     if (property == kPropertyLeft)
     {
       value = bbox.x_;
@@ -560,13 +560,13 @@ namespace yae
     done.anchors_.right_ = ItemRef::offset(d22, kPropertyLeft);
     done.anchors_.bottom_ = ItemRef::offset(d22, kPropertyTop);
     done.margins_.
-      set_right(ItemRef::reference(titleHeight, kPropertyExpression, 2.0));
+      set_right(ItemRef::reference(titleHeight.ref_, 2.0));
     done.margins_.
-      set_bottom(ItemRef::reference(titleHeight, kPropertyExpression, 1.0));
+      set_bottom(ItemRef::reference(titleHeight.ref_, 1.0));
     done.color_ = ColorRef::constant(Color(0x000000, 1.0));
     done.text_ = TVarRef::constant(QVariant(tr("Done")));
     done.font_ = style.font_small_;
-    done.fontSize_ = ItemRef::scale(titleHeight, kPropertyExpression, 0.5);
+    done.fontSize_ = ItemRef::scale(titleHeight.ref_, 0.5);
 
     doneBg.color_ = doneBg.addExpr(new ColorOnHover(*this, doneBg,
                                                     Color(0xffffff, 0.7),
@@ -574,9 +574,9 @@ namespace yae
     doneBg.colorBorder_ = ColorRef::constant(Color(0x000000, 1.0));
     doneBg.anchors_.fill(done);
     doneBg.margins_.
-      set_left(ItemRef::scale(titleHeight, kPropertyExpression, -0.9));
+      set_left(ItemRef::scale(titleHeight.ref_, -0.9));
     doneBg.margins_.
-      set_top(ItemRef::scale(titleHeight, kPropertyExpression, -0.3));
+      set_top(ItemRef::scale(titleHeight.ref_, -0.3));
     doneBg.margins_.set_right(doneBg.margins_.get_left());
     doneBg.margins_.set_bottom(doneBg.margins_.get_top());
     doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 3.0);

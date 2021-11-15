@@ -206,6 +206,8 @@ set(project_sources
   # yaetv:
   yaeAspectRatioView.cpp
   yaeAspectRatioView.h
+  yaeConfirmItem.cpp
+  yaeConfirmItem.h
   yaeConfirmView.cpp
   yaeConfirmView.h
   yaeOptionView.cpp

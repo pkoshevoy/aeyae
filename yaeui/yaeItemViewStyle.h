@@ -81,9 +81,12 @@ namespace yae
     virtual void uncache();
 
     // a reference to GridCellWidth 
-    inline GridCellWidth * cell_width_expr() const
+    inline yae::shared_ptr<GridCellWidth, TDoubleExpr> cell_width_expr() const
     {
-      return cell_width_.unwrap<GridCellWidth>();
+      typedef ItemRef::CachedRef<ItemRef::Affine<ItemRef::ExprDataSrc> > TRef;
+      const TRef * ref = cell_width_.private_.cast<TRef>();
+      return ref ? ref->src_.src_.get<GridCellWidth>() :
+        yae::shared_ptr<GridCellWidth, TDoubleExpr>();
     }
 
     // the view that owns this style:

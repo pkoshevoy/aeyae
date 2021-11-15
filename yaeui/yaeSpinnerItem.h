@@ -31,19 +31,14 @@ namespace yae
   public:
     SpinnerItem(const char * id, ItemView & view);
 
-    void setEnabled(bool enable);
+    // call this after initializing the data references:
+    void layout();
+
+    // virtual:
+    void setVisible(bool visible);
 
     // virtual:
     void uncache();
-
-    // virtual:
-    void get(Property property, double & value) const;
-
-    // virtual:
-    void get(Property property, Color & value) const;
-
-    // virtual:
-    void get(Property property, TVar & value) const;
 
     ItemView & view_;
     ColorRef fg_;

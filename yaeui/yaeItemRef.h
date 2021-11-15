@@ -22,6 +22,7 @@
 
 // local interfaces:
 #include "yaeProperty.h"
+#include "yaeExpression.h"
 
 
 namespace yae
@@ -30,23 +31,51 @@ namespace yae
   //----------------------------------------------------------------
   // DataRef
   //
-  template <typename TData>
+  template <typename data_t>
   struct DataRef
   {
+
+    //----------------------------------------------------------------
+    // TData
+    //
+    typedef data_t TData;
+
     //----------------------------------------------------------------
     // value_type
     //
-    typedef TData value_type;
+    typedef data_t value_type;
 
     //----------------------------------------------------------------
     // TDataRef
     //
-    typedef DataRef<TData> TDataRef;
+    typedef DataRef<data_t> TDataRef;
 
     //----------------------------------------------------------------
     // TDataProperties
     //
-    typedef IProperties<TData> TDataProperties;
+    typedef IProperties<data_t> TDataProperties;
+
+    //----------------------------------------------------------------
+    // TExpression
+    //
+    typedef Expression<data_t> TExpression;
+
+    //----------------------------------------------------------------
+    // IDataSrc
+    //
+    struct IDataSrc
+    {
+      virtual ~IDataSrc() {}
+
+      virtual const TData & get() const = 0;
+      virtual void get(TData & data) const = 0;
+
+      virtual bool is_memo() const { return false; }
+      virtual bool is_data() const { return false; }
+      virtual bool is_prop() const { return false; }
+      virtual bool is_expr() const { return false; }
+      virtual bool is_dref() const { return false; }
+    };
 
     //----------------------------------------------------------------
     // IRef
@@ -63,90 +92,108 @@ namespace yae
       };
 
       virtual IRef * copy() const = 0;
+      virtual IRef * make_const_ref() const = 0;
+      virtual IRef * make_cached_ref() const = 0;
 
-      virtual const TDataProperties * get_reference() const = 0;
-      virtual Property get_property() const = 0;
-
-      virtual bool is_relative() const = 0;
-      virtual bool is_cached() const = 0;
-      virtual bool is_cacheable() const = 0;
-      virtual void set_cacheable(bool cacheable) = 0;
-      virtual void uncache() const = 0;
-      virtual void cache(const TData & value) const = 0;
+      virtual const IDataSrc & src() const = 0;
       virtual const TData & get_value() const = 0;
+
+      virtual bool is_cacheable() const = 0;
+      virtual bool is_cached() const = 0;
+      virtual void cache(const TData &) const = 0;
+      virtual void uncache() const = 0;
+
+      template <typename TSrc>
+      inline const TSrc * get() const
+      {
+        return dynamic_cast<const TSrc *>(&src());
+      }
+    };
+
+    // forward declaration:
+    template <typename TDataSrc> struct CachedRef;
+
+    //----------------------------------------------------------------
+    // ConstRef
+    //
+    template <typename TDataSrc>
+    struct ConstRef : IRef
+    {
+      ConstRef(const TDataSrc & src = TDataSrc()):
+        src_(src)
+      {}
+
+      // virtual:
+      inline ConstRef<TDataSrc> * copy() const
+      { return new ConstRef<TDataSrc>(*this); }
+
+      inline ConstRef<TDataSrc> * make_const_ref() const
+      { return copy(); }
+
+      inline CachedRef<TDataSrc> * make_cached_ref() const
+      { return new CachedRef<TDataSrc>(src_); }
+
+      // virtual:
+      const IDataSrc & src() const { return src_; }
+
+      // virtual:
+      inline const TData & get_value() const
+      { return src_.get(); }
+
+      // virtual:
+      bool is_cacheable() const { return false; }
+      bool is_cached() const { return false; }
+      void cache(const TData &) const {}
+      void uncache() const {}
+
+      TDataSrc src_;
     };
 
     //----------------------------------------------------------------
-    // Const
+    // CachedRef
     //
-    struct Const : IRef
+    template <typename TDataSrc>
+    struct CachedRef : IRef
     {
-      Const(const TData & value):
-        value_(value)
+      CachedRef(const TDataSrc & src = TDataSrc()):
+        visited_(false),
+        cached_(false),
+        src_(src)
       {}
 
-      virtual Const * copy() const
-      { return new Const(*this); }
+      // virtual:
+      inline CachedRef<TDataSrc> * copy() const
+      { return new CachedRef(*this); }
 
-      virtual const TDataProperties * get_reference() const { return NULL; }
-      virtual Property get_property() const { return kPropertyConstant; }
+      inline CachedRef<TDataSrc> * make_cached_ref() const
+      { return copy(); }
 
-      virtual bool is_relative() const { return false; }
-      virtual bool is_cached() const { return true; }
-      virtual bool is_cacheable() const { return false; }
-      virtual void set_cacheable(bool cacheable) { (void)cacheable; }
-      virtual void uncache() const {}
-      virtual void cache(const TData & value) const { (void)value; }
-      virtual const TData & get_value() const { return value_; }
+      inline ConstRef<TDataSrc> * make_const_ref() const
+      { return new ConstRef<TDataSrc>(src_); }
 
-      TData value_;
-   };
+      // virtual:
+      inline const IDataSrc & src() const { return src_; }
 
-    //----------------------------------------------------------------
-    // Ref
-    //
-    struct Ref : IRef
-    {
-      Ref(const TDataProperties & ref, Property prop, bool cacheable = true):
-        ref_(ref),
-        prop_(prop),
-        cacheable_(cacheable),
-        visited_(false),
-        cached_(false)
+      // virtual:
+      inline bool is_cacheable() const { return true; }
+      inline bool is_cached() const { return cached_; }
+
+      // virtual: cache an externally computed value:
+      inline void cache(const TData & value) const
       {
-        YAE_ASSERT(prop != kPropertyUnspecified);
+        cached_ = true;
+        value_ = value;
       }
 
-      virtual Ref * copy() const
-      { return new Ref(*this); }
-
-      virtual const TDataProperties * get_reference() const { return &ref_; }
-      virtual Property get_property() const { return prop_; }
-
-      virtual bool is_relative() const { return true; }
-      virtual bool is_cached() const { return cached_; }
-      virtual bool is_cacheable() const { return cacheable_; }
-
-      virtual void set_cacheable(bool cacheable)
-      {
-        cacheable_ = cacheable;
-      }
-
-      // caching is used to avoid re-calculating the same property:
-      virtual void uncache() const
+      // virtual: discard the cache:
+      inline void uncache() const
       {
         visited_ = false;
         cached_ = false;
       }
 
-      // cache an externally computed value:
-      virtual void cache(const TData & value) const
-      {
-        cached_ = cacheable_;
-        value_ = value;
-      }
-
-      virtual const TData & get_value() const
+      // virtual:
+      const TData & get_value() const
       {
         if (cached_)
         {
@@ -162,102 +209,296 @@ namespace yae
 
         // NOTE: reference cycles can not be detected
         //       for items with disabled caching:
-        visited_ = cacheable_;
-
-        TData v;
-        ref_.get(prop_, v);
-        value_ = v;
-
-        cached_ = cacheable_;
+        visited_ = true;
+        src_.get(value_);
+        cached_ = true;
         return value_;
       }
-
-      // reference properties:
-      const TDataProperties & ref_;
-      const Property prop_;
-      bool cacheable_;
 
       // reference state:
       mutable bool visited_;
       mutable bool cached_;
       mutable TData value_;
+
+      TDataSrc src_;
+    };
+
+
+
+    //----------------------------------------------------------------
+    // MemoSrc
+    //
+    // this is to make DataRef::cache work for invalid DataRefs.
+    // used by Item::width() and Item::height() to cache implicitly
+    // computed width and height.
+    //
+    struct MemoSrc : IDataSrc
+    {
+      MemoSrc(const TData & data):
+        data_(data)
+      {}
+
+      // virtual:
+      inline bool is_memo() const { return true; }
+
+      // virtual:
+      inline const TData & get() const { return data_; }
+
+      // virtual:
+      inline void get(TData & data) const { data = data_; }
+
+    protected:
+      TData data_;
     };
 
     //----------------------------------------------------------------
-    // DataRef
+    // ConstDataSrc
     //
-    DataRef(const TData & value):
-      private_(new Const(value))
-    {}
+    struct ConstDataSrc : IDataSrc
+    {
+      ConstDataSrc(const TData & data):
+        data_(data)
+      {}
+
+      // virtual:
+      inline bool is_data() const { return true; }
+
+      // virtual:
+      inline const TData & get() const { return data_; }
+
+      // virtual:
+      inline void get(TData & data) const { data = data_; }
+
+    protected:
+      TData data_;
+    };
 
     //----------------------------------------------------------------
-    // DataRef
+    // PropDataSrc
     //
-    DataRef(const TDataProperties * reference = NULL,
-            Property property = kPropertyUnspecified,
-            bool cacheable = true)
+    struct PropDataSrc : IDataSrc
     {
-      if (reference)
+      PropDataSrc(const TDataProperties & properties, Property property):
+        properties_(&properties),
+        property_(property)
+      {}
+
+      // virtual:
+      inline bool is_prop() const
+      { return true; }
+
+      // virtual:
+      inline const TData & get() const
       {
-        private_.reset(new Ref(*reference, property, cacheable));
+        properties_->get(property_, data_);
+        return data_;
       }
-    }
+
+      // virtual:
+      inline void get(TData & data) const
+      { properties_->get(property_, data); }
+
+    protected:
+      // reference properties:
+      const TDataProperties * properties_;
+      const Property property_;
+      mutable TData data_;
+    };
+
+    //----------------------------------------------------------------
+    // ExprDataSrc
+    //
+    struct ExprDataSrc : IDataSrc
+    {
+      ExprDataSrc(TExpression * expr):
+        expr_(expr)
+      {}
+
+      // virtual:
+      inline bool is_expr() const
+      { return true; }
+
+      // virtual:
+      inline const TData & get() const
+      {
+        expr_->evaluate(data_);
+        return data_;
+      }
+
+      // virtual:
+      inline void get(TData & data) const
+      { expr_->evaluate(data); }
+
+      // accessor:
+      template <typename TExpr>
+      inline yae::shared_ptr<TExpr, TExpression> get() const
+      { return yae::shared_ptr<TExpr, TExpression>(expr_); }
+
+    protected:
+      yae::shared_ptr<TExpression> expr_;
+      mutable TData data_;
+    };
+
+    //----------------------------------------------------------------
+    // DataRefSrc
+    //
+    struct DataRefSrc : IDataSrc
+    {
+      DataRefSrc(const DataRef & dref):
+        dref_(&dref)
+      {
+        if (!dref.isValid())
+        {
+          YAE_ASSERT(false);
+          throw std::runtime_error("reference to an invalid data reference");
+        }
+      }
+
+      // virtual:
+      inline bool is_dref() const
+      { return true; }
+
+      // virtual:
+      inline const TData & get() const
+      { return dref_->get(); }
+
+      // virtual:
+      inline void get(TData & data) const
+      { data = dref_->get(); }
+
+      // accessor:
+      inline const DataRef * dref() const
+      { return dref_; }
+
+    protected:
+      const DataRef * dref_;
+    };
+
 
     inline void reset()
     { private_.reset(); }
 
+    // reference setters:
+    template <typename TDataSrc>
+    inline void set(const TDataSrc & data_src, bool cacheable)
+    {
+      if (cacheable)
+      {
+        private_.reset(new CachedRef<TDataSrc>(data_src));
+      }
+      else
+      {
+        private_.reset(new ConstRef<TDataSrc>(data_src));
+      }
+    }
+
+    inline void set(const TData & value)
+    { private_.reset(new ConstRef<ConstDataSrc>((ConstDataSrc(value)))); }
+
+    inline void set(const TDataRef & dref)
+    { private_.reset(new ConstRef<DataRefSrc>((DataRefSrc(dref)))); }
+
+    inline void set(const TDataProperties & properties,
+                    Property property,
+                    bool cacheable = true)
+    {
+      PropDataSrc data_src(properties, property);
+      set<PropDataSrc>(data_src, cacheable);
+    }
+
+    inline void set(TExpression * expression, bool cacheable = true)
+    {
+      ExprDataSrc data_src(expression);
+      set<ExprDataSrc>(data_src, cacheable);
+    }
+
+    // for explicit caching of an externally computed value
+    // on an undefined (invalid) DataRef:
+    inline void cache(const TData & value) const
+    {
+      YAE_ASSERT(!private_ || private_->src().is_memo());
+      private_.reset(new ConstRef<MemoSrc>((MemoSrc(value))));
+    }
+
+
+    // constructors:
+    DataRef() {}
+    explicit DataRef(const TData & data) { TDataRef::set(data); }
+
+
     // constructor helpers:
-    inline static DataRef<TData>
-    reference(const TDataProperties & ref, Property prop)
-    { return DataRef<TData>(&ref, prop); }
+    inline static TDataRef
+    constant(const TData & data)
+    {
+      TDataRef ref;
+      ref.set(data);
+      return ref;
+    }
 
-    inline static DataRef<TData>
-    constant(const TData & t)
-    { return DataRef<TData>(t); }
+    inline static TDataRef
+    reference(const TDataRef & other)
+    {
+      TDataRef ref;
+      ref.set(other);
+      return ref;
+    }
 
-    inline static DataRef<TData>
-    expression(const TDataProperties & ref)
-    { return DataRef<TData>(&ref, kPropertyExpression); }
+    inline static TDataRef
+    reference(const TDataProperties & properties,
+              Property property,
+              bool cacheable = true)
+    {
+      TDataRef ref;
+      ref.set(properties, property, cacheable);
+      return ref;
+    }
+
+    inline static TDataRef
+    expression(TExpression * expr, bool cacheable = true)
+    {
+      TDataRef ref;
+      ref.set(expr, cacheable);
+      return ref;
+    }
+
+
 
     // check whether this property reference is valid:
     inline bool isValid() const
-    { return private_; }
-
-    // accessor to reference source, if any:
-    inline const TDataProperties * ref() const
-    { return private_ ? private_->get_reference() : NULL; }
-
-    // check whether this reference is relative:
-    inline bool isRelative() const
-    { return private_ && private_->is_relative(); }
-
-    inline bool isConstant() const
-    { return private_ && private_->get_property() == kPropertyConstant; }
+    { return private_ && !private_->src().is_memo(); }
 
     inline bool isCached() const
     { return private_ && private_->is_cached(); }
 
     // caching is used to avoid re-calculating the same property:
     inline void uncache() const
-    { if (private_) private_->uncache(); }
-
-    // cache an externally computed value:
-    inline void cache(const TData & value) const
-    { if (private_) private_->cache(value); }
-
-    inline bool isCacheable() const
-    { return private_ && private_->is_cacheable(); }
-
-    inline void enableCaching()
     {
-      YAE_ASSERT(private_);
-      private_->set_cacheable(true);
+      if (isValid())
+      {
+        private_->uncache();
+      }
+      else
+      {
+        private_.reset();
+      }
     }
 
     inline void disableCaching()
     {
       YAE_ASSERT(private_);
-      private_->set_cacheable(false);
+      if (private_ && private_->is_cacheable())
+      {
+        private_.reset(private_->make_const_ref());
+      }
+    }
+
+    inline void enableCaching()
+    {
+      YAE_ASSERT(private_);
+      if (private_ && !private_->is_cacheable())
+      {
+        private_.reset(private_->make_cached_ref());
+      }
     }
 
     inline const TData & get() const
@@ -266,18 +507,27 @@ namespace yae
       return private_->get_value();
     }
 
-    template <typename TProp>
-    inline TProp *
-    unwrap() const
+    template <typename TExpr>
+    inline yae::shared_ptr<TExpr, TExpression>
+    get_expr() const
     {
-      const Ref * ref = dynamic_cast<const Ref *>(private_.get());
-      if (ref)
-      {
-        const TProp * prop = dynamic_cast<const TProp *>(&ref->ref_);
-        return const_cast<TProp *>(prop);
-      }
+      const ExprDataSrc * src =
+        private_ ? (private_->template get<ExprDataSrc>()) : NULL;
+      return src ? src->template get<TExpr>() :
+        yae::shared_ptr<TExpr, TExpression>();
+    }
 
-      return NULL;
+    inline bool refers_to(const TDataRef & dref) const
+    {
+      const DataRefSrc * src =
+        private_ ? (private_->template get<DataRefSrc>()) : NULL;
+      return src ? (src->dref() == &dref) : false;
+    }
+
+    inline TDataRef & operator = (const TData & data)
+    {
+      set(data);
+      return *this;
     }
 
     // implementation details:
@@ -285,183 +535,207 @@ namespace yae
                           typename TDataRef::IRef,
                           typename TDataRef::IRef::Copy> TOptionalRef;
 
-    TOptionalRef private_;
+    mutable TOptionalRef private_;
   };
+
+
 
   //----------------------------------------------------------------
   // ItemRef
   //
-  struct ItemRef : public DataRef<double>
+  struct ItemRef : DataRef<double>
   {
-    typedef DataRef<double> TDataRef;
-    typedef IProperties<double> TDataProperties;
+    typedef DataRef<double> TBase;
+    using TBase::set;
+    using TBase::operator=;
+
+    // constructors:
+    ItemRef() {}
+    explicit ItemRef(double data) { TBase::set(data); }
 
     //----------------------------------------------------------------
     // Affine
     //
-    struct Affine : public TDataRef::Ref
+    template <typename TDataSrc>
+    struct Affine : IDataSrc
     {
-      Affine(const TDataProperties & ref,
-             Property prop,
-             double scale,
-             double translate,
-             bool cacheable = true):
-        TDataRef::Ref(ref, prop, cacheable),
+      Affine(const TDataSrc & src, double scale, double translate):
+        src_(src),
         scale_(scale),
         translate_(translate)
       {}
 
-      virtual Affine * copy() const
-      { return new Affine(*this); }
-
-      virtual const double & get_value() const
+      // virtual:
+      inline const TData & get() const
       {
-        if (!TDataRef::Ref::cached_)
-        {
-          double v = TDataRef::Ref::get_value();
-          v *= scale_;
-          v += translate_;
-          TDataRef::Ref::cache(v);
-        }
-
-        return TDataRef::Ref::value_;
+        data_ = src_.get();
+        data_ *= scale_;
+        data_ += translate_;
+        return data_;
       }
 
+      // virtual:
+      inline void get(TData & data) const
+      {
+        src_.get(data);
+        data *= scale_;
+        data += translate_;
+      }
+
+      // virtual:
+      inline bool is_memo() const { return src_.is_memo(); }
+      inline bool is_data() const { return src_.is_data(); }
+      inline bool is_prop() const { return src_.is_prop(); }
+      inline bool is_expr() const { return src_.is_expr(); }
+      inline bool is_dref() const { return src_.is_dref(); }
+
+      // public, for the VSplitter use-case:
+      TDataSrc src_;
       double scale_;
       double translate_;
+
+    protected:
+      mutable double data_;
     };
 
-    //----------------------------------------------------------------
-    // ItemRef
-    //
-    ItemRef(const TDataProperties * reference = NULL,
-            Property property = kPropertyUnspecified,
-            double scale = 1.0,
-            double translate = 0.0,
-            bool cacheable = true)
+
+    // reference setters:
+    inline void set(const TDataRef & other,
+                    double s = 1.0,
+                    double t = 0.0,
+                    bool cacheable = true)
     {
-      if (reference)
+      if (s == 1.0 && t == 0.0)
       {
-        private_.reset(new Affine(*reference,
-                                  property,
-                                  scale,
-                                  translate,
-                                  cacheable));
-      }
-    }
-
-    //----------------------------------------------------------------
-    // ItemRef
-    //
-    ItemRef(const double & value):
-      TDataRef(value)
-    {}
-
-    //----------------------------------------------------------------
-    // ItemRef
-    //
-    ItemRef(const ItemRef & other):
-      TDataRef(other)
-    {}
-
-    //----------------------------------------------------------------
-    // ItemRef
-    //
-    ItemRef(const TDataRef & dataRef,
-            double scale,
-            double translate = 0.0,
-            bool cacheable = true)
-    {
-      if (!dataRef.isValid())
-      {
-        YAE_ASSERT(false);
-        throw std::runtime_error("reference to an invalid data reference");
-      }
-
-      // shortcut:
-      const IRef & other = *(dataRef.private_);
-
-      if (other.get_property() == kPropertyConstant)
-      {
-        // pre-evaluate constant values:
-        double value = dataRef.get() * scale + translate;
-        private_.reset(new TDataRef::Const(value));
+        TBase::set(other);
       }
       else
       {
-        double s = scale;
-        double t = translate;
-
-        Affine * affine = dataRef.private_.cast<Affine>();
-        if (affine)
-        {
-          double s_other = affine->scale_;
-          double t_other = affine->translate_;
-
-          s = scale * s_other;
-          t = scale * t_other + translate;
-        }
-
-        if (s == 1.0 && t == 0.0)
-        {
-          private_.reset(new TDataRef::Ref(*other.get_reference(),
-                                           other.get_property(),
-                                           cacheable));
-        }
-        else
-        {
-          private_.reset(new Affine(*other.get_reference(),
-                                    other.get_property(),
-                                    s,
-                                    t,
-                                    cacheable));
-        }
+        typedef Affine<DataRefSrc> TDataSrc;
+        TDataSrc data_src(DataRefSrc(other), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
       }
     }
 
+    inline void set(const TDataProperties & properties,
+                    Property property,
+                    double s = 1.0,
+                    double t = 0.0,
+                    bool cacheable = true)
+    {
+      if (s == 1.0 && t == 0.0)
+      {
+        TBase::set(properties, property, cacheable);
+      }
+      else
+      {
+        typedef Affine<PropDataSrc> TDataSrc;
+        TDataSrc data_src(PropDataSrc(properties, property), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
+
+    inline void set(TExpression * expression,
+                    double s = 1.0,
+                    double t = 0.0,
+                    bool cacheable = true)
+    {
+      if (s == 1.0 && t == 0.0)
+      {
+        TBase::set(expression, cacheable);
+      }
+      else
+      {
+        typedef Affine<ExprDataSrc> TDataSrc;
+        TDataSrc data_src(ExprDataSrc(expression), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
+
+
     // constructor helpers:
     inline static ItemRef
-    reference(const TDataProperties & ref,
-              Property prop,
+    constant(const double & data)
+    {
+      ItemRef ref;
+      ref.TBase::set(data);
+      return ref;
+    }
+
+    inline static ItemRef
+    reference(const TDataProperties & properties,
+              Property property,
               double s = 1.0,
               double t = 0.0)
-    { return ItemRef(&ref, prop, s, t); }
+    {
+      ItemRef ref;
+      ref.set(properties, property, s, t, true);
+      return ref;
+    }
 
     inline static ItemRef
-    uncacheable(const TDataProperties & ref,
-                Property prop,
+    uncacheable(const TDataProperties & properties,
+                Property property,
                 double s = 1.0,
                 double t = 0.0)
-    { return ItemRef(&ref, prop, s, t, false); }
+    {
+      ItemRef ref;
+      ref.set(properties, property, s, t, false);
+      return ref;
+    }
 
     inline static ItemRef
-    reference(const TDataRef & dataRef,
+    scale(const TDataProperties & props, Property prop, double s = 1.0)
+    {
+      return reference(props, prop, s, 0.0);
+    }
+
+    inline static ItemRef
+    offset(const TDataProperties & props, Property prop, double t = 0.0)
+    {
+      return reference(props, prop, 1.0, t);
+    }
+
+    inline static ItemRef
+    reference(const TDataRef & other,
               double s = 1.0,
               double t = 0.0,
               bool cacheable = true)
-    { return ItemRef(dataRef, s, t, cacheable); }
+    {
+      ItemRef ref;
+      ref.set(other, s, t, cacheable);
+      return ref;
+    }
 
     inline static ItemRef
-    uncacheable(const TDataRef & dataRef,
+    uncacheable(const TDataRef & other,
                 double s = 1.0,
                 double t = 0.0)
-    { return ItemRef(dataRef, s, t, false); }
+    {
+      ItemRef ref;
+      ref.set(other, s, t, false);
+      return ref;
+    }
 
     inline static ItemRef
-    constant(const double & t)
-    { return ItemRef(t); }
+    scale(const TDataRef & other, double s = 1.0)
+    {
+      return reference(other, s, 0.0);
+    }
 
     inline static ItemRef
-    expression(const TDataProperties & ref, double s = 1.0, double t = 0.0)
-    { return ItemRef(&ref, kPropertyExpression, s, t); }
+    offset(const TDataRef & other, double t = 0.0)
+    {
+      return reference(other, 1.0, t);
+    }
 
     inline static ItemRef
-    scale(const TDataProperties & ref, Property prop, double s = 1.0)
-    { return ItemRef(&ref, prop, s, 0.0); }
-
-    inline static ItemRef
-    offset(const TDataProperties & ref, Property prop, double t = 0.0)
-    { return ItemRef(&ref, prop, 1.0, t); }
+    expression(TExpression * expr, double s = 1.0, double t = 0.0)
+    {
+      ItemRef ref;
+      ref.set(expr, s, t);
+      return ref;
+    }
   };
 
 
@@ -479,129 +753,163 @@ namespace yae
   //----------------------------------------------------------------
   // BoolRef
   //
-  struct BoolRef : public DataRef<bool>
+  struct BoolRef : DataRef<bool>
   {
-    typedef DataRef<bool> TDataRef;
-    typedef IProperties<bool> TDataProperties;
+    typedef DataRef<bool> TBase;
+    using TBase::set;
+    using TBase::operator=;
+
+    // constructors:
+    BoolRef() {}
+    explicit BoolRef(bool data) { TBase::set(data); }
 
     //----------------------------------------------------------------
     // Inverse
     //
-    struct Inverse : TDataRef::Ref
+    template <typename TDataSrc>
+    struct Inverse : IDataSrc
     {
-      Inverse(const TDataProperties & ref,
-              Property prop,
-              bool cacheable = true):
-        TDataRef::Ref(ref, prop, cacheable)
+      Inverse(const TDataSrc & src):
+        src_(src)
       {}
 
-      virtual Inverse * copy() const
-      { return new Inverse(*this); }
-
-      virtual const bool & get_value() const
+      // virtual:
+      inline const TData & get() const
       {
-        if (!TDataRef::Ref::cached_)
-        {
-          // invert the value:
-          bool v = !TDataRef::Ref::get_value();
-          TDataRef::Ref::cache(v);
-        }
-
-        return TDataRef::Ref::value_;
+        data_ = !src_.get();
+        return data_;
       }
+
+      // virtual:
+      inline void get(TData & data) const
+      {
+        src_.get(data);
+        data = !data;
+      }
+
+      // virtual:
+      inline bool is_memo() const { return src_.is_memo(); }
+      inline bool is_data() const { return src_.is_data(); }
+      inline bool is_prop() const { return src_.is_prop(); }
+      inline bool is_expr() const { return src_.is_expr(); }
+      inline bool is_dref() const { return src_.is_dref(); }
+
+      const TDataSrc src_;
+
+    protected:
+      mutable bool data_;
     };
 
-    //----------------------------------------------------------------
-    // BoolRef
-    //
-    BoolRef(const TDataProperties * reference = NULL,
-            Property property = kPropertyUnspecified,
-            bool inverse = false,
-            bool cacheable = true)
+
+    // reference setters:
+    inline void set(const TDataRef & other,
+                    bool inverse = false,
+                    bool cacheable = true)
     {
-      if (reference)
+      if (!inverse)
       {
-        if (inverse)
-        {
-          private_.reset(new Inverse(*reference,
-                                     property,
-                                     cacheable));
-        }
-        else
-        {
-          private_.reset(new TDataRef::Ref(*reference,
-                                           property,
-                                           cacheable));
-        }
-      }
-    }
-
-    //----------------------------------------------------------------
-    // BoolRef
-    //
-    BoolRef(const bool & value):
-      TDataRef(value)
-    {}
-
-    //----------------------------------------------------------------
-    // BoolRef
-    //
-    BoolRef(const BoolRef & other,
-            bool inverse = false,
-            bool cacheable = true)
-    {
-      if (!other.isValid())
-      {
-        YAE_ASSERT(false);
-        throw std::runtime_error("reference to an invalid data reference");
-      }
-
-      if (other.isConstant())
-      {
-        // pre-evaluate constant values:
-        bool value = inverse ^ other.get();
-        private_.reset(new TDataRef::Const(value));
+        TBase::set(other);
       }
       else
       {
-        const TDataRef::Ref * ref = other.private_.cast<TDataRef::Ref>();
-        const Inverse * inv = other.private_.cast<Inverse>();
+        typedef Inverse<DataRefSrc> TDataSrc;
+        TDataSrc data_src((DataRefSrc(other)));
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
 
-        if ((inv && inverse) || !(inv || inverse))
-        {
-          private_.reset(new TDataRef::Ref(ref->ref_, ref->prop_, cacheable));
-        }
-        else
-        {
-          private_.reset(new Inverse(ref->ref_, ref->prop_, cacheable));
-        }
+    inline void set(const TDataProperties & properties,
+                    Property property,
+                    bool inverse = false,
+                    bool cacheable = true)
+    {
+      if (!inverse)
+      {
+        TBase::set(properties, property, cacheable);
+      }
+      else
+      {
+        typedef Inverse<PropDataSrc> TDataSrc;
+        TDataSrc data_src(PropDataSrc(properties, property));
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
+
+    inline void set(TExpression * expr,
+                    bool inverse = false,
+                    bool cacheable = true)
+    {
+      if (!inverse)
+      {
+        TBase::set(expr, cacheable);
+      }
+      else
+      {
+        typedef Inverse<ExprDataSrc> TDataSrc;
+        TDataSrc data_src((ExprDataSrc(expr)));
+        TBase::set<TDataSrc>(data_src, cacheable);
       }
     }
 
     // constructor helpers:
     inline static BoolRef
-    constant(const bool & t)
-    { return BoolRef(t); }
+    constant(const bool & data)
+    {
+      BoolRef ref;
+      ref.TBase::set(data);
+      return ref;
+    }
 
     inline static BoolRef
-    reference(const TDataProperties & ref, Property prop, bool inverse = false)
-    { return BoolRef(&ref, prop, inverse); }
+    reference(const TDataProperties & properties,
+              Property property,
+              bool inverse = false)
+    {
+      BoolRef ref;
+      ref.set(properties, property, inverse);
+      return ref;
+    }
 
     inline static BoolRef
-    reference(const BoolRef & ref, bool inverse = false)
-    { return BoolRef(ref, inverse); }
+    inverse(const TDataProperties & properties,
+            Property property)
+    {
+      BoolRef ref;
+      ref.set(properties, property, true);
+      return ref;
+    }
 
     inline static BoolRef
-    expression(const TDataProperties & ref, bool inverse = false)
-    { return BoolRef(&ref, kPropertyExpression, inverse); }
+    reference(const TDataRef & other, bool inverse = false)
+    {
+      BoolRef ref;
+      ref.set(other, inverse);
+      return ref;
+    }
 
     inline static BoolRef
-    inverse(const TDataProperties & ref, Property prop)
-    { return BoolRef(&ref, prop, true); }
+    inverse(const TDataRef & other)
+    {
+      BoolRef ref;
+      ref.set(other, true);
+      return ref;
+    }
 
     inline static BoolRef
-    inverse(const BoolRef & ref)
-    { return BoolRef(ref, true); }
+    expression(TExpression * expr, bool inverse = false)
+    {
+      BoolRef ref;
+      ref.set(expr, inverse, true);
+      return ref;
+    }
+
+    inline static BoolRef
+    inverse(TExpression * expr)
+    {
+      BoolRef ref;
+      ref.set(expr, true, true);
+      return ref;
+    }
   };
 
 
@@ -618,109 +926,196 @@ namespace yae
   //----------------------------------------------------------------
   // ColorRef
   //
-  struct ColorRef : public DataRef<Color>
+  struct ColorRef : DataRef<Color>
   {
-    typedef DataRef<Color> TDataRef;
-    typedef IProperties<Color> TDataProperties;
+    typedef DataRef<Color> TBase;
+    using TBase::set;
+    using TBase::operator=;
+
+    // constructors:
+    ColorRef() {}
+    explicit ColorRef(const Color & data) { TBase::set(data); }
+
 
     //----------------------------------------------------------------
     // Affine
     //
-    struct Affine : TDataRef::Ref
+    template <typename TDataSrc>
+    struct Affine : IDataSrc
     {
-      Affine(const TDataProperties & ref,
-             Property prop,
+      Affine(const TDataSrc & src,
              const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
-             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0),
-             bool cacheable = true):
-        TDataRef::Ref(ref, prop, cacheable),
+             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0)):
+        src_(src),
         scale_(scale),
         translate_(translate)
       {}
 
-      virtual Affine * copy() const
-      { return new Affine(*this); }
-
-      virtual const Color & get_value() const
+      // virtual:
+      inline const TData & get() const
       {
-        if (!TDataRef::Ref::cached_)
-        {
-          TVec4D v(TDataRef::Ref::get_value());
-          v *= scale_;
-          v += translate_;
-          v.clamp(0.0, 1.0);
-          TDataRef::Ref::cache(Color(v));
-        }
-
-        return TDataRef::Ref::value_;
+        TVec4D data(src_.get());
+        data *= scale_;
+        data += translate_;
+        data.clamp(0.0, 1.0);
+        data_ = Color(data);
+        return data_;
       }
 
-      TVec4D scale_;
-      TVec4D translate_;
+      // virtual:
+      inline void get(TData & data) const
+      {
+        src_.get(data);
+        TVec4D vec4(data);
+        vec4 *= scale_;
+        vec4 += translate_;
+        vec4.clamp(0.0, 1.0);
+        data = Color(vec4);
+      }
+
+      // virtual:
+      inline bool is_memo() const { return src_.is_memo(); }
+      inline bool is_data() const { return src_.is_data(); }
+      inline bool is_prop() const { return src_.is_prop(); }
+      inline bool is_expr() const { return src_.is_expr(); }
+      inline bool is_dref() const { return src_.is_dref(); }
+
+      const TDataSrc src_;
+      const TVec4D scale_;
+      const TVec4D translate_;
+
+    protected:
+      mutable Color data_;
     };
 
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const TDataProperties * reference = NULL,
-             Property property = kPropertyUnspecified,
-             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
-             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0),
-             bool cacheable = true)
+
+    // reference setters:
+    inline void set(const TDataRef & other,
+                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                    bool cacheable = true)
     {
-      if (reference)
+      if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
+          t == TVec4D(0.0, 0.0, 0.0, 0.0))
       {
-        private_.reset(new Affine(*reference,
-                                  property,
-                                  scale,
-                                  translate,
-                                  cacheable));
+        TBase::set(other);
+      }
+      else
+      {
+        typedef Affine<DataRefSrc> TDataSrc;
+        TDataSrc data_src(DataRefSrc(other), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
       }
     }
 
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const Color & value):
-      TDataRef(value)
-    {}
+    inline void set(const TDataProperties & properties,
+                    Property property,
+                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                    bool cacheable = true)
+    {
+      if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
+          t == TVec4D(0.0, 0.0, 0.0, 0.0))
+      {
+        TBase::set(properties, property, cacheable);
+      }
+      else
+      {
+        typedef Affine<PropDataSrc> TDataSrc;
+        TDataSrc data_src(PropDataSrc(properties, property), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
 
-    //----------------------------------------------------------------
-    // ColorRef
-    //
-    ColorRef(const ColorRef & other):
-      TDataRef(other)
-    {}
+    inline void set(TExpression * expr,
+                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                    bool cacheable = true)
+    {
+      if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
+          t == TVec4D(0.0, 0.0, 0.0, 0.0))
+      {
+        TBase::set(expr, cacheable);
+      }
+      else
+      {
+        typedef Affine<ExprDataSrc> TDataSrc;
+        TDataSrc data_src(ExprDataSrc(expr), s, t);
+        TBase::set<TDataSrc>(data_src, cacheable);
+      }
+    }
+
 
     // constructor helpers:
     inline static ColorRef
-    constant(const Color & t)
-    { return ColorRef(t); }
+    constant(const Color & color)
+    {
+      ColorRef ref;
+      ref.TBase::set(color);
+      return ref;
+    }
 
     inline static ColorRef
-    reference(const TDataProperties & ref,
-              Property prop,
+    reference(const TDataProperties & properties,
+              Property property,
               const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
-              const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0))
-    { return ColorRef(&ref, prop, s, t); }
+              const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+              bool cacheable = true)
+    {
+      ColorRef ref;
+      ref.set(properties, property, s, t, cacheable);
+      return ref;
+    }
 
     inline static ColorRef
-    expression(const TDataProperties & ref,
+    transparent(const TDataProperties & properties,
+                Property property,
+                double sa = 0.0,
+                bool cacheable = true)
+    {
+      return reference(properties,
+                       property,
+                       TVec4D(sa, 1.0, 1.0, 1.0),
+                       TVec4D(0.0, 0.0, 0.0, 0.0),
+                       cacheable);
+    }
+
+    inline static ColorRef
+    scale(const TDataProperties & properties,
+          Property property,
+          const TVec4D & scale,
+          bool cacheable = true)
+    {
+      return reference(properties,
+                       property,
+                       scale,
+                       TVec4D(0.0, 0.0, 0.0, 0.0),
+                       cacheable);
+    }
+
+    inline static ColorRef
+    offset(const TDataProperties & properties,
+           Property property,
+           const TVec4D & translate,
+           bool cacheable = true)
+    {
+      return reference(properties,
+                       property,
+                       TVec4D(1.0, 1.0, 1.0, 1.0),
+                       translate,
+                       cacheable);
+    }
+
+    inline static ColorRef
+    expression(TExpression * expr,
                const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
-               const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0))
-    { return ColorRef(&ref, kPropertyExpression, s, t); }
-
-    inline static ColorRef
-    scale(const TDataProperties & ref, Property prop, const TVec4D & s)
-    { return ColorRef(&ref, prop, s); }
-
-    inline static ColorRef
-    offset(const TDataProperties & ref, Property prop, const TVec4D & t)
-    { return ColorRef(&ref, prop, TVec4D(1.0, 1.0, 1.0, 1.0), t); }
-
-    inline static ColorRef
-    transparent(const TDataProperties & ref, Property prop, double sa = 0.0)
-    { return ColorRef(&ref, prop, TVec4D(sa, 1.0, 1.0, 1.0)); }
+               const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+               bool cacheable = true)
+    {
+      ColorRef ref;
+      ref.set(expr, s, t, cacheable);
+      return ref;
+    }
   };
 
   //----------------------------------------------------------------

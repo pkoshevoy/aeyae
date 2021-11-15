@@ -56,132 +56,27 @@ namespace yae
 
     if (enable)
     {
-      layout();
+      confirm_.reset(new ConfirmItem("ConfirmItem", *this));
+      ConfirmItem & confirm = root.add<ConfirmItem>(confirm_);
+      confirm.anchors_.fill(root);
+      confirm.fg_.set(fg_);
+      confirm.bg_.set(bg_);
+      confirm.message_.set(message_);
+      confirm.affirmative_ = affirmative_;
+      confirm.negative_ = negative_;
+      confirm.layout();
+      confirm.setVisible(true);
+    }
+    else if (confirm_)
+    {
+      confirm_->setVisible(false);
+      confirm_.reset();
     }
 
     root.uncache();
     uncache_.clear();
 
     ItemView::setEnabled(enable);
-  }
-
-  //----------------------------------------------------------------
-  // OnAction
-  //
-  struct OnAction : public InputArea
-  {
-    OnAction(const char * id,
-             ConfirmView & view,
-             const yae::shared_ptr<ConfirmView::Action> & action):
-      InputArea(id),
-      view_(view),
-      action_(action)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    { return true; }
-
-    // virtual:
-    bool onClick(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      yae::shared_ptr<OnAction, Item> keep_alive = self_.lock();
-      YAE_ASSERT(keep_alive);
-
-      const ConfirmView::Action & action = *action_;
-      action();
-      view_.setEnabled(false);
-      return true;
-    }
-
-    ConfirmView & view_;
-    yae::shared_ptr<ConfirmView::Action> action_;
-  };
-
-  //----------------------------------------------------------------
-  // ConfirmView::layout
-  //
-  void
-  ConfirmView::layout()
-  {
-    Item & root = *root_;
-    const ItemViewStyle & style = *style_;
-    const Action & affirmative = *affirmative_;
-    const Action & negative = *negative_;
-
-    // setup mouse trap to prevent unintended click-through:
-    MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
-    mouse_trap.anchors_.fill(root);
-    mouse_trap.onDoubleClick_ = false;
-
-    Rectangle & bg = root.addNew<Rectangle>("bg");
-    bg.anchors_.fill(root);
-    bg.color_ = bg_;
-
-    Text & text = root.addNew<Text>("text");
-    text.anchors_.top_ = ItemRef::scale(root, kPropertyHeight, 0.33);
-    text.anchors_.hcenter_ = ItemRef::reference(root, kPropertyHCenter);
-    text.width_ = ItemRef::scale(root, kPropertyWidth, 0.67);
-    text.text_ = message_;
-    text.color_ = fg_;
-    text.background_ = bg_;
-    text.fontSize_ = ItemRef::reference(style.title_height_);
-    text.elide_ = Qt::ElideNone;
-    text.setAttr("linewrap", true);
-
-    RoundRect & bg_yes = root.addNew<RoundRect>("bg_yes");
-    RoundRect & bg_no = root.addNew<RoundRect>("bg_no");
-
-    Text & tx_yes = root.addNew<Text>("tx_yes");
-    Text & tx_no = root.addNew<Text>("tx_no");
-
-    tx_yes.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
-    tx_yes.anchors_.right_ = ItemRef::reference(text, kPropertyHCenter);
-    tx_yes.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_yes.margins_.set_right(ItemRef::reference(style.title_height_, 2.0));
-    tx_yes.text_ = affirmative.message_;
-    tx_yes.color_ = affirmative.fg_;
-    tx_yes.background_ = affirmative.bg_;
-    tx_yes.fontSize_ = text.fontSize_;
-    tx_yes.elide_ = Qt::ElideNone;
-    tx_yes.setAttr("oneline", true);
-
-    bg_yes.anchors_.fill(tx_yes, -7.0);
-    bg_yes.margins_.set_left(ItemRef::reference(style.title_height_, -1));
-    bg_yes.margins_.set_right(ItemRef::reference(style.title_height_, -1));
-    bg_yes.color_ = affirmative.bg_;
-    bg_yes.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
-    bg_yes.radius_ = ItemRef::scale(bg_yes, kPropertyHeight, 0.1);
-
-    OnAction & on_yes = bg_yes.
-      add(new OnAction("on_yes", *this, affirmative_));
-    on_yes.anchors_.fill(bg_yes);
-
-    tx_no.anchors_.top_ = ItemRef::reference(text, kPropertyBottom);
-    tx_no.anchors_.left_ = ItemRef::reference(text, kPropertyHCenter);
-    tx_no.margins_.set_top(ItemRef::reference(text, kPropertyFontHeight));
-    tx_no.margins_.set_left(ItemRef::reference(style.title_height_, 2.0));
-    tx_no.text_ = negative.message_;
-    tx_no.color_ = negative.fg_;
-    tx_no.background_ = negative.bg_;
-    tx_no.fontSize_ = text.fontSize_;
-    tx_no.elide_ = Qt::ElideNone;
-    tx_no.setAttr("oneline", true);
-
-    bg_no.anchors_.fill(tx_no, -7.0);
-    bg_no.margins_.set_left(ItemRef::reference(style.title_height_, -1));
-    bg_no.margins_.set_right(ItemRef::reference(style.title_height_, -1));
-    bg_no.color_ = negative.bg_;
-    // bg_no.colorBorder_ = negative.fg_;
-    bg_no.background_ = ColorRef::constant(bg_.get().a_scaled(0.0));
-    bg_no.radius_ = ItemRef::scale(bg_no, kPropertyHeight, 0.1);
-    // bg_no.border_ = ItemRef::constant(0.25);
-
-    OnAction & on_no = bg_no.
-      add(new OnAction("on_no", *this, negative_));
-    on_no.anchors_.fill(bg_no);
   }
 
 }

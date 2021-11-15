@@ -66,36 +66,42 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
 
     Item & root = *root_;
-    if (!spinner_)
-    {
-      root.anchors_.left_ = ItemRef::constant(0.0);
-      root.anchors_.top_ = ItemRef::constant(0.0);
-      root.width_ = ItemRef::constant(w_);
-      root.height_ = ItemRef::constant(h_);
+    root.children_.clear();
+    root.anchors_.left_ = ItemRef::constant(0.0);
+    root.anchors_.top_ = ItemRef::constant(0.0);
+    root.width_ = ItemRef::constant(w_);
+    root.height_ = ItemRef::constant(h_);
 
+    if (enable)
+    {
       spinner_.reset(new SpinnerItem("SpinnerItem", *this));
       SpinnerItem & spinner = root.add<SpinnerItem>(spinner_);
-
       spinner.anchors_.fill(root);
-      spinner.message_ = spinner.addExpr(new GetSpinnerText(*this));
+      spinner.message_.set(new GetSpinnerText(*this));
 
       if (fg_.isValid())
       {
-        spinner.fg_ = fg_;
+        spinner.fg_.set(fg_);
       }
 
       if (bg_.isValid())
       {
-        spinner.bg_ = bg_;
+        spinner.bg_.set(bg_);
       }
 
       if (text_color_.isValid())
       {
-        spinner.text_color_ = text_color_;
+        spinner.text_color_.set(text_color_);
       }
-    }
 
-    spinner_->setEnabled(enable);
+      spinner.layout();
+      spinner.setVisible(true);
+    }
+    else if (spinner_)
+    {
+      spinner_->setVisible(false);
+      spinner_.reset();
+    }
 
     root.uncache();
     uncache_.clear();

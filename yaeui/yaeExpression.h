@@ -15,7 +15,7 @@
 // yae includes:
 #include "yae/api/yae_api.h"
 
-// local interfaces:
+// local:
 #include "yaeProperty.h"
 
 
@@ -26,21 +26,10 @@ namespace yae
   // Expression
   //
   template <typename TData>
-  struct Expression : public IProperties<TData>
+  struct Expression
   {
+    virtual ~Expression() {}
     virtual void evaluate(TData & result) const = 0;
-
-    // virtual:
-    void get(Property property, TData & result) const
-    {
-      if (property != kPropertyExpression)
-      {
-        YAE_ASSERT(false);
-        throw std::runtime_error("requested a non-expression property");
-      }
-
-      evaluate(result);
-    }
   };
 
 

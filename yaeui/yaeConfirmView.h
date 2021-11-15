@@ -14,6 +14,7 @@
 #include <QString>
 
 // local:
+#include "yaeConfirmItem.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 
@@ -40,31 +41,16 @@ namespace yae
     // virtual:
     void setEnabled(bool enable);
 
-    //----------------------------------------------------------------
-    // Action
-    //
-    struct YAEUI_API Action
-    {
-      virtual ~Action() {}
-      virtual void operator()() const {}
-
-      TVarRef message_;
-      ColorRef fg_;
-      ColorRef bg_;
-    };
-
-    yae::shared_ptr<Action> affirmative_;
-    yae::shared_ptr<Action> negative_;
+    yae::shared_ptr<ConfirmItem::Action> affirmative_;
+    yae::shared_ptr<ConfirmItem::Action> negative_;
 
     TVarRef message_;
     ColorRef fg_;
     ColorRef bg_;
 
   protected:
-
-    void layout();
-
     ItemViewStyle * style_;
+    ConfirmItemPtr confirm_;
   };
 
 }

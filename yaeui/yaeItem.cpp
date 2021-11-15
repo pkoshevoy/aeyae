@@ -1427,6 +1427,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::setVisible
+  //
+  void
+  Item::setVisible(bool visible)
+  {
+    visible_ = BoolRef::constant(visible);
+  }
+
+  //----------------------------------------------------------------
   // Item::operator[]
   //
   const Item &
@@ -1815,11 +1824,10 @@ namespace yae
                                  const Transition::Polyline & steady,
                                  const Transition::Polyline & spindown):
     Item(id),
-    expression_(Item::addExpr(new Transition(spinup, steady, spindown))),
-    transition_(*(dynamic_cast<Transition *>
-                  (const_cast<IProperties<double> *>(expression_.ref()))))
+    expr_ref_(Item::addExpr(new Transition(spinup, steady, spindown))),
+    transition_(*(expr_ref_.get_expr<Transition>()))
   {
-    override_ = expression_;
+    override_.set(expr_ref_);
   }
 
   //----------------------------------------------------------------
@@ -1837,7 +1845,7 @@ namespace yae
   bool
   TransitionItem::is_paused() const
   {
-    bool paused = (override_.ref() != expression_.ref());
+    bool paused = !override_.refers_to(expr_ref_);
     return paused;
   }
 
@@ -1861,7 +1869,7 @@ namespace yae
         transition_.start();
       }
 
-      override_ = expression_;
+      override_.set(expr_ref_);
     }
     else
     {
@@ -1892,7 +1900,7 @@ namespace yae
   TransitionItem::uncache()
   {
     override_.uncache();
-    expression_.uncache();
+    expr_ref_.uncache();
     Item::uncache();
   }
 

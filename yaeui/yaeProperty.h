@@ -66,8 +66,6 @@ namespace yae
   enum Property
   {
     kPropertyUnspecified,
-    kPropertyConstant,
-    kPropertyExpression,
     kPropertyTransition,
     kPropertyAnchorLeft,
     kPropertyAnchorRight,
@@ -113,7 +111,6 @@ namespace yae
     kPropertyColorSelBg,
     kPropertyColorNoFocusBg,
     kPropertyColorOnFocusBg,
-    kPropertyColorOfText,
     kPropertyCursorWidth,
     kPropertyHasText,
     kPropertyText,

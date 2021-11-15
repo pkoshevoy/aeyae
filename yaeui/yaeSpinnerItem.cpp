@@ -45,21 +45,26 @@ namespace yae
     Item(id),
     view_(view)
   {
-    bg_ = addExpr(style_color_ref
-                  (view, &ItemViewStyle::fg_edit_selected_, 0.75));
+    bg_.set(style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75));
+    fg_.set(style_color_ref(view, &ItemViewStyle::fg_));
 
-    fg_ = addExpr(style_color_ref
-                  (view, &ItemViewStyle::fg_));
+    text_color_.set
+      (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
+  }
 
-    text_color_ = addExpr(style_color_ref
-                          (view, &ItemViewStyle::fg_timecode_, 0, 0.78));
-
-    const ItemViewStyle & style = *(view.style());
+  //----------------------------------------------------------------
+  // SpinnerItem::layout
+  //
+  void
+  SpinnerItem::layout()
+  {
+    const ItemViewStyle & style = *(view_.style());
     font_size_ = ItemRef::reference(style.title_height_, 0.625);
 
+    children_.clear();
     Rectangle & spinner = addNew<Rectangle>("spinner");
     spinner.anchors_.fill(*this);
-    spinner.color_ = ColorRef::reference(*this, kPropertyColorBg);
+    spinner.color_.set(bg_);
 
     typedef Transition::Polyline TPolyline;
     transition_.reset(new TransitionItem("spinner_transition",
@@ -121,10 +126,10 @@ namespace yae
       r9.anchors_.right_ =
         ItemRef::reference(*this, kPropertyHeight, -0.04);
 
-      r0.color_ = ColorRef::reference(*this, kPropertyColor);
-      r3.color_ = ColorRef::reference(*this, kPropertyColor);
-      r6.color_ = ColorRef::reference(*this, kPropertyColor);
-      r9.color_ = ColorRef::reference(*this, kPropertyColor);
+      r0.color_.set(fg_);
+      r3.color_.set(fg_);
+      r6.color_.set(fg_);
+      r9.color_.set(fg_);
 
       r0.opacity_ = r0.addExpr
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(12 - i)));
@@ -146,30 +151,35 @@ namespace yae
     text.anchors_.vcenter_ = ItemRef::scale(spinner, kPropertyHeight, 0.25);
     text.width_ = ItemRef::reference(spinner, kPropertyWidth, 0.9);
     text.background_ = ColorRef::transparent(spinner, kPropertyColor);
-    text.color_ = ColorRef::reference(*this, kPropertyColorOfText);
-    text.text_ = TVarRef::reference(*this, kPropertyText);
-    text.fontSize_ = ItemRef::reference(*this, kPropertyFontSize);
+    text.color_.set(text_color_);
+    text.text_.set(message_);
+    text.fontSize_.set(font_size_);
     text.elide_ = Qt::ElideMiddle;
   }
 
   //----------------------------------------------------------------
-  // SpinnerItem::setEnabled
+  // SpinnerItem::setVisible
   //
   void
-  SpinnerItem::setEnabled(bool enable)
+  SpinnerItem::setVisible(bool visible)
   {
-    if (!enable && animator_)
+    if (!visible)
     {
-      view_.delAnimator(animator_);
-      animator_.reset();
+      if (animator_)
+      {
+        view_.delAnimator(animator_);
+        animator_.reset();
+      }
     }
 
-    if (enable)
+    if (visible)
     {
       transition_->start();
       animator_.reset(new SpinnerAnimator(*this));
       view_.addAnimator(animator_);
     }
+
+    Item::setVisible(visible);
   }
 
   //----------------------------------------------------------------
@@ -185,62 +195,6 @@ namespace yae
     font_size_.uncache();
 
     Item::uncache();
-  }
-
-  //----------------------------------------------------------------
-  // SpinnerItem::get
-  //
-  void
-  SpinnerItem::get(Property property, double & value) const
-  {
-    if (property == kPropertyFontSize)
-    {
-      value = font_size_.get();
-    }
-    else
-    {
-      Item::get(property, value);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // SpinnerItem::get
-  //
-  void
-  SpinnerItem::get(Property property, Color & value) const
-  {
-    if (property == kPropertyColor)
-    {
-      value = fg_.get();
-    }
-    else if (property == kPropertyColorBg)
-    {
-      value = bg_.get();
-    }
-    else if (property == kPropertyColorOfText)
-    {
-      value = text_color_.get();
-    }
-    else
-    {
-      Item::get(property, value);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // SpinnerItem::get
-  //
-  void
-  SpinnerItem::get(Property property, TVar & value) const
-  {
-    if (property == kPropertyText)
-    {
-      value = message_.get();
-    }
-    else
-    {
-      Item::get(property, value);
-    }
   }
 
 }

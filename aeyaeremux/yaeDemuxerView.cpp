@@ -1892,6 +1892,8 @@ namespace yae
   //
   struct VSplitter : public InputArea
   {
+    typedef ItemRef::CachedRef<ItemRef::Affine<ItemRef::PropDataSrc> > TPropRef;
+
     VSplitter(const char * id,
               const ItemRef & lowerBound,
               const ItemRef & upperBound,
@@ -1899,7 +1901,7 @@ namespace yae
       InputArea(id, true),
       lowerBound_(lowerBound),
       upperBound_(upperBound),
-      anchor_(anchorRef.private_.cast<ItemRef::Affine>()),
+      anchor_(anchorRef.private_.cast<TPropRef>()),
       anchorPos_(0),
       offsetPos_(0)
     {
@@ -1919,7 +1921,7 @@ namespace yae
                  const TVec2D & rootCSysPoint)
     {
       anchorPos_ = anchor_->get_value();
-      offsetPos_ = anchor_->translate_;
+      offsetPos_ = anchor_->src_.translate_;
       return true;
     }
 
@@ -1935,7 +1937,7 @@ namespace yae
       v = std::min(v_max, std::max(v_min, v));
 
       double dv = v - anchorPos_;
-      anchor_->translate_ = offsetPos_ + dv;
+      anchor_->src_.translate_ = offsetPos_ + dv;
 
       // this avoids uncaching the scrollview content:
       parent_->uncacheSelfAndChildren();
@@ -1946,7 +1948,7 @@ namespace yae
     ItemRef lowerBound_;
     ItemRef upperBound_;
 
-    ItemRef::Affine * anchor_;
+    TPropRef * anchor_;
 
     double anchorPos_;
     double offsetPos_;
@@ -3961,8 +3963,9 @@ namespace yae
            i = gops.children_.begin(); i != gops.children_.end(); ++i)
     {
       const Item & item = *(*i);
-      const IsCurrentClip * found =
-        dynamic_cast<const IsCurrentClip *>(item.visible_.ref());
+
+      yae::shared_ptr<IsCurrentClip, TBoolExpr> found =
+        item.visible_.get_expr<IsCurrentClip>();
 
       if (found && found->clip_ == clip_ptr)
       {

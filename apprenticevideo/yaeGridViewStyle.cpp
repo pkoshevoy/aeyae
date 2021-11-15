@@ -121,7 +121,7 @@ namespace yae
     }
 
     // configure common style attributes:
-    GridCellWidth * cell_width = cell_width_expr();
+    yae::shared_ptr<GridCellWidth, TDoubleExpr> cell_width = cell_width_expr();
     YAE_ASSERT(cell_width);
 
     cell_width->path_to_grid_container_ = "scrollview";

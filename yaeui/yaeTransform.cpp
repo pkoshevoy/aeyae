@@ -89,13 +89,8 @@ namespace yae
     yContentLocal_ = Item::yContent_;
     Item::xContent_ = addExpr(new TransformedXContent(*this));
     Item::yContent_ = addExpr(new TransformedYContent(*this));
-
-    // get rid of base implementation of xExtent and yExtent:
-    Item::expr_.remove_if(SameExpression(Item::xExtent_.ref()));
-    Item::expr_.remove_if(SameExpression(Item::yExtent_.ref()));
-
-    Item::xExtent_ = Item::xContent_;
-    Item::yExtent_ = Item::yContent_;
+    Item::xExtent_.set(Item::xContent_);
+    Item::yExtent_.set(Item::yContent_);
 
     uAxis_ = addExpr(new GetUAxis(rotation_));
   }

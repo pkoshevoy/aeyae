@@ -519,6 +519,7 @@ namespace yae
     double vcenter() const;
 
     virtual bool visible() const;
+    virtual void setVisible(bool visible);
 
     // child item lookup, will throw a runtime exception
     // if a child with a matching id is not found here:
@@ -655,29 +656,25 @@ namespace yae
     template <typename TData>
     inline DataRef<TData> addExpr(Expression<TData> * e)
     {
-      expr_.push_back(TPropertiesBasePtr(e));
-      return DataRef<TData>::expression(*e);
+      return DataRef<TData>::expression(e);
     }
 
     inline ItemRef addExpr(TDoubleExpr * e,
                            double scale = 1.0,
                            double translate = 0.0)
     {
-      expr_.push_back(TPropertiesBasePtr(e));
-      return ItemRef::expression(*e, scale, translate);
+      return ItemRef::expression(e, scale, translate);
     }
 
     inline BoolRef addExpr(TBoolExpr * e)
     {
-      expr_.push_back(TPropertiesBasePtr(e));
-      return BoolRef::expression(*e);
+      return BoolRef::expression(e);
     }
 
     inline BoolRef addInverse(TBoolExpr * e)
     {
       bool inverse = true;
-      expr_.push_back(TPropertiesBasePtr(e));
-      return BoolRef::expression(*e, inverse);
+      return BoolRef::expression(e, inverse);
     }
 
     inline ColorRef
@@ -685,8 +682,7 @@ namespace yae
             const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
             const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
     {
-      expr_.push_back(TPropertiesBasePtr(e));
-      return ColorRef::expression(*e, scale, translate);
+      return ColorRef::expression(e, scale, translate);
     }
 
     // for user-defined item attributes:
@@ -909,9 +905,6 @@ namespace yae
     BoolRef visible_;
 
   protected:
-    // storage of expressions associated with this Item:
-    std::list<TPropertiesBasePtr> expr_;
-
     // storage of event observers associated with this Item:
     yae::optional<TEventObservers> eo_;
 
@@ -1010,30 +1003,23 @@ namespace yae
     ExprItem(const char * id, expression_type * expression):
       Item(id)
     {
-      expression_ = this->addExpr(expression);
+      ref_ = this->addExpr(expression);
     }
 
     // virtual:
     void get(Property property, value_type & value) const
     {
-      if (property == kPropertyExpression)
-      {
-        value = expression_.get();
-      }
-      else
-      {
-        Item::get(property, value);
-      }
-   }
+      value = ref_.get();
+    }
 
     // virtual:
     void uncache()
     {
-      expression_.uncache();
+      ref_.uncache();
       Item::uncache();
     }
 
-    TDataRef expression_;
+    TDataRef ref_;
   };
 
   //----------------------------------------------------------------
@@ -1051,8 +1037,8 @@ namespace yae
   {
     typedef DataRef<TData> TDataRef;
     typedef ExprItem<TDataRef> TItem;
-    TItem & item = addHidden(new TItem(key, e));
-    return DataRef<TData>::reference(item, kPropertyExpression);
+    TItem & expr_item = addHidden(new TItem(key, e));
+    return expr_item.ref_;
   }
 
   //----------------------------------------------------------------
@@ -1083,8 +1069,8 @@ namespace yae
 
     typedef DataRef<TData> TDataRef;
     typedef ExprItem<TDataRef> TItem;
-    const TItem * expr = dynamic_cast<const TItem *>(attr);
-    expr->TItem::get(kPropertyExpression, value);
+    const TItem * expr_item = dynamic_cast<const TItem *>(attr);
+    value = expr_item->ref_.get();
     return true;
   }
 
@@ -1120,7 +1106,7 @@ namespace yae
 
   protected:
     ItemRef override_;
-    ItemRef expression_;
+    ItemRef expr_ref_;
     Transition & transition_;
   };
 

@@ -482,12 +482,6 @@ namespace yae
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
 
-    // shortcut:
-    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
-    pl_ux.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
-    pl_ux.enableBackArrowButton_ = BoolRef::constant(true);
-    pl_ux.enableDeleteFileButton_ = BoolRef::constant(true);
-
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
@@ -551,30 +545,6 @@ namespace yae
                  this, SLOT(playerExitingFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&pl_ux, SIGNAL(playback_finished(TTime)),
-                 this, SLOT(playbackFinished(TTime)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&pl_ux, SIGNAL(save_bookmark()),
-                 this, SLOT(saveBookmark()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&pl_ux, SIGNAL(save_bookmark_at(double)),
-                 this, SLOT(saveBookmarkAt(double)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&pl_ux, SIGNAL(on_back_arrow()),
-                 this, SLOT(backToPlaylist()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&pl_ux, SIGNAL(delete_playing_file()),
-                 this, SLOT(confirmDeletePlayingRecording()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&pl_ux, SIGNAL(toggle_playlist()),
-                 &playerWindow_, SLOT(stopAndHide()));
-    YAE_ASSERT(ok);
-
     ok = connect(&start_live_playback_, SIGNAL(timeout()),
                  this, SLOT(startLivePlayback()));
     YAE_ASSERT(ok);
@@ -626,6 +596,38 @@ namespace yae
     spinner_.setEnabled(false);
 
     playerWidget_->initItemViews();
+
+    // shortcut:
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
+    pl_ux.enableBackArrowButton_ = BoolRef::constant(true);
+    pl_ux.enableDeleteFileButton_ = BoolRef::constant(true);
+    pl_ux.uncache();
+
+    bool ok = true;
+    ok = connect(&pl_ux, SIGNAL(playback_finished(TTime)),
+                 this, SLOT(playbackFinished(TTime)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&pl_ux, SIGNAL(save_bookmark()),
+                 this, SLOT(saveBookmark()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&pl_ux, SIGNAL(save_bookmark_at(double)),
+                 this, SLOT(saveBookmarkAt(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&pl_ux, SIGNAL(on_back_arrow()),
+                 this, SLOT(backToPlaylist()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&pl_ux, SIGNAL(delete_playing_file()),
+                 this, SLOT(confirmDeletePlayingRecording()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&pl_ux, SIGNAL(toggle_playlist()),
+                 &playerWindow_, SLOT(stopAndHide()));
+    YAE_ASSERT(ok);
 
     if (!dvr_.has_preferences())
     {
@@ -818,17 +820,35 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DismissConfirmView
+  //
+  struct DismissConfirmView : ConfirmItem::Action
+  {
+    MainWindow & mainWindow_;
+
+    DismissConfirmView(MainWindow & mainWindow):
+      mainWindow_(mainWindow)
+    {}
+
+    // virtual:
+    void execute() const
+    {
+      mainWindow_.confirm_.setEnabled(false);
+    }
+  };
+
+  //----------------------------------------------------------------
   // ConfirmDeleteRecording
   //
-  struct ConfirmDeleteRecording : ConfirmView::Action
+  struct ConfirmDeleteRecording : DismissConfirmView
   {
     ConfirmDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      mainWindow_(mainWindow),
+      DismissConfirmView(mainWindow),
       rec_(rec)
     {}
 
     // virtual:
-    void operator()() const
+    void execute() const
     {
       // shortcuts:
       DVR & dvr = mainWindow_.dvr_;
@@ -851,9 +871,9 @@ namespace yae
       appView.requestUncache();
       appView.sync_ui();
       appView.requestRepaint();
+      DismissConfirmView::execute();
     }
 
-    MainWindow & mainWindow_;
     TRecPtr rec_;
   };
 
@@ -872,13 +892,13 @@ namespace yae
     confirm_.fg_ = style.bg_;
 
     confirm_.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
-    ConfirmView::Action & aff = *confirm_.affirmative_;
+    ConfirmItem::Action & aff = *confirm_.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm_.negative_.reset(new ConfirmView::Action());
-    ConfirmView::Action & neg = *confirm_.negative_;
+    confirm_.negative_.reset(new DismissConfirmView(*this));
+    ConfirmItem::Action & neg = *confirm_.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
@@ -889,15 +909,15 @@ namespace yae
   //----------------------------------------------------------------
   // DeclineDeleteRecording
   //
-  struct DeclineDeleteRecording : ConfirmView::Action
+  struct DeclineDeleteRecording : DismissConfirmView
   {
     DeclineDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      mainWindow_(mainWindow),
+      DismissConfirmView(mainWindow),
       rec_(rec)
     {}
 
     // virtual:
-    void operator()() const
+    void execute() const
     {
       // shortcuts:
       AppView & appView = mainWindow_.view_;
@@ -916,9 +936,9 @@ namespace yae
 
       appView.sync_ui();
       appView.requestRepaint();
+      DismissConfirmView::execute();
     }
 
-    MainWindow & mainWindow_;
     TRecPtr rec_;
   };
 
@@ -970,13 +990,13 @@ namespace yae
     confirm.fg_ = style.bg_;
 
     confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
-    ConfirmView::Action & aff = *confirm.affirmative_;
+    ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
     confirm.negative_.reset(new DeclineDeleteRecording(*this, rec_ptr));
-    ConfirmView::Action & neg = *confirm.negative_;
+    ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Close"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
@@ -987,21 +1007,21 @@ namespace yae
   //----------------------------------------------------------------
   // CancelDeleteRecording
   //
-  struct CancelDeleteRecording : ConfirmView::Action
+  struct CancelDeleteRecording : DismissConfirmView
   {
     CancelDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      mainWindow_(mainWindow),
+      DismissConfirmView(mainWindow),
       rec_(rec)
     {}
 
     // virtual:
-    void operator()() const
+    void execute() const
     {
       ConfirmView & confirm = mainWindow_.playerWidget_->confirm_;
       confirm.setEnabled(false);
+      DismissConfirmView::execute();
     }
 
-    MainWindow & mainWindow_;
     TRecPtr rec_;
   };
 
@@ -1029,13 +1049,13 @@ namespace yae
     confirm.fg_ = style.bg_;
 
     confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
-    ConfirmView::Action & aff = *confirm.affirmative_;
+    ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
     confirm.negative_.reset(new CancelDeleteRecording(*this, rec_ptr));
-    ConfirmView::Action & neg = *confirm.negative_;
+    ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
@@ -1147,19 +1167,18 @@ namespace yae
   //----------------------------------------------------------------
   // ConfirmExit
   //
-  struct ConfirmExit : ConfirmView::Action
+  struct ConfirmExit : DismissConfirmView
   {
     ConfirmExit(MainWindow & mainWindow):
-      mainWindow_(mainWindow)
+      DismissConfirmView(mainWindow)
     {}
 
     // virtual:
-    void operator()() const
+    void execute() const
     {
+      DismissConfirmView::execute();
       mainWindow_.exitConfirmed();
     }
-
-    MainWindow & mainWindow_;
   };
 
   //----------------------------------------------------------------
@@ -1193,13 +1212,13 @@ namespace yae
     confirm.fg_ = style.bg_;
 
     confirm.affirmative_.reset(new ConfirmExit(*this));
-    ConfirmView::Action & aff = *confirm.affirmative_;
+    ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Exit"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm.negative_.reset(new ConfirmView::Action());
-    ConfirmView::Action & neg = *confirm.negative_;
+    confirm.negative_.reset(new DismissConfirmView(*this));
+    ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;

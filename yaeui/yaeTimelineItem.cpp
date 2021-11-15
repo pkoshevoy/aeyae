@@ -181,14 +181,14 @@ namespace yae
     Gradient & shadow = this->add<Gradient>(shadow_);
     shadow.anchors_.fill(*this);
     shadow.anchors_.top_.reset();
-    shadow.height_ = ItemRef::scale(titleHeight, kPropertyExpression, 4.5);
+    shadow.height_ = ItemRef::scale(titleHeight.ref_, 4.5);
     shadow.color_ = shadow.addExpr(new StyleTimelineShadow(view_));
     shadow.opacity_ = ItemRef::uncacheable(opacity, kPropertyTransition);
 
     Item & container = this->addNew<Item>("container");
     container.anchors_.fill(*this);
     container.anchors_.top_.reset();
-    container.height_ = ItemRef::scale(titleHeight, kPropertyExpression, 1.5);
+    container.height_ = ItemRef::scale(titleHeight.ref_, 1.5);
 
     Item & mouseDetect = this->addNew<Item>("mouse_detect");
     mouseDetect.anchors_.fill(container);
@@ -205,9 +205,7 @@ namespace yae
     timeline.anchors_.left_ = ItemRef::reference(*this, kPropertyLeft);
     timeline.anchors_.right_ = ItemRef::reference(*this, kPropertyRight);
     timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
-    timeline.margins_.set_left(ItemRef::scale(titleHeight,
-                                              kPropertyExpression,
-                                              0.5));
+    timeline.margins_.set_left(ItemRef::scale(titleHeight.ref_, 0.5));
     timeline.margins_.set_right(timeline.margins_.get_left());
     timeline.height_ = timeline.addExpr(new OddRoundUp(container,
                                                        kPropertyHeight,
@@ -546,9 +544,7 @@ namespace yae
     }
 
     // other on-screen controls:
-    ItemRef tool_btn_size = ItemRef::scale(titleHeight,
-                                           kPropertyExpression,
-                                           1.5);
+    ItemRef tool_btn_size = ItemRef::scale(titleHeight.ref_, 1.5);
 
     // playlist burger button:
     Item & playlistButton = this->addNew<Item>("playlistButton");
@@ -557,9 +553,9 @@ namespace yae
     playlistButton.width_ = tool_btn_size;
     playlistButton.height_ = tool_btn_size;
     playlistButton.margins_.set_top
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      (ItemRef::reference(titleHeight.ref_, 0.5));
     playlistButton.margins_.set_left
-      (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+      (ItemRef::reference(titleHeight.ref_, 0.5));
     playlistButton.visible_ = playlistButton.
       addExpr(new IsValid(toggle_playlist_));
     {
@@ -572,7 +568,7 @@ namespace yae
       TexturedRect & gridOn = playlistButton.add(new TexturedRect("gridOn"));
       gridOn.anchors_.fill(playlistButton);
       gridOn.margins_.set
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
+        (ItemRef::reference(titleHeight.ref_, 0.2));
       gridOn.visible_ = BoolRef::reference(this->is_playlist_visible_);
       gridOn.texture_ = gridOn.addExpr(new StyleGridOnTexture(view_));
       gridOn.opacity_ = shadow.opacity_;
@@ -580,7 +576,7 @@ namespace yae
       TexturedRect & gridOff = playlistButton.add(new TexturedRect("gridOff"));
       gridOff.anchors_.fill(playlistButton);
       gridOff.margins_.set
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.2));
+        (ItemRef::reference(titleHeight.ref_, 0.2));
       gridOff.visible_ = BoolRef::inverse(this->is_playlist_visible_);
       gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(view_));
       gridOff.opacity_ = shadow.opacity_;
@@ -615,15 +611,15 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(arrow_btn, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(arrow_btn, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       ArrowItem & arrow = bg.add<ArrowItem>
         (new ArrowItem("arrow", ArrowItem::kLeft));
       arrow.anchors_.fill(bg);
       arrow.margins_.set
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.3));
+        (ItemRef::reference(titleHeight.ref_, 0.3));
       arrow.weight_ = ItemRef::reference(arrow, kPropertyHeight, 0.178);
       arrow.color_ = colorControlsFg;
       arrow.opacity_ = shadow.opacity_;
@@ -655,9 +651,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(back_to_prev, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -698,9 +694,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(skip_to_next, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -741,9 +737,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(select_all, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -784,9 +780,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(remove_sel, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -826,9 +822,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(delete_file, kPropertyTop);
       bg.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_left
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       TexturedRect & trashcan = bg.addNew<TexturedRect>("trashcan");
       trashcan.anchors_.fill(bg);
@@ -863,9 +859,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(frame_crop, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_right
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -905,9 +901,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(aspect_ratio, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_right
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -946,9 +942,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(video_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_right
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -987,9 +983,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(audio_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_right
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -1028,9 +1024,9 @@ namespace yae
       bg.anchors_.top_ = ItemRef::reference(subtt_track, kPropertyTop);
       bg.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
       bg.margins_.set_top
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
       bg.margins_.set_right
-        (ItemRef::reference(titleHeight, kPropertyExpression, 0.5));
+        (ItemRef::reference(titleHeight.ref_, 0.5));
 
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
@@ -1070,7 +1066,7 @@ namespace yae
     controls.anchors_.hcenter_ =
       ItemRef::reference(*this, kPropertyHCenter);
     controls.height_ =
-      ItemRef::scale(titleHeight, kPropertyExpression, 3.0);
+      ItemRef::scale(titleHeight.ref_, 3.0);
     controls.visible_ = BoolRef::inverse(this->is_playlist_visible_);
     controls.visible_.disableCaching();
     mouseTrapForControls.onScroll_ = false;
