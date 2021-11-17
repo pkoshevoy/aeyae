@@ -29,6 +29,15 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // DataRefCaching
+  //
+  enum DataRefCaching
+  {
+    kDisableCaching = 2,
+    kEnableCaching = 4,
+  };
+
+  //----------------------------------------------------------------
   // DataRef
   //
   template <typename data_t>
@@ -380,9 +389,9 @@ namespace yae
 
     // reference setters:
     template <typename TDataSrc>
-    inline void set(const TDataSrc & data_src, bool cacheable)
+    inline void set(const TDataSrc & data_src, DataRefCaching caching)
     {
-      if (cacheable)
+      if (caching == kEnableCaching)
       {
         private_.reset(new CachedRef<TDataSrc>(data_src));
       }
@@ -400,16 +409,17 @@ namespace yae
 
     inline void set(const TDataProperties & properties,
                     Property property,
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       PropDataSrc data_src(properties, property);
-      set<PropDataSrc>(data_src, cacheable);
+      set<PropDataSrc>(data_src, caching);
     }
 
-    inline void set(TExpression * expression, bool cacheable = true)
+    inline void set(TExpression * expression,
+                    DataRefCaching caching = kEnableCaching)
     {
       ExprDataSrc data_src(expression);
-      set<ExprDataSrc>(data_src, cacheable);
+      set<ExprDataSrc>(data_src, caching);
     }
 
     // for explicit caching of an externally computed value
@@ -446,18 +456,19 @@ namespace yae
     inline static TDataRef
     reference(const TDataProperties & properties,
               Property property,
-              bool cacheable = true)
+              DataRefCaching caching = kEnableCaching)
     {
       TDataRef ref;
-      ref.set(properties, property, cacheable);
+      ref.set(properties, property, caching);
       return ref;
     }
 
     inline static TDataRef
-    expression(TExpression * expr, bool cacheable = true)
+    expression(TExpression * expr,
+               DataRefCaching caching = kEnableCaching)
     {
       TDataRef ref;
-      ref.set(expr, cacheable);
+      ref.set(expr, caching);
       return ref;
     }
 
@@ -601,9 +612,9 @@ namespace yae
 
     // reference setters:
     inline void set(const TDataRef & other,
-                    double s = 1.0,
+                    double s,
                     double t = 0.0,
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == 1.0 && t == 0.0)
       {
@@ -613,42 +624,42 @@ namespace yae
       {
         typedef Affine<DataRefSrc> TDataSrc;
         TDataSrc data_src(DataRefSrc(other), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(const TDataProperties & properties,
                     Property property,
-                    double s = 1.0,
+                    double s,
                     double t = 0.0,
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == 1.0 && t == 0.0)
       {
-        TBase::set(properties, property, cacheable);
+        TBase::set(properties, property, caching);
       }
       else
       {
         typedef Affine<PropDataSrc> TDataSrc;
         TDataSrc data_src(PropDataSrc(properties, property), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(TExpression * expression,
-                    double s = 1.0,
+                    double s,
                     double t = 0.0,
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == 1.0 && t == 0.0)
       {
-        TBase::set(expression, cacheable);
+        TBase::set(expression, caching);
       }
       else
       {
         typedef Affine<ExprDataSrc> TDataSrc;
         TDataSrc data_src(ExprDataSrc(expression), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
@@ -666,10 +677,11 @@ namespace yae
     reference(const TDataProperties & properties,
               Property property,
               double s = 1.0,
-              double t = 0.0)
+              double t = 0.0,
+              DataRefCaching caching = kEnableCaching)
     {
       ItemRef ref;
-      ref.set(properties, property, s, t, true);
+      ref.set(properties, property, s, t, caching);
       return ref;
     }
 
@@ -680,30 +692,36 @@ namespace yae
                 double t = 0.0)
     {
       ItemRef ref;
-      ref.set(properties, property, s, t, false);
+      ref.set(properties, property, s, t, kDisableCaching);
       return ref;
     }
 
     inline static ItemRef
-    scale(const TDataProperties & props, Property prop, double s = 1.0)
+    scale(const TDataProperties & props,
+          Property prop,
+          double s = 1.0,
+          DataRefCaching caching = kEnableCaching)
     {
-      return reference(props, prop, s, 0.0);
+      return reference(props, prop, s, 0.0, caching);
     }
 
     inline static ItemRef
-    offset(const TDataProperties & props, Property prop, double t = 0.0)
+    offset(const TDataProperties & props,
+           Property prop,
+           double t = 0.0,
+           DataRefCaching caching = kEnableCaching)
     {
-      return reference(props, prop, 1.0, t);
+      return reference(props, prop, 1.0, t, caching);
     }
 
     inline static ItemRef
     reference(const TDataRef & other,
               double s = 1.0,
               double t = 0.0,
-              bool cacheable = true)
+              DataRefCaching caching = kEnableCaching)
     {
       ItemRef ref;
-      ref.set(other, s, t, cacheable);
+      ref.set(other, s, t, caching);
       return ref;
     }
 
@@ -713,27 +731,34 @@ namespace yae
                 double t = 0.0)
     {
       ItemRef ref;
-      ref.set(other, s, t, false);
+      ref.set(other, s, t, kDisableCaching);
       return ref;
     }
 
     inline static ItemRef
-    scale(const TDataRef & other, double s = 1.0)
+    scale(const TDataRef & other,
+          double s = 1.0,
+          DataRefCaching caching = kEnableCaching)
     {
-      return reference(other, s, 0.0);
+      return reference(other, s, 0.0, caching);
     }
 
     inline static ItemRef
-    offset(const TDataRef & other, double t = 0.0)
+    offset(const TDataRef & other,
+           double t = 0.0,
+           DataRefCaching caching = kEnableCaching)
     {
-      return reference(other, 1.0, t);
+      return reference(other, 1.0, t, caching);
     }
 
     inline static ItemRef
-    expression(TExpression * expr, double s = 1.0, double t = 0.0)
+    expression(TExpression * expr,
+               double s = 1.0,
+               double t = 0.0,
+               DataRefCaching caching = kEnableCaching)
     {
       ItemRef ref;
-      ref.set(expr, s, t);
+      ref.set(expr, s, t, caching);
       return ref;
     }
   };
@@ -803,8 +828,8 @@ namespace yae
 
     // reference setters:
     inline void set(const TDataRef & other,
-                    bool inverse = false,
-                    bool cacheable = true)
+                    bool inverse,
+                    DataRefCaching caching = kEnableCaching)
     {
       if (!inverse)
       {
@@ -814,40 +839,40 @@ namespace yae
       {
         typedef Inverse<DataRefSrc> TDataSrc;
         TDataSrc data_src((DataRefSrc(other)));
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(const TDataProperties & properties,
                     Property property,
-                    bool inverse = false,
-                    bool cacheable = true)
+                    bool inverse,
+                    DataRefCaching caching = kEnableCaching)
     {
       if (!inverse)
       {
-        TBase::set(properties, property, cacheable);
+        TBase::set(properties, property, caching);
       }
       else
       {
         typedef Inverse<PropDataSrc> TDataSrc;
         TDataSrc data_src(PropDataSrc(properties, property));
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(TExpression * expr,
-                    bool inverse = false,
-                    bool cacheable = true)
+                    bool inverse,
+                    DataRefCaching caching = kEnableCaching)
     {
       if (!inverse)
       {
-        TBase::set(expr, cacheable);
+        TBase::set(expr, caching);
       }
       else
       {
         typedef Inverse<ExprDataSrc> TDataSrc;
         TDataSrc data_src((ExprDataSrc(expr)));
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
@@ -863,51 +888,59 @@ namespace yae
     inline static BoolRef
     reference(const TDataProperties & properties,
               Property property,
-              bool inverse = false)
+              bool inverse = false,
+              DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(properties, property, inverse);
+      ref.set(properties, property, inverse, caching);
       return ref;
     }
 
     inline static BoolRef
     inverse(const TDataProperties & properties,
-            Property property)
+            Property property,
+            DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(properties, property, true);
+      ref.set(properties, property, true, caching);
       return ref;
     }
 
     inline static BoolRef
-    reference(const TDataRef & other, bool inverse = false)
+    reference(const TDataRef & other,
+              bool inverse = false,
+              DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(other, inverse);
+      ref.set(other, inverse, caching);
       return ref;
     }
 
     inline static BoolRef
-    inverse(const TDataRef & other)
+    inverse(const TDataRef & other,
+            DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(other, true);
+      ref.set(other, true, caching);
       return ref;
     }
 
     inline static BoolRef
-    expression(TExpression * expr, bool inverse = false)
+    expression(TExpression * expr,
+               bool inverse = false,
+               DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(expr, inverse, true);
+      ref.set(expr, inverse, caching);
       return ref;
     }
 
     inline static BoolRef
-    inverse(TExpression * expr)
+    inverse(TExpression * expr,
+            DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
-      ref.set(expr, true, true);
+      ref.set(expr, true, caching);
       return ref;
     }
   };
@@ -991,9 +1024,9 @@ namespace yae
 
     // reference setters:
     inline void set(const TDataRef & other,
-                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & s,
                     const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
           t == TVec4D(0.0, 0.0, 0.0, 0.0))
@@ -1004,44 +1037,44 @@ namespace yae
       {
         typedef Affine<DataRefSrc> TDataSrc;
         TDataSrc data_src(DataRefSrc(other), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(const TDataProperties & properties,
                     Property property,
-                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & s,
                     const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
           t == TVec4D(0.0, 0.0, 0.0, 0.0))
       {
-        TBase::set(properties, property, cacheable);
+        TBase::set(properties, property, caching);
       }
       else
       {
         typedef Affine<PropDataSrc> TDataSrc;
         TDataSrc data_src(PropDataSrc(properties, property), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
     inline void set(TExpression * expr,
-                    const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                    const TVec4D & s,
                     const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
-                    bool cacheable = true)
+                    DataRefCaching caching = kEnableCaching)
     {
       if (s == TVec4D(1.0, 1.0, 1.0, 1.0) &&
           t == TVec4D(0.0, 0.0, 0.0, 0.0))
       {
-        TBase::set(expr, cacheable);
+        TBase::set(expr, caching);
       }
       else
       {
         typedef Affine<ExprDataSrc> TDataSrc;
         TDataSrc data_src(ExprDataSrc(expr), s, t);
-        TBase::set<TDataSrc>(data_src, cacheable);
+        TBase::set<TDataSrc>(data_src, caching);
       }
     }
 
@@ -1060,10 +1093,10 @@ namespace yae
               Property property,
               const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
               const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
-              bool cacheable = true)
+              DataRefCaching caching = kEnableCaching)
     {
       ColorRef ref;
-      ref.set(properties, property, s, t, cacheable);
+      ref.set(properties, property, s, t, caching);
       return ref;
     }
 
@@ -1071,49 +1104,49 @@ namespace yae
     transparent(const TDataProperties & properties,
                 Property property,
                 double sa = 0.0,
-                bool cacheable = true)
+                DataRefCaching caching = kEnableCaching)
     {
       return reference(properties,
                        property,
                        TVec4D(sa, 1.0, 1.0, 1.0),
                        TVec4D(0.0, 0.0, 0.0, 0.0),
-                       cacheable);
+                       caching);
     }
 
     inline static ColorRef
     scale(const TDataProperties & properties,
           Property property,
           const TVec4D & scale,
-          bool cacheable = true)
+          DataRefCaching caching = kEnableCaching)
     {
       return reference(properties,
                        property,
                        scale,
                        TVec4D(0.0, 0.0, 0.0, 0.0),
-                       cacheable);
+                       caching);
     }
 
     inline static ColorRef
     offset(const TDataProperties & properties,
            Property property,
            const TVec4D & translate,
-           bool cacheable = true)
+           DataRefCaching caching = kEnableCaching)
     {
       return reference(properties,
                        property,
                        TVec4D(1.0, 1.0, 1.0, 1.0),
                        translate,
-                       cacheable);
+                       caching);
     }
 
     inline static ColorRef
     expression(TExpression * expr,
                const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
                const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
-               bool cacheable = true)
+               DataRefCaching caching = kEnableCaching)
     {
       ColorRef ref;
-      ref.set(expr, s, t, cacheable);
+      ref.set(expr, s, t, caching);
       return ref;
     }
   };
