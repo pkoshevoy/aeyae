@@ -966,11 +966,6 @@ namespace yae
 
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
 
-    if (enableBackArrowButton_.get())
-    {
-      timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
-    }
-
     timeline.toggle_fullscreen_ = view_.toggle_fullscreen_;
     timeline.layout();
 
@@ -1567,6 +1562,11 @@ namespace yae
         timeline.frame_crop_cb_.reset(&yae::select_frame_crop_cb, this);
         timeline.aspect_ratio_cb_.reset(&yae::select_aspect_ratio_cb, this);
         timeline.subtt_track_cb_.reset(&yae::select_subtt_track_cb, this);
+
+        if (enableBackArrowButton_.get())
+        {
+          timeline.back_arrow_cb_.reset(&yae::back_arrow_cb, this);
+        }
 
         if (enableDeleteFileButton_.get())
         {
