@@ -824,17 +824,17 @@ namespace yae
   //
   struct DismissConfirmView : ConfirmItem::Action
   {
-    MainWindow & mainWindow_;
-
-    DismissConfirmView(MainWindow & mainWindow):
-      mainWindow_(mainWindow)
+    DismissConfirmView(ConfirmView & confirm):
+      confirm_(confirm)
     {}
 
     // virtual:
     void execute() const
     {
-      mainWindow_.confirm_.setEnabled(false);
+      confirm_.setEnabled(false);
     }
+
+    ConfirmView & confirm_;
   };
 
   //----------------------------------------------------------------
@@ -842,8 +842,11 @@ namespace yae
   //
   struct ConfirmDeleteRecording : DismissConfirmView
   {
-    ConfirmDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      DismissConfirmView(mainWindow),
+    ConfirmDeleteRecording(MainWindow & mainWindow,
+                           ConfirmView & confirm,
+                           const TRecPtr & rec):
+      DismissConfirmView(confirm),
+      mainWindow_(mainWindow),
       rec_(rec)
     {}
 
@@ -874,6 +877,7 @@ namespace yae
       DismissConfirmView::execute();
     }
 
+    MainWindow & mainWindow_;
     TRecPtr rec_;
   };
 
@@ -891,13 +895,14 @@ namespace yae
     confirm_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
     confirm_.fg_ = style.bg_;
 
-    confirm_.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
+    confirm_.affirmative_.
+      reset(new ConfirmDeleteRecording(*this, confirm_, rec_ptr));
     ConfirmItem::Action & aff = *confirm_.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm_.negative_.reset(new DismissConfirmView(*this));
+    confirm_.negative_.reset(new DismissConfirmView(confirm_));
     ConfirmItem::Action & neg = *confirm_.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
@@ -911,8 +916,11 @@ namespace yae
   //
   struct DeclineDeleteRecording : DismissConfirmView
   {
-    DeclineDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      DismissConfirmView(mainWindow),
+    DeclineDeleteRecording(MainWindow & mainWindow,
+                           ConfirmView & confirm,
+                           const TRecPtr & rec):
+      DismissConfirmView(confirm),
+      mainWindow_(mainWindow),
       rec_(rec)
     {}
 
@@ -939,6 +947,7 @@ namespace yae
       DismissConfirmView::execute();
     }
 
+    MainWindow & mainWindow_;
     TRecPtr rec_;
   };
 
@@ -989,13 +998,15 @@ namespace yae
     confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
     confirm.fg_ = style.bg_;
 
-    confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
+    confirm.affirmative_.
+      reset(new ConfirmDeleteRecording(*this, confirm, rec_ptr));
     ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm.negative_.reset(new DeclineDeleteRecording(*this, rec_ptr));
+    confirm.negative_.
+      reset(new DeclineDeleteRecording(*this, confirm, rec_ptr));
     ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Close"));
     neg.bg_ = style.fg_;
@@ -1003,27 +1014,6 @@ namespace yae
 
     confirm.setEnabled(true);
   }
-
-  //----------------------------------------------------------------
-  // CancelDeleteRecording
-  //
-  struct CancelDeleteRecording : DismissConfirmView
-  {
-    CancelDeleteRecording(MainWindow & mainWindow, const TRecPtr & rec):
-      DismissConfirmView(mainWindow),
-      rec_(rec)
-    {}
-
-    // virtual:
-    void execute() const
-    {
-      ConfirmView & confirm = mainWindow_.playerWidget_->confirm_;
-      confirm.setEnabled(false);
-      DismissConfirmView::execute();
-    }
-
-    TRecPtr rec_;
-  };
 
   //----------------------------------------------------------------
   // MainWindow::confirmDeletePlayingRecording
@@ -1048,13 +1038,14 @@ namespace yae
     confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
     confirm.fg_ = style.bg_;
 
-    confirm.affirmative_.reset(new ConfirmDeleteRecording(*this, rec_ptr));
+    confirm.affirmative_.
+      reset(new ConfirmDeleteRecording(*this, confirm, rec_ptr));
     ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm.negative_.reset(new CancelDeleteRecording(*this, rec_ptr));
+    confirm.negative_.reset(new DismissConfirmView(confirm));
     ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
@@ -1169,8 +1160,10 @@ namespace yae
   //
   struct ConfirmExit : DismissConfirmView
   {
-    ConfirmExit(MainWindow & mainWindow):
-      DismissConfirmView(mainWindow)
+    ConfirmExit(MainWindow & mainWindow,
+                ConfirmView & confirm):
+      DismissConfirmView(confirm),
+      mainWindow_(mainWindow)
     {}
 
     // virtual:
@@ -1179,6 +1172,8 @@ namespace yae
       DismissConfirmView::execute();
       mainWindow_.exitConfirmed();
     }
+
+    MainWindow & mainWindow_;
   };
 
   //----------------------------------------------------------------
@@ -1211,13 +1206,13 @@ namespace yae
     confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
     confirm.fg_ = style.bg_;
 
-    confirm.affirmative_.reset(new ConfirmExit(*this));
+    confirm.affirmative_.reset(new ConfirmExit(*this, confirm));
     ConfirmItem::Action & aff = *confirm.affirmative_;
     aff.message_ = TVarRef::constant(TVar("Exit"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm.negative_.reset(new DismissConfirmView(*this));
+    confirm.negative_.reset(new DismissConfirmView(confirm));
     ConfirmItem::Action & neg = *confirm.negative_;
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
