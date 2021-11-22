@@ -23,8 +23,6 @@ namespace yae
   //
   class YAEUI_API PlayerView : public ItemView
   {
-    Q_OBJECT;
-
   public:
     PlayerView();
     ~PlayerView();

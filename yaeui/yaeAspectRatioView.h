@@ -9,11 +9,8 @@
 #ifndef YAE_ASPECT_RATIO_VIEW_H_
 #define YAE_ASPECT_RATIO_VIEW_H_
 
-// Qt library:
-#include <QObject>
-#include <QString>
-
 // local:
+#include "yaeAspectRatioItem.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 
@@ -22,42 +19,12 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // AspectRatio
-  //
-  struct YAEUI_API AspectRatio
-  {
-    enum Category {
-      kNone,
-      kStandard,
-      kAuto,
-      kOther
-    };
-
-    AspectRatio(double ar = 0.0,
-                const char * label = NULL,
-                Category category = kStandard,
-                const char * select_subview = NULL);
-
-    double ar_;
-    std::string label_;
-
-    // non-standard aspect ratio selection may need special handling:
-    Category category_;
-
-    // in case a separate view is required to handle the selection:
-    std::string subview_;
-  };
-
-
-  //----------------------------------------------------------------
   // AspectRatioView
   //
   class YAEUI_API AspectRatioView : public ItemView
   {
-    Q_OBJECT;
-
   public:
-    AspectRatioView();
+    AspectRatioView(const char * name);
 
     void init(ItemViewStyle * style,
               const AspectRatio * options,
@@ -73,42 +40,13 @@ namespace yae
     // virtual:
     void setEnabled(bool enable);
 
-    double getAspectRatio(std::size_t index) const;
-
-    inline const std::vector<AspectRatio> & options() const
-    { return options_; }
-
-    inline const AspectRatio * get_options(std::size_t i) const
-    { return i < options_.size() ? &options_.at(i) : NULL; }
-
-    inline std::size_t currentSelection() const
-    { return sel_; }
-
-    inline double nativeAspectRatio() const
-    { return native_; }
-
-    inline double currentAspectRatio() const
-    { return current_; }
-
-  signals:
-    void selected(const AspectRatio & ar);
-    void aspectRatio(double ar);
-    void done();
-
-  public slots:
-    void selectAspectRatioCategory(AspectRatio::Category category);
-    void selectAspectRatio(std::size_t index);
-    void setNativeAspectRatio(double ar);
-    void setAspectRatio(double ar);
+    // accessor:
+    inline AspectRatioItem * item() const
+    { return aspectRatioItem_.get(); }
 
   protected:
     ItemViewStyle * style_;
-    std::vector<AspectRatio> options_;
-
-    // current selection:
-    std::size_t sel_;
-    double current_;
-    double native_;
+    yae::shared_ptr<AspectRatioItem, Item> aspectRatioItem_;
   };
 
 }

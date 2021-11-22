@@ -9,10 +9,6 @@
 #ifndef YAE_CONFIRM_VIEW_H_
 #define YAE_CONFIRM_VIEW_H_
 
-// Qt library:
-#include <QObject>
-#include <QString>
-
 // local:
 #include "yaeConfirmItem.h"
 #include "yaeItemView.h"
@@ -27,8 +23,6 @@ namespace yae
   //
   class YAEUI_API ConfirmView : public ItemView
   {
-    Q_OBJECT;
-
   public:
     ConfirmView();
 

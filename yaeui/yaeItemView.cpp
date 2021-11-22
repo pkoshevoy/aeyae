@@ -163,10 +163,10 @@ namespace yae
     root_->self_ = root_;
 
     Item & root = *root_;
-    root.anchors_.left_ = ItemRef::constant(0.0);
-    root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = ItemRef::constant(w_);
-    root.height_ = ItemRef::constant(h_);
+    root.anchors_.left_.set(0.0);
+    root.anchors_.top_.set(0.0);
+    root.width_.set(new GetViewWidth(*this));
+    root.height_.set(new GetViewHeight(*this));
   }
 
   //----------------------------------------------------------------
@@ -310,11 +310,7 @@ namespace yae
     w_ = w;
     h_ = h;
 
-    Item & root = *root_;
-    root.width_ = ItemRef::constant(w_);
-    root.height_ = ItemRef::constant(h_);
-
-    requestUncache(&root);
+    requestUncache(root_.get());
     return true;
   }
 

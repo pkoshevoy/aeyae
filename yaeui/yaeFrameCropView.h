@@ -40,7 +40,7 @@ namespace yae
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
     // accessor:
-    inline FrameCropItem * frameCropItem() const
+    inline FrameCropItem * item() const
     { return frameCropItem_.get(); }
 
   protected:

@@ -62,6 +62,8 @@ namespace yae
     appleRemoteControl_(NULL),
 #endif
     canvas_(NULL),
+    frameCropSelectionView_("frameCropSelectionView"),
+    aspectRatioSelectionView_("aspectRatioSelectionView"),
     renderMode_(Canvas::kScaleToFit),
     xexpand_(1.0),
     yexpand_(1.0)
@@ -172,7 +174,7 @@ namespace yae
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
 
-    FrameCropItem * frameCropItem = cropView_.frameCropItem();
+    FrameCropItem * frameCropItem = cropView_.item();
     CanvasRendererItem & rendererItem = frameCropItem->getRendererItem();
     onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
     canvas_->addLoadFrameObserver(onLoadFrame_);
@@ -233,6 +235,8 @@ namespace yae
 
     // shortcut:
     yae::PlayerUxItem * pl_ux = view_.player_ux();
+    AspectRatioItem * crop_sel_item = frameCropSelectionView_.item();
+    AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -317,29 +321,29 @@ namespace yae
                  this, SLOT(dismissFrameCropView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&frameCropSelectionView_,
+    ok = connect(crop_sel_item,
                  SIGNAL(selected(const AspectRatio &)),
                  this,
                  SLOT(selectFrameCrop(const AspectRatio &)));
     YAE_ASSERT(ok);
 
-    ok = connect(&frameCropSelectionView_, SIGNAL(done()),
+    ok = connect(crop_sel_item, SIGNAL(done()),
                  this, SLOT(dismissFrameCropSelectionView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&aspectRatioSelectionView_,
+    ok = connect(ar_sel_item,
                  SIGNAL(selected(const AspectRatio &)),
                  this,
                  SLOT(selectAspectRatio(const AspectRatio &)));
     YAE_ASSERT(ok);
 
-    ok = connect(&aspectRatioSelectionView_,
+    ok = connect(ar_sel_item,
                  SIGNAL(aspectRatio(double)),
                  this,
                  SLOT(setAspectRatio(double)));
     YAE_ASSERT(ok);
 
-    ok = connect(&aspectRatioSelectionView_, SIGNAL(done()),
+    ok = connect(ar_sel_item, SIGNAL(done()),
                  this, SLOT(dismissAspectRatioSelectionView()));
     YAE_ASSERT(ok);
 
@@ -608,6 +612,7 @@ namespace yae
   {
     // shortcut:
     PlayerUxItem & pl_ux = get_player_ux();
+    AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
 
     if (aspectRatioSelectionView_.isEnabled())
     {
@@ -617,7 +622,7 @@ namespace yae
     int rotate = 0;
     double native_ar = canvas().nativeAspectRatioRotated(rotate);
     native_ar = native_ar ? native_ar : 1.0;
-    aspectRatioSelectionView_.setNativeAspectRatio(native_ar);
+    ar_sel_item->setNativeAspectRatio(native_ar);
 
     double w = 0.0;
     double h = 0.0;
@@ -625,14 +630,14 @@ namespace yae
 
     // avoid creating an infinite signal loop:
     SignalBlocker blockSignals;
-    blockSignals << &aspectRatioSelectionView_;
+    blockSignals << ar_sel_item;
 
     current_ar = current_ar ? current_ar : 1.0;
-    aspectRatioSelectionView_.setAspectRatio(current_ar);
+    ar_sel_item->setAspectRatio(current_ar);
 
     if (pl_ux.actionAspectRatioAuto_->isChecked())
     {
-      aspectRatioSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
+      ar_sel_item->selectAspectRatioCategory(AspectRatio::kNone);
     }
 
     // view_.setEnabled(false);
@@ -683,7 +688,8 @@ namespace yae
     }
     else if (option.category_ == AspectRatio::kOther)
     {
-      ar = aspectRatioSelectionView_.currentAspectRatio();
+      AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
+      ar = ar_sel_item->currentAspectRatio();
       pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
     }
     else
@@ -824,6 +830,7 @@ namespace yae
   {
     // shortcut:
     PlayerUxItem & pl_ux = get_player_ux();
+    AspectRatioItem * crop_sel_item = frameCropSelectionView_.item();
 
     if (frameCropSelectionView_.isEnabled())
     {
@@ -835,22 +842,22 @@ namespace yae
     double current_ar = canvas().nativeAspectRatioRotated(rotate);
 
     native_ar = native_ar ? native_ar : 1.0;
-    frameCropSelectionView_.setNativeAspectRatio(native_ar);
+    crop_sel_item->setNativeAspectRatio(native_ar);
 
     // avoid creating an infinite signal loop:
     SignalBlocker blockSignals;
-    blockSignals << &frameCropSelectionView_;
+    blockSignals << crop_sel_item;
 
     current_ar = current_ar ? current_ar : 1.0;
-    frameCropSelectionView_.setAspectRatio(current_ar);
+    crop_sel_item->setAspectRatio(current_ar);
 
     if (pl_ux.actionCropFrameNone_->isChecked())
     {
-      frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kNone);
+      crop_sel_item->selectAspectRatioCategory(AspectRatio::kNone);
     }
     else if (pl_ux.actionCropFrameAutoDetect_->isChecked())
     {
-      frameCropSelectionView_.selectAspectRatioCategory(AspectRatio::kAuto);
+      crop_sel_item->selectAspectRatioCategory(AspectRatio::kAuto);
     }
 
     // view_.setEnabled(false);
@@ -1172,7 +1179,7 @@ namespace yae
 
     // pass current frame crop info to the FrameCropItem:
     {
-      FrameCropItem * frameCropItem = cropView_.frameCropItem();
+      FrameCropItem * frameCropItem = cropView_.item();
 
       TCropFrame crop;
       renderer->getCroppedFrame(crop);

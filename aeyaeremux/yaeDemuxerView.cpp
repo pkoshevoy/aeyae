@@ -4067,10 +4067,6 @@ namespace yae
     Item & root = *root_;
     root.children_.clear();
     root.addHidden(style_);
-    root.anchors_.left_ = ItemRef::constant(0.0);
-    root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = ItemRef::constant(w_);
-    root.height_ = ItemRef::constant(h_);
     root.uncache();
     uncache_.clear();
 
