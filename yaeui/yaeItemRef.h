@@ -478,6 +478,9 @@ namespace yae
     inline bool isValid() const
     { return private_ && !private_->src().is_memo(); }
 
+    inline bool isCacheable() const
+    { return private_ && private_->is_cacheable(); }
+
     inline bool isCached() const
     { return private_ && private_->is_cached(); }
 

@@ -985,4 +985,31 @@ namespace yae
     return (unsigned int)n;
   }
 
+
+  //----------------------------------------------------------------
+  // ColorOnHover::ColorOnHover
+  //
+  ColorOnHover::ColorOnHover(const ItemView & view,
+                             const Item & item,
+                             const ColorRef & c0,
+                             const ColorRef & c1):
+    view_(view),
+    item_(item),
+    c0_(c0),
+    c1_(c1)
+  {
+    YAE_ASSERT(!(c0_.isCacheable() || c1_.isCacheable()));
+  }
+
+  //----------------------------------------------------------------
+  // ColorOnHover::evaluate
+  //
+  void
+  ColorOnHover::evaluate(Color & result) const
+  {
+    const TVec2D & pt = view_.mousePt();
+    const bool overlaps = item_.overlaps(pt);
+    result = overlaps ? c1_.get() : c0_.get();
+  }
+
 }

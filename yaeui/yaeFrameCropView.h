@@ -9,10 +9,8 @@
 #ifndef YAE_FRAME_CROP_VIEW_H_
 #define YAE_FRAME_CROP_VIEW_H_
 
-// Qt interfaces:
-#include <QObject>
-
 // local interfaces:
+#include "yaeFrameCropItem.h"
 #include "yaeItemView.h"
 
 
@@ -20,77 +18,10 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // LetterBoxExpr
-  //
-  struct YAEUI_API LetterBoxExpr : public TBBoxExpr
-  {
-    LetterBoxExpr(const Item & container, const CanvasRenderer & renderer);
-
-    // virtual:
-    void evaluate(BBox & bbox) const;
-
-    const Item & container_;
-    const CanvasRenderer & renderer_;
-  };
-
-  //----------------------------------------------------------------
-  // LetterBoxItem
-  //
-  struct YAEUI_API LetterBoxItem : public ExprItem<BBoxRef>
-  {
-    LetterBoxItem(const char * id, TBBoxExpr * expression);
-
-    // virtual:
-    void get(Property property, double & value) const;
-
-    using ExprItem<BBoxRef>::get;
-  };
-
-  //----------------------------------------------------------------
-  // CanvasRendererItem
-  //
-  struct YAEUI_API CanvasRendererItem : public Item
-  {
-    CanvasRendererItem(const char * id, Canvas::ILayer & layer);
-
-    // virtual:
-    void paintContent() const;
-
-    void observe(Canvas * canvas, const TVideoFramePtr & frame);
-
-    void loadFrame();
-
-    Canvas::ILayer & layer_;
-    CanvasRenderer renderer_;
-    TVideoFramePtr frame_;
-  };
-
-  //----------------------------------------------------------------
-  // OnFrameLoaded
-  //
-  struct OnFrameLoaded : public Canvas::ILoadFrameObserver
-  {
-    OnFrameLoaded(CanvasRendererItem & rendererItem):
-      rendererItem_(rendererItem)
-    {}
-
-    // virtual:
-    void frameLoaded(Canvas * canvas, const TVideoFramePtr & frame)
-    {
-      rendererItem_.observe(canvas, frame);
-    }
-
-  protected:
-    CanvasRendererItem & rendererItem_;
-  };
-
-  //----------------------------------------------------------------
   // FrameCropView
   //
   class YAEUI_API FrameCropView : public ItemView
   {
-    Q_OBJECT;
-
   public:
     FrameCropView();
 
@@ -108,24 +39,15 @@ namespace yae
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
-    // NOTE: crop region is applied to the un-rotated image:
-    void setCrop(const TVideoFramePtr & frame, const TCropFrame & crop);
-
-    // NOTE: xCrop and yCrop are expressed in the rotated coordinate system:
-    void setCrop(const Segment & xCrop, const Segment & yCrop);
-
-    inline void emit_done()
-    { emit done(); }
-
-  signals:
-    void done();
-
-    // NOTE: crop region to be applied to the un-rotated image:
-    void cropped(const TVideoFramePtr & frame, const TCropFrame & crop);
+    // accessor:
+    inline FrameCropItem * frameCropItem() const
+    { return frameCropItem_.get(); }
 
   protected:
     ItemView * mainView_;
+    yae::shared_ptr<FrameCropItem, Item> frameCropItem_;
   };
+
 }
 
 

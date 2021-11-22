@@ -78,7 +78,7 @@ endif ()
 set(project_moc_hxx
   # apprenticevideo:
   yaeCanvasWidget.h
-  yaeFrameCropView.h
+  yaeFrameCropItem.h
   yaeItemView.h
   yaeScreenSaverInhibitor.h
   yaeTextInput.h
@@ -129,6 +129,8 @@ set(project_sources
   yaeExpression.h
   yaeFlickableArea.cpp
   yaeFlickableArea.h
+  yaeFrameCropItem.cpp
+  yaeFrameCropItem.h
   yaeFrameCropView.cpp
   yaeFrameCropView.h
   yaeGradient.cpp

@@ -172,6 +172,11 @@ namespace yae
     confirm_.setStyle(view_.style());
     cropView_.init(&view_);
 
+    FrameCropItem * frameCropItem = cropView_.frameCropItem();
+    CanvasRendererItem & rendererItem = frameCropItem->getRendererItem();
+    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
+    canvas_->addLoadFrameObserver(onLoadFrame_);
+
     // initialize frame crop selection view:
     static const AspectRatio crop_choices[] = {
       AspectRatio(0.0, "none", AspectRatio::kNone),
@@ -225,12 +230,6 @@ namespace yae
     videoTrackSelectionView_.setStyle(view_.style());
     audioTrackSelectionView_.setStyle(view_.style());
     subttTrackSelectionView_.setStyle(view_.style());
-
-    CanvasRendererItem & rendererItem =
-      cropView_.root()->get<CanvasRendererItem>("uncropped");
-
-    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
-    canvas_->addLoadFrameObserver(onLoadFrame_);
 
     // shortcut:
     yae::PlayerUxItem * pl_ux = view_.player_ux();
@@ -308,13 +307,13 @@ namespace yae
                  this, SLOT(windowIncreaseSize()));
     YAE_ASSERT(ok);
 
-    ok = connect(&cropView_, SIGNAL(cropped(const TVideoFramePtr &,
-                                            const TCropFrame &)),
+    ok = connect(frameCropItem, SIGNAL(cropped(const TVideoFramePtr &,
+                                               const TCropFrame &)),
                  pl_ux, SLOT(cropped(const TVideoFramePtr &,
                                       const TCropFrame &)));
     YAE_ASSERT(ok);
 
-    ok = connect(&cropView_, SIGNAL(done()),
+    ok = connect(frameCropItem, SIGNAL(done()),
                  this, SLOT(dismissFrameCropView()));
     YAE_ASSERT(ok);
 
@@ -1171,14 +1170,16 @@ namespace yae
       return;
     }
 
-    // pass current frame crop info to the view:
+    // pass current frame crop info to the FrameCropItem:
     {
+      FrameCropItem * frameCropItem = cropView_.frameCropItem();
+
       TCropFrame crop;
       renderer->getCroppedFrame(crop);
 
       SignalBlocker blockSignals;
-      blockSignals << &cropView_;
-      cropView_.setCrop(frame, crop);
+      blockSignals << frameCropItem;
+      frameCropItem->setCrop(frame, crop);
     }
 
     // view_.setEnabled(false);

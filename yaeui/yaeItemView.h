@@ -674,6 +674,25 @@ namespace yae
     const ItemView & view_;
   };
 
+  //----------------------------------------------------------------
+  // ColorOnHover
+  //
+  struct ColorOnHover : public TColorExpr
+  {
+    ColorOnHover(const ItemView & view,
+                 const Item & item,
+                 const ColorRef & c0,
+                 const ColorRef & c1);
+
+    // virtual:
+    void evaluate(Color & result) const;
+
+    const ItemView & view_;
+    const Item & item_;
+    ColorRef c0_;
+    ColorRef c1_;
+  };
+
 }
 
 
