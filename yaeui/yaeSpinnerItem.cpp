@@ -53,6 +53,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // SpinnerItem::~SpinnerItem
+  //
+  SpinnerItem::~SpinnerItem()
+  {
+    // clear children 1st, in order to avoid causing a temporarily
+    // dangling DataRefSrc reference to font_size_:
+    children_.clear();
+  }
+
+  //----------------------------------------------------------------
   // SpinnerItem::layout
   //
   void

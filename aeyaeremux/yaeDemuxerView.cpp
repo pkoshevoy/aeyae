@@ -2230,7 +2230,7 @@ namespace yae
           (new InvokeMethodOnClick("source_ia", view, "set_view_mode",
                                    Q_ARG(RemuxView::ViewMode, mode)));
         ia.anchors_.fill(source_btn);
-     }
+      }
 
       // add a button to switch to clip layout view:
       TabRect & layout_btn =
@@ -2260,7 +2260,7 @@ namespace yae
           (new InvokeMethodOnClick("layout_ia", view, "set_view_mode",
                                    Q_ARG(RemuxView::ViewMode, mode)));
         ia.anchors_.fill(layout_btn);
-     }
+      }
 
       // add a button to switch to preview:
       TabRect & preview_btn =
@@ -3327,13 +3327,13 @@ namespace yae
     }
 
     Item & row = prog.addNew<Item>(str("track_", track_id).c_str());
-    row.height_ = ItemRef::reference(style.row_height_, 1);
+    row.height_ = ItemRef::reference(style.row_height_);
     row.margins_.set_left(ItemRef::reference(style.row_height_, 1));
 
     CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
     cbox.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
     cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
-    cbox.height_ = ItemRef::reference(row.height_, 0.75);
+    cbox.height_ = ItemRef::scale(style.row_height_, 0.75);
     cbox.width_ = cbox.height_;
     cbox.checked_ = cbox.addInverse(new IsRedacted(view, src_name, track_id));
     cbox.on_toggle_.reset(new OnToggleRedacted(view, src_name, track_id));

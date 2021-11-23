@@ -1084,6 +1084,7 @@ namespace yae
                    const Transition::Polyline & spinup,
                    const Transition::Polyline & steady,
                    const Transition::Polyline & spindown);
+    ~TransitionItem();
 
     // override transition value with another (until start):
     void pause(const ItemRef & v);

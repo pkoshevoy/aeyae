@@ -30,6 +30,7 @@ namespace yae
   {
   public:
     SpinnerItem(const char * id, ItemView & view);
+    ~SpinnerItem();
 
     // call this after initializing the data references:
     void layout();

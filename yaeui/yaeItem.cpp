@@ -1831,6 +1831,14 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TransitionItem::~TransitionItem
+  //
+  TransitionItem::~TransitionItem()
+  {
+    override_.reset();
+  }
+
+  //----------------------------------------------------------------
   // TransitionItem::pause
   //
   void
