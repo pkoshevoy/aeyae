@@ -95,6 +95,15 @@ namespace yae
       virtual bool is_prop() const { return false; }
       virtual bool is_expr() const { return false; }
       virtual bool is_dref() const { return false; }
+
+      struct IVisitor
+      {
+        virtual ~IVisitor() {}
+        virtual bool match(const IDataSrc * src) const = 0;
+      };
+
+      virtual const IDataSrc * find(const IDataSrc::IVisitor & visitor) const
+      { return visitor.match(this) ? this : NULL; }
     };
 
     //----------------------------------------------------------------
@@ -125,8 +134,24 @@ namespace yae
 
       template <typename TSrc>
       inline const TSrc * get() const
+      { return dynamic_cast<const TSrc *>(&src()); }
+
+      template <typename TSrc>
+      struct Find : IDataSrc::IVisitor
       {
-        return dynamic_cast<const TSrc *>(&src());
+        // virtual:
+        bool match(const IDataSrc * src) const
+        {
+          const TSrc * found = dynamic_cast<const TSrc *>(src);
+          return !!found;
+        }
+      };
+
+      template <typename TSrc>
+      inline const TSrc * find() const
+      {
+        const IDataSrc * found = src().find((Find<TSrc>()));
+        return dynamic_cast<const TSrc *>(found);
       }
     };
 
@@ -351,7 +376,7 @@ namespace yae
 
       // accessor:
       template <typename TExpr>
-      inline yae::shared_ptr<TExpr, TExpression> get() const
+      inline yae::shared_ptr<TExpr, TExpression> get_expr() const
       { return yae::shared_ptr<TExpr, TExpression>(expr_); }
 
     protected:
@@ -420,6 +445,15 @@ namespace yae
       // accessor:
       inline const DataRef * dref() const
       { return dref_; }
+
+      // virtual:
+      inline const IDataSrc *
+      find(const typename IDataSrc::IVisitor & visitor) const
+      {
+        return
+          visitor.match(this) ? this :
+          dref_->private_->src().find(visitor);
+      }
 
     protected:
       const DataRef * dref_;
@@ -609,14 +643,18 @@ namespace yae
       return private_->get_value();
     }
 
-    template <typename TExpr>
-    inline yae::shared_ptr<TExpr, TExpression>
-    get_expr() const
+    template <typename TSrc>
+    inline const TSrc * find() const
     {
-      const ExprDataSrc * src =
-        private_ ? (private_->template get<ExprDataSrc>()) : NULL;
-      return src ? src->template get<TExpr>() :
-        yae::shared_ptr<TExpr, TExpression>();
+      return private_ ? private_->template find<TSrc>() : NULL;
+    }
+
+    template <typename TExpr>
+    inline yae::shared_ptr<TExpr, TExpression> get_expr() const
+    {
+      const ExprDataSrc * found = this->find<ExprDataSrc>();
+      return (found ? found->template get_expr<TExpr>() :
+              yae::shared_ptr<TExpr, TExpression>());
     }
 
     inline bool refers_to(const TDataRef & dref) const
@@ -690,6 +728,11 @@ namespace yae
       inline bool is_prop() const { return src_.is_prop(); }
       inline bool is_expr() const { return src_.is_expr(); }
       inline bool is_dref() const { return src_.is_dref(); }
+
+      // virtual:
+      inline const IDataSrc *
+      find(const typename IDataSrc::IVisitor & visitor) const
+      { return visitor.match(this) ? this : src_.find(visitor); }
 
       // public, for the VSplitter use-case:
       TDataSrc src_;
@@ -910,6 +953,11 @@ namespace yae
       inline bool is_expr() const { return src_.is_expr(); }
       inline bool is_dref() const { return src_.is_dref(); }
 
+      // virtual:
+      inline const IDataSrc *
+      find(const typename IDataSrc::IVisitor & visitor) const
+      { return visitor.match(this) ? this : src_.find(visitor); }
+
       const TDataSrc src_;
 
     protected:
@@ -1103,6 +1151,11 @@ namespace yae
       inline bool is_prop() const { return src_.is_prop(); }
       inline bool is_expr() const { return src_.is_expr(); }
       inline bool is_dref() const { return src_.is_dref(); }
+
+      // virtual:
+      inline const IDataSrc *
+      find(const typename IDataSrc::IVisitor & visitor) const
+      { return visitor.match(this) ? this : src_.find(visitor); }
 
       const TDataSrc src_;
       const TVec4D scale_;
