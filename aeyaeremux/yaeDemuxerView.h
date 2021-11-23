@@ -245,7 +245,7 @@ namespace yae
       kExportMode = 4,
     };
 
-    RemuxView();
+    RemuxView(const char * name);
 
     // virtual:
     void setContext(const yae::shared_ptr<IOpenGLContext> & context);

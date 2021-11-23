@@ -93,7 +93,7 @@ set(project_moc_hxx
   # yaetv:
   yaeAspectRatioItem.h
   yaeConfirmItem.h
-  yaeOptionView.h
+  yaeOptionItem.h
   yaePlayerUxItem.h
   yaePlayerWidget.h
 
@@ -214,6 +214,8 @@ set(project_sources
   yaeConfirmItem.h
   yaeConfirmView.cpp
   yaeConfirmView.h
+  yaeOptionItem.cpp
+  yaeOptionItem.h
   yaeOptionView.cpp
   yaeOptionView.h
   yaePlayerShortcuts.cpp

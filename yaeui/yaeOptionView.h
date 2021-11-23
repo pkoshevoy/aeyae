@@ -9,17 +9,9 @@
 #ifndef YAE_OPTION_VIEW_H_
 #define YAE_OPTION_VIEW_H_
 
-// Qt library:
-#include <QObject>
-#include <QString>
-
-// aeyae:
-#include "yae/video/yae_video.h"
-
 // yaeui:
 #include "yaeItemView.h"
-#include "yaeItemViewStyle.h"
-#include "yaePlayerItem.h"
+#include "yaeOptionItem.h"
 
 
 namespace yae
@@ -30,11 +22,8 @@ namespace yae
   //
   class YAEUI_API OptionView : public ItemView
   {
-    Q_OBJECT;
-
   public:
-
-    OptionView();
+    OptionView(const char * name);
 
     void setStyle(ItemViewStyle * style);
 
@@ -42,44 +31,19 @@ namespace yae
     ItemViewStyle * style() const
     { return style_; }
 
-    //----------------------------------------------------------------
-    // Option
-    //
-    struct Option
-    {
-      uint32_t index_;
-      std::string headline_;
-      std::string fineprint_;
-    };
-
-    void setOptions(const std::vector<Option> & options,
-                    int preselect_option);
-
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
 
     // virtual:
     void setEnabled(bool enable);
 
-    inline int get_selected() const
-    { return selected_; }
-
-  signals:
-    void option_selected(int index);
-    void done();
-
-  public slots:
-    void set_selected(int index, bool is_done = false);
+    // accessor:
+    inline OptionItem * item() const
+    { return optionItem_.get(); }
 
   protected:
-    void sync_ui();
-
     ItemViewStyle * style_;
-    std::vector<Option> options_;
-    std::size_t selected_;
-
-    yae::shared_ptr<Item> hidden_;
-    yae::shared_ptr<Item> panel_;
+    yae::shared_ptr<OptionItem, Item> optionItem_;
   };
 
 }

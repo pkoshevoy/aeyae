@@ -37,8 +37,8 @@ namespace yae
   //----------------------------------------------------------------
   // SpinnerView::SpinnerView
   //
-  SpinnerView::SpinnerView():
-    ItemView("SpinnerView"),
+  SpinnerView::SpinnerView(const char * name):
+    ItemView(name),
     style_(NULL),
     text_(tr("please wait"))
   {}

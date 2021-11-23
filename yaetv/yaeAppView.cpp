@@ -2316,8 +2316,8 @@ namespace yae
   //----------------------------------------------------------------
   // AppView::AppView
   //
-  AppView::AppView():
-    ItemView("AppView"),
+  AppView::AppView(const char * name):
+    ItemView(name),
     dvr_(NULL),
     sync_ui_(this),
     gps_hour_(gps_now_round_dn()),

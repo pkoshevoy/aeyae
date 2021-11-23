@@ -24,7 +24,7 @@ namespace yae
   class YAEUI_API PlayerView : public ItemView
   {
   public:
-    PlayerView();
+    PlayerView(const char * name);
     ~PlayerView();
 
     // accessors:

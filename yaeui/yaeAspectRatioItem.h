@@ -11,7 +11,6 @@
 
 // Qt library:
 #include <QObject>
-#include <QString>
 
 // local:
 #include "yaeItemView.h"

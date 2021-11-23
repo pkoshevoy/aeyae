@@ -38,12 +38,6 @@ namespace yae
 
     Item & root = *root_;
     root.children_.clear();
-#if 0
-    root.anchors_.left_ = ItemRef::constant(0.0);
-    root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = root.addExpr(new GetViewWidth(*this));
-    root.height_ = root.addExpr(new GetViewHeight(*this));
-#endif
 
     aspectRatioItem_.reset(new AspectRatioItem("AspectRatioItem",
                                                *this,

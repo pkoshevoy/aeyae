@@ -81,7 +81,9 @@ namespace yae
   MainWindow::MainWindow():
     QMainWindow(NULL, 0),
     canvasWidget_(NULL),
-    canvas_(NULL)
+    canvas_(NULL),
+    view_("MainWindow remux view"),
+    spinner_("MainWindow spinner view")
   {
     setupUi(this);
     setAcceptDrops(true);

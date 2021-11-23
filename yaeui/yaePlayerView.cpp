@@ -22,8 +22,8 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerView::PlayerView
   //
-  PlayerView::PlayerView():
-    ItemView("PlayerView")
+  PlayerView::PlayerView(const char * name):
+    ItemView(name)
   {
     style_.reset(new PlayerStyle("player_style", *this));
   }

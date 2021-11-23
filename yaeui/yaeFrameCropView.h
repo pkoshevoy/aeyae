@@ -23,7 +23,7 @@ namespace yae
   class YAEUI_API FrameCropView : public ItemView
   {
   public:
-    FrameCropView();
+    FrameCropView(const char * name);
 
     void init(ItemView * mainView);
 

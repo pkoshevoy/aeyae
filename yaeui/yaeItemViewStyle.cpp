@@ -420,8 +420,13 @@ namespace yae
     cell_height_ = cell_width_;
 
     title_height_ = addExpr(new CalcTitleHeight(view, 24.0));
-    font_size_ = addExpr(new GetFontSize(title_height_, 0.52,
-                                         cell_height_, 0.15));
+#if 0
+    font_size_.set(new GetFontSize(title_height_, 0.52,
+                                   cell_height_, 0.15));
+#else
+    font_size_.set(new GetFontSize(ItemRef::reference(title_height_), 0.52,
+                                   ItemRef::reference(cell_height_), 0.15));
+#endif
 
     unit_size_ = title_height_;
 

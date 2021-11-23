@@ -10,7 +10,9 @@
 #define YAE_ITEM_REF_H_
 
 // standard libraries:
+#include <map>
 #include <stdexcept>
+#include <string>
 
 // boost includes:
 #ifndef Q_MOC_RUN
@@ -19,11 +21,20 @@
 
 // yae includes:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 
 // local interfaces:
 #include "yaeProperty.h"
 #include "yaeExpression.h"
 
+//----------------------------------------------------------------
+// YAE_DEBUG_DATA_REF_SRC
+//
+#ifdef NDEBUG
+#define YAE_DEBUG_DATA_REF_SRC 0
+#else
+#define YAE_DEBUG_DATA_REF_SRC 1
+#endif
 
 namespace yae
 {
@@ -361,6 +372,37 @@ namespace yae
           YAE_ASSERT(false);
           throw std::runtime_error("reference to an invalid data reference");
         }
+
+#if YAE_DEBUG_DATA_REF_SRC
+        dref_->incref(this);
+#endif
+      }
+
+      DataRefSrc(const DataRefSrc & other):
+        dref_(other.dref_)
+      {
+#if YAE_DEBUG_DATA_REF_SRC
+        dref_->incref(this);
+#endif
+      }
+
+#if YAE_DEBUG_DATA_REF_SRC
+      ~DataRefSrc()
+      {
+        dref_->decref(this);
+      }
+#endif
+
+      inline DataRefSrc & operator = (const DataRefSrc & other)
+      {
+#if YAE_DEBUG_DATA_REF_SRC
+        YAE_ASSERT(this != &other);
+        dref_->decref(this);
+#endif
+        dref_ = other.dref_;
+#if YAE_DEBUG_DATA_REF_SRC
+        dref_->incref(this);
+#endif
       }
 
       // virtual:
@@ -432,9 +474,55 @@ namespace yae
 
 
     // constructors:
-    DataRef() {}
-    explicit DataRef(const TData & data) { TDataRef::set(data); }
+#if YAE_DEBUG_DATA_REF_SRC
+    mutable std::map<const DataRefSrc *, std::string> refs_;
 
+    ~DataRef()
+    {
+      for (typename std::map<const DataRefSrc *, std::string>::const_iterator
+             i = refs_.begin(); i != refs_.end(); ++i)
+      {
+        yae_error
+          << this << " is referenced by " << i->first
+          << ", created here:\n" << i->second;
+      }
+
+      YAE_ASSERT(refs_.empty());
+    }
+
+    inline void incref(const DataRefSrc * ref) const
+    {
+      std::string & bt = refs_[ref];
+      YAE_ASSERT(bt.empty());
+      bt = get_stacktrace_str(4);
+    }
+
+    inline void decref(const DataRefSrc * ref) const
+    {
+      typename std::map<const DataRefSrc *, std::string>::iterator
+        found = refs_.find(ref);
+      YAE_ASSERT(found != refs_.end());
+      refs_.erase(found);
+    }
+#endif
+
+    inline DataRef & operator = (const DataRef & other)
+    {
+      private_ = other.private_;
+      return *this;
+    }
+
+    DataRef(const DataRef & other):
+      private_(other.private_)
+    {}
+
+    DataRef()
+    {}
+
+    explicit DataRef(const TData & data)
+    {
+      TDataRef::set(data);
+    }
 
     // constructor helpers:
     inline static TDataRef

@@ -436,6 +436,9 @@ namespace yae
     readerFactory_(new LiveReaderFactory),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir),
+    view_("MainWindow app view"),
+    confirm_("MainWindow confirm view"),
+    spinner_("MainWindow spinner view"),
     start_live_playback_(this)
   {
     setupUi(this);

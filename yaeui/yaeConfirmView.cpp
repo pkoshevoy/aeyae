@@ -20,8 +20,8 @@ namespace yae
   //----------------------------------------------------------------
   // ConfirmView::ConfirmView
   //
-  ConfirmView::ConfirmView():
-    ItemView("ConfirmView"),
+  ConfirmView::ConfirmView(const char * name):
+    ItemView(name),
     style_(NULL)
   {}
 

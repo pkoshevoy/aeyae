@@ -78,7 +78,8 @@ namespace yae
   {
     ItemViewStyle(const char * id, const ItemView & view);
 
-    virtual void uncache();
+    // virtual:
+    void uncache();
 
     // a reference to GridCellWidth 
     inline yae::shared_ptr<GridCellWidth, TDoubleExpr> cell_width_expr() const

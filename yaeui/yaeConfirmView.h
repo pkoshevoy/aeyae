@@ -24,7 +24,7 @@ namespace yae
   class YAEUI_API ConfirmView : public ItemView
   {
   public:
-    ConfirmView();
+    ConfirmView(const char * name);
 
     void setStyle(ItemViewStyle * style);
 

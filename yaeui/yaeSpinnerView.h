@@ -30,7 +30,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    SpinnerView();
+    SpinnerView(const char * name);
 
     void setStyle(ItemViewStyle * style);
 

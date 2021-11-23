@@ -489,7 +489,10 @@ namespace yae
       cellHeight_(cellHeight),
       titleHeightScale_(titleHeightScale),
       cellHeightScale_(cellHeightScale)
-    {}
+    {
+      YAE_ASSERT(!(titleHeight_.isCacheable() ||
+                   cellHeight_.isCacheable()));
+    }
 
     // virtual:
     void evaluate(double & result) const
@@ -503,8 +506,8 @@ namespace yae
       result = std::min(t, c);
     }
 
-    const ItemRef & titleHeight_;
-    const ItemRef & cellHeight_;
+    ItemRef titleHeight_;
+    ItemRef cellHeight_;
 
     double titleHeightScale_;
     double cellHeightScale_;
@@ -550,29 +553,37 @@ namespace yae
   //
   struct YAEUI_API OddRoundUp : public TDoubleExpr
   {
+    OddRoundUp(const ItemRef & ref,
+               double scale = 1.0,
+               double translate = 0.0):
+      ref_(ref),
+      scale_(scale),
+      translate_(translate)
+    {
+      YAE_ASSERT(!ref.isCacheable());
+    }
+
     OddRoundUp(const Item & item,
                Property property,
                double scale = 1.0,
                double translate = 0.0):
-      item_(item),
-      property_(property),
       scale_(scale),
       translate_(translate)
-    {}
+    {
+      ref_.set(item, property, kDisableCaching);
+    }
 
     // virtual:
     void evaluate(double & result) const
     {
-      double v = 0.0;
-      item_.get(property_, v);
+      double v = ref_.get();
       v *= scale_;
 
       int i = 1 | int(ceil(v));
       result = double(i) + translate_;
     }
 
-    const Item & item_;
-    Property property_;
+    ItemRef ref_;
     double scale_;
     double translate_;
   };
@@ -582,29 +593,37 @@ namespace yae
   //
   struct YAEUI_API RoundUp : public TDoubleExpr
   {
+    RoundUp(const ItemRef & ref,
+            double scale = 1.0,
+            double translate = 0.0):
+      ref_(ref),
+      scale_(scale),
+      translate_(translate)
+    {
+      YAE_ASSERT(!ref.isCacheable());
+    }
+
     RoundUp(const Item & item,
             Property property,
             double scale = 1.0,
             double translate = 0.0):
-      item_(item),
-      property_(property),
       scale_(scale),
       translate_(translate)
-    {}
+    {
+      ref_.set(item, property, kDisableCaching);
+    }
 
     // virtual:
     void evaluate(double & result) const
     {
-      double v = 0.0;
-      item_.get(property_, v);
+      double v = ref_.get();
       v *= scale_;
 
       int i = int(ceil(v));
       result = double(i) + translate_;
     }
 
-    const Item & item_;
-    Property property_;
+    ItemRef ref_;
     double scale_;
     double translate_;
   };

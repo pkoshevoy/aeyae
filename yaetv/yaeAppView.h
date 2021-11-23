@@ -53,7 +53,7 @@ namespace yae
 
   public:
 
-    AppView();
+    AppView(const char * name);
 
     // virtual:
     void setEnabled(bool enable);

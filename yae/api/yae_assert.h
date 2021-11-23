@@ -59,12 +59,12 @@ namespace yae
   // dump_stacktrace
   //
   YAE_API std::ostream &
-  dump_stacktrace(std::ostream & os);
+  dump_stacktrace(std::ostream & os, std::size_t offset = 2);
 
   //----------------------------------------------------------------
   // get_stacktrace_str
   //
-  YAE_API std::string get_stacktrace_str();
+  YAE_API std::string get_stacktrace_str(std::size_t offset = 2);
 
 }
 

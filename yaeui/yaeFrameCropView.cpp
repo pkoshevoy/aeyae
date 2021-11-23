@@ -17,8 +17,8 @@ namespace yae
   //----------------------------------------------------------------
   // FrameCropView::FrameCropView
   //
-  FrameCropView::FrameCropView():
-    ItemView("frameCrop"),
+  FrameCropView::FrameCropView(const char * name):
+    ItemView(name),
     mainView_(NULL)
   {}
 

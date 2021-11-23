@@ -62,8 +62,14 @@ namespace yae
     appleRemoteControl_(NULL),
 #endif
     canvas_(NULL),
-    frameCropSelectionView_("frameCropSelectionView"),
-    aspectRatioSelectionView_("aspectRatioSelectionView"),
+    view_("PlayerWidget player view"),
+    confirm_("PlayerWidget confirm view"),
+    cropView_("PlayerWidget cropView"),
+    frameCropSelectionView_("PlayerWidget frameCropSelectionView"),
+    aspectRatioSelectionView_("PlayerWidget aspectRatioSelectionView"),
+    videoTrackSelectionView_("PlayerWidget videoTrackSelectionView"),
+    audioTrackSelectionView_("PlayerWidget audioTrackSelectionView"),
+    subttTrackSelectionView_("PlayerWidget subttTrackSelectionView"),
     renderMode_(Canvas::kScaleToFit),
     xexpand_(1.0),
     yexpand_(1.0)
@@ -237,6 +243,9 @@ namespace yae
     yae::PlayerUxItem * pl_ux = view_.player_ux();
     AspectRatioItem * crop_sel_item = frameCropSelectionView_.item();
     AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
+    OptionItem * video_sel_item = videoTrackSelectionView_.item();
+    OptionItem * audio_sel_item = audioTrackSelectionView_.item();
+    OptionItem * subtt_sel_item = subttTrackSelectionView_.item();
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -347,27 +356,27 @@ namespace yae
                  this, SLOT(dismissAspectRatioSelectionView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&videoTrackSelectionView_, SIGNAL(option_selected(int)),
+    ok = connect(video_sel_item, SIGNAL(option_selected(int)),
                  this, SLOT(videoTrackSelectedOption(int)));
     YAE_ASSERT(ok);
 
-    ok = connect(&videoTrackSelectionView_, SIGNAL(done()),
+    ok = connect(video_sel_item, SIGNAL(done()),
                  this, SLOT(dismissVideoTrackSelectionView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&audioTrackSelectionView_, SIGNAL(option_selected(int)),
+    ok = connect(audio_sel_item, SIGNAL(option_selected(int)),
                  this, SLOT(audioTrackSelectedOption(int)));
     YAE_ASSERT(ok);
 
-    ok = connect(&audioTrackSelectionView_, SIGNAL(done()),
+    ok = connect(audio_sel_item, SIGNAL(done()),
                  this, SLOT(dismissAudioTrackSelectionView()));
     YAE_ASSERT(ok);
 
-    ok = connect(&subttTrackSelectionView_, SIGNAL(option_selected(int)),
+    ok = connect(subtt_sel_item, SIGNAL(option_selected(int)),
                  this, SLOT(subttTrackSelectedOption(int)));
     YAE_ASSERT(ok);
 
-    ok = connect(&subttTrackSelectionView_, SIGNAL(done()),
+    ok = connect(subtt_sel_item, SIGNAL(done()),
                  this, SLOT(dismissSubttTrackSelectionView()));
     YAE_ASSERT(ok);
 
@@ -891,13 +900,13 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == traits.size());
 
-    std::vector<OptionView::Option> options(num_tracks + 1);
+    std::vector<OptionItem::Option> options(num_tracks + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
       const VideoTraits & vtts = traits[i];
 
-      OptionView::Option & option = options[i];
+      OptionItem::Option & option = options[i];
       option.index_ = i;
 
       // headline:
@@ -949,14 +958,15 @@ namespace yae
 
     // add Disabled track option:
     {
-      OptionView::Option & option = options[num_tracks];
+      OptionItem::Option & option = options[num_tracks];
       option.index_ = num_tracks;
       option.headline_ = "Disabled";
       option.fineprint_ = "";
     }
 
     int preselect = reader->getSelectedVideoTrackIndex();
-    videoTrackSelectionView_.setOptions(options, preselect);
+    OptionItem * video_sel_item = videoTrackSelectionView_.item();
+    video_sel_item->setOptions(options, preselect);
     videoTrackSelectionView_.setEnabled(true);
     // view_.setEnabled(false);
   }
@@ -978,13 +988,13 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == traits.size());
 
-    std::vector<OptionView::Option> options(num_tracks + 1);
+    std::vector<OptionItem::Option> options(num_tracks + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
       const AudioTraits & atts = traits[i];
 
-      OptionView::Option & option = options[i];
+      OptionItem::Option & option = options[i];
       option.index_ = i;
 
       // headline:
@@ -1028,14 +1038,15 @@ namespace yae
 
     // add Disabled track option:
     {
-      OptionView::Option & option = options[num_tracks];
+      OptionItem::Option & option = options[num_tracks];
       option.index_ = num_tracks;
       option.headline_ = "Disabled";
       option.fineprint_ = "";
     }
 
     int preselect = reader->getSelectedAudioTrackIndex();
-    audioTrackSelectionView_.setOptions(options, preselect);
+    OptionItem * audio_sel_item = audioTrackSelectionView_.item();
+    audio_sel_item->setOptions(options, preselect);
     audioTrackSelectionView_.setEnabled(true);
     // view_.setEnabled(false);
   }
@@ -1057,13 +1068,13 @@ namespace yae
     std::size_t num_tracks = tracks.size();
     YAE_ASSERT(num_tracks == formats.size());
 
-    std::vector<OptionView::Option> options(num_tracks + 4 + 1);
+    std::vector<OptionItem::Option> options(num_tracks + 4 + 1);
     for (std::size_t i = 0; i < num_tracks; i++)
     {
       const TTrackInfo & info = tracks[i];
       TSubsFormat format = formats[i];
 
-      OptionView::Option & option = options[i];
+      OptionItem::Option & option = options[i];
       option.index_ = i;
 
       // headline:
@@ -1108,7 +1119,7 @@ namespace yae
     // add fake CC1-4 tracks:
     for (unsigned int i = 0; i < 4; i++)
     {
-      OptionView::Option & option = options[num_tracks + i];
+      OptionItem::Option & option = options[num_tracks + i];
       option.index_ = num_tracks + i + 1;
       option.headline_ = yae::strfmt("Closed Captions (CC%u)", (i + 1));
       option.fineprint_ = "format: CEA-608";
@@ -1116,14 +1127,15 @@ namespace yae
 
     // add Disabled track option:
     {
-      OptionView::Option & option = options[num_tracks + 4];
+      OptionItem::Option & option = options[num_tracks + 4];
       option.index_ = num_tracks + 5;
       option.headline_ = "Disabled";
       option.fineprint_ = "";
     }
 
     int preselect = reader ? get_selected_subtt_track(*reader) : 4;
-    subttTrackSelectionView_.setOptions(options, preselect);
+    OptionItem * subtt_sel_item = subttTrackSelectionView_.item();
+    subtt_sel_item->setOptions(options, preselect);
     subttTrackSelectionView_.setEnabled(true);
     // view_.setEnabled(false);
   }

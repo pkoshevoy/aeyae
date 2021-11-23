@@ -2383,8 +2383,8 @@ namespace yae
   //----------------------------------------------------------------
   // RemuxView::RemuxView
   //
-  RemuxView::RemuxView():
-    ItemView("RemuxView"),
+  RemuxView::RemuxView(const char * name):
+    ItemView(name),
     model_(NULL),
     view_mode_(RemuxView::kLayoutMode),
     actionSetInPoint_(this),

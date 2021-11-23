@@ -712,10 +712,10 @@ namespace yae
   // dump_stacktrace
   //
   std::ostream &
-  dump_stacktrace(std::ostream & os)
+  dump_stacktrace(std::ostream & os, std::size_t offset)
   {
     std::list<StackFrame> backtrace;
-    capture_backtrace(backtrace);
+    capture_backtrace(backtrace, offset);
     dump(os, backtrace);
     return os;
   }
@@ -724,12 +724,14 @@ namespace yae
   // get_stacktrace_str
   //
   std::string
-  get_stacktrace_str()
+  get_stacktrace_str(std::size_t offset)
   {
     std::list<StackFrame> backtrace;
-    capture_backtrace(backtrace);
+    capture_backtrace(backtrace, offset);
+
     std::ostringstream oss;
     dump(oss, backtrace);
+
     std::string bt(oss.str().c_str());
     return bt;
   }
