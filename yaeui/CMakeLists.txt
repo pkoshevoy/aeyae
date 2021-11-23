@@ -92,7 +92,6 @@ set(project_moc_hxx
 
   # yaetv:
   yaeAspectRatioItem.h
-  yaeConfirmItem.h
   yaeOptionItem.h
   yaePlayerUxItem.h
   yaePlayerWidget.h
