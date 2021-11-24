@@ -27,6 +27,7 @@ namespace yae
 
     StackTrace & operator = (const StackTrace & bt);
 
+    void capture();
     std::string to_str(std::size_t offset = 2, const char * sep = "\n") const;
 
   protected:

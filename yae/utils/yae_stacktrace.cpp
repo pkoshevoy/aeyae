@@ -566,12 +566,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // StackTrace::capture
+  //
+  void
+  StackTrace::capture()
+  {
+    private_->capture();
+  }
+
+  //----------------------------------------------------------------
   // StackTrace::to_str
   //
   std::string
   StackTrace::to_str(std::size_t offset, const char * sep) const
   {
-    return private_ ? private_->to_str(offset, sep) : std::string();
+    return private_->to_str(offset, sep);
   }
 
   //----------------------------------------------------------------

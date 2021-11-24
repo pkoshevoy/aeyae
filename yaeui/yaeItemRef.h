@@ -529,7 +529,7 @@ namespace yae
 
     inline void incref(const DataRefSrc * ref) const
     {
-      refs_[ref] = StackTrace();
+      refs_[ref].capture();
     }
 
     inline void decref(const DataRefSrc * ref) const
