@@ -255,6 +255,8 @@ add_library(${PROGNAME} SHARED
   yae/utils/yae_pgm_file.h
   yae/utils/yae_plugin_registry.cpp
   yae/utils/yae_plugin_registry.h
+  yae/utils/yae_stacktrace.cpp
+  yae/utils/yae_stacktrace.h
   yae/utils/yae_time.cpp
   yae/utils/yae_time.h
   yae/utils/yae_timesheet.cpp
