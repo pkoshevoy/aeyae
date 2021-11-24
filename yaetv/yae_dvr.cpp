@@ -1833,9 +1833,12 @@ namespace yae
       schedule_.load(json);
     }
 
-    yae_ilog("DVR start, recordings storage: %s", basedir.c_str());
     basedir_ = basedir.empty() ? yae::get_temp_dir_utf8() : basedir;
-    YAE_ASSERT(yae::mkdir_p(basedir_.string()));
+    yae_ilog("DVR start, recordings storage: %s", basedir.c_str());
+    if (!yae::mkdir_p(basedir_.string()))
+    {
+      yae_elog("mkdir failed for %s", basedir_.string().c_str());
+    }
 
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
@@ -4186,7 +4189,12 @@ namespace yae
   DVR::has_preferences() const
   {
     boost::unique_lock<boost::mutex> lock(preferences_mutex_);
-    return !preferences_.empty();
+    if (preferences_.empty())
+    {
+      return false;
+    }
+
+    return fs::is_directory(basedir_.string());
   }
 
   //----------------------------------------------------------------

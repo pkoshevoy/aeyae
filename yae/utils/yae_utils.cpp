@@ -285,7 +285,15 @@ namespace yae
   mkdir_p(const std::string & path_utf8)
   {
     fs::path path(path_utf8);
-    fs::create_directories(path);
+    try
+    {
+      fs::create_directories(path);
+    }
+    catch (...)
+    {
+      return false;
+    }
+
     bool exists = fs::is_directory(path);
     return exists;
   }
