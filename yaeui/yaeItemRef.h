@@ -509,16 +509,19 @@ namespace yae
 
     // constructors:
 #if YAE_DEBUG_DATA_REF_SRC
-    mutable std::map<const DataRefSrc *, std::string> refs_;
+    mutable std::map<const DataRefSrc *, yae::StackTrace> refs_;
 
     ~DataRef()
     {
-      for (typename std::map<const DataRefSrc *, std::string>::const_iterator
-             i = refs_.begin(); i != refs_.end(); ++i)
+      for (typename std::map<const DataRefSrc *, yae::StackTrace>::
+             const_iterator i = refs_.begin(); i != refs_.end(); ++i)
       {
+        const DataRefSrc * dependent = i->first;
+        const yae::StackTrace & bt = i->second;
+        std::string bt_str = bt.to_str(4);
         yae_error
-          << this << " is referenced by " << i->first
-          << ", created here:\n" << i->second;
+          << this << " is referenced by " << dependent
+          << ", created here:\n" << bt_str;
       }
 
       YAE_ASSERT(refs_.empty());
@@ -526,14 +529,12 @@ namespace yae
 
     inline void incref(const DataRefSrc * ref) const
     {
-      std::string & bt = refs_[ref];
-      YAE_ASSERT(bt.empty());
-      bt = get_stacktrace_str(4);
+      refs_[ref] = StackTrace();
     }
 
     inline void decref(const DataRefSrc * ref) const
     {
-      typename std::map<const DataRefSrc *, std::string>::iterator
+      typename std::map<const DataRefSrc *, yae::StackTrace>::iterator
         found = refs_.find(ref);
       YAE_ASSERT(found != refs_.end());
       refs_.erase(found);

@@ -15,6 +15,7 @@ include("${PROJECT_SOURCE_DIR}/add_freetype.cmake")
 include("${PROJECT_SOURCE_DIR}/add_fontconfig.cmake")
 include("${PROJECT_SOURCE_DIR}/add_fribidi.cmake")
 include("${PROJECT_SOURCE_DIR}/add_harfbuzz.cmake")
+include("${PROJECT_SOURCE_DIR}/add_libbfd.cmake")
 
 find_package(Threads REQUIRED)
 

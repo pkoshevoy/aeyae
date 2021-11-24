@@ -175,6 +175,25 @@ namespace yae
   };
 #endif
 
+
+  //----------------------------------------------------------------
+  // StackTrace
+  //
+  struct YAE_API StackTrace
+  {
+    StackTrace();
+    StackTrace(const StackTrace & bt);
+    ~StackTrace();
+
+    StackTrace & operator = (const StackTrace & bt);
+
+    std::string to_str(std::size_t offset = 2, const char * sep = "\n") const;
+
+  protected:
+    struct Private;
+    Private * private_;
+  };
+
 }
 
 

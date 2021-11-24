@@ -544,7 +544,7 @@ namespace yae
     const ItemViewStyle & style = *(view_.style());
     Item & root = *this;
 
-#if 0
+#if 1
     // setup mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");
     mouse_trap.anchors_.fill(root);
