@@ -590,6 +590,7 @@ namespace yae
   get_stacktrace_str(std::size_t offset, const char * sep)
   {
     StackTrace bt;
+    bt.capture();
     return bt.to_str(offset, sep);
   }
 
