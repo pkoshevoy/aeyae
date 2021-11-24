@@ -71,6 +71,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ConfirmItem::~ConfirmItem
+  //
+  ConfirmItem::~ConfirmItem()
+  {
+    // clear children first, in order to avoid causing a temporarily
+    // dangling DataRefSrc reference to font_size_:
+    ConfirmItem::clear();
+  }
+
+  //----------------------------------------------------------------
   // ConfirmItem::layout
   //
   void
@@ -82,7 +92,7 @@ namespace yae
     const Action & affirmative = *affirmative_;
     const Action & negative = *negative_;
 
-    root.children_.clear();
+    root.clear();
 
     // setup mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = root.addNew<MouseTrap>("mouse_trap");

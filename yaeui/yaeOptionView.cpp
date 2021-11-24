@@ -31,7 +31,7 @@ namespace yae
     optionItem_.reset(new OptionItem("OptionItem", *this));
 
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
 
     OptionItem & optionItem = root.add<OptionItem>(optionItem_);
     optionItem.anchors_.fill(root);

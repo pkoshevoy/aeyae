@@ -837,6 +837,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::~Item
+  //
+  Item::~Item()
+  {
+    Item::clear();
+  }
+
+  //----------------------------------------------------------------
+  // Item::clear
+  //
+  void
+  Item::clear()
+  {
+    // discard children in reverse order, to minimize chances of
+    // temporarily creating dangling DataRefSrc references:
+    for (std::size_t i = 1, n = children_.size(); i <= n; i++)
+    {
+      children_[n - i].reset();
+    }
+
+    children_.clear();
+  }
+
+  //----------------------------------------------------------------
   // Item::calcContentWidth
   //
   double

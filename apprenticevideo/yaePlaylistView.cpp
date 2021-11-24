@@ -583,7 +583,7 @@ namespace yae
                        const PlaylistViewStyle & style)
   {
     // in-case of a re-layout:
-    item.children_.clear();
+    item.clear();
 
     // reuse pre-computed properties:
     const Item & playlist = *(view.root());
@@ -885,7 +885,7 @@ namespace yae
                        const PlaylistViewStyle & style)
   {
     // in-case of a re-layout:
-    footer.children_.clear();
+    footer.clear();
 
     const ItemRef & fontSize = style.font_size_;
 
@@ -2582,7 +2582,7 @@ namespace yae
     Scrollview & sview = root.get<Scrollview>("scrollview");
     Item & sviewContent = *(sview.content_);
     Item & groups = sviewContent["groups"];
-    groups.children_.clear();
+    groups.clear();
 
     const PlaylistViewStyle & style = playlistViewStyle();
     QModelIndex rootIndex = model_->index(-1, -1);

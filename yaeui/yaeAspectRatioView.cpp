@@ -37,7 +37,7 @@ namespace yae
     const ItemViewStyle & style = *style_;
 
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
 
     aspectRatioItem_.reset(new AspectRatioItem("AspectRatioItem",
                                                *this,

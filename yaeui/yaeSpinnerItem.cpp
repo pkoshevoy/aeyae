@@ -57,9 +57,9 @@ namespace yae
   //
   SpinnerItem::~SpinnerItem()
   {
-    // clear children 1st, in order to avoid causing a temporarily
+    // clear children first, in order to avoid causing a temporarily
     // dangling DataRefSrc reference to font_size_:
-    children_.clear();
+    SpinnerItem::clear();
   }
 
   //----------------------------------------------------------------
@@ -71,7 +71,7 @@ namespace yae
     const ItemViewStyle & style = *(view_.style());
     font_size_ = ItemRef::reference(style.title_height_, 0.625);
 
-    children_.clear();
+    this->clear();
     Rectangle & spinner = addNew<Rectangle>("spinner");
     spinner.anchors_.fill(*this);
     spinner.color_.set(bg_);

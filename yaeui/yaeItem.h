@@ -388,7 +388,11 @@ namespace yae
          const SegmentRef & x_content,
          const SegmentRef & y_content);
 
-    virtual ~Item() {}
+    virtual ~Item();
+
+    // clear children in reverse order, to minimize chances of
+    // temporarily creating dangling DataRefSrc references:
+    virtual void clear();
 
     //----------------------------------------------------------------
     // setParent

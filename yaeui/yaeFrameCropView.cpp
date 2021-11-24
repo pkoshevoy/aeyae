@@ -30,7 +30,7 @@ namespace yae
   {
     mainView_ = mainView;
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
 
     frameCropItem_.reset(new FrameCropItem("FrameCropItem", *this));
     FrameCropItem & item = root.add<FrameCropItem>(frameCropItem_);

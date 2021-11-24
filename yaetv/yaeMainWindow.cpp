@@ -1173,7 +1173,7 @@ namespace yae
     void execute() const
     {
       DismissConfirmView::execute();
-      mainWindow_.exitConfirmed();
+      yae::queue_call(mainWindow_, &MainWindow::exitConfirmed);
     }
 
     MainWindow & mainWindow_;

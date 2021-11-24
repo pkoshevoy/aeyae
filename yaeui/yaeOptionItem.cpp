@@ -109,6 +109,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // OptionItem::~OptionItem
+  //
+  OptionItem::~OptionItem()
+  {
+    // clear children first, in order to avoid causing a temporarily
+    // dangling DataRefSrc reference to font_size_:
+    OptionItem::clear();
+  }
+
+  //----------------------------------------------------------------
   // OptionItem::setOptions
   //
   void
@@ -197,7 +207,7 @@ namespace yae
   OptionItem::sync_ui()
   {
     Item & panel = *panel_;
-    panel.children_.clear();
+    panel.clear();
 
     int num_options = int(options_.size());
 

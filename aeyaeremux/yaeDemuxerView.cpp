@@ -4065,7 +4065,7 @@ namespace yae
     inputHandlers_.clear();
 
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
     root.addHidden(style_);
     root.uncache();
     uncache_.clear();
@@ -4518,7 +4518,7 @@ namespace yae
       model_json_str_ = model_json_str;
       output_clip_.reset();
       serial_demuxer_.reset();
-      preview.children_.clear();
+      preview.clear();
     }
 
     TClipPtr clip = output_clip();

@@ -66,7 +66,7 @@ namespace yae
     TMakeCurrentContext currentContext(*context());
 
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
 
     if (enable)
     {

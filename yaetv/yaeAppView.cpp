@@ -2561,7 +2561,7 @@ namespace yae
     inputHandlers_.clear();
 
     Item & root = *root_;
-    root.children_.clear();
+    root.clear();
     root.addHidden(style_);
     root.uncache();
     uncache_.clear();
@@ -4900,7 +4900,7 @@ namespace yae
 
     sep.anchors_.top_ = ItemRef::reference(overview, kPropertyTop);
     sep.anchors_.bottom_ = ItemRef::reference(overview, kPropertyBottom);
-    sep.anchors_.left_ = ItemRef::reference(splitter.pos_);
+    sep.anchors_.left_ = splitter.pos_;
     sep.width_ = ItemRef::constant(1.0);
 
     sideview.anchors_.fill(overview);

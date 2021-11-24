@@ -24,6 +24,7 @@ namespace yae
   {
   public:
     ConfirmItem(const char * id, ItemView & view);
+    ~ConfirmItem();
 
     // call this after initializing the data references:
     void layout();

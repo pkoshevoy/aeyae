@@ -36,6 +36,7 @@ namespace yae
 
   public:
     OptionItem(const char * id, ItemView & view);
+    ~OptionItem();
 
     //----------------------------------------------------------------
     // Option
