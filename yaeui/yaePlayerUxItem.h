@@ -86,8 +86,8 @@ namespace yae
 
   public:
     // accessors:
-    inline Canvas & canvas()
-    { return view_.delegate()->windowCanvas(); }
+    inline Canvas * canvas()
+    { return player_->get_canvas(); }
 
     inline IReader * get_reader() const
     { return player_->reader().get(); }

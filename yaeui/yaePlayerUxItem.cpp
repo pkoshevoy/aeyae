@@ -953,7 +953,7 @@ namespace yae
   //
   PlayerUxItem::~PlayerUxItem()
   {
-    canvas().cropAutoDetectStop();
+    canvas()->cropAutoDetectStop();
 
     // clear children first, in order to avoid causing a temporarily
     // dangling DataRefSrc reference to font_size_:
@@ -1085,10 +1085,6 @@ namespace yae
     FrameCropItem & frame_crop = this->add<FrameCropItem>(frame_crop_);
     frame_crop.anchors_.fill(*this);
     frame_crop.setVisible(false);
-
-    CanvasRendererItem & renderer = frame_crop.getRendererItem();
-    onLoadFrame_.reset(new OnFrameLoaded(renderer));
-    canvas().addLoadFrameObserver(onLoadFrame_);
 
     bool ok = true;
 
@@ -1326,7 +1322,7 @@ namespace yae
       if (ac)
       {
         ac->accept();
-        canvas().cropFrame(ac->cropFrame_);
+        canvas()->cropFrame(ac->cropFrame_);
         emit adjust_canvas_height();
         return true;
       }
@@ -1763,7 +1759,7 @@ namespace yae
              videoTrack >= numVideoTracks)
     {
       // use the same frame again:
-      return player_ux->canvas().currentFrame();
+      return player_ux->canvas()->currentFrame();
     }
 
     return TVideoFramePtr();
@@ -1943,7 +1939,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatioAuto()
   {
-    canvas().overrideDisplayAspectRatio(0.0);
+    canvas()->overrideDisplayAspectRatio(0.0);
     emit adjust_canvas_height();
   }
 
@@ -1953,7 +1949,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio2_40()
   {
-    canvas().overrideDisplayAspectRatio(2.40);
+    canvas()->overrideDisplayAspectRatio(2.40);
     emit adjust_canvas_height();
   }
 
@@ -1963,7 +1959,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio2_35()
   {
-    canvas().overrideDisplayAspectRatio(2.35);
+    canvas()->overrideDisplayAspectRatio(2.35);
     emit adjust_canvas_height();
   }
 
@@ -1973,7 +1969,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio1_85()
   {
-    canvas().overrideDisplayAspectRatio(1.85);
+    canvas()->overrideDisplayAspectRatio(1.85);
     emit adjust_canvas_height();
   }
 
@@ -1983,7 +1979,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio1_78()
   {
-    canvas().overrideDisplayAspectRatio(16.0 / 9.0);
+    canvas()->overrideDisplayAspectRatio(16.0 / 9.0);
     emit adjust_canvas_height();
   }
 
@@ -1993,7 +1989,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio1_60()
   {
-    canvas().overrideDisplayAspectRatio(1.6);
+    canvas()->overrideDisplayAspectRatio(1.6);
     emit adjust_canvas_height();
   }
 
@@ -2003,7 +1999,7 @@ namespace yae
   void
   PlayerUxItem::playbackAspectRatio1_33()
   {
-    canvas().overrideDisplayAspectRatio(4.0 / 3.0);
+    canvas()->overrideDisplayAspectRatio(4.0 / 3.0);
     emit adjust_canvas_height();
   }
 
@@ -2014,8 +2010,8 @@ namespace yae
   PlayerUxItem::playbackCropFrameNone()
   {
     autocropTimer_.stop();
-    canvas().cropAutoDetectStop();
-    canvas().cropFrame(0.0);
+    canvas()->cropAutoDetectStop();
+    canvas()->cropFrame(0.0);
     emit adjust_canvas_height();
   }
 
@@ -2025,7 +2021,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame2_40()
   {
-    canvas().cropFrame(2.40);
+    canvas()->cropFrame(2.40);
     emit adjust_canvas_height();
   }
 
@@ -2035,7 +2031,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame2_35()
   {
-    canvas().cropFrame(2.35);
+    canvas()->cropFrame(2.35);
     emit adjust_canvas_height();
   }
 
@@ -2045,7 +2041,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_85()
   {
-    canvas().cropFrame(1.85);
+    canvas()->cropFrame(1.85);
     emit adjust_canvas_height();
   }
 
@@ -2055,7 +2051,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_78()
   {
-    canvas().cropFrame(16.0 / 9.0);
+    canvas()->cropFrame(16.0 / 9.0);
     emit adjust_canvas_height();
   }
 
@@ -2065,7 +2061,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_60()
   {
-    canvas().cropFrame(1.6);
+    canvas()->cropFrame(1.6);
     emit adjust_canvas_height();
   }
 
@@ -2075,7 +2071,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_33()
   {
-    canvas().cropFrame(4.0 / 3.0);
+    canvas()->cropFrame(4.0 / 3.0);
     emit adjust_canvas_height();
   }
 
@@ -2085,7 +2081,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrameAutoDetect()
   {
-    canvas().cropAutoDetect(this, &(PlayerUxItem::autocrop_cb));
+    canvas()->cropAutoDetect(this, &(PlayerUxItem::autocrop_cb));
   }
 
   //----------------------------------------------------------------
@@ -2094,7 +2090,9 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrameOther()
   {
-    CanvasRenderer * renderer = canvas().canvasRenderer();
+    // shortcuts:
+    Canvas * canvas = this->canvas();
+    CanvasRenderer * renderer = canvas->canvasRenderer();
 
     TVideoFramePtr frame;
     renderer->getFrame(frame);
@@ -2104,9 +2102,8 @@ namespace yae
     }
 
     // pass current frame crop info to the FrameCropItem:
+    FrameCropItem & frame_crop = *frame_crop_;
     {
-      FrameCropItem & frame_crop = *frame_crop_;
-
       TCropFrame crop;
       renderer->getCroppedFrame(crop);
 
@@ -2122,7 +2119,11 @@ namespace yae
     subtt_track_sel_->setVisible(false);
     frame_crop_->setVisible(true);
 
-    onLoadFrame_->frameLoaded(&canvas(), frame);
+    // update the frame observer:
+    canvas->delLoadFrameObserver(onLoadFrame_);
+    onLoadFrame_.reset(new OnFrameLoaded(frame_crop.getRendererItem()));
+    canvas->addLoadFrameObserver(onLoadFrame_);
+    onLoadFrame_->frameLoaded(canvas, frame);
   }
 
   //----------------------------------------------------------------
@@ -2251,13 +2252,13 @@ namespace yae
     }
 
     int rotate = 0;
-    double native_ar = canvas().nativeAspectRatioRotated(rotate);
+    double native_ar = canvas()->nativeAspectRatioRotated(rotate);
     native_ar = native_ar ? native_ar : 1.0;
     aspect_ratio_sel.setNativeAspectRatio(native_ar);
 
     double w = 0.0;
     double h = 0.0;
-    double current_ar = canvas().imageAspectRatio(w, h);
+    double current_ar = canvas()->imageAspectRatio(w, h);
 
     // avoid creating an infinite signal loop:
     SignalBlocker blockSignals;
@@ -2324,7 +2325,7 @@ namespace yae
       actionAspectRatioOther_->activate(QAction::Trigger);
     }
 
-    canvas().overrideDisplayAspectRatio(ar);
+    canvas()->overrideDisplayAspectRatio(ar);
   }
 
   //----------------------------------------------------------------
@@ -2335,7 +2336,7 @@ namespace yae
   {
     // update Aspect Ratio menu item selection
     actionAspectRatioOther_->activate(QAction::Trigger);
-    canvas().overrideDisplayAspectRatio(ar);
+    canvas()->overrideDisplayAspectRatio(ar);
   }
 
   //----------------------------------------------------------------
@@ -2389,7 +2390,7 @@ namespace yae
                       this, SLOT(playbackCropFrameOther()));
       YAE_ASSERT(ok);
 
-      canvas().cropFrame(option.ar_);
+      canvas()->cropFrame(option.ar_);
       actionCropFrameOther_->activate(QAction::Trigger);
 
       ok = connect(actionCropFrameOther_, SIGNAL(triggered()),
@@ -2413,8 +2414,8 @@ namespace yae
     }
 
     int rotate = 0;
-    double native_ar = canvas().nativeAspectRatioUncroppedRotated(rotate);
-    double current_ar = canvas().nativeAspectRatioRotated(rotate);
+    double native_ar = canvas()->nativeAspectRatioUncroppedRotated(rotate);
+    double current_ar = canvas()->nativeAspectRatioRotated(rotate);
 
     native_ar = native_ar ? native_ar : 1.0;
     frame_crop_sel.setNativeAspectRatio(native_ar);
@@ -3068,7 +3069,7 @@ namespace yae
   PlayerUxItem::cropped(const TVideoFramePtr & frame, const TCropFrame & crop)
   {
     (void) frame;
-    canvas().cropFrame(crop);
+    canvas()->cropFrame(crop);
   }
 
   //----------------------------------------------------------------
