@@ -75,14 +75,7 @@ namespace yae
     bool resizeTo(const Canvas * canvas);
 
     // virtual:
-    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
-
-    // virtual:
-    bool processMouseTracking(const TVec2D & mousePt);
-
-    // virtual:
-    // bool processRightClick();
 
     // helper:
     TRecPtr now_playing() const;

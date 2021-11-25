@@ -1666,6 +1666,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Item::processKeyEvent
+  //
+  bool
+  Item::processKeyEvent(Canvas *, QKeyEvent *)
+  {
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // Item::processWheelEvent
+  //
+  bool
+  Item::processWheelEvent(Canvas *, QWheelEvent *)
+  {
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Item::visibleInRegion
   //
   bool
@@ -1717,16 +1735,13 @@ namespace yae
       }
     }
 
-    // NOTE: reverse order doesn't reverse z-order,
-    // it only affects painting of items at the same z-order level:
     bool paint_in_reverse = this->attr<bool>("paint-in-reverse-order", false);
-
-    for (std::map<double, std::list<ItemPtr> >::iterator
-           i = order.begin(); i != order.end(); ++i)
+    if (paint_in_reverse)
     {
-      std::list<ItemPtr> & children = i->second;
-      if (paint_in_reverse)
+      for (std::map<double, std::list<ItemPtr> >::reverse_iterator
+             i = order.rbegin(); i != order.rend(); ++i)
       {
+        std::list<ItemPtr> & children = i->second;
         while (!children.empty())
         {
           const ItemPtr & child = children.back();
@@ -1734,8 +1749,13 @@ namespace yae
           children.pop_back();
         }
       }
-      else
+    }
+    else
+    {
+      for (std::map<double, std::list<ItemPtr> >::iterator
+             i = order.begin(); i != order.end(); ++i)
       {
+        std::list<ItemPtr> & children = i->second;
         while (!children.empty())
         {
           const ItemPtr & child = children.front();
@@ -1791,6 +1811,77 @@ namespace yae
     }
 
     notifyObservers(kOnUnpaint);
+  }
+
+  //----------------------------------------------------------------
+  // Item::visit
+  //
+  bool
+  Item::visit(Item::IVisitor & visitor,
+              bool in_reverse_paint_order,
+              bool visible_only)
+  {
+    if (visible_only && !this->visible())
+    {
+      return false;
+    }
+
+    std::map<double, std::list<ItemPtr> > order;
+    for (std::vector<ItemPtr>::const_iterator i = children_.begin();
+         i != children_.end(); ++i)
+    {
+      const ItemPtr & child = *i;
+      if (!visible_only || child->visible())
+      {
+        double z = child->attr<double>("z-order", 0.0);
+        order[z].push_back(child);
+      }
+    }
+
+    if (in_reverse_paint_order)
+    {
+      for (std::map<double, std::list<ItemPtr> >::reverse_iterator
+           i = order.rbegin(); i != order.rend(); ++i)
+      {
+        std::list<ItemPtr> & children = i->second;
+        while (!children.empty())
+        {
+          Item & child = *children.back();
+          if (child.visit(visitor, in_reverse_paint_order, visible_only))
+          {
+            return true;
+          }
+
+          children.pop_back();
+        }
+      }
+    }
+
+    if (visitor.visit(*this))
+    {
+      return true;
+    }
+
+    if (!in_reverse_paint_order)
+    {
+      for (std::map<double, std::list<ItemPtr> >::iterator
+           i = order.begin(); i != order.end(); ++i)
+      {
+        std::list<ItemPtr> & children = i->second;
+        while (!children.empty())
+        {
+          Item & child = *children.front();
+          if (child.visit(visitor, in_reverse_paint_order, visible_only))
+          {
+            return true;
+          }
+
+          children.pop_front();
+        }
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------

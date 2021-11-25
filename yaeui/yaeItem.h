@@ -27,6 +27,8 @@
 
 // Qt interfaces:
 #include <QEvent>
+#include <QKeyEvent>
+#include <QWheelEvent>
 #include <QPersistentModelIndex>
 
 // aeyae:
@@ -804,6 +806,9 @@ namespace yae
                               Canvas * canvas,
                               QEvent * event);
 
+    virtual bool processKeyEvent(Canvas *, QKeyEvent *);
+    virtual bool processWheelEvent(Canvas *, QWheelEvent *);
+
     // NOTE: override this to provide custom visual representation:
     virtual void paintContent() const {}
 
@@ -831,6 +836,20 @@ namespace yae
     // NOTE: this will call unpaintContent,
     // followed by a call to unpaint each nested item:
     virtual void unpaint() const;
+
+    //----------------------------------------------------------------
+    // IVisitor
+    //
+    struct IVisitor
+    {
+      virtual ~IVisitor() {}
+      virtual bool visit(Item & item) = 0;
+    };
+
+    // helper for traversing through the item tree:
+    virtual bool visit(IVisitor & visitor,
+                       bool in_reverse_paint_order = true,
+                       bool visible_only = true);
 
     //----------------------------------------------------------------
     // Event

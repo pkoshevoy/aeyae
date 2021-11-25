@@ -32,9 +32,6 @@ namespace yae
     { return style_; }
 
     // virtual:
-    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
-
-    // virtual:
     void setEnabled(bool enable);
 
     // accessor:

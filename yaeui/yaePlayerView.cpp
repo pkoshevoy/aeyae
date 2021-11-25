@@ -113,25 +113,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerView::processKeyEvent
-  //
-  bool
-  PlayerView::processKeyEvent(Canvas * canvas, QKeyEvent * event)
-  {
-    if (ItemView::processKeyEvent(canvas, event))
-    {
-      return true;
-    }
-
-    if (player_ux_ && player_ux_->processKeyEvent(canvas, event))
-    {
-      return true;
-    }
-
-    return false;
-  }
-
-  //----------------------------------------------------------------
   // PlayerView::processWheelEvent
   //
   bool

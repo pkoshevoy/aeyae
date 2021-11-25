@@ -47,7 +47,6 @@ namespace yae
 
     // virtual:
     bool processEvent(Canvas * canvas, QEvent * event);
-    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
 

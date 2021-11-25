@@ -49,20 +49,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AspectRatioView::processKeyEvent
-  //
-  bool
-  AspectRatioView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
-  {
-    if (this->isEnabled() && aspectRatioItem_)
-    {
-      return aspectRatioItem_->processKeyEvent(canvas, e);
-    }
-
-    return ItemView::processKeyEvent(canvas, e);
-  }
-
-  //----------------------------------------------------------------
   // AspectRatioView::setEnabled
   //
   void

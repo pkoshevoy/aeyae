@@ -37,21 +37,6 @@ namespace yae
     optionItem.anchors_.fill(root);
   }
 
-
-  //----------------------------------------------------------------
-  // OptionView::processKeyEvent
-  //
-  bool
-  OptionView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
-  {
-    if (this->isEnabled() && optionItem_)
-    {
-      return optionItem_->processKeyEvent(canvas, e);
-    }
-
-    return ItemView::processKeyEvent(canvas, e);
-  }
-
   //----------------------------------------------------------------
   // OptionView::setEnabled
   //

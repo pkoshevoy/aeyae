@@ -2450,36 +2450,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // AppView::processKeyEvent
-  //
-  bool
-  AppView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
-  {
-#if 0 // ndef NDEBUG
-    // FIXME: pkoshevoy: for debvugging only:
-    if (root_)
-    {
-      root_->dump(std::cerr);
-    }
-#endif
-    return ItemView::processKeyEvent(canvas, e);
-  }
-
-  //----------------------------------------------------------------
-  // AppView::processMouseTracking
-  //
-  bool
-  AppView::processMouseTracking(const TVec2D & mousePt)
-  {
-    if (!this->isEnabled())
-    {
-      return false;
-    }
-
-    return true;
-  }
-
-  //----------------------------------------------------------------
   // find_item_under_mouse
   //
   template <typename TItem>

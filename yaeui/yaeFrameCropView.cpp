@@ -80,18 +80,4 @@ namespace yae
     return false;
   }
 
-  //----------------------------------------------------------------
-  // FrameCropView::processKeyEvent
-  //
-  bool
-  FrameCropView::processKeyEvent(Canvas * canvas, QKeyEvent * e)
-  {
-    if (this->isEnabled() && frameCropItem_)
-    {
-      return frameCropItem_->processKeyEvent(canvas, e);
-    }
-
-    return ItemView::processKeyEvent(canvas, e);
-  }
-
 }

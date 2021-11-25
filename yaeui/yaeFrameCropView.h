@@ -36,9 +36,6 @@ namespace yae
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
 
-    // virtual:
-    bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
-
     // accessor:
     inline FrameCropItem * item() const
     { return frameCropItem_.get(); }

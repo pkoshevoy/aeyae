@@ -600,6 +600,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ProcessKeyEvent
+  //
+  struct ProcessKeyEvent : Item::IVisitor
+  {
+    ProcessKeyEvent(Canvas * canvas, QKeyEvent * event):
+      canvas_(canvas),
+      event_(event)
+    {}
+
+    // virtual:
+    bool visit(Item & item)
+    {
+      return item.processKeyEvent(canvas_, event_);
+    }
+
+    Canvas * canvas_;
+    QKeyEvent * event_;
+  };
+
+  //----------------------------------------------------------------
   // ItemView::processKeyEvent
   //
   bool
@@ -617,6 +637,16 @@ namespace yae
              e->isAutoRepeat() ? " auto-repeat" : "",
              e->count());
 #endif
+
+    if (isEnabled())
+    {
+      ProcessKeyEvent visitor(canvas, e);
+      if (root_->visit(visitor))
+      {
+        e->accept();
+        return true;
+      }
+    }
 
     e->ignore();
     return false;
@@ -846,6 +876,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ProcessWheelEvent
+  //
+  struct ProcessWheelEvent : Item::IVisitor
+  {
+    ProcessWheelEvent(Canvas * canvas, QWheelEvent * event):
+      canvas_(canvas),
+      event_(event)
+    {}
+
+    // virtual:
+    bool visit(Item & item)
+    {
+      return item.processWheelEvent(canvas_, event_);
+    }
+
+    Canvas * canvas_;
+    QWheelEvent * event_;
+  };
+
+  //----------------------------------------------------------------
   // ItemView::processWheelEvent
   //
   bool
@@ -856,42 +906,51 @@ namespace yae
       return false;
     }
 
-    TVec2D pt = device_pixel_pos(canvas, e);
-    std::list<InputHandler> handlers;
-    if (!root_->getInputHandlers(pt, handlers))
+    if (!isEnabled())
     {
       return false;
     }
 
-    // Quoting from QWheelEvent docs:
-    //
-    //  " Most mouse types work in steps of 15 degrees,
-    //    in which case the delta value is a multiple of 120;
-    //    i.e., 120 units * 1/8 = 15 degrees. "
-    //
-    int delta = e->delta();
-    double degrees = double(delta) * 0.125;
+    TVec2D pt = device_pixel_pos(canvas, e);
+    std::list<InputHandler> handlers;
+    if (root_->getInputHandlers(pt, handlers))
+    {
+      // Quoting from QWheelEvent docs:
+      //
+      //  " Most mouse types work in steps of 15 degrees,
+      //    in which case the delta value is a multiple of 120;
+      //    i.e., 120 units * 1/8 = 15 degrees. "
+      //
+      int delta = e->delta();
+      double degrees = double(delta) * 0.125;
 
 #if 0
-    yae_debug
-      << "FIXME: wheel: delta: " << delta
-      << ", degrees: " << degrees;
+      yae_debug
+        << "FIXME: wheel: delta: " << delta
+        << ", degrees: " << degrees;
 #endif
 
-    bool processed = false;
-    for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
-    {
-      InputHandler & handler = *i;
-      InputArea * ia = handler.inputArea();
-
-      if (ia && ia->onScroll(handler.csysOrigin_, pt, degrees))
+      bool processed = false;
+      for (TInputHandlerRIter i = handlers.rbegin(); i != handlers.rend(); ++i)
       {
-        processed = true;
-        break;
+        InputHandler & handler = *i;
+        InputArea * ia = handler.inputArea();
+
+        if (ia && ia->onScroll(handler.csysOrigin_, pt, degrees))
+        {
+          processed = true;
+          break;
+        }
+      }
+
+      if (processed)
+      {
+        return true;
       }
     }
 
-    return processed;
+    ProcessWheelEvent visitor(canvas, e);
+    return root_->visit(visitor);
   }
 
   //----------------------------------------------------------------

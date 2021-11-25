@@ -2382,7 +2382,7 @@ namespace yae
       }
     }
 
-    return e->isAccepted();
+    return e->isAccepted() ? true : ItemView::processKeyEvent(canvas, e);
   }
 
   //----------------------------------------------------------------
