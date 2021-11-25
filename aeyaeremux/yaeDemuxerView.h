@@ -30,9 +30,8 @@
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
-#include "yaePlayerItem.h"
+#include "yaePlayerUxItem.h"
 #include "yaeScrollview.h"
-#include "yaeTimelineItem.h"
 
 
 namespace yae
@@ -349,8 +348,7 @@ namespace yae
 
   public:
     yae::shared_ptr<RemuxViewStyle, Item> style_;
-    yae::shared_ptr<PlayerItem, Item> player_;
-    yae::shared_ptr<TimelineItem, Item> timeline_;
+    yae::shared_ptr<PlayerUxItem, Item> pl_ux_;
 
     // index of currently selected clip:
     std::size_t selected_;

@@ -2093,11 +2093,8 @@ namespace yae
       preview.visible_ = layout.addExpr(new In<RemuxView::kPreviewMode>(view));
       preview.visible_.disableCaching();
 
-      PlayerItem & player = root.add(view.player_);
-      player.anchors_.fill(bg);
-
-      TimelineItem & timeline = player.add(view.timeline_);
-      timeline.anchors_.fill(player);
+      PlayerUxItem & pl_ux = root.add<PlayerUxItem>(view.pl_ux_);
+      pl_ux.anchors_.fill(bg);
 
       Item & output = root.addNew<Item>("export");
       output.anchors_.fill(bg);
@@ -2299,7 +2296,7 @@ namespace yae
           ItemRef::reference(preview_btn, kPropertyRight);
 
         Rectangle & underline = controls.addNew<Rectangle>("player_ul");
-        underline.visible_ = player.visible_;
+        underline.visible_ = pl_ux.visible_;
         underline.visible_.disableCaching();
 
         Text & txt = layout_control_button(model,
@@ -2431,31 +2428,15 @@ namespace yae
     YAE_ASSERT(delegate_);
     ItemView::setContext(context);
 
-    player_.reset(new PlayerItem("player"));
-    PlayerItem & player = *player_;
-    player.setCanvasDelegate(delegate_);
-    player.makePersonalCanvas(context);
-    player.visible_ = player.addExpr(new In<RemuxView::kPlayerMode>(*this));
-    player.visible_.disableCaching();
+    pl_ux_.reset(new PlayerUxItem("pl_ux", *this));
+    PlayerUxItem & pl_ux = *pl_ux_;
+    pl_ux.player_->makePersonalCanvas(context);
+    pl_ux.visible_.set(new In<RemuxView::kPlayerMode>(*this));
+    pl_ux.visible_.disableCaching();
 
-    timeline_.reset(new TimelineItem("timeline_item",
-                                     *this,
-                                     player.timeline()));
-
-    TimelineItem & timeline = *timeline_;
-    timeline.is_playback_paused_ = timeline.addExpr
-      (new IsPlaybackPaused(*this));
-
-    timeline.is_fullscreen_ = timeline.addExpr
-      (new IsFullscreen(*this));
-
+    TimelineItem & timeline = *pl_ux.timeline_;
     timeline.is_playlist_visible_ = BoolRef::constant(false);
     timeline.is_timeline_visible_ = BoolRef::constant(false);
-    timeline.toggle_playback_.reset(&yae::toggle_playback, this);
-    timeline.toggle_fullscreen_ = this->toggle_fullscreen_;
-    timeline.layout();
-
-    // FIXME: connect timeline item and player item signals/slots:
   }
 
   //----------------------------------------------------------------
@@ -2712,9 +2693,7 @@ namespace yae
     }
     else if (view_mode_ == kPlayerMode)
     {
-      Item & player = root["player"];
-      TimelineItem & timeline = player.get<TimelineItem>("timeline_item");
-      timeline.processMouseTracking(mousePt);
+      pl_ux_->processMouseTracking(mousePt);
     }
 
     return true;
@@ -4405,7 +4384,7 @@ namespace yae
   bool
   RemuxView::is_playback_paused()
   {
-    return player_->paused();
+    return pl_ux_->is_playback_paused();
   }
 
   //----------------------------------------------------------------
@@ -4414,19 +4393,7 @@ namespace yae
   void
   RemuxView::toggle_playback()
   {
-    player_->toggle_playback();
-
-    timeline_->modelChanged();
-    timeline_->maybeAnimateOpacity();
-
-    if (!is_playback_paused())
-    {
-      timeline_->forceAnimateControls();
-    }
-    else
-    {
-      timeline_->maybeAnimateControls();
-    }
+    pl_ux_->togglePlayback();
   }
 
   //----------------------------------------------------------------
@@ -4474,7 +4441,7 @@ namespace yae
     reader_->getProgramInfo(track_info.program_, prog_info);
 
     playhead_.prog_id_ = prog_info.program_;
-    playhead_.pts_ = player_->timeline().currentTime();
+    playhead_.pts_ = pl_ux_->timeline_model().currentTime();
 
     if (!serial_demuxer_->map_to_source(playhead_.prog_id_,
                                         playhead_.pts_,
@@ -4486,7 +4453,7 @@ namespace yae
       playhead_.src_index_ = 0;
     }
 
-    player_->playback_stop();
+    pl_ux_->stopPlayback();
     reader_.reset();
   }
 
@@ -4546,11 +4513,11 @@ namespace yae
     }
 
     Item & root = *root_;
-    Item & player = root["player"];
+    PlayerUxItem & pl_ux = *pl_ux_;
 
     bool hwdec = true;
     reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
-    player_->playback(reader_);
+    pl_ux.playback(reader_);
 
     TTime playhead_pts = playhead_.pts_;
     TDemuxerInterfacePtr playhead_src = playhead_.src_.lock();
@@ -4579,16 +4546,14 @@ namespace yae
                                      playhead_pts);
 
       YAE_ASSERT(playhead_pts.valid());
-      player_->timeline().seekTo(playhead_pts.sec());
+      pl_ux.timeline_model().seekTo(playhead_pts.sec());
     }
 
-    TimelineItem & timeline =
-      player.get<TimelineItem>("timeline_item");
-
+    TimelineItem & timeline = *pl_ux.timeline_;
     timeline.maybeAnimateOpacity();
     timeline.forceAnimateControls();
 
-    player.uncache();
+    pl_ux.uncache();
   }
 
 }
