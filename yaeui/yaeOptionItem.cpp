@@ -168,17 +168,18 @@ namespace yae
   // OptionItem::setVisible
   //
   void
-  OptionItem::setVisible(bool visible)
+  OptionItem::setVisible(bool enable)
   {
-    Item::setVisible(visible);
+    bool changing = visible() != enable;
+    Item::setVisible(enable);
 
-    if (!visible)
-    {
-      emit done();
-    }
-    else
+    if (enable)
     {
       sync_ui();
+    }
+    else if (changing)
+    {
+      emit done();
     }
   }
 

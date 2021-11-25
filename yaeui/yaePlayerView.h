@@ -27,9 +27,8 @@ namespace yae
     PlayerView(const char * name);
     ~PlayerView();
 
-    // accessors:
-    inline Canvas & canvas()
-    { return delegate_->windowCanvas(); }
+    // virtual:
+    void clear();
 
     inline PlayerUxItem * player_ux() const
     { return player_ux_.get(); }

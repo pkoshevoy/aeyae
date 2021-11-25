@@ -38,6 +38,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerView::clear
+  //
+  void
+  PlayerView::clear()
+  {
+    ItemView::clear();
+    player_ux_->clear();
+  }
+
+  //----------------------------------------------------------------
   // PlayerView::setStyle
   //
   void
@@ -77,13 +87,9 @@ namespace yae
     if (enable)
     {
       layout(*this, *style_, root);
-      player_ux_->timelineTimer_.start(1000);
-    }
-    else
-    {
-      player_ux_->timelineTimer_.stop();
     }
 
+    player_ux_->setVisible(enable);
     root.uncache();
     uncache_.clear();
 
@@ -163,10 +169,6 @@ namespace yae
                      const ItemViewStyle & style,
                      Item & root)
   {
-    Item & hidden = root.addHidden(new Item("hidden"));
-    hidden.width_ = hidden.
-      addExpr(style_item_ref(view, &ItemViewStyle::unit_size_));
-
     // add style to root item, so that it could be uncached
     // together with all the view:
     root.addHidden(view.style_);

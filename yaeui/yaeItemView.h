@@ -151,6 +151,8 @@ namespace yae
 
     ItemView(const char * name);
 
+    virtual void clear();
+
     void setRoot(const ItemPtr & root);
 
     virtual ItemViewStyle * style() const

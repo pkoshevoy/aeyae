@@ -751,11 +751,12 @@ namespace yae
   // AspectRatioItem::setVisible
   //
   void
-  AspectRatioItem::setVisible(bool visible)
+  AspectRatioItem::setVisible(bool enable)
   {
-    Item::setVisible(visible);
+    bool changing = visible() != enable;
+    Item::setVisible(enable);
 
-    if (!visible)
+    if (changing && !enable)
     {
       emit done();
     }

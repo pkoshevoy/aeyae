@@ -14,11 +14,8 @@
 #include <QWidget>
 
 // local:
-#include "yaeAspectRatioView.h"
 #include "yaeCanvasWidget.h"
 #include "yaeConfirmView.h"
-#include "yaeFrameCropView.h"
-#include "yaeOptionView.h"
 #include "yaePlayerShortcuts.h"
 #include "yaePlayerView.h"
 
@@ -74,8 +71,6 @@ namespace yae
     { return *(view_.player_ux()); }
 
   signals:
-    void setInPoint();
-    void setOutPoint();
     void playbackFinished();
     void enteringFullScreen();
     void exitingFullScreen();
@@ -83,7 +78,7 @@ namespace yae
   public slots:
 
     // helpers:
-    void playbackVerticalScaling();
+    void playbackVerticalScaling(bool enable);
     void playbackShrinkWrap();
     void playbackFullScreen();
     void playbackFillScreen();
@@ -92,45 +87,12 @@ namespace yae
     void enterFullScreen(Canvas::TRenderMode renderMode);
     void exitFullScreen();
 
-    // prompt to override output aspect ratio:
-    void playbackAspectRatioOther();
-
-    // callback from aspect ratio view reflecting current selection:
-    void selectAspectRatio(const AspectRatio & ar);
-    void setAspectRatio(double ar);
-
-    // window menu:
-    void windowHalfSize();
-    void windowFullSize();
-    void windowDoubleSize();
-    void windowDecreaseSize();
-    void windowIncreaseSize();
-
-    // helpers:
-    void selectFrameCrop(const AspectRatio & ar);
-    void showFrameCropSelectionView();
-    void showAspectRatioSelectionView();
-    void showVideoTrackSelectionView();
-    void showAudioTrackSelectionView();
-    void showSubttTrackSelectionView();
-
     void focusChanged(QWidget * prev, QWidget * curr);
-    void playbackCropFrameOther();
-
-    void dismissFrameCropView();
-    void dismissFrameCropSelectionView();
-    void dismissAspectRatioSelectionView();
-    void dismissVideoTrackSelectionView();
-    void dismissAudioTrackSelectionView();
-    void dismissSubttTrackSelectionView();
-    void dismissSelectionViews();
-
-    void videoTrackSelectedOption(int option_index);
-    void audioTrackSelectedOption(int option_index);
-    void subttTrackSelectedOption(int option_index);
 
     void canvasSizeBackup();
     void canvasSizeRestore();
+    void canvasSizeSet(double xexpand, double yexpand);
+    void canvasSizeScaleBy(double scale);
 
     virtual void adjustCanvasHeight();
     virtual void swapShortcuts();
@@ -138,14 +100,12 @@ namespace yae
 
   protected:
     // virtual:
-    void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
-    virtual bool processKeyEvent(QKeyEvent * event);
-    virtual bool processMousePressEvent(QMouseEvent * event);
+    // virtual:
+    bool processMousePressEvent(QMouseEvent * event);
 
     // helpers:
-    void canvasSizeSet(double xexpand, double yexpand);
 
 #ifdef __APPLE__
     // for Apple Remote:
@@ -171,13 +131,6 @@ namespace yae
     // player views:
     PlayerView view_;
     ConfirmView confirm_;
-    FrameCropView cropView_;
-    AspectRatioView frameCropSelectionView_;
-    AspectRatioView aspectRatioSelectionView_;
-    OptionView videoTrackSelectionView_;
-    OptionView audioTrackSelectionView_;
-    OptionView subttTrackSelectionView_;
-    yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
   protected:
     // remember most recently used full screen render mode:

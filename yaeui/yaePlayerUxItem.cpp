@@ -927,64 +927,14 @@ namespace yae
 
     bool ok = true;
 
-    ok = connect(&autocropTimer_, SIGNAL(timeout()),
-                 this, SLOT(playbackCropFrameAutoDetect()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&bookmarkTimer_, SIGNAL(timeout()),
-                 this, SIGNAL(save_bookmark()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&timelineTimer_, SIGNAL(timeout()),
-                 this, SLOT(sync_ui()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
-                 this, SLOT(scrollWheelTimerExpired()));
-    YAE_ASSERT(ok);
-
-    player_.reset(new PlayerItem("player"));
-    PlayerItem & player = Item::add<PlayerItem>(player_);
-    player.anchors_.fill(*this);
-    player.setCanvasDelegate(view_.delegate());
-
-    timeline_.reset(new TimelineItem("player_timeline",
-                                     view_,
-                                     player.timeline()));
-
-    TimelineItem & timeline = Item::add<TimelineItem>(timeline_);
-    timeline.anchors_.fill(*this);
-
-    timeline.query_timeline_visible_.
-      reset(&yae::context_query_timeline_visible, this);
-
-    timeline.is_playback_paused_ = timeline.addExpr
-      (new IsPlaybackPaused(*this));
-
-    timeline.is_fullscreen_ = timeline.addExpr
-      (new IsFullscreen(view_));
-
-    timeline.toggle_playback_.reset(&yae::toggle_playback, this);
-
-    timeline.toggle_fullscreen_ = view_.toggle_fullscreen_;
-    timeline.layout();
-
-    ok = connect(actionSetInPoint_, SIGNAL(triggered()),
-                 &timeline_model(), SLOT(setInPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(actionSetOutPoint_, SIGNAL(triggered()),
-                 &timeline_model(), SLOT(setOutPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&timeline_model(), SIGNAL(clockStopped(const SharedClock &)),
-                 this, SLOT(playbackFinished(const SharedClock &)));
-    YAE_ASSERT(ok);
-#if 0
-    ok = connect(player_.get(), SIGNAL(maybe_animate_opacity()),
-                 timeline_.get(), SLOT(maybeAnimateOpacity()));
-    YAE_ASSERT(ok);
-#endif
+    init_player();
+    init_timeline();
+    init_frame_crop();
+    init_frame_crop_sel();
+    init_aspect_ratio_sel();
+    init_video_track_sel();
+    init_audio_track_sel();
+    init_subtt_track_sel();
 
     // apply default settings:
     playbackLoop();
@@ -1003,6 +953,12 @@ namespace yae
   //
   PlayerUxItem::~PlayerUxItem()
   {
+    canvas().cropAutoDetectStop();
+
+    // clear children first, in order to avoid causing a temporarily
+    // dangling DataRefSrc reference to font_size_:
+    PlayerUxItem::clear();
+
     delete menuPlayback_;
     delete menuPlaybackSpeed_;
     delete menuAudio_;
@@ -1013,6 +969,344 @@ namespace yae
     delete menuSubs_;
     delete menuChapters_;
     delete contextMenu_;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_player
+  //
+  void
+  PlayerUxItem::init_player()
+  {
+    player_.reset(new PlayerItem("player"));
+    PlayerItem & player = Item::add<PlayerItem>(player_);
+    player.anchors_.fill(*this);
+    player.setCanvasDelegate(view_.delegate());
+
+    bool ok = true;
+    ok = connect(&timelineTimer_, SIGNAL(timeout()),
+                 this, SLOT(sync_ui()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&bookmarkTimer_, SIGNAL(timeout()),
+                 this, SIGNAL(save_bookmark()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionVerticalScaling_, SIGNAL(triggered(bool)),
+                 this, SIGNAL(playback_vertical_scaling(bool)));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionShrinkWrap_, SIGNAL(triggered()),
+                 this, SIGNAL(playback_shrink_wrap()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionFullScreen_, SIGNAL(triggered()),
+                 this, SIGNAL(playback_full_screen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionFillScreen_, SIGNAL(triggered()),
+                 this, SIGNAL(playback_fill_screen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionHalfSize_, SIGNAL(triggered()),
+                 this, SLOT(windowHalfSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionFullSize_, SIGNAL(triggered()),
+                 this, SLOT(windowFullSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionDoubleSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDoubleSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionDecreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionIncreaseSize_, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_timeline
+  //
+  void
+  PlayerUxItem::init_timeline()
+  {
+    timeline_.reset(new TimelineItem("player_timeline",
+                                     view_,
+                                     player_->timeline()));
+
+    TimelineItem & timeline = Item::add<TimelineItem>(timeline_);
+    timeline.anchors_.fill(*this);
+
+    timeline.query_timeline_visible_.
+      reset(&yae::context_query_timeline_visible, this);
+
+    timeline.is_playback_paused_ = timeline.addExpr
+      (new IsPlaybackPaused(*this));
+
+    timeline.is_fullscreen_ = timeline.addExpr
+      (new IsFullscreen(view_));
+
+    timeline.toggle_playback_.reset(&yae::toggle_playback, this);
+
+    timeline.toggle_fullscreen_ = view_.toggle_fullscreen_;
+    timeline.layout();
+
+    bool ok = true;
+    ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
+                 this, SLOT(scrollWheelTimerExpired()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSetInPoint_, SIGNAL(triggered()),
+                 &timeline_model(), SLOT(setInPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionSetOutPoint_, SIGNAL(triggered()),
+                 &timeline_model(), SLOT(setOutPoint()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&timeline_model(), SIGNAL(clockStopped(const SharedClock &)),
+                 this, SLOT(playbackFinished(const SharedClock &)));
+    YAE_ASSERT(ok);
+#if 0
+    ok = connect(player_.get(), SIGNAL(maybe_animate_opacity()),
+                 timeline_.get(), SLOT(maybeAnimateOpacity()));
+    YAE_ASSERT(ok);
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_frame_crop
+  //
+  void
+  PlayerUxItem::init_frame_crop()
+  {
+    frame_crop_.reset(new FrameCropItem("FrameCropItem", view_));
+    FrameCropItem & frame_crop = this->add<FrameCropItem>(frame_crop_);
+    frame_crop.anchors_.fill(*this);
+
+    CanvasRendererItem & renderer = frame_crop.getRendererItem();
+    onLoadFrame_.reset(new OnFrameLoaded(renderer));
+    canvas().addLoadFrameObserver(onLoadFrame_);
+
+    bool ok = true;
+
+    ok = connect(&frame_crop, SIGNAL(done()),
+                 this, SLOT(dismissFrameCrop()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&frame_crop, SIGNAL(cropped(const TVideoFramePtr &,
+                                             const TCropFrame &)),
+                 this, SLOT(cropped(const TVideoFramePtr &,
+                                    const TCropFrame &)));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_frame_crop_sel
+  //
+  void
+  PlayerUxItem::init_frame_crop_sel()
+  {
+    static const AspectRatio options[] = {
+      AspectRatio(0.0, "none", AspectRatio::kNone),
+      AspectRatio(4.0 / 3.0, "4:3"),
+      AspectRatio(16.0 / 10.0, "16:10"),
+      AspectRatio(16.0 / 9.0, "16:9"),
+
+      AspectRatio(1.85),
+      AspectRatio(2.35),
+      AspectRatio(2.40),
+      AspectRatio(8.0 / 3.0, "8:3"),
+
+      AspectRatio(3.0 / 4.0, "3:4"),
+      AspectRatio(9.0 / 16.0, "9:16"),
+      AspectRatio(-1.0, "auto", AspectRatio::kAuto),
+      AspectRatio(1e+6, "other", AspectRatio::kOther, "CropFrameOther"),
+    };
+
+    static const std::size_t num_options =
+      sizeof(options) / sizeof(options[0]);
+
+    frame_crop_sel_.reset(new AspectRatioItem("frame_crop_sel",
+                                              view_,
+                                              options,
+                                              num_options));
+    AspectRatioItem & frame_crop_sel =
+      this->add<AspectRatioItem>(frame_crop_sel_);
+    frame_crop_sel.anchors_.fill(*this);
+
+    bool ok = true;
+    ok = connect(&frame_crop_sel, SIGNAL(selected(const AspectRatio &)),
+                 this, SLOT(selectFrameCrop(const AspectRatio &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&frame_crop_sel, SIGNAL(done()),
+                 this, SLOT(dismissFrameCropSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(select_frame_crop()),
+                 this, SLOT(showFrameCropSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionCropFrameOther_, SIGNAL(triggered()),
+                 this, SLOT(playbackCropFrameOther()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&autocropTimer_, SIGNAL(timeout()),
+                 this, SLOT(playbackCropFrameAutoDetect()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_aspect_ratio_sel
+  //
+  void
+  PlayerUxItem::init_aspect_ratio_sel()
+  {
+    static const AspectRatio options[] = {
+      AspectRatio(1.0, "1:1"),
+      AspectRatio(4.0 / 3.0, "4:3"),
+      AspectRatio(16.0 / 10.0, "16:10"),
+      AspectRatio(16.0 / 9.0, "16:9"),
+
+      AspectRatio(1.85),
+      AspectRatio(2.35),
+      AspectRatio(2.40),
+      AspectRatio(8.0 / 3.0, "8:3"),
+
+      AspectRatio(3.0 / 4.0, "3:4"),
+      AspectRatio(9.0 / 16.0, "9:16"),
+      AspectRatio(0.0, "auto", AspectRatio::kNone),
+      AspectRatio(-1.0, "custom", AspectRatio::kOther),
+    };
+
+    static const std::size_t num_options =
+      sizeof(options) / sizeof(options[0]);
+
+    aspect_ratio_sel_.reset(new AspectRatioItem("aspect_ratio_sel",
+                                                view_,
+                                                options,
+                                                num_options));
+    AspectRatioItem & aspect_ratio_sel =
+      this->add<AspectRatioItem>(aspect_ratio_sel_);
+    aspect_ratio_sel.anchors_.fill(*this);
+
+    bool ok = true;
+    ok = connect(&aspect_ratio_sel, SIGNAL(selected(const AspectRatio &)),
+                 this, SLOT(selectAspectRatio(const AspectRatio &)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspect_ratio_sel, SIGNAL(aspectRatio(double)),
+                 this, SLOT(setAspectRatio(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&aspect_ratio_sel, SIGNAL(done()),
+                 this, SLOT(dismissAspectRatioSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(select_aspect_ratio()),
+                 this, SLOT(showAspectRatioSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionAspectRatioOther_, SIGNAL(triggered()),
+                 this, SLOT(showAspectRatioSelection()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_video_track_sel
+  //
+  void
+  PlayerUxItem::init_video_track_sel()
+  {
+    video_track_sel_.reset(new OptionItem("video_track_sel", view_));
+    OptionItem & video_track_sel = this->add<OptionItem>(video_track_sel_);
+    video_track_sel.anchors_.fill(*this);
+
+    bool ok = true;
+    ok = connect(&video_track_sel, SIGNAL(option_selected(int)),
+                 this, SLOT(videoTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&video_track_sel, SIGNAL(done()),
+                 this, SLOT(dismissVideoTrackSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(select_video_track()),
+                 this, SLOT(showVideoTrackSelection()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_audio_track_sel
+  //
+  void
+  PlayerUxItem::init_audio_track_sel()
+  {
+    audio_track_sel_.reset(new OptionItem("audio_track_sel", view_));
+    OptionItem & audio_track_sel = this->add<OptionItem>(audio_track_sel_);
+    audio_track_sel.anchors_.fill(*this);
+
+    bool ok = true;
+    ok = connect(&audio_track_sel, SIGNAL(option_selected(int)),
+                 this, SLOT(audioTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&audio_track_sel, SIGNAL(done()),
+                 this, SLOT(dismissAudioTrackSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(select_audio_track()),
+                 this, SLOT(showAudioTrackSelection()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::init_subtt_track_sel
+  //
+  void
+  PlayerUxItem::init_subtt_track_sel()
+  {
+    subtt_track_sel_.reset(new OptionItem("subtt_track_sel", view_));
+    OptionItem & subtt_track_sel = this->add<OptionItem>(subtt_track_sel_);
+    subtt_track_sel.anchors_.fill(*this);
+
+    bool ok = true;
+    ok = connect(&subtt_track_sel, SIGNAL(option_selected(int)),
+                 this, SLOT(subttTrackSelectedOption(int)));
+    YAE_ASSERT(ok);
+
+    ok = connect(&subtt_track_sel, SIGNAL(done()),
+                 this, SLOT(dismissSubttTrackSelection()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(select_subtt_track()),
+                 this, SLOT(showSubttTrackSelection()));
+    YAE_ASSERT(ok);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::setVisible
+  //
+  void
+  PlayerUxItem::setVisible(bool enable)
+  {
+    bool changing = visible() != enable;
+
+    if (!enable)
+    {
+      timelineTimer_.stop();
+    }
+    else if (changing)
+    {
+      timelineTimer_.start(1000);
+    }
+
+    Item::setVisible(enable);
   }
 
   //----------------------------------------------------------------
@@ -1180,6 +1474,8 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerUxItem::processKeyEvent
   //
+  // FIXME: pkoshevoy: must respect item focus
+  //
   bool
   PlayerUxItem::processKeyEvent(Canvas * canvas, QKeyEvent * event)
   {
@@ -1189,14 +1485,27 @@ namespace yae
 
     if (is_playlist_visible)
     {
-      // let the playlist handle most event:
+      // let the playlist handle most events:
       return false;
+    }
+    else if (key == Qt::Key_I)
+    {
+      if (key_press)
+      {
+        actionSetInPoint_->activate(QAction::Trigger);
+      }
+    }
+    else if (key == Qt::Key_O)
+    {
+      if (key_press)
+      {
+        actionSetOutPoint_->activate(QAction::Trigger);
+      }
     }
     else if (key == Qt::Key_N)
     {
       if (key_press)
       {
-        // FIXME: pkoshevoy: must respect item focus
         skipToNextFrame();
       }
     }
@@ -1486,6 +1795,8 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
+    dismissSelectionItems();
+
     TimelineModel & timeline = timeline_model();
     timeline.startFromZero(start_from_zero_time);
 
@@ -1775,6 +2086,43 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerUxItem::playbackCropFrameOther
+  //
+  void
+  PlayerUxItem::playbackCropFrameOther()
+  {
+    CanvasRenderer * renderer = canvas().canvasRenderer();
+
+    TVideoFramePtr frame;
+    renderer->getFrame(frame);
+    if (!frame)
+    {
+      return;
+    }
+
+    // pass current frame crop info to the FrameCropItem:
+    {
+      FrameCropItem & frame_crop = *frame_crop_;
+
+      TCropFrame crop;
+      renderer->getCroppedFrame(crop);
+
+      SignalBlocker blockSignals;
+      blockSignals << &frame_crop;
+      frame_crop.setCrop(frame, crop);
+    }
+
+    frame_crop_sel_->setVisible(false);
+    aspect_ratio_sel_->setVisible(false);
+    video_track_sel_->setVisible(false);
+    audio_track_sel_->setVisible(false);
+    subtt_track_sel_->setVisible(false);
+    frame_crop_->setVisible(true);
+
+    onLoadFrame_->frameLoaded(&canvas(), frame);
+  }
+
+  //----------------------------------------------------------------
   // PlayerUxItem::playbackLoop
   //
   void
@@ -1883,6 +2231,639 @@ namespace yae
 #else
     yae::show_in_file_manager(filePath);
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::showAspectRatioSelection
+  //
+  void
+  PlayerUxItem::showAspectRatioSelection()
+  {
+    // shortcut:
+    AspectRatioItem & aspect_ratio_sel = *aspect_ratio_sel_;
+
+    if (aspect_ratio_sel.visible())
+    {
+      return;
+    }
+
+    int rotate = 0;
+    double native_ar = canvas().nativeAspectRatioRotated(rotate);
+    native_ar = native_ar ? native_ar : 1.0;
+    aspect_ratio_sel.setNativeAspectRatio(native_ar);
+
+    double w = 0.0;
+    double h = 0.0;
+    double current_ar = canvas().imageAspectRatio(w, h);
+
+    // avoid creating an infinite signal loop:
+    SignalBlocker blockSignals;
+    blockSignals << &aspect_ratio_sel;
+
+    current_ar = current_ar ? current_ar : 1.0;
+    aspect_ratio_sel.setAspectRatio(current_ar);
+
+    if (actionAspectRatioAuto_->isChecked())
+    {
+      aspect_ratio_sel.selectAspectRatioCategory(AspectRatio::kNone);
+    }
+
+    frame_crop_sel_->setVisible(false);
+    aspect_ratio_sel.setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::selectAspectRatio
+  //
+  void
+  PlayerUxItem::selectAspectRatio(const AspectRatio & option)
+  {
+    // update Aspect Ratio menu item selection
+    double ar = option.ar_;
+
+    if (option.category_ == AspectRatio::kNone)
+    {
+      ar = 0.0;
+      actionAspectRatioAuto_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
+    {
+      actionAspectRatio1_33_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.6, 1e-2))
+    {
+      actionAspectRatio1_60_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
+    {
+      actionAspectRatio1_78_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.85, 1e-2))
+    {
+      actionAspectRatio1_85_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.35, 1e-2))
+    {
+      actionAspectRatio2_35_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.4, 1e-2))
+    {
+      actionAspectRatio2_40_->activate(QAction::Trigger);
+    }
+    else if (option.category_ == AspectRatio::kOther)
+    {
+      AspectRatioItem & aspect_ratio_sel = *aspect_ratio_sel_;
+      ar = aspect_ratio_sel.currentAspectRatio();
+      actionAspectRatioOther_->activate(QAction::Trigger);
+    }
+    else
+    {
+      actionAspectRatioOther_->activate(QAction::Trigger);
+    }
+
+    canvas().overrideDisplayAspectRatio(ar);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::setAspectRatio
+  //
+  void
+  PlayerUxItem::setAspectRatio(double ar)
+  {
+    // update Aspect Ratio menu item selection
+    actionAspectRatioOther_->activate(QAction::Trigger);
+    canvas().overrideDisplayAspectRatio(ar);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::selectFrameCropAspectRatio
+  //
+  void
+  PlayerUxItem::selectFrameCrop(const AspectRatio & option)
+  {
+    // update Crop menu item selection
+    if (option.category_ == AspectRatio::kNone)
+    {
+      actionCropFrameNone_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
+    {
+      actionCropFrame1_33_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.6, 1e-2))
+    {
+      actionCropFrame1_60_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
+    {
+      actionCropFrame1_78_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 1.85, 1e-2))
+    {
+      actionCropFrame1_85_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.35, 1e-2))
+    {
+      actionCropFrame2_35_->activate(QAction::Trigger);
+    }
+    else if (close_enough(option.ar_, 2.4, 1e-2))
+    {
+      actionCropFrame2_40_->activate(QAction::Trigger);
+    }
+    else if (option.category_ == AspectRatio::kAuto)
+    {
+      actionCropFrameAutoDetect_->activate(QAction::Trigger);
+    }
+    else if (option.category_ == AspectRatio::kOther)
+    {
+      actionCropFrameOther_->activate(QAction::Trigger);
+    }
+    else
+    {
+      bool ok = true;
+
+      ok = disconnect(actionCropFrameOther_, SIGNAL(triggered()),
+                      this, SLOT(playbackCropFrameOther()));
+      YAE_ASSERT(ok);
+
+      canvas().cropFrame(option.ar_);
+      actionCropFrameOther_->activate(QAction::Trigger);
+
+      ok = connect(actionCropFrameOther_, SIGNAL(triggered()),
+                   this, SLOT(playbackCropFrameOther()));
+      YAE_ASSERT(ok);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::showFrameCropSelection
+  //
+  void
+  PlayerUxItem::showFrameCropSelection()
+  {
+    // shortcut:
+    AspectRatioItem & frame_crop_sel = *frame_crop_sel_;
+
+    if (frame_crop_sel.visible())
+    {
+      return;
+    }
+
+    int rotate = 0;
+    double native_ar = canvas().nativeAspectRatioUncroppedRotated(rotate);
+    double current_ar = canvas().nativeAspectRatioRotated(rotate);
+
+    native_ar = native_ar ? native_ar : 1.0;
+    frame_crop_sel.setNativeAspectRatio(native_ar);
+
+    // avoid creating an infinite signal loop:
+    SignalBlocker blockSignals;
+    blockSignals << &frame_crop_sel;
+
+    current_ar = current_ar ? current_ar : 1.0;
+    frame_crop_sel.setAspectRatio(current_ar);
+
+    if (actionCropFrameNone_->isChecked())
+    {
+      frame_crop_sel.selectAspectRatioCategory(AspectRatio::kNone);
+    }
+    else if (actionCropFrameAutoDetect_->isChecked())
+    {
+      frame_crop_sel.selectAspectRatioCategory(AspectRatio::kAuto);
+    }
+
+    frame_crop_->setVisible(false);
+    frame_crop_sel.setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::showVideoTrackSelection
+  //
+  void
+  PlayerUxItem::showVideoTrackSelection()
+  {
+    // shortcuts:
+    const PlayerItem & player = *(player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.video_tracks_info();
+    const std::vector<VideoTraits> & traits = player.video_tracks_traits();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == traits.size());
+
+    std::vector<OptionItem::Option> options(num_tracks + 1);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      const VideoTraits & vtts = traits[i];
+
+      OptionItem::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Video Track " << i + 1;
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << yae::strfmt("%u x %u, %.3f fps",
+                           vtts.visibleWidth_,
+                           vtts.visibleHeight_,
+                           vtts.frameRate_);
+
+        if (vtts.cameraRotation_)
+        {
+          static const char * degree_utf8 = "\xc2""\xb0";
+          oss << ", rotated " << vtts.cameraRotation_ << degree_utf8;
+        }
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
+
+    // add Disabled track option:
+    {
+      OptionItem::Option & option = options[num_tracks];
+      option.index_ = num_tracks;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader->getSelectedVideoTrackIndex();
+    OptionItem & video_track_sel = *video_track_sel_;
+    video_track_sel.setOptions(options, preselect);
+    video_track_sel.setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::showAudioTrackSelection
+  //
+  void
+  PlayerUxItem::showAudioTrackSelection()
+  {
+    // shortcuts:
+    const PlayerItem & player = *(player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.audio_tracks_info();
+    const std::vector<AudioTraits> & traits = player.audio_tracks_traits();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == traits.size());
+
+    std::vector<OptionItem::Option> options(num_tracks + 1);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      const AudioTraits & atts = traits[i];
+
+      OptionItem::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Audio Track " << i + 1;
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << atts.sampleRate_ << " Hz, "
+            << getNumberOfChannels(atts.channelLayout_) << " channels";
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
+
+    // add Disabled track option:
+    {
+      OptionItem::Option & option = options[num_tracks];
+      option.index_ = num_tracks;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader->getSelectedAudioTrackIndex();
+    OptionItem & audio_track_sel = *audio_track_sel_;
+    audio_track_sel.setOptions(options, preselect);
+    audio_track_sel.setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::showSubttTrackSelection
+  //
+  void
+  PlayerUxItem::showSubttTrackSelection()
+  {
+    // shortcut:
+    const PlayerItem & player = *(player_);
+    IReaderPtr reader = player.reader();
+
+    const std::vector<TTrackInfo> & tracks = player.subtt_tracks_info();
+    const std::vector<TSubsFormat> & formats = player.subtt_tracks_format();
+
+    std::size_t num_tracks = tracks.size();
+    YAE_ASSERT(num_tracks == formats.size());
+
+    std::vector<OptionItem::Option> options(num_tracks + 4 + 1);
+    for (std::size_t i = 0; i < num_tracks; i++)
+    {
+      const TTrackInfo & info = tracks[i];
+      TSubsFormat format = formats[i];
+
+      OptionItem::Option & option = options[i];
+      option.index_ = i;
+
+      // headline:
+      {
+        std::ostringstream oss;
+
+        oss << "Subtitles Track " << i + 1;
+
+        if (info.hasLang())
+        {
+          oss << " (" << info.lang() << ")";
+        }
+
+        if (info.hasName())
+        {
+          oss << ": " << info.name();
+        }
+
+        option.headline_ = oss.str().c_str();
+      }
+
+      // fineprint:
+      {
+        std::ostringstream oss;
+
+        oss << "format: " << getSubsFormatLabel(format);
+
+        std::string service = yae::get_program_name(*reader, info.program_);
+        if (service.size())
+        {
+          oss << ", " << service;
+        }
+        else if (info.nprograms_ > 1)
+        {
+          oss << ", program " << info.program_;
+        }
+
+        option.fineprint_ = oss.str().c_str();
+      }
+    }
+
+    // add fake CC1-4 tracks:
+    for (unsigned int i = 0; i < 4; i++)
+    {
+      OptionItem::Option & option = options[num_tracks + i];
+      option.index_ = num_tracks + i + 1;
+      option.headline_ = yae::strfmt("Closed Captions (CC%u)", (i + 1));
+      option.fineprint_ = "format: CEA-608";
+    }
+
+    // add Disabled track option:
+    {
+      OptionItem::Option & option = options[num_tracks + 4];
+      option.index_ = num_tracks + 5;
+      option.headline_ = "Disabled";
+      option.fineprint_ = "";
+    }
+
+    int preselect = reader ? get_selected_subtt_track(*reader) : 4;
+    OptionItem & subtt_track_sel = *subtt_track_sel_;
+    subtt_track_sel.setOptions(options, preselect);
+    subtt_track_sel.setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissFrameCrop
+  //
+  void
+  PlayerUxItem::dismissFrameCrop()
+  {
+    frame_crop_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+    emit adjust_canvas_height();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissFrameCropSelection
+  //
+  void
+  PlayerUxItem::dismissFrameCropSelection()
+  {
+    frame_crop_sel_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+    emit adjust_canvas_height();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissAspectRatioSelection
+  //
+  void
+  PlayerUxItem::dismissAspectRatioSelection()
+  {
+    aspect_ratio_sel_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+    emit adjust_canvas_height();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissVideoTrackSelection
+  //
+  void
+  PlayerUxItem::dismissVideoTrackSelection()
+  {
+    video_track_sel_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissAudioTrackSelection
+  //
+  void
+  PlayerUxItem::dismissAudioTrackSelection()
+  {
+    audio_track_sel_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissSubttTrackSelection
+  //
+  void
+  PlayerUxItem::dismissSubttTrackSelection()
+  {
+    subtt_track_sel_->setVisible(false);
+    player_->setVisible(true);
+    timeline_->setVisible(true);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::dismissSelections
+  //
+  void
+  PlayerUxItem::dismissSelectionItems()
+  {
+    frame_crop_->setVisible(false);
+    frame_crop_sel_->setVisible(false);
+    aspect_ratio_sel_->setVisible(false);
+    video_track_sel_->setVisible(false);
+    audio_track_sel_->setVisible(false);
+    subtt_track_sel_->setVisible(false);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::videoTrackSelectedOption
+  //
+  void
+  PlayerUxItem::videoTrackSelectedOption(int option_index)
+  {
+    if (!videoTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < videoTrackGroup_->actions().size())
+    {
+      videoTrackGroup_->actions()[option_index]->trigger();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::audioTrackSelectedOption
+  //
+  void
+  PlayerUxItem::audioTrackSelectedOption(int option_index)
+  {
+    if (!audioTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < audioTrackGroup_->actions().size())
+    {
+      audioTrackGroup_->actions()[option_index]->trigger();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::subttTrackSelectedOption
+  //
+  void
+  PlayerUxItem::subttTrackSelectedOption(int option_index)
+  {
+    if (!subsTrackGroup_)
+    {
+      return;
+    }
+
+    if (option_index < subsTrackGroup_->actions().size())
+    {
+      subsTrackGroup_->actions()[option_index]->trigger();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::windowHalfSize
+  //
+  void
+  PlayerUxItem::windowHalfSize()
+  {
+    emit expand_canvas_size(0.5, 0.5);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::windowFullSize
+  //
+  void
+  PlayerUxItem::windowFullSize()
+  {
+    emit expand_canvas_size(1.0, 1.0);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::windowDoubleSize
+  //
+  void
+  PlayerUxItem::windowDoubleSize()
+  {
+    emit expand_canvas_size(2.0, 2.0);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::windowDecreaseSize
+  //
+  void
+  PlayerUxItem::windowDecreaseSize()
+  {
+    emit scale_canvas_size(0.5);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::windowIncreaseSize
+  //
+  void
+  PlayerUxItem::windowIncreaseSize()
+  {
+    emit scale_canvas_size(2.0);
   }
 
   //----------------------------------------------------------------
@@ -2099,6 +3080,8 @@ namespace yae
     timeline_->maybeAnimateOpacity();
     timeline_->maybeAnimateControls();
     actionPlay_->setText(tr("Play"));
+
+    dismissSelectionItems();
   }
 
   //----------------------------------------------------------------

@@ -24,7 +24,10 @@
 #include "yaeAppleRemoteControl.h"
 #include "yaeAppleUtils.h"
 #endif
+#include "yaeAspectRatioItem.h"
+#include "yaeFrameCropItem.h"
 #include "yaeItemView.h"
+#include "yaeOptionItem.h"
 #include "yaePlayerItem.h"
 #include "yaePlayerShortcuts.h"
 #include "yaeTimelineItem.h"
@@ -71,6 +74,17 @@ namespace yae
     PlayerUxItem(const char * id, ItemView & view);
     ~PlayerUxItem();
 
+  protected:
+    void init_player();
+    void init_timeline();
+    void init_frame_crop();
+    void init_frame_crop_sel();
+    void init_aspect_ratio_sel();
+    void init_video_track_sel();
+    void init_audio_track_sel();
+    void init_subtt_track_sel();
+
+  public:
     // accessors:
     inline Canvas & canvas()
     { return view_.delegate()->windowCanvas(); }
@@ -80,6 +94,9 @@ namespace yae
 
     inline TimelineModel & timeline_model() const
     { return player_->timeline(); }
+
+    // virtual:
+    void setVisible(bool visible);
 
     // virtual:
     bool event(QEvent * e);
@@ -106,7 +123,14 @@ namespace yae
                                       const TCropFrame & detected,
                                       bool detectionFinished);
   signals:
+    void expand_canvas_size(double xexpand, double yexpand);
+    void scale_canvas_size(double scale);
     void adjust_canvas_height();
+    void playback_vertical_scaling(bool enable);
+    void playback_shrink_wrap();
+    void playback_full_screen();
+    void playback_fill_screen();
+
     void toggle_playlist();
     void playback_next();
     void playback_finished(TTime playhead_pos);
@@ -174,6 +198,7 @@ namespace yae
     void playbackCropFrame1_60();
     void playbackCropFrame1_33();
     void playbackCropFrameAutoDetect();
+    void playbackCropFrameOther();
 
     void playbackAspectRatioAuto();
     void playbackAspectRatio2_40();
@@ -189,6 +214,37 @@ namespace yae
     void playbackNonReferenceFrames();
     void playbackDeinterlace();
     void playbackSetTempo(int percent);
+
+    // callback from aspect ratio view reflecting current selection:
+    void selectAspectRatio(const AspectRatio & ar);
+    void setAspectRatio(double ar);
+
+    // helpers:
+    void selectFrameCrop(const AspectRatio & ar);
+    void showFrameCropSelection();
+    void showAspectRatioSelection();
+    void showVideoTrackSelection();
+    void showAudioTrackSelection();
+    void showSubttTrackSelection();
+
+    void dismissFrameCrop();
+    void dismissFrameCropSelection();
+    void dismissAspectRatioSelection();
+    void dismissVideoTrackSelection();
+    void dismissAudioTrackSelection();
+    void dismissSubttTrackSelection();
+    void dismissSelectionItems();
+
+    void videoTrackSelectedOption(int option_index);
+    void audioTrackSelectedOption(int option_index);
+    void subttTrackSelectedOption(int option_index);
+
+    // window menu:
+    void windowHalfSize();
+    void windowFullSize();
+    void windowDoubleSize();
+    void windowDecreaseSize();
+    void windowIncreaseSize();
 
     // audio/video menus:
     void audioDownmixToStereo();
@@ -222,10 +278,6 @@ namespace yae
                            std::vector<VideoTraits> & video_traits,
                            std::vector<TTrackInfo> & subs_info,
                            std::vector<TSubsFormat> & subs_sormat);
-
-    void layout(PlayerUxItem & view,
-                const ItemViewStyle & style,
-                Item & root);
 
   public:
     ItemView & view_;
@@ -332,6 +384,14 @@ namespace yae
     // items:
     yae::shared_ptr<PlayerItem, Item> player_;
     yae::shared_ptr<TimelineItem, Item> timeline_;
+    yae::shared_ptr<FrameCropItem, Item> frame_crop_;
+    yae::shared_ptr<AspectRatioItem, Item> frame_crop_sel_;
+    yae::shared_ptr<AspectRatioItem, Item> aspect_ratio_sel_;
+    yae::shared_ptr<OptionItem, Item> video_track_sel_;
+    yae::shared_ptr<OptionItem, Item> audio_track_sel_;
+    yae::shared_ptr<OptionItem, Item> subtt_track_sel_;
+
+    yae::shared_ptr<Canvas::ILoadFrameObserver> onLoadFrame_;
 
     BoolRef enableBackArrowButton_;
     BoolRef enableDeleteFileButton_;

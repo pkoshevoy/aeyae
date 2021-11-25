@@ -64,12 +64,6 @@ namespace yae
     canvas_(NULL),
     view_("PlayerWidget player view"),
     confirm_("PlayerWidget confirm view"),
-    cropView_("PlayerWidget cropView"),
-    frameCropSelectionView_("PlayerWidget frameCropSelectionView"),
-    aspectRatioSelectionView_("PlayerWidget aspectRatioSelectionView"),
-    videoTrackSelectionView_("PlayerWidget videoTrackSelectionView"),
-    audioTrackSelectionView_("PlayerWidget audioTrackSelectionView"),
-    subttTrackSelectionView_("PlayerWidget subttTrackSelectionView"),
     renderMode_(Canvas::kScaleToFit),
     xexpand_(1.0),
     yexpand_(1.0)
@@ -119,32 +113,10 @@ namespace yae
     YAE_ASSERT(ok);
 
     view_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    cropView_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
-    frameCropSelectionView_.toggle_fullscreen_.
-      reset(&player_toggle_fullscreen, this);
-    aspectRatioSelectionView_.toggle_fullscreen_.
-      reset(&player_toggle_fullscreen, this);
-    videoTrackSelectionView_.toggle_fullscreen_.
-      reset(&player_toggle_fullscreen, this);
-    audioTrackSelectionView_.toggle_fullscreen_.
-      reset(&player_toggle_fullscreen, this);
-    subttTrackSelectionView_.toggle_fullscreen_.
-      reset(&player_toggle_fullscreen, this);
-
     view_.query_fullscreen_.reset(&player_query_fullscreen, this);
+
+    confirm_.toggle_fullscreen_.reset(&player_toggle_fullscreen, this);
     confirm_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    cropView_.query_fullscreen_.reset(&player_query_fullscreen, this);
-    frameCropSelectionView_.query_fullscreen_.
-      reset(&player_query_fullscreen, this);
-    aspectRatioSelectionView_.query_fullscreen_.
-      reset(&player_query_fullscreen, this);
-    videoTrackSelectionView_.query_fullscreen_.
-      reset(&player_query_fullscreen, this);
-    audioTrackSelectionView_.query_fullscreen_.
-      reset(&player_query_fullscreen, this);
-    subttTrackSelectionView_.query_fullscreen_.
-      reset(&player_query_fullscreen, this);
   }
 
   //----------------------------------------------------------------
@@ -152,7 +124,8 @@ namespace yae
   //
   PlayerWidget::~PlayerWidget()
   {
-    canvas_->cropAutoDetectStop();
+    confirm_.clear();
+    view_.clear();
     delete canvas_;
   }
 
@@ -168,229 +141,47 @@ namespace yae
     canvas_->setGreeting(greeting_);
     canvas_->append(&view_);
 
-    // FIXME: this functionality belongs in PlayerUxItem:
     canvas_->append(&confirm_);
-    canvas_->append(&cropView_);
-    canvas_->append(&frameCropSelectionView_);
-    canvas_->append(&aspectRatioSelectionView_);
-    canvas_->append(&videoTrackSelectionView_);
-    canvas_->append(&audioTrackSelectionView_);
-    canvas_->append(&subttTrackSelectionView_);
-
     confirm_.setStyle(view_.style());
-    cropView_.init(&view_);
-
-    FrameCropItem * frameCropItem = cropView_.item();
-    CanvasRendererItem & rendererItem = frameCropItem->getRendererItem();
-    onLoadFrame_.reset(new OnFrameLoaded(rendererItem));
-    canvas_->addLoadFrameObserver(onLoadFrame_);
-
-    // initialize frame crop selection view:
-    static const AspectRatio crop_choices[] = {
-      AspectRatio(0.0, "none", AspectRatio::kNone),
-      AspectRatio(4.0 / 3.0, "4:3"),
-      AspectRatio(16.0 / 10.0, "16:10"),
-      AspectRatio(16.0 / 9.0, "16:9"),
-
-      AspectRatio(1.85),
-      AspectRatio(2.35),
-      AspectRatio(2.40),
-      AspectRatio(8.0 / 3.0, "8:3"),
-
-      AspectRatio(3.0 / 4.0, "3:4"),
-      AspectRatio(9.0 / 16.0, "9:16"),
-      AspectRatio(-1.0, "auto", AspectRatio::kAuto),
-      AspectRatio(1e+6, "other", AspectRatio::kOther, "CropFrameOther"),
-    };
-
-    static const std::size_t num_crop_choices =
-      sizeof(crop_choices) / sizeof(crop_choices[0]);
-
-    frameCropSelectionView_.init(view_.style(),
-                                 crop_choices,
-                                 num_crop_choices);
-
-    // initialize aspect ratio selection view:
-    static const AspectRatio ar_choices[] = {
-      AspectRatio(1.0, "1:1"),
-      AspectRatio(4.0 / 3.0, "4:3"),
-      AspectRatio(16.0 / 10.0, "16:10"),
-      AspectRatio(16.0 / 9.0, "16:9"),
-
-      AspectRatio(1.85),
-      AspectRatio(2.35),
-      AspectRatio(2.40),
-      AspectRatio(8.0 / 3.0, "8:3"),
-
-      AspectRatio(3.0 / 4.0, "3:4"),
-      AspectRatio(9.0 / 16.0, "9:16"),
-      AspectRatio(0.0, "auto", AspectRatio::kNone),
-      AspectRatio(-1.0, "custom", AspectRatio::kOther),
-    };
-
-    static const std::size_t num_ar_choices =
-      sizeof(ar_choices) / sizeof(ar_choices[0]);
-
-    aspectRatioSelectionView_.init(view_.style(),
-                                   ar_choices,
-                                   num_ar_choices);
-
-    videoTrackSelectionView_.setStyle(view_.style());
-    audioTrackSelectionView_.setStyle(view_.style());
-    subttTrackSelectionView_.setStyle(view_.style());
 
     // shortcut:
     yae::PlayerUxItem * pl_ux = view_.player_ux();
-    AspectRatioItem * crop_sel_item = frameCropSelectionView_.item();
-    AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
-    OptionItem * video_sel_item = videoTrackSelectionView_.item();
-    OptionItem * audio_sel_item = audioTrackSelectionView_.item();
-    OptionItem * subtt_sel_item = subttTrackSelectionView_.item();
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     bool ok = true;
 
-    ok = connect(pl_ux, SIGNAL(select_frame_crop()),
-                 this, SLOT(showFrameCropSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux, SIGNAL(select_aspect_ratio()),
-                 this, SLOT(showAspectRatioSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux, SIGNAL(select_video_track()),
-                 this, SLOT(showVideoTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux, SIGNAL(select_audio_track()),
-                 this, SLOT(showAudioTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux, SIGNAL(select_subtt_track()),
-                 this, SLOT(showSubttTrackSelectionView()));
+    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
+                 pl_ux, SIGNAL(toggle_playlist()));
     YAE_ASSERT(ok);
 
     ok = connect(pl_ux, SIGNAL(adjust_canvas_height()),
                  this, SLOT(adjustCanvasHeight()));
     YAE_ASSERT(ok);
 
-    ok = connect(pl_ux->actionVerticalScaling_, SIGNAL(triggered()),
-                 this, SLOT(playbackVerticalScaling()));
+    ok = connect(pl_ux, SIGNAL(expand_canvas_size(double, double)),
+                 this, SLOT(canvasSizeSet(double, double)));
     YAE_ASSERT(ok);
 
-    ok = connect(pl_ux->actionShrinkWrap_, SIGNAL(triggered()),
+    ok = connect(pl_ux, SIGNAL(scale_canvas_size(double)),
+                 this, SLOT(canvasSizeScaleBy(double)));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(playback_vertical_scaling(bool)),
+                 this, SLOT(playbackVerticalScaling(bool)));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(playback_shrink_wrap()),
                  this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
 
-    ok = connect(pl_ux->actionFullScreen_, SIGNAL(triggered()),
+    ok = connect(pl_ux, SIGNAL(playback_full_screen()),
                  this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(pl_ux->actionFillScreen_, SIGNAL(triggered()),
+    ok = connect(pl_ux, SIGNAL(playback_fill_screen()),
                  this, SLOT(playbackFillScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionAspectRatioOther_, SIGNAL(triggered()),
-                 this, SLOT(playbackAspectRatioOther()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionCropFrameOther_, SIGNAL(triggered()),
-                 this, SLOT(playbackCropFrameOther()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionHalfSize_, SIGNAL(triggered()),
-                 this, SLOT(windowHalfSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionFullSize_, SIGNAL(triggered()),
-                 this, SLOT(windowFullSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionDoubleSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDoubleSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionDecreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowDecreaseSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(pl_ux->actionIncreaseSize_, SIGNAL(triggered()),
-                 this, SLOT(windowIncreaseSize()));
-    YAE_ASSERT(ok);
-
-    ok = connect(frameCropItem, SIGNAL(cropped(const TVideoFramePtr &,
-                                               const TCropFrame &)),
-                 pl_ux, SLOT(cropped(const TVideoFramePtr &,
-                                      const TCropFrame &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(frameCropItem, SIGNAL(done()),
-                 this, SLOT(dismissFrameCropView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(crop_sel_item,
-                 SIGNAL(selected(const AspectRatio &)),
-                 this,
-                 SLOT(selectFrameCrop(const AspectRatio &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(crop_sel_item, SIGNAL(done()),
-                 this, SLOT(dismissFrameCropSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(ar_sel_item,
-                 SIGNAL(selected(const AspectRatio &)),
-                 this,
-                 SLOT(selectAspectRatio(const AspectRatio &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(ar_sel_item,
-                 SIGNAL(aspectRatio(double)),
-                 this,
-                 SLOT(setAspectRatio(double)));
-    YAE_ASSERT(ok);
-
-    ok = connect(ar_sel_item, SIGNAL(done()),
-                 this, SLOT(dismissAspectRatioSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(video_sel_item, SIGNAL(option_selected(int)),
-                 this, SLOT(videoTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(video_sel_item, SIGNAL(done()),
-                 this, SLOT(dismissVideoTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(audio_sel_item, SIGNAL(option_selected(int)),
-                 this, SLOT(audioTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(audio_sel_item, SIGNAL(done()),
-                 this, SLOT(dismissAudioTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(subtt_sel_item, SIGNAL(option_selected(int)),
-                 this, SLOT(subttTrackSelectedOption(int)));
-    YAE_ASSERT(ok);
-
-    ok = connect(subtt_sel_item, SIGNAL(done()),
-                 this, SLOT(dismissSubttTrackSelectionView()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
-                 pl_ux, SIGNAL(toggle_playlist()));
-    YAE_ASSERT(ok);
-
-
-    ok = connect(this, SIGNAL(setInPoint()),
-                 &(pl_ux->timeline_model()), SLOT(setInPoint()));
-    YAE_ASSERT(ok);
-
-    ok = connect(this, SIGNAL(setOutPoint()),
-                 &(pl_ux->timeline_model()), SLOT(setOutPoint()));
     YAE_ASSERT(ok);
 
     shortcuts_.reset(new PlayerShortcuts(this));
@@ -407,11 +198,9 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    dismissSelectionViews();
     view_.setEnabled(true);
+
+    PlayerUxItem & pl_ux = get_player_ux();
     pl_ux.playback(reader, bookmark, start_from_zero_time);
   }
 
@@ -421,24 +210,17 @@ namespace yae
   void
   PlayerWidget::stop()
   {
-    // shortcut:
     PlayerUxItem & pl_ux = get_player_ux();
-
     pl_ux.stopPlayback();
-    dismissSelectionViews();
   }
 
   //----------------------------------------------------------------
   // PlayerWidget::playbackVerticalScaling
   //
   void
-  PlayerWidget::playbackVerticalScaling()
+  PlayerWidget::playbackVerticalScaling(bool enable)
   {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
     canvasSizeBackup();
-    bool enable = pl_ux.actionVerticalScaling_->isChecked();
     canvas().enableVerticalScaling(enable);
     canvasSizeRestore();
   }
@@ -614,533 +396,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::playbackAspectRatioOther
-  //
-  void
-  PlayerWidget::playbackAspectRatioOther()
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-    AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
-
-    if (aspectRatioSelectionView_.isEnabled())
-    {
-      return;
-    }
-
-    int rotate = 0;
-    double native_ar = canvas().nativeAspectRatioRotated(rotate);
-    native_ar = native_ar ? native_ar : 1.0;
-    ar_sel_item->setNativeAspectRatio(native_ar);
-
-    double w = 0.0;
-    double h = 0.0;
-    double current_ar = canvas().imageAspectRatio(w, h);
-
-    // avoid creating an infinite signal loop:
-    SignalBlocker blockSignals;
-    blockSignals << ar_sel_item;
-
-    current_ar = current_ar ? current_ar : 1.0;
-    ar_sel_item->setAspectRatio(current_ar);
-
-    if (pl_ux.actionAspectRatioAuto_->isChecked())
-    {
-      ar_sel_item->selectAspectRatioCategory(AspectRatio::kNone);
-    }
-
-    // view_.setEnabled(false);
-    cropView_.setEnabled(false);
-    aspectRatioSelectionView_.setEnabled(true);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::selectAspectRatio
-  //
-  void
-  PlayerWidget::selectAspectRatio(const AspectRatio & option)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    // update Aspect Ratio menu item selection
-    double ar = option.ar_;
-
-    if (option.category_ == AspectRatio::kNone)
-    {
-      ar = 0.0;
-      pl_ux.actionAspectRatioAuto_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
-    {
-      pl_ux.actionAspectRatio1_33_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 1.6, 1e-2))
-    {
-      pl_ux.actionAspectRatio1_60_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
-    {
-      pl_ux.actionAspectRatio1_78_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 1.85, 1e-2))
-    {
-      pl_ux.actionAspectRatio1_85_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 2.35, 1e-2))
-    {
-      pl_ux.actionAspectRatio2_35_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 2.4, 1e-2))
-    {
-      pl_ux.actionAspectRatio2_40_->activate(QAction::Trigger);
-    }
-    else if (option.category_ == AspectRatio::kOther)
-    {
-      AspectRatioItem * ar_sel_item = aspectRatioSelectionView_.item();
-      ar = ar_sel_item->currentAspectRatio();
-      pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
-    }
-    else
-    {
-      pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
-    }
-
-    canvas().overrideDisplayAspectRatio(ar);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::setAspectRatio
-  //
-  void
-  PlayerWidget::setAspectRatio(double ar)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    // update Aspect Ratio menu item selection
-    pl_ux.actionAspectRatioOther_->activate(QAction::Trigger);
-    canvas().overrideDisplayAspectRatio(ar);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::windowHalfSize
-  //
-  void
-  PlayerWidget::windowHalfSize()
-  {
-    canvasSizeSet(0.5, 0.5);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::windowFullSize
-  //
-  void
-  PlayerWidget::windowFullSize()
-  {
-    canvasSizeSet(1.0, 1.0);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::windowDoubleSize
-  //
-  void
-  PlayerWidget::windowDoubleSize()
-  {
-    canvasSizeSet(2.0, 2.0);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::windowDecreaseSize
-  //
-  void
-  PlayerWidget::windowDecreaseSize()
-  {
-    canvasSizeSet(xexpand_ * 0.5, yexpand_ * 0.5);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::windowIncreaseSize
-  //
-  void
-  PlayerWidget::windowIncreaseSize()
-  {
-    canvasSizeSet(xexpand_ * 2.0, yexpand_ * 2.0);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::selectFrameCropAspectRatio
-  //
-  void
-  PlayerWidget::selectFrameCrop(const AspectRatio & option)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    // update Crop menu item selection
-    if (option.category_ == AspectRatio::kNone)
-    {
-      pl_ux.actionCropFrameNone_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 4.0 / 3.0, 1e-2))
-    {
-      pl_ux.actionCropFrame1_33_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 1.6, 1e-2))
-    {
-      pl_ux.actionCropFrame1_60_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 16.0 / 9.0, 1e-2))
-    {
-      pl_ux.actionCropFrame1_78_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 1.85, 1e-2))
-    {
-      pl_ux.actionCropFrame1_85_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 2.35, 1e-2))
-    {
-      pl_ux.actionCropFrame2_35_->activate(QAction::Trigger);
-    }
-    else if (close_enough(option.ar_, 2.4, 1e-2))
-    {
-      pl_ux.actionCropFrame2_40_->activate(QAction::Trigger);
-    }
-    else if (option.category_ == AspectRatio::kAuto)
-    {
-      pl_ux.actionCropFrameAutoDetect_->activate(QAction::Trigger);
-    }
-    else if (option.category_ == AspectRatio::kOther)
-    {
-      pl_ux.actionCropFrameOther_->activate(QAction::Trigger);
-    }
-    else
-    {
-      bool ok = true;
-
-      ok = disconnect(pl_ux.actionCropFrameOther_, SIGNAL(triggered()),
-                      this, SLOT(playbackCropFrameOther()));
-      YAE_ASSERT(ok);
-
-      pl_ux.canvas().cropFrame(option.ar_);
-      pl_ux.actionCropFrameOther_->activate(QAction::Trigger);
-
-      ok = connect(pl_ux.actionCropFrameOther_, SIGNAL(triggered()),
-                   this, SLOT(playbackCropFrameOther()));
-      YAE_ASSERT(ok);
-    }
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::showFrameCropSelectionView
-  //
-  void
-  PlayerWidget::showFrameCropSelectionView()
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-    AspectRatioItem * crop_sel_item = frameCropSelectionView_.item();
-
-    if (frameCropSelectionView_.isEnabled())
-    {
-      return;
-    }
-
-    int rotate = 0;
-    double native_ar = canvas().nativeAspectRatioUncroppedRotated(rotate);
-    double current_ar = canvas().nativeAspectRatioRotated(rotate);
-
-    native_ar = native_ar ? native_ar : 1.0;
-    crop_sel_item->setNativeAspectRatio(native_ar);
-
-    // avoid creating an infinite signal loop:
-    SignalBlocker blockSignals;
-    blockSignals << crop_sel_item;
-
-    current_ar = current_ar ? current_ar : 1.0;
-    crop_sel_item->setAspectRatio(current_ar);
-
-    if (pl_ux.actionCropFrameNone_->isChecked())
-    {
-      crop_sel_item->selectAspectRatioCategory(AspectRatio::kNone);
-    }
-    else if (pl_ux.actionCropFrameAutoDetect_->isChecked())
-    {
-      crop_sel_item->selectAspectRatioCategory(AspectRatio::kAuto);
-    }
-
-    // view_.setEnabled(false);
-    cropView_.setEnabled(false);
-    frameCropSelectionView_.setEnabled(true);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::showAspectRatioSelectionView
-  //
-  void
-  PlayerWidget::showAspectRatioSelectionView()
-  {
-    playbackAspectRatioOther();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::showVideoTrackSelectionView
-  //
-  void
-  PlayerWidget::showVideoTrackSelectionView()
-  {
-    // shortcuts:
-    PlayerUxItem & pl_ux = get_player_ux();
-    const PlayerItem & player = *(pl_ux.player_);
-    IReaderPtr reader = player.reader();
-
-    const std::vector<TTrackInfo> & tracks = player.video_tracks_info();
-    const std::vector<VideoTraits> & traits = player.video_tracks_traits();
-
-    std::size_t num_tracks = tracks.size();
-    YAE_ASSERT(num_tracks == traits.size());
-
-    std::vector<OptionItem::Option> options(num_tracks + 1);
-    for (std::size_t i = 0; i < num_tracks; i++)
-    {
-      const TTrackInfo & info = tracks[i];
-      const VideoTraits & vtts = traits[i];
-
-      OptionItem::Option & option = options[i];
-      option.index_ = i;
-
-      // headline:
-      {
-        std::ostringstream oss;
-
-        oss << "Video Track " << i + 1;
-        if (info.hasLang())
-        {
-          oss << " (" << info.lang() << ")";
-        }
-
-        if (info.hasName())
-        {
-          oss << ": " << info.name();
-        }
-
-        option.headline_ = oss.str().c_str();
-      }
-
-      // fineprint:
-      {
-        std::ostringstream oss;
-
-        oss << yae::strfmt("%u x %u, %.3f fps",
-                           vtts.visibleWidth_,
-                           vtts.visibleHeight_,
-                           vtts.frameRate_);
-
-        if (vtts.cameraRotation_)
-        {
-          static const char * degree_utf8 = "\xc2""\xb0";
-          oss << ", rotated " << vtts.cameraRotation_ << degree_utf8;
-        }
-
-        std::string service = yae::get_program_name(*reader, info.program_);
-        if (service.size())
-        {
-          oss << ", " << service;
-        }
-        else if (info.nprograms_ > 1)
-        {
-          oss << ", program " << info.program_;
-        }
-
-        option.fineprint_ = oss.str().c_str();
-      }
-    }
-
-    // add Disabled track option:
-    {
-      OptionItem::Option & option = options[num_tracks];
-      option.index_ = num_tracks;
-      option.headline_ = "Disabled";
-      option.fineprint_ = "";
-    }
-
-    int preselect = reader->getSelectedVideoTrackIndex();
-    OptionItem * video_sel_item = videoTrackSelectionView_.item();
-    video_sel_item->setOptions(options, preselect);
-    videoTrackSelectionView_.setEnabled(true);
-    // view_.setEnabled(false);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::showAudioTrackSelectionView
-  //
-  void
-  PlayerWidget::showAudioTrackSelectionView()
-  {
-    // shortcuts:
-    PlayerUxItem & pl_ux = get_player_ux();
-    const PlayerItem & player = *(pl_ux.player_);
-    IReaderPtr reader = player.reader();
-
-    const std::vector<TTrackInfo> & tracks = player.audio_tracks_info();
-    const std::vector<AudioTraits> & traits = player.audio_tracks_traits();
-
-    std::size_t num_tracks = tracks.size();
-    YAE_ASSERT(num_tracks == traits.size());
-
-    std::vector<OptionItem::Option> options(num_tracks + 1);
-    for (std::size_t i = 0; i < num_tracks; i++)
-    {
-      const TTrackInfo & info = tracks[i];
-      const AudioTraits & atts = traits[i];
-
-      OptionItem::Option & option = options[i];
-      option.index_ = i;
-
-      // headline:
-      {
-        std::ostringstream oss;
-
-        oss << "Audio Track " << i + 1;
-        if (info.hasLang())
-        {
-          oss << " (" << info.lang() << ")";
-        }
-
-        if (info.hasName())
-        {
-          oss << ": " << info.name();
-        }
-
-        option.headline_ = oss.str().c_str();
-      }
-
-      // fineprint:
-      {
-        std::ostringstream oss;
-
-        oss << atts.sampleRate_ << " Hz, "
-            << getNumberOfChannels(atts.channelLayout_) << " channels";
-
-        std::string service = yae::get_program_name(*reader, info.program_);
-        if (service.size())
-        {
-          oss << ", " << service;
-        }
-        else if (info.nprograms_ > 1)
-        {
-          oss << ", program " << info.program_;
-        }
-
-        option.fineprint_ = oss.str().c_str();
-      }
-    }
-
-    // add Disabled track option:
-    {
-      OptionItem::Option & option = options[num_tracks];
-      option.index_ = num_tracks;
-      option.headline_ = "Disabled";
-      option.fineprint_ = "";
-    }
-
-    int preselect = reader->getSelectedAudioTrackIndex();
-    OptionItem * audio_sel_item = audioTrackSelectionView_.item();
-    audio_sel_item->setOptions(options, preselect);
-    audioTrackSelectionView_.setEnabled(true);
-    // view_.setEnabled(false);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::showSubttTrackSelectionView
-  //
-  void
-  PlayerWidget::showSubttTrackSelectionView()
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-    const PlayerItem & player = *(pl_ux.player_);
-    IReaderPtr reader = player.reader();
-
-    const std::vector<TTrackInfo> & tracks = player.subtt_tracks_info();
-    const std::vector<TSubsFormat> & formats = player.subtt_tracks_format();
-
-    std::size_t num_tracks = tracks.size();
-    YAE_ASSERT(num_tracks == formats.size());
-
-    std::vector<OptionItem::Option> options(num_tracks + 4 + 1);
-    for (std::size_t i = 0; i < num_tracks; i++)
-    {
-      const TTrackInfo & info = tracks[i];
-      TSubsFormat format = formats[i];
-
-      OptionItem::Option & option = options[i];
-      option.index_ = i;
-
-      // headline:
-      {
-        std::ostringstream oss;
-
-        oss << "Subtitles Track " << i + 1;
-
-        if (info.hasLang())
-        {
-          oss << " (" << info.lang() << ")";
-        }
-
-        if (info.hasName())
-        {
-          oss << ": " << info.name();
-        }
-
-        option.headline_ = oss.str().c_str();
-      }
-
-      // fineprint:
-      {
-        std::ostringstream oss;
-
-        oss << "format: " << getSubsFormatLabel(format);
-
-        std::string service = yae::get_program_name(*reader, info.program_);
-        if (service.size())
-        {
-          oss << ", " << service;
-        }
-        else if (info.nprograms_ > 1)
-        {
-          oss << ", program " << info.program_;
-        }
-
-        option.fineprint_ = oss.str().c_str();
-      }
-    }
-
-    // add fake CC1-4 tracks:
-    for (unsigned int i = 0; i < 4; i++)
-    {
-      OptionItem::Option & option = options[num_tracks + i];
-      option.index_ = num_tracks + i + 1;
-      option.headline_ = yae::strfmt("Closed Captions (CC%u)", (i + 1));
-      option.fineprint_ = "format: CEA-608";
-    }
-
-    // add Disabled track option:
-    {
-      OptionItem::Option & option = options[num_tracks + 4];
-      option.index_ = num_tracks + 5;
-      option.headline_ = "Disabled";
-      option.fineprint_ = "";
-    }
-
-    int preselect = reader ? get_selected_subtt_track(*reader) : 4;
-    OptionItem * subtt_sel_item = subttTrackSelectionView_.item();
-    subtt_sel_item->setOptions(options, preselect);
-    subttTrackSelectionView_.setEnabled(true);
-    // view_.setEnabled(false);
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::focusChanged
   //
   void
@@ -1172,180 +427,6 @@ namespace yae
       appleRemoteControl_ = NULL;
     }
 #endif
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::playbackCropFrameOther
-  //
-  void
-  PlayerWidget::playbackCropFrameOther()
-  {
-    CanvasRenderer * renderer = canvas().canvasRenderer();
-
-    TVideoFramePtr frame;
-    renderer->getFrame(frame);
-    if (!frame)
-    {
-      return;
-    }
-
-    // pass current frame crop info to the FrameCropItem:
-    {
-      FrameCropItem * frameCropItem = cropView_.item();
-
-      TCropFrame crop;
-      renderer->getCroppedFrame(crop);
-
-      SignalBlocker blockSignals;
-      blockSignals << frameCropItem;
-      frameCropItem->setCrop(frame, crop);
-    }
-
-    // view_.setEnabled(false);
-    frameCropSelectionView_.setEnabled(false);
-    aspectRatioSelectionView_.setEnabled(false);
-    videoTrackSelectionView_.setEnabled(false);
-    audioTrackSelectionView_.setEnabled(false);
-    subttTrackSelectionView_.setEnabled(false);
-    cropView_.setEnabled(true);
-    onLoadFrame_->frameLoaded(canvas_, frame);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissFrameCropView
-  //
-  void
-  PlayerWidget::dismissFrameCropView()
-  {
-    cropView_.setEnabled(false);
-    view_.setEnabled(true);
-    adjustCanvasHeight();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissFrameCropSelectionView
-  //
-  void
-  PlayerWidget::dismissFrameCropSelectionView()
-  {
-    frameCropSelectionView_.setEnabled(false);
-    view_.setEnabled(true);
-    adjustCanvasHeight();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissAspectRatioSelectionView
-  //
-  void
-  PlayerWidget::dismissAspectRatioSelectionView()
-  {
-    aspectRatioSelectionView_.setEnabled(false);
-    view_.setEnabled(true);
-    adjustCanvasHeight();
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissVideoTrackSelectionView
-  //
-  void
-  PlayerWidget::dismissVideoTrackSelectionView()
-  {
-    videoTrackSelectionView_.setEnabled(false);
-    view_.setEnabled(true);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissAudioTrackSelectionView
-  //
-  void
-  PlayerWidget::dismissAudioTrackSelectionView()
-  {
-    audioTrackSelectionView_.setEnabled(false);
-    view_.setEnabled(true);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissSubttTrackSelectionView
-  //
-  void
-  PlayerWidget::dismissSubttTrackSelectionView()
-  {
-    subttTrackSelectionView_.setEnabled(false);
-    view_.setEnabled(true);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::dismissSelectionViews
-  //
-  void
-  PlayerWidget::dismissSelectionViews()
-  {
-    cropView_.setEnabled(false);
-    frameCropSelectionView_.setEnabled(false);
-    aspectRatioSelectionView_.setEnabled(false);
-    videoTrackSelectionView_.setEnabled(false);
-    audioTrackSelectionView_.setEnabled(false);
-    subttTrackSelectionView_.setEnabled(false);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::videoTrackSelectedOption
-  //
-  void
-  PlayerWidget::videoTrackSelectedOption(int option_index)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    if (!pl_ux.videoTrackGroup_)
-    {
-      return;
-    }
-
-    if (option_index < pl_ux.videoTrackGroup_->actions().size())
-    {
-      pl_ux.videoTrackGroup_->actions()[option_index]->trigger();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::audioTrackSelectedOption
-  //
-  void
-  PlayerWidget::audioTrackSelectedOption(int option_index)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    if (!pl_ux.audioTrackGroup_)
-    {
-      return;
-    }
-
-    if (option_index < pl_ux.audioTrackGroup_->actions().size())
-    {
-      pl_ux.audioTrackGroup_->actions()[option_index]->trigger();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::subttTrackSelectedOption
-  //
-  void
-  PlayerWidget::subttTrackSelectedOption(int option_index)
-  {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    if (!pl_ux.subsTrackGroup_)
-    {
-      return;
-    }
-
-    if (option_index < pl_ux.subsTrackGroup_->actions().size())
-    {
-      pl_ux.subsTrackGroup_->actions()[option_index]->trigger();
-    }
   }
 
   //----------------------------------------------------------------
@@ -1383,9 +464,9 @@ namespace yae
       }
     }
 
-    if (cropView_.isEnabled())
+    if (pl_ux.frame_crop_->visible())
     {
-      playbackCropFrameOther();
+      pl_ux.playbackCropFrameOther();
     }
   }
 
@@ -1454,23 +535,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::keyPressEvent
-  //
-  void
-  PlayerWidget::keyPressEvent(QKeyEvent * e)
-  {
-    e->ignore();
-
-    if (this->processKeyEvent(e))
-    {
-      e->accept();
-      return;
-    }
-
-    QWidget::keyPressEvent(e);
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::mousePressEvent
   //
   void
@@ -1483,29 +547,6 @@ namespace yae
     }
 
     QWidget::mousePressEvent(e);
-  }
-
-  //----------------------------------------------------------------
-  // PlayerWidget::processKeyEvent
-  //
-  bool
-  PlayerWidget::processKeyEvent(QKeyEvent * event)
-  {
-    int key = event->key();
-
-    if (key == Qt::Key_I)
-    {
-      emit setInPoint();
-      return true;
-    }
-
-    if (key == Qt::Key_O)
-    {
-      emit setOutPoint();
-      return true;
-    }
-
-    return false;
   }
 
   //----------------------------------------------------------------
@@ -1607,6 +648,15 @@ namespace yae
 
     // repaint the frame:
     canvas_->refresh();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerWidget::canvasSizeScaleBy
+  //
+  void
+  PlayerWidget::canvasSizeScaleBy(double scale)
+  {
+    canvasSizeSet(xexpand_ * scale, yexpand_ * scale);
   }
 
 #ifdef __APPLE__

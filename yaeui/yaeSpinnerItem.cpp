@@ -171,9 +171,11 @@ namespace yae
   // SpinnerItem::setVisible
   //
   void
-  SpinnerItem::setVisible(bool visible)
+  SpinnerItem::setVisible(bool enable)
   {
-    if (!visible)
+    bool changing = visible() != enable;
+
+    if (!enable)
     {
       if (animator_)
       {
@@ -182,14 +184,14 @@ namespace yae
       }
     }
 
-    if (visible)
+    if (enable && changing)
     {
       transition_->start();
       animator_.reset(new SpinnerAnimator(*this));
       view_.addAnimator(animator_);
     }
 
-    Item::setVisible(visible);
+    Item::setVisible(enable);
   }
 
   //----------------------------------------------------------------
