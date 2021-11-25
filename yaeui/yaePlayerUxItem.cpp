@@ -981,6 +981,7 @@ namespace yae
     PlayerItem & player = Item::add<PlayerItem>(player_);
     player.anchors_.fill(*this);
     player.setCanvasDelegate(view_.delegate());
+    player.setVisible(true);
 
     bool ok = true;
     ok = connect(&timelineTimer_, SIGNAL(timeout()),
@@ -1040,6 +1041,7 @@ namespace yae
 
     TimelineItem & timeline = Item::add<TimelineItem>(timeline_);
     timeline.anchors_.fill(*this);
+    timeline.setVisible(true);
 
     timeline.query_timeline_visible_.
       reset(&yae::context_query_timeline_visible, this);
@@ -1071,11 +1073,6 @@ namespace yae
     ok = connect(&timeline_model(), SIGNAL(clockStopped(const SharedClock &)),
                  this, SLOT(playbackFinished(const SharedClock &)));
     YAE_ASSERT(ok);
-#if 0
-    ok = connect(player_.get(), SIGNAL(maybe_animate_opacity()),
-                 timeline_.get(), SLOT(maybeAnimateOpacity()));
-    YAE_ASSERT(ok);
-#endif
   }
 
   //----------------------------------------------------------------
@@ -1087,6 +1084,7 @@ namespace yae
     frame_crop_.reset(new FrameCropItem("FrameCropItem", view_));
     FrameCropItem & frame_crop = this->add<FrameCropItem>(frame_crop_);
     frame_crop.anchors_.fill(*this);
+    frame_crop.setVisible(false);
 
     CanvasRendererItem & renderer = frame_crop.getRendererItem();
     onLoadFrame_.reset(new OnFrameLoaded(renderer));
@@ -1138,6 +1136,7 @@ namespace yae
     AspectRatioItem & frame_crop_sel =
       this->add<AspectRatioItem>(frame_crop_sel_);
     frame_crop_sel.anchors_.fill(*this);
+    frame_crop_sel.setVisible(false);
 
     bool ok = true;
     ok = connect(&frame_crop_sel, SIGNAL(selected(const AspectRatio &)),
@@ -1194,6 +1193,7 @@ namespace yae
     AspectRatioItem & aspect_ratio_sel =
       this->add<AspectRatioItem>(aspect_ratio_sel_);
     aspect_ratio_sel.anchors_.fill(*this);
+    aspect_ratio_sel.setVisible(false);
 
     bool ok = true;
     ok = connect(&aspect_ratio_sel, SIGNAL(selected(const AspectRatio &)),
@@ -1226,6 +1226,7 @@ namespace yae
     video_track_sel_.reset(new OptionItem("video_track_sel", view_));
     OptionItem & video_track_sel = this->add<OptionItem>(video_track_sel_);
     video_track_sel.anchors_.fill(*this);
+    video_track_sel.setVisible(false);
 
     bool ok = true;
     ok = connect(&video_track_sel, SIGNAL(option_selected(int)),
@@ -1250,6 +1251,7 @@ namespace yae
     audio_track_sel_.reset(new OptionItem("audio_track_sel", view_));
     OptionItem & audio_track_sel = this->add<OptionItem>(audio_track_sel_);
     audio_track_sel.anchors_.fill(*this);
+    audio_track_sel.setVisible(false);
 
     bool ok = true;
     ok = connect(&audio_track_sel, SIGNAL(option_selected(int)),
@@ -1274,6 +1276,7 @@ namespace yae
     subtt_track_sel_.reset(new OptionItem("subtt_track_sel", view_));
     OptionItem & subtt_track_sel = this->add<OptionItem>(subtt_track_sel_);
     subtt_track_sel.anchors_.fill(*this);
+    subtt_track_sel.setVisible(false);
 
     bool ok = true;
     ok = connect(&subtt_track_sel, SIGNAL(option_selected(int)),
