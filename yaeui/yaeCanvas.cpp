@@ -1094,6 +1094,14 @@ namespace yae
   bool
   Canvas::updateOverlay(bool reparse)
   {
+    double w = this->canvasWidth();
+    double h = this->canvasHeight();
+
+    if (w < 1.0 || h < 1.0)
+    {
+      return false;
+    }
+
     if (showTheGreeting_)
     {
       return updateGreeting();
@@ -1106,9 +1114,6 @@ namespace yae
     private_->imageWidthHeightRotated(imageWidth,
                                       imageHeight,
                                       cameraRotation);
-
-    double w = this->canvasWidth();
-    double h = this->canvasHeight();
 
     double max_w = 1920.0;
     double max_h = 1080.0;

@@ -815,6 +815,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // request_toggle_fullscreen
+  //
+  static void
+  request_toggle_fullscreen(void * context)
+  {
+    PlayerUxItem * pl_ux = (PlayerUxItem *)context;
+    pl_ux->requestToggleFullScreen();
+  }
+
+  //----------------------------------------------------------------
   // PlayerUxItem::PlayerUxItem
   //
   PlayerUxItem::PlayerUxItem(const char * id, ItemView & view):
@@ -910,10 +920,17 @@ namespace yae
     scrollOffset_(0.0),
 
     enableBackArrowButton_(BoolRef::constant(false)),
-    enableDeleteFileButton_(BoolRef::constant(false))
+    enableDeleteFileButton_(BoolRef::constant(false)),
+
+    renderMode_(Canvas::kScaleToFit),
+    xexpand_(1.0),
+    yexpand_(1.0)
   {
     init_actions();
     translate_ui();
+
+    // override default toggle_fullscreen function:
+    view_.toggle_fullscreen_.reset(&request_toggle_fullscreen, this);
 
     // for scroll-wheel event buffering,
     // used to avoid frequent seeking by small distances:
@@ -993,19 +1010,19 @@ namespace yae
     YAE_ASSERT(ok);
 
     ok = connect(actionVerticalScaling_, SIGNAL(triggered(bool)),
-                 this, SIGNAL(playback_vertical_scaling(bool)));
+                 this, SLOT(playbackVerticalScaling(bool)));
     YAE_ASSERT(ok);
 
     ok = connect(actionShrinkWrap_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_shrink_wrap()));
+                 this, SLOT(playbackShrinkWrap()));
     YAE_ASSERT(ok);
 
     ok = connect(actionFullScreen_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_full_screen()));
+                 this, SLOT(playbackFullScreen()));
     YAE_ASSERT(ok);
 
     ok = connect(actionFillScreen_, SIGNAL(triggered()),
-                 this, SIGNAL(playback_fill_screen()));
+                 this, SLOT(playbackFillScreen()));
     YAE_ASSERT(ok);
 
     ok = connect(actionHalfSize_, SIGNAL(triggered()),
@@ -1026,6 +1043,14 @@ namespace yae
 
     ok = connect(actionIncreaseSize_, SIGNAL(triggered()),
                  this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(enteringFullScreen()),
+                 this, SLOT(swapShortcuts()));
+    YAE_ASSERT(ok);
+
+    ok = connect(this, SIGNAL(exitingFullScreen()),
+                 this, SLOT(swapShortcuts()));
     YAE_ASSERT(ok);
   }
 
@@ -1323,7 +1348,7 @@ namespace yae
       {
         ac->accept();
         canvas()->cropFrame(ac->cropFrame_);
-        emit adjust_canvas_height();
+        adjustCanvasHeight();
         return true;
       }
     }
@@ -1533,6 +1558,7 @@ namespace yae
              key == Qt::Key_MediaPause ||
              key == Qt::Key_MediaTogglePlayPause ||
 #endif
+             key == Qt::Key_Space ||
              key == Qt::Key_Return ||
              key == Qt::Key_MediaStop)
     {
@@ -1684,38 +1710,7 @@ namespace yae
     ok = connect(&shortcut.aspectRatio1_78_, SIGNAL(activated()),
                  actionAspectRatio1_78_, SLOT(trigger()));
     YAE_ASSERT(ok);
-
   }
-
-  //----------------------------------------------------------------
-  // PlayerUxItem::swap_shortcuts
-  //
-  void
-  PlayerUxItem::swap_shortcuts()
-  {
-    if (!shortcuts_)
-    {
-      return;
-    }
-
-    PlayerShortcuts & shortcut = *shortcuts_;
-    yae::swapShortcuts(&shortcut.fullScreen_, actionFullScreen_);
-    yae::swapShortcuts(&shortcut.fillScreen_, actionFillScreen_);
-    yae::swapShortcuts(&shortcut.showTimeline_, actionShowTimeline_);
-    yae::swapShortcuts(&shortcut.play_, actionPlay_);
-    yae::swapShortcuts(&shortcut.loop_, actionLoop_);
-    yae::swapShortcuts(&shortcut.cropNone_, actionCropFrameNone_);
-    yae::swapShortcuts(&shortcut.crop1_33_, actionCropFrame1_33_);
-    yae::swapShortcuts(&shortcut.crop1_78_, actionCropFrame1_78_);
-    yae::swapShortcuts(&shortcut.crop1_85_, actionCropFrame1_85_);
-    yae::swapShortcuts(&shortcut.crop2_40_, actionCropFrame2_40_);
-    yae::swapShortcuts(&shortcut.cropOther_, actionCropFrameOther_);
-    yae::swapShortcuts(&shortcut.autoCrop_, actionCropFrameAutoDetect_);
-    yae::swapShortcuts(&shortcut.nextChapter_, actionNextChapter_);
-    yae::swapShortcuts(&shortcut.aspectRatioNone_, actionAspectRatioAuto_);
-    yae::swapShortcuts(&shortcut.aspectRatio1_33_, actionAspectRatio1_33_);
-    yae::swapShortcuts(&shortcut.aspectRatio1_78_, actionAspectRatio1_78_);
- }
 
   //----------------------------------------------------------------
   // PlayerUxItem::insert_menus
@@ -1909,7 +1904,7 @@ namespace yae
     }
     else
     {
-      QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+      QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
 
     timeline_->modelChanged();
@@ -1940,7 +1935,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatioAuto()
   {
     canvas()->overrideDisplayAspectRatio(0.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1950,7 +1945,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio2_40()
   {
     canvas()->overrideDisplayAspectRatio(2.40);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1960,7 +1955,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio2_35()
   {
     canvas()->overrideDisplayAspectRatio(2.35);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1970,7 +1965,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio1_85()
   {
     canvas()->overrideDisplayAspectRatio(1.85);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1980,7 +1975,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio1_78()
   {
     canvas()->overrideDisplayAspectRatio(16.0 / 9.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -1990,7 +1985,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio1_60()
   {
     canvas()->overrideDisplayAspectRatio(1.6);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2000,7 +1995,7 @@ namespace yae
   PlayerUxItem::playbackAspectRatio1_33()
   {
     canvas()->overrideDisplayAspectRatio(4.0 / 3.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2012,7 +2007,7 @@ namespace yae
     autocropTimer_.stop();
     canvas()->cropAutoDetectStop();
     canvas()->cropFrame(0.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2022,7 +2017,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame2_40()
   {
     canvas()->cropFrame(2.40);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2032,7 +2027,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame2_35()
   {
     canvas()->cropFrame(2.35);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2042,7 +2037,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame1_85()
   {
     canvas()->cropFrame(1.85);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2052,7 +2047,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame1_78()
   {
     canvas()->cropFrame(16.0 / 9.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2062,7 +2057,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame1_60()
   {
     canvas()->cropFrame(1.6);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2072,7 +2067,7 @@ namespace yae
   PlayerUxItem::playbackCropFrame1_33()
   {
     canvas()->cropFrame(4.0 / 3.0);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2700,7 +2695,7 @@ namespace yae
     frame_crop_->setVisible(false);
     player_->setVisible(true);
     timeline_->setVisible(true);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2712,7 +2707,7 @@ namespace yae
     frame_crop_sel_->setVisible(false);
     player_->setVisible(true);
     timeline_->setVisible(true);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2724,7 +2719,7 @@ namespace yae
     aspect_ratio_sel_->setVisible(false);
     player_->setVisible(true);
     timeline_->setVisible(true);
-    emit adjust_canvas_height();
+    adjustCanvasHeight();
   }
 
   //----------------------------------------------------------------
@@ -2831,7 +2826,7 @@ namespace yae
   void
   PlayerUxItem::windowHalfSize()
   {
-    emit expand_canvas_size(0.5, 0.5);
+    canvasSizeSet(0.5, 0.5);
   }
 
   //----------------------------------------------------------------
@@ -2840,7 +2835,7 @@ namespace yae
   void
   PlayerUxItem::windowFullSize()
   {
-    emit expand_canvas_size(1.0, 1.0);
+    canvasSizeSet(1.0, 1.0);
   }
 
   //----------------------------------------------------------------
@@ -2849,7 +2844,7 @@ namespace yae
   void
   PlayerUxItem::windowDoubleSize()
   {
-    emit expand_canvas_size(2.0, 2.0);
+    canvasSizeSet(2.0, 2.0);
   }
 
   //----------------------------------------------------------------
@@ -2858,7 +2853,7 @@ namespace yae
   void
   PlayerUxItem::windowDecreaseSize()
   {
-    emit scale_canvas_size(0.5);
+    canvasSizeScaleBy(0.5);
   }
 
   //----------------------------------------------------------------
@@ -2867,7 +2862,7 @@ namespace yae
   void
   PlayerUxItem::windowIncreaseSize()
   {
-    emit scale_canvas_size(2.0);
+    canvasSizeScaleBy(2.0);
   }
 
   //----------------------------------------------------------------
@@ -2902,7 +2897,7 @@ namespace yae
         actions[int(tracks.subtt_)]->setChecked(true);
       }
 
-      // QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+      // QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
   }
 
@@ -2927,7 +2922,7 @@ namespace yae
         actions[int(tracks.subtt_)]->setChecked(true);
       }
 
-      QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+      QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
 
     emit video_track_selected();
@@ -2954,7 +2949,7 @@ namespace yae
         actions[int(tracks.audio_)]->setChecked(true);
       }
 
-      // QTimer::singleShot(1900, this, SIGNAL(adjust_canvas_height()));
+      // QTimer::singleShot(1900, this, SLOT(adjustCanvasHeight()));
     }
   }
 
@@ -3150,6 +3145,36 @@ namespace yae
     stopPlayback();
 
     emit playback_finished(t1);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::swapShortcuts
+  //
+  void
+  PlayerUxItem::swapShortcuts()
+  {
+    if (!shortcuts_)
+    {
+      return;
+    }
+
+    PlayerShortcuts & shortcut = *shortcuts_;
+    yae::swapShortcuts(&shortcut.fullScreen_, actionFullScreen_);
+    yae::swapShortcuts(&shortcut.fillScreen_, actionFillScreen_);
+    yae::swapShortcuts(&shortcut.showTimeline_, actionShowTimeline_);
+    yae::swapShortcuts(&shortcut.play_, actionPlay_);
+    yae::swapShortcuts(&shortcut.loop_, actionLoop_);
+    yae::swapShortcuts(&shortcut.cropNone_, actionCropFrameNone_);
+    yae::swapShortcuts(&shortcut.crop1_33_, actionCropFrame1_33_);
+    yae::swapShortcuts(&shortcut.crop1_78_, actionCropFrame1_78_);
+    yae::swapShortcuts(&shortcut.crop1_85_, actionCropFrame1_85_);
+    yae::swapShortcuts(&shortcut.crop2_40_, actionCropFrame2_40_);
+    yae::swapShortcuts(&shortcut.cropOther_, actionCropFrameOther_);
+    yae::swapShortcuts(&shortcut.autoCrop_, actionCropFrameAutoDetect_);
+    yae::swapShortcuts(&shortcut.nextChapter_, actionNextChapter_);
+    yae::swapShortcuts(&shortcut.aspectRatioNone_, actionAspectRatioAuto_);
+    yae::swapShortcuts(&shortcut.aspectRatio1_33_, actionAspectRatio1_33_);
+    yae::swapShortcuts(&shortcut.aspectRatio1_78_, actionAspectRatio1_78_);
   }
 
   //----------------------------------------------------------------
@@ -3593,6 +3618,354 @@ namespace yae
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::adjustCanvasHeight
+  //
+  void
+  PlayerUxItem::adjustCanvasHeight()
+  {
+    bool playlist_visible = timeline_->is_playlist_visible_.get();
+    if (playlist_visible)
+    {
+      return;
+    }
+
+    IReader * reader = get_reader();
+    if (!reader)
+    {
+      return;
+    }
+
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    if (videoTrack >= numVideoTracks)
+    {
+      return;
+    }
+
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (!canvas_delegate.isFullScreen())
+    {
+      double w = 1.0;
+      double h = 1.0;
+      double dar = canvas()->imageAspectRatio(w, h);
+
+      if (dar)
+      {
+        double s = double(canvas()->canvasWidth()) / w;
+        canvasSizeSet(s, s);
+      }
+    }
+
+    if (frame_crop_->visible())
+    {
+      playbackCropFrameOther();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::canvasSizeSet
+  //
+  void
+  PlayerUxItem::canvasSizeSet(double xexpand, double yexpand)
+  {
+    xexpand_ = xexpand;
+    yexpand_ = yexpand;
+
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (canvas_delegate.isFullScreen())
+    {
+      return;
+    }
+
+    Canvas * canvas = this->canvas();
+    double iw = canvas->imageWidth();
+    double ih = canvas->imageHeight();
+
+    int vw = int(0.5 + iw);
+    int vh = int(0.5 + ih);
+
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
+
+    double cw = canvas->canvasWidth();
+    double ch = canvas->canvasHeight();
+
+    TVec2D clientPos, clientSize;
+    canvas_delegate.getWindowClient(clientPos, clientSize);
+
+    TVec2D windowPos, windowSize;
+    canvas_delegate.getWindowFrame(windowPos, windowSize);
+    double ww = windowSize.x();
+    double wh = windowSize.y();
+
+    // calculate width and height overhead:
+    double ox = ww - cw;
+    double oy = wh - ch;
+
+    double ideal_w = floor(0.5 + vw * xexpand_);
+    double ideal_h = floor(0.5 + vh * yexpand_);
+
+    TVec2D screenPos, screenSize;
+    canvas_delegate.getScreenGeometry(screenPos, screenSize);
+
+    double max_w = screenSize.x() - ox;
+    double max_h = screenSize.y() - oy;
+
+    if (ideal_w > max_w || ideal_h > max_h)
+    {
+      // image won't fit on screen, scale it to the largest size that fits:
+      double vDAR = iw / ih;
+      double cDAR = double(max_w) / double(max_h);
+
+      if (vDAR > cDAR)
+      {
+        ideal_w = max_w;
+        ideal_h = floor(0.5 + double(max_w) / vDAR);
+      }
+      else
+      {
+        ideal_h = max_h;
+        ideal_w = floor(0.5 + double(max_h) * vDAR);
+      }
+    }
+
+    double new_w = std::min(ideal_w, max_w);
+    double new_h = std::min(ideal_h, max_h);
+
+    TVec2D delta;
+    delta[0] = new_w - cw;
+    delta[1] = new_h - ch;
+
+    // apply the new geometry:
+    canvas_delegate.resizeWindowClient(clientSize + delta);
+
+    // repaint the frame:
+    canvas->refresh();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::canvasSizeScaleBy
+  //
+  void
+  PlayerUxItem::canvasSizeScaleBy(double scale)
+  {
+    canvasSizeSet(xexpand_ * scale, yexpand_ * scale);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::canvasSizeBackup
+  //
+  void
+  PlayerUxItem::canvasSizeBackup()
+  {
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (canvas_delegate.isFullScreen())
+    {
+      return;
+    }
+
+    Canvas * canvas = this->canvas();
+    int vw = int(0.5 + canvas->imageWidth());
+    int vh = int(0.5 + canvas->imageHeight());
+    if (vw < 1 || vh < 1)
+    {
+      return;
+    }
+
+    double cw = canvas->canvasWidth();
+    double ch = canvas->canvasHeight();
+    xexpand_ = double(cw) / double(vw);
+    yexpand_ = double(ch) / double(vh);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::canvasSizeRestore
+  //
+  void
+  PlayerUxItem::canvasSizeRestore()
+  {
+    canvasSizeSet(xexpand_, yexpand_);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::playbackVerticalScaling
+  //
+  void
+  PlayerUxItem::playbackVerticalScaling(bool enable)
+  {
+    canvasSizeBackup();
+    canvas()->enableVerticalScaling(enable);
+    canvasSizeRestore();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::playbackShrinkWrap
+  //
+  void
+  PlayerUxItem::playbackShrinkWrap()
+  {
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (canvas_delegate.isFullScreen())
+    {
+      return;
+    }
+
+    IReader * reader = get_reader();
+    if (!reader)
+    {
+      return;
+    }
+
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    if (videoTrack >= numVideoTracks)
+    {
+      return;
+    }
+
+    canvasSizeBackup();
+
+    double scale = std::min<double>(xexpand_, yexpand_);
+    canvasSizeSet(scale, scale);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::playbackFullScreen
+  //
+  void
+  PlayerUxItem::playbackFullScreen()
+  {
+    // enter full screen pillars-and-bars letterbox rendering:
+    enterFullScreen(Canvas::kScaleToFit);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::playbackFillScreen
+  //
+  void
+  PlayerUxItem::playbackFillScreen()
+  {
+    // enter full screen crop-to-fill rendering:
+    enterFullScreen(Canvas::kCropToFill);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::requestToggleFullScreen
+  //
+  void
+  PlayerUxItem::requestToggleFullScreen()
+  {
+    // all this to work-around apparent QML bug where
+    // toggling full-screen on double-click leaves Flickable in
+    // a state where it never receives the button-up event
+    // and ends up interpreting all mouse movement as dragging,
+    // very annoying...
+    //
+    // The workaround is to delay fullscreen toggle to allow
+    // Flickable time to receive the button-up event
+
+    QTimer::singleShot(178, this, SLOT(toggleFullScreen()));
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::toggleFullScreen
+  //
+  void
+  PlayerUxItem::toggleFullScreen()
+  {
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (canvas_delegate.isFullScreen())
+    {
+      exitFullScreen();
+    }
+    else
+    {
+      enterFullScreen(renderMode_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::enterFullScreen
+  //
+  void
+  PlayerUxItem::enterFullScreen(Canvas::TRenderMode renderMode)
+  {
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    bool is_fullscreen = canvas_delegate.isFullScreen();
+    if (is_fullscreen && renderMode_ == renderMode)
+    {
+      exitFullScreen();
+      return;
+    }
+
+    if (!is_fullscreen)
+    {
+      emit enteringFullScreen();
+    }
+
+    SignalBlocker blockSignals;
+    blockSignals
+      << actionFullScreen_
+      << actionFillScreen_;
+
+    if (renderMode == Canvas::kScaleToFit)
+    {
+      actionFullScreen_->setChecked(true);
+      actionFillScreen_->setChecked(false);
+    }
+
+    if (renderMode == Canvas::kCropToFill)
+    {
+      actionFillScreen_->setChecked(true);
+      actionFullScreen_->setChecked(false);
+    }
+
+    canvas()->setRenderMode(renderMode);
+    renderMode_ = renderMode;
+
+    if (is_fullscreen)
+    {
+      return;
+    }
+
+    // enter full screen rendering:
+    actionShrinkWrap_->setEnabled(false);
+
+    canvas_delegate.showFullScreen();
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::exitFullScreen
+  //
+  void
+  PlayerUxItem::exitFullScreen()
+  {
+    Canvas::IDelegate & canvas_delegate = *view_.delegate();
+    if (!canvas_delegate.isFullScreen())
+    {
+      return;
+    }
+
+    // exit full screen rendering:
+    SignalBlocker blockSignals;
+    blockSignals
+      << actionFullScreen_
+      << actionFillScreen_;
+
+    actionFullScreen_->setChecked(false);
+    actionFillScreen_->setChecked(false);
+    actionShrinkWrap_->setEnabled(true);
+
+    canvas_delegate.exitFullScreen();
+    canvas()->setRenderMode(Canvas::kScaleToFit);
+    QTimer::singleShot(100, this, SLOT(adjustCanvasHeight()));
+
+    emit exitingFullScreen();
   }
 
 }

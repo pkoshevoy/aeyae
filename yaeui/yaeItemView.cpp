@@ -125,6 +125,44 @@ namespace yae
     private_->onTimeout();
   }
 
+  //----------------------------------------------------------------
+  // delegate_toggle_fullscreen
+  //
+  static void
+  delegate_toggle_fullscreen(void * context)
+  {
+    const ItemView * view = (ItemView *)context;
+    if (view->delegate())
+    {
+      Canvas::IDelegate & canvas_delegate = *view->delegate();
+      if (canvas_delegate.isFullScreen())
+      {
+        canvas_delegate.exitFullScreen();
+      }
+      else
+      {
+        canvas_delegate.showFullScreen();
+      }
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // delegate_query_fullscreen
+  //
+  static bool
+  delegate_query_fullscreen(void * context, bool & fullscreen)
+  {
+    const ItemView * view = (ItemView *)context;
+    if (!view->delegate())
+    {
+      return false;
+    }
+
+    const Canvas::IDelegate & canvas_delegate = *view->delegate();
+    fullscreen = canvas_delegate.isFullScreen();
+    return true;
+  }
 
   //----------------------------------------------------------------
   // ItemView::ItemView
@@ -144,6 +182,9 @@ namespace yae
     setRoot(ItemPtr(new Item(name)));
     repaintTimer_.setSingleShot(true);
     animateTimer_.setInterval(16);
+
+    toggle_fullscreen_.reset(&delegate_toggle_fullscreen, this);
+    query_fullscreen_.reset(&delegate_query_fullscreen, this);
 
     bool ok = true;
     ok = connect(&repaintTimer_, SIGNAL(timeout()), this, SLOT(repaint()));

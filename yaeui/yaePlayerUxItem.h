@@ -112,7 +112,6 @@ namespace yae
 
     // helpers:
     void set_shortcuts(const yae::shared_ptr<PlayerShortcuts> & sc);
-    void swap_shortcuts();
 
     void insert_menus(const IReaderPtr & reader,
                       QMenuBar * menubar,
@@ -123,14 +122,6 @@ namespace yae
                                       const TCropFrame & detected,
                                       bool detectionFinished);
   signals:
-    void expand_canvas_size(double xexpand, double yexpand);
-    void scale_canvas_size(double scale);
-    void adjust_canvas_height();
-    void playback_vertical_scaling(bool enable);
-    void playback_shrink_wrap();
-    void playback_full_screen();
-    void playback_fill_screen();
-
     void toggle_playlist();
     void playback_next();
     void playback_finished(TTime playhead_pos);
@@ -147,6 +138,9 @@ namespace yae
     void select_audio_track();
     void select_subtt_track();
     void delete_playing_file();
+
+    void enteringFullScreen();
+    void exitingFullScreen();
 
   public:
     bool is_playback_paused() const;
@@ -267,8 +261,24 @@ namespace yae
     void togglePlayback();
     void playbackFinished(const SharedClock & c);
 
+    void swapShortcuts();
     void populateContextMenu();
     void adjustMenuActions();
+
+    void adjustCanvasHeight();
+    void canvasSizeSet(double xexpand, double yexpand);
+    void canvasSizeScaleBy(double scale);
+    void canvasSizeBackup();
+    void canvasSizeRestore();
+
+    void playbackVerticalScaling(bool enable);
+    void playbackShrinkWrap();
+    void playbackFullScreen();
+    void playbackFillScreen();
+    void requestToggleFullScreen();
+    void toggleFullScreen();
+    void enterFullScreen(Canvas::TRenderMode renderMode);
+    void exitFullScreen();
 
   protected:
     void adjustMenuActions(IReader * reader,
@@ -395,6 +405,14 @@ namespace yae
 
     BoolRef enableBackArrowButton_;
     BoolRef enableDeleteFileButton_;
+
+  protected:
+    // remember most recently used full screen render mode:
+    Canvas::TRenderMode renderMode_;
+
+    // shrink wrap stretch factors:
+    double xexpand_;
+    double yexpand_;
   };
 
 }

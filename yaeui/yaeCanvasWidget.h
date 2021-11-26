@@ -192,6 +192,53 @@ namespace yae
         ssi_.screenSaverInhibit();
       }
 
+      virtual bool isFullScreen() const
+      {
+        return canvas_.window()->isFullScreen();
+      }
+
+      virtual void showFullScreen()
+      {
+        canvas_.window()->showFullScreen();
+      }
+
+      virtual void exitFullScreen()
+      {
+        canvas_.window()->showNormal();
+      }
+
+      virtual void getWindowFrame(TVec2D & origin, TVec2D & size) const
+      {
+        QRect r = canvas_.window()->frameGeometry();
+        origin[0] = r.x();
+        origin[1] = r.y();
+        size[0] = r.width();
+        size[1] = r.height();
+      }
+
+      virtual void getWindowClient(TVec2D & origin, TVec2D & size) const
+      {
+        QRect r = canvas_.window()->geometry();
+        origin[0] = r.x();
+        origin[1] = r.y();
+        size[0] = r.width();
+        size[1] = r.height();
+      }
+
+      virtual void getScreenGeometry(TVec2D & origin, TVec2D & size) const
+      {
+        QRect r = QApplication::desktop()->availableGeometry(canvas_.window());
+        origin[0] = r.x();
+        origin[1] = r.y();
+        size[0] = r.width();
+        size[1] = r.height();
+      }
+
+      virtual void resizeWindowClient(const TVec2D & size)
+      {
+        canvas_.window()->resize(int(size.x()), int(size.y()));
+      }
+
       static QWidget * get_screen_widget(const QWidget * widget)
       {
         QDesktopWidget * dw = QApplication::desktop();

@@ -36,6 +36,7 @@
 #include "yaeCanvasRenderer.h"
 #include "yaeLibass.h"
 #include "yaeThumbnailProvider.h"
+#include "yaeVec.h"
 
 
 namespace yae
@@ -146,6 +147,15 @@ namespace yae
       virtual void repaint() = 0;
       virtual void requestRepaint() = 0;
       virtual void inhibitScreenSaver() = 0;
+
+      virtual bool isFullScreen() const = 0;
+      virtual void showFullScreen() = 0;
+      virtual void exitFullScreen() = 0;
+
+      virtual void getWindowFrame(TVec2D & origin, TVec2D & size) const = 0;
+      virtual void getWindowClient(TVec2D & origin, TVec2D & size) const = 0;
+      virtual void getScreenGeometry(TVec2D & origin, TVec2D & size) const = 0;
+      virtual void resizeWindowClient(const TVec2D & size) = 0;
 
       virtual double device_pixel_ratio() const = 0;
       virtual double screen_width() const = 0;

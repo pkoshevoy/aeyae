@@ -62,39 +62,25 @@ namespace yae
     { return *canvas_; }
 
     inline const PlayerView & view() const
-    { return view_; }
+    { return player_; }
 
     inline PlayerView & view()
-    { return view_; }
+    { return player_; }
 
     inline PlayerUxItem & get_player_ux() const
-    { return *(view_.player_ux()); }
+    { return *(player_.player_ux()); }
 
   signals:
-    void playbackFinished();
+    // void playbackFinished();
     void enteringFullScreen();
     void exitingFullScreen();
 
   public slots:
 
     // helpers:
-    void playbackVerticalScaling(bool enable);
-    void playbackShrinkWrap();
-    void playbackFullScreen();
-    void playbackFillScreen();
     void requestToggleFullScreen();
-    void toggleFullScreen();
-    void enterFullScreen(Canvas::TRenderMode renderMode);
-    void exitFullScreen();
-
     void focusChanged(QWidget * prev, QWidget * curr);
 
-    void canvasSizeBackup();
-    void canvasSizeRestore();
-    void canvasSizeSet(double xexpand, double yexpand);
-    void canvasSizeScaleBy(double scale);
-
-    virtual void adjustCanvasHeight();
     virtual void swapShortcuts();
     virtual void populateContextMenu();
 
@@ -129,16 +115,8 @@ namespace yae
     TCanvasWidget * canvas_;
 
     // player views:
-    PlayerView view_;
+    PlayerView player_;
     ConfirmView confirm_;
-
-  protected:
-    // remember most recently used full screen render mode:
-    Canvas::TRenderMode renderMode_;
-
-    // shrink wrap stretch factors:
-    double xexpand_;
-    double yexpand_;
   };
 
 }

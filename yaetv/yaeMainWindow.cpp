@@ -1307,26 +1307,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::keyPressEvent
-  //
-  void
-  MainWindow::keyPressEvent(QKeyEvent * event)
-  {
-    int key = event->key();
-    if (key == Qt::Key_Escape)
-    {
-      if (isFullScreen())
-      {
-        playerWidget_->exitFullScreen();
-      }
-    }
-    else
-    {
-      QMainWindow::keyPressEvent(event);
-    }
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::mousePressEvent
   //
   void

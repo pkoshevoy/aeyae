@@ -162,7 +162,11 @@ namespace yae
                  this, SLOT(adjustMenus(IReaderPtr)));
     YAE_ASSERT(ok);
 
-    ok = connect(playerWidget_, SIGNAL(swap_shortcuts()),
+    ok = connect(playerWidget_, SIGNAL(enteringFullScreen()),
+                 this, SLOT(swapShortcuts()));
+    YAE_ASSERT(ok);
+
+    ok = connect(playerWidget_, SIGNAL(exitingFullScreen()),
                  this, SLOT(swapShortcuts()));
     YAE_ASSERT(ok);
   }
@@ -399,6 +403,7 @@ namespace yae
   MainWindow::swapShortcuts()
   {
     yae::swapShortcuts(shortcutExit_, actionExit);
+    playerWidget_->swapShortcuts();
   }
 
   //----------------------------------------------------------------

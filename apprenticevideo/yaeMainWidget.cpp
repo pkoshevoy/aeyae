@@ -252,27 +252,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // context_toggle_fullscreen
-  //
-  static void
-  context_toggle_fullscreen(void * context)
-  {
-    MainWidget * mainWidget = (MainWidget *)context;
-    mainWidget->requestToggleFullScreen();
-  }
-
-  //----------------------------------------------------------------
-  // context_query_fullscreen
-  //
-  static bool
-  context_query_fullscreen(void * context, bool & fullscreen)
-  {
-    MainWidget * mainWidget = (MainWidget *)context;
-    fullscreen = mainWidget->isFullScreen();
-    return true;
-  }
-
-  //----------------------------------------------------------------
   // context_query_playlist_visible
   //
   static bool
@@ -348,8 +327,8 @@ namespace yae
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
     playlistView_.setup(&(PlayerWidget::view()));
     playlistView_.setModel(&playlistModel_);
-    playlistView_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    playlistView_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    playlistView_.toggle_fullscreen_ = player_.toggle_fullscreen_;
+    playlistView_.query_fullscreen_ = player_.query_fullscreen_;
 
     PlayerView & player_view = PlayerWidget::view();
     PlayerUxItem * pl_ux = player_view.player_ux();
@@ -1224,21 +1203,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWidget::adjustCanvasHeight
-  //
-  void
-  MainWidget::adjustCanvasHeight()
-  {
-    bool showPlaylist = actionShowPlaylist_->isChecked();
-    if (showPlaylist)
-    {
-      return;
-    }
-
-    PlayerWidget::adjustCanvasHeight();
-  }
-
-  //----------------------------------------------------------------
   // MainWidget::swapShortcuts
   //
   void
@@ -1248,8 +1212,6 @@ namespace yae
 
     yae::swapShortcuts(shortcutNext_, actionNext_);
     yae::swapShortcuts(shortcutPrev_, actionPrev_);
-
-    emit swap_shortcuts();
   }
 
   //----------------------------------------------------------------

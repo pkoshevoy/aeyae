@@ -87,7 +87,6 @@ namespace yae
   signals:
     void adjust_menus(IReaderPtr reader);
     void adjust_playlist_style();
-    void swap_shortcuts();
 
   public slots:
 
@@ -127,7 +126,6 @@ namespace yae
                       PlaylistBookmark & bookmark) const;
 
     // virtual:
-    void adjustCanvasHeight();
     void swapShortcuts();
     void populateContextMenu();
 
