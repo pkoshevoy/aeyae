@@ -1980,6 +1980,7 @@ namespace yae
     // shortcuts:
     Canvas * canvas = this->canvas();
     CanvasRenderer * renderer = canvas->canvasRenderer();
+    FrameCropItem & frame_crop = *frame_crop_;
 
     TVideoFramePtr frame;
     renderer->getFrame(frame);
@@ -1988,8 +1989,13 @@ namespace yae
       return;
     }
 
+    // update the frame observer:
+    canvas->delLoadFrameObserver(onLoadFrame_);
+    onLoadFrame_.reset(new OnFrameLoaded(frame_crop.getRendererItem()));
+    canvas->addLoadFrameObserver(onLoadFrame_);
+    onLoadFrame_->frameLoaded(canvas, frame);
+
     // pass current frame crop info to the FrameCropItem:
-    FrameCropItem & frame_crop = *frame_crop_;
     {
       TCropFrame crop;
       renderer->getCroppedFrame(crop);
@@ -2005,12 +2011,6 @@ namespace yae
     audio_track_sel_->setVisible(false);
     subtt_track_sel_->setVisible(false);
     frame_crop_->setVisible(true);
-
-    // update the frame observer:
-    canvas->delLoadFrameObserver(onLoadFrame_);
-    onLoadFrame_.reset(new OnFrameLoaded(frame_crop.getRendererItem()));
-    canvas->addLoadFrameObserver(onLoadFrame_);
-    onLoadFrame_->frameLoaded(canvas, frame);
   }
 
   //----------------------------------------------------------------
