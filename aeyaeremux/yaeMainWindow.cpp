@@ -167,6 +167,10 @@ namespace yae
                  this, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
+    ok = connect(&(canvasWidget_->sigs_), SIGNAL(escLong()),
+                 this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
     ok = connect(&view_, SIGNAL(view_mode_changed()),
                  this, SLOT(viewModeChanged()));
     YAE_ASSERT(ok);

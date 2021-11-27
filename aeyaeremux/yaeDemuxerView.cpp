@@ -2440,7 +2440,6 @@ namespace yae
 
     TimelineItem & timeline = *pl_ux.timeline_;
     timeline.is_playlist_visible_ = BoolRef::constant(false);
-    // timeline.is_timeline_visible_ = BoolRef::constant(false);
   }
 
   //----------------------------------------------------------------
