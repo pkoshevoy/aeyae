@@ -296,8 +296,9 @@ namespace yae
           signal_.notify_all();
 
           Todo todo = todo_.front();
-          yae::shared_ptr<Task> task = todo.task_.lock();
+          todo_.pop_front();
 
+          yae::shared_ptr<Task> task = todo.task_.lock();
           if (task)
           {
             lock.unlock();
@@ -323,7 +324,6 @@ namespace yae
             lock.lock();
           }
 
-          todo_.pop_front();
           boost::this_thread::interruption_point();
         }
       }
@@ -334,7 +334,7 @@ namespace yae
       while (true)
       {
         boost::unique_lock<boost::mutex> lock(mutex_);
-        if (stop_ || todo_.empty())
+        if (stop_ || (todo_.empty() && paused_))
         {
           return;
         }
