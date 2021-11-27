@@ -411,9 +411,7 @@ namespace yae
   {
     Item & root = *this;
 
-    ExpressionItem & titleHeight = root.
-      addHidden(new ExpressionItem("style_title_height",
-                                   new StyleTitleHeight(view_)));
+    unit_size_.set(new StyleTitleHeight(view_));
 
     ColorRef colorControlsBg = root.addExpr
       (style_color_ref(view_, &ItemViewStyle::bg_controls_));
@@ -522,14 +520,12 @@ namespace yae
     Text & done = donut.addNew<Text>("done");
     done.anchors_.right_ = ItemRef::offset(d22, kPropertyLeft);
     done.anchors_.bottom_ = ItemRef::offset(d22, kPropertyTop);
-    done.margins_.
-      set_right(ItemRef::reference(titleHeight.ref_, 2.0));
-    done.margins_.
-      set_bottom(ItemRef::reference(titleHeight.ref_, 1.0));
+    done.margins_.set_right(ItemRef::scale(unit_size_, 2.0));
+    done.margins_.set_bottom(ItemRef::reference(unit_size_));
     done.color_ = ColorRef::constant(Color(0x000000, 1.0));
     done.text_ = TVarRef::constant(QVariant(tr("Done")));
     done.font_ = style.font_small_;
-    done.fontSize_ = ItemRef::scale(titleHeight.ref_, 0.5);
+    done.fontSize_ = ItemRef::scale(unit_size_, 0.5);
 
     doneBg.color_ = doneBg.addExpr
       (new ColorOnHover(view_, doneBg,
@@ -537,10 +533,8 @@ namespace yae
                         ColorRef::constant(Color(0xffffff, 1.0))));
     doneBg.colorBorder_ = ColorRef::constant(Color(0x000000, 1.0));
     doneBg.anchors_.fill(done);
-    doneBg.margins_.
-      set_left(ItemRef::scale(titleHeight.ref_, -0.9));
-    doneBg.margins_.
-      set_top(ItemRef::scale(titleHeight.ref_, -0.3));
+    doneBg.margins_.set_left(ItemRef::scale(unit_size_, -0.9));
+    doneBg.margins_.set_top(ItemRef::scale(unit_size_, -0.3));
     doneBg.margins_.set_right(doneBg.margins_.get_left());
     doneBg.margins_.set_bottom(doneBg.margins_.get_top());
     doneBg.radius_ = ItemRef::reference(doneBg, kPropertyHeight, 0.05, 3.0);
@@ -557,6 +551,25 @@ namespace yae
     dismiss.anchors_.fill(doneBg);
     doneBg.addObserver(Item::kOnUncache,
                        Item::TObserverPtr(new Uncache(dismiss)));
+  }
+
+  //----------------------------------------------------------------
+  // FrameCropItem::~FrameCropItem
+  //
+  FrameCropItem::~FrameCropItem()
+  {
+    uncropped_.reset();
+    FrameCropItem::clear();
+  }
+
+  //----------------------------------------------------------------
+  // FrameCropItem::uncache
+  //
+  void
+  FrameCropItem::uncache()
+  {
+    unit_size_.uncache();
+    Item::uncache();
   }
 
   //----------------------------------------------------------------

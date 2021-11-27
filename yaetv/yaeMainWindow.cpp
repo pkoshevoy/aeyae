@@ -558,8 +558,8 @@ namespace yae
   //
   MainWindow::~MainWindow()
   {
-    canvas_->cropAutoDetectStop();
     delete canvas_;
+    canvas_ = NULL;
   }
 
   //----------------------------------------------------------------

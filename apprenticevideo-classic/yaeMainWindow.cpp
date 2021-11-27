@@ -996,8 +996,8 @@ namespace yae
     audioRenderer_->destroy();
     videoRenderer_->destroy();
 
-    canvas_->cropAutoDetectStop();
     delete canvas_;
+    canvas_ = NULL;
   }
 
   //----------------------------------------------------------------
@@ -1947,7 +1947,6 @@ namespace yae
   MainWindow::playbackCropFrameNone()
   {
     autocropTimer_.stop();
-    canvas_->cropAutoDetectStop();
     canvas_->cropFrame(0.0);
     adjustCanvasHeight();
   }
@@ -1958,6 +1957,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_40()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(2.40);
     adjustCanvasHeight();
   }
@@ -1968,6 +1968,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame2_35()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(2.35);
     adjustCanvasHeight();
   }
@@ -1978,6 +1979,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_85()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(1.85);
     adjustCanvasHeight();
   }
@@ -1988,6 +1990,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_78()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(16.0 / 9.0);
     adjustCanvasHeight();
   }
@@ -1998,6 +2001,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_60()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(1.6);
     adjustCanvasHeight();
   }
@@ -2008,6 +2012,7 @@ namespace yae
   void
   MainWindow::playbackCropFrame1_33()
   {
+    autocropTimer_.stop();
     canvas_->cropFrame(4.0 / 3.0);
     adjustCanvasHeight();
   }

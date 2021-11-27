@@ -1045,11 +1045,6 @@ namespace yae
     TDataRef ref_;
   };
 
-  //----------------------------------------------------------------
-  // ExpressionItem
-  //
-  typedef ExprItem<ItemRef> ExpressionItem;
-
 
   //----------------------------------------------------------------
   // Item::setAttr

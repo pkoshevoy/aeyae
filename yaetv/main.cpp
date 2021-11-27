@@ -839,6 +839,10 @@ namespace yae
 
     signal_handler().add(&signal_callback_app, &app);
     app.exec();
+
+    delete yae::mainWindow;
+    yae::mainWindow = NULL;
+
     return 0;
   }
 }

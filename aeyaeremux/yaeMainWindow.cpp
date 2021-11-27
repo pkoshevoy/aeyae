@@ -181,8 +181,9 @@ namespace yae
   //
   MainWindow::~MainWindow()
   {
-    canvas_->cropAutoDetectStop();
     delete canvasWidget_;
+    canvasWidget_ = NULL;
+    canvas_ = NULL;
   }
 
   //----------------------------------------------------------------

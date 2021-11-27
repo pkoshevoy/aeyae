@@ -87,6 +87,7 @@ namespace yae
   //
   Canvas::~Canvas()
   {
+    cropAutoDetectStop();
     delete private_;
     delete overlay_;
   }
@@ -1483,6 +1484,7 @@ namespace yae
   void
   Canvas::cropFrame(double darCropped)
   {
+    cropAutoDetectStop();
     private_->cropFrame(darCropped);
   }
 

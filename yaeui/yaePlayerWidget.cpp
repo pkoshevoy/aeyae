@@ -75,6 +75,7 @@ namespace yae
     confirm_.clear();
     player_.clear();
     delete canvas_;
+    canvas_ = NULL;
   }
 
   //----------------------------------------------------------------

@@ -99,6 +99,10 @@ namespace yae
 
   public:
     FrameCropItem(const char * id, ItemView & view);
+    ~FrameCropItem();
+
+    // virtual:
+    void uncache();
 
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
@@ -125,6 +129,7 @@ namespace yae
   protected:
     ItemView & view_;
     CanvasRendererItemPtr uncropped_;
+    ItemRef unit_size_;
   };
 
   //----------------------------------------------------------------

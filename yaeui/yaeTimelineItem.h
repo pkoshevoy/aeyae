@@ -345,6 +345,7 @@ namespace yae
 
   public:
     TimelineItem(const char * name, ItemView & view, TimelineModel & model);
+    ~TimelineItem();
 
     void layout();
 
@@ -370,6 +371,7 @@ namespace yae
     TimelineModel & model_;
     yae::shared_ptr<Gradient, Item> shadow_;
 
+    ItemRef unit_size_;
     BoolRef is_playback_paused_;
     BoolRef is_fullscreen_;
     BoolRef is_playlist_visible_;

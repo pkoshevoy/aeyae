@@ -973,11 +973,19 @@ namespace yae
   //
   PlayerUxItem::~PlayerUxItem()
   {
-    canvas()->cropAutoDetectStop();
-
     // clear children first, in order to avoid causing a temporarily
     // dangling DataRefSrc reference to font_size_:
     PlayerUxItem::clear();
+
+    onLoadFrame_.reset();
+    subtt_track_sel_->clear();
+    audio_track_sel_->clear();
+    video_track_sel_->clear();
+    aspect_ratio_sel_->clear();
+    frame_crop_sel_->clear();
+    frame_crop_->clear();
+    timeline_->clear();
+    player_->clear();
 
     delete menuPlayback_;
     delete menuPlaybackSpeed_;
@@ -1916,7 +1924,6 @@ namespace yae
   PlayerUxItem::playbackCropFrameNone()
   {
     autocropTimer_.stop();
-    canvas()->cropAutoDetectStop();
     canvas()->cropFrame(0.0);
     adjustCanvasHeight();
   }
@@ -1927,6 +1934,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame2_40()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(2.40);
     adjustCanvasHeight();
   }
@@ -1937,6 +1945,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame2_35()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(2.35);
     adjustCanvasHeight();
   }
@@ -1947,6 +1956,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_85()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(1.85);
     adjustCanvasHeight();
   }
@@ -1957,6 +1967,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_78()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(16.0 / 9.0);
     adjustCanvasHeight();
   }
@@ -1967,6 +1978,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_60()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(1.6);
     adjustCanvasHeight();
   }
@@ -1977,6 +1989,7 @@ namespace yae
   void
   PlayerUxItem::playbackCropFrame1_33()
   {
+    autocropTimer_.stop();
     canvas()->cropFrame(4.0 / 3.0);
     adjustCanvasHeight();
   }
