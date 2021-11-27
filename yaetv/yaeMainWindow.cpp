@@ -1307,6 +1307,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::keyPressEvent
+  //
+  void
+  MainWindow::keyPressEvent(QKeyEvent * e)
+  {
+    // if the event propagates all the way here
+    // then let the player handle it:
+    if (playerWindow_.isVisible())
+    {
+#if 0
+      QKeyEvent * event = new QKeyEvent(e->type(),
+                                        e->key(),
+                                        e->modifiers(),
+                                        e->text(),
+                                        e->isAutoRepeat(),
+                                        e->count());
+
+      qApp->postEvent(&playerWidget_->canvas(),
+                      event,
+                      Qt::HighEventPriority);
+#else
+      playerWidget_->canvas().event(e);
+#endif
+    }
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::mousePressEvent
   //
   void

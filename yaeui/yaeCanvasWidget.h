@@ -19,10 +19,10 @@
 
 // Qt includes:
 #include <QApplication>
-#include <QCursor>
 #include <QDesktopWidget>
-#include <QDragEnterEvent>
-#include <QDropEvent>
+// #include <QDragEnterEvent>
+// #include <QDropEvent>
+#include <QKeyEvent>
 #ifdef YAE_USE_QOPENGL_WIDGET
 #include <QOpenGLWidget>
 #else
@@ -33,7 +33,7 @@
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 
-// local includes:
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeScreenSaverInhibitor.h"
 #include "yaeUtilsQt.h"
@@ -50,17 +50,20 @@ namespace yae
     Q_OBJECT;
 
   public:
-    CanvasWidgetSignalsSlots(QWidget & widget):
-      widget_(widget)
-    {
-      timerHideCursor_.setSingleShot(true);
-      timerHideCursor_.setInterval(3000);
+    CanvasWidgetSignalsSlots(QWidget & widget);
+    ~CanvasWidgetSignalsSlots();
 
-      bool ok = true;
-      ok = connect(&timerHideCursor_, SIGNAL(timeout()),
-                   this, SIGNAL(maybeHideCursor()));
-      YAE_ASSERT(ok);
-    }
+    // accessors:
+    inline QWidget & widget()
+    { return widget_; }
+
+    // signals are protected in Qt4, this is a workaround:
+    void emit_toggle_fullscreen();
+    void emit_esc_short();
+    void emit_esc_long();
+
+    void stopHideCursorTimer();
+    void startHideCursorTimer();
 
   signals:
     void toggleFullScreen();
@@ -68,49 +71,24 @@ namespace yae
     void escShort();
     void escLong();
 
-  public:
-    // signals are protected in Qt4, this is a workaround:
-    inline void emit_toggle_fullscreen()
-    { emit toggleFullScreen(); }
-
-    inline void emit_esc_short()
-    {
-      // yae_error << "emit_esc_short";
-      emit escShort();
-    }
-
-    inline void emit_esc_long()
-    {
-      // yae_error << "emit_esc_long";
-      emit escLong();
-    }
-
   public slots:
-    void hideCursor()
-    {
-      widget_.setCursor(QCursor(Qt::BlankCursor));
-    }
+    void hideCursor();
+    void showCursor();
 
-    void showCursor()
-    {
-      widget_.setCursor(QCursor(Qt::ArrowCursor));
-    }
+    void focusChanged(QWidget * prev, QWidget * curr);
 
-  public:
-    void stopHideCursorTimer()
-    {
-      timerHideCursor_.stop();
-    }
-
-    void startHideCursorTimer()
-    {
-      timerHideCursor_.start();
-    }
+  private:
+    CanvasWidgetSignalsSlots(const CanvasWidgetSignalsSlots &);
+    CanvasWidgetSignalsSlots & operator = (const CanvasWidgetSignalsSlots &);
 
     QWidget & widget_;
 
     // a single shot timer for hiding the cursor:
     QTimer timerHideCursor_;
+
+#ifdef __APPLE__
+    void * appleRemoteControl_;
+#endif
   };
 
   //----------------------------------------------------------------
@@ -374,34 +352,6 @@ namespace yae
       init();
     }
 
-  protected:
-    // helper:
-    void init()
-    {
-      escPressed_ = false;
-      escRepeated_ = false;
-
-      TWidget::setAttribute(Qt::WA_NoSystemBackground);
-      TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
-      TWidget::setAutoFillBackground(false);
-      TWidget::setMouseTracking(true);
-      Canvas::setDelegate(yae::shared_ptr<TDelegate, Canvas::IDelegate>
-                          (new TDelegate(*this)));
-    }
-
-    // virtual:
-    void initializeGL()
-    {
-      yae_dlog("initializeGL: QGLContext::currentContext(): %p",
-               QGLContext::currentContext());
-    }
-
-    // virtual:
-    void resizeGL(int width, int height)
-    {
-      yae_dlog("resizeGL(%i, %i)", width, height);
-    }
-
     // virtual:
     bool event(QEvent * event)
     {
@@ -487,6 +437,45 @@ namespace yae
       return false;
     }
 
+    // helper:
+    void updateCanvasSize()
+    {
+      QWidget * sw = TDelegate::get_screen_widget(this);
+      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
+
+      Canvas::resize(devicePixelRatio,
+                     TWidget::width(),
+                     TWidget::height());
+    }
+
+  protected:
+    // helper:
+    void init()
+    {
+      escPressed_ = false;
+      escRepeated_ = false;
+
+      TWidget::setAttribute(Qt::WA_NoSystemBackground);
+      TWidget::setAttribute(Qt::WA_OpaquePaintEvent, true);
+      TWidget::setAutoFillBackground(false);
+      TWidget::setMouseTracking(true);
+      Canvas::setDelegate(yae::shared_ptr<TDelegate, Canvas::IDelegate>
+                          (new TDelegate(*this)));
+    }
+
+    // virtual:
+    void initializeGL()
+    {
+      yae_dlog("initializeGL: QGLContext::currentContext(): %p",
+               QGLContext::currentContext());
+    }
+
+    // virtual:
+    void resizeGL(int width, int height)
+    {
+      yae_dlog("resizeGL(%i, %i)", width, height);
+    }
+
     // virtual:
     void paintGL()
     {
@@ -502,17 +491,6 @@ namespace yae
     }
 
   public:
-    // helper:
-    void updateCanvasSize()
-    {
-      QWidget * sw = TDelegate::get_screen_widget(this);
-      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
-
-      Canvas::resize(devicePixelRatio,
-                     TWidget::width(),
-                     TWidget::height());
-    }
-
     CanvasWidgetSignalsSlots sigs_;
 
   protected:

@@ -178,7 +178,15 @@ const char* AppleRemoteDeviceName = "AppleIRController";
 		// Treat the new center button and play/pause button the same
 		[_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlay]		forKey:@"33_21_20_8_2_33_21_20_8_2_"];
 		[_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlay]		forKey:@"33_21_20_3_2_33_21_20_3_2_"];
-		[_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlay_Hold]	forKey:@"33_21_20_11_2_33_21_20_11_2_"];		
+		[_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlay_Hold]	forKey:@"33_21_20_11_2_33_21_20_11_2_"];
+
+                // macOS 10.14, external usb IR receiver, original small white plastic apple remote Model No: A1156, EMC No: 2086
+                [_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlus_Hold]	forKey:@"33_31_30_21_20_15_12_2_"];
+                // [_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlus_Hold]	forKey:@"33_21_20_15_12_2_33_21_20_2_"]; // release?
+                [_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonMinus_Hold]	forKey:@"33_32_30_21_20_16_12_2_"];
+                // [_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonMinus_Hold]	forKey:@"33_21_20_16_12_2_33_21_20_2_"]; // release?
+
+                // [_cookieToButtonMapping setObject:[NSNumber numberWithInt:kRemoteButtonPlay_Hold]	forKey:@"36_33_21_20_2_36_33_21_20_2_"]; // release?
 	}
 
 }

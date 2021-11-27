@@ -47,6 +47,7 @@
 // yaeui:
 #ifdef __APPLE__
 #include "yaeAudioUnitRenderer.h"
+#include "yaeAppleUtils.h"
 #else
 #include "yaePortaudioRenderer.h"
 #endif
@@ -164,30 +165,6 @@ namespace yae
     action_(NULL)
   {}
 
-
-#ifdef __APPLE__
-  //----------------------------------------------------------------
-  // RemoteControlEvent
-  //
-  struct RemoteControlEvent : public QEvent
-  {
-    RemoteControlEvent(TRemoteControlButtonId buttonId,
-                       bool pressedDown,
-                       unsigned int clickCount,
-                       bool heldDown):
-      QEvent(QEvent::User),
-      buttonId_(buttonId),
-      pressedDown_(pressedDown),
-      clickCount_(clickCount),
-      heldDown_(heldDown)
-    {}
-
-    TRemoteControlButtonId buttonId_;
-    bool pressedDown_;
-    unsigned int clickCount_;
-    bool heldDown_;
-  };
-#endif
 
   //----------------------------------------------------------------
   // setTimelineCss
@@ -307,10 +284,6 @@ namespace yae
     selClosedCaptions_(0),
     style_("classic", view_)
   {
-#ifdef __APPLE__
-    appleRemoteControl_ = NULL;
-#endif
-
     setupUi(this);
     setAcceptDrops(true);
     setFocusPolicy(Qt::StrongFocus);
@@ -941,10 +914,6 @@ namespace yae
                  SIGNAL(clockStopped(const SharedClock &)),
                  this,
                  SLOT(playbackFinished(const SharedClock &)));
-    YAE_ASSERT(ok);
-
-    ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
-                 this, SLOT(focusChanged(QWidget *, QWidget *)));
     YAE_ASSERT(ok);
 
     ok = connect(&scrollWheelTimer_, SIGNAL(timeout()),
@@ -2841,39 +2810,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // MainWindow::focusChanged
-  //
-  void
-  MainWindow::focusChanged(QWidget * prev, QWidget * curr)
-  {
-#if 0
-    yae_debug << "focus changed: " << prev << " -> " << curr;
-    if (curr)
-    {
-      yae_debug << ", " << curr->objectName().toUtf8().constData()
-                << " (" << curr->metaObject()->className() << ")";
-    }
-#endif
-
-#ifdef __APPLE__
-    if (!appleRemoteControl_ && curr)
-    {
-      appleRemoteControl_ =
-        appleRemoteControlOpen(true, // exclusive
-                               false, // count clicks
-                               false, // simulate hold
-                               &MainWindow::appleRemoteControlObserver,
-                               this);
-    }
-    else if (appleRemoteControl_ && !curr)
-    {
-      appleRemoteControlClose(appleRemoteControl_);
-      appleRemoteControl_ = NULL;
-    }
-#endif
-  }
-
-  //----------------------------------------------------------------
   // MainWindow::playbackFinished
   //
   void
@@ -3252,106 +3188,6 @@ namespace yae
         adjustCanvasHeight();
         return true;
       }
-
-#ifdef __APPLE__
-      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
-      if (rc)
-      {
-        rc->accept();
-#if 0
-        yae_debug << "remote control: " << rc->buttonId_
-                  << ", down: " << rc->pressedDown_
-                  << ", clicks: " << rc->clickCount_
-                  << ", held down: " << rc->heldDown_;
-#endif
-
-        if (rc->buttonId_ == kRemoteControlPlayButton)
-        {
-          if (rc->pressedDown_ && !rc->heldDown_)
-          {
-            togglePlayback();
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlMenuButton)
-        {
-          if (rc->pressedDown_)
-          {
-            if (rc->heldDown_)
-            {
-              if (actionCropFrameAutoDetect->isChecked())
-              {
-                actionCropFrameNone->trigger();
-              }
-              else
-              {
-                actionCropFrameAutoDetect->trigger();
-              }
-            }
-            else
-            {
-              playbackShowTimeline();
-            }
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeUp)
-        {
-          if (rc->pressedDown_)
-          {
-            // raise the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume + 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeDown)
-        {
-          if (rc->pressedDown_)
-          {
-            // lower the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume - 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlLeftButton ||
-                 rc->buttonId_ == kRemoteControlRightButton)
-        {
-          if (rc->pressedDown_)
-          {
-            double offset =
-              (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
-
-            timelineControls_->model_.seekFromCurrentTime(offset);
-          }
-        }
-
-        return true;
-      }
-#endif
     }
 
     return QMainWindow::event(e);
@@ -3434,42 +3270,63 @@ namespace yae
   MainWindow::keyPressEvent(QKeyEvent * event)
   {
     int key = event->key();
-    if (key == Qt::Key_Escape)
+    bool key_press = event->type() == QEvent::KeyPress;
+
+    if (key == Qt::Key_I)
     {
-      exitFullScreen();
-    }
-    else if (key == Qt::Key_I)
-    {
-      emit setInPoint();
+      if (key_press)
+      {
+        emit setInPoint();
+      }
     }
     else if (key == Qt::Key_O)
     {
-      emit setOutPoint();
+      if (key_press)
+      {
+        emit setOutPoint();
+      }
     }
     else if (key == Qt::Key_N)
     {
-      skipToNextFrame();
+      if (key_press)
+      {
+        skipToNextFrame();
+      }
     }
     else if (key == Qt::Key_MediaNext ||
              key == Qt::Key_Period ||
-             key == Qt::Key_Greater)
+             key == Qt::Key_Greater ||
+             key == Qt::Key_Right)
     {
-      timelineControls_->model_.seekFromCurrentTime(7.0);
+      if (key_press)
+      {
+        timelineControls_->model_.seekFromCurrentTime(7.0);
+      }
     }
     else if (key == Qt::Key_MediaPrevious ||
              key == Qt::Key_Comma ||
-             key == Qt::Key_Less)
+             key == Qt::Key_Less ||
+             key == Qt::Key_Left)
     {
-      timelineControls_->model_.seekFromCurrentTime(-3.0);
+      if (key_press)
+      {
+        timelineControls_->model_.seekFromCurrentTime(-3.0);
+      }
     }
     else if (key == Qt::Key_MediaPlay ||
 #if QT_VERSION >= 0x040700
              key == Qt::Key_MediaPause ||
              key == Qt::Key_MediaTogglePlayPause ||
 #endif
+             key == Qt::Key_Space ||
+             key == Qt::Key_Enter ||
+             key == Qt::Key_Return ||
              key == Qt::Key_MediaStop)
     {
-      togglePlayback();
+      if (key_press)
+      {
+        togglePlayback();
+      }
     }
     else
     {
@@ -4581,22 +4438,4 @@ namespace yae
     return TVideoFramePtr();
   }
 
-#ifdef __APPLE__
-  //----------------------------------------------------------------
-  // appleRemoteControlObserver
-  //
-  void
-  MainWindow::appleRemoteControlObserver(void * observerContext,
-                                         TRemoteControlButtonId buttonId,
-                                         bool pressedDown,
-                                         unsigned int clickCount,
-                                         bool heldDown)
-  {
-    MainWindow * mainWindow = (MainWindow *)observerContext;
-    qApp->postEvent(mainWindow, new RemoteControlEvent(buttonId,
-                                                       pressedDown,
-                                                       clickCount,
-                                                       heldDown));
-  }
-#endif
 };

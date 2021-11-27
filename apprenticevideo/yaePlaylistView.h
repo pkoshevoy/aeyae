@@ -180,9 +180,6 @@ namespace yae
     ItemViewStyle * style() const;
 
     // virtual:
-    bool processEvent(Canvas * canvas, QEvent * event);
-
-    // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 

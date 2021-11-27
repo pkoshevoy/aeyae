@@ -36,9 +36,6 @@ namespace yae
                              TCanvasWidget * shared_ctx,
                              Qt::WindowFlags flags):
     QWidget(parent, flags),
-#ifdef __APPLE__
-    appleRemoteControl_(NULL),
-#endif
     canvas_(NULL),
     player_("PlayerWidget player view"),
     confirm_("PlayerWidget confirm view")
@@ -68,16 +65,6 @@ namespace yae
 
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
-
-    bool ok = true;
-
-    ok = connect(qApp, SIGNAL(focusChanged(QWidget *, QWidget *)),
-                 this, SLOT(focusChanged(QWidget *, QWidget *)));
-    YAE_ASSERT(ok);
-
-    ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
-                 &(canvas_->sigs_), SLOT(hideCursor()));
-    YAE_ASSERT(ok);
   }
 
   //----------------------------------------------------------------
@@ -112,6 +99,10 @@ namespace yae
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     bool ok = true;
+
+    ok = connect(&(canvas_->sigs_), SIGNAL(maybeHideCursor()),
+                 &(canvas_->sigs_), SLOT(hideCursor()));
+    YAE_ASSERT(ok);
 
     ok = connect(&(canvas_->sigs_), SIGNAL(escShort()),
                  pl_ux, SIGNAL(toggle_playlist()));
@@ -178,40 +169,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerWidget::focusChanged
-  //
-  void
-  PlayerWidget::focusChanged(QWidget * prev, QWidget * curr)
-  {
-#if 0
-    std::cerr << "focus changed: " << prev << " -> " << curr;
-    if (curr)
-    {
-      std::cerr << ", " << curr->objectName().toUtf8().constData()
-                << " (" << curr->metaObject()->className() << ")";
-    }
-    std::cerr << std::endl;
-#endif
-
-#ifdef __APPLE__
-    if (!appleRemoteControl_ && curr)
-    {
-      appleRemoteControl_ =
-        appleRemoteControlOpen(true, // exclusive
-                               false, // count clicks
-                               false, // simulate hold
-                               &PlayerWidget::appleRemoteControlObserver,
-                               this);
-    }
-    else if (appleRemoteControl_ && !curr)
-    {
-      appleRemoteControlClose(appleRemoteControl_);
-      appleRemoteControl_ = NULL;
-    }
-#endif
-  }
-
-  //----------------------------------------------------------------
   // PlayerWidget::swapShortcuts
   //
   void
@@ -270,34 +227,5 @@ namespace yae
 
     return false;
   }
-
-#ifdef __APPLE__
-  //----------------------------------------------------------------
-  // appleRemoteControlObserver
-  //
-  void
-  PlayerWidget::appleRemoteControlObserver(void * observerContext,
-                                           TRemoteControlButtonId buttonId,
-                                           bool pressedDown,
-                                           unsigned int clickCount,
-                                           bool heldDown)
-  {
-    PlayerWidget * widget = (PlayerWidget *)observerContext;
-    RemoteControlEvent * rc = new RemoteControlEvent(buttonId,
-                                                     pressedDown,
-                                                     clickCount,
-                                                     heldDown);
-#ifndef NDEBUG
-    yae_debug
-      << "posting remote control event(" << rc
-      << "), buttonId: " << buttonId
-      << ", down: " << pressedDown
-      << ", clicks: " << clickCount
-      << ", held down: " << heldDown;
-#endif
-
-    qApp->postEvent(widget->canvas_, rc, Qt::HighEventPriority);
-  }
-#endif
 
 }

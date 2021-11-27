@@ -11,6 +11,9 @@
 #include <QProcess>
 
 // yaeui:
+#ifdef __APPLE__
+#include "yaeAppleUtils.h"
+#endif
 #include "yaePlayerStyle.h"
 #include "yaePlayerUxItem.h"
 #include "yaeUtilsQt.h"
@@ -1357,145 +1360,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // PlayerUxItem::processEvent
-  //
-  bool
-  PlayerUxItem::processEvent(Canvas::ILayer & canvasLayer,
-                             Canvas * canvas,
-                             QEvent * e)
-  {
-    QEvent::Type et = e->type();
-
-    if (et == QEvent::User)
-    {
-#ifdef __APPLE__
-      RemoteControlEvent * rc = dynamic_cast<RemoteControlEvent *>(e);
-      if (rc)
-      {
-        TimelineItem & timeline = *timeline_;
-        if (timeline.is_playlist_visible_.get())
-        {
-          // let the playlist handle the remote control:
-          return false;
-        }
-
-#ifndef NDEBUG
-        std::cerr
-          << "received remote control event(" << rc
-          << "), buttonId: " << rc->buttonId_
-          << ", down: " << rc->pressedDown_
-          << ", clicks: " << rc->clickCount_
-          << ", held down: " << rc->heldDown_
-          << std::endl;
-#endif
-        rc->accept();
-
-        if (rc->buttonId_ == kRemoteControlPlayButton)
-        {
-          if (rc->pressedDown_)
-          {
-            if (rc->heldDown_)
-            {
-              view_.toggle_fullscreen_();
-            }
-            else
-            {
-              togglePlayback();
-            }
-
-            return true;
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlMenuButton)
-        {
-          if (rc->pressedDown_)
-          {
-            if (rc->heldDown_)
-            {
-              if (actionCropFrameAutoDetect_->isChecked())
-              {
-                actionCropFrameNone_->trigger();
-              }
-              else
-              {
-                actionCropFrameAutoDetect_->trigger();
-              }
-            }
-            else
-            {
-              emit rc_menu_button_pressed();
-            }
-
-            return true;
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeUp)
-        {
-          if (!rc->pressedDown_)
-          {
-            // raise the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume + 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-            return true;
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlVolumeDown)
-        {
-          if (!rc->pressedDown_)
-          {
-            // lower the volume:
-            static QStringList args;
-
-            if (args.empty())
-            {
-              args << "-e" << ("set currentVolume to output "
-                               "volume of (get volume settings)")
-                   << "-e" << ("set volume output volume "
-                               "(currentVolume - 6.25)")
-                   << "-e" << ("do shell script \"afplay "
-                               "/System/Library/LoginPlugins"
-                               "/BezelServices.loginPlugin"
-                               "/Contents/Resources/volume.aiff\"");
-            }
-
-            QProcess::startDetached("/usr/bin/osascript", args);
-            return true;
-          }
-        }
-        else if (rc->buttonId_ == kRemoteControlLeftButton ||
-                 rc->buttonId_ == kRemoteControlRightButton)
-        {
-          if (!rc->pressedDown_)
-          {
-            double offset =
-              (rc->buttonId_ == kRemoteControlLeftButton) ? -3.0 : 7.0;
-
-            timeline_model().seekFromCurrentTime(offset);
-            timeline_->maybeAnimateOpacity();
-            return true;
-          }
-        }
-      }
-#endif
-    }
-
-    return Item::processEvent(canvasLayer, canvas, e);
-  }
-
-  //----------------------------------------------------------------
   // PlayerUxItem::processKeyEvent
   //
   // FIXME: pkoshevoy: must respect item focus
@@ -1559,6 +1423,7 @@ namespace yae
              key == Qt::Key_MediaTogglePlayPause ||
 #endif
              key == Qt::Key_Space ||
+             key == Qt::Key_Enter ||
              key == Qt::Key_Return ||
              key == Qt::Key_MediaStop)
     {

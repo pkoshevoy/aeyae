@@ -115,6 +115,7 @@ set(project_sources
   yaeBBox.h
   yaeCanvas.h
   yaeCanvas.cpp
+  yaeCanvasWidget.cpp
   yaeCanvasWidget.h
   yaeCanvasQPainterUtils.h
   yaeCanvasQPainterUtils.cpp

@@ -25,7 +25,6 @@
 
 // yaeui:
 #ifdef __APPLE__
-#include "yaeAppleRemoteControl.h"
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
@@ -216,7 +215,6 @@ namespace yae
     void moveTimeOut(double seconds);
     void movePlayHead(double seconds);
     void updateTimelineDuration();
-    void focusChanged(QWidget * prev, QWidget * curr);
     void playbackFinished(const SharedClock & c);
     void playbackStop();
     void playback(bool forward = true);
@@ -273,16 +271,6 @@ namespace yae
     static TVideoFramePtr autoCropCallback(void * context,
                                            const TCropFrame & detected,
                                            bool detectionFinished);
-
-#ifdef __APPLE__
-    // for Apple Remote:
-    static void appleRemoteControlObserver(void * observerContext,
-                                           TRemoteControlButtonId buttonId,
-                                           bool pressedDown,
-                                           unsigned int clickCount,
-                                           bool heldDown);
-    void * appleRemoteControl_;
-#endif
 
     // context sensitive menu which includes most relevant actions:
     QMenu * contextMenu_;

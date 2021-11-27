@@ -79,7 +79,6 @@ namespace yae
 
     // helpers:
     void requestToggleFullScreen();
-    void focusChanged(QWidget * prev, QWidget * curr);
 
     virtual void swapShortcuts();
     virtual void populateContextMenu();
@@ -90,18 +89,6 @@ namespace yae
 
     // virtual:
     bool processMousePressEvent(QMouseEvent * event);
-
-    // helpers:
-
-#ifdef __APPLE__
-    // for Apple Remote:
-    static void appleRemoteControlObserver(void * observerContext,
-                                           TRemoteControlButtonId buttonId,
-                                           bool pressedDown,
-                                           unsigned int clickCount,
-                                           bool heldDown);
-    void * appleRemoteControl_;
-#endif
 
     // shortcuts used during full-screen mode (when menubar is invisible)
     yae::shared_ptr<PlayerShortcuts> shortcuts_;

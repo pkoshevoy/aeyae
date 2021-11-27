@@ -34,6 +34,7 @@ namespace yae
                                         unsigned int /* click count */,
                                         bool /* held down */);
 
+#ifdef __APPLE__
   //----------------------------------------------------------------
   // appleRemoteControlOpen
   //
@@ -47,6 +48,7 @@ namespace yae
   // appleRemoteControlClose
   //
   void appleRemoteControlClose(void * appleRemoteControl);
+#endif
 
 }
 

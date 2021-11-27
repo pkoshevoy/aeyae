@@ -6,16 +6,16 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// system:
 #include <list>
 #include <math.h>
 
-// boost includes:
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/algorithm/string.hpp>
 #endif
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #include <QCloseEvent>
 #include <QDragEnterEvent>
@@ -27,13 +27,18 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
-// aeyae includes:
+// aeyae:
 #include "yae/api/yae_version.h"
 #include "yae/ffmpeg/yae_reader_ffmpeg.h"
 
-// local includes:
-#include "yaeMainWindow.h"
+// yaeui:
+#ifdef __APPLE__
+#include "yaeAppleUtils.h"
+#endif
 #include "yaeUtilsQt.h"
+
+// local:
+#include "yaeMainWindow.h"
 
 
 namespace yae
