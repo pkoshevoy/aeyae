@@ -1600,26 +1600,45 @@ namespace yae
     {
       menubar->insertAction(before, menuPlayback_->menuAction());
     }
+    else
+    {
+      menubar->removeAction(menuPlayback_->menuAction());
+    }
 
     if (menuAudio_->menuAction()->isEnabled())
     {
       menubar->insertAction(before, menuAudio_->menuAction());
+    }
+    else
+    {
+      menubar->removeAction(menuAudio_->menuAction());
     }
 
     if (menuVideo_->menuAction()->isEnabled())
     {
       menubar->insertAction(before, menuVideo_->menuAction());
     }
+    else
+    {
+      menubar->removeAction(menuVideo_->menuAction());
+    }
 
     if (menuSubs_->menuAction()->isEnabled())
     {
       menubar->insertAction(before, menuSubs_->menuAction());
     }
+    else
+    {
+      menubar->removeAction(menuSubs_->menuAction());
+    }
 
-    std::size_t numChapters = reader ? reader->countChapters() : 0;
-    if (menuChapters_->menuAction()->isEnabled() && numChapters)
+    if (menuChapters_->menuAction()->isEnabled())
     {
       menubar->insertAction(before, menuChapters_->menuAction());
+    }
+    else
+    {
+      menubar->removeAction(menuChapters_->menuAction());
     }
   }
 
