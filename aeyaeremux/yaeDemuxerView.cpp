@@ -2435,7 +2435,10 @@ namespace yae
 
     pl_ux_.reset(new PlayerUxItem("pl_ux", *this));
     PlayerUxItem & pl_ux = *pl_ux_;
+    pl_ux.actionLoop_->setChecked(true);
+    pl_ux.actionLoop_->setEnabled(false);
     pl_ux.player_->makePersonalCanvas(context);
+    pl_ux.player_->set_loop_playback(true);
     pl_ux.setVisible(false);
 
     TimelineItem & timeline = *pl_ux.timeline_;
