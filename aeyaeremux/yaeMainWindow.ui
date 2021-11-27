@@ -14,7 +14,7 @@
    <string>Aeyae Remux</string>
   </property>
   <property name="windowIcon">
-   <iconset>
+   <iconset resource="aeyaeremux.qrc">
     <normaloff>:/images/aeyae-remux-logo.png</normaloff>:/images/aeyae-remux-logo.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -59,12 +59,6 @@
     <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
-   <widget class="QMenu" name="menuView">
-    <property name="title">
-     <string>&amp;View</string>
-    </property>
-    <addaction name="actionFullScreen"/>
-   </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>&amp;Help</string>
@@ -72,7 +66,6 @@
     <addaction name="actionAbout"/>
    </widget>
    <addaction name="menuFile"/>
-   <addaction name="menuView"/>
    <addaction name="menuHelp"/>
   </widget>
   <action name="actionOpen">

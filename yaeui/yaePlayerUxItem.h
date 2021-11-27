@@ -90,6 +90,9 @@ namespace yae
                                       const TCropFrame & detected,
                                       bool detectionFinished);
   signals:
+    void reader_changed(IReaderPtr reader);
+    void visibility_changed(bool);
+
     void toggle_playlist();
     void playback_next();
     void playback_finished(TTime playhead_pos);
@@ -97,7 +100,6 @@ namespace yae
     void save_bookmark();
     void save_bookmark_at(double position_in_ec);
     void on_back_arrow();
-    void rc_menu_button_pressed();
     void video_track_selected();
 
     void select_frame_crop();

@@ -1333,7 +1333,18 @@ namespace yae
       timelineTimer_.start(1000);
     }
 
+    menuPlayback_->menuAction()->setEnabled(enable);
+    menuAudio_->menuAction()->setEnabled(enable);
+    menuVideo_->menuAction()->setEnabled(enable);
+    menuSubs_->menuAction()->setEnabled(enable);
+    menuChapters_->menuAction()->setEnabled(enable);
+
     Item::setVisible(enable);
+
+    if (changing)
+    {
+      emit visibility_changed(enable);
+    }
   }
 
   //----------------------------------------------------------------
@@ -1585,13 +1596,28 @@ namespace yae
                              QMenuBar * menubar,
                              QAction * before)
   {
-    menubar->insertAction(before, menuPlayback_->menuAction());
-    menubar->insertAction(before, menuAudio_->menuAction());
-    menubar->insertAction(before, menuVideo_->menuAction());
-    menubar->insertAction(before, menuSubs_->menuAction());
+    if (menuPlayback_->menuAction()->isEnabled())
+    {
+      menubar->insertAction(before, menuPlayback_->menuAction());
+    }
+
+    if (menuAudio_->menuAction()->isEnabled())
+    {
+      menubar->insertAction(before, menuAudio_->menuAction());
+    }
+
+    if (menuVideo_->menuAction()->isEnabled())
+    {
+      menubar->insertAction(before, menuVideo_->menuAction());
+    }
+
+    if (menuSubs_->menuAction()->isEnabled())
+    {
+      menubar->insertAction(before, menuSubs_->menuAction());
+    }
 
     std::size_t numChapters = reader ? reader->countChapters() : 0;
-    if (numChapters)
+    if (menuChapters_->menuAction()->isEnabled() && numChapters)
     {
       menubar->insertAction(before, menuChapters_->menuAction());
     }
@@ -1790,6 +1816,7 @@ namespace yae
       bookmarkTimer_.stop();
     }
 
+    emit reader_changed(reader_ptr);
     emit fixup_next_prev();
   }
 

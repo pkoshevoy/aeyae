@@ -58,29 +58,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // context_toggle_fullscreen
-  //
-  static void
-  context_toggle_fullscreen(void * context)
-  {
-    MainWindow * mainWindow = (MainWindow *)context;
-    mainWindow->requestToggleFullScreen();
-  }
-
-
-  //----------------------------------------------------------------
-  // context_query_fullscreen
-  //
-  static bool
-  context_query_fullscreen(void * context, bool & fullscreen)
-  {
-    MainWindow * mainWindow = (MainWindow *)context;
-    fullscreen = mainWindow->isFullScreen();
-    return true;
-  }
-
-
-  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
@@ -93,8 +70,7 @@ namespace yae
     setupUi(this);
     setAcceptDrops(true);
 
-    contextMenu_ = new QMenu(this);
-    contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
+    shortcuts_.reset(new PlayerShortcuts(this));
 
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon =
@@ -127,33 +103,20 @@ namespace yae
 #endif
     canvasWidget_->setGreeting(greeting);
 
-    view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    view_.query_fullscreen_.reset(&context_query_fullscreen, this);
-
     canvasWidget_->setFocusPolicy(Qt::StrongFocus);
     canvasWidget_->setAcceptDrops(true);
 
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvasWidget_);
 
-#if 1
-    actionFullScreen->setShortcut(tr("Ctrl+F"));
-#elif defined(__APPLE__)
-    actionFullScreen->setShortcut(tr("Ctrl+Shift+F"));
-#else
-    actionFullScreen->setShortcut(tr("F11"));
-#endif
-
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     shortcutSave_ = new QShortcut(this);
     shortcutExit_ = new QShortcut(this);
-    shortcutFullScreen_ = new QShortcut(this);
 
     shortcutSave_->setContext(Qt::ApplicationShortcut);
     shortcutExit_->setContext(Qt::ApplicationShortcut);
-    shortcutFullScreen_->setContext(Qt::ApplicationShortcut);
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -196,20 +159,16 @@ namespace yae
                  actionExit, SLOT(trigger()));
     YAE_ASSERT(ok);
 
-    ok = connect(actionFullScreen, SIGNAL(triggered()),
-                 this, SLOT(enterFullScreen()));
-    YAE_ASSERT(ok);
-
-    ok = connect(shortcutFullScreen_, SIGNAL(activated()),
-                 actionFullScreen, SLOT(trigger()));
-    YAE_ASSERT(ok);
-
     ok = connect(actionAbout, SIGNAL(triggered()),
                  this, SLOT(helpAbout()));
     YAE_ASSERT(ok);
 
     ok = connect(&(canvasWidget_->sigs_), SIGNAL(toggleFullScreen()),
                  this, SLOT(requestToggleFullScreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(&view_, SIGNAL(view_mode_changed()),
+                 this, SLOT(viewModeChanged()));
     YAE_ASSERT(ok);
   }
 
@@ -254,12 +213,21 @@ namespace yae
     view_.setEnabled(true);
     view_.layoutChanged();
 
-    spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
-
     canvasWidget_->append(&spinner_);
     spinner_.setStyle(view_.style());
     spinner_.setEnabled(false);
+
+    yae::PlayerUxItem * pl_ux = view_.pl_ux_.get();
+    pl_ux->set_shortcuts(shortcuts_);
+
+    bool ok = true;
+    ok = connect(pl_ux, SIGNAL(enteringFullScreen()),
+                 this, SLOT(swapShortcuts()));
+    YAE_ASSERT(ok);
+
+    ok = connect(pl_ux, SIGNAL(exitingFullScreen()),
+                 this, SLOT(swapShortcuts()));
+    YAE_ASSERT(ok);
   }
 
 
@@ -761,89 +729,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::viewModeChanged
+  //
+  void
+  MainWindow::viewModeChanged()
+  {
+    QMenuBar * menubar = menuBar();
+    menubar->clear();
+    menubar->addAction(menuFile->menuAction());
+    menubar->addAction(menuHelp->menuAction());
+    view_.insert_menus(menubar, menuHelp->menuAction());
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::requestToggleFullScreen
   //
   void
   MainWindow::requestToggleFullScreen()
   {
-    // all this to work-around apparent QML bug where
-    // toggling full-screen on double-click leaves Flickable in
-    // a state where it never receives the button-up event
-    // and ends up interpreting all mouse movement as dragging,
-    // very annoying...
-    //
-    // The workaround is to delay fullscreen toggle to allow
-    // Flickable time to receive the button-up event
-
-    QTimer::singleShot(178, this, SLOT(toggleFullScreen()));
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::toggleFullScreen
-  //
-  void
-  MainWindow::toggleFullScreen()
-  {
-    if (isFullScreen())
-    {
-      exitFullScreen();
-    }
-    else
-    {
-      enterFullScreen();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::enterFullScreen
-  //
-  void
-  MainWindow::enterFullScreen()
-  {
-    if (isFullScreen())
-    {
-      exitFullScreen();
-      return;
-    }
-
-    SignalBlocker blockSignals;
-    blockSignals << actionFullScreen;
-
-    actionFullScreen->setChecked(true);
-    canvas_->setRenderMode(Canvas::kScaleToFit);
-
-    if (isFullScreen())
-    {
-      return;
-    }
-
-    // enter full screen rendering:
-    menuBar()->hide();
-    showFullScreen();
-
-    this->swapShortcuts();
-  }
-
-  //----------------------------------------------------------------
-  // MainWindow::exitFullScreen
-  //
-  void
-  MainWindow::exitFullScreen()
-  {
-    if (!isFullScreen())
-    {
-      return;
-    }
-
-    // exit full screen rendering:
-    SignalBlocker blockSignals;
-    blockSignals << actionFullScreen;
-
-    actionFullScreen->setChecked(false);
-    menuBar()->show();
-    showNormal();
-    canvas_->setRenderMode(Canvas::kScaleToFit);
-    this->swapShortcuts();
+    yae::PlayerUxItem * pl_ux = view_.pl_ux_.get();
+    pl_ux->requestToggleFullScreen();
   }
 
   //----------------------------------------------------------------
@@ -888,7 +793,6 @@ namespace yae
   {
     yae::swapShortcuts(shortcutSave_, actionSave);
     yae::swapShortcuts(shortcutExit_, actionExit);
-    yae::swapShortcuts(shortcutFullScreen_, actionFullScreen);
   }
 
   //----------------------------------------------------------------
@@ -962,6 +866,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::changeEvent
+  //
+  void
+  MainWindow::changeEvent(QEvent * event)
+  {
+    if (event->type() == QEvent::WindowStateChange)
+    {
+      if (isFullScreen())
+      {
+        menuBar()->hide();
+      }
+      else
+      {
+        menuBar()->show();
+      }
+    }
+
+    event->ignore();
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::closeEvent
   //
   void
@@ -1013,19 +938,9 @@ namespace yae
     {
       if (isFullScreen())
       {
-        exitFullScreen();
+        requestToggleFullScreen();
       }
     }
-#if 0
-    else if (key == Qt::Key_I)
-    {
-      emit setInPoint();
-    }
-    else if (key == Qt::Key_O)
-    {
-      emit setOutPoint();
-    }
-#endif
     else
     {
       QMainWindow::keyPressEvent(event);
@@ -1040,33 +955,17 @@ namespace yae
   {
     if (e->button() == Qt::RightButton)
     {
-      QPoint localPt = e->pos();
-      QPoint globalPt = QWidget::mapToGlobal(localPt);
+      QPoint local_pos = e->pos();
+      QPoint global_pos = QWidget::mapToGlobal(local_pos);
 
-      // populate the context menu:
-      contextMenu_->clear();
-
-      std::size_t items = 0;
-      if (view_.actionSetInPoint_.isEnabled())
+      if (view_.popup_context_menu(global_pos))
       {
-        contextMenu_->addAction(&view_.actionSetInPoint_);
-        items++;
+        e->accept();
+        return;
       }
-
-      if (view_.actionSetOutPoint_.isEnabled())
-      {
-        contextMenu_->addAction(&view_.actionSetOutPoint_);
-        items++;
-      }
-
-      if (items)
-      {
-        contextMenu_->addSeparator();
-      }
-
-      contextMenu_->addAction(actionFullScreen);
-      contextMenu_->popup(globalPt);
     }
+
+    QWidget::mousePressEvent(e);
   }
 
 }

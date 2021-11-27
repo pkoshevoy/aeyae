@@ -17,22 +17,25 @@
 #include <QShortcut>
 #include <QTimer>
 
+// Qt uic generated files:
+#include "ui_yaeAbout.h"
+#include "ui_yaeMainWindow.h"
+
 // aeyae:
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_remux.h"
 #include "yae/thread/yae_task_runner.h"
 
-// local includes:
+// yaeui:
 #ifdef __APPLE__
 #include "yaeAppleUtils.h"
 #endif
 #include "yaeCanvasWidget.h"
-#include "yaeDemuxerView.h"
+#include "yaePlayerShortcuts.h"
 #include "yaeSpinnerView.h"
 
-// Qt uic generated files:
-#include "ui_yaeAbout.h"
-#include "ui_yaeMainWindow.h"
+// local:
+#include "yaeDemuxerView.h"
 
 
 namespace yae
@@ -116,29 +119,27 @@ namespace yae
     void helpAbout();
 
     // helpers:
+    void viewModeChanged();
     void requestToggleFullScreen();
-    void toggleFullScreen();
-    void enterFullScreen();
-    void exitFullScreen();
     void processDropEventUrls(const QList<QUrl> & urls);
     void swapShortcuts();
 
   protected:
     // virtual:
     bool event(QEvent * e);
+    void changeEvent(QEvent * e);
     void closeEvent(QCloseEvent * e);
     void dragEnterEvent(QDragEnterEvent * e);
     void dropEvent(QDropEvent * e);
     void keyPressEvent(QKeyEvent * e);
     void mousePressEvent(QMouseEvent * e);
 
-    // context sensitive menu which includes most relevant actions:
-    QMenu * contextMenu_;
+    // shortcuts used during full-screen mode (when menubar is invisible)
+    yae::shared_ptr<PlayerShortcuts> shortcuts_;
 
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutSave_;
     QShortcut * shortcutExit_;
-    QShortcut * shortcutFullScreen_;
 
     // frame canvas:
     TCanvasWidget * canvasWidget_;

@@ -23,6 +23,7 @@
 #include "yaeRoundRect.h"
 #include "yaeTabRect.h"
 #include "yaeTextInput.h"
+#include "yaeUtilsQt.h"
 
 // local:
 #include "yaeDemuxerView.h"
@@ -2382,10 +2383,11 @@ namespace yae
   //
   RemuxView::RemuxView(const char * name):
     ItemView(name),
+    menuEdit_(NULL),
+    menuView_(NULL),
+    contextMenu_(NULL),
     model_(NULL),
-    view_mode_(RemuxView::kLayoutMode),
-    actionSetInPoint_(this),
-    actionSetOutPoint_(this),
+    view_mode_(RemuxView::kUndefined),
     time_range_(new Segment(0, 1)),
     size_range_(new Segment())
   {
@@ -2394,13 +2396,14 @@ namespace yae
     // add style to the root item, so it could be uncached automatically:
     style_.reset(new RemuxViewStyle("RemuxViewStyle", *this));
 
-    actionSetInPoint_.setObjectName(QString::fromUtf8("actionSetInPoint_"));
-    actionSetInPoint_.setText(tr("Set &In Point"));
-    actionSetInPoint_.setShortcut(QKeySequence(Qt::Key_I));
+    // init actions:
+    menuEdit_ = add_menu("menuEdit");
+    menuView_ = add_menu("menuView");
+    contextMenu_ = add_menu("contextMenu");
 
-    actionSetOutPoint_.setObjectName(QString::fromUtf8("actionSetOutPoint_"));
-    actionSetOutPoint_.setText(tr("Set &Out Point"));
-    actionSetOutPoint_.setShortcut(QKeySequence(Qt::Key_O));
+    // translate ui:
+    menuEdit_->setTitle(trUtf8("&Edit"));
+    menuView_->setTitle(trUtf8("&View"));
 
     bool ok = connect(&t0_, SIGNAL(mapped(int)),
                       this, SLOT(timecode_changed_t0(int)));
@@ -2409,14 +2412,16 @@ namespace yae
     ok = connect(&t1_, SIGNAL(mapped(int)),
                  this, SLOT(timecode_changed_t1(int)));
     YAE_ASSERT(ok);
+  }
 
-    ok = connect(&actionSetInPoint_, SIGNAL(triggered()),
-                 this, SLOT(set_in_point()));
-    YAE_ASSERT(ok);
-
-    ok = connect(&actionSetOutPoint_, SIGNAL(triggered()),
-                 this, SLOT(set_out_point()));
-    YAE_ASSERT(ok);
+  //----------------------------------------------------------------
+  // RemuxView::~RemuxView
+  //
+  RemuxView::~RemuxView()
+  {
+    delete menuEdit_;
+    delete menuView_;
+    delete contextMenu_;
   }
 
   //----------------------------------------------------------------
@@ -2431,12 +2436,11 @@ namespace yae
     pl_ux_.reset(new PlayerUxItem("pl_ux", *this));
     PlayerUxItem & pl_ux = *pl_ux_;
     pl_ux.player_->makePersonalCanvas(context);
-    pl_ux.visible_.set(new In<RemuxView::kPlayerMode>(*this));
-    pl_ux.visible_.disableCaching();
+    pl_ux.setVisible(false);
 
     TimelineItem & timeline = *pl_ux.timeline_;
     timeline.is_playlist_visible_ = BoolRef::constant(false);
-    timeline.is_timeline_visible_ = BoolRef::constant(false);
+    // timeline.is_timeline_visible_ = BoolRef::constant(false);
   }
 
   //----------------------------------------------------------------
@@ -2452,8 +2456,9 @@ namespace yae
 
     // FIXME: disconnect previous model:
     YAE_ASSERT(!model_);
-
+    set_view_mode(RemuxView::kUndefined);
     model_ = model;
+    set_view_mode(RemuxView::kLayoutMode);
   }
 
   //----------------------------------------------------------------
@@ -2592,7 +2597,10 @@ namespace yae
       return false;
     }
 
+    // shortcuts:
+    PlayerUxItem & pl_ux = *pl_ux_;
     QEvent::Type et = e->type();
+
     if (et == QEvent::KeyPress && !ItemFocus::singleton().focus())
     {
       int key = e->key();
@@ -2636,17 +2644,11 @@ namespace yae
       }
       else if (key == Qt::Key_I)
       {
-        if (actionSetInPoint_.isEnabled())
-        {
-          actionSetInPoint_.trigger();
-        }
+        pl_ux.actionSetInPoint_->activate(QAction::Trigger);
       }
       else if (key == Qt::Key_O)
       {
-        if (actionSetOutPoint_.isEnabled())
-        {
-          actionSetOutPoint_.trigger();
-        }
+        pl_ux.actionSetOutPoint_->activate(QAction::Trigger);
       }
 #if 0
       else if (key == Qt::Key_PageUp ||
@@ -2655,13 +2657,6 @@ namespace yae
                key == Qt::Key_End)
       {
         scroll(*this, key);
-        e->accept();
-      }
-      else if (key == Qt::Key_Return ||
-               key == Qt::Key_Enter)
-      {
-        QModelIndex currentIndex = currentItem();
-        setPlayingItem(currentIndex);
         e->accept();
       }
 #endif
@@ -2725,6 +2720,7 @@ namespace yae
   bool
   RemuxView::processMouseEvent(Canvas * canvas, QMouseEvent * event)
   {
+    PlayerUxItem & pl_ux = *pl_ux_;
     bool r = ItemView::processMouseEvent(canvas, event);
 
     QEvent::Type et = event->type();
@@ -2735,9 +2731,6 @@ namespace yae
          view_mode_ == kPreviewMode) ?
         get_cursor_item(*this) :
         NULL;
-
-      actionSetInPoint_.setEnabled(!!cursor);
-      actionSetOutPoint_.setEnabled(!!cursor);
 
       if (cursor)
       {
@@ -4349,7 +4342,66 @@ namespace yae
   void
   RemuxView::set_view_mode(RemuxView::ViewMode mode)
   {
-    if (mode == view_mode_)
+    PlayerUxItem & pl_ux = *pl_ux_;
+
+    // re-use some of the player actions:
+    bool ok = true;
+    ok = disconnect(pl_ux.actionSetInPoint_, SIGNAL(triggered()),
+                    this, SLOT(set_in_point()));
+
+    ok = disconnect(pl_ux.actionSetOutPoint_, SIGNAL(triggered()),
+                    this, SLOT(set_out_point()));
+
+    ok = disconnect(pl_ux.actionSetInPoint_, SIGNAL(triggered()),
+                    &pl_ux.timeline_model(), SLOT(setInPoint()));
+
+    ok = disconnect(pl_ux.actionSetOutPoint_, SIGNAL(triggered()),
+                    &pl_ux.timeline_model(), SLOT(setOutPoint()));
+
+    if (mode == RemuxView::kPlayerMode)
+    {
+      pl_ux.actionFullScreen_->setText(trUtf8("&Full Screen (letterbox)"));
+
+      ok = connect(pl_ux.actionSetInPoint_, SIGNAL(triggered()),
+                   &pl_ux.timeline_model(), SLOT(setInPoint()));
+      YAE_ASSERT(ok);
+
+      ok = connect(pl_ux.actionSetOutPoint_, SIGNAL(triggered()),
+                   &pl_ux.timeline_model(), SLOT(setOutPoint()));
+      YAE_ASSERT(ok);
+    }
+    else
+    {
+      pl_ux.actionFullScreen_->setText(trUtf8("&Full Screen"));
+
+      if (mode == RemuxView::kLayoutMode)
+      {
+        ok = connect(pl_ux.actionSetInPoint_, SIGNAL(triggered()),
+                     this, SLOT(set_in_point()));
+        YAE_ASSERT(ok);
+
+        ok = connect(pl_ux.actionSetOutPoint_, SIGNAL(triggered()),
+                     this, SLOT(set_out_point()));
+        YAE_ASSERT(ok);
+      }
+    }
+
+    menuEdit_->clear();
+    menuView_->clear();
+
+    if (mode == RemuxView::kLayoutMode)
+    {
+      menuEdit_->addAction(pl_ux.actionSetInPoint_);
+      menuEdit_->addAction(pl_ux.actionSetOutPoint_);
+    }
+
+    if (mode != RemuxView::kPlayerMode)
+    {
+      menuView_->addAction(pl_ux.actionFullScreen_);
+    }
+
+    bool changing = view_mode_ != mode;
+    if (!changing)
     {
       return;
     }
@@ -4365,6 +4417,8 @@ namespace yae
     enable_focus_group();
 
     requestRepaint();
+
+    emit view_mode_changed();
   }
 
   //----------------------------------------------------------------
@@ -4507,13 +4561,15 @@ namespace yae
   void
   RemuxView::maybe_update_player()
   {
+    PlayerUxItem & pl_ux = *pl_ux_;
+
     if (view_mode_ != kPlayerMode)
     {
+      pl_ux.setVisible(false);
       return;
     }
 
-    Item & root = *root_;
-    PlayerUxItem & pl_ux = *pl_ux_;
+    pl_ux.setVisible(true);
 
     bool hwdec = true;
     reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
@@ -4554,6 +4610,58 @@ namespace yae
     timeline.forceAnimateControls();
 
     pl_ux.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::popup_context_menu
+  //
+  bool
+  RemuxView::popup_context_menu(const QPoint & global_pos)
+  {
+    PlayerUxItem & pl_ux = *pl_ux_;
+    if (pl_ux.visible())
+    {
+      pl_ux.populateContextMenu();
+      pl_ux.contextMenu_->popup(global_pos);
+      return true;
+    }
+
+    // populate the context menu:
+    contextMenu_->clear();
+
+    if (view_mode_ == RemuxView::kLayoutMode)
+    {
+      contextMenu_->addAction(pl_ux.actionSetInPoint_);
+      contextMenu_->addAction(pl_ux.actionSetOutPoint_);
+      contextMenu_->addSeparator();
+    }
+
+    contextMenu_->addAction(pl_ux.actionFullScreen_);
+    contextMenu_->popup(global_pos);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::insert_menus
+  //
+  void
+  RemuxView::insert_menus(QMenuBar * menubar, QAction * before)
+  {
+    if (view_mode_ == RemuxView::kPlayerMode)
+    {
+      yae::PlayerUxItem & pl_ux = *pl_ux_;
+      pl_ux.insert_menus(pl_ux.player_->reader(), menubar, before);
+      pl_ux.uncache();
+    }
+    else
+    {
+      if (view_mode_ == RemuxView::kLayoutMode)
+      {
+        menubar->insertAction(before, menuEdit_->menuAction());
+      }
+
+      menubar->insertAction(before, menuView_->menuAction());
+    }
   }
 
 }

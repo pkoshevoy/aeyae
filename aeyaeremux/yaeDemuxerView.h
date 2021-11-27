@@ -237,6 +237,7 @@ namespace yae
 
     enum ViewMode
     {
+      kUndefined = -1,
       kSourceMode = 0,
       kLayoutMode = 1,
       kPreviewMode = 2,
@@ -245,6 +246,7 @@ namespace yae
     };
 
     RemuxView(const char * name);
+    ~RemuxView();
 
     // virtual:
     void setContext(const yae::shared_ptr<IOpenGLContext> & context);
@@ -265,9 +267,6 @@ namespace yae
 
     // virtual:
     bool processMouseTracking(const TVec2D & mousePt);
-
-    // virtual:
-    bool processRightClick();
 
     // helpers:
     void append_source(const std::string & name,
@@ -309,6 +308,7 @@ namespace yae
   signals:
     void remux();
     void toggle_fullscreen();
+    void view_mode_changed();
 
   public slots:
     void layoutChanged();
@@ -335,6 +335,17 @@ namespace yae
     void maybe_layout_gops();
     void maybe_update_player();
 
+  public:
+    bool popup_context_menu(const QPoint & global_pos);
+    void insert_menus(QMenuBar * menubar, QAction * before);
+
+  protected:
+    QMenu * menuEdit_;
+    QMenu * menuView_;
+
+    // context sensitive menu which includes most relevant actions:
+    QMenu * contextMenu_;
+
     RemuxModel * model_;
     ViewMode view_mode_;
     mutable TClipPtr output_clip_;
@@ -355,9 +366,6 @@ namespace yae
 
     QSignalMapper t0_;
     QSignalMapper t1_;
-
-    QAction actionSetInPoint_;
-    QAction actionSetOutPoint_;
 
     // LUT of top level clip container items:
     std::map<TClipPtr, ItemPtr> clips_;
