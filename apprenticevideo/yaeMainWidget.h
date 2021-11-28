@@ -162,7 +162,7 @@ namespace yae
 
     // playlist stuff:
     TPlaylistModel playlistModel_;
-    PlaylistView playlistView_;
+    yae::shared_ptr<PlaylistView, ItemView> playlistView_;
 
     // bookmark selection mechanism:
     std::vector<PlaylistBookmark> bookmarks_;

@@ -2419,9 +2419,27 @@ namespace yae
   //
   RemuxView::~RemuxView()
   {
+    TMakeCurrentContext currentContext(context().get());
+    RemuxView::clear();
+    clips_.clear();
+    gops_.clear();
+    pl_ux_.reset();
+    style_.reset();
+
     delete menuEdit_;
     delete menuView_;
     delete contextMenu_;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::clear
+  //
+  void
+  RemuxView::clear()
+  {
+    TMakeCurrentContext currentContext(context().get());
+    ItemView::clear();
+    pl_ux_->clear();
   }
 
   //----------------------------------------------------------------

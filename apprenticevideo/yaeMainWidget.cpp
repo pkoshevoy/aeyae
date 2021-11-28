@@ -324,11 +324,13 @@ namespace yae
   {
     PlayerWidget::initItemViews();
 
+    PlaylistView & playlistView = *playlistView_;
+
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
-    playlistView_.setup(&(PlayerWidget::view()));
-    playlistView_.setModel(&playlistModel_);
-    playlistView_.toggle_fullscreen_ = player_.toggle_fullscreen_;
-    playlistView_.query_fullscreen_ = player_.query_fullscreen_;
+    playlistView.setup(&(PlayerWidget::view()));
+    playlistView.setModel(&playlistModel_);
+    playlistView.toggle_fullscreen_ = player_->toggle_fullscreen_;
+    playlistView.query_fullscreen_ = player_->query_fullscreen_;
 
     PlayerView & player_view = PlayerWidget::view();
     PlayerUxItem * pl_ux = player_view.player_ux();
@@ -447,12 +449,12 @@ namespace yae
       getFilePath(new PlaylistItemFilePath(playlistModel_));
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
       imageProvider(new ThumbnailProvider(readerFactory_, getFilePath));
-    playlistView_.addImageProvider(QString::fromUtf8("thumbnails"),
+    playlistView.addImageProvider(QString::fromUtf8("thumbnails"),
                                    imageProvider);
 
     PlayerWidget::canvas_->setFocusPolicy(Qt::StrongFocus);
-    PlayerWidget::canvas_->prepend(&playlistView_);
-    playlistView_.setEnabled(false);
+    PlayerWidget::canvas_->prepend(&playlistView);
+    playlistView.setEnabled(false);
 
     TimelineItem & timeline = *(pl_ux->timeline_);
     timeline.back_to_prev_cb_.
@@ -555,7 +557,7 @@ namespace yae
     playback();
 
     QModelIndex playingIndex = playlistModel_.playingItem();
-    playlistView_.ensureVisible(playingIndex);
+    playlistView_->ensureVisible(playingIndex);
   }
 
   //----------------------------------------------------------------
@@ -802,7 +804,7 @@ namespace yae
     yae::dump(timesheet, oss.str().c_str(), oss.str().size());
 #endif
 
-    playlistView_.setEnabled(showPlaylist);
+    playlistView_->setEnabled(showPlaylist);
 
     PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
     TimelineItem & timeline = *(pl_ux.timeline_);
@@ -832,11 +834,11 @@ namespace yae
         // so I'll consider that as an audio file trait:
         (gotVideoTraits && vtts.frameRate_ > 240.0))
     {
-      playlistView_.setStyleId(PlaylistView::kListView);
+      playlistView_->setStyleId(PlaylistView::kListView);
     }
     else if (numVideoTracks)
     {
-      playlistView_.setStyleId(PlaylistView::kGridView);
+      playlistView_->setStyleId(PlaylistView::kGridView);
     }
   }
 
@@ -882,7 +884,7 @@ namespace yae
       playback(index);
 
       QModelIndex playingIndex = playlistModel_.playingItem();
-      playlistView_.ensureVisible(playingIndex);
+      playlistView_->ensureVisible(playingIndex);
     }
   }
 
@@ -992,7 +994,7 @@ namespace yae
       }
     }
 
-    playlistView_.ensureVisible(current);
+    playlistView_->ensureVisible(current);
 
     if (!ok && !forward)
     {
@@ -1138,7 +1140,7 @@ namespace yae
 
       if (!item->failed_)
       {
-        playlistView_.ensureVisible(index);
+        playlistView_->ensureVisible(index);
 
         // update playlist model:
         BlockSignal block(&playlistModel_,

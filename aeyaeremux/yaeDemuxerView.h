@@ -249,6 +249,9 @@ namespace yae
     ~RemuxView();
 
     // virtual:
+    void clear();
+
+    // virtual:
     void setContext(const yae::shared_ptr<IOpenGLContext> & context);
 
     // data source:
