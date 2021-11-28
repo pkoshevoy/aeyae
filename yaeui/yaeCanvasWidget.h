@@ -117,7 +117,11 @@ namespace yae
       {}
 
       virtual bool makeCurrent()
-      { widget_.makeCurrent(); return true; }
+      {
+        widget_.makeCurrent();
+        YAE_OGL_11_HERE();
+        return true;
+      }
 
       virtual void doneCurrent()
       { widget_.doneCurrent(); }

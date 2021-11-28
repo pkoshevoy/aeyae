@@ -274,6 +274,9 @@ namespace yae
     // add a layer at the back:
     void prepend(ILayer * layer);
 
+    // remove a layer:
+    void remove(ILayer * layer);
+
     // lookup a fragment shader for a given pixel format, if one exits:
     const TFragmentShader * fragmentShaderFor(const VideoTraits & vtts) const;
 

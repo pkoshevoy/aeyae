@@ -1133,7 +1133,7 @@ yae_reset_opengl_to_initial_state()
   }
 #endif
 
-  if (glActiveTexture)
+  if (YAE_OGL_FN(glActiveTexture))
   {
     YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
     yae_assert_gl_no_error();
@@ -2155,41 +2155,43 @@ namespace yae
 
     if (!clut_tex_id_ && !skipColorConverter_)
     {
+      YAE_OGL_11_HERE();
       YAE_OGL_11(glGenTextures(1, &clut_tex_id_));
       upload_clut_texture = true;
     }
 
     if (clut_tex_id_ && upload_clut_texture)
     {
-      YAE_OGL_11(glEnable(GL_TEXTURE_3D));
-      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
+      YAE_OGL_12_HERE();
+      YAE_OGL_12(glEnable(GL_TEXTURE_3D));
+      YAE_OGL_12(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
 
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S,
+      YAE_OGL_12(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S,
                                  GL_CLAMP_TO_EDGE));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T,
+      YAE_OGL_12(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T,
                                  GL_CLAMP_TO_EDGE));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,
+      YAE_OGL_12(glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R,
                                  GL_CLAMP_TO_EDGE));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
+      YAE_OGL_12(glTexParameteri(GL_TEXTURE_3D,
                                  GL_TEXTURE_MAG_FILTER, GL_LINEAR));
-      YAE_OGL_11(glTexParameteri(GL_TEXTURE_3D,
+      YAE_OGL_12(glTexParameteri(GL_TEXTURE_3D,
                                  GL_TEXTURE_MIN_FILTER, GL_LINEAR));
 
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE));
+      YAE_OGL_12(glPixelStorei(GL_UNPACK_SWAP_BYTES, GL_FALSE));
       yae_assert_gl_no_error();
 
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
+      YAE_OGL_12(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
       yae_assert_gl_no_error();
 
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_ROW_LENGTH,
+      YAE_OGL_12(glPixelStorei(GL_UNPACK_ROW_LENGTH,
                                (GLint)(clut_.size_1d_)));
       yae_assert_gl_no_error();
 
-      YAE_OGL_11(glPixelStorei(GL_UNPACK_IMAGE_HEIGHT,
+      YAE_OGL_12(glPixelStorei(GL_UNPACK_IMAGE_HEIGHT,
                                (GLint)(clut_.size_1d_)));
       yae_assert_gl_no_error();
 
-      YAE_OGL_11(glTexImage3D(GL_TEXTURE_3D, // target
+      YAE_OGL_12(glTexImage3D(GL_TEXTURE_3D, // target
                               0, // level
                               GL_RGB, // internalFormat
                               clut_.size_1d_, // width
@@ -2200,7 +2202,7 @@ namespace yae
                               GL_UNSIGNED_BYTE, // type
                               clut_.get_data())); // pixels
       yae_assert_gl_no_error();
-      YAE_OGL_11(glDisable(GL_TEXTURE_3D));
+      YAE_OGL_12(glDisable(GL_TEXTURE_3D));
     }
 
     frame_ = frame;
@@ -2215,6 +2217,7 @@ namespace yae
   {
     if (clut_tex_id_)
     {
+      YAE_OGL_11_HERE();
       YAE_OGL_11(glDeleteTextures(1, &clut_tex_id_));
       clut_tex_id_ = 0;
     }
@@ -2647,7 +2650,7 @@ namespace yae
     getCroppedFrame(crop);
 
     YAE_OPENGL_HERE();
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();
@@ -2677,7 +2680,7 @@ namespace yae
                                     shader_->program_->handle_));
       }
 
-      if (glActiveTexture)
+      if (YAE_OGL_FN(glActiveTexture))
       {
         for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
@@ -2718,7 +2721,7 @@ namespace yae
     }
 
     // un-bind the textures:
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       for (std::size_t k = 0; k < shader.numPlanes_; k++)
       {
@@ -2737,7 +2740,7 @@ namespace yae
 
     YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
 
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();
@@ -3376,7 +3379,7 @@ namespace yae
     YAE_OPENGL_HERE();
     YAE_OGL_11_HERE();
 
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();
@@ -3411,7 +3414,7 @@ namespace yae
                                     shader_->program_->handle_));
       }
 
-      if (glActiveTexture)
+      if (YAE_OGL_FN(glActiveTexture))
       {
         for (std::size_t k = 0; k < shader.numPlanes_; k++)
         {
@@ -3454,7 +3457,7 @@ namespace yae
     }
 
     // un-bind the textures:
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       for (std::size_t k = 0; k < shader.numPlanes_; k++)
       {
@@ -3473,7 +3476,7 @@ namespace yae
 
     YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
 
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();

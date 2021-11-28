@@ -68,6 +68,9 @@ namespace yae
     { return player_->timeline(); }
 
     // virtual:
+    void uncache();
+
+    // virtual:
     void setVisible(bool visible);
 
     // virtual:

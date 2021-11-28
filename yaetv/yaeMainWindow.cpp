@@ -436,9 +436,9 @@ namespace yae
     readerFactory_(new LiveReaderFactory),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir),
-    view_("MainWindow app view"),
-    confirm_("MainWindow confirm view"),
-    spinner_("MainWindow spinner view"),
+    view_(new AppView("MainWindow app view")),
+    confirm_(new ConfirmView("MainWindow confirm view")),
+    spinner_(new SpinnerView("MainWindow spinner view")),
     start_live_playback_(this)
   {
     setupUi(this);
@@ -470,8 +470,9 @@ namespace yae
 #endif
     canvas_->setObjectName(tr("app view canvas"));
 
-    view_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    view_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    AppView & app_view = *view_;
+    app_view.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    app_view.query_fullscreen_.reset(&context_query_fullscreen, this);
 
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
@@ -524,15 +525,15 @@ namespace yae
                  playerWidget_, SLOT(requestToggleFullScreen()));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(watch_live(uint32_t, TTime)),
+    ok = connect(view_.get(), SIGNAL(watch_live(uint32_t, TTime)),
                  this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(playback(TRecPtr)),
+    ok = connect(view_.get(), SIGNAL(playback(TRecPtr)),
                  this, SLOT(playbackRecording(TRecPtr)));
     YAE_ASSERT(ok);
 
-    ok = connect(&view_, SIGNAL(confirm_delete(TRecPtr)),
+    ok = connect(view_.get(), SIGNAL(confirm_delete(TRecPtr)),
                  this, SLOT(confirmDelete(TRecPtr)));
     YAE_ASSERT(ok);
 
@@ -558,7 +559,15 @@ namespace yae
   //
   MainWindow::~MainWindow()
   {
-    // NOTE: QStackedWidget owns canvas_ and playerWidget_
+    spinner_.reset();
+    confirm_.reset();
+    view_.reset();
+
+    delete playerWidget_;
+    playerWidget_ = NULL;
+
+    delete canvas_;
+    canvas_ = NULL;
   }
 
   //----------------------------------------------------------------
@@ -567,35 +576,40 @@ namespace yae
   void
   MainWindow::initItemViews()
   {
+    AppView & app_view = *view_;
+    ConfirmView & confirm = *confirm_;
+    SpinnerView & spinner = *spinner_;
+
     // add image://thumbnails/... provider:
     yae::shared_ptr<ThumbnailProvider, ImageProvider>
       image_provider(new ThumbnailProvider(readerFactory_));
-    view_.addImageProvider(QString::fromUtf8("thumbnails"), image_provider);
+    app_view.addImageProvider(QString::fromUtf8("thumbnails"),
+                              image_provider);
 
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
     canvas_->initializePrivateBackend();
     canvas_->setGreeting(tr("hello"));
-    canvas_->append(&view_);
+    canvas_->append(&app_view);
 
-    view_.setModel(&dvr_);
-    view_.setEnabled(true);
-    view_.layoutChanged();
+    app_view.setModel(&dvr_);
+    app_view.setEnabled(true);
+    app_view.layoutChanged();
 
     // action confirmation view:
-    confirm_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    confirm_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    confirm.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    confirm.query_fullscreen_.reset(&context_query_fullscreen, this);
 
-    canvas_->append(&confirm_);
-    confirm_.setStyle(view_.style());
-    confirm_.setEnabled(false);
+    canvas_->append(&confirm);
+    confirm.setStyle(app_view.style());
+    confirm.setEnabled(false);
 
     // spinner view:
-    spinner_.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
-    spinner_.query_fullscreen_.reset(&context_query_fullscreen, this);
+    spinner.toggle_fullscreen_.reset(&context_toggle_fullscreen, this);
+    spinner.query_fullscreen_.reset(&context_query_fullscreen, this);
 
-    canvas_->append(&spinner_);
-    spinner_.setStyle(view_.style());
-    spinner_.setEnabled(false);
+    canvas_->append(&spinner);
+    spinner.setStyle(app_view.style());
+    spinner.setEnabled(false);
 
     playerWidget_->initItemViews();
 
@@ -645,11 +659,12 @@ namespace yae
   void
   MainWindow::themeChanged(const yae::Application & app)
   {
-    AppStyle & style = *(view_.style());
+    AppView & app_view = *view_;
+    AppStyle & style = *(app_view.style());
     style.themeChanged(app);
-    view_.requestUncacheEPG();
-    view_.requestUncache();
-    view_.requestRepaint();
+    app_view.requestUncacheEPG();
+    app_view.requestUncache();
+    app_view.requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -668,9 +683,8 @@ namespace yae
   MainWindow::exitConfirmed()
   {
     dvr_.shutdown();
-    view_.setContext(yae::shared_ptr<IOpenGLContext>());
     qApp->quit();
-    ::exit(0);
+    // ::exit(0);
   }
 
   //----------------------------------------------------------------
@@ -716,7 +730,7 @@ namespace yae
   void
   MainWindow::watchLive(uint32_t ch_num, TTime seekPos)
   {
-    view_.now_playing_.reset();
+    view_->now_playing_.reset();
     dvr_.watch_live(ch_num);
 
     // open the player window
@@ -857,7 +871,7 @@ namespace yae
     {
       // shortcuts:
       DVR & dvr = mainWindow_.dvr_;
-      AppView & appView = mainWindow_.view_;
+      AppView & appView = *(mainWindow_.view_);
       const Recording::Rec & rec = *rec_;
 
       if (appView.now_playing_)
@@ -890,27 +904,28 @@ namespace yae
   MainWindow::confirmDelete(TRecPtr rec_ptr)
   {
     const Recording::Rec & rec = *rec_ptr;
-    const AppStyle & style = *(view_.style());
+    const AppStyle & style = *(view_->style());
+    ConfirmView & confirm = *confirm_;
 
     std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
-    confirm_.message_ = TVarRef::constant(TVar(msg));
-    confirm_.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
-    confirm_.fg_ = style.bg_;
+    confirm.message_ = TVarRef::constant(TVar(msg));
+    confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm.fg_ = style.bg_;
 
-    confirm_.affirmative_.
-      reset(new ConfirmDeleteRecording(*this, confirm_, rec_ptr));
-    ConfirmItem::Action & aff = *confirm_.affirmative_;
+    confirm.affirmative_.
+      reset(new ConfirmDeleteRecording(*this, *confirm_, rec_ptr));
+    ConfirmItem::Action & aff = *(confirm.affirmative_);
     aff.message_ = TVarRef::constant(TVar("Delete"));
     aff.bg_ = style.cursor_;
     aff.fg_ = style.cursor_fg_;
 
-    confirm_.negative_.reset(new DismissConfirmView(confirm_));
-    ConfirmItem::Action & neg = *confirm_.negative_;
+    confirm.negative_.reset(new DismissConfirmView(*confirm_));
+    ConfirmItem::Action & neg = *(confirm.negative_);
     neg.message_ = TVarRef::constant(TVar("Cancel"));
     neg.bg_ = style.fg_;
     neg.fg_ = style.bg_;
 
-    confirm_.setEnabled(true);
+    confirm.setEnabled(true);
   }
 
   //----------------------------------------------------------------
@@ -930,7 +945,7 @@ namespace yae
     void execute() const
     {
       // shortcuts:
-      AppView & appView = mainWindow_.view_;
+      AppView & appView = *(mainWindow_.view_);
       const Recording::Rec & rec = *rec_;
 
       if (appView.now_playing_)
@@ -940,7 +955,7 @@ namespace yae
         if (appView.now_playing_->filename_ == filename)
         {
           mainWindow_.playerWindow_.stopAndHide();
-          mainWindow_.view_.now_playing_.reset();
+          mainWindow_.view_->now_playing_.reset();
         }
       }
 
@@ -959,7 +974,7 @@ namespace yae
   void
   MainWindow::playbackFinished(TTime playheadPos)
   {
-    TRecPtr rec_ptr = view_.now_playing();
+    TRecPtr rec_ptr = view_->now_playing();
     if (live_rec_ || !rec_ptr)
     {
       uint32_t live_ch = dvr_.schedule_.get_live_channel();
@@ -992,8 +1007,8 @@ namespace yae
     const Recording::Rec & rec = *rec_ptr;
 
     // shortcuts:
-    const AppStyle & style = *(view_.style());
-    ConfirmView & confirm = playerWidget_->confirm_;
+    const AppStyle & style = *(view_->style());
+    ConfirmView & confirm = *(playerWidget_->confirm_);
 
     std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
     confirm.message_ = TVarRef::constant(TVar(msg));
@@ -1023,7 +1038,7 @@ namespace yae
   void
   MainWindow::confirmDeletePlayingRecording()
   {
-    TRecPtr rec_ptr = view_.now_playing();
+    TRecPtr rec_ptr = view_->now_playing();
     if (!rec_ptr)
     {
       return;
@@ -1032,8 +1047,8 @@ namespace yae
     const Recording::Rec & rec = *rec_ptr;
 
     // shortcuts:
-    const AppStyle & style = *(view_.style());
-    ConfirmView & confirm = playerWidget_->confirm_;
+    const AppStyle & style = *(view_->style());
+    ConfirmView & confirm = *(playerWidget_->confirm_);
 
     std::string msg = strfmt("Delete %s?", rec.get_basename().c_str());
     confirm.message_ = TVarRef::constant(TVar(msg));
@@ -1062,7 +1077,7 @@ namespace yae
   void
   MainWindow::saveBookmark()
   {
-    TRecPtr now_playing = view_.now_playing();
+    TRecPtr now_playing = view_->now_playing();
     if (!now_playing)
     {
       return;
@@ -1079,7 +1094,7 @@ namespace yae
   void
   MainWindow::saveBookmarkAt(double position_in_sec)
   {
-    TRecPtr now_playing = view_.now_playing();
+    TRecPtr now_playing = view_->now_playing();
     if (!now_playing)
     {
       return;
@@ -1099,7 +1114,7 @@ namespace yae
   {
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
-    view_.now_playing_.reset();
+    view_->now_playing_.reset();
     stopLivePlayback();
   }
 
@@ -1109,7 +1124,7 @@ namespace yae
   void
   MainWindow::playerEnteringFullScreen()
   {
-    if (view_.now_playing_)
+    if (view_->now_playing_)
     {
       playerWindow_.hide();
       canvasContainer_->addWidget(playerWidget_);
@@ -1130,7 +1145,7 @@ namespace yae
   void
   MainWindow::playerExitingFullScreen()
   {
-    if (view_.now_playing_)
+    if (view_->now_playing_)
     {
       QApplication::processEvents();
 
@@ -1192,7 +1207,7 @@ namespace yae
       return;
     }
 
-    const AppStyle & style = *(view_.style());
+    const AppStyle & style = *(view_->style());
 
     const char * msg =
       "NOTE: if you exit the DVR then it will not be able to "
@@ -1201,8 +1216,8 @@ namespace yae
     ConfirmView & confirm =
       (canvasContainer_->currentWidget() == playerWidget_ &&
        window()->isFullScreen()) ?
-      playerWidget_->confirm_ :
-      confirm_;
+      *playerWidget_->confirm_ :
+      *confirm_;
 
     confirm.message_ = TVarRef::constant(TVar(msg));
     confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
@@ -1229,9 +1244,10 @@ namespace yae
   void
   MainWindow::startLivePlayback()
   {
+    AppView & app_view = *view_;
     uint32_t live_ch = dvr_.schedule_.get_live_channel();
     uint64_t t_gps = unix_epoch_time_to_gps_time(start_live_seek_pos_.get(1));
-    live_rec_ = yae::next<Recording::Rec>(view_.rec_by_channel_,
+    live_rec_ = yae::next<Recording::Rec>(app_view.rec_by_channel_,
                                           live_ch,
                                           t_gps,
                                           live_rec_);
@@ -1257,9 +1273,9 @@ namespace yae
       const Recording::Rec & rec = *live_rec_;
       std::string basepath = rec.get_filepath(dvr_.basedir_, "");
       std::string filename = rec.get_basename() + ".mpg";
-      view_.now_playing_.reset(new DVR::Playback(view_.sidebar_sel_,
-                                                 filename,
-                                                 basepath));
+      app_view.now_playing_.reset(new DVR::Playback(app_view.sidebar_sel_,
+                                                    filename,
+                                                    basepath));
     }
   }
 

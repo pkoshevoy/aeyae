@@ -195,11 +195,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ItemView::~ItemView
+  //
+  ItemView::~ItemView()
+  {
+    ItemView::clear();
+
+    if (delegate())
+    {
+      delegate()->windowCanvas().remove(this);
+    }
+  }
+
+  //----------------------------------------------------------------
   // ItemView::clear
   //
   void
   ItemView::clear()
   {
+    TMakeCurrentContext currentContext(this->context().get());
     root_->clear();
   }
 

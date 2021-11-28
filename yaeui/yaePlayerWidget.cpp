@@ -37,8 +37,8 @@ namespace yae
                              Qt::WindowFlags flags):
     QWidget(parent, flags),
     canvas_(NULL),
-    player_("PlayerWidget player view"),
-    confirm_("PlayerWidget confirm view")
+    player_(new PlayerView("PlayerWidget player view")),
+    confirm_(new ConfirmView("PlayerWidget confirm view"))
   {
     greeting_ = tr("hello");
 
@@ -63,6 +63,12 @@ namespace yae
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
 
+    // attempt to initialize:
+    {
+      QResizeEvent e(QSize(64, 64), QSize(0, 0));
+      canvas_->TCanvasWidget::event(&e);
+    }
+
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
   }
@@ -72,8 +78,9 @@ namespace yae
   //
   PlayerWidget::~PlayerWidget()
   {
-    confirm_.clear();
-    player_.clear();
+    confirm_.reset();
+    player_.reset();
+
     delete canvas_;
     canvas_ = NULL;
   }
@@ -88,13 +95,13 @@ namespace yae
 
     TMakeCurrentContext currentContext(canvas_->Canvas::context());
     canvas_->setGreeting(greeting_);
-    canvas_->append(&player_);
+    canvas_->append(player_.get());
 
-    canvas_->append(&confirm_);
-    confirm_.setStyle(player_.style());
+    canvas_->append(confirm_.get());
+    confirm_->setStyle(player_->style());
 
     // shortcut:
-    yae::PlayerUxItem * pl_ux = player_.player_ux();
+    yae::PlayerUxItem * pl_ux = player_->player_ux();
 
     // when in fullscreen mode the menubar is hidden and all actions
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
@@ -132,7 +139,7 @@ namespace yae
     shortcuts_.reset(new PlayerShortcuts(this));
     pl_ux->set_shortcuts(shortcuts_);
 
-    player_.setEnabled(true);
+    player_->setEnabled(true);
   }
 
   //----------------------------------------------------------------
@@ -143,7 +150,7 @@ namespace yae
                          const IBookmark * bookmark,
                          bool start_from_zero_time)
   {
-    player_.setEnabled(true);
+    player_->setEnabled(true);
 
     PlayerUxItem & pl_ux = get_player_ux();
     pl_ux.playback(reader, bookmark, start_from_zero_time);

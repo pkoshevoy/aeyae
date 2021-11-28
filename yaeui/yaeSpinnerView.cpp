@@ -44,6 +44,16 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // SpinnerView::~SpinnerView
+  //
+  SpinnerView::~SpinnerView()
+  {
+    TMakeCurrentContext currentContext(this->context().get());
+    SpinnerView::clear();
+    spinner_.reset();
+  }
+
+  //----------------------------------------------------------------
   // SpinnerView::setStyle
   //
   void

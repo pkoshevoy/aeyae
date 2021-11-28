@@ -150,6 +150,7 @@ namespace yae
     };
 
     ItemView(const char * name);
+    ~ItemView();
 
     virtual void clear();
 

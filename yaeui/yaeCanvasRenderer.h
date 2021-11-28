@@ -25,6 +25,8 @@
 #include <QtOpenGL>
 #include <QOpenGLFunctions_1_0>
 #include <QOpenGLFunctions_1_1>
+#include <QOpenGLFunctions_1_2>
+#include <QOpenGLFunctions_1_3>
 #include <QOpenGLFunctions_1_4>
 #include <QOpenGLFunctions_2_0>
 #else
@@ -171,6 +173,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ogl_12
+  //
+  inline static QOpenGLFunctions_1_2 & ogl_12()
+  {
+    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_2>());
+  }
+
+  //----------------------------------------------------------------
+  // ogl_13
+  //
+  inline static QOpenGLFunctions_1_3 & ogl_13()
+  {
+    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_3>());
+  }
+
+  //----------------------------------------------------------------
   // ogl_14
   //
   inline static QOpenGLFunctions_1_4 & ogl_14()
@@ -187,6 +205,8 @@ namespace yae
   }
 
 #define YAE_OGL_11_HERE() QOpenGLFunctions_1_1 & ogl_11 = yae::ogl_11()
+#define YAE_OGL_12_HERE() QOpenGLFunctions_1_2 & ogl_12 = yae::ogl_12()
+#define YAE_OGL_13_HERE() QOpenGLFunctions_1_3 & ogl_13 = yae::ogl_13()
 #define YAE_OGL_14_HERE() QOpenGLFunctions_1_4 & ogl_14 = yae::ogl_14()
 #define YAE_OGL_20_HERE() QOpenGLFunctions_2_0 & ogl_20 = yae::ogl_20()
 #define YAE_OPENGL_HERE() \
@@ -194,20 +214,28 @@ namespace yae
 
 
 #define YAE_OGL_11(x) ogl_11.x
+#define YAE_OGL_12(x) ogl_12.x
+#define YAE_OGL_13(x) ogl_13.x
 #define YAE_OGL_14(x) ogl_14.x
 #define YAE_OGL_20(x) ogl_20.x
 #define YAE_OPENGL(x) opengl.x
+#define YAE_OGL_FN(x) true
 
 #else
 #define YAE_OGL_11_HERE()
+#define YAE_OGL_12_HERE()
+#define YAE_OGL_13_HERE()
 #define YAE_OGL_14_HERE()
 #define YAE_OGL_20_HERE()
 #define YAE_OPENGL_HERE()
 
 #define YAE_OGL_11(x) x
+#define YAE_OGL_12(x) x
+#define YAE_OGL_13(x) x
 #define YAE_OGL_14(x) x
 #define YAE_OGL_20(x) x
 #define YAE_OPENGL(x) x
+#define YAE_OGL_FN(x) x
 
 #endif
 
@@ -259,18 +287,40 @@ namespace yae
   //
   struct YAEUI_API TMakeCurrentContext
   {
-    TMakeCurrentContext(IOpenGLContext & context):
+    TMakeCurrentContext(IOpenGLContext * context):
       context_(context)
     {
-      context_.lock();
+      maybe_lock();
+    }
+
+    TMakeCurrentContext(IOpenGLContext & context):
+      context_(&context)
+    {
+      maybe_lock();
     }
 
     ~TMakeCurrentContext()
     {
-      context_.unlock();
+      maybe_unlock();
     }
 
-    IOpenGLContext & context_;
+    inline void maybe_lock()
+    {
+      if (context_)
+      {
+        context_->lock();
+      }
+    }
+
+    inline void maybe_unlock()
+    {
+      if (context_)
+      {
+        context_->unlock();
+      }
+    }
+
+    IOpenGLContext * context_;
   };
 
   //----------------------------------------------------------------

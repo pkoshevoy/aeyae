@@ -25,6 +25,7 @@ namespace yae
   {
   public:
     ConfirmView(const char * name);
+    ~ConfirmView();
 
     void setStyle(ItemViewStyle * style);
 

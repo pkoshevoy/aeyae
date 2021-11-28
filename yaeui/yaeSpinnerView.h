@@ -31,6 +31,7 @@ namespace yae
 
   public:
     SpinnerView(const char * name);
+    ~SpinnerView();
 
     void setStyle(ItemViewStyle * style);
 

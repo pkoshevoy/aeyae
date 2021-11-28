@@ -26,6 +26,16 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // ConfirmView::~ConfirmView
+  //
+  ConfirmView::~ConfirmView()
+  {
+    TMakeCurrentContext currentContext(this->context().get());
+    ConfirmView::clear();
+    confirm_.reset();
+  }
+
+  //----------------------------------------------------------------
   // ConfirmView::setStyle
   //
   void

@@ -62,13 +62,13 @@ namespace yae
     { return *canvas_; }
 
     inline const PlayerView & view() const
-    { return player_; }
+    { return *player_; }
 
     inline PlayerView & view()
-    { return player_; }
+    { return *player_; }
 
     inline PlayerUxItem & get_player_ux() const
-    { return *(player_.player_ux()); }
+    { return *(player_->player_ux()); }
 
   signals:
     // void playbackFinished();
@@ -102,8 +102,8 @@ namespace yae
     TCanvasWidget * canvas_;
 
     // player views:
-    PlayerView player_;
-    ConfirmView confirm_;
+    yae::shared_ptr<PlayerView, ItemView> player_;
+    yae::shared_ptr<ConfirmView, ItemView> confirm_;
   };
 
 }

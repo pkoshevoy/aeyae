@@ -33,6 +33,8 @@ namespace yae
   //
   PlayerView::~PlayerView()
   {
+    TMakeCurrentContext currentContext(context().get());
+    PlayerView::clear();
     player_ux_.reset();
     style_.reset();
   }
@@ -43,6 +45,7 @@ namespace yae
   void
   PlayerView::clear()
   {
+    TMakeCurrentContext currentContext(context().get());
     ItemView::clear();
     player_ux_->clear();
   }

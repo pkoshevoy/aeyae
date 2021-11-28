@@ -1325,6 +1325,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerUxItem::uncache
+  //
+  void
+  PlayerUxItem::uncache()
+  {
+    TMakeCurrentContext currentContext(view_.context().get());
+    enableBackArrowButton_.uncache();
+    enableDeleteFileButton_.uncache();
+    Item::uncache();
+  }
+
+  //----------------------------------------------------------------
   // PlayerUxItem::setVisible
   //
   void

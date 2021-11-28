@@ -2334,6 +2334,50 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::~AppView
+  //
+  AppView::~AppView()
+  {
+    TMakeCurrentContext currentContext(this->context().get());
+
+    sync_ui_.stop();
+    worker_.stop();
+    setEnabled(false);
+
+    sidebar_sel_.clear();
+    collapsed_.clear();
+    sideview_.reset();
+    mainview_.reset();
+    epg_view_.reset();
+    blacklist_.clear();
+    channels_.clear();
+    schedule_.clear();
+    recordings_.clear();
+    rec_by_channel_.clear();
+    now_playing_.reset();
+    program_sel_.reset();
+    ch_index_.clear();
+    ch_tile_.clear();
+    ch_row_.clear();
+    ch_prog_.clear();
+    tickmark_.clear();
+    rec_highlight_.clear();
+    pd_layout_.clear();
+    ch_layout_.clear();
+    sch_layout_.clear();
+    pl_index_.clear();
+    pl_sidebar_.clear();
+    pl_layout_.clear();
+    wl_index_.clear();
+    wl_sidebar_.clear();
+    wishlist_ui_.reset();
+    wi_edit_.reset();
+    style_.reset();
+
+    AppView::clear();
+  }
+
+  //----------------------------------------------------------------
   // AppView::setEnabled
   //
   void
@@ -2363,49 +2407,15 @@ namespace yae
   void
   AppView::setContext(const yae::shared_ptr<IOpenGLContext> & context)
   {
-    if (!context)
-    {
-      sync_ui_.stop();
-      worker_.stop();
-      setEnabled(false);
-
-      sidebar_sel_.clear();
-      collapsed_.clear();
-      sideview_.reset();
-      mainview_.reset();
-      epg_view_.reset();
-      blacklist_.clear();
-      channels_.clear();
-      schedule_.clear();
-      recordings_.clear();
-      rec_by_channel_.clear();
-      now_playing_.reset();
-      program_sel_.reset();
-      ch_index_.clear();
-      ch_tile_.clear();
-      ch_row_.clear();
-      ch_prog_.clear();
-      tickmark_.clear();
-      rec_highlight_.clear();
-      pd_layout_.clear();
-      ch_layout_.clear();
-      sch_layout_.clear();
-      pl_index_.clear();
-      pl_sidebar_.clear();
-      pl_layout_.clear();
-      wl_index_.clear();
-      wl_sidebar_.clear();
-      wishlist_ui_.reset();
-      wi_edit_.reset();
-      root_.reset();
-      style_.reset();
-    }
-
     ItemView::setContext(context);
 
     if (context)
     {
       sync_ui_.start(1000);
+    }
+    else
+    {
+      sync_ui_.stop();
     }
   }
 

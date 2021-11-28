@@ -177,6 +177,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::remove
+  //
+  void
+  Canvas::remove(Canvas::ILayer * layer)
+  {
+    layers_.remove(layer);
+  }
+
+  //----------------------------------------------------------------
   // Canvas::fragmentShaderFor
   //
   const TFragmentShader *
@@ -672,7 +681,7 @@ namespace yae
     YAE_OPENGL_HERE();
     yae_assert_gl_no_error();
 
-    if (glCheckFramebufferStatus)
+    if (YAE_OGL_FN(glCheckFramebufferStatus))
     {
       GLenum s = YAE_OPENGL(glCheckFramebufferStatus(GL_DRAW_FRAMEBUFFER));
       if (s != GL_FRAMEBUFFER_COMPLETE)

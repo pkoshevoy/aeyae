@@ -176,9 +176,9 @@ namespace yae
     TCanvasWidget * canvas_;
 
     yae::DVR dvr_;
-    AppView view_;
-    ConfirmView confirm_;
-    SpinnerView spinner_;
+    yae::shared_ptr<AppView, ItemView> view_;
+    yae::shared_ptr<ConfirmView, ItemView> confirm_;
+    yae::shared_ptr<SpinnerView, ItemView> spinner_;
 
   protected:
     // background thread, etc...
