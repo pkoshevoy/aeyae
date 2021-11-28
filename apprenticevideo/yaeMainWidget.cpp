@@ -101,6 +101,8 @@ namespace yae
     bookmarksMapper_(NULL),
     bookmarksMenuSeparator_(NULL)
   {
+    playlistView_.reset(new PlaylistView());
+
     init_actions();
     translate_ui();
   }
@@ -110,6 +112,7 @@ namespace yae
   //
   MainWidget::~MainWidget()
   {
+    playlistView_.reset();
     delete menuBookmarks_;
   }
 
