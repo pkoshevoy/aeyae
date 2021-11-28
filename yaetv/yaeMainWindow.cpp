@@ -558,8 +558,7 @@ namespace yae
   //
   MainWindow::~MainWindow()
   {
-    delete canvas_;
-    canvas_ = NULL;
+    // NOTE: QStackedWidget owns canvas_ and playerWidget_
   }
 
   //----------------------------------------------------------------
@@ -670,8 +669,8 @@ namespace yae
   {
     dvr_.shutdown();
     view_.setContext(yae::shared_ptr<IOpenGLContext>());
-    // MainWindow::close();
     qApp->quit();
+    ::exit(0);
   }
 
   //----------------------------------------------------------------
