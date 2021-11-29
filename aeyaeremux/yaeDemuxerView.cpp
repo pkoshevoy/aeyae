@@ -1988,7 +1988,7 @@ namespace yae
     btn.anchors_.top_ = ItemRef::reference(controls, kPropertyTop);
     // btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
     btn.anchors_.right_ = ItemRef::reference(txt, kPropertyRight);
-    btn.margins_.set_right(ItemRef::reference(txt.margins_.get_left(), -1));
+    btn.margins_.set_right(ItemRef::reference(controls, kPropertyHeight, -0.7));
     // btn.margins_.set_right(btn.margins_.get_left());
 
     return txt;
@@ -2061,6 +2061,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // HiddenItem
+  //
+  struct HiddenItem : Item
+  {
+    HiddenItem(const char * id, const RemuxViewStyle & style):
+      Item(id)
+    {
+      row_height_ = ItemRef::reference(style.row_height_);
+      row_height_with_odd_roundup_.set(new OddRoundUp(row_height_));
+    }
+
+    // virtual:
+    void uncache()
+    {
+      row_height_.uncache();
+      row_height_with_odd_roundup_.uncache();
+      Item::uncache();
+    }
+
+    ItemRef row_height_;
+    ItemRef row_height_with_odd_roundup_;
+  };
+
+  //----------------------------------------------------------------
   // RemuxLayout
   //
   struct RemuxLayout : public TLayout
@@ -2071,6 +2095,9 @@ namespace yae
                 Item & root,
                 void * context)
     {
+      HiddenItem & hidden = root.
+        addHidden<HiddenItem>(new HiddenItem("hidden", style));
+
       Rectangle & bg = root.addNew<Rectangle>("background");
       Rectangle & controls = root.addNew<Rectangle>("controls");
       bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
@@ -2173,7 +2200,7 @@ namespace yae
       clips_add.anchors_.fill(clips_container);
       clips_add.anchors_.top_ = ItemRef::reference(clip_list, kPropertyBottom);
       clips_add.anchors_.bottom_.reset();
-      clips_add.height_ = ItemRef::reference(style.row_height_);
+      clips_add.height_ = ItemRef::reference(hidden.row_height_);
       layout_clips_add(model, view, style, clips_add);
 
       std::size_t num_clips = model.clips_.size();
@@ -2188,14 +2215,10 @@ namespace yae
       controls.anchors_.top_.reset();
       controls.visible_ = controls.addInverse(new IsFullscreen(view));
 
-      Item & hidden = controls.addHidden(new Item("hidden"));
-      hidden.height_ = hidden.
-        addExpr(new OddRoundUp(clips_add, kPropertyHeight));
-
       controls.height_ = controls.addExpr
         (new Conditional<ItemRef>
          (controls.visible_,
-          ItemRef::uncacheable(hidden.height_),
+          ItemRef::reference(hidden.row_height_with_odd_roundup_),
           ItemRef::constant(0.0)));
 
       // add a button to switch to clip source view:
