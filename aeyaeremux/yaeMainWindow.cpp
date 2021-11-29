@@ -652,6 +652,7 @@ namespace yae
   {
     static const QString filter =
       tr("movies ("
+#if 0
          "*.avi "
          "*.mpeg "
          "*.mpg "
@@ -661,6 +662,7 @@ namespace yae
          "*.nut "
          "*.ogm "
          "*.ts "
+#endif
          "*.* "
          ")");
 
