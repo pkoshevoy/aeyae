@@ -1826,6 +1826,12 @@ namespace yae
       {
         timeline.audio_track_cb_.reset(&yae::select_audio_track_cb, this);
       }
+
+      timelineTimer_.start();
+    }
+    else
+    {
+      timelineTimer_.stop();
     }
 
     if (actionCropFrameAutoDetect_->isChecked())
@@ -3009,6 +3015,7 @@ namespace yae
   void
   PlayerUxItem::stopPlayback()
   {
+    timelineTimer_.stop();
     bookmarkTimer_.stop();
     player_->playback_stop();
     timeline_->modelChanged();
