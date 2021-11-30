@@ -4616,7 +4616,10 @@ namespace yae
 
     bool hwdec = true;
     reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
-    pl_ux.playback(reader_);
+
+    const IBookmark * bookmark = NULL;
+    bool start_from_zero_time = true;
+    pl_ux.playback(reader_, bookmark, start_from_zero_time);
 
     TTime playhead_pts = playhead_.pts_;
     TDemuxerInterfacePtr playhead_src = playhead_.src_.lock();
