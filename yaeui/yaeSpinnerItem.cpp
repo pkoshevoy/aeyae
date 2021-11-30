@@ -50,6 +50,8 @@ namespace yae
 
     text_color_.set
       (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
+
+    SpinnerItem::setVisible(false);
   }
 
   //----------------------------------------------------------------
