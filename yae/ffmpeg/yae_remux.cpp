@@ -484,6 +484,21 @@ namespace yae
     return serial_demuxer;
   }
 
+  //----------------------------------------------------------------
+  // rx::Loader::Loader
+  //
+  rx::Loader::
+  Loader(const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
+         const std::set<std::string> & sources,
+         const std::list<ClipInfo> & src_clips,
+         const rx::Loader::TProgressObserverPtr & observer,
+         bool hwdec):
+    demuxers_(demuxers),
+    sources_(sources),
+    src_clips_(src_clips),
+    observer_(observer),
+    hwdec_(hwdec)
+  {}
 
   //----------------------------------------------------------------
   // rx::Loader::run
@@ -521,7 +536,7 @@ namespace yae
   // rx::Loader::get_demuxer
   //
   TDemuxerInterfacePtr
-  rx::Loader::get_demuxer(const std::string & source)
+  rx::Loader::get_demuxer(const std::string & source, bool hwdec)
   {
     if (!yae::has(demuxers_, source))
     {
@@ -531,7 +546,7 @@ namespace yae
       }
 
       std::list<TDemuxerPtr> demuxers;
-      if (!open_primary_and_aux_demuxers(source, demuxers, true))
+      if (!open_primary_and_aux_demuxers(source, demuxers, hwdec))
       {
         // failed to open the primary resource:
        yae_wlog("failed to open %s, skipping...",
@@ -579,7 +594,7 @@ namespace yae
       {
         const std::string & source = *i;
 
-        TDemuxerInterfacePtr demuxer = get_demuxer(source);
+        TDemuxerInterfacePtr demuxer = get_demuxer(source, hwdec_);
         if (!demuxer)
         {
           continue;
@@ -630,7 +645,7 @@ namespace yae
       {
         const ClipInfo & trim = *i;
 
-        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_);
+        TDemuxerInterfacePtr demuxer = get_demuxer(trim.source_, hwdec_);
         if (!demuxer)
         {
           // failed to demux:

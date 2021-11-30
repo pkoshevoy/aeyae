@@ -320,10 +320,12 @@ namespace yae
                   const std::list<ClipInfo> & src_clips)
   {
     rx::Loader::TProgressObserverPtr cb(new LoaderProgressObserver(this));
+    bool hwdec = false;
     TAsyncTaskPtr t(new rx::Loader(model_.demuxer_,
                                    sources,
                                    src_clips,
-                                   cb));
+                                   cb,
+                                   hwdec));
     tasks_.push_back(t);
     async_.push_back(t);
   }

@@ -167,19 +167,15 @@ namespace yae
       Loader(const std::map<std::string, TDemuxerInterfacePtr> & demuxers,
              const std::set<std::string> & sources,
              const std::list<ClipInfo> & src_clips,
-             const TProgressObserverPtr & observer = TProgressObserverPtr()):
-        demuxers_(demuxers),
-        sources_(sources),
-        src_clips_(src_clips),
-        observer_(observer)
-      {}
+             const TProgressObserverPtr & observer = TProgressObserverPtr(),
+             bool hwdec = true);
 
       // virtual:
       void run();
 
     protected:
       // helper, for loading a source on-demand:
-      TDemuxerInterfacePtr get_demuxer(const std::string & source);
+      TDemuxerInterfacePtr get_demuxer(const std::string & source, bool hwdec);
 
       // helpers:
       void load_sources();
@@ -189,6 +185,7 @@ namespace yae
       std::set<std::string> sources_;
       std::list<ClipInfo> src_clips_;
       TProgressObserverPtr observer_;
+      bool hwdec_;
     };
 
   }
