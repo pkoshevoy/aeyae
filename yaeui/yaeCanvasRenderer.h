@@ -244,32 +244,25 @@ namespace yae
   //
   struct YAEUI_API IOpenGLContext
   {
-    IOpenGLContext(): n_(0) {}
+    IOpenGLContext() {}
     virtual ~IOpenGLContext() {}
 
     inline bool lock()
     {
       mutex_.lock();
-      n_++;
-
-      if (this->isCurrent())
-      {
-        n_++;
-      }
-      else
-      {
-        this->makeCurrent();
-      }
-
+      restore_.push_back(getCurrent());
+      YAE_ASSERT(this->makeCurrent());
       return true;
     }
 
     inline void unlock()
     {
-      YAE_ASSERT(n_ > 0);
-      n_--;
+      YAE_ASSERT(!restore_.empty());
 
-      if (n_ == 0)
+      yae::shared_ptr<ICurrentContext> prev = restore_.back();
+      restore_.pop_back();
+
+      if (!prev->restore())
       {
         this->doneCurrent();
       }
@@ -277,15 +270,22 @@ namespace yae
       mutex_.unlock();
     }
 
-  protected:
+    //----------------------------------------------------------------
+    // ICurrentContext
+    //
+    struct ICurrentContext
+    {
+      virtual ~ICurrentContext() {}
+      virtual bool restore() = 0;
+    };
+
+    virtual yae::shared_ptr<ICurrentContext> getCurrent() const = 0;
     virtual bool makeCurrent() = 0;
     virtual void doneCurrent() = 0;
-    virtual const void * getCurrent() const = 0;
-    virtual bool isCurrent() const = 0;
 
   private:
     boost::recursive_mutex mutex_;
-    std::size_t n_;
+    std::list<yae::shared_ptr<ICurrentContext> > restore_;
   };
 
   //----------------------------------------------------------------

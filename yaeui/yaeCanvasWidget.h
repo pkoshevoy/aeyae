@@ -128,18 +128,49 @@ namespace yae
       virtual void doneCurrent()
       { widget_.doneCurrent(); }
 
-      virtual const void * getCurrent() const
-      {
 #ifdef YAE_USE_QOPENGL_WIDGET
-        QOpenGLContext * ctx = QOpenGLContext::currentContext();
-#else
-        const QGLContext * ctx = QGLContext::currentContext();
-#endif
-        return ctx;
-      }
+      //----------------------------------------------------------------
+      // CurrentContext
+      //
+      struct CurrentContext : ICurrentContext
+      {
+        CurrentContext():
+          ctx_(QOpenGLContext::currentContext())
+        {
+          surface_ = ctx_ ? ctx_->surface() : NULL;
+        }
 
-      virtual bool isCurrent() const
-      { return widget_.context() == this->getCurrent(); }
+        // virtual:
+        bool restore()
+        {
+          return ctx_ ? ctx_->makeCurrent(surface_) : false;
+        }
+
+        QOpenGLContext * ctx_;
+        QSurface * surface_;
+      };
+#else
+      //----------------------------------------------------------------
+      // CurrentContext
+      //
+      struct CurrentContext : ICurrentContext
+      {
+        CurrentContext():
+          ctx_(const_cast<QGLContext *>(QGLContext::currentContext()))
+        {}
+
+        // virtual:
+        bool restore()
+        {
+          return ctx_ ? (ctx_->makeCurrent(), true) : false;
+        }
+
+        QGLContext * ctx_;
+      };
+#endif
+
+      virtual yae::shared_ptr<ICurrentContext> getCurrent() const
+      { return yae::shared_ptr<ICurrentContext>(new CurrentContext()); }
 
     protected:
       TOpenGLWidget & widget_;
