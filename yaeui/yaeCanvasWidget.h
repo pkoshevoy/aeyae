@@ -126,6 +126,16 @@ namespace yae
       virtual void doneCurrent()
       { widget_.doneCurrent(); }
 
+      virtual const void * getCurrent() const
+      {
+#ifdef YAE_USE_QOPENGL_WIDGET
+        QOpenGLContext * ctx = QOpenGLContext::currentContext();
+#else
+        const QGLContext * ctx = QGLWidget::currentContext();
+#endif
+        return ctx;
+      }
+
     protected:
       TOpenGLWidget & widget_;
     };

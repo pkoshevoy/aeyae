@@ -358,7 +358,7 @@ namespace yae
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
 
     YAE_OPENGL_HERE();
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();
@@ -421,7 +421,7 @@ namespace yae
     }
 
     // un-bind:
-    if (glActiveTexture)
+    if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();

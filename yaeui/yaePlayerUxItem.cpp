@@ -947,6 +947,7 @@ namespace yae
 
     bool ok = true;
 
+    TMakeCurrentContext currentContext(view_.context().get());
     init_player();
     init_timeline();
     init_frame_crop();
