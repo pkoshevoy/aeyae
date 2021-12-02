@@ -131,7 +131,7 @@ namespace yae
 #ifdef YAE_USE_QOPENGL_WIDGET
         QOpenGLContext * ctx = QOpenGLContext::currentContext();
 #else
-        const QGLContext * ctx = QGLWidget::currentContext();
+        const QGLContext * ctx = QGLContext::currentContext();
 #endif
         return ctx;
       }
