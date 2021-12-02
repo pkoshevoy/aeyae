@@ -14,6 +14,7 @@
 #include <list>
 #include <map>
 #include <set>
+#include <sstream>
 #include <string>
 #include <time.h>
 #include <vector>
@@ -502,6 +503,24 @@ namespace yae
       load(*i, value);
       v.push_back(value);
     }
+  }
+
+  //----------------------------------------------------------------
+  // to_str
+  //
+  inline std::string
+  to_str(const Json::Value & v, const char * indent = "")
+  {
+    std::ostringstream oss;
+
+    if (indent && *indent)
+    {
+      Json::StyledStreamWriter(indent).write(oss, v);
+      return oss.str();
+    }
+
+    Json::FastWriter writer;
+    return writer.write(v);
   }
 
 }

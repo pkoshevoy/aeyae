@@ -1293,8 +1293,9 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::PacketHandler::PacketHandler
   //
-  DVR::PacketHandler::PacketHandler(DVR & dvr):
+  DVR::PacketHandler::PacketHandler(DVR & dvr, const std::string & frequency):
     dvr_(dvr),
+    ctx_(frequency),
     ring_buffer_(188 * 262144),
     packets_(400000), // 75.2MB
     recordings_update_gps_time_(0)
@@ -1521,7 +1522,7 @@ namespace yae
 
     if (!packet_handler_)
     {
-      packet_handler_.reset(new PacketHandler(dvr_));
+      packet_handler_.reset(new PacketHandler(dvr_, frequency));
       dvr_.packet_handler_[frequency] = packet_handler_;
     }
 
@@ -2023,7 +2024,7 @@ namespace yae
         (yaetv_ / ("epg-" + frequency + ".json")).string();
 
       TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
-      packet_handler_ptr.reset(new PacketHandler(*this));
+      packet_handler_ptr.reset(new PacketHandler(*this, frequency));
 
       Json::Value epg;
       if (yae::TOpenFile(epg_path, "rb").load(epg))
@@ -2175,7 +2176,7 @@ namespace yae
     DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
     if (!handler_ptr)
     {
-      handler_ptr.reset(new DVR::PacketHandler(dvr_));
+      handler_ptr.reset(new DVR::PacketHandler(dvr_, frequency));
     }
 
     const DVR::PacketHandler & packet_handler = *handler_ptr;
@@ -2553,7 +2554,7 @@ namespace yae
       DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
       if (!handler_ptr)
       {
-        handler_ptr.reset(new DVR::PacketHandler(dvr_));
+        handler_ptr.reset(new DVR::PacketHandler(dvr_, frequency));
       }
 
       const DVR::PacketHandler & packet_handler = *handler_ptr;

@@ -88,6 +88,7 @@ namespace yae
     std::map<uint16_t, yae::TOpenFilePtr> files_;
 
     StreamDumper(const std::string & basedir):
+      ctx_("StreamDumper"),
       packets_(400000), // 75.2MB
       basedir_(basedir)
     {}

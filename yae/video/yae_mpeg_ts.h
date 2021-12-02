@@ -2261,10 +2261,20 @@ namespace yae
 
       TTime elapsed_time_since_mgt() const;
 
+      //----------------------------------------------------------------
+      // VerifyEventDesc
+      //
+      enum VerifyEventDesc
+      {
+        kEventDescOptional = 0,
+        kEventDescRequired = 1,
+      };
+
       // check whether we have all the expected sections
       // and the extent of the EIT events overlaps
       // given GPS time:
-      bool has_epg_for(uint32_t gps_time) const;
+      bool has_epg_for(uint32_t gps_time,
+                       VerifyEventDesc verify_etm) const;
 
       // map major.minor channel number to ChannelGuide:
       std::map<uint32_t, ChannelGuide> guide_;
@@ -2422,7 +2432,7 @@ namespace yae
     //
     struct YAE_API Context
     {
-      Context();
+      Context(const std::string & id);
 
       void push(const TSPacket & pkt);
 
@@ -2436,9 +2446,6 @@ namespace yae
       void get_epg_now(yae::mpeg_ts::EPG & epg,
                        const std::string & lang = std::string("eng")) const;
 
-      void get_epg(yae::mpeg_ts::EPG & epg,
-                   const std::string & lang = std::string("eng")) const;
-
       // channels, indexed by major.minor:
       void get_channels(std::map<uint32_t, EPG::Channel> & channels,
                         const std::string & lang = std::string("eng")) const;
@@ -2450,8 +2457,17 @@ namespace yae
 
       void dump(const std::string & lang = std::string("eng")) const;
 
+      enum
+      {
+#if 1
+        kBucketDuration = 60 * 60 * 3, // 3 hours
+#else
+        kBucketDuration = 60 * 5, // 5 minutes
+#endif
+      };
+
       inline std::size_t bucket_index_at(uint32_t gps_time) const
-      { return (gps_time / 10800) % bucket_.size(); }
+      { return (gps_time / kBucketDuration) % bucket_.size(); }
 
       inline Bucket & get_current_bucket()
       {
@@ -2514,6 +2530,8 @@ namespace yae
 
       void dump(const std::vector<TDescriptorPtr> & descs,
                 std::ostream & oss) const;
+
+      std::string id_;
 
       // 4 days worth of channel guide data in 3 hour long chunks,
       // indexed by an index derived from STT system time:

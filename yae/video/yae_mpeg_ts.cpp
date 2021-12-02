@@ -4323,7 +4323,8 @@ namespace yae
     // Bucket::has_epg_for
     //
     bool
-    Bucket::has_epg_for(uint32_t gps_time) const
+    Bucket::has_epg_for(uint32_t gps_time,
+                        Bucket::VerifyEventDesc verify_etm) const
     {
       if (guide_.empty())
       {
@@ -4370,20 +4371,36 @@ namespace yae
           return false;
         }
 
-#if 1
-        // check that we have descriptions for each event:
+        bool found = false;
+
         for (std::list<ChannelGuide::Item>::const_iterator
                j = chan.items_.begin(); j != chan.items_.end(); ++j)
         {
           const ChannelGuide::Item & item = *j;
-          std::map<uint16_t, TLangText>::const_iterator
-            found_etm = chan.event_etm_.find(item.event_id_);
-          if (found_etm == chan.event_etm_.end())
+          if (!item.contains(gps_time))
           {
-            return false;
+            continue;
           }
+
+          if (verify_etm == Bucket::kEventDescRequired)
+          {
+            // check that we have descriptions for the specified event:
+            std::map<uint16_t, TLangText>::const_iterator
+              found_etm = chan.event_etm_.find(item.event_id_);
+            if (found_etm == chan.event_etm_.end())
+            {
+              return false;
+            }
+          }
+
+          found = true;
+          break;
         }
-#endif
+
+        if (!found)
+        {
+          return false;
+        }
       }
 
       return true;
@@ -5092,7 +5109,8 @@ namespace yae
     //----------------------------------------------------------------
     // Context::Context
     //
-    Context::Context():
+    Context::Context(const std::string & id):
+      id_(id),
       bucket_(4 * 8),
       network_pid_(0),
       stt_error_(0)
@@ -5852,17 +5870,95 @@ namespace yae
       for (std::size_t i = 0, n = bucket_.size(); i < n; i++)
       {
         const Bucket & bucket = bucket_[bx];
-        if (bucket.has_epg_for(gps_time))
+
+        if (bucket.has_epg_for(gps_time, Bucket::kEventDescOptional))
         {
-          bx_fallback.reset();
-          break;
-        }
-        else if (!bucket.guide_.empty() && !bx_fallback)
-        {
-          bx_fallback.reset(bx);
+          if (bucket.has_epg_for(gps_time, Bucket::kEventDescRequired))
+          {
+            bx_fallback.reset();
+#ifndef NDEBUG
+            yae_debug << id_ << " bucket " << bx << " has EPG for "
+                      << gps_time;
+
+            // it better have at least one program overlapping
+            // the given time point:
+            for (std::map<uint32_t, ChannelGuide>::const_iterator
+                   j = bucket.guide_.begin(); j != bucket.guide_.end(); ++j)
+            {
+              const uint32_t ch_num = j->first;
+              const ChannelGuide & guide = j->second;
+
+              bool found = false;
+              for (std::list<ChannelGuide::Item>::const_iterator
+                     k = guide.items_.begin(); k != guide.items_.end(); ++k)
+              {
+                const ChannelGuide::Item & item = *k;
+                if (item.contains(gps_time))
+                {
+                  Json::Value json;
+                  yae::mpeg_ts::save(json, item);
+                  yae_debug
+                    << id_ << " bucket " << bx << " has EPG for "
+                    << channel_major(ch_num) << "-" << channel_minor(ch_num)
+                    << " at " << gps_time_to_localtime_str(gps_time) << ": "
+                    << yae::to_str(json);
+                  found = true;
+                  break;
+                }
+              }
+
+              YAE_ASSERT(found);
+
+              if (!found)
+              {
+                if (guide.items_.empty())
+                {
+                  yae_debug
+                    << id_ << " bucket " << bx << " has NO EPG for "
+                    << channel_major(ch_num) << "-" << channel_minor(ch_num)
+                    << " at " << gps_time_to_localtime_str(gps_time);
+                }
+                else
+                {
+                  const ChannelGuide::Item & head = guide.items_.front();
+                  const ChannelGuide::Item & tail = guide.items_.back();
+
+                  Json::Value json_head;
+                  yae::mpeg_ts::save(json_head, head);
+
+                  Json::Value json_tail;
+                  yae::mpeg_ts::save(json_tail, tail);
+
+                  yae_debug
+                    << id_ << " bucket " << bx << " has NO EPG for "
+                    << channel_major(ch_num) << "-" << channel_minor(ch_num)
+                    << " at " << gps_time_to_localtime_str(gps_time)
+                    << ", first event: " << yae::to_str(json_head)
+                    << ", last event: " << yae::to_str(json_tail);
+                }
+              }
+            }
+#endif
+            break;
+          }
+          else if (!bx_fallback)
+          {
+#ifndef NDEBUG
+            yae_debug
+              << id_ << " bucket " << bx << " has EPG for "
+              << gps_time << ", lacking some program description(s), "
+              << "will be used as fallback";
+#endif
+            bx_fallback.reset(bx);
+          }
         }
 
-        bx = (bx + n - 1) % n;
+        std::size_t prev_bx = (bx + n - 1) % n;
+#if 0
+        yae_debug << id_ << " bucket " << bx << " has NO EPG for "
+                  << gps_time << ", checking bucket " << prev_bx << " instead";
+#endif
+        bx = prev_bx;
       }
 
       if (bx_fallback)
@@ -5955,26 +6051,6 @@ namespace yae
     }
 
     //----------------------------------------------------------------
-    // Context::get_epg
-    //
-    void
-    Context::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
-    {
-      YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "get_epg");
-      uint32_t gps_time = gps_time_now();
-      std::size_t bx_now = bucket_index_at(gps_time);
-      std::size_t num_bx = bucket_.size();
-
-      for (std::size_t i = 0; i < num_bx; i++)
-      {
-        std::size_t bx = (bx_now + i + 1) % num_bx;
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        const Bucket & bucket = bucket_[bx];
-        get_epg_nolock(bucket, epg, lang);
-      }
-    }
-
-    //----------------------------------------------------------------
     // Context::get_channels
     //
     void
@@ -6016,7 +6092,8 @@ namespace yae
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = yae::unix_epoch_time_to_gps_time(t);
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
-      return bucket.has_epg_for(gps_time);
+      bool require_program_description = true;
+      return bucket.has_epg_for(gps_time, Bucket::kEventDescRequired);
     }
 
     //----------------------------------------------------------------

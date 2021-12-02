@@ -390,7 +390,7 @@ namespace yae
     //
     struct PacketHandler : yae::mpeg_ts::IPacketHandler
     {
-      PacketHandler(DVR & dvr);
+      PacketHandler(DVR & dvr, const std::string & frequency);
       virtual ~PacketHandler();
 
       virtual void handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
