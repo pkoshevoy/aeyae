@@ -189,6 +189,7 @@ namespace yae
   void
   Scrollview::uncacheSelf()
   {
+    scrollbar_size_ref_.uncache();
     position_x_.uncache();
     position_y_.uncache();
 
@@ -700,6 +701,7 @@ namespace yae
     Scrollview & sview = root.
       addNew<Scrollview>((std::string(root.id_) + ".scrollview").c_str());
     sview.clipContent_ = clipContent;
+    sview.scrollbar_size_ref_ = scrollbar_size_ref;
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     Item & hscrollbar = root.addNew<Item>("hscrollbar");
@@ -714,12 +716,12 @@ namespace yae
 
                // vertical scrollbar width:
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               scrollbar_size_ref :
+               ItemRef::reference(sview.scrollbar_size_ref_) :
                ItemRef::constant(inset_v ? -1.0 : 0.0),
 
                // horizontal scrollbar width:
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               scrollbar_size_ref :
+               ItemRef::reference(sview.scrollbar_size_ref_) :
                ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
@@ -730,7 +732,7 @@ namespace yae
     scrollbar.width_ = scrollbar.addExpr
       (new Conditional<ItemRef>
        (scrollbar.visible_,
-        scrollbar_size_ref,
+        ItemRef::reference(sview.scrollbar_size_ref_),
         ItemRef::constant(0.0)));
 
     hscrollbar.setAttr("vertical", false);
@@ -744,11 +746,11 @@ namespace yae
                kScrollbarHorizontal,
 
                (scrollbars & kScrollbarVertical) == kScrollbarVertical ?
-               scrollbar_size_ref :
+               ItemRef::reference(sview.scrollbar_size_ref_) :
                ItemRef::constant(inset_v ? -1.0 : 0.0),
 
                (scrollbars & kScrollbarHorizontal) == kScrollbarHorizontal ?
-               scrollbar_size_ref :
+               ItemRef::reference(sview.scrollbar_size_ref_) :
                ItemRef::constant(inset_h ? -1.0 : 0.0),
 
                ItemRef::uncacheable(sview, kPropertyLeft),
@@ -759,7 +761,7 @@ namespace yae
     hscrollbar.height_ = hscrollbar.addExpr
       (new Conditional<ItemRef>
        (hscrollbar.visible_,
-        scrollbar_size_ref,
+        ItemRef::reference(sview.scrollbar_size_ref_),
         ItemRef::constant(0.0)));
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);

@@ -178,6 +178,9 @@ namespace yae
     // item container:
     ItemPtr content_;
 
+    // for scrollbar size reference lifetime management:
+    ItemRef scrollbar_size_ref_;
+
     // optional scrollview position ...
     // NOTE: if defined then set_position_* are ignored
     ItemRef position_x_;
@@ -265,6 +268,12 @@ namespace yae
       bottom_(bottom)
     {
       YAE_ASSERT(scrollbarId_ != kScrollbarNone);
+      YAE_ASSERT(!(vscrollbarWidth_.isCacheable() ||
+                   hscrollbarWidth_.isCacheable() ||
+                   left_.isCacheable() ||
+                   right_.isCacheable() ||
+                   top_.isCacheable() ||
+                   bottom_.isCacheable()));
     }
 
     void evaluate(bool & result) const
