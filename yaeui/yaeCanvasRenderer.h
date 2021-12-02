@@ -252,7 +252,7 @@ namespace yae
       mutex_.lock();
       n_++;
 
-      if (this->getCurrent())
+      if (this->isCurrent())
       {
         n_++;
       }
@@ -281,6 +281,7 @@ namespace yae
     virtual bool makeCurrent() = 0;
     virtual void doneCurrent() = 0;
     virtual const void * getCurrent() const = 0;
+    virtual bool isCurrent() const = 0;
 
   private:
     boost::recursive_mutex mutex_;

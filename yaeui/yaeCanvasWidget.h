@@ -119,7 +119,9 @@ namespace yae
       virtual bool makeCurrent()
       {
         widget_.makeCurrent();
+#ifndef NDEBUG
         YAE_OGL_11_HERE();
+#endif
         return true;
       }
 
@@ -135,6 +137,9 @@ namespace yae
 #endif
         return ctx;
       }
+
+      virtual bool isCurrent() const
+      { return widget_.context() == this->getCurrent(); }
 
     protected:
       TOpenGLWidget & widget_;
