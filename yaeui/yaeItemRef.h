@@ -102,7 +102,7 @@ namespace yae
         virtual bool match(const IDataSrc * src) const = 0;
       };
 
-      virtual const IDataSrc * find(const IDataSrc::IVisitor & visitor) const
+      virtual const IDataSrc * find(const typename IDataSrc::IVisitor & visitor) const
       { return visitor.match(this) ? this : NULL; }
     };
 
