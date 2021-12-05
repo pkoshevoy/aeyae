@@ -2972,17 +2972,18 @@ namespace yae
       Json::Value epg;
       if (yae::TOpenFile(path, "rb").load(epg))
       {
-        boost::unique_lock<boost::mutex> lock(mutex_);
-
-        TPacketHandlerPtr & packet_handler_ptr =
-          packet_handler_[frequency];
-
-        if (!packet_handler_ptr)
+        TPacketHandlerPtr packet_handler_ptr;
         {
-          packet_handler_ptr.reset(new PacketHandler(*this, frequency));
-          packet_handler_[frequency] = packet_handler_ptr;
+          boost::unique_lock<boost::mutex> lock(mutex_);
+          packet_handler_ptr = packet_handler_[frequency];
+          if (!packet_handler_ptr)
+          {
+            packet_handler_ptr.reset(new PacketHandler(*this, frequency));
+            packet_handler_[frequency] = packet_handler_ptr;
+          }
         }
 
+        yae_ilog("loading EPG for %s Hz", frequency.c_str());
         PacketHandler & packet_handler = *packet_handler_ptr;
         packet_handler.ctx_.load(epg[frequency]);
       }
