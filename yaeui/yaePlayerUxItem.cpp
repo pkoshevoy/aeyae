@@ -3598,7 +3598,8 @@ namespace yae
 
       if (dar)
       {
-        double s = double(canvas()->canvasWidth()) / w;
+        double cw = canvas()->canvasLogicalWidth();
+        double s = cw / w;
         canvasSizeSet(s, s);
       }
     }
@@ -3636,8 +3637,8 @@ namespace yae
       return;
     }
 
-    double cw = canvas->canvasWidth();
-    double ch = canvas->canvasHeight();
+    double cw = canvas->canvasLogicalWidth();
+    double ch = canvas->canvasLogicalHeight();
 
     TVec2D clientPos, clientSize;
     canvas_delegate.getWindowClient(clientPos, clientSize);
@@ -3650,6 +3651,9 @@ namespace yae
     // calculate width and height overhead:
     double ox = ww - cw;
     double oy = wh - ch;
+
+    YAE_ASSERT(ox >= 0.0);
+    YAE_ASSERT(oy >= 0.0);
 
     double ideal_w = floor(0.5 + vw * xexpand_);
     double ideal_h = floor(0.5 + vh * yexpand_);
@@ -3721,8 +3725,8 @@ namespace yae
       return;
     }
 
-    double cw = canvas->canvasWidth();
-    double ch = canvas->canvasHeight();
+    double cw = canvas->canvasLogicalWidth();
+    double ch = canvas->canvasLogicalHeight();
     xexpand_ = double(cw) / double(vw);
     yexpand_ = double(ch) / double(vh);
   }

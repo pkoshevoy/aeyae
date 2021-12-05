@@ -241,6 +241,12 @@ namespace yae
     inline int canvasHeight() const
     { return h_; }
 
+    inline double canvasLogicalWidth() const
+    { return w_ / devicePixelRatio_; }
+
+    inline double canvasLogicalHeight() const
+    { return h_ / devicePixelRatio_; }
+
     inline const yae::shared_ptr<IOpenGLContext> & contextPtr() const
     { return context_; }
 
