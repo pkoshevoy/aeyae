@@ -5718,8 +5718,8 @@ namespace yae
         return;
       }
 
-      // drop items more than 28 days in the past from t_now:
-      uint32_t t_old = t_now - 28 * 24 * 3600;
+      // drop items more than 7 days in the past from t_now:
+      uint32_t t_old = t_now - 7 * 24 * 3600;
       for (std::list<ChannelGuide::Item>::iterator it = old_items.begin();
            it != old_items.end(); )
       {
