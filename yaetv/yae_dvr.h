@@ -711,6 +711,9 @@ namespace yae
     TTime margin_;
 
   protected:
+    std::string local_uuid_;
+    std::string remote_uuid_;
+
     mutable boost::mutex tuner_cache_mutex_;
     Json::Value tuner_cache_;
     std::map<uint32_t, std::string> channel_frequency_lut_;
@@ -725,7 +728,6 @@ namespace yae
     TTime epg_lastmod_;
 
     mutable boost::mutex preferences_mutex_;
-    std::set<std::string> known_device_names_;
     Json::Value preferences_;
   };
 

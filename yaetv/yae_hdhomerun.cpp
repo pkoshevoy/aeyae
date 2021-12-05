@@ -428,8 +428,7 @@ namespace yae
   {
     Private(const std::string & cache_dir);
 
-    void discover_devices(std::list<TunerDevicePtr> & devices,
-                          const std::set<std::string> & known_device_names);
+    void discover_devices(std::list<TunerDevicePtr> & devices);
 
     void get_channel_list(std::list<TunerChannel> & channels,
                           const char * channel_map) const;
@@ -461,6 +460,9 @@ namespace yae
     // keep track of existing sessions, but don't extend their lifetime:
     std::map<std::string, yae::weak_ptr<HDHomeRun::Session> > sessions_;
 
+    // keep track of known devices, to avoid spamming the log:
+    std::set<std::string> known_device_names_;
+
     // for HDHomeRun debug logging:
     hdhomerun_dbgptr_t dbg_;
   };
@@ -491,8 +493,7 @@ namespace yae
   // HDHomeRun::Private::discover_tuners
   //
   void
-  HDHomeRun::Private::discover_devices(std::list<TunerDevicePtr> & devices,
-                                       const std::set<std::string> & known)
+  HDHomeRun::Private::discover_devices(std::list<TunerDevicePtr> & devices)
   {
     YAE_ASSERT(devices.empty());
 
@@ -512,8 +513,10 @@ namespace yae
       const hdhomerun_discover_device_t & found = devices_[i];
       devices.push_back(TunerDevicePtr(new HDHomeRunDevice(found)));
 
-      if (!yae::has(known, devices.back()->name()))
+      std::string device_name = devices.back()->name();
+      if (!yae::has(known_device_names_, device_name))
       {
+        known_device_names_.insert(device_name);
         yae_ilog("%p hdhomerun device %08X found at %u.%u.%u.%u\n",
                  this,
                  (unsigned int)found.device_id,
@@ -1008,10 +1011,9 @@ namespace yae
   // HDHomeRun::discover_devices
   //
   void
-  HDHomeRun::discover_devices(std::list<TunerDevicePtr> & devices,
-                              const std::set<std::string> & known_device_names)
+  HDHomeRun::discover_devices(std::list<TunerDevicePtr> & devices)
   {
-    private_->discover_devices(devices, known_device_names);
+    private_->discover_devices(devices);
   }
 
   //----------------------------------------------------------------

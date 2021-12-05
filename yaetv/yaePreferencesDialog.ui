@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>400</height>
+    <height>554</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,7 +64,7 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QComboBox" name="channelMapComboBox">
-        <property name="currentText" stdset="0">
+        <property name="currentText">
          <string>au-bcast</string>
         </property>
         <item>
@@ -142,14 +142,31 @@
      <property name="title">
       <string>Storage</string>
      </property>
-     <layout class="QHBoxLayout" name="horizontalLayout">
+     <layout class="QVBoxLayout" name="verticalLayout_3">
       <item>
-       <widget class="QLineEdit" name="storageLineEdit"/>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QLineEdit" name="storageLineEdit"/>
+        </item>
+        <item>
+         <widget class="QToolButton" name="storageToolButton">
+          <property name="text">
+           <string>...</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
       </item>
       <item>
-       <widget class="QToolButton" name="storageToolButton">
+       <widget class="QCheckBox" name="allowRecordingCheckBox">
+        <property name="toolTip">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Network shared DVR storage should have just one DVR instance responsible for writing to it.&lt;br/&gt;&lt;br/&gt;When multiple DVR instances are allowed to write to the same storage only one will be able to (on first come first served basis), or when the current write-enabled DVR instance quits.&lt;br/&gt;&lt;br/&gt;You can explicitly disable local DVR recording to shared storage here.&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
         <property name="text">
-         <string>...</string>
+         <string>allow recording to this storage</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </item>
@@ -187,8 +204,8 @@
           <rect>
            <x>0</x>
            <y>0</y>
-           <width>372</width>
-           <height>170</height>
+           <width>370</width>
+           <height>250</height>
           </rect>
          </property>
         </widget>

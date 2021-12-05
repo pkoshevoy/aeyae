@@ -1805,6 +1805,30 @@ namespace yae
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
+
+
+    // load or generate a UUIC for this DVR instance:
+    {
+      Json::Value json;
+      std::string uuid_path = (yaetv_ / "uuid.json").string();
+      if (yae::TOpenFile(uuid_path, "rb").load(json))
+      {
+        local_uuid_ = json["uuid"].asString();
+        YAE_ASSERT(!local_uuid_.empty());
+      }
+
+      if (local_uuid_.empty())
+      {
+        local_uuid_ = yae::generate_uuid();
+        json["uuid"] = local_uuid_;
+
+        if (!yae::TOpenFile(uuid_path, "wb").save(json))
+        {
+          local_uuid_.clear();
+        }
+      }
+    }
+
     restart(basedir_.string());
   }
 
@@ -2318,7 +2342,7 @@ namespace yae
     dvr_.hdhr_.get_channel_list(channels, channelmap.c_str());
 
     std::list<TunerDevicePtr> devices;
-    dvr_.hdhr_.discover_devices(devices, std::set<std::string>());
+    dvr_.hdhr_.discover_devices(devices);
 
     for (std::list<TunerDevicePtr>::const_iterator
            i = devices.begin(); i != devices.end(); ++i)
@@ -4311,24 +4335,25 @@ namespace yae
   bool
   DVR::discover_enabled_tuners(std::set<std::string> & tuner_names)
   {
-    std::set<std::string> known_device_names;
     Json::Value tuners;
     {
       boost::unique_lock<boost::mutex> lock(preferences_mutex_);
+
+      if (!preferences_.get("allow_recording", true).asBool())
+      {
+        return false;
+      }
+
       tuners = preferences_.get("tuners", Json::Value(Json::objectValue));
-      known_device_names = known_device_names_;
     }
 
-    std::set<std::string> device_names;
     std::list<TunerDevicePtr> devices;
-    hdhr_.discover_devices(devices, known_device_names);
+    hdhr_.discover_devices(devices);
 
     for (std::list<TunerDevicePtr>::const_iterator
            i = devices.begin(); i != devices.end(); ++i)
     {
       const TunerDevice & device = *(*(i));
-      device_names.insert(device.name());
-
       for (int j = 0, num_tuners = device.num_tuners(); j < num_tuners; j++)
       {
         std::string tuner_name = device.tuner_name(j);
@@ -4338,12 +4363,6 @@ namespace yae
           tuner_names.insert(tuner_name);
         }
       }
-    }
-
-    if (known_device_names != device_names)
-    {
-      boost::unique_lock<boost::mutex> lock(preferences_mutex_);
-      known_device_names_ = device_names;
     }
 
     return !tuner_names.empty();

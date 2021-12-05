@@ -230,6 +230,9 @@ namespace yae
       basedir = (fs::path(movies.toUtf8().constData()) / "yaetv").string();
     }
 
+    bool allow_recording = preferences_.get("allow_recording", true).asBool();
+    this->allowRecordingCheckBox->setChecked(allow_recording);
+
     QString basedir_qstr = QString::fromUtf8(basedir.c_str());
     basedir_qstr = QDir::toNativeSeparators(basedir_qstr);
     this->storageLineEdit->setText(basedir_qstr);
@@ -239,7 +242,7 @@ namespace yae
       get("tuners", Json::Value(Json::objectValue));
 
     std::list<TunerDevicePtr> devices;
-    dvr.hdhr_.discover_devices(devices, std::set<std::string>());
+    dvr.hdhr_.discover_devices(devices);
 
     // clear any prior items:
     tuners_.clear();
@@ -314,6 +317,9 @@ namespace yae
 
     preferences_["basedir"] =
       fs::path(basedir_qstr.toUtf8().constData()).string();
+
+    preferences_["allow_recording"] =
+      this->allowRecordingCheckBox->isChecked();
 
     preferences_["channelmap"] =
       this->channelMapComboBox->currentText().toUtf8().constData();
