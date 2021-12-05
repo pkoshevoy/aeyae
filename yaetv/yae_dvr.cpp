@@ -1752,13 +1752,18 @@ namespace yae
           dvr_.update_epg();
         }
 
-        if (dvr_.next_channel_scan() <= now)
+        std::set<std::string> enabled_tuners;
+        bool has_enabled_tuners = dvr_.discover_enabled_tuners(enabled_tuners);
+
+        if (has_enabled_tuners &&
+            dvr_.next_channel_scan() <= now)
         {
           dvr_.set_next_channel_scan(now + dvr_.channel_scan_period_);
           dvr_.scan_channels();
         }
 
-        if (dvr_.next_storage_cleanup() <= now)
+        if (has_enabled_tuners &&
+            dvr_.next_storage_cleanup() <= now)
         {
           dvr_.set_next_storage_cleanup(now + dvr_.storage_cleanup_period_);
           dvr_.cleanup_storage();
