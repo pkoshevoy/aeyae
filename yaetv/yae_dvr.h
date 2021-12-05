@@ -517,6 +517,8 @@ namespace yae
     void save_epg() const;
     void save_frequencies() const;
 
+    void load_epg();
+
     void toggle_blacklist(uint32_t ch_num);
     void save_blacklist() const;
     bool load_blacklist();

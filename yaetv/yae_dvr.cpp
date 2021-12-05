@@ -54,6 +54,12 @@ namespace yae
     "^\\d{8}-\\d{4} \\d{1,2}\\.\\d{1,2} .+\\.mpg$";
 
   //----------------------------------------------------------------
+  // epg_by_freq_rx
+  //
+  static const char * epg_by_freq_rx =
+    "^epg-\\d{8,9}\\.json";
+
+  //----------------------------------------------------------------
   // CollectFiles
   //
   struct CollectFiles
@@ -2009,30 +2015,7 @@ namespace yae
     }
 
     // load the EPG:
-    for (std::map<std::string, yae::TChannels>::const_iterator
-           i = frequencies.begin(); i != frequencies.end(); ++i)
-    {
-      const std::string & frequency = i->first;
-      const yae::TChannels & channels = i->second;
-
-      if (channels.empty())
-      {
-        continue;
-      }
-
-      std::string epg_path =
-        (yaetv_ / ("epg-" + frequency + ".json")).string();
-
-      TPacketHandlerPtr & packet_handler_ptr = packet_handler_[frequency];
-      packet_handler_ptr.reset(new PacketHandler(*this, frequency));
-
-      Json::Value epg;
-      if (yae::TOpenFile(epg_path, "rb").load(epg))
-      {
-        PacketHandler & packet_handler = *packet_handler_ptr;
-        packet_handler.ctx_.load(epg[frequency]);
-      }
-    }
+    load_epg();
   }
 
   //----------------------------------------------------------------
@@ -2486,13 +2469,12 @@ namespace yae
   //
   struct UpdateProgramGuide : yae::Worker::Task
   {
+    DVR & dvr_;
+
     UpdateProgramGuide(DVR & dvr);
 
     // virtual:
     void execute(const yae::Worker & worker);
-
-    // helper:
-    DVR & dvr_;
   };
 
   //----------------------------------------------------------------
@@ -2514,7 +2496,8 @@ namespace yae
     std::set<std::string> enabled_tuners;
     if (!dvr_.discover_enabled_tuners(enabled_tuners))
     {
-      // there are no enabled tuners, nothing to do here:
+      // there are no enabled tuners, use the remote EPG, if any:
+      dvr_.load_epg();
       return;
     }
 
@@ -2963,6 +2946,46 @@ namespace yae
     if (freq_file.open(freq_path, "wb"))
     {
       freq_file.save(json);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::load_epg
+  //
+  void
+  DVR::load_epg()
+  {
+    std::map<std::string, std::string> epg_by_freq;
+    {
+      std::string epg_dir = (basedir_ / ".yaetv").string();
+      CollectFiles collect_files(epg_by_freq, epg_by_freq_rx);
+      for_each_file_at(epg_dir, collect_files);
+    }
+
+    for (std::map<std::string, std::string>::const_iterator
+           i = epg_by_freq.begin(); i != epg_by_freq.end(); ++i)
+    {
+      const std::string & name = i->first;
+      const std::string & path = i->second;
+      std::string frequency = name.substr(4, name.size() - 9);
+
+      Json::Value epg;
+      if (yae::TOpenFile(path, "rb").load(epg))
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+
+        TPacketHandlerPtr & packet_handler_ptr =
+          packet_handler_[frequency];
+
+        if (!packet_handler_ptr)
+        {
+          packet_handler_ptr.reset(new PacketHandler(*this, frequency));
+          packet_handler_[frequency] = packet_handler_ptr;
+        }
+
+        PacketHandler & packet_handler = *packet_handler_ptr;
+        packet_handler.ctx_.load(epg[frequency]);
+      }
     }
   }
 
@@ -4077,6 +4100,7 @@ namespace yae
         continue;
       }
 
+      yae_ilog("no channels found at %s Hz", frequency.c_str());
       frequency_channel_lut_.erase(frequency);
     }
 
@@ -4089,6 +4113,7 @@ namespace yae
         continue;
       }
 
+      yae_ilog("no signal present at %s Hz", frequency.c_str());
       frequency_channel_lut_.erase(frequency);
     }
 
