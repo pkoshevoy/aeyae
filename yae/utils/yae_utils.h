@@ -123,6 +123,32 @@ namespace yae
   rename_utf8(const char * fn_old_utf8, const char * fn_new_utf8);
 
   //----------------------------------------------------------------
+  // rename_utf8
+  //
+  inline int
+  rename_utf8(const std::string & fn_old_utf8,
+              const std::string & fn_new_utf8)
+  { return rename_utf8(fn_old_utf8.c_str(), fn_new_utf8.c_str()); }
+
+  //----------------------------------------------------------------
+  // atomic_rename_utf8
+  //
+  // This uses ReplaceFile WIN32 API on windows,
+  // otherwise this is the same as rename_utf8.
+  //
+  YAE_API int
+  atomic_rename_utf8(const char * fn_old_utf8,
+                     const char * fn_new_utf8);
+
+  //----------------------------------------------------------------
+  // atomic_rename_utf8
+  //
+  inline int
+  atomic_rename_utf8(const std::string & fn_old_utf8,
+                     const std::string & fn_new_utf8)
+  { return atomic_rename_utf8(fn_old_utf8.c_str(), fn_new_utf8.c_str()); }
+
+  //----------------------------------------------------------------
   // remove_utf8
   //
   YAE_API bool
@@ -491,6 +517,22 @@ namespace yae
   // TOpenFilePtr
   //
   typedef boost::shared_ptr<TOpenFile> TOpenFilePtr;
+
+
+  //----------------------------------------------------------------
+  // generate_uuid
+  //
+  // thread-safe UUID generator function
+  //
+  YAE_API std::string generate_uuid();
+
+  //----------------------------------------------------------------
+  // atomic_save
+  //
+  // thread-safe
+  //
+  YAE_API bool atomic_save(const std::string & path,
+                           const Json::Value & data);
 
 
   //----------------------------------------------------------------

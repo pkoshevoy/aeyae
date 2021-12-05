@@ -50,7 +50,10 @@
 
 // boost includes:
 #ifndef Q_MOC_RUN
+#include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #endif
 
 // aeyae:
@@ -326,6 +329,34 @@ namespace yae
 #endif
 
     return ret;
+  }
+
+  //----------------------------------------------------------------
+  // atomic_rename_utf8
+  //
+  int
+  atomic_rename_utf8(const char * fn_old,
+                     const char * fn_new)
+  {
+#ifndef _WIN32
+    return rename_utf8(fn_old, fn_new);
+#else
+    wchar_t * wold = cstr_to_utf16(fn_old);
+    wchar_t * wnew = cstr_to_utf16(fn_new);
+
+    BOOL ok = ReplaceFileW(wnew, // to
+                           wold, // from
+                           NULL, // backup file name
+                           0, // flags
+                           NULL, // lpExclude
+                           NULL);// lpReserved
+    int err = ok ? 0 : GetLastError();
+
+    free(wold);
+    free(wnew);
+
+    return err;
+#endif
   }
 
   //----------------------------------------------------------------
@@ -1516,6 +1547,86 @@ namespace yae
       file_ = NULL;
     }
   }
+
+  //----------------------------------------------------------------
+  // uuid_generator_t
+  //
+  struct uuid_generator_t
+  {
+    boost::mutex mutex_;
+    boost::uuids::random_generator rng_;
+
+    inline std::string generate()
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return boost::lexical_cast<std::string>(rng_());
+    }
+  };
+
+  //----------------------------------------------------------------
+  // generate_uuid
+  //
+  std::string
+  generate_uuid()
+  {
+    static uuid_generator_t uuid;
+    return uuid.generate();
+  }
+
+  //----------------------------------------------------------------
+  // atomic_save
+  //
+  bool
+  atomic_save(const std::string & path,
+              const Json::Value & data)
+  {
+    std::string dir_name;
+    std::string filename;
+    if (!parse_file_path(path, dir_name, filename))
+    {
+      yae_elog("atomic_save: failed to parse the file path: %s", path.c_str());
+      return false;
+    }
+
+    if (!yae::mkdir_p(dir_name))
+    {
+      yae_elog("atomic_save: failed to mkdir_p: %s", dir_name.c_str());
+      return false;
+    }
+
+    std::string uuid = generate_uuid();
+    std::string tmp_path = (fs::path(dir_name) / (".tmp." + uuid)).string();
+    {
+      yae::TOpenFile file;
+      if (!file.open(tmp_path, "wb"))
+      {
+        yae_elog("atomic_save: failed to open temp file: %s",
+                 tmp_path.c_str());
+        return false;
+      }
+
+      if (!file.save(data))
+      {
+        yae_elog("atomic_save: failed to save temp file: %s",
+                 tmp_path.c_str());
+        YAE_ASSERT(remove_utf8(tmp_path) == 0);
+        return false;
+      }
+    }
+
+    int err = yae::atomic_rename_utf8(tmp_path, path);
+    if (err != 0)
+    {
+      yae_elog("atomic_save: failed to rename %s to %s",
+               tmp_path.c_str(),
+               path.c_str());
+      YAE_ASSERT(remove_utf8(tmp_path) == 0);
+      return false;
+    }
+
+    return !err;
+  }
+
 
   //----------------------------------------------------------------
   // parse_hhmmss_xxx

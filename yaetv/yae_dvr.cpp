@@ -2911,12 +2911,9 @@ namespace yae
     ctx.save(json[frequency]);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string epg_path = (yaetv_ / ("epg-" + frequency + ".json")).string();
-    yae::TOpenFile epg_file;
-    if (epg_file.open(epg_path, "wb"))
-    {
-      epg_file.save(json);
-    }
+    std::string epg_path =
+      (basedir_ / ".yaetv" / ("epg-" + frequency + ".json")).string();
+    YAE_ASSERT(yae::atomic_save(epg_path, json));
   }
 
   //----------------------------------------------------------------
