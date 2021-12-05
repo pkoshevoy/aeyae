@@ -725,6 +725,7 @@ namespace yae
     TTime epg_lastmod_;
 
     mutable boost::mutex preferences_mutex_;
+    std::set<std::string> known_device_names_;
     Json::Value preferences_;
   };
 

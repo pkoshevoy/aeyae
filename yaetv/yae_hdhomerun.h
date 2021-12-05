@@ -116,7 +116,8 @@ namespace yae
     HDHomeRun(const std::string & cache_dir);
     ~HDHomeRun();
 
-    void discover_devices(std::list<TunerDevicePtr> & devices);
+    void discover_devices(std::list<TunerDevicePtr> & devices,
+                          const std::set<std::string> & known_device_names);
 
     void get_channel_list(std::list<TunerChannel> & channels,
                           const char * channel_map) const;

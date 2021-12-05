@@ -428,7 +428,8 @@ namespace yae
   {
     Private(const std::string & cache_dir);
 
-    void discover_devices(std::list<TunerDevicePtr> & devices);
+    void discover_devices(std::list<TunerDevicePtr> & devices,
+                          const std::set<std::string> & known_device_names);
 
     void get_channel_list(std::list<TunerChannel> & channels,
                           const char * channel_map) const;
@@ -490,7 +491,8 @@ namespace yae
   // HDHomeRun::Private::discover_tuners
   //
   void
-  HDHomeRun::Private::discover_devices(std::list<TunerDevicePtr> & devices)
+  HDHomeRun::Private::discover_devices(std::list<TunerDevicePtr> & devices,
+                                       const std::set<std::string> & known)
   {
     YAE_ASSERT(devices.empty());
 
@@ -508,15 +510,18 @@ namespace yae
     for (int i = 0; i < num_found; i++)
     {
       const hdhomerun_discover_device_t & found = devices_[i];
-      yae_ilog("%p hdhomerun device %08X found at %u.%u.%u.%u\n",
-               this,
-               (unsigned int)found.device_id,
-               (unsigned int)(found.ip_addr >> 24) & 0x0FF,
-               (unsigned int)(found.ip_addr >> 16) & 0x0FF,
-               (unsigned int)(found.ip_addr >> 8) & 0x0FF,
-               (unsigned int)(found.ip_addr >> 0) & 0x0FF);
-
       devices.push_back(TunerDevicePtr(new HDHomeRunDevice(found)));
+
+      if (!yae::has(known, devices.back()->name()))
+      {
+        yae_ilog("%p hdhomerun device %08X found at %u.%u.%u.%u\n",
+                 this,
+                 (unsigned int)found.device_id,
+                 (unsigned int)(found.ip_addr >> 24) & 0x0FF,
+                 (unsigned int)(found.ip_addr >> 16) & 0x0FF,
+                 (unsigned int)(found.ip_addr >> 8) & 0x0FF,
+                 (unsigned int)(found.ip_addr >> 0) & 0x0FF);
+      }
 
       for (int tuner = 0; tuner < found.tuner_count; tuner++)
       {
@@ -1003,9 +1008,10 @@ namespace yae
   // HDHomeRun::discover_devices
   //
   void
-  HDHomeRun::discover_devices(std::list<TunerDevicePtr> & devices)
+  HDHomeRun::discover_devices(std::list<TunerDevicePtr> & devices,
+                              const std::set<std::string> & known_device_names)
   {
-    private_->discover_devices(devices);
+    private_->discover_devices(devices, known_device_names);
   }
 
   //----------------------------------------------------------------

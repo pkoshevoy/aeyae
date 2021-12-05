@@ -239,7 +239,7 @@ namespace yae
       get("tuners", Json::Value(Json::objectValue));
 
     std::list<TunerDevicePtr> devices;
-    dvr.hdhr_.discover_devices(devices);
+    dvr.hdhr_.discover_devices(devices, std::set<std::string>());
 
     // clear any prior items:
     tuners_.clear();
