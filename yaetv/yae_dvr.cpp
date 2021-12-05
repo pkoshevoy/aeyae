@@ -3968,6 +3968,12 @@ namespace yae
   {
     frequency_channel_lut_.clear();
 
+    std::set<std::string> signal_present;
+    std::set<std::string> signal_absent;
+
+    std::set<std::string> channels_present;
+    std::set<std::string> channels_absent;
+
     const Json::Value & const_tuner_cache = tuner_cache_;
     for (Json::Value::const_iterator i = const_tuner_cache.begin();
          i != tuner_cache_.end(); ++i)
@@ -3985,14 +3991,20 @@ namespace yae
         const Json::Value & status = cache["status"];
         TChannels & channels = frequency_channel_lut_[frequency];
 
-        bool signal_present =
-          status.get("signal_present", false).asBool();
+        bool no_signal_present =
+          !status.get("signal_present", false).asBool();
+
         uint32_t signal_to_noise_quality =
           status.get("signal_to_noise_quality", 0).asUInt();
-        if (!signal_present)
+
+        if (no_signal_present)
         {
-          frequency_channel_lut_.erase(frequency);
+          signal_absent.insert(frequency);
           continue;
+        }
+        else
+        {
+          signal_present.insert(frequency);
         }
 
         for (Json::Value::const_iterator k = programs.begin();
@@ -4050,10 +4062,41 @@ namespace yae
 
         if (channels.empty())
         {
-          frequency_channel_lut_.erase(frequency);
+          channels_absent.insert(frequency);
+        }
+        else
+        {
+          channels_present.insert(frequency);
         }
       }
     }
+
+    for (std::set<std::string>::const_iterator
+           i = channels_absent.begin(); i != channels_absent.end(); ++i)
+    {
+      const std::string & frequency = *i;
+      if (yae::has(channels_present, frequency))
+      {
+        continue;
+      }
+
+      frequency_channel_lut_.erase(frequency);
+    }
+
+    for (std::set<std::string>::const_iterator
+           i = signal_absent.begin(); i != signal_absent.end(); ++i)
+    {
+      const std::string & frequency = *i;
+      if (yae::has(signal_present, frequency))
+      {
+        continue;
+      }
+
+      frequency_channel_lut_.erase(frequency);
+    }
+
+    YAE_ASSERT(frequency_channel_lut_.empty() ==
+               channel_frequency_lut_.empty());
   }
 
   //----------------------------------------------------------------
