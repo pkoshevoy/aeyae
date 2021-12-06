@@ -592,6 +592,18 @@ namespace yae
 
     void evaluate(const yae::mpeg_ts::EPG & epg);
 
+    inline TTime next_heartbeat() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_heartbeat_);
+    }
+
+    inline void set_next_heartbeat(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_heartbeat_ = t;
+    }
+
     inline TTime next_channel_scan() const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -657,8 +669,15 @@ namespace yae
 
   protected:
     void update_channel_frequency_luts();
+    void save_heartbeat();
 
   public:
+    // check whether the selected storage location
+    // has no other DVR instances writing to it,
+    // whether this DVR instance has any enabled tuners,
+    // and whether recording has been explicitly enabled:
+    bool check_local_recording_allowed();
+
     // fill in the major.minor -> frequency lookup table:
     void get_channel_luts(std::map<uint32_t, std::string> & chan_freq,
                           std::map<std::string, TChannels> & freq_chan) const;
@@ -679,6 +698,9 @@ namespace yae
 
     // returns false if there are no enabled tuners:
     bool discover_enabled_tuners(std::set<std::string> & tuner_names);
+
+    // helper:
+    std::string get_writer_uuid() const;
 
     // default is us-bcast, can be configured in preferences:
     std::string get_channelmap() const;
@@ -704,6 +726,7 @@ namespace yae
     // channels we don't want to waste time on:
     Blacklist blacklist_;
 
+    TTime heartbeat_period_;
     TTime channel_scan_period_;
     TTime epg_refresh_period_;
     TTime schedule_refresh_period_;
@@ -712,13 +735,16 @@ namespace yae
 
   protected:
     std::string local_uuid_;
-    std::string remote_uuid_;
+
+    mutable boost::mutex writer_uuid_mutex_;
+    mutable std::string writer_uuid_;
 
     mutable boost::mutex tuner_cache_mutex_;
     Json::Value tuner_cache_;
     std::map<uint32_t, std::string> channel_frequency_lut_;
     std::map<std::string, TChannels> frequency_channel_lut_;
 
+    TTime next_heartbeat_;
     TTime next_channel_scan_;
     TTime next_epg_refresh_;
     TTime next_schedule_refresh_;

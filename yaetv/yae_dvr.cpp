@@ -17,16 +17,18 @@
 
 // boost includes:
 #ifndef Q_MOC_RUN
+#include <boost/asio.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/thread.hpp>
 #endif
 
+// aeyae:
+#include "yae/api/yae_log.h"
+
+// yaeui:
 #ifdef __APPLE__
 #include "yaeAppleUtils.h"
 #endif
-
-// aeyae:
-#include "yae/api/yae_log.h"
 
 // yaetv:
 #include "yae_dvr.h"
@@ -58,6 +60,16 @@ namespace yae
   //
   static const char * epg_by_freq_rx =
     "^epg-\\d{8,9}\\.json";
+
+  //----------------------------------------------------------------
+  // heartbeat_rx
+  //
+  static const char * heartbeat_rx =
+    "^heartbeat-[a-f0-9]{8}"
+    "-[a-f0-9]{4}"
+    "-4[a-f0-9]{3}"
+    "-[89aAbB][a-f0-9]{3}"
+    "-[a-f0-9]{12}\\.json";
 
   //----------------------------------------------------------------
   // CollectFiles
@@ -1695,6 +1707,7 @@ namespace yae
     dvr_.set_next_epg_refresh(now);
     dvr_.set_next_schedule_refresh(now);
     dvr_.set_next_storage_cleanup(now);
+    dvr_.set_next_heartbeat(now);
 
     yae::mpeg_ts::EPG epg;
     dvr_.get_epg(epg);
@@ -1709,6 +1722,12 @@ namespace yae
       if (dvr_.load_wishlist())
       {
         dvr_.save_schedule();
+      }
+
+      if (dvr_.next_heartbeat() <= now)
+      {
+        dvr_.set_next_heartbeat(now + dvr_.heartbeat_period_);
+        dvr_.save_heartbeat();
       }
 
       if (dvr_.next_schedule_refresh() <= now)
@@ -1798,6 +1817,7 @@ namespace yae
     hdhr_(yaetv_dir),
     yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
+    heartbeat_period_(5, 1),
     channel_scan_period_(24 * 60 * 60, 1),
     epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
@@ -4152,6 +4172,163 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::save_heartbeat
+  //
+  void
+  DVR::save_heartbeat()
+  {
+    std::string heartbeat_path =
+      (basedir_ / ".yaetv" / ("heartbeat-" + local_uuid_ + ".json")).string();
+
+    Json::Value json;
+    json["uuid"] = local_uuid_;
+    json["host"] = boost::asio::ip::host_name();
+    json["has_tuners"] = check_local_recording_allowed();
+    json["heartbeat"] = TTime::now().get(1);
+
+    YAE_ASSERT(yae::atomic_save(heartbeat_path, json));
+  }
+
+  //----------------------------------------------------------------
+  // DVR::is_local_recording_allowed
+  //
+  bool
+  DVR::check_local_recording_allowed()
+  {
+    // check whether recording has been explicitly disabled:
+    {
+      boost::unique_lock<boost::mutex> lock(preferences_mutex_);
+      if (!preferences_.get("allow_recording", true).asBool())
+      {
+        return false;
+      }
+    }
+
+    // check whether there are any other DVR instances writing
+    // to the same storage:
+    std::map<std::string, std::string> dvr_instances;
+    {
+      std::string heartbeat_dir = (basedir_ / ".yaetv").string();
+      CollectFiles collect_files(dvr_instances, heartbeat_rx);
+      for_each_file_at(heartbeat_dir, collect_files);
+    }
+
+    static const int64_t one_day = 24 * 60 * 60;
+    const int64_t now = yae::TTime::now().get(1);
+
+    for (std::map<std::string, std::string>::const_iterator
+           i = dvr_instances.begin(); i != dvr_instances.end(); ++i)
+    {
+      const std::string & name = i->first;
+      const std::string & path = i->second;
+
+      Json::Value dvr;
+      if (!yae::TOpenFile(path, "rb").load(dvr))
+      {
+        // hmm, this shouldn't happen:
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      std::string dvr_uuid = dvr.get("uuid", std::string()).asString();
+      if (dvr_uuid == local_uuid_)
+      {
+        // skip self:
+        continue;
+      }
+
+      std::string dvr_host = dvr.get("host", std::string()).asString();
+      int64_t heartbeat = dvr.get("heartbeat", 0).asInt64();
+
+      int64_t dt_sec = now - heartbeat;
+      if (dt_sec > 60)
+      {
+        // slow heartbeat ... possibly dead:
+        yae_ilog("possibly dead DVR instance: "
+                 "uuid: %s, "
+                 "host: %s, "
+                 "time since last heartbeat: %" PRIi64 "",
+                 dvr_uuid.c_str(),
+                 dvr_host.c_str(),
+                 dt_sec);
+
+        if (dt_sec >= 24 * 60 * 60)
+        {
+          // dead DVR instance, last heartbeat was more than a day ago:
+          yae_ilog("removing dead DVR info: %s", path.c_str());
+          yae::remove_utf8(path);
+        }
+
+        boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+        if (dvr_uuid == writer_uuid_)
+        {
+          writer_uuid_.clear();
+        }
+
+        continue;
+      }
+
+      bool has_tuners = dvr.get("has_tuners", false).asBool();
+      if (!has_tuners)
+      {
+        boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+        if (dvr_uuid == writer_uuid_)
+        {
+          yae_ilog("un-selecting writer DVR instance %s (%s) "
+                   "since it no longer has any tuners",
+                   dvr_uuid.c_str(),
+                   dvr_host.c_str());
+          writer_uuid_.clear();
+        }
+
+        // ignore non-recording DVR instances:
+        continue;
+      }
+
+      boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+      if (writer_uuid_.empty())
+      {
+        yae_ilog("selecting writer DVR instance %s (%s)",
+                 dvr_uuid.c_str(),
+                 dvr_host.c_str());
+        writer_uuid_ = dvr_uuid;
+      }
+
+      // another writer exists ... there had better be just one:
+      YAE_ASSERT(writer_uuid_ == dvr_uuid);
+      return false;
+    }
+
+    // no writer DVR instances detected:
+    {
+      boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+      if (!writer_uuid_.empty())
+      {
+        yae_ilog("un-selecting writer DVR instance %s, "
+                 "it appears to have vanished",
+                 writer_uuid_.c_str());
+        writer_uuid_.clear();
+      }
+    }
+
+    // check if we have any enabled tuners:
+    std::set<std::string> enabled_tuners;
+    if (this->discover_enabled_tuners(enabled_tuners))
+    {
+      return true;
+    }
+
+    // no enabled tuners discovered:
+    boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+    if (writer_uuid_.empty())
+    {
+      yae_dlog("no writer DVR instance detected");
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // DVR::get_channel_luts
   //
   void
@@ -4347,6 +4524,13 @@ namespace yae
       tuners = preferences_.get("tuners", Json::Value(Json::objectValue));
     }
 
+    std::string writer_uuid = get_writer_uuid();
+    if (!writer_uuid.empty())
+    {
+      // another DVR instance is writing to the same storage:
+      return false;
+    }
+
     std::list<TunerDevicePtr> devices;
     hdhr_.discover_devices(devices);
 
@@ -4366,6 +4550,16 @@ namespace yae
     }
 
     return !tuner_names.empty();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::get_writer_uuid
+  //
+  std::string
+  DVR::get_writer_uuid() const
+  {
+    boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+    return writer_uuid_;
   }
 
   //----------------------------------------------------------------
