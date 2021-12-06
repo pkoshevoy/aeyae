@@ -4184,7 +4184,7 @@ namespace yae
     json["uuid"] = local_uuid_;
     json["host"] = boost::asio::ip::host_name();
     json["has_tuners"] = check_local_recording_allowed();
-    json["heartbeat"] = TTime::now().get(1);
+    json["heartbeat"] = (Json::Value::Int64)(TTime::now().get(1));
 
     YAE_ASSERT(yae::atomic_save(heartbeat_path, json));
   }
