@@ -355,6 +355,11 @@ namespace yae
     free(wold);
     free(wnew);
 
+    if (err == ERROR_FILE_NOT_FOUND)
+    {
+      err = rename_utf8(fn_old, fn_new);
+    }
+
     return err;
 #endif
   }
