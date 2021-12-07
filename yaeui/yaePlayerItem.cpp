@@ -144,7 +144,11 @@ namespace yae
     double y = this->top();
     double w = this->width();
     double h = this->height();
-    canvas.resize(1.0, w, h);
+    double device_pixel_ratio =
+      canvas_delegate_ ? canvas_delegate_->device_pixel_ratio() : 1.0;
+    canvas.resize(device_pixel_ratio,
+                  w / device_pixel_ratio,
+                  h / device_pixel_ratio);
 
     if (reader_)
     {
