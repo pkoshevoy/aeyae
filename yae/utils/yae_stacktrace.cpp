@@ -15,7 +15,7 @@
 #include <vector>
 
 // system:
-#if !defined(_WIN32) && !defined(__APPLE__)
+#ifdef YAE_HAS_LIBBFD
 #include <bfd.h>
 #ifndef HAVE_DECL_BASENAME
 #define HAVE_DECL_BASENAME 1
@@ -174,7 +174,7 @@ namespace yae
   struct StackTrace::Private : StackTraceWin32
   {};
 
-#elif defined(__APPLE__)
+#elif !defined(YAE_HAS_LIBBFD)
   //----------------------------------------------------------------
   // StackTraceApple
   //
