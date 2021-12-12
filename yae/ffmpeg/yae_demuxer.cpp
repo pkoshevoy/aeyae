@@ -3574,7 +3574,7 @@ namespace yae
       TTime d1 = d0 + dt;
       TTime p1 = p0 + dt;
 
-      if (p1 <= timespan_.t0_)
+      if (p1 <= timespan_.t0_ && (d1 <= trim.a_ || !keyframe))
       {
         TTime pts(packet.pts * src->time_base.num, src->time_base.den);
         TTime end = pts + dt;
@@ -3593,7 +3593,7 @@ namespace yae
         continue;
       }
 
-      if (timespan_.t1_ <= p0)
+      if (timespan_.t1_ <= p0 && (trim.d_ <= d0 || !keyframe))
       {
 #if 0 // ndef NDEBUG
         yae_debug
