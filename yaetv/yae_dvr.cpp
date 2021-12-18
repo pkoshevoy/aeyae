@@ -3236,20 +3236,12 @@ namespace yae
       }
     }
 
-    // and another one, for post-mortem debugging:
+    // and another one, for non-recording yaetv instances:
+    if (check_local_recording_allowed())
     {
-      int64_t t = yae::TTime::now().get(1);
-      t -= t % 1800; // round-down to half-hour:
-
-      struct tm tm;
-      yae::unix_epoch_time_to_localtime(t, tm);
-      std::string fn = strfmt("schedule-%02i%02i.json", tm.tm_hour, tm.tm_min);
-      std::string path = (yaetv_ / fn).string();
-      yae::TOpenFile file;
-      if (!(file.open(path, "wb") && file.save(json)))
-      {
-        yae_elog("write failed: %s", path.c_str());
-      }
+      std::string path =
+        (basedir_ / ".yaetv" / ("schedule-" + local_uuid_ + ".json")).string();
+      YAE_ASSERT(yae::atomic_save(path, json));
     }
   }
 
@@ -4193,7 +4185,7 @@ namespace yae
   // DVR::is_local_recording_allowed
   //
   bool
-  DVR::check_local_recording_allowed()
+  DVR::check_local_recording_allowed() const
   {
     // check whether recording has been explicitly disabled:
     {
@@ -4510,7 +4502,7 @@ namespace yae
   // DVR::discover_enabled_tuners
   //
   bool
-  DVR::discover_enabled_tuners(std::set<std::string> & tuner_names)
+  DVR::discover_enabled_tuners(std::set<std::string> & tuner_names) const
   {
     Json::Value tuners;
     {

@@ -676,7 +676,7 @@ namespace yae
     // has no other DVR instances writing to it,
     // whether this DVR instance has any enabled tuners,
     // and whether recording has been explicitly enabled:
-    bool check_local_recording_allowed();
+    bool check_local_recording_allowed() const;
 
     // fill in the major.minor -> frequency lookup table:
     void get_channel_luts(std::map<uint32_t, std::string> & chan_freq,
@@ -697,7 +697,7 @@ namespace yae
     void set_preferences(const Json::Value & preferences);
 
     // returns false if there are no enabled tuners:
-    bool discover_enabled_tuners(std::set<std::string> & tuner_names);
+    bool discover_enabled_tuners(std::set<std::string> & tuner_names) const;
 
     // helper:
     std::string get_writer_uuid() const;
@@ -708,7 +708,7 @@ namespace yae
     // protect against concurrent access:
     mutable boost::mutex mutex_;
 
-    yae::HDHomeRun hdhr_;
+    mutable yae::HDHomeRun hdhr_;
     yae::Worker worker_;
     fs::path yaetv_;
     fs::path basedir_;
