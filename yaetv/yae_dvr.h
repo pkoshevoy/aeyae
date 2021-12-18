@@ -527,6 +527,7 @@ namespace yae
     bool load_wishlist();
 
     void save_schedule() const;
+    void load_schedule();
 
     // NOTE: this explicitly bypasses the regular Wishlist and generates
     // a separate item one-item wishlist just for the specified program:

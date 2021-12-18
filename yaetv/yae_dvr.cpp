@@ -1882,12 +1882,7 @@ namespace yae
     load_wishlist();
 
     // load the schedule:
-    {
-      std::string path = (yaetv_ / "schedule.json").string();
-      Json::Value json;
-      yae::TOpenFile(path, "rb").load(json);
-      schedule_.load(json);
-    }
+    load_schedule();
 
     basedir_ = basedir.empty() ? yae::get_temp_dir_utf8() : basedir;
     yae_ilog("DVR start, recordings storage: %s", basedir.c_str());
@@ -3166,12 +3161,12 @@ namespace yae
     yae::save(json, wishlist_);
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    std::string path = (yaetv_ / "wishlist.json").string();
-    yae::TOpenFile file;
-    if (!(file.open(path, "wb") && file.save(json)))
-    {
-      yae_elog("write failed: %s", path.c_str());
-    }
+    std::string path = (basedir_ / ".yaetv" / "wishlist.json").string();
+    YAE_ASSERT(yae::atomic_save(path, json));
+
+    // and another one, for local backup:
+    path = (yaetv_ / "wishlist.json").string();
+    YAE_ASSERT(yae::atomic_save(path, json));
   }
 
   //----------------------------------------------------------------
@@ -3182,7 +3177,13 @@ namespace yae
   {
     try
     {
-      std::string path = (yaetv_ / "wishlist.json").string();
+      std::string path = (basedir_ / ".yaetv" / "wishlist.json").string();
+      if (!fs::exists(path))
+      {
+        // load the local backup:
+        path = (yaetv_ / "wishlist.json").string();
+      }
+
       int64_t lastmod = yae::stat_lastmod(path.c_str());
       if (wishlist_.lastmod_ < lastmod)
       {
@@ -3229,11 +3230,7 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
     {
       std::string path = (yaetv_ / "schedule.json").string();
-      yae::TOpenFile file;
-      if (!(file.open(path, "wb") && file.save(json)))
-      {
-        yae_elog("write failed: %s", path.c_str());
-      }
+      YAE_ASSERT(yae::atomic_save(path, json));
     }
 
     // and another one, for non-recording yaetv instances:
@@ -3243,6 +3240,29 @@ namespace yae
         (basedir_ / ".yaetv" / ("schedule-" + local_uuid_ + ".json")).string();
       YAE_ASSERT(yae::atomic_save(path, json));
     }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::load_schedule
+  //
+  void
+  DVR::load_schedule()
+  {
+    std::string writer_uuid = get_writer_uuid();
+
+    fs::path path =
+      writer_uuid.empty() ? (yaetv_ / "schedule.json") :
+      (basedir_ / ".yaetv" / ("schedule-" + writer_uuid + ".json"));
+
+    Json::Value json;
+
+    if (!yae::TOpenFile(path.string(), "rb").load(json))
+    {
+      return;
+    }
+
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    schedule_.load(json);
   }
 
   //----------------------------------------------------------------
@@ -3862,6 +3882,12 @@ namespace yae
   void
   DVR::evaluate(const yae::mpeg_ts::EPG & epg)
   {
+    if (!check_local_recording_allowed())
+    {
+      load_schedule();
+      return;
+    }
+
     uint32_t margin_sec = margin_.get(1);
     schedule_.update(*this, epg);
 
