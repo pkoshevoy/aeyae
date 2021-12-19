@@ -3315,14 +3315,11 @@ namespace yae
       // if cancelled, then un-cancel:
       remove_utf8((path + ".cancelled").c_str());
 
-      // write it out, then close the file:
+      // write it out:
+      if (!yae::atomic_save(path, json))
       {
-        yae::TOpenFile file;
-        if (!(file.open(path, "wb") && file.save(json)))
-        {
-          yae_elog("write failed: %s", path.c_str());
-          return;
-        }
+        yae_elog("write failed: %s", path.c_str());
+        return;
       }
     }
 
