@@ -24,6 +24,7 @@
 
 // aeyae:
 #include "yae/api/yae_log.h"
+#include "yae/utils/yae_benchmark.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -4206,12 +4207,15 @@ namespace yae
   bool
   DVR::check_local_recording_allowed() const
   {
+    YAE_BENCHMARK(probe, "DVR::check_local_recording_allowed");
+
     // check whether recording has been explicitly disabled:
+    bool recording_allowed = true;
     {
       boost::unique_lock<boost::mutex> lock(preferences_mutex_);
       if (!preferences_.get("allow_recording", true).asBool())
       {
-        return false;
+        recording_allowed = false;
       }
     }
 
@@ -4323,10 +4327,13 @@ namespace yae
     }
 
     // check if we have any enabled tuners:
-    std::set<std::string> enabled_tuners;
-    if (this->discover_enabled_tuners(enabled_tuners))
+    if (recording_allowed)
     {
-      return true;
+      std::set<std::string> enabled_tuners;
+      if (this->discover_enabled_tuners(enabled_tuners))
+      {
+        return true;
+      }
     }
 
     // no enabled tuners discovered:
