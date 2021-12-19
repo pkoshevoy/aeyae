@@ -3868,7 +3868,20 @@ namespace yae
 
       rows[name] = row_ptr;
 
+      // avoid calling sync_ui_playlist when the playlist has not changed:
+      std::map<std::string, TRecs>::const_iterator
+        found_prev = prev_recs_.find(name);
+      if (found_prev != prev_recs_.end())
+      {
+        const TRecs & prev_recs = found_prev->second;
+        if (yae::same(recs, prev_recs))
+        {
+          continue;
+        }
+      }
+
       sync_ui_playlist(name, recs);
+      prev_recs_[name] = recs;
     }
 
     sync_ui_playlist(std::string("view_mode_recordings"), recordings_);
@@ -3883,6 +3896,8 @@ namespace yae
       const std::string & name = i->first;
       if (!yae::has(rows, name))
       {
+        prev_recs_.erase(name);
+
         yae::shared_ptr<Item> row_ptr = i->second;
         YAE_ASSERT(body.remove(row_ptr));
 

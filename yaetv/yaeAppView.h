@@ -186,6 +186,7 @@ namespace yae
 
     // all recordings, indexed by playlist:
     std::map<std::string, TRecs> playlists_;
+    std::map<std::string, TRecs> prev_recs_;
 
     // all recordings, indexed by channel and gps start time:
     std::map<uint32_t, TRecsByTime> rec_by_channel_;
