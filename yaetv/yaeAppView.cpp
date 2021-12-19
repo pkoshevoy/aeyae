@@ -2271,11 +2271,11 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // IsBlacklisted
+  // IsBlocklisted
   //
-  struct IsBlacklisted : public TBoolExpr
+  struct IsBlocklisted : public TBoolExpr
   {
-    IsBlacklisted(const AppView & view, uint16_t major, uint16_t minor):
+    IsBlocklisted(const AppView & view, uint16_t major, uint16_t minor):
       view_(view),
       ch_num_(yae::mpeg_ts::channel_number(major, minor))
     {}
@@ -2283,7 +2283,7 @@ namespace yae
     // virtual:
     void evaluate(bool & result) const
     {
-      result = yae::has(view_.blacklist_.channels_, ch_num_);
+      result = yae::has(view_.blocklist_.channels_, ch_num_);
     }
 
     const AppView & view_;
@@ -2291,11 +2291,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // OnToggleBlacklist
+  // OnToggleBlocklist
   //
-  struct OnToggleBlacklist : CheckboxItem::Action
+  struct OnToggleBlocklist : CheckboxItem::Action
   {
-    OnToggleBlacklist(AppView & view, uint16_t major, uint16_t minor):
+    OnToggleBlocklist(AppView & view, uint16_t major, uint16_t minor):
       view_(view),
       ch_num_(yae::mpeg_ts::channel_number(major, minor))
     {}
@@ -2303,8 +2303,8 @@ namespace yae
     // virtual:
     void operator()(const CheckboxItem &) const
     {
-      view_.model()->toggle_blacklist(ch_num_);
-      view_.model()->save_blacklist();
+      view_.model()->toggle_blocklist(ch_num_);
+      view_.model()->save_blocklist();
       view_.sync_ui();
     }
 
@@ -2349,7 +2349,7 @@ namespace yae
     sideview_.reset();
     mainview_.reset();
     epg_view_.reset();
-    blacklist_.clear();
+    blocklist_.clear();
     channels_.clear();
     schedule_.clear();
     recordings_.clear();
@@ -2658,9 +2658,9 @@ namespace yae
       dvr_->get(wishlist);
       bool same_wishlist = (wishlist == wishlist_);
 
-      DVR::Blacklist blacklist;
-      dvr_->get(blacklist);
-      bool same_blacklist = (blacklist.channels_ == blacklist_.channels_);
+      DVR::Blocklist blocklist;
+      dvr_->get(blocklist);
+      bool same_blocklist = (blocklist.channels_ == blocklist_.channels_);
 
       std::map<std::string, TChannels> channels;
       dvr_->get_channels(channels);
@@ -2700,9 +2700,9 @@ namespace yae
         sync_ui_playlists();
       }
 
-      if (!(same_channels && same_blacklist))
+      if (!(same_channels && same_blocklist))
       {
-        blacklist_.channels_.swap(blacklist.channels_);
+        blocklist_.channels_.swap(blocklist.channels_);
         channels_.swap(channels);
         sync_ui_channels();
       }
@@ -2736,7 +2736,7 @@ namespace yae
       }
 
       if (same_program_guide &&
-          same_blacklist &&
+          same_blocklist &&
           same_wishlist &&
           same_schedule)
       {
@@ -2788,7 +2788,7 @@ namespace yae
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
 
-      if (yae::has(blacklist_.channels_, ch_num))
+      if (yae::has(blocklist_.channels_, ch_num))
       {
         continue;
       }
@@ -3295,9 +3295,9 @@ namespace yae
               cbox.height_ = ItemRef::reference(row.height_, 0.75);
               cbox.width_ = cbox.height_;
               cbox.checked_ = cbox.
-                addInverse(new IsBlacklisted(view, ch_major, ch_minor));
+                addInverse(new IsBlocklisted(view, ch_major, ch_minor));
               cbox.on_toggle_.
-                reset(new OnToggleBlacklist(view, ch_major, ch_minor));
+                reset(new OnToggleBlocklist(view, ch_major, ch_minor));
 
               Item & maj_min = row.addNew<Item>("maj_min");
               maj_min.anchors_.fill(row);

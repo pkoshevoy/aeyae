@@ -372,11 +372,11 @@ namespace yae
   struct DVR
   {
     //----------------------------------------------------------------
-    // Blacklist
+    // Blocklist
     //
-    struct Blacklist
+    struct Blocklist
     {
-      Blacklist();
+      Blocklist();
 
       void clear();
       void toggle(uint32_t ch_num);
@@ -501,7 +501,7 @@ namespace yae
     void no_signal(const std::string & frequency);
 
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
-    void get(Blacklist & blacklist) const;
+    void get(Blocklist & blocklist) const;
     void get(std::map<std::string, Wishlist::Item> & wishlist) const;
 
     bool wishlist_remove(const std::string & wi_key);
@@ -519,9 +519,9 @@ namespace yae
 
     void load_epg();
 
-    void toggle_blacklist(uint32_t ch_num);
-    void save_blacklist() const;
-    bool load_blacklist();
+    void toggle_blocklist(uint32_t ch_num);
+    void save_blocklist() const;
+    bool load_blocklist();
 
     void save_wishlist() const;
     bool load_wishlist();
@@ -725,7 +725,7 @@ namespace yae
     Wishlist wishlist_;
 
     // channels we don't want to waste time on:
-    Blacklist blacklist_;
+    Blocklist blocklist_;
 
     TTime heartbeat_period_;
     TTime channel_scan_period_;

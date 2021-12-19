@@ -1763,9 +1763,9 @@ namespace yae
 
       if (dvr_.worker_.is_idle())
       {
-        bool blacklist_changed = dvr_.load_blacklist();
+        bool blocklist_changed = dvr_.load_blocklist();
 
-        if (blacklist_changed || dvr_.next_epg_refresh() <= now)
+        if (blocklist_changed || dvr_.next_epg_refresh() <= now)
         {
           dvr_.set_next_epg_refresh(now + dvr_.schedule_refresh_period_ * 2.0);
           dvr_.update_epg();
@@ -1875,8 +1875,8 @@ namespace yae
       update_channel_frequency_luts();
     }
 
-    // load the blacklist:
-    load_blacklist();
+    // load the blocklist:
+    load_blocklist();
 
     // load the wishlist:
     load_wishlist();
@@ -2549,8 +2549,8 @@ namespace yae
     std::map<uint32_t, std::string> channels;
     dvr_.get_channels(channels);
 
-    DVR::Blacklist blacklist;
-    dvr_.get(blacklist);
+    DVR::Blocklist blocklist;
+    dvr_.get(blocklist);
 
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
@@ -2567,9 +2567,9 @@ namespace yae
       uint16_t major = yae::mpeg_ts::channel_major(ch_num);
       uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
 #if 0
-      if (has(blacklist.channels_, ch_num))
+      if (has(blocklist.channels_, ch_num))
       {
-        yae_ilog("skipping EPG update for blacklisted channel %i.%i",
+        yae_ilog("skipping EPG update for blocklisted channel %i.%i",
                  int(major),
                  int(minor));
         continue;
@@ -2854,10 +2854,10 @@ namespace yae
   // DVR::get
   //
   void
-  DVR::get(Blacklist & blacklist) const
+  DVR::get(Blocklist & blocklist) const
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
-    blacklist = blacklist_;
+    blocklist = blocklist_;
   }
 
   //----------------------------------------------------------------
@@ -3035,27 +3035,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::Blacklist::Blacklist
+  // DVR::Blocklist::Blocklist
   //
-  DVR::Blacklist::Blacklist():
+  DVR::Blocklist::Blocklist():
     lastmod_(std::numeric_limits<int64_t>::min())
   {}
 
   //----------------------------------------------------------------
-  // DVR::Blacklist::clear
+  // DVR::Blocklist::clear
   //
   void
-  DVR::Blacklist::clear()
+  DVR::Blocklist::clear()
   {
     channels_.clear();
     lastmod_ = std::numeric_limits<int64_t>::min();
   }
 
   //----------------------------------------------------------------
-  // DVR::Blacklist::toggle
+  // DVR::Blocklist::toggle
   //
   void
-  DVR::Blacklist::toggle(uint32_t ch_num)
+  DVR::Blocklist::toggle(uint32_t ch_num)
   {
     std::set<uint32_t>::iterator found = channels_.find(ch_num);
     if (found == channels_.end())
@@ -3069,79 +3069,79 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::toggle_blacklist
+  // DVR::toggle_blocklist
   //
   void
-  DVR::toggle_blacklist(uint32_t ch_num)
+  DVR::toggle_blocklist(uint32_t ch_num)
   {
-    // toggle the blacklist item:
+    // toggle the blocklist item:
     boost::unique_lock<boost::mutex> lock(mutex_);
-    blacklist_.toggle(ch_num);
+    blocklist_.toggle(ch_num);
   }
 
   //----------------------------------------------------------------
-  // DVR::save_blacklist
+  // DVR::save_blocklist
   //
   void
-  DVR::save_blacklist() const
+  DVR::save_blocklist() const
   {
-    std::list<std::string> blacklist;
+    std::list<std::string> blocklist;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
 
-      for (std::set<uint32_t>::const_iterator i = blacklist_.channels_.begin();
-           i != blacklist_.channels_.end(); ++i)
+      for (std::set<uint32_t>::const_iterator i = blocklist_.channels_.begin();
+           i != blocklist_.channels_.end(); ++i)
       {
         const uint32_t ch_num = *i;
         uint16_t major = yae::mpeg_ts::channel_major(ch_num);
         uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
         std::string ch_str = strfmt("%i.%i", int(major), int(minor));
-        blacklist.push_back(ch_str);
+        blocklist.push_back(ch_str);
       }
     }
 
     Json::Value json;
-    yae::save(json, blacklist);
+    yae::save(json, blocklist);
 
-    std::string path = (basedir_ / ".yaetv" / "blacklist.json").string();
+    std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
     yae::TOpenFile(path, "wb").save(json);
   }
 
   //----------------------------------------------------------------
-  // DVR::load_blacklist
+  // DVR::load_blocklist
   //
   bool
-  DVR::load_blacklist()
+  DVR::load_blocklist()
   {
     try
     {
-      std::string path = (basedir_ / ".yaetv" / "blacklist.json").string();
+      std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
       int64_t lastmod = yae::stat_lastmod(path.c_str());
-      if (blacklist_.lastmod_ < lastmod)
+      if (blocklist_.lastmod_ < lastmod)
       {
         struct tm tm;
         unix_epoch_time_to_localtime(lastmod, tm);
         std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
-        yae_ilog("loading blacklist %s, lastmod %s",
+        yae_ilog("loading blocklist %s, lastmod %s",
                  path.c_str(),
                  lastmod_txt.c_str());
 
         Json::Value json;
         yae::TOpenFile(path, "rb").load(json);
-        std::list<std::string> blacklist;
-        yae::load(json, blacklist);
+        std::list<std::string> blocklist;
+        yae::load(json, blocklist);
 
         boost::unique_lock<boost::mutex> lock(mutex_);
-        blacklist_.channels_.clear();
+        blocklist_.channels_.clear();
         for (std::list<std::string>::const_iterator
-               i = blacklist.begin(); i != blacklist.end(); ++i)
+               i = blocklist.begin(); i != blocklist.end(); ++i)
         {
           const std::string & ch_str = *i;
           uint32_t ch_num = parse_channel_str(ch_str);
-          blacklist_.channels_.insert(ch_num);
+          blocklist_.channels_.insert(ch_num);
         }
 
-        blacklist_.lastmod_ = lastmod;
+        blocklist_.lastmod_ = lastmod;
         return true;
       }
     }
