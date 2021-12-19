@@ -118,8 +118,8 @@ namespace yae
   //----------------------------------------------------------------
   // Wishlist::Wishlist
   //
-  Wishlist::Wishlist():
-    lastmod_(std::numeric_limits<int64_t>::min())
+  Wishlist::Wishlist(int64_t lastmod):
+    lastmod_(lastmod)
   {}
 
   //----------------------------------------------------------------
@@ -642,6 +642,7 @@ namespace yae
   void
   Wishlist::get(std::map<std::string, Item> & wishlist) const
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
     unsigned int index = 0;
 
     for (std::list<Item>::const_iterator
@@ -661,7 +662,9 @@ namespace yae
   {
     if (!wi_key.empty())
     {
+      boost::unique_lock<boost::mutex> lock(mutex_);
       unsigned int index = 0;
+
       for (std::list<Item>::iterator
              i = items_.begin(); i != items_.end(); ++i, ++index)
       {
@@ -684,6 +687,8 @@ namespace yae
   void
   Wishlist::update(const std::string & wi_key, const Wishlist::Item & new_item)
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     if (!wi_key.empty())
     {
       unsigned int index = 0;
@@ -710,6 +715,8 @@ namespace yae
   Wishlist::matches(const yae::mpeg_ts::EPG::Channel & channel,
                     const yae::mpeg_ts::EPG::Program & program) const
   {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     for (std::list<Item>::const_iterator
            i = items_.begin(); i != items_.end(); ++i)
     {
@@ -721,6 +728,45 @@ namespace yae
     }
 
     return yae::shared_ptr<Item>();
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::swap_to_latest
+  //
+  bool
+  Wishlist::swap_to_latest(Wishlist & wishlist)
+  {
+    boost::unique_lock<boost::mutex> lock_this(mutex_);
+    boost::unique_lock<boost::mutex> lock_that(wishlist.mutex_);
+
+    if (lastmod_ >= wishlist.lastmod_)
+    {
+      return false;
+    }
+
+    std::swap(lastmod_, wishlist.lastmod_);
+    items_.swap(wishlist.items_);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::save
+  //
+  void
+  Wishlist::save(Json::Value & json) const
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    yae::save(json["items"], items_);
+  }
+
+  //----------------------------------------------------------------
+  // Wishlist::load
+  //
+  void
+  Wishlist::load(const Json::Value & json)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    yae::load(json["items"], items_);
   }
 
   //----------------------------------------------------------------
@@ -739,24 +785,6 @@ namespace yae
   load(const Json::Value & json, Wishlist::Item & item)
   {
     item.load(json);
-  }
-
-  //----------------------------------------------------------------
-  // save
-  //
-  void
-  save(Json::Value & json, const Wishlist & wishlist)
-  {
-    save(json["items"], wishlist.items_);
-  }
-
-  //----------------------------------------------------------------
-  // load
-  //
-  void
-  load(const Json::Value & json, Wishlist & wishlist)
-  {
-    load(json["items"], wishlist.items_);
   }
 
 
@@ -2898,7 +2926,6 @@ namespace yae
   DVR::get(std::map<std::string, Wishlist::Item> & wishlist) const
   {
     YAE_BENCHMARK(probe, "DVR::get wishlist");
-    boost::unique_lock<boost::mutex> lock(mutex_);
     wishlist_.get(wishlist);
   }
 
@@ -2909,12 +2936,9 @@ namespace yae
   DVR::wishlist_remove(const std::string & wi_key)
   {
     // update the wishlist:
+    if (!wishlist_.remove(wi_key))
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-      if (!wishlist_.remove(wi_key))
-      {
-        return false;
-      }
+      return false;
     }
 
     save_wishlist();
@@ -2929,11 +2953,7 @@ namespace yae
                        const Wishlist::Item & new_item)
   {
     // update the wishlist:
-    {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-      wishlist_.update(wi_key, new_item);
-    }
-
+    wishlist_.update(wi_key, new_item);
     save_wishlist();
   }
 
@@ -3219,9 +3239,8 @@ namespace yae
   DVR::save_wishlist() const
   {
     Json::Value json;
-    yae::save(json, wishlist_);
+    wishlist_.save(json);
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
     std::string path = (basedir_ / ".yaetv" / "wishlist.json").string();
     YAE_ASSERT(yae::atomic_save(path, json));
 
@@ -3257,23 +3276,19 @@ namespace yae
         }
       }
 
-      Wishlist wishlist;
-      yae::load(json, wishlist);
-      wishlist.lastmod_ = yae::stat_lastmod(path.c_str());
+      int64_t lastmod = yae::stat_lastmod(path.c_str());
+      Wishlist wishlist(lastmod);
+      wishlist.load(json);
 
-      if (wishlist_.lastmod_ < wishlist.lastmod_)
+      if (wishlist_.swap_to_latest(wishlist))
       {
         struct tm tm;
-        unix_epoch_time_to_localtime(wishlist.lastmod_, tm);
+        unix_epoch_time_to_localtime(lastmod, tm);
 
         std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
         yae_ilog("loading wishlist %s, lastmod %s",
                  path.c_str(),
                  lastmod_txt.c_str());
-
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        wishlist_.items_.swap(wishlist.items_);
-        std::swap(wishlist_.lastmod_, wishlist.lastmod_);
         return true;
       }
     }

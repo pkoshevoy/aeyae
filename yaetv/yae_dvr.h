@@ -132,7 +132,7 @@ namespace yae
       mutable yae::optional<boost::regex> rx_description_;
     };
 
-    Wishlist();
+    Wishlist(int64_t lastmod = std::numeric_limits<int64_t>::min());
 
     // store wishlist in a map, indexed by Item::to_str summary:
     void get(std::map<std::string, Item> & wishlist) const;
@@ -144,15 +144,19 @@ namespace yae
     matches(const yae::mpeg_ts::EPG::Channel & channel,
             const yae::mpeg_ts::EPG::Program & program) const;
 
+    bool swap_to_latest(Wishlist & wishlist);
+
+    void save(Json::Value & json) const;
+    void load(const Json::Value & json);
+
+  protected:
+    mutable boost::mutex mutex_;
     std::list<Item> items_;
     int64_t lastmod_;
   };
 
   void save(Json::Value & json, const Wishlist::Item & item);
   void load(const Json::Value & json, Wishlist::Item & item);
-
-  void save(Json::Value & json, const Wishlist & wishlist);
-  void load(const Json::Value & json, Wishlist & wishlist);
 
 
 
