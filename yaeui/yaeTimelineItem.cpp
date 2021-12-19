@@ -1586,11 +1586,6 @@ namespace yae
   void
   TimelineItem::showTimeline(bool show_timeline)
   {
-    if (is_timeline_visible_.get() == show_timeline)
-    {
-      return;
-    }
-
     uncache();
     maybeAnimateOpacity();
   }
