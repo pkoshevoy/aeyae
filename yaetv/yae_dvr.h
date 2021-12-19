@@ -655,7 +655,7 @@ namespace yae
 
     inline void cache_epg(const yae::mpeg_ts::EPG & epg)
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(epg_mutex_);
       epg_ = epg;
       epg_lastmod_ = TTime::now();
     }
@@ -751,6 +751,7 @@ namespace yae
     TTime next_schedule_refresh_;
     TTime next_storage_cleanup_;
 
+    mutable boost::mutex epg_mutex_;
     yae::mpeg_ts::EPG epg_;
     TTime epg_lastmod_;
 

@@ -1632,6 +1632,33 @@ namespace yae
     return !err;
   }
 
+  //----------------------------------------------------------------
+  // attempt_load
+  //
+  bool
+  attempt_load(const std::string & path,
+               Json::Value & data,
+               unsigned int max_attempts,
+               unsigned int msec_sleep)
+  {
+    for (unsigned int i = 0; i < max_attempts; i++)
+    {
+      if (yae::TOpenFile(path, "rb").load(data))
+      {
+        return true;
+      }
+
+      if (i + 1 < max_attempts)
+      {
+        // read/write race condition with atomic_save, perhaps:
+        boost::this_thread::sleep_for
+          (boost::chrono::milliseconds((i + 1) * msec_sleep));
+      }
+    }
+
+    return false;
+  }
+
 
   //----------------------------------------------------------------
   // parse_hhmmss_xxx

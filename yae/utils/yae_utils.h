@@ -534,6 +534,17 @@ namespace yae
   YAE_API bool atomic_save(const std::string & path,
                            const Json::Value & data);
 
+  //----------------------------------------------------------------
+  // attempt_load
+  //
+  // attempt to load JSON data from the specified file path and retry
+  // upto max_attempts, sleeping for msec_sleep * attempt in between
+  //
+  YAE_API bool attempt_load(const std::string & path,
+                            Json::Value & data,
+                            unsigned int max_attempts = 3,
+                            unsigned int msec_sleep = 10);
+
 
   //----------------------------------------------------------------
   // TOpenHere

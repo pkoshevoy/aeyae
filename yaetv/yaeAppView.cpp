@@ -3921,7 +3921,7 @@ namespace yae
   AppView::sync_ui_playlist(const std::string & playlist_name,
                             const TRecs & playlist_recs)
   {
-    YAE_BENCHMARK(probe, "AppView::sync_ui_playlist");
+    YAE_BENCHMARK(probe, playlist_name.c_str());
 
     // shortcuts:
     AppView & view = *this;

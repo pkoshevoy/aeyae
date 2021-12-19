@@ -3483,7 +3483,7 @@ namespace yae
 
     // avoid race condition with EPG updates:
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(epg_mutex_);
       channel = yae::get(epg_.channels_, ch_num);
     }
 
@@ -4018,7 +4018,9 @@ namespace yae
   {
     YAE_BENCHMARK(probe, "DVR::get_cached_epg");
 
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    boost::unique_lock<boost::mutex> lock(epg_mutex_);
+    YAE_BENCHMARK(probe1, "DVR::get_cached_epg after mutex");
+
     if (lastmod.invalid() || lastmod < epg_lastmod_)
     {
       lastmod = epg_lastmod_;
@@ -4280,10 +4282,11 @@ namespace yae
       const std::string & path = i->second;
 
       Json::Value dvr;
-      if (!yae::TOpenFile(path, "rb").load(dvr))
+      if (!yae::attempt_load(path, dvr))
       {
-        // hmm, this shouldn't happen:
         YAE_ASSERT(false);
+
+        // give up:
         continue;
       }
 
