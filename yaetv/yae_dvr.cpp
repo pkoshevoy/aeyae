@@ -3104,7 +3104,11 @@ namespace yae
     yae::save(json, blocklist);
 
     std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
-    yae::TOpenFile(path, "wb").save(json);
+    YAE_ASSERT(yae::atomic_save(path, json));
+
+    // and another one, for local backup:
+    path = (yaetv_ / "blocklist.json").string();
+    YAE_ASSERT(yae::atomic_save(path, json));
   }
 
   //----------------------------------------------------------------
@@ -3116,6 +3120,12 @@ namespace yae
     try
     {
       std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
+      if (!fs::exists(path))
+      {
+        // load the local backup:
+        path = (yaetv_ / "blocklist.json").string();
+      }
+
       int64_t lastmod = yae::stat_lastmod(path.c_str());
       if (blocklist_.lastmod_ < lastmod)
       {
