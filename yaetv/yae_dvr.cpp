@@ -1981,7 +1981,7 @@ namespace yae
     std::map<std::string, std::string> recs;
     {
       CollectFiles collect_files(recs, rec_sched_rx);
-      for_each_file_at(yaetv_.string(), collect_files);
+      for_each_file_at((basedir_ / ".yaetv").string(), collect_files);
     }
 
     // remove cancelled/expired explicitly scheduled items:
@@ -3103,7 +3103,7 @@ namespace yae
     Json::Value json;
     yae::save(json, blacklist);
 
-    std::string path = (yaetv_ / "blacklist.json").string();
+    std::string path = (basedir_ / ".yaetv" / "blacklist.json").string();
     yae::TOpenFile(path, "wb").save(json);
   }
 
@@ -3115,7 +3115,7 @@ namespace yae
   {
     try
     {
-      std::string path = (yaetv_ / "blacklist.json").string();
+      std::string path = (basedir_ / ".yaetv" / "blacklist.json").string();
       int64_t lastmod = yae::stat_lastmod(path.c_str());
       if (blacklist_.lastmod_ < lastmod)
       {
@@ -3232,14 +3232,6 @@ namespace yae
       std::string path = (yaetv_ / "schedule.json").string();
       YAE_ASSERT(yae::atomic_save(path, json));
     }
-
-    // and another one, for non-recording yaetv instances:
-    if (check_local_recording_allowed())
-    {
-      std::string path =
-        (basedir_ / ".yaetv" / ("schedule-" + local_uuid_ + ".json")).string();
-      YAE_ASSERT(yae::atomic_save(path, json));
-    }
   }
 
   //----------------------------------------------------------------
@@ -3248,15 +3240,9 @@ namespace yae
   void
   DVR::load_schedule()
   {
-    std::string writer_uuid = get_writer_uuid();
-
-    fs::path path =
-      writer_uuid.empty() ? (yaetv_ / "schedule.json") :
-      (basedir_ / ".yaetv" / ("schedule-" + writer_uuid + ".json"));
-
     Json::Value json;
-
-    if (!yae::TOpenFile(path.string(), "rb").load(json))
+    std::string path = (yaetv_ / "schedule.json").string();
+    if (!yae::TOpenFile(path, "rb").load(json))
     {
       return;
     }
@@ -3314,7 +3300,7 @@ namespace yae
       boost::unique_lock<boost::mutex> lock(mutex_);
 
       std::string name = wishlist_item_filename(channel, program);
-      std::string path = (yaetv_ / name).string();
+      std::string path = (basedir_ / ".yaetv" / name).string();
 
       // if cancelled, then un-cancel:
       remove_utf8((path + ".cancelled").c_str());
@@ -3357,7 +3343,7 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
 
     std::string name = wishlist_item_filename(channel, program);
-    std::string path = (yaetv_ / name).string();
+    std::string path = (basedir_ / ".yaetv" / name).string();
 
     // clean up any prior placeholder:
     remove_utf8((path + ".cancelled").c_str());
@@ -3384,7 +3370,7 @@ namespace yae
     yae::shared_ptr<Wishlist::Item> item_ptr;
 
     std::string name = wishlist_item_filename(channel, program);
-    std::string path = (yaetv_ / name).string();
+    std::string path = (basedir_ / ".yaetv" / name).string();
 
     yae::TOpenFile file;
     if (file.open(path, "rb") && file.load(json))
