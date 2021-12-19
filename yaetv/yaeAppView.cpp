@@ -2284,7 +2284,7 @@ namespace yae
     // virtual:
     void evaluate(bool & result) const
     {
-      result = yae::has(view_.blocklist_.channels_, ch_num_);
+      result = yae::has(view_.blocklist_, ch_num_);
     }
 
     const AppView & view_;
@@ -2660,9 +2660,9 @@ namespace yae
       dvr_->get(wishlist);
       bool same_wishlist = (wishlist == wishlist_);
 
-      DVR::Blocklist blocklist;
-      dvr_->get(blocklist);
-      bool same_blocklist = (blocklist.channels_ == blocklist_.channels_);
+      std::set<uint32_t> blocklist;
+      dvr_->blocklist_.get(blocklist);
+      bool same_blocklist = (blocklist == blocklist_);
 
       std::map<std::string, TChannels> channels;
       dvr_->get_channels(channels);
@@ -2704,7 +2704,7 @@ namespace yae
 
       if (!(same_channels && same_blocklist))
       {
-        blocklist_.channels_.swap(blocklist.channels_);
+        blocklist_.swap(blocklist);
         channels_.swap(channels);
         sync_ui_channels();
       }
@@ -2792,7 +2792,7 @@ namespace yae
       const uint32_t ch_num = i->first;
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
 
-      if (yae::has(blocklist_.channels_, ch_num))
+      if (yae::has(blocklist_, ch_num))
       {
         continue;
       }

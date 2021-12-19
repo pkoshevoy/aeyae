@@ -386,11 +386,19 @@ namespace yae
     //
     struct Blocklist
     {
-      Blocklist();
+      Blocklist(int64_t lastmod = std::numeric_limits<int64_t>::min());
 
       void clear();
       void toggle(uint32_t ch_num);
+      void get(std::set<uint32_t> & channels) const;
 
+      bool swap_to_latest(Blocklist & blocklist);
+
+      void save(Json::Value & json) const;
+      void load(const Json::Value & json);
+
+    protected:
+      mutable boost::mutex mutex_;
       std::set<uint32_t> channels_;
       int64_t lastmod_;
     };
@@ -511,7 +519,6 @@ namespace yae
     void no_signal(const std::string & frequency);
 
     void get(std::map<std::string, TPacketHandlerPtr> & packet_handlers) const;
-    void get(Blocklist & blocklist) const;
     void get(std::map<std::string, Wishlist::Item> & wishlist) const;
 
     bool wishlist_remove(const std::string & wi_key);

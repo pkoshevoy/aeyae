@@ -171,7 +171,7 @@ namespace yae
     yae::mpeg_ts::EPG epg_;
     yae::TTime epg_lastmod_;
 
-    DVR::Blocklist blocklist_;
+    std::set<uint32_t> blocklist_;
 
     // frequency -> major:minor:name:
     std::map<std::string, TChannels> channels_;

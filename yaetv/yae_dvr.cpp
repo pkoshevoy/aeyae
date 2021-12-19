@@ -2606,9 +2606,6 @@ namespace yae
     std::map<uint32_t, std::string> channels;
     dvr_.get_channels(channels);
 
-    DVR::Blocklist blocklist;
-    dvr_.get(blocklist);
-
     for (std::map<uint32_t, std::string>::const_iterator
            i = channels.begin(); i != channels.end(); ++i)
     {
@@ -2617,23 +2614,12 @@ namespace yae
         return;
       }
 
-      // shortuct:
+      // shortucts:
       const uint32_t ch_num = i->first;
       const std::string & frequency = i->second;
-
-      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-      uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-#if 0
-      if (has(blocklist.channels_, ch_num))
-      {
-        yae_ilog("skipping EPG update for blocklisted channel %i.%i",
-                 int(major),
-                 int(minor));
-        continue;
-      }
-#endif
-      // shortcut:
-      std::string channels_str = dvr_.get_channels_str(frequency);
+      const uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+      const uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+      const std::string channels_str = dvr_.get_channels_str(frequency);
 
       DVR::TPacketHandlerPtr & handler_ptr = dvr_.packet_handler_[frequency];
       if (!handler_ptr)
@@ -2912,17 +2898,6 @@ namespace yae
   // DVR::get
   //
   void
-  DVR::get(Blocklist & blocklist) const
-  {
-    YAE_BENCHMARK(probe, "DVR::get blocklist");
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    blocklist = blocklist_;
-  }
-
-  //----------------------------------------------------------------
-  // DVR::get
-  //
-  void
   DVR::get(std::map<std::string, Wishlist::Item> & wishlist) const
   {
     YAE_BENCHMARK(probe, "DVR::get wishlist");
@@ -3099,8 +3074,8 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::Blocklist::Blocklist
   //
-  DVR::Blocklist::Blocklist():
-    lastmod_(std::numeric_limits<int64_t>::min())
+  DVR::Blocklist::Blocklist(int64_t lastmod):
+    lastmod_(lastmod)
   {}
 
   //----------------------------------------------------------------
@@ -3109,6 +3084,9 @@ namespace yae
   void
   DVR::Blocklist::clear()
   {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::clear");
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     channels_.clear();
     lastmod_ = std::numeric_limits<int64_t>::min();
   }
@@ -3119,6 +3097,9 @@ namespace yae
   void
   DVR::Blocklist::toggle(uint32_t ch_num)
   {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::toggle");
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
     std::set<uint32_t>::iterator found = channels_.find(ch_num);
     if (found == channels_.end())
     {
@@ -3131,13 +3112,88 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DVR::Blocklist::get
+  //
+  void
+  DVR::Blocklist::get(std::set<uint32_t> & channels) const
+  {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::get");
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    channels = channels_;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::Blocklist::swap_to_latest
+  //
+  bool
+  DVR::Blocklist::swap_to_latest(DVR::Blocklist & blocklist)
+  {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::swap_to_latest");
+    boost::unique_lock<boost::mutex> lock_this(mutex_);
+    boost::unique_lock<boost::mutex> lock_that(blocklist.mutex_);
+
+    if (lastmod_ >= blocklist.lastmod_)
+    {
+      return false;
+    }
+
+    std::swap(lastmod_, blocklist.lastmod_);
+    channels_.swap(blocklist.channels_);
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::Blocklist::save
+  //
+  void
+  DVR::Blocklist::save(Json::Value & json) const
+  {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::save");
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
+    std::list<std::string> blocklist;
+    for (std::set<uint32_t>::const_iterator
+           i = channels_.begin(); i != channels_.end(); ++i)
+    {
+      const uint32_t ch_num = *i;
+      uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+      uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+      std::string ch_str = strfmt("%i.%i", int(major), int(minor));
+      blocklist.push_back(ch_str);
+    }
+
+    yae::save(json, blocklist);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::Blocklist::load
+  //
+  void
+  DVR::Blocklist::load(const Json::Value & json)
+  {
+    YAE_BENCHMARK(probe, "DVR::Blocklist::load");
+    boost::unique_lock<boost::mutex> lock(mutex_);
+
+    std::list<std::string> blocklist;
+    yae::load(json, blocklist);
+
+    channels_.clear();
+    for (std::list<std::string>::const_iterator
+           i = blocklist.begin(); i != blocklist.end(); ++i)
+    {
+      const std::string & ch_str = *i;
+      uint32_t ch_num = parse_channel_str(ch_str);
+      channels_.insert(ch_num);
+    }
+  }
+
+  //----------------------------------------------------------------
   // DVR::toggle_blocklist
   //
   void
   DVR::toggle_blocklist(uint32_t ch_num)
   {
     // toggle the blocklist item:
-    boost::unique_lock<boost::mutex> lock(mutex_);
     blocklist_.toggle(ch_num);
   }
 
@@ -3147,23 +3203,10 @@ namespace yae
   void
   DVR::save_blocklist() const
   {
-    std::list<std::string> blocklist;
-    {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-
-      for (std::set<uint32_t>::const_iterator i = blocklist_.channels_.begin();
-           i != blocklist_.channels_.end(); ++i)
-      {
-        const uint32_t ch_num = *i;
-        uint16_t major = yae::mpeg_ts::channel_major(ch_num);
-        uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
-        std::string ch_str = strfmt("%i.%i", int(major), int(minor));
-        blocklist.push_back(ch_str);
-      }
-    }
+    YAE_BENCHMARK(probe, "DVR::save_blocklist");
 
     Json::Value json;
-    yae::save(json, blocklist);
+    blocklist_.save(json);
 
     std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
     YAE_ASSERT(yae::atomic_save(path, json));
@@ -3184,50 +3227,54 @@ namespace yae
     try
     {
       std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
+      Json::Value json;
 
-      if (!fs::exists(path))
+      if (!yae::attempt_load(path, json))
       {
-        // load the local backup:
+        yae_ilog("failed to load blocklist %s", path.c_str());
+
+        // try the local backup:
         path = (yaetv_ / "blocklist.json").string();
-      }
 
-      if (!fs::exists(path))
-      {
-        // load the old blocklist:
-        path = (yaetv_ / "blacklist.json").string();
+        if (!yae::attempt_load(path, json))
+        {
+          yae_ilog("failed to load blocklist %s", path.c_str());
+
+          // load the old blocklist:
+          path = (yaetv_ / "blacklist.json").string();
+
+          if (!yae::attempt_load(path, json))
+          {
+            yae_ilog("failed to load blocklist %s", path.c_str());
+            return false;
+          }
+        }
       }
 
       int64_t lastmod = yae::stat_lastmod(path.c_str());
-      if (blocklist_.lastmod_ < lastmod)
+      DVR::Blocklist blocklist(lastmod);
+      blocklist.load(json);
+
+      if (blocklist_.swap_to_latest(blocklist))
       {
         struct tm tm;
         unix_epoch_time_to_localtime(lastmod, tm);
+
         std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
         yae_ilog("loading blocklist %s, lastmod %s",
                  path.c_str(),
                  lastmod_txt.c_str());
-
-        Json::Value json;
-        yae::TOpenFile(path, "rb").load(json);
-        std::list<std::string> blocklist;
-        yae::load(json, blocklist);
-
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        blocklist_.channels_.clear();
-        for (std::list<std::string>::const_iterator
-               i = blocklist.begin(); i != blocklist.end(); ++i)
-        {
-          const std::string & ch_str = *i;
-          uint32_t ch_num = parse_channel_str(ch_str);
-          blocklist_.channels_.insert(ch_num);
-        }
-
-        blocklist_.lastmod_ = lastmod;
         return true;
       }
     }
+    catch (const std::exception & e)
+    {
+      yae_elog("DVR::load_blocklist exception: %s", e.what());
+    }
     catch (...)
-    {}
+    {
+      yae_elog("DVR::load_blocklist unexpected exception");
+    }
 
     return false;
   }
@@ -3238,6 +3285,8 @@ namespace yae
   void
   DVR::save_wishlist() const
   {
+    YAE_BENCHMARK(probe, "DVR::save_wishlist");
+
     Json::Value json;
     wishlist_.save(json);
 
@@ -3310,6 +3359,8 @@ namespace yae
   void
   DVR::save_schedule() const
   {
+    YAE_BENCHMARK(probe, "DVR::save_schedule");
+
     Json::Value json;
     schedule_.save(json);
 
@@ -3326,6 +3377,8 @@ namespace yae
   void
   DVR::load_schedule()
   {
+    YAE_BENCHMARK(probe, "DVR::load_schedule");
+
     Json::Value json;
     std::string path = (yaetv_ / "schedule.json").string();
     if (!yae::TOpenFile(path, "rb").load(json))
