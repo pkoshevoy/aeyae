@@ -15,6 +15,7 @@
 #endif
 
 // aeyae:
+#include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_utils.h"
 
 // yaeui:
@@ -2648,6 +2649,7 @@ namespace yae
       return;
     }
 
+    YAE_BENCHMARK(probe, "AppView::sync_ui");
     TMakeCurrentContext currentContext(*context());
 
     // check if model data has changed:
@@ -2755,6 +2757,8 @@ namespace yae
   void
   AppView::sync_ui_epg()
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_epg");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -3191,6 +3195,8 @@ namespace yae
   void
   AppView::sync_ui_channels()
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_channels");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -3375,6 +3381,8 @@ namespace yae
   void
   AppView::sync_ui_schedule()
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_schedule");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -3593,6 +3601,8 @@ namespace yae
   void
   AppView::sync_ui_wishlist()
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_wishlist");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -3728,6 +3738,8 @@ namespace yae
   void
   AppView::sync_ui_playlists()
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_playlists");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -3909,6 +3921,8 @@ namespace yae
   AppView::sync_ui_playlist(const std::string & playlist_name,
                             const TRecs & playlist_recs)
   {
+    YAE_BENCHMARK(probe, "AppView::sync_ui_playlist");
+
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
@@ -4850,6 +4864,8 @@ namespace yae
   void
   AppView::layout(AppView & view, AppStyle & style, Item & root)
   {
+    YAE_BENCHMARK(probe, "AppView::layout");
+
     Item & hidden = root.addHidden(new Item("hidden"));
     hidden.width_ = hidden.
       addExpr(style_item_ref(view, &AppStyle::unit_size_));
@@ -4971,6 +4987,8 @@ namespace yae
   void
   AppView::layout_sidebar(AppView & view, AppStyle & style, Item & panel)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_sidebar");
+
     Item & root = *(view.root_);
     Item & hidden = root.get<Item>("hidden");
 
@@ -5115,6 +5133,8 @@ namespace yae
   void
   AppView::layout_epg(AppView & view, AppStyle & style, Item & mainview)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_epg");
+
     Item & root = *(view.root_);
     Item & hidden = root.get<Item>("hidden");
 
@@ -5292,6 +5312,8 @@ namespace yae
                                   AppStyle & style,
                                   Item & mainview)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_program_details");
+
     // shortcuts:
     Item & root = *root_;
     Item & hidden = root.get<Item>("hidden");
@@ -5606,6 +5628,8 @@ namespace yae
   void
   AppView::layout_channels(AppView & view, AppStyle & style, Item & mainview)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_channels");
+
     // shortcuts:
     Item & root = *root_;
     Item & hidden = root.get<Item>("hidden");
@@ -5627,6 +5651,8 @@ namespace yae
   void
   AppView::layout_schedule(AppView & view, AppStyle & style, Item & mainview)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_schedule");
+
     // shortcuts:
     Item & root = *root_;
     Item & hidden = root.get<Item>("hidden");
@@ -5735,6 +5761,8 @@ namespace yae
   void
   AppView::layout_wishlist(AppView & view, AppStyle & style, Item & mainview)
   {
+    YAE_BENCHMARK(probe, "AppView::layout_wishlist");
+
     // shortcuts:
     bool ok = true;
     Item & root = *root_;

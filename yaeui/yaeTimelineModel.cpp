@@ -23,8 +23,11 @@
 #include <QFontMetrics>
 #include <QTime>
 
-// yae includes:
-#include <yaeTimelineModel.h>
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
+// yaeui:
+#include "yaeTimelineModel.h"
 
 
 namespace yae
@@ -266,6 +269,8 @@ namespace yae
       return true;
     }
 
+    YAE_BENCHMARK(probe, "yae::get_duration");
+
     TTime audioStart;
     TTime audioDuration;
     bool audioOk = reader->getAudioDuration(audioStart, audioDuration);
@@ -403,6 +408,8 @@ namespace yae
   void
   TimelineModel::updateDuration(IReader * reader)
   {
+    YAE_BENCHMARK(probe, "TimelineModel::updateDuration");
+
     // get current in/out/playhead positions in seconds:
     double t0 = timeIn();
     double t1 = timeOut();

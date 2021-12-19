@@ -20,6 +20,7 @@
 #include "yae/ffmpeg/yae_live_reader.h"
 #include "yae/ffmpeg/yae_movie.h"
 #include "yae/thread/yae_queue.h"
+#include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_reader.h"
@@ -482,6 +483,8 @@ namespace yae
       return false;
     }
 
+    YAE_BENCHMARK(probe, "Live::updateTimelinePositions");
+
     // shortcut:
     TOpenFile & dat = *dat_;
 
@@ -622,6 +625,8 @@ namespace yae
   void
   Live::calcTimeline(TTime & start, TTime & duration)
   {
+    YAE_BENCHMARK(probe, "Live::calcTimeline");
+
     boost::unique_lock<boost::mutex> lock(mutex_);
     updateTimelinePositions();
 
@@ -1204,6 +1209,8 @@ namespace yae
   bool
   LiveReader::getVideoDuration(TTime & start, TTime & duration) const
   {
+    YAE_BENCHMARK(probe, "LiveReader::getVideoDuration");
+
     if (!private_->walltime_.empty())
     {
       private_->calcTimeline(start, duration);
@@ -1226,6 +1233,8 @@ namespace yae
   bool
   LiveReader::getAudioDuration(TTime & start, TTime & duration) const
   {
+    YAE_BENCHMARK(probe, "LiveReader::getAudioDuration");
+
     if (!private_->walltime_.empty())
     {
       private_->calcTimeline(start, duration);

@@ -7,9 +7,11 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // standard:
+#include <algorithm>
 #include <cstring>
 #include <iostream>
 #include <iomanip>
+#include <limits>
 #include <map>
 #include <string>
 #include <sstream>
@@ -86,6 +88,8 @@ namespace yae
           name_(name),
           n_(0),
           t_(0),
+          min_(std::numeric_limits<uint64>::max()),
+          max_(0),
           fresh_(true)
         {
           YAE_ASSERT(*name);
@@ -96,6 +100,8 @@ namespace yae
         std::string name_;
         uint64 n_; // total number of occurrances
         uint64 t_; // total time spent, measured in microseconds
+        uint64 min_; // usec
+        uint64 max_; // usec
         bool fresh_;
       };
 
@@ -201,6 +207,8 @@ namespace yae
 
     entry.n_++;
     entry.t_ += dt;
+    entry.min_ = std::min<uint64>(entry.min_, dt);
+    entry.max_ = std::max<uint64>(entry.max_, dt);
 
     if (entry.fresh_)
     {
@@ -260,8 +268,16 @@ namespace yae
           << " msec total, "
 
           << std::fixed << std::setprecision(3) << std::setw(13)
-          << double(entry.t_ * 1000000) / double(entry.n_ * timebase)
-          << " usec avg\n";
+          << double(entry.t_ * 1000) / double(entry.n_ * timebase)
+          << " msec avg, "
+
+          << std::fixed << std::setprecision(3) << std::setw(13)
+          << double(entry.min_ * 1000) / double(timebase)
+          << " msec min, "
+
+          << std::fixed << std::setprecision(3) << std::setw(13)
+          << double(entry.max_ * 1000) / double(timebase)
+          << " msec max\n";
       }
     }
 

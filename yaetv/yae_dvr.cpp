@@ -998,6 +998,7 @@ namespace yae
   void
   Schedule::get(std::map<uint32_t, TScheduledRecordings> & recordings) const
   {
+    YAE_BENCHMARK(probe, "Schedule::get");
     boost::unique_lock<boost::mutex> lock(mutex_);
     recordings = recordings_;
   }
@@ -2847,6 +2848,7 @@ namespace yae
   void
   DVR::get(std::map<std::string, DVR::TPacketHandlerPtr> & ph) const
   {
+    YAE_BENCHMARK(probe, "DVR::get packet handlers");
     boost::unique_lock<boost::mutex> lock(mutex_);
     ph = packet_handler_;
   }
@@ -2857,6 +2859,7 @@ namespace yae
   void
   DVR::get(Blocklist & blocklist) const
   {
+    YAE_BENCHMARK(probe, "DVR::get blocklist");
     boost::unique_lock<boost::mutex> lock(mutex_);
     blocklist = blocklist_;
   }
@@ -2867,6 +2870,7 @@ namespace yae
   void
   DVR::get(std::map<std::string, Wishlist::Item> & wishlist) const
   {
+    YAE_BENCHMARK(probe, "DVR::get wishlist");
     boost::unique_lock<boost::mutex> lock(mutex_);
     wishlist_.get(wishlist);
   }
@@ -2912,6 +2916,8 @@ namespace yae
   void
   DVR::get_epg(yae::mpeg_ts::EPG & epg, const std::string & lang) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_epg");
+
     std::map<std::string, TPacketHandlerPtr> packet_handlers;
     get(packet_handlers);
 
@@ -2934,6 +2940,8 @@ namespace yae
   DVR::save_epg(const std::string & frequency,
                 const yae::mpeg_ts::Context & ctx) const
   {
+    YAE_BENCHMARK(probe, "DVR::save_epg");
+
     Json::Value json;
     json["timestamp"] = Json::Int64(yae::TTime::now().get(1));
     ctx.save(json[frequency]);
@@ -2950,6 +2958,8 @@ namespace yae
   void
   DVR::save_epg() const
   {
+    YAE_BENCHMARK(probe, "DVR::get_epg (all)");
+
     std::map<std::string, TPacketHandlerPtr> packet_handlers;
     get(packet_handlers);
 
@@ -2970,6 +2980,8 @@ namespace yae
   void
   DVR::save_frequencies() const
   {
+    YAE_BENCHMARK(probe, "DVR::save_frequencies");
+
     std::map<std::string, yae::TChannels> frequencies;
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -3000,6 +3012,8 @@ namespace yae
   void
   DVR::load_epg()
   {
+    YAE_BENCHMARK(probe, "DVR::load_epg");
+
     std::map<std::string, std::string> epg_by_freq;
     {
       std::string epg_dir = (basedir_ / ".yaetv").string();
@@ -3118,6 +3132,8 @@ namespace yae
   bool
   DVR::load_blocklist()
   {
+    YAE_BENCHMARK(probe, "DVR::load_blocklist");
+
     try
     {
       std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
@@ -3186,6 +3202,8 @@ namespace yae
   bool
   DVR::load_wishlist()
   {
+    YAE_BENCHMARK(probe, "DVR::load_wishlist");
+
     try
     {
       std::string path = (basedir_ / ".yaetv" / "wishlist.json").string();
@@ -3371,6 +3389,8 @@ namespace yae
   DVR::explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
                             const yae::mpeg_ts::EPG::Program & program) const
   {
+    YAE_BENCHMARK(probe, "DVR::explicitly_scheduled");
+
     // avoid race condition with Schedule::update:
     boost::unique_lock<boost::mutex> lock(mutex_);
 
@@ -3526,6 +3546,8 @@ namespace yae
   remove_excess_recordings(const fs::path & basedir,
                            const Recording::Rec & rec)
   {
+    YAE_BENCHMARK(probe, "remove_excess_recordings");
+
     if (!rec.max_recordings_)
     {
       // unlimited:
@@ -3588,6 +3610,8 @@ namespace yae
                 const Recording::Rec & rec,
                 uint64_t num_sec)
   {
+    YAE_BENCHMARK(probe, "make_room_for rec");
+
     // remove any existing old recordings beyond max recordings limit:
     yae::remove_excess_recordings(basedir, rec);
 
@@ -3611,6 +3635,8 @@ namespace yae
   bool
   make_room_for(const std::string & path, uint64_t required_bytes)
   {
+    YAE_BENCHMARK(probe, "make_room_for");
+
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
     uint64_t available_bytes = 0;
@@ -3682,6 +3708,8 @@ namespace yae
   DVR::already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
                         const yae::mpeg_ts::EPG::Program & program) const
   {
+    YAE_BENCHMARK(probe, "DVR::already_recorded");
+
     if (program.description_.empty())
     {
       // can't check for duplicates without a description:
@@ -3753,6 +3781,8 @@ namespace yae
   void
   DVR::get_existing_recordings(FoundRecordings & found) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_existing_recordings");
+
     std::map<std::string, std::string> recordings;
     {
       CollectRecordings collect_recordings(recordings);
@@ -3797,6 +3827,8 @@ namespace yae
   yae::shared_ptr<DVR::Playback>
   DVR::is_ready_to_play(const Recording::Rec & rec) const
   {
+    YAE_BENCHMARK(probe, "DVR::is_ready_to_play");
+
     yae::shared_ptr<Playback> result;
     std::string mpg = rec.get_filepath(basedir_);
 
@@ -3984,6 +4016,8 @@ namespace yae
   bool
   DVR::get_cached_epg(TTime & lastmod, yae::mpeg_ts::EPG & epg) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_cached_epg");
+
     boost::unique_lock<boost::mutex> lock(mutex_);
     if (lastmod.invalid() || lastmod < epg_lastmod_)
     {
@@ -4018,6 +4052,8 @@ namespace yae
   DVR::get_tuner_cache(const std::string & device_name,
                        Json::Value & tuner_cache) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_tuner_cache");
+
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     tuner_cache = tuner_cache_.get(device_name, Json::Value());
   }
@@ -4029,6 +4065,8 @@ namespace yae
   DVR::update_tuner_cache(const std::string & device_name,
                           const Json::Value & tuner_cache)
   {
+    YAE_BENCHMARK(probe, "DVR::update_tuner_cache");
+
     Json::Value cache;
     {
       boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
@@ -4048,6 +4086,8 @@ namespace yae
   void
   DVR::update_channel_frequency_luts()
   {
+    YAE_BENCHMARK(probe, "DVR::update_channel_frequency_luts");
+
     frequency_channel_lut_.clear();
 
     std::set<std::string> signal_present;
@@ -4189,6 +4229,8 @@ namespace yae
   void
   DVR::save_heartbeat()
   {
+    YAE_BENCHMARK(probe, "DVR::save_heartbeat");
+
     std::string heartbeat_path =
       (basedir_ / ".yaetv" / ("heartbeat-" + local_uuid_ + ".json")).string();
 
@@ -4353,6 +4395,7 @@ namespace yae
   DVR::get_channel_luts(std::map<uint32_t, std::string> & chan_freq,
                         std::map<std::string, TChannels> & freq_chan) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channel_luts");
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     chan_freq = channel_frequency_lut_;
     freq_chan = frequency_channel_lut_;
@@ -4364,6 +4407,7 @@ namespace yae
   void
   DVR::get_channels(std::map<uint32_t, std::string> & chan_freq) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channels chan_freq");
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     chan_freq = channel_frequency_lut_;
   }
@@ -4374,6 +4418,7 @@ namespace yae
   void
   DVR::get_channels(std::map<std::string, TChannels> & channels) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channels freq_chan");
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     channels = frequency_channel_lut_;
   }
@@ -4384,6 +4429,7 @@ namespace yae
   bool
   DVR::get_channels(const std::string & freq, TChannels & channels) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channels @freq");
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
     std::map<std::string, TChannels>::const_iterator found =
       frequency_channel_lut_.find(freq);
@@ -4402,6 +4448,7 @@ namespace yae
   std::string
   DVR::get_channels_str(const std::string & frequency) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channels_str @freq");
     std::ostringstream oss;
     const char * sep = "";
 
@@ -4439,6 +4486,7 @@ namespace yae
                         uint16_t minor,
                         std::string & name) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_channels_name major.minor");
     uint32_t ch_num = yae::mpeg_ts::channel_number(major, minor);
 
     boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
@@ -4479,6 +4527,7 @@ namespace yae
   bool
   DVR::has_preferences() const
   {
+    YAE_BENCHMARK(probe, "DVR::has_preferences");
     boost::unique_lock<boost::mutex> lock(preferences_mutex_);
     if (preferences_.empty())
     {
@@ -4494,6 +4543,7 @@ namespace yae
   void
   DVR::get_preferences(Json::Value & preferences) const
   {
+    YAE_BENCHMARK(probe, "DVR::get_preferences");
     boost::unique_lock<boost::mutex> lock(preferences_mutex_);
     preferences = preferences_;
   }
@@ -4504,6 +4554,7 @@ namespace yae
   void
   DVR::set_preferences(const Json::Value & preferences)
   {
+    YAE_BENCHMARK(probe, "DVR::set_preferences");
     std::string basedir =
       preferences.get("basedir", basedir_.string()).asString();
 
@@ -4530,6 +4581,7 @@ namespace yae
   bool
   DVR::discover_enabled_tuners(std::set<std::string> & tuner_names) const
   {
+    YAE_BENCHMARK(probe, "DVR::discover_enabled_tuners");
     Json::Value tuners;
     {
       boost::unique_lock<boost::mutex> lock(preferences_mutex_);
