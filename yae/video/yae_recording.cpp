@@ -68,6 +68,27 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Recording::Rec::operator ==
+  //
+  bool
+  Recording::Rec::operator == (const Recording::Rec & r) const
+  {
+    bool same = (made_by_ == r.made_by_ &&
+                 cancelled_ == r.cancelled_ &&
+                 utc_t0_ == r.utc_t0_ &&
+                 gps_t0_ == r.gps_t0_ &&
+                 gps_t1_ == r.gps_t1_ &&
+                 channel_major_ == r.channel_major_ &&
+                 channel_minor_ == r.channel_minor_ &&
+                 channel_name_ == r.channel_name_ &&
+                 title_ == r.title_ &&
+                 rating_ == r.rating_ &&
+                 description_ == r.description_ &&
+                 max_recordings_ == r.max_recordings_);
+    return same;
+  }
+
+  //----------------------------------------------------------------
   // Recording::Rec::get_title_path
   //
   fs::path

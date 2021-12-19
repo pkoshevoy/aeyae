@@ -65,6 +65,11 @@ namespace yae
                   Recording::MadeBy rec_cause = Recording::kUnspecified,
                   uint16_t max_recordings = 0);
 
+      bool operator == (const Rec & r) const;
+
+      inline bool operator != (const Rec & r) const
+      { return !(this->operator == (r)); }
+
       inline uint32_t ch_num() const
       { return yae::mpeg_ts::channel_number(channel_major_, channel_minor_); }
 

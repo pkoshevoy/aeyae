@@ -2693,7 +2693,7 @@ namespace yae
         worker_.add(task);
       }
 
-      bool same_recordings = (recordings == recordings_);
+      bool same_recordings = yae::same(recordings, recordings_);
       if (!same_recordings)
       {
         recordings_.swap(recordings);

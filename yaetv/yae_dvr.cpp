@@ -760,6 +760,33 @@ namespace yae
   }
 
 
+  //----------------------------------------------------------------
+  // same
+  //
+  bool same(const TRecs & a, const TRecs & b)
+  {
+    TRecs::const_iterator ia = a.begin();
+    TRecs::const_iterator ib = b.begin();
+    for (; ia != a.end() && ib != b.end(); ++ia, ++ib)
+    {
+      const std::string & ka = ia->first;
+      const std::string & kb = ib->first;
+      if (ka != kb)
+      {
+        return false;
+      }
+
+      const Recording::Rec & ra = *(ia->second);
+      const Recording::Rec & rb = *(ib->second);
+      if (ra != rb)
+      {
+        return false;
+      }
+    }
+
+    return ia == a.end() && ib == b.end();
+  }
+
 
   //----------------------------------------------------------------
   // Schedule::is_recording_now
@@ -3137,10 +3164,17 @@ namespace yae
     try
     {
       std::string path = (basedir_ / ".yaetv" / "blocklist.json").string();
+
       if (!fs::exists(path))
       {
         // load the local backup:
         path = (yaetv_ / "blocklist.json").string();
+      }
+
+      if (!fs::exists(path))
+      {
+        // load the old blocklist:
+        path = (yaetv_ / "blacklist.json").string();
       }
 
       int64_t lastmod = yae::stat_lastmod(path.c_str());
@@ -3207,32 +3241,40 @@ namespace yae
     try
     {
       std::string path = (basedir_ / ".yaetv" / "wishlist.json").string();
-      if (!fs::exists(path))
+      Json::Value json;
+
+      if (!yae::attempt_load(path, json))
       {
+        yae_ilog("failed to load wishlist %s", path.c_str());
+
         // load the local backup:
         path = (yaetv_ / "wishlist.json").string();
+
+        if (!yae::attempt_load(path, json))
+        {
+          yae_ilog("failed to load wishlist %s", path.c_str());
+          return false;
+        }
       }
 
-      int64_t lastmod = yae::stat_lastmod(path.c_str());
-      if (wishlist_.lastmod_ < lastmod)
+      Wishlist wishlist;
+      yae::load(json, wishlist);
+      wishlist.lastmod_ = yae::stat_lastmod(path.c_str());
+
+      if (wishlist_.lastmod_ < wishlist.lastmod_)
       {
         struct tm tm;
-        unix_epoch_time_to_localtime(lastmod, tm);
+        unix_epoch_time_to_localtime(wishlist.lastmod_, tm);
+
         std::string lastmod_txt = to_yyyymmdd_hhmmss(tm);
         yae_ilog("loading wishlist %s, lastmod %s",
                  path.c_str(),
                  lastmod_txt.c_str());
 
         boost::unique_lock<boost::mutex> lock(mutex_);
-        Json::Value json;
-        if (yae::TOpenFile(path, "rb").load(json))
-        {
-          Wishlist wishlist;
-          yae::load(json, wishlist);
-          wishlist_.items_.swap(wishlist.items_);
-          wishlist_.lastmod_ = lastmod;
-          return true;
-        }
+        wishlist_.items_.swap(wishlist.items_);
+        std::swap(wishlist_.lastmod_, wishlist.lastmod_);
+        return true;
       }
     }
     catch (const std::exception & e)

@@ -172,6 +172,12 @@ namespace yae
   //
   typedef std::map<uint32_t, TRecPtr> TRecsByTime;
 
+  //----------------------------------------------------------------
+  // same
+  //
+  // check if there is any difference between two sets of recordings
+  //
+  bool same(const TRecs & a, const TRecs & b);
 
   //----------------------------------------------------------------
   // FoundRecordings
