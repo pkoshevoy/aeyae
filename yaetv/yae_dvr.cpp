@@ -3882,14 +3882,14 @@ namespace yae
   void
   DVR::evaluate(const yae::mpeg_ts::EPG & epg)
   {
-    if (!check_local_recording_allowed())
-    {
-      load_schedule();
-      return;
-    }
-
     uint32_t margin_sec = margin_.get(1);
     schedule_.update(*this, epg);
+
+    std::string writer_uuid = get_writer_uuid();
+    if (!writer_uuid.empty())
+    {
+      return;
+    }
 
     std::map<uint32_t, std::string> frequencies;
     DVR::get_channels(frequencies);

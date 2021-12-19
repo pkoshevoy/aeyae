@@ -4187,8 +4187,16 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
         title.background_ = title.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
-        title.text_ =
-          TVarRef::constant(TVar(QString::fromUtf8(rec.title_.c_str())));
+
+        // prefix the title with the channel number:
+        {
+          std::ostringstream oss;
+          oss << rec.channel_major_ << "-"
+              << rec.channel_minor_ << " "
+              << rec.title_;
+          title.text_ =
+            TVarRef::constant(TVar(QString::fromUtf8(oss.str().c_str())));
+        }
 
         Text & desc = c1.addNew<Text>("desc");
         desc.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
