@@ -64,7 +64,7 @@
      <layout class="QVBoxLayout" name="verticalLayout_2">
       <item>
        <widget class="QComboBox" name="channelMapComboBox">
-        <property name="currentText">
+        <property name="currentText" stdset="0">
          <string>au-bcast</string>
         </property>
         <item>
@@ -179,16 +179,7 @@
       <string>Tuners</string>
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
+      <property name="margin">
        <number>0</number>
       </property>
       <item>
@@ -205,7 +196,7 @@
            <x>0</x>
            <y>0</y>
            <width>370</width>
-           <height>250</height>
+           <height>255</height>
           </rect>
          </property>
         </widget>
