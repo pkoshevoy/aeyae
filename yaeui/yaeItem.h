@@ -288,6 +288,12 @@ namespace yae
     void bottomLeft(const TDoubleProp & reference, double offset = 0.0);
     void bottomRight(const TDoubleProp & reference, double offset = 0.0);
 
+    // check whether any anchors are valid:
+    bool any_valid() const;
+
+    inline bool all_invalid() const
+    { return !any_valid(); }
+
     ItemRef left_;
     ItemRef right_;
     ItemRef top_;

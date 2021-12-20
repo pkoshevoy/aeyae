@@ -744,6 +744,19 @@ namespace yae
     right_ = ItemRef::offset(ref, kPropertyRight, -offset);
   }
 
+  //----------------------------------------------------------------
+  // Anchors::any_valid
+  //
+  bool
+  Anchors::any_valid() const
+  {
+    return (left_.isValid() ||
+            right_.isValid() ||
+            top_.isValid() ||
+            bottom_.isValid() ||
+            hcenter_.isValid() ||
+            vcenter_.isValid());
+  }
 
   //----------------------------------------------------------------
   // InputHandler::InputHandler

@@ -2147,7 +2147,11 @@ namespace yae
   {
     bool show_timeline = actionShowTimeline_->isChecked();
     saveBooleanSetting(kShowTimeline, show_timeline);
-    timeline_->showTimeline(show_timeline);
+
+    if (anchors_.any_valid())
+    {
+      timeline_->showTimeline(show_timeline);
+    }
   }
 
   //----------------------------------------------------------------
