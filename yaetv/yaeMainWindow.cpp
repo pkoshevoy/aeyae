@@ -100,7 +100,7 @@ namespace yae
     bookmark["position_in_sec"] = position_in_sec;
 
     std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
-    TOpenFile(filepath, "wb").save(seen);
+    yae::atomic_save(filepath, seen);
   }
 
   //----------------------------------------------------------------
@@ -113,7 +113,7 @@ namespace yae
     std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
     Json::Value seen;
 
-    if (TOpenFile(filepath, "rb").load(seen))
+    if (yae::attempt_load(filepath, seen))
     {
       const Json::Value & jv = seen["bookmark"];
 
