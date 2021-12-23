@@ -374,18 +374,23 @@ namespace yae
     std::string defaultFamily =
       QApplication::font().family().toUtf8().constData();
 
-#ifdef __APPLE__
-    // seems to have trouble with Italics
+#if LIBASS_VERSION < 0x01203000
+    int fontProvider = 1; // autodetect
+#elif defined(__APPLE__)
     int fontProvider = ASS_FONTPROVIDER_CORETEXT;
-    // disabling Harfbuzz appears to work around the problem:
-    ass_set_shaper(renderer_, ASS_SHAPING_SIMPLE);
 #elif defined(_WIN32)
     int fontProvider = ASS_FONTPROVIDER_DIRECTWRITE;
 #else
     int fontProvider = ASS_FONTPROVIDER_FONTCONFIG;
 #endif
-    int updateFontCache = 1;
 
+#ifdef __APPLE__
+    // ASS_FONTPROVIDER_CORETEXT seems to have trouble with Italics
+    // disabling Harfbuzz appears to work around the problem:
+    ass_set_shaper(renderer_, ASS_SHAPING_SIMPLE);
+#endif
+
+    int updateFontCache = 1;
     ass_set_fonts(renderer_,
                   NULL, // default font file
                   defaultFamily.c_str(),
