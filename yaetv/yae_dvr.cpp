@@ -2126,7 +2126,10 @@ namespace yae
   DVR::shutdown()
   {
     yae_ilog("DVR shutdown");
-    service_loop_worker_.reset();
+    {
+      TWorkerPtr service_loop_worker;
+      std::swap(service_loop_worker, service_loop_worker_);
+    }
 
     worker_.stop();
     worker_.wait_until_finished();
@@ -3046,6 +3049,11 @@ namespace yae
     for (std::map<std::string, std::string>::const_iterator
            i = epg_by_freq.begin(); i != epg_by_freq.end(); ++i)
     {
+      if (!service_loop_worker_)
+      {
+        break;
+      }
+
       const std::string & name = i->first;
       const std::string & path = i->second;
       std::string frequency = name.substr(4, name.size() - 9);
