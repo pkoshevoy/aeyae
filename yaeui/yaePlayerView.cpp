@@ -146,6 +146,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerView::populateContextMenu
+  //
+  bool
+  PlayerView::populateContextMenu(QMenu & menu)
+  {
+    return player_ux_ && player_ux_->populateContextMenu(menu);
+  }
+
+  //----------------------------------------------------------------
   // PlayerView::layout
   //
   void

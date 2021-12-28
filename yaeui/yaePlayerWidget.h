@@ -11,6 +11,7 @@
 
 // Qt:
 #include <QDialog>
+#include <QMenu>
 #include <QWidget>
 
 // local:
@@ -100,6 +101,9 @@ namespace yae
 
     // frame canvas:
     TCanvasWidget * canvas_;
+
+    // context menu:
+    QMenu * popup_;
 
     // player views:
     yae::shared_ptr<PlayerView, ItemView> player_;

@@ -34,7 +34,17 @@ namespace yae
   //
   struct InputArea : public Item
   {
-    InputArea(const char * id, bool draggable = true);
+    enum MouseButton
+    {
+      kNoButtons    = 0,
+      kLeftButton   = (1 << 0),
+      kRightButton  = (1 << 1),
+      kMiddleButton = (1 << 2),
+    };
+
+    InputArea(const char * id,
+              bool draggable = true,
+              uint32_t allowed_buttons = kLeftButton);
 
     // virtual:
     void getInputHandlers(// coordinate system origin of
@@ -62,10 +72,31 @@ namespace yae
                           double degrees)
     { return false; }
 
+    virtual bool accepts(MouseButton button) const
+    { return button != kNoButtons && (allowed_buttons_ & button) == button; }
+
+    virtual bool isButtonPressed(MouseButton button) const
+    { return pressed_button_ == button; }
+
+    virtual bool onButtonPress(const TVec2D & itemCSysOrigin,
+                               const TVec2D & rootCSysPoint,
+                               MouseButton button)
+    {
+      if ((allowed_buttons_ & button) == button)
+      {
+        pressed_button_ = button;
+        return this->onPress(itemCSysOrigin, rootCSysPoint);
+      }
+
+      return false;
+    }
+
+  protected:
     virtual bool onPress(const TVec2D & itemCSysOrigin,
                          const TVec2D & rootCSysPoint)
     { return false; }
 
+  public:
     virtual bool onClick(const TVec2D & itemCSysOrigin,
                          const TVec2D & rootCSysPoint)
     { return false; }
@@ -103,7 +134,10 @@ namespace yae
                              const TVec2D & itemCSysOrigin,
                              const TVec2D & rootCSysPoint) const;
 
+  protected:
     bool draggable_;
+    uint32_t allowed_buttons_;
+    MouseButton pressed_button_;
   };
 
   //----------------------------------------------------------------

@@ -37,10 +37,12 @@ namespace yae
                              Qt::WindowFlags flags):
     QWidget(parent, flags),
     canvas_(NULL),
+    popup_(NULL),
     player_(new PlayerView("PlayerWidget player view")),
     confirm_(new ConfirmView("PlayerWidget confirm view"))
   {
     greeting_ = tr("hello");
+    popup_ = add_menu("PlayerWidget::popup_");
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(this);
     canvasLayout->setMargin(0);
@@ -83,6 +85,9 @@ namespace yae
 
     delete canvas_;
     canvas_ = NULL;
+
+    delete popup_;
+    popup_ = NULL;
   }
 
   //----------------------------------------------------------------
@@ -192,10 +197,8 @@ namespace yae
   void
   PlayerWidget::populateContextMenu()
   {
-    // shortcut:
-    PlayerUxItem & pl_ux = get_player_ux();
-
-    pl_ux.populateContextMenu();
+    popup_->clear();
+    canvas_->populateContextMenu(*popup_);
   }
 
   //----------------------------------------------------------------
@@ -229,7 +232,11 @@ namespace yae
 
       populateContextMenu();
 
-      pl_ux.contextMenu_->popup(globalPt);
+      if (!popup_->isEmpty())
+      {
+        popup_->popup(globalPt);
+      }
+
       return true;
     }
 

@@ -26,6 +26,7 @@
 #endif
 #include <QApplication>
 #include <QEvent>
+#include <QMenu>
 
 // yae includes:
 #include "yae/video/yae_video.h"
@@ -471,6 +472,30 @@ namespace yae
       ILayer * layer = *i;
       layer->resizeTo(this);
     }
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::populateContextMenu
+  //
+  bool
+  Canvas::populateContextMenu(QMenu & menu)
+  {
+    for (std::list<ILayer *>::reverse_iterator
+           i = Canvas::layers_.rbegin(); i != Canvas::layers_.rend(); ++i)
+    {
+      ILayer * layer = *i;
+      if (!layer->isEnabled())
+      {
+        continue;
+      }
+
+      if (layer->populateContextMenu(menu))
+      {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   //----------------------------------------------------------------

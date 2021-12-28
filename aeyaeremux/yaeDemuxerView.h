@@ -339,6 +339,10 @@ namespace yae
     void maybe_update_player();
 
   public:
+    // virtual:
+    bool populateContextMenu(QMenu & menu);
+
+    // helpers:
     bool popup_context_menu(const QPoint & global_pos);
     void insert_menus(QMenuBar * menubar, QAction * before);
 
@@ -347,7 +351,7 @@ namespace yae
     QMenu * menuView_;
 
     // context sensitive menu which includes most relevant actions:
-    QMenu * contextMenu_;
+    QMenu * popup_;
 
     RemuxModel * model_;
     ViewMode view_mode_;

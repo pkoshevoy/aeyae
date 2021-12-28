@@ -19,6 +19,9 @@
 #include "yae/utils/yae_utils.h"
 
 // yaeui:
+#ifdef __APPLE__
+#include "yaeAppleUtils.h"
+#endif
 #include "yaeAxisItem.h"
 #include "yaeCheckboxItem.h"
 #include "yaeFlickableArea.h"
@@ -732,7 +735,7 @@ namespace yae
   struct WatchLive : public InputArea
   {
     WatchLive(const char * id, AppView & view, uint32_t ch_num):
-      InputArea(id),
+      InputArea(id, false, InputArea::kLeftButton | InputArea::kRightButton),
       view_(view),
       ch_num_(ch_num)
     {}
@@ -740,13 +743,20 @@ namespace yae
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
-    { return true; }
+    {
+      view_.clicked_ch_num_ = ch_num_;
+      return true;
+    }
 
     // virtual:
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      yae::queue_call(view_, &AppView::on_watch_live, ch_num_);
+      if (InputArea::pressed_button_ == InputArea::kLeftButton)
+      {
+        yae::queue_call(view_, &AppView::on_watch_live, ch_num_);
+      }
+
       return true;
     }
 
@@ -1798,7 +1808,7 @@ namespace yae
     PlaybackRecording(const char * id,
                       AppView & view,
                       const std::string & rec):
-      InputArea(id),
+      InputArea(id, false, InputArea::kLeftButton | InputArea::kRightButton),
       view_(view),
       rec_(rec)
     {}
@@ -1806,13 +1816,20 @@ namespace yae
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
-    { return true; }
+    {
+      view_.clicked_rec_ = rec_;
+      return true;
+    }
 
     // virtual:
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      yae::queue_call(view_, &AppView::playback_recording, rec_);
+      if (InputArea::pressed_button_ == InputArea::kLeftButton)
+      {
+        yae::queue_call(view_, &AppView::playback_recording, rec_);
+      }
+
       return true;
     }
 
@@ -1827,7 +1844,7 @@ namespace yae
   struct DeleteRecording : public InputArea
   {
     DeleteRecording(const char * id, AppView & view, const std::string & rec):
-      InputArea(id),
+      InputArea(id, false, InputArea::kLeftButton | InputArea::kRightButton),
       view_(view),
       rec_(rec)
     {}
@@ -1835,13 +1852,20 @@ namespace yae
     // virtual:
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
-    { return true; }
+    {
+      view_.clicked_rec_ = rec_;
+      return true;
+    }
 
     // virtual:
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      view_.delete_recording(rec_);
+      if (InputArea::pressed_button_ == InputArea::kLeftButton)
+      {
+        view_.delete_recording(rec_);
+      }
+
       return true;
     }
 
@@ -2272,11 +2296,11 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // IsBlocklisted
+  // IsBlocked
   //
-  struct IsBlocklisted : public TBoolExpr
+  struct IsBlocked : public TBoolExpr
   {
-    IsBlocklisted(const AppView & view, uint16_t major, uint16_t minor):
+    IsBlocked(const AppView & view, uint16_t major, uint16_t minor):
       view_(view),
       ch_num_(yae::mpeg_ts::channel_number(major, minor))
     {}
@@ -2325,12 +2349,35 @@ namespace yae
     sidebar_sel_("view_mode_program_guide"),
     epg_lastmod_(0, 0)
   {
+    init_actions();
+    translate_ui();
+
     Item & root = *root_;
 
     // add style to the root item, so it could be uncached automatically:
     style_.reset(new AppStyle("AppStyle", *this));
 
     bool ok = connect(&sync_ui_, SIGNAL(timeout()), this, SLOT(sync_ui()));
+    YAE_ASSERT(ok);
+
+    ok = connect(action_toggle_fullscreen_, SIGNAL(triggered()),
+                 this, SLOT(on_toggle_fullscreen()));
+    YAE_ASSERT(ok);
+
+    ok = connect(action_block_channel_, SIGNAL(triggered()),
+                 this, SLOT(on_block_channel()));
+    YAE_ASSERT(ok);
+
+    ok = connect(action_show_in_finder_, SIGNAL(triggered()),
+                 this, SLOT(on_show_in_finder()));
+    YAE_ASSERT(ok);
+
+    ok = connect(action_watch_recording_, SIGNAL(triggered()),
+                 this, SLOT(on_watch_recording()));
+    YAE_ASSERT(ok);
+
+    ok = connect(action_delete_recording_, SIGNAL(triggered()),
+                 this, SLOT(on_delete_recording()));
     YAE_ASSERT(ok);
   }
 
@@ -2376,6 +2423,53 @@ namespace yae
     style_.reset();
 
     AppView::clear();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::init_actions
+  //
+  void
+  AppView::init_actions()
+  {
+    action_toggle_fullscreen_ =
+      yae::add<QAction>(this, "action_toggle_fullscreen");
+    action_toggle_fullscreen_->setCheckable(false);
+
+    action_block_channel_ =
+      yae::add<QAction>(this, "action_block_channel");
+    action_block_channel_->setCheckable(false);
+
+    action_show_in_finder_ =
+      yae::add<QAction>(this, "action_show_in_finder");
+    action_show_in_finder_->setCheckable(false);
+
+    action_watch_recording_ =
+      yae::add<QAction>(this, "action_watch_recording");
+    action_watch_recording_->setCheckable(false);
+
+    action_delete_recording_ =
+      yae::add<QAction>(this, "action_delete_recording");
+    action_delete_recording_->setCheckable(false);
+  }
+
+  //----------------------------------------------------------------
+  // AppView::translate_ui
+  //
+  void
+  AppView::translate_ui()
+  {
+    action_toggle_fullscreen_->setText(trUtf8("Toggle Full Screen View"));
+    action_block_channel_->setText(trUtf8("Block Channel"));
+    action_watch_recording_->setText(trUtf8("Watch Now"));
+
+    action_delete_recording_->setText(trUtf8("Delete"));
+#ifdef __APPLE__
+    action_show_in_finder_->setText(trUtf8("Show In Finder"));
+#elif defined(_WIN32)
+    action_show_in_finder_->setText(trUtf8("Show In Explorer"));
+#else
+    action_show_in_finder_->setText(trUtf8("Show In File Manager"));
+#endif
   }
 
   //----------------------------------------------------------------
@@ -2487,11 +2581,11 @@ namespace yae
   bool
   AppView::processMouseEvent(Canvas * canvas, QMouseEvent * event)
   {
-    bool r = ItemView::processMouseEvent(canvas, event);
-
     QEvent::Type et = event->type();
     if (et == QEvent::MouseButtonPress)
     {
+      clicked_rec_.clear();
+      clicked_ch_num_ = 0;
 #if 0
       ProgramItem * prog = find_item_under_mouse<ProgramItem>(mouseOverItems_);
       if (prog)
@@ -2503,7 +2597,37 @@ namespace yae
 #endif
     }
 
+    bool r = ItemView::processMouseEvent(canvas, event);
     return r;
+  }
+
+  //----------------------------------------------------------------
+  // AppView::populateContextMenu
+  //
+  bool
+  AppView::populateContextMenu(QMenu & menu)
+  {
+    if (clicked_ch_num_)
+    {
+      const uint16_t major = yae::mpeg_ts::channel_major(clicked_ch_num_);
+      const uint16_t minor = yae::mpeg_ts::channel_minor(clicked_ch_num_);
+      action_block_channel_->setText
+        (trUtf8("Block Channel %1-%2").arg(major).arg(minor));
+
+      menu.addAction(action_block_channel_);
+    }
+    else if (!clicked_rec_.empty())
+    {
+      menu.addAction(action_watch_recording_);
+      menu.addAction(action_delete_recording_);
+      menu.addAction(action_show_in_finder_);
+    }
+    else
+    {
+      menu.addAction(action_toggle_fullscreen_);
+    }
+
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -3301,7 +3425,7 @@ namespace yae
               cbox.height_ = ItemRef::reference(row.height_, 0.75);
               cbox.width_ = cbox.height_;
               cbox.checked_ = cbox.
-                addInverse(new IsBlocklisted(view, ch_major, ch_minor));
+                addInverse(new IsBlocked(view, ch_major, ch_minor));
               cbox.on_toggle_.
                 reset(new OnToggleBlocklist(view, ch_major, ch_minor));
 
@@ -4339,6 +4463,71 @@ namespace yae
 
     layout.items_.swap(rows);
     table.uncache();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_toggle_fullscreen
+  //
+  void
+  AppView::on_toggle_fullscreen()
+  {
+    ItemView::toggle_fullscreen_();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_block_channel
+  //
+  void
+  AppView::on_block_channel()
+  {
+    YAE_ASSERT(clicked_ch_num_);
+    emit block_channel(clicked_ch_num_);
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_show_in_finder
+  //
+  void
+  AppView::on_show_in_finder()
+  {
+    YAE_ASSERT(!clicked_rec_.empty());
+
+    TRecs::iterator found = recordings_.find(clicked_rec_);
+    YAE_ASSERT(found != recordings_.end());
+    if (found == recordings_.end())
+    {
+      return;
+    }
+
+    const TRecPtr & rec_ptr = found->second;
+    const Recording::Rec & rec = *rec_ptr;
+    std::string filepath = rec.get_filepath(dvr_->basedir_);
+
+#ifdef __APPLE__
+    yae::showInFinder(filepath.c_str());
+#else
+    yae::show_in_file_manager(filepath.c_str());
+#endif
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_watch_recording
+  //
+  void
+  AppView::on_watch_recording()
+  {
+    YAE_ASSERT(!clicked_rec_.empty());
+    playback_recording(clicked_rec_);
+  }
+
+  //----------------------------------------------------------------
+  // AppView::on_delete_recording
+  //
+  void
+  AppView::on_delete_recording()
+  {
+    YAE_ASSERT(!clicked_rec_.empty());
+    delete_recording(clicked_rec_);
   }
 
   //----------------------------------------------------------------

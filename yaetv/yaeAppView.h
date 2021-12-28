@@ -51,6 +51,10 @@ namespace yae
   {
     Q_OBJECT;
 
+    // helpers:
+    void init_actions();
+    void translate_ui();
+
   public:
 
     AppView(const char * name);
@@ -78,6 +82,9 @@ namespace yae
     // virtual:
     bool processMouseEvent(Canvas * canvas, QMouseEvent * event);
 
+    // virtual:
+    bool populateContextMenu(QMenu & menu);
+
     // helper:
     TRecPtr now_playing() const;
 
@@ -85,10 +92,10 @@ namespace yae
     void found_recordings(const TFoundRecordingsPtr & found);
 
   signals:
-    void toggle_fullscreen();
     void confirm_delete(TRecPtr);
     void playback(TRecPtr);
     void watch_live(uint32_t ch_num, TTime seek_pos);
+    void block_channel(uint32_t ch_num);
 
   public:
     // signals are protected in Qt4, this is a workaround:
@@ -114,6 +121,12 @@ namespace yae
     void sync_ui_playlists();
     void sync_ui_playlist(const std::string & playlist_name,
                           const TRecs & playlist_recs);
+
+    void on_toggle_fullscreen();
+    void on_block_channel();
+    void on_show_in_finder();
+    void on_watch_recording();
+    void on_delete_recording();
 
     void on_watch_live(uint32_t ch_num);
     void show_program_details(uint32_t ch_num, uint32_t gps_time);
@@ -157,8 +170,17 @@ namespace yae
     int64_t gps_hour_;
 
   public:
+    // popup menu actions:
+    QAction * action_toggle_fullscreen_;
+    QAction * action_block_channel_;
+    QAction * action_show_in_finder_;
+    QAction * action_watch_recording_;
+    QAction * action_delete_recording_;
+
     // UI state:
     std::string sidebar_sel_;
+    std::string clicked_rec_;
+    uint32_t clicked_ch_num_;
 
     // collapsed item groups:
     std::set<std::string> collapsed_;

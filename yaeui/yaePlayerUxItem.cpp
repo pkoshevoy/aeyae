@@ -363,7 +363,6 @@ namespace yae
     menuAspectRatio_ = add_menu("menuAspectRatio");
     menuSubs_ = add_menu("menuSubs");
     menuChapters_ = add_menu("menuChapters");
-    contextMenu_ = add_menu("contextMenu");
 
     menuPlayback_->addAction(actionPlay_);
     menuPlayback_->addSeparator();
@@ -902,9 +901,6 @@ namespace yae
     menuSubs_(NULL),
     menuChapters_(NULL),
 
-    // context sensitive menu which includes most relevant actions:
-    contextMenu_(NULL),
-
     // audio/video track selection widgets:
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
@@ -997,7 +993,6 @@ namespace yae
     delete menuAspectRatio_;
     delete menuSubs_;
     delete menuChapters_;
-    delete contextMenu_;
   }
 
   //----------------------------------------------------------------
@@ -3128,8 +3123,8 @@ namespace yae
   //----------------------------------------------------------------
   // PlayerUxItem::populateContextMenu
   //
-  void
-  PlayerUxItem::populateContextMenu()
+  bool
+  PlayerUxItem::populateContextMenu(QMenu & menu)
   {
     IReader * reader = get_reader();
 
@@ -3145,48 +3140,54 @@ namespace yae
     std::size_t numChapters =
       reader ? reader->countChapters() : 0;
 
+    if (!menu.isEmpty())
+    {
+      menu.addSeparator();
+    }
+
     // populate the context menu:
-    contextMenu_->clear();
-    contextMenu_->addAction(actionPlay_);
-    contextMenu_->addSeparator();
+    menu.addAction(actionPlay_);
+    menu.addSeparator();
 
-    contextMenu_->addAction(actionLoop_);
-    contextMenu_->addAction(actionSetInPoint_);
-    contextMenu_->addAction(actionSetOutPoint_);
-    contextMenu_->addAction(actionShowTimeline_);
-    contextMenu_->addSeparator();
+    menu.addAction(actionLoop_);
+    menu.addAction(actionSetInPoint_);
+    menu.addAction(actionSetOutPoint_);
+    menu.addAction(actionShowTimeline_);
+    menu.addSeparator();
 
-    contextMenu_->addAction(actionShrinkWrap_);
-    contextMenu_->addAction(actionFullScreen_);
-    contextMenu_->addAction(actionFillScreen_);
-    addMenuCopyTo(contextMenu_, menuPlaybackSpeed_);
-    contextMenu_->addSeparator();
+    menu.addAction(actionShrinkWrap_);
+    menu.addAction(actionFullScreen_);
+    menu.addAction(actionFillScreen_);
+    addMenuCopyTo(&menu, menuPlaybackSpeed_);
+    menu.addSeparator();
 
     if (numVideoTracks || numAudioTracks)
     {
       if (numAudioTracks)
       {
-        addMenuCopyTo(contextMenu_, menuAudio_);
+        addMenuCopyTo(&menu, menuAudio_);
       }
 
       if (numVideoTracks)
       {
-        addMenuCopyTo(contextMenu_, menuVideo_);
+        addMenuCopyTo(&menu, menuVideo_);
       }
 
       if (numSubtitles || true)
       {
-        addMenuCopyTo(contextMenu_, menuSubs_);
+        addMenuCopyTo(&menu, menuSubs_);
       }
 
       if (numChapters)
       {
-        addMenuCopyTo(contextMenu_, menuChapters_);
+        addMenuCopyTo(&menu, menuChapters_);
       }
 
-      contextMenu_->addSeparator();
-      contextMenu_->addAction(actionShowInFinder_);
+      menu.addSeparator();
+      menu.addAction(actionShowInFinder_);
     }
+
+    return true;
   }
 
   //----------------------------------------------------------------

@@ -1220,9 +1220,8 @@ namespace yae
     PlayerWidget::populateContextMenu();
 
     PlayerUxItem & pl_ux = PlayerWidget::get_player_ux();
-    QMenu & context_menu = *(pl_ux.contextMenu_);
-    QAction * separator = context_menu.
-      insertSeparator(pl_ux.actionLoop_);
+    QMenu & context_menu = *popup_;
+    QAction * separator = context_menu.insertSeparator(pl_ux.actionLoop_);
     context_menu.insertAction(separator, actionPrev_);
     context_menu.insertAction(separator, actionNext_);
     context_menu.insertAction(separator, actionShowPlaylist_);

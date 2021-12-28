@@ -35,8 +35,13 @@ namespace yae
                   const TVec2D & rootCSysPoint,
                   double degrees);
 
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint);
+    bool accepts(InputArea::MouseButton button) const;
+
+    bool isButtonPressed(InputArea::MouseButton button) const;
+
+    bool onButtonPress(const TVec2D & itemCSysOrigin,
+                       const TVec2D & rootCSysPoint,
+                       InputArea::MouseButton button);
 
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint);

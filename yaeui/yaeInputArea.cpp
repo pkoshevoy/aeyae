@@ -17,9 +17,11 @@ namespace yae
   //----------------------------------------------------------------
   // InputArea::InputArea
   //
-  InputArea::InputArea(const char * id, bool draggable):
+  InputArea::InputArea(const char * id, bool draggable, uint32_t buttons):
     Item(id),
-    draggable_(draggable)
+    draggable_(draggable),
+    allowed_buttons_(buttons),
+    pressed_button_(kNoButtons)
   {}
 
   //----------------------------------------------------------------
@@ -60,7 +62,9 @@ namespace yae
   //
   void
   InputArea::onCancel()
-  {}
+  {
+    pressed_button_ = kNoButtons;
+  }
 
   //----------------------------------------------------------------
   // InputArea::onDragEnd

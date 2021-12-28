@@ -134,6 +134,7 @@ namespace yae
     void playerEnteringFullScreen();
     void playerExitingFullScreen();
     void backToPlaylist();
+    void confirmBlockChannel(uint32_t ch_num);
     void confirmExit();
 
   protected slots:
@@ -148,7 +149,7 @@ namespace yae
     void mousePressEvent(QMouseEvent * e);
 
     // context sensitive menu which includes most relevant actions:
-    QMenu * contextMenu_;
+    QMenu * popup_;
 
     // shortcuts used during full-screen mode (when menubar is invisible)
     QShortcut * shortcutExit_;

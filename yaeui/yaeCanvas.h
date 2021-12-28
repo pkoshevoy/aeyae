@@ -38,6 +38,9 @@
 #include "yaeThumbnailProvider.h"
 #include "yaeVec.h"
 
+// forward declarations:
+class QMenu;
+
 
 namespace yae
 {
@@ -199,6 +202,9 @@ namespace yae
         enabled_ = enable;
         requestRepaint();
       }
+
+      virtual bool populateContextMenu(QMenu & menu)
+      { return false; }
 
       virtual void requestRepaint() = 0;
       virtual bool resizeTo(const Canvas * canvas) = 0;
@@ -412,6 +418,11 @@ namespace yae
 
     // helper:
     void resize(double devicePixelRatio, int w, int h);
+
+    // iterate through enabled layers in the front to back order
+    // and request to populate the context menu,
+    // stop iterating on the layer that returns true:
+    bool populateContextMenu(QMenu & menu);
 
     // helper:
     inline bool overlayHasContent() const

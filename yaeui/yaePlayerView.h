@@ -50,6 +50,9 @@ namespace yae
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
 
+    // virtual:
+    bool populateContextMenu(QMenu & menu);
+
   protected:
     void layout(PlayerView & view, const ItemViewStyle & style, Item & root);
 

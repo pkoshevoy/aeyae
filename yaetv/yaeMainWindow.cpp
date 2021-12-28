@@ -429,12 +429,31 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // DismissConfirmView
+  //
+  struct DismissConfirmView : ConfirmItem::Action
+  {
+    DismissConfirmView(ConfirmView & confirm):
+      confirm_(confirm)
+    {}
+
+    // virtual:
+    void execute() const
+    {
+      confirm_.setEnabled(false);
+    }
+
+    ConfirmView & confirm_;
+  };
+
+
+  //----------------------------------------------------------------
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const std::string & yaetv_dir,
                          const std::string & recordings_dir):
     QMainWindow(NULL, 0),
-    contextMenu_(NULL),
+    popup_(NULL),
     shortcutExit_(NULL),
     preferencesDialog_(NULL),
     playerWidget_(NULL),
@@ -455,8 +474,7 @@ namespace yae
 
     start_live_playback_.setInterval(1000);
 
-    contextMenu_ = new QMenu(this);
-    contextMenu_->setObjectName(QString::fromUtf8("contextMenu_"));
+    popup_ = add_menu("contextMenu");
 
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon =
@@ -535,6 +553,10 @@ namespace yae
                  this, SLOT(watchLive(uint32_t, TTime)));
     YAE_ASSERT(ok);
 
+    ok = connect(view_.get(), SIGNAL(block_channel(uint32_t)),
+                 this, SLOT(confirmBlockChannel(uint32_t)));
+    YAE_ASSERT(ok);
+
     ok = connect(view_.get(), SIGNAL(playback(TRecPtr)),
                  this, SLOT(playbackRecording(TRecPtr)));
     YAE_ASSERT(ok);
@@ -574,6 +596,9 @@ namespace yae
 
     delete canvas_;
     canvas_ = NULL;
+
+    delete popup_;
+    popup_ = NULL;
   }
 
   //----------------------------------------------------------------
@@ -772,6 +797,70 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ConfirmBlockChannel
+  //
+  struct ConfirmBlockChannel : DismissConfirmView
+  {
+    ConfirmBlockChannel(MainWindow & mainWindow,
+                        ConfirmView & confirm,
+                        uint32_t ch_num):
+      DismissConfirmView(confirm),
+      mainWindow_(mainWindow),
+      ch_num_(ch_num)
+    {}
+
+    // virtual:
+    void execute() const
+    {
+      // shortcuts:
+      DVR & dvr = mainWindow_.dvr_;
+      AppView & appView = *(mainWindow_.view_);
+      dvr.toggle_blocklist(ch_num_);
+      dvr.save_blocklist();
+      appView.sync_ui();
+      appView.requestRepaint();
+      DismissConfirmView::execute();
+    }
+
+    MainWindow & mainWindow_;
+    uint32_t ch_num_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::confirmBlockChannel
+  //
+  void
+  MainWindow::confirmBlockChannel(uint32_t ch_num)
+  {
+    uint16_t major = yae::mpeg_ts::channel_major(ch_num);
+    uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
+    const AppStyle & style = *(view_->style());
+    ConfirmView & confirm = *confirm_;
+
+    std::string msg = strfmt("Block Channel %i-%i?  You will be able "
+                             "to re-enable it in the Channels view.",
+                             major, minor);
+    confirm.message_ = TVarRef::constant(TVar(msg));
+    confirm.bg_ = ColorRef::constant(style.fg_.get().a_scaled(0.9));
+    confirm.fg_ = style.bg_;
+
+    confirm.affirmative_.
+      reset(new ConfirmBlockChannel(*this, confirm, ch_num));
+    ConfirmItem::Action & aff = *(confirm.affirmative_);
+    aff.message_ = TVarRef::constant(TVar("Block"));
+    aff.bg_ = style.cursor_;
+    aff.fg_ = style.cursor_fg_;
+
+    confirm.negative_.reset(new DismissConfirmView(*confirm_));
+    ConfirmItem::Action & neg = *(confirm.negative_);
+    neg.message_ = TVarRef::constant(TVar("Cancel"));
+    neg.bg_ = style.fg_;
+    neg.fg_ = style.bg_;
+
+    confirm.setEnabled(true);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::playbackRecording
   //
   IReaderPtr
@@ -840,24 +929,6 @@ namespace yae
 
     return reader;
   }
-
-  //----------------------------------------------------------------
-  // DismissConfirmView
-  //
-  struct DismissConfirmView : ConfirmItem::Action
-  {
-    DismissConfirmView(ConfirmView & confirm):
-      confirm_(confirm)
-    {}
-
-    // virtual:
-    void execute() const
-    {
-      confirm_.setEnabled(false);
-    }
-
-    ConfirmView & confirm_;
-  };
 
   //----------------------------------------------------------------
   // ConfirmDeleteRecording
@@ -1121,6 +1192,8 @@ namespace yae
     canvasContainer_->addWidget(playerWidget_);
     canvasContainer_->setCurrentWidget(canvas_);
     view_->now_playing_.reset();
+    view_->requestUncache();
+    view_->requestRepaint();
     stopLivePlayback();
   }
 
@@ -1377,11 +1450,22 @@ namespace yae
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
 
-      PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
-      pl_ux.populateContextMenu();
-      pl_ux.contextMenu_->popup(globalPt);
-      e->accept();
-      return;
+      popup_->clear();
+      if (canvasContainer_->currentWidget() == canvas_)
+      {
+        canvas_->populateContextMenu(*popup_);
+      }
+      else
+      {
+        playerWidget_->canvas_->populateContextMenu(*popup_);
+      }
+
+      if (!popup_->isEmpty())
+      {
+        popup_->popup(globalPt);
+        e->accept();
+        return;
+      }
     }
 
     QWidget::mousePressEvent(e);

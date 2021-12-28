@@ -235,7 +235,7 @@ namespace yae
     void playbackFinished(const SharedClock & c);
 
     void swapShortcuts();
-    void populateContextMenu();
+    bool populateContextMenu(QMenu & menu);
     void adjustMenuActions();
 
     void adjustCanvasHeight();
@@ -334,9 +334,6 @@ namespace yae
     QMenu * menuAspectRatio_;
     QMenu * menuSubs_;
     QMenu * menuChapters_;
-
-    // context sensitive menu which includes most relevant actions:
-    QMenu * contextMenu_;
 
     // audio/video track selection widgets:
     QActionGroup * audioTrackGroup_;

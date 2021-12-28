@@ -2408,7 +2408,7 @@ namespace yae
     ItemView(name),
     menuEdit_(NULL),
     menuView_(NULL),
-    contextMenu_(NULL),
+    popup_(NULL),
     model_(NULL),
     view_mode_(RemuxView::kUndefined),
     time_range_(new Segment(0, 1)),
@@ -2422,7 +2422,7 @@ namespace yae
     // init actions:
     menuEdit_ = add_menu("menuEdit");
     menuView_ = add_menu("menuView");
-    contextMenu_ = add_menu("contextMenu");
+    popup_ = add_menu("contextMenu");
 
     // translate ui:
     menuEdit_->setTitle(trUtf8("&Edit"));
@@ -2451,7 +2451,7 @@ namespace yae
 
     delete menuEdit_;
     delete menuView_;
-    delete contextMenu_;
+    delete popup_;
   }
 
   //----------------------------------------------------------------
@@ -4659,31 +4659,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // RemuxView::populateContextMenu
+  //
+  bool
+  RemuxView::populateContextMenu(QMenu & menu)
+  {
+    PlayerUxItem & pl_ux = *pl_ux_;
+    if (pl_ux.visible() && pl_ux.populateContextMenu(menu))
+    {
+      return true;
+    }
+
+    if (view_mode_ == RemuxView::kLayoutMode)
+    {
+      menu.addAction(pl_ux.actionSetInPoint_);
+      menu.addAction(pl_ux.actionSetOutPoint_);
+      menu.addSeparator();
+    }
+
+    menu.addAction(pl_ux.actionFullScreen_);
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // RemuxView::popup_context_menu
   //
   bool
   RemuxView::popup_context_menu(const QPoint & global_pos)
   {
-    PlayerUxItem & pl_ux = *pl_ux_;
-    if (pl_ux.visible())
-    {
-      pl_ux.populateContextMenu();
-      pl_ux.contextMenu_->popup(global_pos);
-      return true;
-    }
-
-    // populate the context menu:
-    contextMenu_->clear();
-
-    if (view_mode_ == RemuxView::kLayoutMode)
-    {
-      contextMenu_->addAction(pl_ux.actionSetInPoint_);
-      contextMenu_->addAction(pl_ux.actionSetOutPoint_);
-      contextMenu_->addSeparator();
-    }
-
-    contextMenu_->addAction(pl_ux.actionFullScreen_);
-    contextMenu_->popup(global_pos);
+    popup_->clear();
+    populateContextMenu(*popup_);
+    popup_->popup(global_pos);
     return true;
   }
 

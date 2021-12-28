@@ -78,16 +78,37 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // InputProxy::onPress
+  // InputProxy::accepts
   //
   bool
-  InputProxy::onPress(const TVec2D & itemCSysOrigin,
-                      const TVec2D & rootCSysPoint)
+  InputProxy::accepts(InputArea::MouseButton button) const
+  {
+    yae::shared_ptr<InputArea, Item> ia = ia_.lock();
+    return ia ? ia->accepts(button) : false;
+  }
+
+  //----------------------------------------------------------------
+  // InputProxy::isButtonPressed
+  //
+  bool
+  InputProxy::isButtonPressed(InputArea::MouseButton button) const
+  {
+    yae::shared_ptr<InputArea, Item> ia = ia_.lock();
+    return ia ? ia->isButtonPressed(button) : false;
+  }
+
+  //----------------------------------------------------------------
+  // InputProxy::onButtonPress
+  //
+  bool
+  InputProxy::onButtonPress(const TVec2D & itemCSysOrigin,
+                            const TVec2D & rootCSysPoint,
+                            InputArea::MouseButton button)
   {
     yae::shared_ptr<InputArea, Item> ia = ia_.lock();
     if (ia)
     {
-      if (!ia->onPress(itemCSysOrigin, rootCSysPoint))
+      if (!ia->onButtonPress(itemCSysOrigin, rootCSysPoint, button))
       {
         return false;
       }
@@ -100,7 +121,7 @@ namespace yae
       return true;
     }
 
-    return InputArea::onPress(itemCSysOrigin, rootCSysPoint);
+    return InputArea::onButtonPress(itemCSysOrigin, rootCSysPoint, button);
   }
 
   //----------------------------------------------------------------

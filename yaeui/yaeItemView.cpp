@@ -759,9 +759,19 @@ namespace yae
       }
     }
 #endif
-    QEvent::Type et = e->type();
+    const QEvent::Type et = e->type();
+    const Qt::MouseButton qt_btn = e->button();
+
+    const InputArea::MouseButton btn =
+      (qt_btn == Qt::LeftButton) ? InputArea::kLeftButton :
+      (qt_btn == Qt::RightButton) ? InputArea::kRightButton :
+      (qt_btn == Qt::MiddleButton) ? InputArea::kMiddleButton :
+      InputArea::kNoButtons;
+
     if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
-          (e->button() == Qt::LeftButton)))
+          (et == QEvent::MouseButtonPress ||
+           et == QEvent::MouseButtonRelease ||
+           et == QEvent::MouseButtonDblClick )))
     {
       if (!e->buttons())
       {
@@ -801,10 +811,13 @@ namespace yae
         InputHandler & handler = *i;
         InputArea * ia = handler.inputArea();
 
-        if (ia && ia->onPress(handler.csysOrigin_, pt))
+        if (ia && ia->onButtonPress(handler.csysOrigin_, pt, btn))
         {
           pressed_ = &handler;
-          return true;
+
+          // consume left-button clicks,
+          // allow other button clicks to bubble up:
+          return btn == InputArea::kLeftButton;
         }
       }
 
@@ -842,7 +855,7 @@ namespace yae
         InputArea * ia = handler.inputArea();
 
         if (!dragged_ && pressed_ && pressed_ != &handler &&
-            ia && ia->onPress(handler.csysOrigin_, startPt_))
+            ia && ia->onButtonPress(handler.csysOrigin_, startPt_, btn))
         {
           // avoid changing clicked item due to an accidental drag,
           // check the threshold:
@@ -881,7 +894,13 @@ namespace yae
         InputArea * ia =
           dragged_ ? dragged_->inputArea() : pressed_->inputArea();
 
+        ItemPtr keep_alive;
         if (ia)
+        {
+          keep_alive = ia->self_.lock();
+        }
+
+        if (ia && ia->isButtonPressed(btn))
         {
           if (dragged_ && ia->draggable())
           {
@@ -892,6 +911,19 @@ namespace yae
             accept = ia->onClick(pressed_->csysOrigin_, pt);
           }
         }
+
+        if (keep_alive)
+        {
+          // to clear InputArea::pressed_button_:
+          ia->onCancel();
+        }
+      }
+
+      if (accept && btn != InputArea::kLeftButton)
+      {
+        // consume left-button clicks,
+        // allow other button clicks to bubble up:
+        accept = false;
       }
 
       pressed_ = NULL;
@@ -900,7 +932,8 @@ namespace yae
 
       return accept;
     }
-    else if (et == QEvent::MouseButtonDblClick)
+    else if (et == QEvent::MouseButtonDblClick &&
+             btn == InputArea::kLeftButton)
     {
       pressed_ = NULL;
       dragged_ = NULL;
@@ -918,7 +951,9 @@ namespace yae
         InputHandler & handler = *i;
         InputArea * ia = handler.inputArea();
 
-        if (ia && ia->onDoubleClick(handler.csysOrigin_, pt))
+        if (ia &&
+            ia->accepts(btn) &&
+            ia->onDoubleClick(handler.csysOrigin_, pt))
         {
           return true;
         }
