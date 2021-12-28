@@ -761,11 +761,15 @@ namespace yae
 #endif
     const QEvent::Type et = e->type();
     const Qt::MouseButton qt_btn = e->button();
+    const Qt::MouseButtons qt_btns = e->buttons();
 
     const InputArea::MouseButton btn =
       (qt_btn == Qt::LeftButton) ? InputArea::kLeftButton :
       (qt_btn == Qt::RightButton) ? InputArea::kRightButton :
       (qt_btn == Qt::MiddleButton) ? InputArea::kMiddleButton :
+      !!(qt_btns & Qt::LeftButton) ? InputArea::kLeftButton :
+      !!(qt_btns & Qt::RightButton) ? InputArea::kRightButton :
+      !!(qt_btns & Qt::MiddleButton) ? InputArea::kMiddleButton :
       InputArea::kNoButtons;
 
     if (!((et == QEvent::MouseMove && (e->buttons() & Qt::LeftButton)) ||
