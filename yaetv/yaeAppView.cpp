@@ -752,11 +752,7 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      if (InputArea::pressed_button_ == InputArea::kLeftButton)
-      {
-        yae::queue_call(view_, &AppView::on_watch_live, ch_num_);
-      }
-
+      yae::queue_call(view_, &AppView::on_watch_live, ch_num_);
       return true;
     }
 
@@ -1825,11 +1821,7 @@ namespace yae
     bool onDoubleClick(const TVec2D & itemCSysOrigin,
                        const TVec2D & rootCSysPoint)
     {
-      if (InputArea::pressed_button_ == InputArea::kLeftButton)
-      {
-        yae::queue_call(view_, &AppView::playback_recording, rec_);
-      }
-
+      yae::queue_call(view_, &AppView::playback_recording, rec_);
       return true;
     }
 
