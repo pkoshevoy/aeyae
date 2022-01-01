@@ -32,6 +32,7 @@
 
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_benchmark.h"
 
 // yaeui:
 #include "yaeCanvas.h"
@@ -197,16 +198,28 @@ namespace yae
 
       virtual void repaint()
       {
+        YAE_BENCHMARK(probe1, "TCanvasWidget::TDelegate::repaint");
+
         // this is just to prevent concurrent OpenGL access
         // to the same context:
         TMakeCurrentContext lock(canvas_.Canvas::context());
         YAE_ASSERT(isVisible());
 
 #ifdef YAE_USE_QOPENGL_WIDGET
-        canvas_.TWidget::update();
+        {
+          YAE_BENCHMARK(probe2, "canvas_.TWidget::update");
+          canvas_.TWidget::update();
+        }
 #else
-        canvas_.paintGL();
-        canvas_.TWidget::swapBuffers();
+        {
+          YAE_BENCHMARK(probe3, "canvas_.paintGL");
+          canvas_.paintGL();
+        }
+
+        {
+          YAE_BENCHMARK(probe4, "canvas_.TWidget::swapBuffers");
+          canvas_.TWidget::swapBuffers();
+        }
 #endif
      }
 
