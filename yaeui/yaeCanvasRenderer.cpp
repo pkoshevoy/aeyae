@@ -14,6 +14,7 @@
 #include <iterator>
 #include <set>
 #include <sstream>
+#include <string.h>
 
 // boost includes:
 #include <boost/thread.hpp>
@@ -2086,12 +2087,67 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_opengl_version
+  //
+  static bool
+  get_opengl_version(uint16_t & major, uint16_t & minor)
+  {
+    major = 0;
+    minor = 0;
+
+    YAE_OPENGL_HERE();
+    const char * version =
+      ((const char *)YAE_OGL_11(glGetString(GL_VERSION)));
+
+    if (version && *version)
+    {
+      const std::size_t version_len = strlen(version);
+      const char * found = strchr(version, '.');
+      if ((found != NULL) &&
+          (found - 1) >= version &&
+          (found + 1) < (version + version_len))
+      {
+        major = (*(found - 1) - '0');
+        minor = (*(found + 1) - '0');
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // check_supports_texture_3d
+  //
+  static bool
+  check_supports_texture_3d()
+  {
+    uint16_t major = 0;
+    uint16_t minor = 0;
+    YAE_ASSERT(get_opengl_version(major, minor));
+    yae_ilog("get_opengl_version: %i.%i", major, minor);
+
+    if (major < 1 || (major == 1 && minor < 2))
+    {
+      return false;
+    }
+
+#ifndef YAE_USE_QOPENGL_WIDGET
+    return glTexImage3D != NULL;
+#else
+    return true;
+#endif
+  }
+
+  //----------------------------------------------------------------
   // TBaseCanvas::setFrame
   //
   bool
   TBaseCanvas::setFrame(const TVideoFramePtr & frame,
                         bool & colorSpaceOrRangeChanged)
   {
+    static const bool supports_tex_3d = check_supports_texture_3d();
+
     // NOTE: this assumes that the mutex is already locked:
     bool frameSizeOrFormatChanged = false;
 
@@ -2107,7 +2163,7 @@ namespace yae
                  clut_input_.av_fmt_ == frame->traits_.av_fmt_);
 
     bool upload_clut_texture =
-      colorSpaceOrRangeChanged && !skipColorConverter_;
+      supports_tex_3d && colorSpaceOrRangeChanged && !skipColorConverter_;
 
     if (upload_clut_texture)
     {
@@ -2153,7 +2209,7 @@ namespace yae
 #endif
     }
 
-    if (!clut_tex_id_ && !skipColorConverter_)
+    if (!clut_tex_id_ && !skipColorConverter_ && supports_tex_3d)
     {
       YAE_OGL_11_HERE();
       YAE_OGL_11(glGenTextures(1, &clut_tex_id_));
@@ -3385,7 +3441,6 @@ namespace yae
       yae_assert_gl_no_error();
     }
 
-    YAE_OGL_11(glEnable(GL_TEXTURE_3D));
     YAE_OGL_11(glEnable(GL_TEXTURE_2D));
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
@@ -3394,6 +3449,7 @@ namespace yae
 
     if (shader_)
     {
+      YAE_OGL_11(glEnable(GL_TEXTURE_3D));
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
@@ -3474,8 +3530,6 @@ namespace yae
       YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
     }
 
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
-
     if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
@@ -3484,12 +3538,13 @@ namespace yae
 
     if (shader_)
     {
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
       YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0));
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
+      YAE_OGL_11(glDisable(GL_TEXTURE_3D));
     }
 
     YAE_OGL_11(glDisable(GL_TEXTURE_2D));
-    YAE_OGL_11(glDisable(GL_TEXTURE_3D));
   }
 
 
@@ -3522,6 +3577,7 @@ namespace yae
        openglVersionInfo == "2.1 Chromium 1.9");
 
     if (yae_is_opengl_extension_supported("GL_ARB_texture_rectangle") &&
+        yae_is_opengl_extension_supported("GL_ARB_fragment_program") &&
         !virtualBoxVM)
     {
       modern_ = new TModernCanvas();
