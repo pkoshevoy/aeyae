@@ -2713,7 +2713,6 @@ namespace yae
     }
 
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_3D));
     YAE_OGL_11(glEnable(GL_TEXTURE_RECTANGLE_ARB));
     YAE_OGL_11(glDisable(GL_LIGHTING));
     YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
@@ -2722,6 +2721,7 @@ namespace yae
 
     if (shader_)
     {
+      YAE_OGL_11(glEnable(GL_TEXTURE_3D));
       YAE_OGL_11(glEnable(GL_FRAGMENT_PROGRAM_ARB));
     }
 
@@ -2794,8 +2794,6 @@ namespace yae
       YAE_OGL_11(glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 0));
     }
 
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
-
     if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
@@ -2804,12 +2802,13 @@ namespace yae
 
     if (shader_)
     {
+      YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, 0));
       YAE_OPENGL(glBindProgramARB(GL_FRAGMENT_PROGRAM_ARB, 0));
       YAE_OGL_11(glDisable(GL_FRAGMENT_PROGRAM_ARB));
+      YAE_OGL_11(glDisable(GL_TEXTURE_3D));
     }
 
     YAE_OGL_11(glDisable(GL_TEXTURE_RECTANGLE_ARB));
-    YAE_OGL_11(glDisable(GL_TEXTURE_3D));
   }
 
 
@@ -3577,7 +3576,6 @@ namespace yae
        openglVersionInfo == "2.1 Chromium 1.9");
 
     if (yae_is_opengl_extension_supported("GL_ARB_texture_rectangle") &&
-        yae_is_opengl_extension_supported("GL_ARB_fragment_program") &&
         !virtualBoxVM)
     {
       modern_ = new TModernCanvas();

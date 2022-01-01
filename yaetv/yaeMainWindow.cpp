@@ -1406,18 +1406,6 @@ namespace yae
   void
   MainWindow::keyPressEvent(QKeyEvent * e)
   {
-#ifndef NDEBUG
-    if (e->type() == QEvent::KeyPress &&
-        e->key() == Qt::Key_T &&
-        !e->isAutoRepeat())
-    {
-      std::ostringstream oss;
-      YAE_BENCHMARK_SHOW(oss);
-      YAE_BENCHMARK_CLEAR();
-      yae_debug << oss.str();
-    }
-#endif
-
     // if the event propagates all the way here
     // then let the player handle it:
     if (playerWindow_.isVisible())

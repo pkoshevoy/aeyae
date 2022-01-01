@@ -26,6 +26,7 @@
 #endif
 #include <QApplication>
 #include <QEvent>
+#include <QKeyEvent>
 #include <QMenu>
 
 // yae includes:
@@ -270,6 +271,8 @@ namespace yae
       return;
     }
 
+    YAE_BENCHMARK(benchmark, "Canvas::refresh");
+
     delegate_->repaint();
   }
 
@@ -295,6 +298,8 @@ namespace yae
   bool
   Canvas::render(const TVideoFramePtr & frame)
   {
+    YAE_BENCHMARK(benchmark, "Canvas::render");
+
     bool postThePayload = renderFrameEvent_.set(frame);
     if (postThePayload)
     {
@@ -363,6 +368,23 @@ namespace yae
   Canvas::processEvent(QEvent * event)
   {
     QEvent::Type et = event->type();
+
+#ifdef YAE_ENABLE_BENCHMARK
+    if (et == QEvent::KeyPress)
+    {
+      QKeyEvent * e = (QKeyEvent *)event;
+      if (e->key() == Qt::Key_F9 &&
+          !e->isAutoRepeat())
+      {
+        std::ostringstream oss;
+        YAE_BENCHMARK_SHOW(oss);
+        YAE_BENCHMARK_CLEAR();
+        yae_info << oss.str();
+      }
+    }
+#endif
+
+    YAE_BENCHMARK(benchmark, "Canvas::processEvent");
 
     if (et == QEvent::User)
     {
@@ -631,6 +653,8 @@ namespace yae
                       double canvas_w,
                       double canvas_h)
   {
+    YAE_BENCHMARK(benchmark, "paint_checker_board");
+
     YAE_OGL_11_HERE();
 
     SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
@@ -668,6 +692,8 @@ namespace yae
                         double canvas_w,
                         double canvas_h)
   {
+    YAE_BENCHMARK(benchmark, "paint_black_rectangle");
+
     YAE_OGL_11_HERE();
 
     SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
@@ -685,7 +711,7 @@ namespace yae
   void
   Canvas::paintCanvas()
   {
-    // YAE_BENCHMARK(benchmark, "Canvas::paintCanvas");
+    YAE_BENCHMARK(benchmark, "Canvas::paintCanvas");
 
     // this is just to prevent concurrent OpenGL access to the same context:
     TMakeCurrentContext lock(context());
@@ -842,6 +868,8 @@ namespace yae
                        double canvas_w,
                        double canvas_h)
   {
+    YAE_BENCHMARK(benchmark, "Canvas::paint_canvas");
+
     const pixelFormat::Traits * ptts =
       private_ ? private_->pixelTraits() : NULL;
 
@@ -896,6 +924,8 @@ namespace yae
                        double canvas_w,
                        double canvas_h)
   {
+    YAE_BENCHMARK(benchmark, "Canvas::paint_layers");
+
     // draw the layers:
     for (std::list<ILayer *>::iterator i = layers_.begin();
          i != layers_.end(); ++i)
@@ -941,6 +971,8 @@ namespace yae
     {
       return false;
     }
+
+    YAE_BENCHMARK(benchmark, "Canvas::loadFrame");
 
     bool ok = private_->loadFrame(context(), frame);
     showTheGreeting_ = false;
@@ -999,6 +1031,8 @@ namespace yae
   Canvas::setSubs(const std::list<TSubsFrame> & subs)
   {
     std::list<TSubsFrame> renderSubs;
+
+    YAE_BENCHMARK(benchmark, "Canvas::setSubs");
 
     for (std::list<TSubsFrame>::const_iterator i = subs.begin();
          i != subs.end(); ++i)
@@ -1141,6 +1175,8 @@ namespace yae
     {
       return updateGreeting();
     }
+
+    YAE_BENCHMARK(benchmark, "Canvas::updateOverlay");
 
     TMakeCurrentContext currentContext(context());
     double imageWidth = 0.0;

@@ -23,6 +23,16 @@
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_assert.h"
 
+//----------------------------------------------------------------
+// YAE_ENABLE_BENCHMARK
+//
+// #define YAE_ENABLE_BENCHMARK
+
+//----------------------------------------------------------------
+// YAE_ENABLE_LIFETIME
+//
+// #define YAE_ENABLE_LIFETIME
+
 
 namespace yae
 {
@@ -48,7 +58,7 @@ namespace yae
 }
 
 #ifndef YAE_BENCHMARK
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_BENCHMARK
 #  define YAE_BENCHMARK(varname, desc) yae::TBenchmark varname(desc)
 # else
 #  define YAE_BENCHMARK(varname, description)
@@ -56,7 +66,7 @@ namespace yae
 #endif
 
 #ifndef YAE_BENCHMARK_SHOW
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_BENCHMARK
 #  define YAE_BENCHMARK_SHOW(ostream) yae::TBenchmark::show(ostream)
 # else
 #  define YAE_BENCHMARK_SHOW(ostream)
@@ -64,7 +74,7 @@ namespace yae
 #endif
 
 #ifndef YAE_BENCHMARK_CLEAR
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_BENCHMARK
 #  define YAE_BENCHMARK_CLEAR() yae::TBenchmark::clear()
 # else
 #  define YAE_BENCHMARK_CLEAR()
@@ -99,7 +109,7 @@ namespace yae
 }
 
 #ifndef YAE_LIFETIME
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_LIFETIME
 #  define YAE_LIFETIME(varname) yae::TLifetime varname
 #  define YAE_LIFETIME_START(varname, desc) varname.start(desc)
 #  define YAE_LIFETIME_FINISH(varname) varname.finish()
@@ -111,7 +121,7 @@ namespace yae
 #endif
 
 #ifndef YAE_LIFETIME_SHOW
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_LIFETIME
 #  define YAE_LIFETIME_SHOW(ostream) yae::TLifetime::show(ostream)
 # else
 #  define YAE_LIFETIME_SHOW(ostream)
@@ -119,7 +129,7 @@ namespace yae
 #endif
 
 #ifndef YAE_LIFETIME_CLEAR
-# ifndef NDEBUG
+# ifdef YAE_ENABLE_LIFETIME
 #  define YAE_LIFETIME_CLEAR() yae::TLifetime::clear()
 # else
 #  define YAE_LIFETIME_CLEAR()
