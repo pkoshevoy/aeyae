@@ -188,6 +188,16 @@ set(project_sources
   ${project_qrc_cxx}
   )
 
+if (NOT (WIN32 OR APPLE))
+  # qmake -query QT_INSTALL_LIBS
+  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
+    OUTPUT_VARIABLE QT_LIBRARIES_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(CMAKE_INSTALL_RPATH
+    ${CMAKE_INSTALL_RPATH};${QT_LIBRARIES_DIR};
+    )
+endif ()
+
 add_executable(${PROGNAME}
   ${GUI_TYPE}
   ${project_sources}
@@ -493,11 +503,25 @@ endif ()
 if (NOT (WIN32 OR APPLE))
   install(TARGETS ${PROGNAME} DESTINATION bin)
 
-  # qmake -query QT_INSTALL_LIBS
-  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
-    OUTPUT_VARIABLE QT_LIBRARIES_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # install locally:
+  set(DESKTOP_INSTALL_PREFIX "$ENV{HOME}/.local")
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.local"
+    @ONLY
+    )
 
+  install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.local"
+    DESTINATION "$ENV{HOME}/.local/share/applications"
+    RENAME "${PROGNAME}.desktop"
+    )
+
+  install(FILES "${PROJECT_SOURCE_DIR}/yaetv.ico"
+    DESTINATION "$ENV{HOME}/.local/share/icons"
+    )
+
+  # install globally:
+  set(DESKTOP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
   configure_file(
     "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
     "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
@@ -508,9 +532,8 @@ if (NOT (WIN32 OR APPLE))
     DESTINATION share/applications
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/images/yaetv-logo.png"
+  install(FILES "${PROJECT_SOURCE_DIR}/yaetv.ico"
     DESTINATION share/icons
-    RENAME "${PROGNAME}.png"
     )
 endif ()
 

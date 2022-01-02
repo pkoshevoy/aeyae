@@ -127,13 +127,6 @@ if (Qt5_FOUND)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
-#include("${aeyae_SOURCE_DIR}/add_ffmpeg.cmake")
-#include("${aeyae_SOURCE_DIR}/add_glew.cmake")
-#include("${aeyae_SOURCE_DIR}/add_libass.cmake")
-#if (NOT (APPLE))
-#  include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
-#endif (NOT (APPLE))
-
 if (WIN32)
   set (YAE_VERSIONED_FILES
     ${YAE_VERSIONED_FILES}
@@ -197,6 +190,16 @@ set(project_sources
   ${project_uis_hxx}
   ${project_qrc_cxx}
   )
+
+if (NOT (WIN32 OR APPLE))
+  # qmake -query QT_INSTALL_LIBS
+  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
+    OUTPUT_VARIABLE QT_LIBRARIES_DIR
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(CMAKE_INSTALL_RPATH
+    ${CMAKE_INSTALL_RPATH};${QT_LIBRARIES_DIR};
+    )
+endif ()
 
 add_executable(${PROGNAME}
   ${GUI_TYPE}
@@ -375,12 +378,12 @@ if (Qt5_FOUND)
     Qt5::OpenGL
     Qt5::Widgets
     )
-endif ()
 
-if (Qt5DBus_FOUND)
-  set(TARGET_LIBS ${TARGET_LIBS}
-    Qt5::DBus
-    )
+  if (Qt5DBus_FOUND)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      Qt5::DBus
+      )
+  endif ()
 endif ()
 
 set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
@@ -534,11 +537,25 @@ endif ()
 if (NOT (WIN32 OR APPLE))
   install(TARGETS ${PROGNAME} DESTINATION bin)
 
-  # qmake -query QT_INSTALL_LIBS
-  execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_LIBS
-    OUTPUT_VARIABLE QT_LIBRARIES_DIR
-    OUTPUT_STRIP_TRAILING_WHITESPACE)
+  # install locally:
+  set(DESKTOP_INSTALL_PREFIX "$ENV{HOME}/.local")
+  configure_file(
+    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
+    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.local"
+    @ONLY
+    )
 
+  install(FILES "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.local"
+    DESTINATION "$ENV{HOME}/.local/share/applications"
+    RENAME "${PROGNAME}.desktop"
+    )
+
+  install(FILES "${PROJECT_SOURCE_DIR}/apprenticevideo.ico"
+    DESTINATION "$ENV{HOME}/.local/share/icons"
+    )
+
+  # install globally:
+  set(DESKTOP_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
   configure_file(
     "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
     "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop"
@@ -549,9 +566,8 @@ if (NOT (WIN32 OR APPLE))
     DESTINATION share/applications
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/images/${PROGNAME}-256.png"
+  install(FILES "${PROJECT_SOURCE_DIR}/apprenticevideo.ico"
     DESTINATION share/icons
-    RENAME "${PROGNAME}.png"
     )
 endif ()
 

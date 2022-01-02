@@ -10,13 +10,3 @@ if (EXISTS "${PROJECT_SOURCE_DIR}/${PROGNAME}.rc.in")
     "${PROJECT_BINARY_DIR}/${PROGNAME}.rc")
   file(REMOVE "${PROJECT_BINARY_DIR}/${PROGNAME}.rc.tmp")
 endif ()
-
-if (EXISTS "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in")
-  configure_file(
-    "${PROJECT_SOURCE_DIR}/${PROGNAME}.desktop.in"
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp")
-  execute_process(COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp"
-    "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop")
-  file(REMOVE "${PROJECT_BINARY_DIR}/${PROGNAME}.desktop.tmp")
-endif ()

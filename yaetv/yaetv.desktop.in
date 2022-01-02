@@ -1,9 +1,9 @@
 [Desktop Entry]
-Comment=https://github.com/pkoshevoy/aeyae
+Comment=https://sourceforge.net/projects/yaetv/
 Exec=@CMAKE_INSTALL_PREFIX@/bin/yaetv
-GenericName=yaetv
-Categories=Qt;AudioVideo;Video;
-Icon=@CMAKE_INSTALL_PREFIX@/share/icons/yaetv.png
+GenericName=Digital Video Recorder for HDHomeRun devices
+Categories=Qt;AudioVideo;Video;Tuner;TV;Recorder;
+Icon=@DESKTOP_INSTALL_PREFIX@/share/icons/yaetv.ico
 Name=yaetv
 Path=
 StartupNotify=false
