@@ -516,8 +516,9 @@ if (NOT (WIN32 OR APPLE))
     RENAME "${PROGNAME}.desktop"
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/yaetv.ico"
+  install(FILES "${PROJECT_SOURCE_DIR}/images/yaetv-logo-512.png"
     DESTINATION "$ENV{HOME}/.local/share/icons"
+    RENAME "${PROGNAME}.png"
     )
 
   # install globally:
@@ -532,8 +533,9 @@ if (NOT (WIN32 OR APPLE))
     DESTINATION share/applications
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/yaetv.ico"
+  install(FILES "${PROJECT_SOURCE_DIR}/images/yaetv-logo-512.png"
     DESTINATION share/icons
+    RENAME "${PROGNAME}.png"
     )
 endif ()
 

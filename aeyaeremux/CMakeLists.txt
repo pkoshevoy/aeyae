@@ -477,8 +477,9 @@ if (NOT (WIN32 OR APPLE))
     RENAME "${PROGNAME}.desktop"
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/aeyaeremux.ico"
+  install(FILES "${PROJECT_SOURCE_DIR}/images/aeyae-remux-logo.png"
     DESTINATION "$ENV{HOME}/.local/share/icons"
+    RENAME "${PROGNAME}.png"
     )
 
   # install globally:
@@ -493,8 +494,9 @@ if (NOT (WIN32 OR APPLE))
     DESTINATION share/applications
     )
 
-  install(FILES "${PROJECT_SOURCE_DIR}/aeyaeremux.ico"
+  install(FILES "${PROJECT_SOURCE_DIR}/images/aeyae-remux-logo.png"
     DESTINATION share/icons
+    RENAME "${PROGNAME}.png"
     )
 endif ()
 
