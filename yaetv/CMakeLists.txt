@@ -5,37 +5,6 @@ set(PROGNAME "yaetv")
 
 find_package(OpenGL REQUIRED)
 
-set(Boost_USE_MULTITHREAD ON)
-find_package(Boost
-  COMPONENTS
-  thread
-  date_time
-  system
-  filesystem
-  locale
-  regex
-  REQUIRED)
-add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
-
-add_definitions(-D__STDC_CONSTANT_MACROS)
-add_definitions(-D__STDC_FORMAT_MACROS)
-add_definitions(-D__STDC_LIMIT_MACROS)
-
-if (WIN32)
-  add_definitions(-D_USE_MATH_DEFINES)
-  add_definitions(-DNOMINMAX)
-
-  # for windows xp:
-  add_definitions(-D_WIN32_WINNT=0x0501)
-  add_definitions(-DWINVER=0x0501)
-endif (WIN32)
-
-if (APPLE)
-  add_definitions(-D__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=0)
-endif (APPLE)
-
-
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 

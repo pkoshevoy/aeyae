@@ -52,6 +52,8 @@ deploy_appdir()
 	--appdir "AppDir.${APP}" \
 	--icon-file /tmp/"${APP}".png \
 	--output appimage || exit 1
+
+    tree "AppDir.${APP}"/usr/lib
 }
 
 

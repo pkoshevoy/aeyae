@@ -5,22 +5,6 @@ project("apprenticevideo-classic")
 
 find_package(OpenGL REQUIRED)
 
-set(Boost_USE_MULTITHREAD ON)
-find_package(Boost
-  COMPONENTS
-  thread
-  date_time
-  system
-  filesystem
-  locale
-  regex
-  REQUIRED)
-add_definitions(-DBOOST_ALL_DYN_LINK)
-add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
-
-add_definitions(-D__STDC_CONSTANT_MACROS)
-add_definitions(-D__STDC_LIMIT_MACROS)
-
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
