@@ -88,7 +88,18 @@ set(TARGET_LIBS
   ${TARGET_LIBS}
   ${Boost_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
+  #icui18n
+  #icuuc
+  #icudata
   )
+
+if (NOT (WIN32 OR APPLE))
+  set(TARGET_LIBS
+    ${TARGET_LIBS}
+    dl
+    )
+endif ()
+
 
 
 if (WIN32)
@@ -188,8 +199,15 @@ set(jsoncpp_sources
   jsoncpp/src/lib_json/json_writer.cpp
   )
 
-add_library(${PROGNAME} SHARED
+set(BUILD_STATIC_LIBAEYAE FALSE CACHE BOOL "build static libaeyae")
+set(EXTRA_LIBS "" CACHE STRING "additional libraries to link")
 
+set(TARGET_LIBS
+  ${TARGET_LIBS}
+  ${EXTRA_LIBS}
+  )
+
+set(LIBAEYAE_SOURCES
   ${jsoncpp_sources}
 
   yae/api/yae_api.h
@@ -301,6 +319,12 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_video_renderer.h
   )
 
+if (${BUILD_STATIC_LIBAEYAE})
+  add_library(${PROGNAME} STATIC ${LIBAEYAE_SOURCES})
+else (${BUILD_STATIC_LIBAEYAE})
+  add_library(${PROGNAME} SHARED ${LIBAEYAE_SOURCES})
+endif ()
+
 add_custom_command(
   OUTPUT "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
   BYPRODUCTS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h"
@@ -319,17 +343,21 @@ add_custom_target("aeyae_update_revision" ALL
   DEPENDS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
   COMMAND "${CMAKE_COMMAND}" -E echo "updating ${PROJECT_BINARY_DIR}/yae/api/yae_version.h")
 
-add_dependencies(aeyae "aeyae_update_revision")
+add_dependencies(${PROGNAME} "aeyae_update_revision")
 
-set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
-# set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${PROGNAME} PROPERTY
+  VERSION 1.0-${CMAKE_SYSTEM_VERSION}
+  )
 
-target_compile_definitions(aeyae PRIVATE
+set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
+# set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+
+target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS
   -DJSON_DLL_BUILD
   )
 
-target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
+target_link_libraries(${PROGNAME} PRIVATE ${TARGET_LIBS})
 
 add_subdirectory(tests)
 add_subdirectory(yaeui)
@@ -340,6 +368,6 @@ add_subdirectory(yaetv)
 add_subdirectory(yamka)
 #add_subdirectory(yathe)
 
-if (NOT (WIN32 OR APPLE))
-  install(TARGETS aeyae DESTINATION lib)
-endif()
+#if (NOT (WIN32 OR APPLE))
+#  install(TARGETS ${PROGNAME} DESTINATION lib)
+#endif()
