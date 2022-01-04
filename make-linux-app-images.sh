@@ -1,4 +1,4 @@
-PROJ_WC_REVISION=`grep YAE_REVISION yae/api/yae_version.h | cut -d'"' -f2`
+PROJ_WC_REVISION=`grep ' YAE_REVISION ' yae/api/yae_version.h | cut -d'"' -f2`
 
 rm -rf AppDir* *.AppImage
 make install DESTDIR=AppDir
