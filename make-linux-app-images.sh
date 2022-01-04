@@ -12,7 +12,7 @@ deploy_appdir()
     APP="${1}"
 
     rm -rf "AppDir.${APP}"/home
-    rm -f "AppDir.${APP}"/usr/bin/*.a
+    rm -f "AppDir.${APP}"/usr/lib/*.a
 
     for i in "AppDir.${APP}"/usr/bin/*; do
 	Z=`echo "${i}" | grep "${APP}"\$`
