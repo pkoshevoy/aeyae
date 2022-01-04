@@ -1,4 +1,6 @@
-rm -rf AppDir
+PROJ_WC_REVISION=`grep -RI git.replay.20220104.001326.a9c2fa4b ./yae/api/yae_version.h | cut -d'"' -f2`
+
+rm -rf AppDir* *.AppImage
 make install DESTDIR=AppDir
 
 rm -f AppDir.tar.bz2
@@ -55,6 +57,11 @@ deploy_appdir()
 	--output appimage || exit 1
 
     tree "AppDir.${APP}"/usr/lib
+
+    mkdir -p .dist
+    FN_OUT="${APP}-${PROJ_WC_REVISION}-x86_64.AppImage"
+    rm -f .dist/"${FN_OUT}"
+    mv *.AppImage .dist/"${FN_OUT}"
 }
 
 
