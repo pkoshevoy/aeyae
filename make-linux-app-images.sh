@@ -50,10 +50,13 @@ deploy_appdir()
 
     mv -f "AppDir.${APP}"/usr/share/icons/"${APP}".png /tmp/"${APP}".png
 
+    # "${HOME}"/x86_64/build/linuxdeploy/bin/linuxdeploy
+
     LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${HOME}"/x86_64/lib \
 	linuxdeploy-x86_64.AppImage \
 	--appdir "AppDir.${APP}" \
-	--icon-file /tmp/"${APP}".png || exit 1
+	--icon-file /tmp/"${APP}".png \
+	--plugin qt || exit 1
 
     tree "AppDir.${APP}"/usr/lib
 
