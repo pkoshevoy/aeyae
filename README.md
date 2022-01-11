@@ -21,7 +21,7 @@ Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aey
     nice make -j8 && make install
 
 ##### All Platforms:
-###### OpenGL 1.2 or later
+###### OpenGL 1.1 or later
 *OpenGL* is used for frame rendering, so make sure you have OpenGL drivers for you graphics card.
 
 ###### CMake 3.1.0 or later
@@ -29,10 +29,10 @@ Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aey
 
 *CMake* is used to configure the build (to generate projects, or makefiles).
 
-###### Qt 4.7.4 or later
+###### Qt 4.7+, or Qt 5.6+
 [https://download.qt.io/archive/qt/4.7/](https://download.qt.io/archive/qt/4.7/)
 
-*Qt* is the cross platform C++ UI toolkit.  Use Qt 4.7+ for OSX 10.5 and OSX 10.6.  Use Qt 5.5+ for newer versions of OSX.
+*Qt* is the cross platform C++ UI toolkit.  Use Qt 4.7+ for OS X 10.5, OS X 10.6, and 32-bit windows builds.  Use Qt 5.6+ for newer versions of macOS and 64-bit windows builds.
 
 ###### boost 1.47.0 or later
 [http://www.boost.org/](http://www.boost.org/)
@@ -54,7 +54,7 @@ Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aey
 
 *FFmpeg* is used for video/audio demuxing and decoding.
 
-###### libass 0.10 or later
+###### libass 0.13 or later
 [http://code.google.com/p/libass/](http://code.google.com/p/libass/)
 
 *libass* is used for high quality subtitle rendering.
