@@ -22,7 +22,7 @@ Download Aeyae Remux Mac/Windows binaries: [https://sourceforge.net/projects/aey
 
 ##### All Platforms:
 ###### OpenGL 1.1 or later
-*OpenGL* is used for frame rendering, so make sure you have OpenGL drivers for you graphics card.
+*OpenGL* is used for frame rendering, so make sure you have OpenGL drivers for your graphics card.
 
 ###### CMake 3.1.0 or later
 [http://www.cmake.org/cmake/resources/software.html](http://www.cmake.org/cmake/resources/software.html)
