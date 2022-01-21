@@ -359,7 +359,7 @@ namespace yae
     // virtual:
     void animate(Canvas::ILayer & layer, ItemView::TAnimatorPtr animatorPtr)
     {
-      TransitionItem & opacity = timeline_.get<TransitionItem>("opacity");
+      TransitionItem & opacity = *(timeline_.opacity_);
 
       if (needToPause() && opacity.transition().is_steady())
       {
@@ -487,11 +487,12 @@ namespace yae
   {
     // setup opacity caching item:
     typedef Transition::Polyline TPolyline;
-    TransitionItem & opacity = this->
-      addHidden(new TransitionItem("opacity",
-                                   TPolyline(0.25, 0.0, 1.0, 10),
-                                   TPolyline(1.75, 1.0, 1.0),
-                                   TPolyline(1.0, 1.0, 0.0, 10)));
+
+    opacity_.reset(new TransitionItem("opacity",
+                                      TPolyline(0.25, 0.0, 1.0, 10),
+                                      TPolyline(1.75, 1.0, 1.0),
+                                      TPolyline(1.0, 1.0, 0.0, 10)));
+    TransitionItem & opacity = this->addHidden(opacity_);
 
     unit_size_.set(new StyleTitleHeight(view_));
 
@@ -1450,7 +1451,7 @@ namespace yae
   void
   TimelineItem::maybeAnimateOpacity()
   {
-    TransitionItem & opacity = this->get<TransitionItem>("opacity");
+    TransitionItem & opacity = *opacity_;
     Animator & animator = dynamic_cast<Animator &>(*(opacity_animator_.get()));
 
     if (animator.needToPause() && opacity.transition().is_steady())

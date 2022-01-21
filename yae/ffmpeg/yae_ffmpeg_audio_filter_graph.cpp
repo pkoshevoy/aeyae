@@ -49,6 +49,9 @@ namespace yae
     avfilter_inout_free(&in_);
     avfilter_inout_free(&out_);
 
+    src_ = NULL;
+    sink_ = NULL;
+
     srcTimeBase_.num = 0;
     srcTimeBase_.den = 1;
 
@@ -163,7 +166,7 @@ namespace yae
   bool
   AudioFilterGraph::push(AVFrame * frame)
   {
-    int err = av_buffersrc_add_frame(src_, frame);
+    int err = src_ ? av_buffersrc_add_frame(src_, frame) : AVERROR_EOF;
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
     return true;
@@ -175,7 +178,7 @@ namespace yae
   bool
   AudioFilterGraph::pull(AVFrame * frame)
   {
-    int err = av_buffersink_get_frame(sink_, frame);
+    int err = sink_ ? av_buffersink_get_frame(sink_, frame) : AVERROR_EOF;
     if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
     {
       return false;

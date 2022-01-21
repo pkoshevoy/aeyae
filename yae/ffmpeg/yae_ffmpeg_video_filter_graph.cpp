@@ -456,6 +456,9 @@ namespace yae
     avfilter_inout_free(&in_);
     avfilter_inout_free(&out_);
 
+    src_ = NULL;
+    sink_ = NULL;
+
     src_framerate_.num = 0;
     src_framerate_.den = 1;
 
@@ -718,7 +721,7 @@ namespace yae
 
     if (!frame)
     {
-      if (flushing_)
+      if (flushing_ || !src_)
       {
         // already flushing, no need to do it twice:
         return;
@@ -748,7 +751,7 @@ namespace yae
     // avoid leaking unintentionally:
     av_frame_unref(frame);
 
-    int err = av_buffersink_get_frame(sink_, frame);
+    int err = sink_ ? av_buffersink_get_frame(sink_, frame) : AVERROR_EOF;
     if (err == AVERROR(EAGAIN) || err == AVERROR_EOF)
     {
       return false;

@@ -941,6 +941,9 @@ namespace yae
     // update a bookmark every 10 seconds during playback:
     bookmarkTimer_.setInterval(10000);
 
+    // update timeline every second:
+    timelineTimer_.setInterval(1000);
+
     bool ok = true;
 
     TMakeCurrentContext currentContext(view_.context().get());
@@ -1346,7 +1349,7 @@ namespace yae
     }
     else if (changing)
     {
-      timelineTimer_.start(1000);
+      timelineTimer_.start();
     }
 
     menuPlayback_->menuAction()->setEnabled(enable);
@@ -1692,6 +1695,12 @@ namespace yae
   void
   PlayerUxItem::sync_ui()
   {
+    double timeline_opacity = timeline_->getOpacity();
+    if (timeline_opacity <= 0.0)
+    {
+      return;
+    }
+
     IReader * reader = get_reader();
     TimelineModel & timeline = timeline_model();
     timeline.updateDuration(reader);

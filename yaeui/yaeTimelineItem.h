@@ -53,6 +53,16 @@ namespace yae
     // helper:
     void processMouseTracking(const TVec2D & pt);
 
+    // helper:
+    inline double getOpacity() const
+    {
+      return
+        is_timeline_visible_.get() ? 1.0 :
+        is_playlist_visible_.get() ? 1.0 :
+        opacity_ ? opacity_->transition().get_value() :
+        0.0;
+    }
+
   public slots:
     void modelChanged();
     void showTimeline(bool);
@@ -62,6 +72,7 @@ namespace yae
     ItemView & view_;
     TimelineModel & model_;
     yae::shared_ptr<Gradient, Item> shadow_;
+    yae::shared_ptr<TransitionItem, Item> opacity_;
 
     ItemRef unit_size_;
     BoolRef is_playback_paused_;
