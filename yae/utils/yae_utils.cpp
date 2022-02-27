@@ -581,8 +581,8 @@ namespace yae
     filesystem_bytes_free = total_number_of_bytes_free.QuadPart;
     available_bytes = bytes_available_to_caller.QuadPart;
 
-#elif defined(__APPLE__)
-    struct statfs64 stat = { 0 };
+#elif defined(__APPLE__) && defined(__DARWIN_STRUCT_STATFS64)
+    struct statfs64 Stat = { 0 };
     int err = statfs64(path_utf8, &stat);
     if (err)
     {

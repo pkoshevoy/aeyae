@@ -9,15 +9,24 @@
 #ifndef YAE_BENCHMARK_H_
 #define YAE_BENCHMARK_H_
 
-// standard:
 #ifdef __GNUC__
-#include <cxxabi.h>
-#include <execinfo.h>
+#define YAE_GCC_VERSION (__GNUC__ * 10000           \
+                         + __GNUC_MINOR__ * 100     \
+                         + __GNUC_PATCHLEVEL__)
+#else
+#define YAE_GCC_VERSION 0
 #endif
+
+// standard:
 #include <iostream>
 #include <list>
 #include <string>
 #include <typeinfo>
+
+#ifdef YAE_BACKTRACE_HEADER
+#include <cxxabi.h>
+#include <execinfo.h>
+#endif
 
 // aeyae:
 #include "yae/api/yae_api.h"

@@ -62,8 +62,8 @@
 	</array>
 	<key>LSUIElement</key>
 	<string>1</string>
-	<key>LSMinimumSystemVersion</key>
-	<string>10.5.0</string>
+	<key>LSMinimumSystemVersion</Key>
+	<string>@CMAKE_OSX_DEPLOYMENT_TARGET@</string>
 	<key>CFBundleExecutable</key>
 	<string>@MACOSX_BUNDLE_BUNDLE_NAME@</string>
 	<key>CFBundleShortVersionString</key>

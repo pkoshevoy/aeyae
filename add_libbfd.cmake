@@ -31,3 +31,8 @@ if (LIBBFD_INSTALL_DIR AND LIBBFD_LIBRARY AND LIBIBERTY_LIBRARY)
   set(TARGET_LIBS ${TARGET_LIBS} ${LIBBFD_LIBRARY})
   set(TARGET_LIBS ${TARGET_LIBS} ${LIBIBERTY_LIBRARY})
 endif ()
+
+find_package(Backtrace)
+if (Backtrace_FOUND)
+  add_definitions(-DYAE_BACKTRACE_HEADER="${Backtrace_HEADER}")
+endif ()

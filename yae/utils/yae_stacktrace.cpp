@@ -6,6 +6,14 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+#ifdef __GNUC__
+#define YAE_GCC_VERSION (__GNUC__ * 10000           \
+                         + __GNUC_MINOR__ * 100     \
+                         + __GNUC_PATCHLEVEL__)
+#else
+#define YAE_GCC_VERSION 0
+#endif
+
 // standard:
 #include <iostream>
 #include <iomanip>
@@ -23,7 +31,7 @@
 #undef HAVE_DECL_BASENAME
 #endif
 #endif
-#ifdef __GNUC__
+#ifdef YAE_BACKTRACE_HEADER
 #include <cxxabi.h>
 #include <execinfo.h>
 #endif
@@ -182,15 +190,18 @@ namespace yae
   {
     void capture(std::size_t max_frames = 256)
     {
+#ifdef YAE_BACKTRACE_HEADER
       frames_.resize(max_frames);
       std::size_t num_frames = ::backtrace(&(frames_[0]), frames_.size());
       frames_.resize(num_frames);
+#endif
     }
 
     std::string to_str(std::size_t offset, const char * sep = "\n") const
     {
       std::ostringstream oss;
 
+#ifdef YAE_BACKTRACE_HEADER
       if (!frames_.empty())
       {
         char ** symbols = backtrace_symbols(&frames_[0], frames_.size());
@@ -202,7 +213,7 @@ namespace yae
         }
         free(symbols);
       }
-
+#endif
       return oss.str();
     }
 

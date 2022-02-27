@@ -24,8 +24,10 @@ else (Qt5_FOUND)
 endif ()
 
 if (QT4_FOUND)
-  if (QT_QTDBUS_FOUND)
-    set(QT_USE_QTDBUS TRUE)
+  if (NOT (APPLE OR WIN32))
+    if (QT_QTDBUS_FOUND)
+      set(QT_USE_QTDBUS TRUE)
+    endif ()
   endif ()
 
   set(QT_USE_QTOPENGL TRUE)
