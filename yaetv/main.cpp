@@ -741,12 +741,6 @@ main(int argc, char ** argv)
     }
 
 #ifdef __APPLE__
-    // show the Dock icon:
-    {
-      ProcessSerialNumber psn = { 0, kCurrentProcess };
-      TransformProcessType(&psn, kProcessTransformToForegroundApplication);
-    }
-
     if (QSysInfo::MacintoshVersion == 0x000a)
     {
       // add a workaround for Qt 4.7 QTBUG-32789
