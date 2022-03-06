@@ -582,7 +582,7 @@ namespace yae
     available_bytes = bytes_available_to_caller.QuadPart;
 
 #elif defined(__APPLE__) && defined(__DARWIN_STRUCT_STATFS64)
-    struct statfs64 Stat = { 0 };
+    struct statfs64 stat = { 0 };
     int err = statfs64(path_utf8, &stat);
     if (err)
     {
