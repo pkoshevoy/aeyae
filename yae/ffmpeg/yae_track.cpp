@@ -78,17 +78,34 @@ namespace yae
   TimePos::seek(AVFormatContext * context, const AVStream * stream) const
   {
     int64_t ts = int64_t(sec_ * double(AV_TIME_BASE));
+    bool seekToStart = (ts <= context->start_time);
+    int streamIndex = stream ? stream->index : -1;
 
     if (stream)
     {
-      AVRational tb;
-      tb.num = 1;
-      tb.den = AV_TIME_BASE;
-
-      ts = av_rescale_q(ts, tb, stream->time_base);
+      // ts expressed in stream timebase:
+      ts =
+        seekToStart ? stream->start_time :
+        int64_t((stream->time_base.num * sec_) /
+                (stream->time_base.den));
+    }
+    else if (seekToStart)
+    {
+      streamIndex = av_find_default_stream_index(context);
+      if (streamIndex >= 0 && streamIndex < context->nb_streams)
+      {
+        // ts expressed in stream timebase:
+        stream = context->streams[streamIndex];
+        ts = stream->start_time;
+      }
+      else
+      {
+        // ts expressed in AV_TIME_BASE timebase:
+        ts = context->start_time;
+        streamIndex = -1;
+      }
     }
 
-    int streamIndex = stream ? stream->index : -1;
     int seekFlags = 0;
     int err = avformat_seek_file(context,
                                  streamIndex,
