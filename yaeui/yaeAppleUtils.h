@@ -65,6 +65,18 @@ namespace yae
     AppleApp(const AppleApp &);
     AppleApp & operator = (const AppleApp &);
   };
+
+
+  //----------------------------------------------------------------
+  // transform_process_type_to_foreground_app
+  //
+  void transform_process_type_to_foreground_app();
+
+  //----------------------------------------------------------------
+  // setup_transform_process_type_to_foreground_app
+  //
+  void setup_transform_process_type_to_foreground_app();
+
 }
 
 

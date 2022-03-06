@@ -14,6 +14,7 @@
 #include <pthread.h>
 
 // Apple imports:
+#import <ApplicationServices/ApplicationServices.h>
 #import <Cocoa/Cocoa.h>
 
 #if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1050
@@ -400,6 +401,75 @@ query_dark_mode()
 
 @end
 
+//----------------------------------------------------------------
+// TApplicationNotificationObserver
+//
+@interface TApplicationNotificationObserver : NSObject {}
+- (id) init;
+- (void) applicationWillFinishLaunching: (NSNotification *) notification;
+- (void) applicationDidFinishLaunching: (NSNotification *) notification;
+@end
+
+@implementation TApplicationNotificationObserver
+
+//----------------------------------------------------------------
+// init
+//
+- (id) init
+{
+  self = [super init];
+  NSNotificationCenter * notifications =
+    [NSNotificationCenter defaultCenter];
+
+  NSLog(@"addObserver NSApplicationWillFinishLaunchingNotification");
+  [notifications addObserver:self
+                 selector:@selector(applicationWillFinishLaunching:)
+                 name:@"NSApplicationWillFinishLaunchingNotification"
+                 object:nil];
+
+  NSLog(@"addObserver NSApplicationDidFinishLaunchingNotification");
+  [notifications addObserver:self
+                 selector:@selector(applicationDidFinishLaunching:)
+                 name:@"NSApplicationDidFinishLaunchingNotification"
+                 object:nil];
+  return self;
+}
+
+//----------------------------------------------------------------
+// applicationWillFinishLaunching:
+//
+- (void) applicationWillFinishLaunching: (NSNotification *) notification
+{
+  yae::transform_process_type_to_foreground_app();
+
+  NSNotificationCenter * notifications =
+    [NSNotificationCenter defaultCenter];
+
+  NSLog(@"removeObserver NSApplicationWillFinishLaunchingNotification");
+
+  [notifications removeObserver:self
+                 name:@"NSApplicationWillFinishLaunchingNotification"
+                 object:nil];
+}
+
+//----------------------------------------------------------------
+// applicationDidFinishLaunching:
+//
+- (void) applicationDidFinishLaunching: (NSNotification *) notification
+{
+  // yae::transform_process_type_to_foreground_app();
+
+  NSNotificationCenter * notifications =
+    [NSNotificationCenter defaultCenter];
+
+  NSLog(@"removeObserver NSApplicationDidFinishLaunchingNotification");
+
+  [notifications removeObserver:self
+                 name:@"NSApplicationDidFinishLaunchingNotification"
+                 object:nil];
+}
+
+@end
 
 namespace yae
 {
@@ -443,6 +513,29 @@ namespace yae
   AppleApp::query_dark_mode() const
   {
     return ::query_dark_mode();
+  }
+
+  //----------------------------------------------------------------
+  // transform_process_type_to_foreground_app
+  //
+  void
+  transform_process_type_to_foreground_app()
+  {
+    NSLog(@"transform_process_type_to_foreground_app");
+
+    // show the Dock icon:
+    ProcessSerialNumber psn = { 0, kCurrentProcess };
+    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+  }
+
+  //----------------------------------------------------------------
+  // setup_transform_process_type_to_foreground_app
+  //
+  void
+  setup_transform_process_type_to_foreground_app()
+  {
+    static TApplicationNotificationObserver * ao =
+      [[TApplicationNotificationObserver alloc] init];
   }
 
 }

@@ -6,7 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// system:
 #ifdef _WIN32
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -24,33 +24,31 @@
 #include <iostream>
 #include <stdexcept>
 
-// boost:
-#include <boost/locale.hpp>
-#include <boost/filesystem/path.hpp>
-
-// APPLE includes:
-#ifdef __APPLE__
-#include <ApplicationServices/ApplicationServices.h>
-#endif
-
 #ifndef _WIN32
 #include <signal.h>
 #endif
 
-// Qt includes:
+// boost:
+#include <boost/locale.hpp>
+#include <boost/filesystem/path.hpp>
+
+// Qt:
 #include <QApplication>
 #include <QDir>
 #ifdef YAE_USE_QT5
 #include <QSurfaceFormat>
 #endif
 
-// yae includes:
+// yae:
 #include "yae/ffmpeg/yae_live_reader.h"
 #include "yae/utils/yae_utils.h"
 
-// local includes:
-#include <yaeMainWindow.h>
-#include <yaeUtilsQt.h>
+// yaeui:
+#include "yaeAppleUtils.h"
+#include "yaeUtilsQt.h"
+
+// local:
+#include "yaeMainWindow.h"
 
 
 namespace yae
@@ -175,8 +173,7 @@ mainMayThrowException(int argc, char ** argv)
   if (!canary)
   {
     // show the Dock icon:
-    ProcessSerialNumber psn = { 0, kCurrentProcess };
-    TransformProcessType(&psn, kProcessTransformToForegroundApplication);
+    yae::setup_transform_process_type_to_foreground_app();
   }
 #endif
 
@@ -258,6 +255,8 @@ mainMayThrowException(int argc, char ** argv)
   YAE_ASSERT(ok);
 
   yae::mainWindow->show();
+
+  // initialize the canvas:
   yae::mainWindow->initItemViews();
 
   yae::mainWindow->setPlaylist(playlist);
