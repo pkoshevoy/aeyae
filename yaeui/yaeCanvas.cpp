@@ -1514,7 +1514,8 @@ namespace yae
     vtts.visibleWidth_ = (int)w;
     vtts.visibleHeight_ = (int)h;
     vtts.pixelAspectRatio_ = 1.0;
-    vtts.isUpsideDown_ = false;
+    vtts.vflip_ = false;
+    vtts.hflip_ = false;
 
     bool ok = overlay_->loadFrame(context(), vf);
     YAE_ASSERT(ok);

@@ -407,12 +407,20 @@ namespace yae
       const AVCodecHWConfig * hw =
         avcodec_get_hw_config(codec, hw_config_index);
 
+      hw_config_index++;
+
       if (!hw)
       {
         break;
       }
 
-      hw_config_index++;
+      if (hw->device_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX &&
+          codec->id == AV_CODEC_ID_H264)
+      {
+        // vt has problems decoding and seeking 20220407-up30635-capture.ts
+        continue;
+      }
+
       int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
                               AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
       if ((hw->methods & hw_device_frames) == hw_device_frames)

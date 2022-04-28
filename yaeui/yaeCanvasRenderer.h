@@ -642,7 +642,8 @@ namespace yae
   YAEUI_API void
   calculateEdges(std::deque<TEdge> & edges,
                  GLsizei edgeSize,
-                 GLsizei textureEdgeMax);
+                 GLsizei textureEdgeMax,
+                 bool flip);
 
   //----------------------------------------------------------------
   // TLegacyCanvas

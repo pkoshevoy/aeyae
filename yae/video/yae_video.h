@@ -210,8 +210,9 @@ namespace yae
     //! camera orientation angle expressed in degrees (divisible by 90):
     int cameraRotation_;
 
-    //! a flag indicating whether video is upside-down:
-    bool isUpsideDown_;
+    //! a flag indicating whether video is flipped:
+    bool vflip_; // mirrored top-to-bottom
+    bool hflip_; // mirrored left-to-right
   };
 
   //----------------------------------------------------------------

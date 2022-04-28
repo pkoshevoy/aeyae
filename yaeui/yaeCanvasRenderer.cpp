@@ -2760,16 +2760,24 @@ namespace yae
 
       YAE_OGL_11(glBegin(GL_QUADS));
       {
-        YAE_OGL_11(glTexCoord2i(crop.x_, crop.y_));
+        const VideoTraits & vtts = frame_->traits_;
+        const int hflip = vtts.hflip_ ? 1 : 0;
+        const int vflip = vtts.vflip_ ? 1 : 0;
+
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_ * hflip,
+                                crop.y_ + crop.h_ * vflip));
         YAE_OGL_11(glVertex2i(0, 0));
 
-        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_, crop.y_));
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_ * (1 - hflip),
+                                crop.y_ + crop.h_ * vflip));
         YAE_OGL_11(glVertex2i(int(w), 0));
 
-        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_, crop.y_ + crop.h_));
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_ * (1 - hflip),
+                                crop.y_ + crop.h_ * (1 - vflip)));
         YAE_OGL_11(glVertex2i(int(w), int(h)));
 
-        YAE_OGL_11(glTexCoord2i(crop.x_, crop.y_ + crop.h_));
+        YAE_OGL_11(glTexCoord2i(crop.x_ + crop.w_ * hflip,
+                                crop.y_ + crop.h_ * (1 - vflip)));
         YAE_OGL_11(glVertex2i(0, int(h)));
       }
       YAE_OGL_11(glEnd());
@@ -2974,7 +2982,8 @@ namespace yae
   void
   calculateEdges(std::deque<TEdge> & edges,
                  GLsizei edgeSize,
-                 GLsizei textureEdgeMax)
+                 GLsizei textureEdgeMax,
+                 bool flip)
   {
     if (!edgeSize)
     {
@@ -3019,6 +3028,18 @@ namespace yae
       }
 
       break;
+    }
+
+    if (!flip)
+    {
+      return;
+    }
+
+    for (std::deque<TEdge>::iterator i = edges.begin(); i != edges.end(); ++i)
+    {
+      TEdge & edge = *i;
+      edge.v0_ = edgeSize - edge.v0_;
+      edge.v1_ = edgeSize - edge.v1_;
     }
   }
 
@@ -3153,11 +3174,11 @@ namespace yae
 
       // calculate x-min, x-max coordinates for each tile:
       std::deque<TEdge> x;
-      calculateEdges(x, w_, textureEdgeMax);
+      calculateEdges(x, w_, textureEdgeMax, vtts.hflip_);
 
       // calculate y-min, y-max coordinates for each tile:
       std::deque<TEdge> y;
-      calculateEdges(y, h_, textureEdgeMax);
+      calculateEdges(y, h_, textureEdgeMax, vtts.vflip_);
 
       // setup the tiles:
       const std::size_t rows = y.size();

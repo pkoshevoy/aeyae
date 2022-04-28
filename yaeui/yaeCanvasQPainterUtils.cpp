@@ -411,7 +411,8 @@ namespace yae
     vtts.visibleWidth_ = w_;
     vtts.visibleHeight_ = h_;
     vtts.pixelAspectRatio_ = 1.0;
-    vtts.isUpsideDown_ = false;
+    vtts.vflip_ = false;
+    vtts.hflip_ = false;
 
     return frame_;
   }

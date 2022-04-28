@@ -22,6 +22,7 @@ extern "C"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "yae/ffmpeg/yae_video_track.h"
 #include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_linear_algebra.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_pixel_format_traits.h"
 #include "yae/video/yae_texture_generator.h"
@@ -616,12 +617,15 @@ namespace yae
         transposeAngle ? 0 :
         (output_.cameraRotation_ - native_.cameraRotation_) % 360;
 
-      bool toggleUpsideDown =
-        (native_.isUpsideDown_ != output_.isUpsideDown_);
+      bool vflip =
+        (native_.vflip_ != output_.vflip_);
 
-      if (toggleUpsideDown || flipAngle)
+      bool hflip =
+        (native_.hflip_ != output_.hflip_);
+
+      if (vflip || hflip || flipAngle)
       {
-        if (toggleUpsideDown && flipAngle)
+        if (vflip && flipAngle)
         {
           // cancel-out two vertical flips:
           add_to(filters, "hflip");
@@ -630,9 +634,13 @@ namespace yae
         {
           add_to(filters, "hflip, vflip");
         }
-        else
+        else if (vflip)
         {
           add_to(filters, "vflip");
+        }
+        else if (hflip)
+        {
+          add_to(filters, "hflip");
         }
       }
 
@@ -1062,6 +1070,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // fp16
+  //
+  static inline double fp16(int fp16_number)
+  {
+    static const double scale = double(1 << 16);
+    return double(fp16_number) / scale;
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::getTraits
   //
   bool
@@ -1200,9 +1217,6 @@ namespace yae
                              double(stream_->sample_aspect_ratio.den));
     }
 
-    //! a flag indicating whether video is upside-down:
-    t.isUpsideDown_ = false;
-
     //! check for rotation:
     {
 #if 0
@@ -1219,6 +1233,11 @@ namespace yae
       }
 #endif
 
+      // check for rotation, hflip, vflip:
+      t.cameraRotation_ = 0;
+      t.vflip_ = false;
+      t.hflip_ = false;
+
       AVDictionaryEntry * rotate =
         av_dict_get(stream_->metadata, "rotate", NULL, 0);
 
@@ -1226,19 +1245,41 @@ namespace yae
       {
         t.cameraRotation_ = to_scalar<int>(rotate->value);
       }
-      else
-      {
-        // check the side data:
-        const int32_t * display_matrix = (const int32_t *)
-          av_stream_get_side_data(stream_, AV_PKT_DATA_DISPLAYMATRIX, NULL);
 
-        if (display_matrix)
+      // check the side data:
+      const int32_t * dm = (const int32_t *)
+        av_stream_get_side_data(stream_, AV_PKT_DATA_DISPLAYMATRIX, NULL);
+
+      if (dm)
+      {
+        m3x3_t M = yae::make_m3x3(fp16(dm[0]), fp16(dm[3]), 0.0,
+                                  fp16(dm[1]), fp16(dm[4]), 0.0,
+                                  0.0,         0.0,         1.0);
+        v3x1_t p00 = yae::make_v3x1(0.0, 0.0, 1.0);
+        v3x1_t p01 = yae::make_v3x1(0.0, 1.0, 1.0);
+        v3x1_t p10 = yae::make_v3x1(1.0, 0.0, 1.0);
+
+        v3x1_t q00 = M * p00;
+        v3x1_t q01 = M * p01;
+        v3x1_t q10 = M * p10;
+
+        v3x1_t x = q10 - q00;
+        v3x1_t y = q01 - q00;
+
+        t.cameraRotation_ =
+          (x[1] < -0.5 && y[0] > 0.5) ? 270 :
+          (x[0] < -0.5 && y[1] < -0.5) ? 180 :
+          (x[1] > 0.5 && y[0] < -0.5) ? 90 :
+          // do not rotate:
+          0;
+
+        if (x[0] > 0.5 && y[1] < -0.5)
         {
-          t.cameraRotation_ = -av_display_rotation_get(display_matrix);
+          t.vflip_ = true;
         }
-        else
+        else if (x[0] < -0.5 && y[1] > 0.5)
         {
-          t.cameraRotation_ = 0;
+          t.hflip_ = true;
         }
       }
     }

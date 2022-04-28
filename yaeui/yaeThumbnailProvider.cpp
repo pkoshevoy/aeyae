@@ -96,7 +96,8 @@ namespace yae
     vtts.visibleWidth_ = vtts.encodedWidth_;
     vtts.visibleHeight_ = vtts.encodedHeight_;
     vtts.pixelAspectRatio_ = 1.0;
-    vtts.isUpsideDown_ = false;
+    vtts.vflip_ = false;
+    vtts.hflip_ = false;
 
     return frame;
   }
@@ -161,7 +162,8 @@ namespace yae
     traits.visibleHeight_ = envelope.height();
     traits.pixelAspectRatio_ = 1.0;
     traits.cameraRotation_ = 0;
-    traits.isUpsideDown_ = false;
+    traits.vflip_ = false;
+    traits.hflip_ = false;
 
     reader->setVideoTraitsOverride(traits);
 

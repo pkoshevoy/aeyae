@@ -4003,7 +4003,8 @@ namespace yae
       traits.visibleHeight_ = envelope_h;
       traits.pixelAspectRatio_ = output_par;
       traits.cameraRotation_ = 0;
-      traits.isUpsideDown_ = false;
+      traits.vflip_ = false;
+      traits.hflip_ = false;
 
       bool deint = false;
       decoder.setTraitsOverride(traits, deint, source_par);
@@ -4352,7 +4353,8 @@ namespace yae
       traits.visibleHeight_ = envelope_h;
       traits.pixelAspectRatio_ = output_par;
       traits.cameraRotation_ = 0;
-      traits.isUpsideDown_ = false;
+      traits.vflip_ = false;
+      traits.hflip_ = false;
 
       if (pixel_format != kInvalidPixelFormat)
       {
