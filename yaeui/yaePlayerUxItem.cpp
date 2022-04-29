@@ -663,7 +663,7 @@ namespace yae
     ok = connect(actionNextChapter_, SIGNAL(triggered()),
                  this, SLOT(skipToNextChapter()));
     YAE_ASSERT(ok);
- }
+  }
 
   //----------------------------------------------------------------
   // PlayerUxItem::translate_ui
@@ -1062,6 +1062,8 @@ namespace yae
     ok = connect(this, SIGNAL(exitingFullScreen()),
                  this, SLOT(swapShortcuts()));
     YAE_ASSERT(ok);
+
+    adjustMenuActions();
   }
 
   //----------------------------------------------------------------
