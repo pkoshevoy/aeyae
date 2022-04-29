@@ -60,8 +60,6 @@
 			<false/>
 		</dict>
 	</array>
-	<key>LSUIElement</key>
-	<string>@ALLOW_LSUIELEMENT@</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>@CMAKE_OSX_DEPLOYMENT_TARGET@</string>
 	<key>CFBundleExecutable</key>
