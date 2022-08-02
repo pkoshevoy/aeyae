@@ -288,7 +288,7 @@ namespace yae
   Bitstream::read_bits(std::size_t num_bits)
   {
     YAE_THROW_IF(64 < num_bits);
-    YAE_THROW_IF(!IBitstream::has_enough_bits(num_bits));
+    YAE_SILENT_THROW_IF(!IBitstream::has_enough_bits(num_bits));
 
     // output value:
     uint64_t v = 0;
@@ -345,7 +345,7 @@ namespace yae
   TBufferPtr
   Bitstream::read_bytes(std::size_t num_bytes)
   {
-    YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
+    YAE_SILENT_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 
     TBufferPtr data;

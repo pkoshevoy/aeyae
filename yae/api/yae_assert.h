@@ -85,6 +85,17 @@
     } while (false)
 
 //----------------------------------------------------------------
+// YAE_SILENT_THROW_IF
+//
+#ifdef NDEBUG
+#define YAE_SILENT_THROW_IF(expr) if ((expr)) do {      \
+      throw std::runtime_error(YAE_STR(expr));          \
+    } while (false)
+#else
+#define YAE_SILENT_THROW_IF(expr) YAE_THROW_IF(expr)
+#endif
+
+//----------------------------------------------------------------
 // YAE_THROW
 //
 #define YAE_THROW(fmt, ...) do {                                        \

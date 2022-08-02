@@ -23,6 +23,8 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_log.h"
+#include "yae/api/yae_message_carrier_interface.h"
 #include "yae/thread/yae_ring_buffer.h"
 #include "yae/thread/yae_worker.h"
 #include "yae/utils/yae_data.h"
@@ -506,6 +508,7 @@ namespace yae
     void scan_channels();
     void update_epg();
     void cleanup_storage();
+    void cleanup_logs();
 
     TStreamPtr capture_stream(const HDHomeRun::TSessionPtr & session_ptr,
                               const std::string & frequency,
@@ -670,6 +673,18 @@ namespace yae
       next_storage_cleanup_ = t;
     }
 
+    inline TTime next_log_cleanup() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_log_cleanup_);
+    }
+
+    inline void set_next_log_cleanup(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_log_cleanup_ = t;
+    }
+
     inline void cache_epg(const yae::mpeg_ts::EPG & epg)
     {
       boost::unique_lock<boost::mutex> lock(epg_mutex_);
@@ -749,6 +764,7 @@ namespace yae
     TTime epg_refresh_period_;
     TTime schedule_refresh_period_;
     TTime storage_cleanup_period_;
+    TTime log_cleanup_period_;
     TTime margin_;
 
   protected:
@@ -767,6 +783,7 @@ namespace yae
     TTime next_epg_refresh_;
     TTime next_schedule_refresh_;
     TTime next_storage_cleanup_;
+    TTime next_log_cleanup_;
 
     mutable boost::mutex epg_mutex_;
     yae::mpeg_ts::EPG epg_;
@@ -774,6 +791,78 @@ namespace yae
 
     mutable boost::mutex preferences_mutex_;
     Json::Value preferences_;
+  };
+
+
+  //----------------------------------------------------------------
+  // LogToFile
+  //
+  struct LogToFile : public IMessageCarrier
+  {
+    LogToFile(const std::string & path):
+      file_(get_open_file(path.c_str(), "wb")),
+      threshold_(TLog::kDebug)
+    {}
+
+    // virtual:
+    void destroy()
+    { delete this; }
+
+    //! a prototype factory method for constructing objects of the same kind,
+    //! but not necessarily deep copies of the original prototype object:
+    // virtual:
+    LogToFile * clone() const
+    { return new LogToFile(*this); }
+
+    // virtual:
+    const char * name() const
+    { return "LogToFile"; }
+
+    // virtual:
+    const char * guid() const
+    { return "6cab86bf-402b-4251-8eae-fe105359bf8b"; }
+
+    // virtual:
+    ISettingGroup * settings()
+    { return NULL; }
+
+    // virtual:
+    int priorityThreshold() const
+    { return threshold_; }
+
+    // virtual:
+    void setPriorityThreshold(int priority)
+    { threshold_ = priority; }
+
+    // virtual:
+    void deliver(int priority, const char * source, const char * message)
+    {
+      if (priority < threshold_)
+      {
+        return;
+      }
+
+      // add timestamp to the message:
+      std::ostringstream oss;
+      TTime now = TTime::now();
+      int64_t now_usec = now.get(1000000);
+      oss << yae::unix_epoch_time_to_localtime_str(now.get(1))
+          << '.'
+          << std::setw(6) << std::setfill('0') << (now_usec % 1000000)
+          << " [" << yae::to_str((TLog::TPriority)(priority)) << "] "
+          << source << ": "
+          << message << std::endl;
+
+      if (file_)
+      {
+        file_->write(oss.str());
+        file_->flush();
+      }
+    }
+
+  protected:
+    TOpenFilePtr file_;
+    int threshold_;
   };
 
 

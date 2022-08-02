@@ -1314,10 +1314,12 @@ namespace yae
 
           if (bytes_consumed != 188)
           {
+#ifndef NDEBUG
             yae_wlog("%sTSPacket too short (%i bytes), %s ...",
                      ctx.log_prefix_.c_str(),
                      bytes_consumed,
                      yae::to_hex(pkt_data->get(), 32, 4).c_str());
+#endif
             continue;
           }
 
@@ -1333,6 +1335,7 @@ namespace yae
         }
         catch (const std::exception & e)
         {
+#ifndef NDEBUG
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
@@ -1340,15 +1343,20 @@ namespace yae
                    ctx.log_prefix_.c_str(),
                    data_hex.c_str(),
                    e.what());
+#else
+          (void)e;
+#endif
         }
         catch (...)
         {
+#ifndef NDEBUG
           std::string data_hex =
             yae::to_hex(data.get(), std::min<std::size_t>(size, 32), 4);
 
           yae_wlog("%sfailed to parse %s: unexpected exception",
                    ctx.log_prefix_.c_str(),
                    data_hex.c_str());
+#endif
         }
       }
 
@@ -1764,6 +1772,7 @@ namespace yae
     dvr_.set_next_epg_refresh(now);
     dvr_.set_next_schedule_refresh(now);
     dvr_.set_next_storage_cleanup(now);
+    dvr_.set_next_log_cleanup(now + dvr_.log_cleanup_period_);
     dvr_.set_next_heartbeat(now);
 
     yae::mpeg_ts::EPG epg;
@@ -1775,6 +1784,12 @@ namespace yae
     while (!keep_going_.stop_)
     {
       now = TTime::now().rebased(1);
+
+      if (dvr_.next_log_cleanup() <= now)
+      {
+        dvr_.set_next_log_cleanup(now + dvr_.log_cleanup_period_);
+        dvr_.cleanup_logs();
+      }
 
       if (dvr_.load_wishlist())
       {
@@ -1879,6 +1894,7 @@ namespace yae
     epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
     storage_cleanup_period_(300, 1),
+    log_cleanup_period_(24 * 60 * 60, 1),
     margin_(60, 1)
   {
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
@@ -2766,6 +2782,25 @@ namespace yae
     yae::shared_ptr<StorageCleanup, yae::Worker::Task> task;
     task.reset(new StorageCleanup(*this));
     worker_.add(task);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::cleanup_logs
+  //
+  void
+  DVR::cleanup_logs()
+  {
+    yae::TLog & logger = yae::logger();
+
+    std::string ts =
+      unix_epoch_time_to_localtime_str(TTime::now().get(1), "", "-", "");
+
+    fs::path log_path =
+      yaetv_ / yae::strfmt("yaetv-%s.log", ts.c_str());
+
+    logger.assign(std::string("yaetv"), new LogToFile(log_path.string()));
+
+    cleanup_yaetv_logs(yaetv_.string());
   }
 
   //----------------------------------------------------------------
