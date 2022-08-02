@@ -5361,6 +5361,7 @@ namespace yae
            table.table_type_ <= 0x03FF) ? version_rrt_ :
           version_;
 
+#ifndef NDEBUG
         uint16_t prev_version =
           yae::get(versions, table_pid, uint16_t((curr_version + 31) % 32));
         if (curr_version != prev_version)
@@ -5372,7 +5373,7 @@ namespace yae
                    prev_version,
                    curr_version);
         }
-
+#endif
         versions[table_pid] = curr_version;
 
         if (table.table_type_ == 0x0000)
