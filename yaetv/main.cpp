@@ -282,7 +282,7 @@ namespace yae
         if (data[offset] == 0x47 &&
             (n - offset == pkt_size || data[offset + pkt_size] == 0x47))
         {
-          av_md5_sum(md5, data + offset, pkt_size - 1);
+          av_md5_sum(md5, data.get() + offset, pkt_size - 1);
 
           fprintf(dst_pos.file_, "%016" PRIx64 "\n", pos + offset);
           fprintf(dst_md5.file_,

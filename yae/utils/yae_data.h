@@ -345,13 +345,6 @@ namespace yae
     inline operator TBufferPtr() const
     { return data_; }
 
-    template <typename TOffset>
-    inline unsigned char * operator + (TOffset i) const
-    {
-      YAE_ASSERT(i < size());
-      return data_->get() + i;
-    }
-
     inline unsigned char & operator[](std::size_t i)
     {
       YAE_ASSERT(i < size());
@@ -363,17 +356,6 @@ namespace yae
       YAE_ASSERT(i < size());
       return data_->get()[i];
     }
-
-    inline operator void * () const
-    { return data_ ? data_->get() : NULL; }
-
-    template <typename TData>
-    inline operator TData * ()
-    { return data_ ? static_cast<TData *>(data_->get()) : NULL; }
-
-    template <typename TData>
-    inline operator const TData * () const
-    { return data_ ? static_cast<const TData *>(data_->get()) : NULL; }
 
     inline bool starts_with(const void * d, std::size_t z) const
     { return size() < z ? false : memcmp(get(), d, z) == 0; }
