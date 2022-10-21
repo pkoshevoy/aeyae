@@ -36,6 +36,7 @@ namespace yae
     virtual unsigned char * get() const = 0;
     virtual std::size_t size() const = 0;
     virtual void truncate(std::size_t new_size) = 0;
+    virtual bool is_safe_to_reference_from_sub_buffer() const = 0;
 
     inline unsigned char * end() const
     {
@@ -94,6 +95,10 @@ namespace yae
     // virtual:
     void truncate(std::size_t size);
 
+    // virtual:
+    bool is_safe_to_reference_from_sub_buffer() const
+    { return true; }
+
   protected:
     mutable std::vector<unsigned char> data_;
   };
@@ -114,6 +119,10 @@ namespace yae
 
     // virtual:
     void truncate(std::size_t size);
+
+    // virtual:
+    bool is_safe_to_reference_from_sub_buffer() const
+    { return false; }
 
   protected:
     unsigned char * data_;
@@ -136,6 +145,10 @@ namespace yae
 
     // virtual:
     void truncate(std::size_t size);
+
+    // virtual:
+    bool is_safe_to_reference_from_sub_buffer() const
+    { return true; }
 
   protected:
     TBufferPtr data_;
@@ -277,7 +290,18 @@ namespace yae
     { return data_ ? data_->size() : 0; }
 
     inline TBufferPtr get(std::size_t addr, std::size_t size) const
-    { return TBufferPtr(new SubBuffer(data_, addr, size)); }
+    {
+      YAE_THROW_IF(this->size() < addr + size);
+
+      if (data_->is_safe_to_reference_from_sub_buffer())
+      {
+        return TBufferPtr(new SubBuffer(data_, addr, size));
+      }
+
+      TBufferPtr copy(new Buffer(size));
+      memcpy(copy.get(), data_->get() + addr, size);
+      return copy;
+    }
 
     inline unsigned char * get() const
     { return data_ ? data_->get() : NULL; }
