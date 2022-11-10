@@ -299,7 +299,7 @@ namespace yae
       }
 
       TBufferPtr copy(new Buffer(size));
-      memcpy(copy.get(), data_->get() + addr, size);
+      memcpy(copy->get(), data_->get() + addr, size);
       return copy;
     }
 
