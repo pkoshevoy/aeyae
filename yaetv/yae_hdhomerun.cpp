@@ -490,6 +490,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // asc_device_name
+  //
+  static bool
+  asc_device_name(const TunerDevicePtr & a,
+                   const TunerDevicePtr & b)
+  {
+    return (a->name() < b->name());
+  }
+
+  //----------------------------------------------------------------
   // HDHomeRun::Private::discover_tuners
   //
   void
@@ -532,6 +542,8 @@ namespace yae
         tuners_[name] = TunerRef(i, tuner);
       }
     }
+
+    devices.sort(&asc_device_name);
   }
 
   //----------------------------------------------------------------
