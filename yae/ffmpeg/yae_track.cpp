@@ -734,7 +734,9 @@ namespace yae
         rate = packetRateEstimator_.window_avg();
       }
 
-      if (rate > 0.0)
+      // must not set packet queue size to 0
+      // or we'll hoard an unlimited number of decoded frames
+      // in memory when playback is paused:
       {
         const uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
         const uint64_t max_queue_size = packetQueue_.getMaxSize();
