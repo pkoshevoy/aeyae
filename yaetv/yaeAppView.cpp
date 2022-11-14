@@ -1361,6 +1361,32 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetRecordingDescription
+  //
+  struct GetRecordingDescription : public TVarExpr
+  {
+    GetRecordingDescription(const TRecordingPtr & recording):
+      recording_(recording)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      TRecordingPtr recording = recording_.lock();
+      if (recording)
+      {
+        yae::shared_ptr<Recording::Rec> rec = recording->get_rec();
+        result = TVar(rec->description_);
+        return;
+      }
+
+      result = TVar("");
+    }
+
+    yae::weak_ptr<Recording> recording_;
+  };
+
+  //----------------------------------------------------------------
   // RecButtonColor
   //
   struct RecButtonColor : TColorExpr
@@ -3538,7 +3564,8 @@ namespace yae
            i = schedule.begin(); i != schedule.end(); ++i)
     {
       const std::string & rec_id = i->first;
-      const TRecPtr rec_ptr = i->second->get_rec();
+      const TRecordingPtr & recording_ptr = i->second;
+      const TRecPtr rec_ptr = recording_ptr->get_rec();
       const Recording::Rec & rec = *rec_ptr;
       const uint32_t ch_num = yae::mpeg_ts::channel_number(rec.channel_major_,
                                                            rec.channel_minor_);
@@ -3689,7 +3716,7 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
         desc.background_ = desc.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-        desc.text_ = TVarRef::constant(TVar(rec.description_));
+        desc.text_ = desc.addExpr(new GetRecordingDescription(recording_ptr));
       }
 
       rows[rec_id] = layout_ptr;

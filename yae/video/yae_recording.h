@@ -91,6 +91,10 @@ namespace yae
       std::string get_filepath(const fs::path & basedir,
                                const char * suffix = ".mpg") const;
 
+      // helpers for interop with code that expect EPG::Channel, etc...
+      yae::mpeg_ts::EPG::Channel to_epg_channel() const;
+      yae::mpeg_ts::EPG::Program to_epg_program() const;
+
       Recording::MadeBy made_by_;
       bool cancelled_;
       uint64_t utc_t0_;

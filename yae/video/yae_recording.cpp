@@ -148,6 +148,35 @@ namespace yae
     return filepath;
   }
 
+  //----------------------------------------------------------------
+  // Recording::Rec::to_epg_channel
+  //
+  yae::mpeg_ts::EPG::Channel
+  Recording::Rec::to_epg_channel() const
+  {
+    yae::mpeg_ts::EPG::Channel channel;
+    channel.major_ = channel_major_;
+    channel.minor_ = channel_minor_;
+    channel.name_ = channel_name_;
+    return channel;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::to_epg_program
+  //
+  yae::mpeg_ts::EPG::Program
+  Recording::Rec::to_epg_program() const
+  {
+    yae::mpeg_ts::EPG::Program program;
+    program.title_ = title_;
+    program.rating_ = rating_;
+    program.description_ = description_;
+    program.gps_time_ = gps_t0_;
+    program.duration_ = gps_t1_ - gps_t0_;
+    unix_epoch_time_to_localtime(utc_t0_, program.tm_);
+    return program;
+  }
+
 
   //----------------------------------------------------------------
   // Recording::Recording

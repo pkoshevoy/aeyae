@@ -1036,7 +1036,15 @@ namespace yae
           continue;
         }
 
-        updated_schedule[ch_num][gps_t0] = recording_ptr;
+        // confirm the recording is still wanted:
+        yae::mpeg_ts::EPG::Channel channel = rec.to_epg_channel();
+        yae::mpeg_ts::EPG::Program program = rec.to_epg_program();
+
+        if (dvr.explicitly_scheduled(channel, program) ||
+            dvr.wishlist_.matches(channel, program))
+        {
+          updated_schedule[ch_num][gps_t0] = recording_ptr;
+        }
       }
     }
 
