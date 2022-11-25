@@ -1040,10 +1040,17 @@ namespace yae
         yae::mpeg_ts::EPG::Channel channel = rec.to_epg_channel();
         yae::mpeg_ts::EPG::Program program = rec.to_epg_program();
 
-        if (dvr.explicitly_scheduled(channel, program) ||
+        if (rec.made_by_ == Recording::kLiveChannel ||
+            dvr.explicitly_scheduled(channel, program) ||
             dvr.wishlist_.matches(channel, program))
         {
           updated_schedule[ch_num][gps_t0] = recording_ptr;
+        }
+        else
+        {
+          yae_dlog("skipping cancelled recording: %s: %s",
+                   channel.name_.c_str(),
+                   program.title_.c_str());
         }
       }
     }
