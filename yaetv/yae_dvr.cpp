@@ -902,10 +902,18 @@ namespace yae
   {
     uint64_t gps_now = TTime::gps_now().get(1);
 
+    std::set<uint32_t> blocked_channels;
+    dvr.blocklist_.get(blocked_channels);
+
     for (std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
       const uint32_t ch_num = i->first;
+      if (yae::has(blocked_channels, ch_num))
+      {
+        continue;
+      }
+
       const yae::mpeg_ts::EPG::Channel & channel = i->second;
       std::list<yae::mpeg_ts::EPG::Program> programs = channel.programs_;
 
@@ -1006,6 +1014,11 @@ namespace yae
            i = current_schedule.begin(); i != current_schedule.end(); ++i)
     {
       const uint32_t ch_num = i->first;
+      if (yae::has(blocked_channels, ch_num))
+      {
+        continue;
+      }
+
       std::map<uint32_t, yae::mpeg_ts::EPG::Channel>::const_iterator
         ch_found = epg.channels_.find(ch_num);
       if (ch_found == epg.channels_.end())
