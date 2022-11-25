@@ -1053,18 +1053,40 @@ namespace yae
         yae::mpeg_ts::EPG::Channel channel = rec.to_epg_channel();
         yae::mpeg_ts::EPG::Program program = rec.to_epg_program();
 
-        if (rec.made_by_ == Recording::kLiveChannel ||
-            dvr.explicitly_scheduled(channel, program) ||
-            dvr.wishlist_.matches(channel, program))
+        if (rec.made_by_ != Recording::kLiveChannel &&
+            !dvr.explicitly_scheduled(channel, program))
         {
-          updated_schedule[ch_num][gps_t0] = recording_ptr;
+          yae::shared_ptr<Wishlist::Item> wanted =
+            dvr.wishlist_.matches(channel, program);
+          if (!wanted)
+          {
+            yae_dlog("skipping cancelled recording: %s: %s",
+                     channel.name_.c_str(),
+                     program.title_.c_str());
+            continue;
+          }
+
+          if (wanted->skip_duplicates())
+          {
+            TRecPtr found = dvr.already_recorded(channel, program);
+            if (found)
+            {
+              // check when the recording was made:
+              const Recording::Rec & prev = *found;
+              if (prev.gps_t0_ < rec.gps_t0_)
+              {
+                // this program has already been recorded:
+                yae_ilog("cancelling duplicate recording: %s, %s",
+                         found->get_basename().c_str(),
+                         program.description_.c_str());
+                continue;
+              }
+            }
+          }
         }
-        else
-        {
-          yae_dlog("skipping cancelled recording: %s: %s",
-                   channel.name_.c_str(),
-                   program.title_.c_str());
-        }
+
+        // keep it:
+        updated_schedule[ch_num][gps_t0] = recording_ptr;
       }
     }
 
