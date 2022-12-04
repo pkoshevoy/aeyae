@@ -1,6 +1,6 @@
 project(yamka)
 
-cmake_minimum_required(VERSION 2.8.0)
+cmake_minimum_required(VERSION 3.0.1)
 
 include("${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 

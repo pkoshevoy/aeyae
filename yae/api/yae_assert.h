@@ -28,6 +28,8 @@
 #    else
 #      define YAE_BREAKPOINT() asm("trap")
 #    endif
+#  elif defined(__arm64__)
+#    define YAE_BREAKPOINT() asm("brk #0")
 #  else
 #    define YAE_BREAKPOINT() asm("int $3")
 #  endif

@@ -7,7 +7,9 @@ if (PKG_CONFIG_FOUND)
   set(TARGET_LIBS ${TARGET_LIBS} ${HDHOMERUN_LIBRARIES})
   include_directories(${HDHOMERUN_INCLUDE_DIRS})
   link_directories(${HDHOMERUN_LIBRARY_DIRS})
-else (PKG_CONFIG_FOUND)
+endif ()
+
+if (NOT HDHOMERUN_FOUND)
   set(HDHOMERUN_INSTALL_PREFIX "$ENV{HDHOMERUN_INSTALL_PREFIX}"
     CACHE PATH "search path for hdhomerun install path")
 
@@ -15,10 +17,10 @@ else (PKG_CONFIG_FOUND)
     include/hdhomerun_device.h
     PATHS
     ${HDHOMERUN_INSTALL_PREFIX}
-    ${AEYAE_INSTALL_DIR_INCLUDE}
-    /usr/include
-    /usr/local/include
-    /opt/local/include)
+    ${CMAKE_INSTALL_PREFIX}
+    /usr
+    /usr/local
+    /opt/local)
 
   if (HDHOMERUN_INSTALL_DIR)
     file(TO_NATIVE_PATH "${HDHOMERUN_INSTALL_DIR}/include"
@@ -27,9 +29,7 @@ else (PKG_CONFIG_FOUND)
       HDHOMERUN_LIBS_DIR)
     include_directories(AFTER ${HDHOMERUN_INCLUDE_DIR})
   endif (HDHOMERUN_INSTALL_DIR)
-endif (PKG_CONFIG_FOUND)
 
-if (NOT HDHOMERUN_FOUND)
   find_library(HDHOMERUN_LIBRARY hdhomerun
     PATHS ${HDHOMERUN_LIBS_DIR} ${AEYAE_INSTALL_DIR_LIB}
     DOC "hdhomerun library")

@@ -350,8 +350,14 @@ set_property(TARGET ${PROGNAME} PROPERTY
   VERSION 1.0-${CMAKE_SYSTEM_VERSION}
   )
 
-set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-# set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+message("Boost_VERSION: ${Boost_VERSION}")
+if (Boost_VERSION VERSION_LESS_EQUAL "1.69")
+  message("setting CXX_STANDARD 98")
+  set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
+else()
+  message("setting CXX_STANDARD 11")
+  set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+endif()
 
 target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS
