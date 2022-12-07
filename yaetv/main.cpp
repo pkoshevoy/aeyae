@@ -97,6 +97,22 @@ namespace yae
       handle_backlog();
     }
 
+    yae::TOpenFile &
+    get_file_for(uint16_t program_id)
+    {
+      yae::TOpenFilePtr & file = files_[program_id];
+      if (!file)
+      {
+        std::string fn = yae::strfmt("pid-%04X.mpg", program_id);
+        std::string mpg = (fs::path(basedir_) / fn).string();
+        yae_info << "will write to " << mpg;
+
+        file = yae::get_open_file(mpg.c_str(), "wb");
+      }
+
+      return *file;
+    }
+
     // virtual:
     void handle(const yae::mpeg_ts::IPacketHandler::Packet & packet,
                 const yae::mpeg_ts::Bucket & bucket,
@@ -108,16 +124,6 @@ namespace yae
       if (!program_id)
       {
         return;
-      }
-
-      yae::TOpenFilePtr & file = files_[program_id];
-      if (!file)
-      {
-        std::string fn = yae::strfmt("pid-%04X.mpg", program_id);
-        std::string mpg = (fs::path(basedir_) / fn).string();
-        yae_info << "will write to " << mpg;
-
-        file = yae::get_open_file(mpg.c_str(), "wb");
       }
 
       if (!packets_.full())
@@ -148,7 +154,7 @@ namespace yae
         }
         else
         {
-          yae::TOpenFile & f = *(files_[program_id]);
+          yae::TOpenFile & f = get_file_for(program_id);
           f.write(data.get(), data.size());
         }
       }
