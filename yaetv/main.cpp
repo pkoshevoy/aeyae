@@ -88,7 +88,7 @@ namespace yae
 
     StreamDumper(const std::string & basedir):
       ctx_("StreamDumper"),
-      packets_(400000), // 75.2MB
+      packets_(40000000), // 7520MB
       basedir_(basedir)
     {}
 
