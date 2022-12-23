@@ -692,7 +692,7 @@ namespace yae
   //
   template <typename TData>
   bool
-  has(const TData * values, TData v, int end = -1)
+  has(const TData * values, TData v, TData end = (TData)-1)
   {
     for (const TData * i = values; i && (int(*i) != end); ++i)
     {

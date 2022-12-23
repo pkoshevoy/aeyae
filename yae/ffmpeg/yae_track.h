@@ -230,6 +230,11 @@ namespace yae
     // open the stream for decoding:
     virtual AVCodecContext * open();
 
+    virtual AVCodecContext *
+    maybe_open(const AVCodec * codec,
+               const AVCodecParameters & params,
+               AVDictionary * opts);
+
     // close the stream:
     virtual void close();
 

@@ -158,6 +158,113 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TDecoderMap
+  //
+  typedef std::map<AVCodecID, std::set<const AVCodec *> > TDecoderMap;
+
+  //----------------------------------------------------------------
+  // TDecoders
+  //
+  struct TDecoders : public TDecoderMap
+  {
+    TDecoders()
+    {
+      void * opaque = NULL;
+      for (const AVCodec * c = av_codec_iterate(&opaque); c;
+           c = av_codec_iterate(&opaque))
+      {
+        if (av_codec_is_decoder(c))
+        {
+          TDecoderMap::operator[](c->id).insert(c);
+        }
+      }
+    }
+
+    bool find(std::list<const AVCodec *> & hardware,
+              std::list<const AVCodec *> & software,
+              std::list<const AVCodec *> & experimental,
+              const AVCodecParameters & params,
+              bool allow_hwdec) const
+    {
+      TDecoderMap::const_iterator found = TDecoderMap::find(params.codec_id);
+      if (found == TDecoderMap::end())
+      {
+        return false;
+      }
+
+      std::list<const AVCodec *> sw_hwconfig;
+      typedef std::set<const AVCodec *> TCodecs;
+      const TCodecs & codecs = found->second;
+
+      for (TCodecs::const_iterator i = codecs.begin(); i != codecs.end(); ++i)
+      {
+        const AVCodec * c = *i;
+
+        if (al::ends_with(c->name, "_v4l2m2m"))
+        {
+          // ignore it, it always fails anyway:
+          continue;
+        }
+
+        if ((c->capabilities & AV_CODEC_CAP_EXPERIMENTAL) ==
+            AV_CODEC_CAP_EXPERIMENTAL)
+        {
+          experimental.push_back(c);
+          continue;
+        }
+
+        if ((c->capabilities & AV_CODEC_CAP_HARDWARE) ==
+            AV_CODEC_CAP_HARDWARE &&
+            allow_hwdec)
+        {
+          hardware.push_back(c);
+          continue;
+        }
+
+        const AVCodecHWConfig * hw =
+          allow_hwdec ? avcodec_get_hw_config(c, 0) : NULL;
+
+        if (hw)
+        {
+          sw_hwconfig.push_back(c);
+        }
+        else
+        {
+          software.push_back(c);
+        }
+      }
+
+      hardware.splice(hardware.end(), sw_hwconfig);
+      return !(hardware.empty() && software.empty() && experimental.empty());
+    }
+  };
+
+  //----------------------------------------------------------------
+  // find_decoders_for
+  //
+  bool
+  find_decoders_for(std::list<const AVCodec *> & candidates,
+                    const AVCodecParameters & params,
+                    bool allow_hwdec)
+  {
+    static const TDecoders decoders;
+
+    std::list<const AVCodec *> hardware;
+    std::list<const AVCodec *> software;
+    std::list<const AVCodec *> experimental;
+    if (!decoders.find(hardware, software, experimental, params, allow_hwdec))
+    {
+      return false;
+    }
+
+    candidates.clear();
+    candidates.splice(candidates.end(), hardware);
+    candidates.splice(candidates.end(), software);
+    candidates.splice(candidates.end(), experimental);
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::open
   //
   AVCodecContext *
@@ -168,16 +275,31 @@ namespace yae
       return codecContext_.get();
     }
 
-    AVCodecContext * ctx = Track::open();
-    if (ctx)
+    std::list<const AVCodec *> candidates;
+    const AVCodecParameters & params = *(stream_->codecpar);
+    if (!yae::find_decoders_for(candidates, params, true))
     {
+      return NULL;
+    }
+
+    for (std::list<const AVCodec *>::const_iterator i = candidates.begin();
+         i != candidates.end(); ++i)
+    {
+      const AVCodec * codec = *i;
+      AVCodecContext * ctx = this->maybe_open(codec, params, NULL);
+      if (!ctx)
+      {
+        continue;
+      }
+
       framesDecoded_ = 0;
       framesProduced_ = 0;
       skipLoopFilter(skipLoopFilter_);
       skipNonReferenceFrames(skipNonReferenceFrames_);
+      return ctx;
     }
 
-    return ctx;
+    return NULL;
   }
 
   //----------------------------------------------------------------

@@ -426,6 +426,17 @@ namespace yae
 
     const AVCodecParameters & params = *(stream_->codecpar);
     const AVCodec * codec = avcodec_find_decoder(params.codec_id);
+    return maybe_open(codec, params, NULL);
+  }
+
+  //----------------------------------------------------------------
+  // Track::maybe_open
+  //
+  AVCodecContext *
+  Track::maybe_open(const AVCodec * codec,
+                    const AVCodecParameters & params,
+                    AVDictionary * opts)
+  {
     if (!codec && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
@@ -483,6 +494,31 @@ namespace yae
     avcodec_parameters_to_context(ctx, &params);
     ctx->opaque = this;
 
+    if (codec->pix_fmts && !yae::has<AVPixelFormat>(codec->pix_fmts,
+                                                    ctx->pix_fmt,
+                                                    AV_PIX_FMT_NONE))
+    {
+      AVPixelFormat found =
+        yae::find_nearest_pix_fmt(ctx->pix_fmt, codec->pix_fmts);
+
+      if (found == AV_PIX_FMT_NONE)
+      {
+        yae_elog("%s doesn't support pixel format %s",
+                 codec->name,
+                 av_get_pix_fmt_name(ctx->pix_fmt));
+        found = codec->pix_fmts[0];
+      }
+
+      if (found != AV_PIX_FMT_NONE)
+      {
+        yae_ilog("adjusting %s pixel format from %s to %s",
+                 codec->name,
+                 av_get_pix_fmt_name(ctx->pix_fmt),
+                 av_get_pix_fmt_name(found));
+        ctx->pix_fmt = found;
+      }
+    }
+
     if (hw_device_ctx.ref_)
     {
       ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
@@ -505,7 +541,6 @@ namespace yae
 #endif
       std::max(1, nthreads);
 
-    AVDictionary * opts = NULL;
     av_dict_set_int(&opts, "threads", nthreads, 0);
 
     ctx->thread_count = nthreads;
