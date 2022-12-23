@@ -595,6 +595,58 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // find_nearest_pix_fmt
+  //
+  AVPixelFormat
+  find_nearest_pix_fmt(AVPixelFormat src, const AVPixelFormat * candidates)
+  {
+    if (!candidates || *candidates == AV_PIX_FMT_NONE)
+    {
+      return AV_PIX_FMT_NONE;
+    }
+
+    const AVPixFmtDescriptor * src_desc = av_pix_fmt_desc_get(src);
+    if (!src_desc || src_desc->nb_components <= 0)
+    {
+      return AV_PIX_FMT_NONE;
+    }
+
+    const bool src_bigendian = !!(src_desc->flags & AV_PIX_FMT_FLAG_BE);
+    const int src_depth = src_desc->comp[0].depth + src_desc->comp[0].shift;
+    int best_depth_err = std::numeric_limits<int>::min();
+    AVPixelFormat best = AV_PIX_FMT_NONE;
+
+    for (const AVPixelFormat * i = candidates; i && *i != AV_PIX_FMT_NONE; ++i)
+    {
+      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(*i);
+      if (!desc || desc->nb_components <= 0)
+      {
+        continue;
+      }
+
+      bool bigendian = !!(desc->flags & AV_PIX_FMT_FLAG_BE);
+      int depth = desc->comp[0].depth + desc->comp[0].shift;
+      int depth_err = depth - src_depth;
+      if (// try to minimize bitdepth error:
+          ((depth_err <= 0) &&
+           (best_depth_err < 0) &&
+           (best_depth_err < depth_err)) ||
+          ((depth_err > 0) &&
+           (best_depth_err > 0) &&
+           (depth_err < best_depth_err)) ||
+          // try to preserve endianness:
+          ((depth_err == best_depth_err) &&
+           (bigendian == src_bigendian)))
+      {
+        best = *i;
+        best_depth_err = depth_err;
+      }
+    }
+
+    return best;
+  }
+
+  //----------------------------------------------------------------
   // AvFrm::sw_pix_fmt
   //
   AVPixelFormat

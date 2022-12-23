@@ -411,6 +411,14 @@ namespace yae
   YAE_API AVPixelFormat
   sw_pix_fmt(const ::AVFrame & frame);
 
+  //----------------------------------------------------------------
+  // find_nearest_pix_fmt
+  //
+  // select the first pixel format from the list of candidates
+  // that minimizes the bit-depth difference:
+  //
+  AVPixelFormat
+  find_nearest_pix_fmt(AVPixelFormat src, const AVPixelFormat * candidates);
 
   //----------------------------------------------------------------
   // is_less_than
