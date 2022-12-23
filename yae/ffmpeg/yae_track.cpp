@@ -375,6 +375,40 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // maybe_set_avopt
+  //
+  // avoid setting unsupported options:
+  //
+  bool
+  maybe_set_avopt(AVDictionary *& opts,
+                  AVCodecContext * ctx,
+                  const char * name,
+                  const char * value)
+  {
+    if (!(name && *name && value && *value))
+    {
+      return false;
+    }
+
+    // avoid setting unsupported options:
+    int search_flags = 0;
+    void * target_obj = NULL;
+    const AVOption * o = av_opt_find2(ctx->priv_data,
+                                      name,
+                                      NULL,
+                                      0,
+                                      search_flags,
+                                      &target_obj);
+    if (o && target_obj)
+    {
+      av_dict_set(&opts, name, value, 0);
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Track::open
   //
   AVCodecContext *

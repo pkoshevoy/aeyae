@@ -183,6 +183,14 @@ namespace yae
     static void destroy(AVCodecContext * ctx);
   };
 
+  //----------------------------------------------------------------
+  // maybe_set_avopt
+  //
+  bool
+  maybe_set_avopt(AVDictionary *& opts,
+                  AVCodecContext * ctx,
+                  const char * name,
+                  const char * value);
 
   //----------------------------------------------------------------
   // tryToOpen
