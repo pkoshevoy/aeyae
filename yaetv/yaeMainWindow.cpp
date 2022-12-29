@@ -643,6 +643,7 @@ namespace yae
     spinner.setEnabled(false);
 
     playerWidget_->initItemViews();
+    playerWidget_->view().setEnabled(false);
 
     // shortcut:
     PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
@@ -905,7 +906,6 @@ namespace yae
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 
     PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
-    pl_ux.insert_menus(reader, menuBar(), menuHelp->menuAction());
 
     if (window()->isFullScreen())
     {
@@ -922,10 +922,15 @@ namespace yae
     playerWidget_->show();
 
     yae::shared_ptr<IBookmark> bookmark = load_bookmark(dvr_, rec);
+    playerWindow_.playback(playerWidget_, reader, bookmark.get());
+
+    pl_ux.insert_menus(reader,
+                       menuBar(),
+                       menuHelp->menuAction());
+
     pl_ux.insert_menus(reader,
                        playerWindow_.menubar,
                        menuHelp->menuAction());
-    playerWindow_.playback(playerWidget_, reader, bookmark.get());
 
     return reader;
   }
@@ -1199,6 +1204,9 @@ namespace yae
     view_->requestUncache();
     view_->requestRepaint();
     stopLivePlayback();
+
+    PlayerUxItem & pl_ux = playerWidget_->get_player_ux();
+    pl_ux.insert_menus(IReaderPtr(), menuBar(), menuHelp->menuAction());
 
     yae_dlog("MainWindow::playerWindowClosed()");
   }
