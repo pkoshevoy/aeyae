@@ -65,6 +65,7 @@ namespace yae
     if (playerWidget_)
     {
       playerWidget_->stop();
+      playerWidget_->view().setEnabled(false);
       playerWidget_ = NULL;
     }
   }

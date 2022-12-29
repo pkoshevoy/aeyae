@@ -199,6 +199,7 @@ namespace yae
       virtual void repaint()
       {
         YAE_BENCHMARK(probe1, "TCanvasWidget::TDelegate::repaint");
+        // yae_dlog("CanvasWidget::TDelegate::repaint");
 
         // this is just to prevent concurrent OpenGL access
         // to the same context:

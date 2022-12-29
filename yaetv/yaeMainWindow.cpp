@@ -1189,12 +1189,18 @@ namespace yae
   void
   MainWindow::playerWindowClosed()
   {
-    canvasContainer_->addWidget(playerWidget_);
+    if (canvasContainer_->indexOf(playerWidget_) == -1)
+    {
+      canvasContainer_->addWidget(playerWidget_);
+    }
+
     canvasContainer_->setCurrentWidget(canvas_);
     view_->now_playing_.reset();
     view_->requestUncache();
     view_->requestRepaint();
     stopLivePlayback();
+
+    yae_dlog("MainWindow::playerWindowClosed()");
   }
 
   //----------------------------------------------------------------

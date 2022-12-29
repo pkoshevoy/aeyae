@@ -240,7 +240,7 @@ namespace yae
   ItemView::setEnabled(bool enable)
   {
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    yae_debug << "FIXME: ItemView::setEnabled " << root_->id_
+    yae_debug << "ItemView::setEnabled " << root_->id_
               << " " << enable;
 #endif
 
@@ -260,6 +260,9 @@ namespace yae
           ItemFocus::singleton().clearFocus(itemPtr.get());
         }
       }
+
+      animateTimer_.stop();
+      animators_.clear();
     }
     else
     {
@@ -291,7 +294,7 @@ namespace yae
         // YAE_BENCHMARK(benchmark, "ItemView::event repaintEvent");
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-        yae_debug << "FIXME: ItemView::repaintEvent " << root_->id_;
+        yae_debug << "ItemView::repaintEvent " << root_->id_;
 #endif
 
         Canvas::ILayer::delegate_->requestRepaint();
@@ -323,7 +326,7 @@ namespace yae
     bool alreadyRequested = repaintTimer_.isActive();
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    yae_debug << "FIXME: ItemView::requestRepaint " << root_->id_
+    yae_debug << "ItemView::requestRepaint " << root_->id_
               << " " << !alreadyRequested;
 #endif
 
@@ -342,7 +345,7 @@ namespace yae
     bool postThePayload = requestRepaintEvent_.setDelivered(false);
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    yae_debug << "FIXME: ItemView::repaint " << root_->id_
+    yae_debug << "ItemView::repaint " << root_->id_
               << " " << postThePayload;
 #endif
 
@@ -409,7 +412,7 @@ namespace yae
     }
 
 #if YAE_DEBUG_ITEM_VIEW_REPAINT
-    yae_debug << "FIXME: ItemView::paint " << root_->id_;
+    yae_debug << "ItemView::paint " << root_->id_;
 #endif
 
     double x = 0.0;

@@ -1343,6 +1343,7 @@ namespace yae
   void
   PlayerUxItem::setVisible(bool enable)
   {
+    yae_dlog("PlayerUxItem::setVisible: %s, %i", Item::id_.c_str(), enable);
     bool changing = visible() != enable;
 
     if (!enable)
