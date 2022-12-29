@@ -351,7 +351,7 @@ set_property(TARGET ${PROGNAME} PROPERTY
   )
 
 message("Boost_VERSION: ${Boost_VERSION}")
-if (Boost_VERSION VERSION_LESS_EQUAL "106900")
+if (Boost_VERSION VERSION_LESS "107000")
   message("setting CXX_STANDARD 98")
   set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
 else()
