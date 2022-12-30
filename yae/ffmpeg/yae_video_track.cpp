@@ -192,7 +192,7 @@ namespace yae
         return false;
       }
 
-      std::list<const AVCodec *> sw_hwconfig;
+      std::list<const AVCodec *> no_hwconfig;
       typedef std::set<const AVCodec *> TCodecs;
       const TCodecs & codecs = found->second;
 
@@ -213,20 +213,18 @@ namespace yae
           continue;
         }
 
-        if ((c->capabilities & AV_CODEC_CAP_HARDWARE) ==
-            AV_CODEC_CAP_HARDWARE &&
-            allow_hwdec)
-        {
-          hardware.push_back(c);
-          continue;
-        }
-
         const AVCodecHWConfig * hw =
           allow_hwdec ? avcodec_get_hw_config(c, 0) : NULL;
 
         if (hw)
         {
-          sw_hwconfig.push_back(c);
+          hardware.push_back(c);
+        }
+        else if ((c->capabilities & AV_CODEC_CAP_HARDWARE) ==
+                 AV_CODEC_CAP_HARDWARE &&
+                 allow_hwdec)
+        {
+          no_hwconfig.push_back(c);
         }
         else
         {
@@ -234,7 +232,7 @@ namespace yae
         }
       }
 
-      hardware.splice(hardware.end(), sw_hwconfig);
+      experimental.splice(experimental.end(), no_hwconfig);
       return !(hardware.empty() && software.empty() && experimental.empty());
     }
   };
