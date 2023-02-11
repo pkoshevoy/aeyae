@@ -21,6 +21,12 @@
 #include "yaeScrollview.h"
 
 
+//----------------------------------------------------------------
+// YAE_DEBUG_ESTIMATE_VELOCITY
+//
+#define YAE_DEBUG_ESTIMATE_VELOCITY 0
+
+
 namespace yae
 {
 
@@ -64,10 +70,58 @@ namespace yae
 
     void addSample(double t, const TVec2D & pos)
     {
+      if (nsamples_)
+      {
+        const int i0 = (nsamples_ - 1) % TPrivate::kMaxSamples;
+        const double dt = t - t_[i0];
+        if (dt <= 0.0)
+        {
+          pos_[i0] = pos;
+          return;
+        }
+      }
+
       int i = nsamples_ % TPrivate::kMaxSamples;
       t_[i] = t;
       pos_[i] = pos;
       nsamples_++;
+    }
+
+    void dump() const
+    {
+      std::size_t n = std::min<std::size_t>(nsamples_, TPrivate::kMaxSamples);
+      for (std::size_t i = 1; i < n; i++)
+      {
+        std::size_t i0 =
+          (nsamples_ + (TPrivate::kMaxSamples - n + i - 1)) %
+          TPrivate::kMaxSamples;
+
+        std::size_t i1 =
+          (nsamples_ + (TPrivate::kMaxSamples - n + i)) %
+          TPrivate::kMaxSamples;
+
+        const double & t0 = t_[i0];
+        const double & t1 = t_[i1];
+        const double dt = t1 - t0;
+
+        const TVec2D & a = pos_[i0];
+        const TVec2D & b = pos_[i1];
+        TVec2D ab = b - a;
+
+        double norm_ab = ab.norm();
+        double v = norm_ab / dt;
+
+        yae_debug
+          << "dump"
+          << ": t[" << std::setw(3) << i - 1 << "] = "
+          << std::fixed << std::setprecision(6) << std::setw(9) << t0
+          << ", t["  << std::setw(3) << i << "] = "
+          << std::fixed << std::setprecision(6) << std::setw(9) << t1
+          << std::setprecision(0)
+          << "; p[" << std::setw(3) << i - 1 << "] = " << a
+          << ", p[" << std::setw(3) << i << "] = " << b
+          << "; v: " << v;
+      }
     }
 
     double estimateVelocity(int i0, int i1) const
@@ -93,7 +147,39 @@ namespace yae
       double norm_ab = ab.norm();
 
       double v = norm_ab / dt;
+#if YAE_DEBUG_ESTIMATE_VELOCITY
+      yae_debug
+        << ": estimateVelocity"
+        << ", n: " << nsamples_
+        << ", dt: " << dt
+        << ", v: " << v;
+#endif
       return v;
+    }
+
+    double estimateAcceleration() const
+    {
+      if (nsamples_ < 3)
+      {
+        return 0.0;
+      }
+
+      int i0 = (nsamples_ - 3) % TPrivate::kMaxSamples;
+      int i1 = (nsamples_ - 2) % TPrivate::kMaxSamples;
+      int i2 = (nsamples_ - 1) % TPrivate::kMaxSamples;
+      double v0 = estimateVelocity(i0, i1);
+      double v1 = estimateVelocity(i1, i2);
+      double dt = t_[i2] - t_[i0];
+      double a = (v1 - v0) / dt;
+#if YAE_DEBUG_ESTIMATE_VELOCITY
+      yae_debug
+        << ": estimateAcceleration"
+        << ", v0: " << v0
+        << ", v1: " << v1
+        << ", dt: " << dt
+        << ", a: " << a;
+#endif
+      return dt;
     }
 
     double estimateVelocity(int nsamples) const
@@ -109,16 +195,34 @@ namespace yae
         const double & t1 = t_[curr];
         double dt = t1 - t0;
 
-        if (dt > 1e-1)
+        if (dt > 0.02)
         {
           // significant pause between final 2 samples,
           // probably not a flick but a simple drag-and-release:
+#if YAE_DEBUG_ESTIMATE_VELOCITY
+          yae_debug << ": estimateVelocity, pause too long: " << dt;
+#endif
           return 0.0;
         }
-#if 0
-        yae_debug << "FIXME: estimateVelocity, dt: " << dt;
-#endif
       }
+      else
+      {
+        // not enough samples:
+#if YAE_DEBUG_ESTIMATE_VELOCITY
+        yae_debug << ": estimateVelocity, not enough samples: " << n;
+#endif
+        return 0.0;
+      }
+
+      double a = estimateAcceleration();
+      if (a < 0.0)
+      {
+        return 0.0;
+      }
+
+#if YAE_DEBUG_ESTIMATE_VELOCITY
+      dump();
+#endif
 
       int i0 = (nsamples_ - n) % TPrivate::kMaxSamples;
       int i1 = (nsamples_ - 1) % TPrivate::kMaxSamples;
@@ -261,7 +365,7 @@ namespace yae
 
     p_->tStart_ = boost::chrono::steady_clock::now();
     p_->nsamples_ = 0;
-    p_->addSample(0.0, rootCSysPoint.y());
+    p_->addSample(0.0, rootCSysPoint);
 
     return true;
   }
@@ -302,7 +406,7 @@ namespace yae
 
     double secondsElapsed = boost::chrono::duration<double>
       (boost::chrono::steady_clock::now() - p_->tStart_).count();
-    p_->addSample(secondsElapsed, rootCSysDragEnd.y());
+    p_->addSample(secondsElapsed, rootCSysDragEnd);
 
     return true;
   }
@@ -327,7 +431,7 @@ namespace yae
     double k = vi / p_->v0_.norm();
 
 #if 0
-    yae_debug << "FIXME: v0: " << p_->v0_ << ", k: " << k;
+    yae_debug << "onDragEnd: v0: " << p_->v0_ << ", k: " << k;
 #endif
 
     if (k > 0.1)
@@ -401,7 +505,7 @@ namespace yae
     vsv.set_position_y(p1.y());
 #if 0
     yae_debug
-      << "FIXME: pos: " << p1
+      << "animate: pos: " << p1
       << ", xrange: " << xRange
       << ", yrange: " << yRange;
 #endif
@@ -434,7 +538,7 @@ namespace yae
 
 #if 0
     yae_debug
-      << "FIXME: v0: " << p_->v0_
+      << "animate: v0: " << p_->v0_
       << ", v1: " << v1
       << ", dv: " << v1 - p_->v0_;
 #endif
