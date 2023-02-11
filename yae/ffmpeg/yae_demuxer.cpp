@@ -2809,12 +2809,6 @@ namespace yae
         continue;
       }
 
-      if (src->codecpar->codec_type == AVMEDIA_TYPE_DATA &&
-          muxer->oformat->data_codec == AV_CODEC_ID_NONE)
-      {
-        continue;
-      }
-
       if (src->codecpar->codec_type == AVMEDIA_TYPE_UNKNOWN &&
           strcmp(muxer->oformat->name, "mpegts") != 0)
       {
