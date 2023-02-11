@@ -2441,10 +2441,12 @@ namespace yae
 
       void get_epg_nolock(const Bucket & bucket,
                           yae::mpeg_ts::EPG & epg,
-                          const std::string & lang = std::string("eng")) const;
+                          const std::string & lang = std::string("eng"),
+                          uint32_t min_gps_time = 0) const;
 
       void get_epg_now(yae::mpeg_ts::EPG & epg,
-                       const std::string & lang = std::string("eng")) const;
+                       const std::string & lang = std::string("eng"),
+                       uint32_t prev_hours = 24) const;
 
       // channels, indexed by major.minor:
       void get_channels(std::map<uint32_t, EPG::Channel> & channels,

@@ -5994,7 +5994,8 @@ namespace yae
     void
     Context::get_epg_nolock(const Bucket & bucket,
                             yae::mpeg_ts::EPG & epg,
-                            const std::string & lang) const
+                            const std::string & lang,
+                            uint32_t min_gps_time) const
     {
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "get_epg_nolock");
 
@@ -6032,6 +6033,11 @@ namespace yae
                j = guide.items_.begin(); j != guide.items_.end(); ++j)
         {
           const ChannelGuide::Item & item = *j;
+          if (item.t1() <= min_gps_time)
+          {
+            // too old, skip it:
+            continue;
+          }
 
           EPG::Program program;
           program.title_ = item.get_title(lang);
@@ -6059,13 +6065,14 @@ namespace yae
     //
     void
     Context::get_epg_now(yae::mpeg_ts::EPG & epg,
-                         const std::string & lang) const
+                         const std::string & lang,
+                         uint32_t prev_hours) const
     {
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "get_epg");
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t gps_time = gps_time_now();
       const Bucket & bucket = get_epg_bucket_nolock(gps_time);
-      get_epg_nolock(bucket, epg, lang);
+      get_epg_nolock(bucket, epg, lang, gps_time - prev_hours * 3600);
     }
 
     //----------------------------------------------------------------
