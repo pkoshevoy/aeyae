@@ -83,8 +83,7 @@ namespace yae
 
     // helpers: these are used to re-configure output buffers
     // when frame traits change:
-    void refreshTraits();
-    bool reconfigure(const AvFrmSpecs & specs);
+    void refreshTraits(const AVFrame * decoded = NULL);
 
     // virtual:
     bool decoderStartup();
@@ -97,7 +96,7 @@ namespace yae
     bool threadStop();
 
     // video traits, not overridden:
-    bool getTraits(VideoTraits & traits) const;
+    bool getTraits(VideoTraits & traits, const AVFrame * decoded = NULL) const;
 
     // use this for video frame conversion (pixel format and size)
     bool setTraitsOverride(const VideoTraits & traits,

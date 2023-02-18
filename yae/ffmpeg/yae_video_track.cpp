@@ -348,10 +348,10 @@ namespace yae
   // VideoTrack::refreshTraits
   //
   void
-  VideoTrack::refreshTraits()
+  VideoTrack::refreshTraits(const AVFrame * decoded)
   {
     // shortcut to native frame format traits:
-    getTraits(native_);
+    getTraits(native_, decoded);
 
     // frame size may have changed, so update output traits accordingly:
     output_ = override_;
@@ -451,13 +451,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::reconfigure
+  // confirm_supported_output_format
   //
-  bool
-  VideoTrack::reconfigure(const AvFrmSpecs & specs)
+  static bool
+  confirm_supported_output_format(const AvFrmSpecs & specs)
   {
-    refreshTraits();
-
     // pixel format shortcut:
     TPixelFormatId out_fmt = ffmpeg_to_yae(yae::pix_fmt(specs));
     const pixelFormat::Traits * ptts = pixelFormat::getTraits(out_fmt);
@@ -668,7 +666,13 @@ namespace yae
       double overridePixelAspectRatio =
         override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
 
-      AvFrmSpecs outSpecs(decoded);
+      const AvFrmSpecs src_specs(decoded);
+      if (!yae::same_specs(src_specs, filterGraph_.src_specs()))
+      {
+        refreshTraits(&decoded);
+      }
+
+      AvFrmSpecs outSpecs = src_specs;
       if (output_.pixelFormat_ != kInvalidPixelFormat)
       {
         // convert to the specified pixel format:
@@ -830,10 +834,8 @@ namespace yae
                              filterChain.c_str()))
       {
         yae_ilog("VideoTrack filters: %s", filterGraph_.get_filters().c_str());
-
-        if (!reconfigure(outSpecs))
+        if (!confirm_supported_output_format(outSpecs))
         {
-          YAE_ASSERT(false);
           return;
         }
       }
@@ -866,7 +868,8 @@ namespace yae
         // increment by average frame duration:
         t = prevPTS_;
         t += TTime(frameRate_.den, frameRate_.num);
-        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_, "video t += 1/fps");
+        gotPTS = verify_pts(hasPrevPTS_, prevPTS_, t, stream_,
+                            "video t += 1/fps");
       }
 
       YAE_ASSERT(gotPTS);
@@ -968,6 +971,12 @@ namespace yae
 
         vf.traits_ = output_;
         vf.traits_.pixelFormat_ = ffmpeg_to_yae(yae::pix_fmt(output));
+
+        // preserve output color specs:
+        vf.traits_.av_rng_ = outSpecs.color_range;
+        vf.traits_.av_pri_ = outSpecs.color_primaries;
+        vf.traits_.av_trc_ = outSpecs.color_trc;
+        vf.traits_.av_csp_ = outSpecs.colorspace;
 
         if (output.linesize[0] < 0)
         {
@@ -1202,7 +1211,7 @@ namespace yae
   // VideoTrack::getTraits
   //
   bool
-  VideoTrack::getTraits(VideoTraits & t) const
+  VideoTrack::getTraits(VideoTraits & t, const AVFrame * decoded) const
   {
     if (!stream_)
     {
@@ -1212,15 +1221,23 @@ namespace yae
     const AVCodecParameters & codecParams = *(stream_->codecpar);
 
     AvFrmSpecs specs;
-    specs.width = codecParams.width;
-    specs.height = codecParams.height;
-    specs.format = (AVPixelFormat)(codecParams.format);
-    specs.colorspace = codecParams.color_space;
-    specs.color_range = codecParams.color_range;
-    specs.color_primaries = codecParams.color_primaries;
-    specs.color_trc = codecParams.color_trc;
-    specs.chroma_location = codecParams.chroma_location;
-    specs.sample_aspect_ratio = codecParams.sample_aspect_ratio;
+    if (decoded)
+    {
+      specs = AvFrmSpecs(*decoded);
+    }
+    else
+    {
+      specs.width = codecParams.width;
+      specs.height = codecParams.height;
+      specs.format = (AVPixelFormat)(codecParams.format);
+      specs.colorspace = codecParams.color_space;
+      specs.color_range = codecParams.color_range;
+      specs.color_primaries = codecParams.color_primaries;
+      specs.color_trc = codecParams.color_trc;
+      specs.chroma_location = codecParams.chroma_location;
+      specs.sample_aspect_ratio = codecParams.sample_aspect_ratio;
+    }
+
     specs.guess_missing_specs();
 
     t.av_fmt_ = specs.get_pix_fmt();
@@ -1309,25 +1326,25 @@ namespace yae
     }
 
     //! encoded frame size (including any padding):
-    t.encodedWidth_ = codecParams.width;
-    t.encodedHeight_ = codecParams.height;
+    t.encodedWidth_ = specs.width;
+    t.encodedHeight_ = specs.height;
 
     //! top/left corner offset to the visible portion of the encoded frame:
     t.offsetTop_ = 0;
     t.offsetLeft_ = 0;
 
     //! dimensions of the visible portion of the encoded frame:
-    t.visibleWidth_ = codecParams.width;
-    t.visibleHeight_ = codecParams.height;
+    t.visibleWidth_ = specs.width;
+    t.visibleHeight_ = specs.height;
 
     //! pixel aspect ration, used to calculate visible frame dimensions:
     t.pixelAspectRatio_ = 1.0;
 
-    if (codecParams.sample_aspect_ratio.num &&
-        codecParams.sample_aspect_ratio.den)
+    if (specs.sample_aspect_ratio.num &&
+        specs.sample_aspect_ratio.den)
     {
-      t.pixelAspectRatio_ = (double(codecParams.sample_aspect_ratio.num) /
-                             double(codecParams.sample_aspect_ratio.den));
+      t.pixelAspectRatio_ = (double(specs.sample_aspect_ratio.num) /
+                             double(specs.sample_aspect_ratio.den));
     }
 
     if (stream_->sample_aspect_ratio.num &&

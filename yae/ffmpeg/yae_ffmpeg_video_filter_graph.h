@@ -146,6 +146,15 @@ namespace yae
     bool pull(AVFrame * out, AVRational & outTimeBase);
 
     // accessors:
+    inline const yae::AvBufferRef & hw_frames() const
+    { return hw_frames_; }
+
+    inline const yae::AvFrmSpecs & src_specs() const
+    { return src_specs_; }
+
+    inline const yae::AvFrmSpecs & dst_specs() const
+    { return dst_specs_; }
+
     inline const AVRational & src_framerate() const
     { return src_framerate_; }
 
