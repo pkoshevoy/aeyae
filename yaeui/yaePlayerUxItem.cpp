@@ -2522,8 +2522,8 @@ namespace yae
       {
         std::ostringstream oss;
 
-        oss << atts.sampleRate_ << " Hz, "
-            << getNumberOfChannels(atts.channelLayout_) << " channels";
+        oss << atts.sample_rate_ << " Hz, "
+            << atts.ch_layout_.nb_channels << " channels";
 
         std::string service = yae::get_program_name(*reader, info.program_);
         if (service.size())
@@ -3371,8 +3371,8 @@ namespace yae
       {
         trackName +=
           tr(", %1 Hz, %2 channels").
-          arg(traits.sampleRate_).
-          arg(getNumberOfChannels(traits.channelLayout_));
+          arg(traits.sample_rate_).
+          arg(traits.ch_layout_.nb_channels);
       }
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);

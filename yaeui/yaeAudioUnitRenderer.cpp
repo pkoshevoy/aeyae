@@ -93,8 +93,7 @@ namespace yae
       outAtts = srcAtts;
     }
 
-    outAtts.sampleFormat_ = kAudio32BitFloat;
-    outAtts.channelFormat_ = kAudioChannelsPacked;
+    outAtts.sample_format_ = AV_SAMPLE_FMT_FLT;
   }
 
   //----------------------------------------------------------------
@@ -114,13 +113,13 @@ namespace yae
     if (input_.open(reader) &&
         input_.reader_->getAudioTraitsOverride(atts))
     {
-      if (atts.sampleFormat_ == kAudioInvalidFormat)
+      if (atts.is_invalid_format())
       {
         return false;
       }
 
-      int sample_rate = int(atts.sampleRate_);
-      int num_channels = int(getNumberOfChannels(atts.channelLayout_));
+      int sample_rate = int(atts.sample_rate_);
+      int num_channels = atts.ch_layout_.nb_channels;
       if (yae_au_ctx_open_stream(yae_au_ctx_, sample_rate, num_channels))
       {
         // FIXME: is this a safe assumption?

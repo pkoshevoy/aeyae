@@ -20,7 +20,9 @@
 extern "C"
 {
 #include <libavcodec/packet.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/pixfmt.h>
+#include <libavutil/samplefmt.h>
 }
 
 // boost includes:
@@ -72,86 +74,91 @@ namespace yae
   YAE_API int
   get_selected_subtt_track(const IReader & reader);
 
+
   //----------------------------------------------------------------
-  // TAudioSampleFormat
+  // ChannelLayout
   //
-  enum TAudioSampleFormat
+  struct YAE_API ChannelLayout : public AVChannelLayout
   {
-    kAudioInvalidFormat      = 0,
-    kAudio8BitOffsetBinary   = 1, //!< [0, 255],
-    kAudio16BitBigEndian     = 2, //!< [-32768, 32767]
-    kAudio16BitLittleEndian  = 3, //!< [-32768, 32767]
-    kAudio24BitLittleEndian  = 4, //!< [-8388608, 8388607]
-    kAudio32BitFloat         = 5, //!< [-1, 1]
-    kAudio32BitBigEndian     = 6, //!< [-2147483648, 2147483647]
-    kAudio32BitLittleEndian  = 7, //!< [-2147483648, 2147483647]
-    kAudio64BitDouble        = 8, //!< [-1, 1]
+    ChannelLayout(int nb_channels = 0)
+    {
+      this->set_default_layout(nb_channels);
+    }
 
-#ifdef __BIG_ENDIAN__
-    kAudio16BitNative        = kAudio16BitBigEndian,
-    kAudio32BitNative        = kAudio32BitBigEndian,
-#else
-    kAudio16BitNative        = kAudio16BitLittleEndian,
-    kAudio32BitNative        = kAudio32BitLittleEndian,
-#endif
+    ChannelLayout(const AVChannelLayout & other)
+    {
+      int err = av_channel_layout_copy(this, &other);
+      YAE_ASSERT(!err);
+    }
+
+    ~ChannelLayout()
+    {
+      av_channel_layout_uninit(this);
+    }
+
+    inline ChannelLayout & operator = (const AVChannelLayout & other)
+    {
+      int err = av_channel_layout_copy(this, &other);
+      YAE_ASSERT(!err);
+      return *this;
+    }
+
+    inline bool operator == (const AVChannelLayout & other) const
+    { return av_channel_layout_compare(this, &other) == 0; }
+
+    inline bool operator != (const AVChannelLayout & other) const
+    { return av_channel_layout_compare(this, &other) == 1; }
+
+    inline void set_default_layout(int nb_channels)
+    { av_channel_layout_default(this, nb_channels); }
+
+    std::string describe() const;
   };
-
-  //----------------------------------------------------------------
-  // getBitsPerSample
-  //
-  YAE_API unsigned int getBitsPerSample(TAudioSampleFormat sampleFormat);
-
-  //----------------------------------------------------------------
-  // TAudioChannelFormat
-  //
-  enum TAudioChannelFormat
-  {
-    kAudioChannelFormatInvalid = 0,
-    kAudioChannelsPacked = 1, //!< all channel samples are interleaved
-    kAudioChannelsPlanar = 2  //!< same channel samples are grouped together
-  };
-
-  //----------------------------------------------------------------
-  // TAudioChannelLayout
-  //
-  enum TAudioChannelLayout
-  {
-    kAudioChannelLayoutInvalid = 0,
-    kAudioMono   = 1,
-    kAudioStereo = 2,
-    kAudio2Pt1   = 3,
-    kAudioQuad   = 4,
-    kAudio4Pt1   = 5,
-    kAudio5Pt1   = 6, //!< 5.1
-    kAudio6Pt1   = 7, //!< 6.1
-    kAudio7Pt1   = 8  //!< 7.1
-  };
-
-  //----------------------------------------------------------------
-  // getNumberOfChannels
-  //
-  YAE_API unsigned int getNumberOfChannels(TAudioChannelLayout channelLayout);
 
   //----------------------------------------------------------------
   // AudioTraits
   //
   struct YAE_API AudioTraits
   {
-    AudioTraits();
+    AudioTraits():
+      sample_format_(AV_SAMPLE_FMT_NONE),
+      sample_rate_(0)
+    {}
 
-    bool operator == (const AudioTraits & at) const;
+    inline bool operator == (const AudioTraits & other) const
+    {
+      return (sample_format_ == other.sample_format_ &&
+              sample_rate_ == other.sample_rate_ &&
+              ch_layout_ == other.ch_layout_);
+    }
 
-    //! audio sample rate, Hz:
-    unsigned int sampleRate_;
+    inline bool is_invalid_format() const
+    { return sample_format_ <= AV_SAMPLE_FMT_NONE; }
 
-    //! sample format -- 8-bit, 16-bit, float, etc...
-    TAudioSampleFormat sampleFormat_;
+    inline bool is_packed_format() const
+    { return av_sample_fmt_is_planar(sample_format_) == 0; }
 
-    //! sample layout -- packed, planar:
-    TAudioChannelFormat channelFormat_;
+    inline bool is_planar_format() const
+    { return av_sample_fmt_is_planar(sample_format_) == 1; }
+
+    inline AVSampleFormat get_packed_format() const
+    { return av_get_packed_sample_fmt(sample_format_); }
+
+    inline AVSampleFormat get_planar_format() const
+    { return av_get_planar_sample_fmt(sample_format_); }
+
+    //! bytes required to store 1 sample, for 1 channel:
+    inline int get_bytes_per_sample() const
+    { return av_get_bytes_per_sample(sample_format_); }
 
     //! channel layout -- mono, stereo, etc...
-    TAudioChannelLayout channelLayout_;
+    ChannelLayout ch_layout_;
+
+    //! sample format -- 8-bit, 16-bit, float, etc...
+    AVSampleFormat sample_format_;
+
+    //! audio sample rate, Hz:
+    unsigned int sample_rate_;
   };
 
   //----------------------------------------------------------------

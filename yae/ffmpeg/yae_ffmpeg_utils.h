@@ -89,21 +89,6 @@ namespace yae
   lookup_sink(AVFilterContext * filter, const char * name);
 
   //----------------------------------------------------------------
-  // ffmpeg_to_yae
-  //
-  YAE_API bool
-  ffmpeg_to_yae(enum AVSampleFormat givenFormat,
-                TAudioSampleFormat & sampleFormat,
-                TAudioChannelFormat & channelFormat);
-
-  //----------------------------------------------------------------
-  // yae_to_ffmpeg
-  //
-  YAE_API enum AVSampleFormat
-  yae_to_ffmpeg(TAudioSampleFormat sampleFormat,
-                TAudioChannelFormat channelFormat);
-
-  //----------------------------------------------------------------
   // getTrackLang
   //
   YAE_API const char *

@@ -1403,10 +1403,10 @@ namespace yae
 
     if (reader->getAudioTraits(native))
     {
-      if (getNumberOfChannels(native.channelLayout_) > 2 &&
+      if (native.ch_layout_.nb_channels > 2 &&
           downmix_to_stereo_.get())
       {
-        native.channelLayout_ = kAudioStereo;
+        native.ch_layout_.set_default_layout(2);
       }
 
       AudioTraits supported;

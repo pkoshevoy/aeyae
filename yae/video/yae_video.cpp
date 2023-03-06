@@ -114,100 +114,19 @@ namespace yae
     return nsubs + 4;
   }
 
-  //----------------------------------------------------------------
-  // getBitsPerSample
-  //
-  unsigned int
-  getBitsPerSample(TAudioSampleFormat sampleFormat)
-  {
-    switch (sampleFormat)
-    {
-      case kAudio8BitOffsetBinary:
-        return 8;
-
-      case kAudio16BitBigEndian:
-      case kAudio16BitLittleEndian:
-        return 16;
-
-      case kAudio24BitLittleEndian:
-        return 24;
-
-      case kAudio32BitFloat:
-      case kAudio32BitBigEndian:
-      case kAudio32BitLittleEndian:
-        return 32;
-
-      case kAudio64BitDouble:
-        return 64;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return 0;
-  }
 
   //----------------------------------------------------------------
-  // getNumberOfChannels
+  // ChannelLayout::describe
   //
-  unsigned int
-  getNumberOfChannels(TAudioChannelLayout channelLayout)
+  std::string
+  ChannelLayout::describe() const
   {
-    switch (channelLayout)
-    {
-      case kAudioMono:
-        return 1;
-
-      case kAudioStereo:
-        return 2;
-
-      case kAudio2Pt1:
-        return 3;
-
-      case kAudioQuad:
-        return 4;
-
-      case kAudio4Pt1:
-        return 5;
-
-      case kAudio5Pt1:
-        return 6;
-
-      case kAudio6Pt1:
-        return 7;
-
-      case kAudio7Pt1:
-        return 8;
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return 0;
+    std::string desc(512, 0);
+    int n = av_channel_layout_describe(this, &desc[0], desc.size());
+    desc.resize(n);
+    return desc;
   }
 
-  //----------------------------------------------------------------
-  // AudioTraits::AudioTraits
-  //
-  AudioTraits::AudioTraits()
-  {
-    memset(this, 0, sizeof(AudioTraits));
-
-    sampleFormat_ = kAudioInvalidFormat;
-    channelFormat_ = kAudioChannelFormatInvalid;
-    channelLayout_ = kAudioChannelLayoutInvalid;
-  }
-
-  //----------------------------------------------------------------
-  // AudioTraits::operator
-  //
-  bool
-  AudioTraits::operator == (const AudioTraits & at) const
-  {
-    return memcmp(this, &at, sizeof(AudioTraits)) == 0;
-  }
 
   //----------------------------------------------------------------
   // VideoTraits::VideoTraits
@@ -749,10 +668,10 @@ namespace yae
   std::size_t
   TAudioFrame::numSamples() const
   {
-    unsigned int sampleSize = getBitsPerSample(traits_.sampleFormat_) / 8;
+    unsigned int sampleSize = traits_.get_bytes_per_sample();
     YAE_ASSERT(sampleSize > 0);
 
-    int channels = getNumberOfChannels(traits_.channelLayout_);
+    int channels = traits_.ch_layout_.nb_channels;
     YAE_ASSERT(channels > 0);
 
     std::size_t bytesPerSample = channels * sampleSize;
@@ -768,7 +687,7 @@ namespace yae
   TAudioFrame::durationInSeconds() const
   {
     std::size_t samples = numSamples();
-    double sec = double(samples) / double(traits_.sampleRate_);
+    double sec = double(samples) / double(traits_.sample_rate_);
     return sec;
   }
 

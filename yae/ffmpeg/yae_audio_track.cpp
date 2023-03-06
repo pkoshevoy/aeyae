@@ -71,11 +71,6 @@ namespace yae
     if (ctx)
     {
       samplesDecoded_ = 0;
-
-      if (!ctx->channel_layout)
-      {
-        ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
-      }
     }
 
     return ctx;
@@ -88,11 +83,8 @@ namespace yae
   AudioTrack::decoderStartup()
   {
     output_ = override_;
-
-    outputChannels_ = getNumberOfChannels(output_.channelLayout_);
-
-    outputBytesPerSample_ =
-      outputChannels_ * getBitsPerSample(output_.sampleFormat_) / 8;
+    outputChannels_ = output_.ch_layout_.nb_channels;
+    outputBytesPerSample_ = outputChannels_ * output_.get_bytes_per_sample();
 
     if (!getTraits(native_))
     {
@@ -143,12 +135,6 @@ namespace yae
       // shortcuts:
       const AVFrame & decoded = decodedFrame.get();
 
-      enum AVSampleFormat outputFormat =
-        yae_to_ffmpeg(output_.sampleFormat_, output_.channelFormat_);
-
-      int64 outputChannelLayout =
-        av_get_default_channel_layout(outputChannels_);
-
       // assemble output audio frame
       if (decoded.nb_samples)
       {
@@ -174,27 +160,27 @@ namespace yae
           }
         }
 
-        if (!copied.channel_layout)
-        {
-          copied.channel_layout =
-            av_get_default_channel_layout(copied.channels);
-        }
-
         const char * filterChain = NULL;
         bool frameTraitsChanged = false;
-        if (!filterGraph_.setup(// input format:
-                                stream_->time_base,
-                                (enum AVSampleFormat)copied.format,
-                                copied.sample_rate,
-                                copied.channel_layout,
+        if (filterGraph_.setup(// input format:
+                               stream_->time_base,
+                               (enum AVSampleFormat)copied.format,
+                               copied.sample_rate,
+                               copied.ch_layout,
 
-                                // output format:
-                                outputFormat,
-                                output_.sampleRate_,
-                                outputChannelLayout,
+                               // output format:
+                               output_.sample_format_,
+                               output_.sample_rate_,
+                               output_.ch_layout_,
 
-                                filterChain,
-                                &frameTraitsChanged))
+                               filterChain,
+                               &frameTraitsChanged))
+        {
+          yae_ilog("AudioTrack filters: %s",
+                   filterGraph_.get_filters().c_str());
+
+        }
+        else if (!filterGraph_.is_valid())
         {
           YAE_ASSERT(false);
           return;
@@ -263,7 +249,7 @@ namespace yae
 
       if (!gotPTS)
       {
-        af.time_.base_ = output_.sampleRate_;
+        af.time_.base_ = output_.sample_rate_;
         af.time_.time_ = samplesDecoded_ - numOutputSamples;
         af.time_ += TTime(startTime_, stream_->time_base.den);
 
@@ -274,7 +260,7 @@ namespace yae
       if (!gotPTS && hasPrevPTS_)
       {
         af.time_ = prevPTS_;
-        af.time_ += TTime(prevNumSamples_, output_.sampleRate_);
+        af.time_ += TTime(prevNumSamples_, output_.sample_rate_);
 
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
                             "audio t_prev + n_prev");
@@ -319,7 +305,7 @@ namespace yae
       // make sure the frame is in the in/out interval:
       if (playbackEnabled_)
       {
-        double dt = double(numOutputSamples) / double(output_.sampleRate_);
+        double dt = double(numOutputSamples) / double(output_.sample_rate_);
         bool after_out_point = posOut_->lt(af);
         bool before_in_point = posIn_->gt(af, dt);
         if (after_out_point || before_in_point)
@@ -453,42 +439,42 @@ namespace yae
       tempoFilter_ = NULL;
     }
 
-    unsigned int bitsPerSample = getBitsPerSample(native_.sampleFormat_);
-    nativeChannels_ = getNumberOfChannels(native_.channelLayout_);
-    nativeBytesPerSample_ = (nativeChannels_ * bitsPerSample / 8);
+    nativeChannels_ = native_.ch_layout_.nb_channels;
+    nativeBytesPerSample_ = nativeChannels_ * native_.get_bytes_per_sample();
 
     // initialize the tempo filter:
     {
       boost::lock_guard<boost::mutex> lock(tempoMutex_);
       YAE_ASSERT(!tempoFilter_);
 
-      if ((output_.channelFormat_ != kAudioChannelsPlanar ||
-           output_.channelLayout_ == kAudioMono))
+      AVSampleFormat packed_sample_format = output_.get_packed_format();
+      if ((output_.is_packed_format() ||
+           output_.ch_layout_.nb_channels == 1))
       {
-        if (output_.sampleFormat_ == kAudio8BitOffsetBinary)
+        if (packed_sample_format == AV_SAMPLE_FMT_U8)
         {
           tempoFilter_ = new TAudioTempoFilterU8();
         }
-        else if (output_.sampleFormat_ == kAudio16BitNative)
+        else if (packed_sample_format == AV_SAMPLE_FMT_S16)
         {
           tempoFilter_ = new TAudioTempoFilterI16();
         }
-        else if (output_.sampleFormat_ == kAudio32BitNative)
+        else if (packed_sample_format == AV_SAMPLE_FMT_S32)
         {
           tempoFilter_ = new TAudioTempoFilterI32();
         }
-        else if (output_.sampleFormat_ == kAudio32BitFloat)
+        else if (packed_sample_format == AV_SAMPLE_FMT_FLT)
         {
           tempoFilter_ = new TAudioTempoFilterF32();
         }
-        else if (output_.sampleFormat_ == kAudio64BitDouble)
+        else if (packed_sample_format == AV_SAMPLE_FMT_DBL)
         {
           tempoFilter_ = new TAudioTempoFilterF64();
         }
 
         if (tempoFilter_)
         {
-          tempoFilter_->reset(output_.sampleRate_, outputChannels_);
+          tempoFilter_->reset(output_.sample_rate_, outputChannels_);
           tempoFilter_->setTempo(tempo_);
 
           std::size_t fragmentSize = tempoFilter_->fragmentSize();
@@ -510,104 +496,14 @@ namespace yae
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
-    AVSampleFormat sampleFormat = (AVSampleFormat)(codecParams.format);
-
-    switch (sampleFormat)
-    {
-      case AV_SAMPLE_FMT_U8:
-      case AV_SAMPLE_FMT_U8P:
-        t.sampleFormat_ = kAudio8BitOffsetBinary;
-        break;
-
-      case AV_SAMPLE_FMT_S16:
-      case AV_SAMPLE_FMT_S16P:
-#ifdef __BIG_ENDIAN__
-        t.sampleFormat_ = kAudio16BitBigEndian;
-#else
-        t.sampleFormat_ = kAudio16BitLittleEndian;
-#endif
-        break;
-
-      case AV_SAMPLE_FMT_S32:
-      case AV_SAMPLE_FMT_S32P:
-#ifdef __BIG_ENDIAN__
-        t.sampleFormat_ = kAudio32BitBigEndian;
-#else
-        t.sampleFormat_ = kAudio32BitLittleEndian;
-#endif
-        break;
-
-      case AV_SAMPLE_FMT_FLT:
-      case AV_SAMPLE_FMT_FLTP:
-        t.sampleFormat_ = kAudio32BitFloat;
-        break;
-
-      default:
-        t.sampleFormat_ = kAudioInvalidFormat;
-        break;
-    }
-
-    switch (codecParams.channels)
-    {
-      case 1:
-        t.channelLayout_ = kAudioMono;
-        break;
-
-      case 2:
-        t.channelLayout_ = kAudioStereo;
-        break;
-
-      case 3:
-        t.channelLayout_ = kAudio2Pt1;
-        break;
-
-      case 4:
-        t.channelLayout_ = kAudioQuad;
-        break;
-
-      case 5:
-        t.channelLayout_ = kAudio4Pt1;
-        break;
-
-      case 6:
-        t.channelLayout_ = kAudio5Pt1;
-        break;
-
-      case 7:
-        t.channelLayout_ = kAudio6Pt1;
-        break;
-
-      case 8:
-        t.channelLayout_ = kAudio7Pt1;
-        break;
-
-      default:
-        t.channelLayout_ = kAudioChannelLayoutInvalid;
-        break;
-    }
-
-    //! audio sample rate, Hz:
-    t.sampleRate_ = codecParams.sample_rate;
-
-    //! packed, planar:
-    switch (sampleFormat)
-    {
-      case AV_SAMPLE_FMT_U8P:
-      case AV_SAMPLE_FMT_S16P:
-      case AV_SAMPLE_FMT_S32P:
-      case AV_SAMPLE_FMT_FLTP:
-        t.channelFormat_ = kAudioChannelsPlanar;
-        break;
-
-      default:
-        t.channelFormat_ = kAudioChannelsPacked;
-        break;
-    }
+    av_channel_layout_copy(&t.ch_layout_, &codecParams.ch_layout);
+    t.sample_rate_ = codecParams.sample_rate;
+    t.sample_format_ = (AVSampleFormat)(codecParams.format);
 
     return
-      t.sampleRate_ > 0 &&
-      t.sampleFormat_ != kAudioInvalidFormat &&
-      t.channelLayout_ != kAudioChannelLayoutInvalid;
+      t.sample_rate_ > 0 &&
+      t.sample_format_ > AV_SAMPLE_FMT_NONE &&
+      t.ch_layout_.nb_channels > 0;
   }
 
   //----------------------------------------------------------------

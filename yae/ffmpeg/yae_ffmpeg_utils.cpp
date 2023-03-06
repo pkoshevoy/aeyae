@@ -206,105 +206,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ffmpeg_to_yae
-  //
-  bool
-  ffmpeg_to_yae(enum AVSampleFormat givenFormat,
-                TAudioSampleFormat & sampleFormat,
-                TAudioChannelFormat & channelFormat)
-  {
-    channelFormat =
-      (givenFormat == AV_SAMPLE_FMT_U8  ||
-       givenFormat == AV_SAMPLE_FMT_S16 ||
-       givenFormat == AV_SAMPLE_FMT_S32 ||
-       givenFormat == AV_SAMPLE_FMT_FLT ||
-       givenFormat == AV_SAMPLE_FMT_DBL) ?
-      kAudioChannelsPacked : kAudioChannelsPlanar;
-
-    switch (givenFormat)
-    {
-      case AV_SAMPLE_FMT_U8:
-      case AV_SAMPLE_FMT_U8P:
-        sampleFormat = kAudio8BitOffsetBinary;
-        break;
-
-      case AV_SAMPLE_FMT_S16:
-      case AV_SAMPLE_FMT_S16P:
-#ifdef __BIG_ENDIAN__
-        sampleFormat = kAudio16BitBigEndian;
-#else
-        sampleFormat = kAudio16BitLittleEndian;
-#endif
-        break;
-
-      case AV_SAMPLE_FMT_S32:
-      case AV_SAMPLE_FMT_S32P:
-#ifdef __BIG_ENDIAN__
-        sampleFormat = kAudio32BitBigEndian;
-#else
-        sampleFormat = kAudio32BitLittleEndian;
-#endif
-        break;
-
-      case AV_SAMPLE_FMT_FLT:
-      case AV_SAMPLE_FMT_FLTP:
-        sampleFormat = kAudio32BitFloat;
-        break;
-
-      case AV_SAMPLE_FMT_DBL:
-      case AV_SAMPLE_FMT_DBLP:
-        sampleFormat = kAudio64BitDouble;
-        break;
-
-      default:
-        channelFormat = kAudioChannelFormatInvalid;
-        sampleFormat = kAudioInvalidFormat;
-        return false;
-    }
-
-    return true;
-  }
-
-  //----------------------------------------------------------------
-  // yae_to_ffmpeg
-  //
-  enum AVSampleFormat
-  yae_to_ffmpeg(TAudioSampleFormat sampleFormat,
-                TAudioChannelFormat channelFormat)
-  {
-    bool planar = channelFormat == kAudioChannelsPlanar;
-
-    switch (sampleFormat)
-    {
-      case kAudio8BitOffsetBinary:
-        return (planar ? AV_SAMPLE_FMT_U8P : AV_SAMPLE_FMT_U8);
-
-      case kAudio16BitBigEndian:
-      case kAudio16BitLittleEndian:
-        YAE_ASSERT(sampleFormat == kAudio16BitNative);
-        return (planar ? AV_SAMPLE_FMT_S16P : AV_SAMPLE_FMT_S16);
-
-      case kAudio32BitBigEndian:
-      case kAudio32BitLittleEndian:
-        YAE_ASSERT(sampleFormat == kAudio32BitNative);
-        return (planar ? AV_SAMPLE_FMT_S32P : AV_SAMPLE_FMT_S32);
-
-      case kAudio32BitFloat:
-        return (planar ? AV_SAMPLE_FMT_FLTP : AV_SAMPLE_FMT_FLT);
-
-      case kAudio64BitDouble:
-        return (planar ? AV_SAMPLE_FMT_DBLP : AV_SAMPLE_FMT_DBL);
-
-      default:
-        break;
-    }
-
-    YAE_ASSERT(false);
-    return AV_SAMPLE_FMT_NONE;
-  }
-
-
-  //----------------------------------------------------------------
   // getTrackLang
   //
   const char *
@@ -521,8 +422,11 @@ namespace yae
         dst.format = src.format;
         dst.width = src.width;
         dst.height = src.height;
+        av_channel_layout_copy(&dst.ch_layout, &src.ch_layout);
+        YAE_DISABLE_DEPRECATION_WARNINGS;
         dst.channels = src.channels;
         dst.channel_layout = src.channel_layout;
+        YAE_ENABLE_DEPRECATION_WARNINGS;
         dst.nb_samples = src.nb_samples;
         av_frame_copy_props(&dst, &src);
       }
@@ -785,7 +689,9 @@ namespace yae
                                      align);
 
     frame_->format = sample_fmt;
+    YAE_DISABLE_DEPRECATION_WARNINGS;
     frame_->channels = nb_channels;
+    YAE_ENABLE_DEPRECATION_WARNINGS;
     frame_->nb_samples = nb_samples;
 
     return err;

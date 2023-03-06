@@ -3337,8 +3337,8 @@ namespace yae
       AudioTraits traits;
       audio->getTraits(traits);
 
-      oss << ", " << traits.sampleRate_ << " Hz"
-          << ", " << int(traits.channelLayout_) << " channels";
+      oss << ", " << traits.sample_rate_ << " Hz"
+          << ", " << traits.ch_layout_.nb_channels << " channels";
     }
 
     Item & row = prog.addNew<Item>(str("track_", track_id).c_str());

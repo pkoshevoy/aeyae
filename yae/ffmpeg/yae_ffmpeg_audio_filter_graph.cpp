@@ -55,17 +55,14 @@ namespace yae
     srcTimeBase_.num = 0;
     srcTimeBase_.den = 1;
 
-    srcSampleFmt_    = AV_SAMPLE_FMT_NONE;
-    dstSampleFmt_[0] = AV_SAMPLE_FMT_NONE;
-    dstSampleFmt_[1] = AV_SAMPLE_FMT_NONE;
+    srcSampleFmt_ = AV_SAMPLE_FMT_NONE;
+    dstSampleFmt_ = AV_SAMPLE_FMT_NONE;
 
-    srcSampleRate_    = -1;
-    dstSampleRate_[0] = -1;
-    dstSampleRate_[1] = -1;
+    srcSampleRate_ = -1;
+    dstSampleRate_ = -1;
 
-    srcChannelLayout_    = -1;
-    dstChannelLayout_[0] = -1;
-    dstChannelLayout_[1] = -1;
+    srcChannelLayout_.set_default_layout(0);
+    dstChannelLayout_.set_default_layout(0);
   }
 
   //----------------------------------------------------------------
@@ -76,12 +73,12 @@ namespace yae
                           const AVRational & srcTimeBase,
                           enum AVSampleFormat srcSampleFmt,
                           int srcSampleRate,
-                          int64 srcChannelLayout,
+                          const AVChannelLayout & srcChannelLayout,
 
                           // output format:
                           enum AVSampleFormat dstSampleFmt,
                           int dstSampleRate,
-                          int64 dstChannelLayout,
+                          const AVChannelLayout & dstChannelLayout,
 
                           const char * filterChain,
                           bool * frameTraitsChanged)
@@ -90,9 +87,9 @@ namespace yae
     bool sameTraits = (srcSampleRate_ == srcSampleRate &&
                        srcChannelLayout_ == srcChannelLayout &&
                        srcSampleFmt_ == srcSampleFmt &&
-                       dstSampleRate_[0] == dstSampleRate &&
-                       dstSampleFmt_[0] == dstSampleFmt &&
-                       dstChannelLayout_[0] == dstChannelLayout &&
+                       dstSampleRate_ == dstSampleRate &&
+                       dstSampleFmt_ == dstSampleFmt &&
+                       dstChannelLayout_ == dstChannelLayout &&
                        filterChain_ == filterChain);
 
     if (frameTraitsChanged)
@@ -102,51 +99,55 @@ namespace yae
 
     if (sameTraits)
     {
-      return true;
+      return false;
     }
 
     reset();
 
     srcTimeBase_ = srcTimeBase;
 
-    srcSampleFmt_    = srcSampleFmt;
-    dstSampleFmt_[0] = dstSampleFmt;
+    srcSampleFmt_ = srcSampleFmt;
+    dstSampleFmt_ = dstSampleFmt;
 
-    srcSampleRate_    = srcSampleRate;
-    dstSampleRate_[0] = dstSampleRate;
+    srcSampleRate_ = srcSampleRate;
+    dstSampleRate_ = dstSampleRate;
 
-    srcChannelLayout_    = srcChannelLayout;
-    dstChannelLayout_[0] = dstChannelLayout;
+    srcChannelLayout_ = srcChannelLayout;
+    dstChannelLayout_ = dstChannelLayout;
 
-    std::string filters;
+    filters_.clear();
     {
       std::ostringstream os;
 
-      const char * srcSampleFmtTxt = av_get_sample_fmt_name(srcSampleFmt_);
+      std::string src_layout = srcChannelLayout_.describe();
+      const char * src_format = av_get_sample_fmt_name(srcSampleFmt_);
+
       os << "abuffer"
          << "=time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
          << ":sample_rate=" << srcSampleRate_
-         << ":sample_fmt=" << srcSampleFmtTxt
-         << ":channel_layout=0x" << std::hex << srcChannelLayout << std::dec;
+         << ":sample_fmt=" << src_format
+         << ":channel_layout=" << src_layout;
 
       if (filterChain && *filterChain && std::strcmp(filterChain, "anull") != 0)
       {
         os << ',' << filterChain;
       }
 
-      const char * dstSampleFmtTxt = av_get_sample_fmt_name(dstSampleFmt);
+      std::string dst_layout = dstChannelLayout_.describe();
+      const char * dst_format = av_get_sample_fmt_name(dstSampleFmt);
+
       os << ",aformat"
-         << "=sample_fmts=" << dstSampleFmtTxt
-         << ":sample_rates=" << dstSampleRate
-         << ":channel_layouts=0x" << std::hex << dstChannelLayout << std::dec
+         << "=sample_rates=" << dstSampleRate_
+         << ":sample_fmts=" << dst_format
+         << ":channel_layouts=" << dst_layout
          << ",abuffersink";
 
-      filters = os.str().c_str();
+      filters_ = os.str().c_str();
       filterChain_ = filterChain;
     }
 
     graph_ = avfilter_graph_alloc();
-    int err = avfilter_graph_parse2(graph_, filters.c_str(), &in_, &out_);
+    int err = avfilter_graph_parse2(graph_, filters_.c_str(), &in_, &out_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);

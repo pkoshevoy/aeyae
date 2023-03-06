@@ -117,7 +117,7 @@ namespace yae
       outAtts = srcAtts;
     }
 
-    if (outAtts.sampleFormat_ == kAudioInvalidFormat)
+    if (outAtts.is_invalid_format())
     {
       return;
     }
@@ -128,19 +128,19 @@ namespace yae
       return;
     }
 
-    if (srcAtts.channelFormat_ == kAudioChannelsPlanar)
+    if (srcAtts.is_planar_format())
     {
       // packed sample format is preferred:
-      outAtts.channelFormat_ = kAudioChannelsPacked;
+      outAtts.sample_format_ = srcAtts.get_packed_format();
     }
 
     const PaHostApiInfo * host = Pa_GetHostApiInfo(Pa_GetDefaultHostApi());
     const PaDeviceInfo * devInfo = Pa_GetDeviceInfo(host->defaultOutputDevice);
 
-    int sourceChannels = getNumberOfChannels(srcAtts.channelLayout_);
+    int sourceChannels = srcAtts.ch_layout_.nb_channels;
     if (devInfo->maxOutputChannels < sourceChannels)
     {
-      outAtts.channelLayout_ = TAudioChannelLayout(devInfo->maxOutputChannels);
+      outAtts.ch_layout_.set_default_layout(devInfo->maxOutputChannels);
     }
 
     // test the configuration:
@@ -160,21 +160,21 @@ namespace yae
         break;
       }
 
-      if (outAtts.sampleRate_ != devInfo->defaultSampleRate)
+      if (outAtts.sample_rate_ != devInfo->defaultSampleRate)
       {
-        outAtts.sampleRate_ = (unsigned int)(devInfo->defaultSampleRate);
+        outAtts.sample_rate_ = (unsigned int)(devInfo->defaultSampleRate);
       }
-      else if (outAtts.channelLayout_ > kAudioStereo)
+      else if (outAtts.ch_layout_.nb_channels > 2)
       {
-        outAtts.channelLayout_ = kAudioStereo;
+        outAtts.ch_layout_.set_default_layout(2);
       }
-      else if (outAtts.channelLayout_ > kAudioMono)
+      else if (outAtts.ch_layout_.nb_channels > 1)
       {
-        outAtts.channelLayout_ = kAudioMono;
+        outAtts.ch_layout_.set_default_layout(1);
       }
       else
       {
-        outAtts.channelLayout_ = kAudioChannelLayoutInvalid;
+        outAtts.ch_layout_.set_default_layout(0);
         break;
       }
     }
@@ -247,7 +247,7 @@ namespace yae
              PaStreamCallback streamCallback,
              void * userData)
   {
-    if (atts.sampleFormat_ == kAudioInvalidFormat)
+    if (atts.is_invalid_format())
     {
       return false;
     }
@@ -262,29 +262,24 @@ namespace yae
     }
 
     outputParams->hostApiSpecificStreamInfo = NULL;
-    outputParams->channelCount = getNumberOfChannels(atts.channelLayout_);
+    outputParams->channelCount = atts.ch_layout_.nb_channels;
 
-    switch (atts.sampleFormat_)
+    AVSampleFormat packed_sample_format = atts.get_packed_format();
+    switch (packed_sample_format)
     {
-      case kAudio8BitOffsetBinary:
+      case AV_SAMPLE_FMT_U8:
         outputParams->sampleFormat = paUInt8;
         break;
 
-      case kAudio16BitBigEndian:
-      case kAudio16BitLittleEndian:
+      case AV_SAMPLE_FMT_S16:
         outputParams->sampleFormat = paInt16;
         break;
 
-      case kAudio32BitBigEndian:
-      case kAudio32BitLittleEndian:
+      case AV_SAMPLE_FMT_S32:
         outputParams->sampleFormat = paInt32;
         break;
 
-      case kAudio24BitLittleEndian:
-        outputParams->sampleFormat = paInt24;
-        break;
-
-      case kAudio32BitFloat:
+      case AV_SAMPLE_FMT_FLT:
         outputParams->sampleFormat = paFloat32;
         break;
 
@@ -292,7 +287,7 @@ namespace yae
         return false;
     }
 
-    if (atts.channelFormat_ == kAudioChannelsPlanar)
+    if (atts.is_planar_format())
     {
       outputParams->sampleFormat |= paNonInterleaved;
     }
@@ -301,7 +296,7 @@ namespace yae
                                            0,
                                            outputParams->channelCount,
                                            outputParams->sampleFormat,
-                                           double(atts.sampleRate_),
+                                           double(atts.sample_rate_),
                                            paFramesPerBufferUnspecified,
                                            streamCallback,
                                            userData);

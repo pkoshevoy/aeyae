@@ -4035,8 +4035,8 @@ namespace yae
       {
         trackName +=
           tr(", %1 Hz, %2 channels").
-          arg(traits.sampleRate_).
-          arg(getNumberOfChannels(traits.channelLayout_));
+          arg(traits.sample_rate_).
+          arg(traits.ch_layout_.nb_channels);
       }
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
@@ -4401,18 +4401,18 @@ namespace yae
      AudioTraits native;
      if (reader->getAudioTraits(native))
      {
-       if (getNumberOfChannels(native.channelLayout_) > 2 &&
+       if (native.ch_layout_.nb_channels > 2 &&
            actionDownmixToStereo->isChecked())
        {
-         native.channelLayout_ = kAudioStereo;
+         native.ch_layout_.set_default_layout(2);
        }
 
        AudioTraits supported;
        audioRenderer_->match(native, supported);
 
 #if 0
-       yae_debug << "supported: " << supported.channelLayout_
-                 << ", required:  " << native.channelLayout_;
+       yae_debug << "supported: " << supported.ch_layout_.describe()
+                 << ", required:  " << native.ch_layout_.describe();
 #endif
 
        reader->setAudioTraitsOverride(supported);

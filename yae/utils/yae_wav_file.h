@@ -79,10 +79,10 @@ namespace yae
 
     bool open(const char * fn, const AudioTraits & atts)
     {
-      int nchan = getNumberOfChannels(atts.channelLayout_);
-      int sampleRate = (unsigned int)(atts.sampleRate_);
-      int bitsPerSample = getBitsPerSample(atts.sampleFormat_);
-      bool floatSamples = atts.sampleFormat_ == kAudio32BitFloat;
+      int nchan = atts.ch_layout_.nb_channels;
+      int sampleRate = (unsigned int)(atts.sample_rate_);
+      int bitsPerSample = atts.get_bytes_per_sample() * 8;
+      bool floatSamples = atts.sample_format_ == AV_SAMPLE_FMT_FLT;
       return open(fn, nchan, sampleRate, bitsPerSample, floatSamples);
     }
 

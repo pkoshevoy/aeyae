@@ -79,7 +79,7 @@ namespace yae
       return false;
     }
 
-    sampleSize_ = getBitsPerSample(atts.sampleFormat_) / 8;
+    sampleSize_ = atts.get_bytes_per_sample();
     terminator_.stopWaiting(false);
     return true;
   }
@@ -155,7 +155,7 @@ namespace yae
         TTime(std::size_t(double(audioFrameOffset_) *
                           audioFrame_->tempo_ +
                           0.5),
-              audioFrame_->traits_.sampleRate_);
+              audioFrame_->traits_.sample_rate_);
     }
     else
     {
@@ -181,11 +181,11 @@ namespace yae
       if (audioFrame_)
       {
         unsigned int srcSampleSize =
-          getBitsPerSample(audioFrame_->traits_.sampleFormat_) / 8;
+          audioFrame_->traits_.get_bytes_per_sample();
         YAE_ASSERT(srcSampleSize > 0);
 
         int srcChannels =
-          getNumberOfChannels(audioFrame_->traits_.channelLayout_);
+          audioFrame_->traits_.ch_layout_.nb_channels;
         YAE_ASSERT(srcChannels > 0);
 
         std::size_t bytesPerSample = srcSampleSize * srcChannels;
@@ -193,7 +193,7 @@ namespace yae
         std::size_t numSamples = (bytesPerSample ?
                                   srcFrameSize / bytesPerSample :
                                   0);
-        unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
+        unsigned int sampleRate = audioFrame_->traits_.sample_rate_;
 
         TTime frameDuration(numSamples * audioFrame_->tempo_, sampleRate);
         TTime frameEnd = audioFrame_->time_ + frameDuration;
@@ -319,15 +319,13 @@ namespace yae
       return;
     }
 
-    unsigned int srcSampleSize =
-      getBitsPerSample(audioFrame_->traits_.sampleFormat_) / 8;
+    unsigned int srcSampleSize = audioFrame_->traits_.get_bytes_per_sample();
     YAE_ASSERT(srcSampleSize > 0);
 
-    int srcChannels =
-      getNumberOfChannels(audioFrame_->traits_.channelLayout_);
+    int srcChannels = audioFrame_->traits_.ch_layout_.nb_channels;
     YAE_ASSERT(srcChannels > 0);
 
-    unsigned int sampleRate = audioFrame_->traits_.sampleRate_;
+    unsigned int sampleRate = audioFrame_->traits_.sample_rate_;
     TTime frameDuration(samplesToRead, sampleRate);
 
     while (dstChunkSize)
@@ -344,13 +342,13 @@ namespace yae
 
       const AudioTraits & t = audioFrame_->traits_;
 
-      srcSampleSize = getBitsPerSample(t.sampleFormat_) / 8;
+      srcSampleSize = t.get_bytes_per_sample();
       YAE_ASSERT(srcSampleSize > 0);
 
-      srcChannels = getNumberOfChannels(t.channelLayout_);
+      srcChannels = t.ch_layout_.nb_channels;
       YAE_ASSERT(srcChannels > 0);
 
-      bool srcPlanar = t.channelFormat_ == kAudioChannelsPlanar;
+      bool srcPlanar = t.is_planar_format();
 
       bool detectedStaleFrame =
         (dstChannelCount != srcChannels ||

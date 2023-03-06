@@ -10,7 +10,8 @@
 #define YAE_FFMPEG_AUDIO_FILTER_GRAPH_H_
 
 // aeyae:
-#include "../api/yae_api.h"
+#include "yae/api/yae_api.h"
+#include "yae/video/yae_video.h"
 
 // standard C++ library:
 #include <string>
@@ -21,8 +22,10 @@ extern "C"
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
+#include <libavutil/channel_layout.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
+#include <libavutil/samplefmt.h>
 }
 
 
@@ -39,16 +42,19 @@ namespace yae
 
     void reset();
 
+    // return true if the graph setup was updated,
+    // return false if the graph has not changed or failed:
+    //
     bool setup(// input format:
                const AVRational & srcTimeBase,
                enum AVSampleFormat srcSampleFmt,
                int srcSampleRate,
-               int64 srcChannelLayout,
+               const AVChannelLayout & srcChannelLayout,
 
                // output format:
                enum AVSampleFormat dstSampleFmt,
                int dstSampleRate,
-               int64 dstChannelLayout,
+               const AVChannelLayout & dstChannelLayout,
 
                const char * filterChain = NULL,
                bool * frameTraitsChanged = NULL);
@@ -56,19 +62,26 @@ namespace yae
     bool push(AVFrame * in);
     bool pull(AVFrame * out);
 
+    inline bool is_valid() const
+    { return graph_ && src_ && sink_; }
+
+    inline const std::string & get_filters() const
+    { return filters_; }
+
   protected:
     std::string filterChain_;
+    std::string filters_;
 
     AVRational srcTimeBase_;
 
     enum AVSampleFormat srcSampleFmt_;
-    enum AVSampleFormat dstSampleFmt_[2];
+    enum AVSampleFormat dstSampleFmt_;
 
     int srcSampleRate_;
-    int dstSampleRate_[2];
+    int dstSampleRate_;
 
-    int64 srcChannelLayout_;
-    int64 dstChannelLayout_[2];
+    yae::ChannelLayout srcChannelLayout_;
+    yae::ChannelLayout dstChannelLayout_;
 
     AVFilterContext * src_;
     AVFilterContext * sink_;
