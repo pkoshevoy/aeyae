@@ -1992,6 +1992,8 @@ namespace yae
   bool
   convert_path_to_utf8(const QString & path, std::string & path_utf8)
   {
+    const bool starts_with_file = path.startsWith("file://");
+
     for (std::size_t i = 0; i < kNumNormalizationForms; i++)
     {
       // find UNICODE NORMALIZATION FORM that works
@@ -2001,8 +2003,12 @@ namespace yae
 
       try
       {
-        TOpenFile f(path_utf8.c_str(), "rb");
-        return true;
+        std::string fn = starts_with_file ? path_utf8.substr(7) : path_utf8;
+
+        if (TOpenFile(fn.c_str(), "rb").is_open())
+        {
+          return true;
+        }
       }
       catch (...)
       {}
