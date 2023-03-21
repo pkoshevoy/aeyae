@@ -402,6 +402,7 @@ namespace yae
     return *singleton;
   }
 
+  YAE_DISABLE_DEPRECATION_WARNINGS;
 
   //----------------------------------------------------------------
   // assign_frame
@@ -423,16 +424,16 @@ namespace yae
         dst.width = src.width;
         dst.height = src.height;
         av_channel_layout_copy(&dst.ch_layout, &src.ch_layout);
-        YAE_DISABLE_DEPRECATION_WARNINGS;
         dst.channels = src.channels;
         dst.channel_layout = src.channel_layout;
-        YAE_ENABLE_DEPRECATION_WARNINGS;
+
         dst.nb_samples = src.nb_samples;
         av_frame_copy_props(&dst, &src);
       }
     }
   }
 
+  YAE_ENABLE_DEPRECATION_WARNINGS;
 
   //----------------------------------------------------------------
   // AvFrm::AvFrm
@@ -660,6 +661,8 @@ namespace yae
                                 align);
   }
 
+  YAE_DISABLE_DEPRECATION_WARNINGS;
+
   //----------------------------------------------------------------
   // AvFrm::alloc_samples_buffer
   //
@@ -689,13 +692,13 @@ namespace yae
                                      align);
 
     frame_->format = sample_fmt;
-    YAE_DISABLE_DEPRECATION_WARNINGS;
     frame_->channels = nb_channels;
-    YAE_ENABLE_DEPRECATION_WARNINGS;
     frame_->nb_samples = nb_samples;
 
     return err;
   }
+
+  YAE_ENABLE_DEPRECATION_WARNINGS;
 
   //----------------------------------------------------------------
   // AvFrm::make_writable
