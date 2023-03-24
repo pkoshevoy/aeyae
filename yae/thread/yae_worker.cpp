@@ -95,7 +95,14 @@ namespace yae
   void
   Worker::start()
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    // keep alive the task queue in case it is
+    // replaced while we are accessing it here:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
     if (!stop_)
     {
       return;
@@ -112,17 +119,17 @@ namespace yae
   void
   Worker::stop()
   {
+    // keep alive the task queue in case it is
+    // replaced while we are accessing it here:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
     // tell the thread to stop:
     {
-      boost::unique_lock<boost::mutex> lock(mutex_);
+      boost::unique_lock<boost::mutex> lock(tasks.mutex_);
       stop_ = true;
-
-      // keep alive the task queue in case it is
-      // replaced while we are accessing it here:
-      TTaskQueuePtr task_queue = tasks_;
-
-      // shortcut:
-      TaskQueue & tasks = *task_queue;
 
       for (std::list<yae::shared_ptr<Task> >::iterator
              i = tasks.fifo_.begin(); i != tasks.fifo_.end(); ++i)
@@ -133,6 +140,12 @@ namespace yae
           task_ptr->cancel();
           task_ptr.reset();
         }
+      }
+
+      if (busy_)
+      {
+        busy_->cancel();
+        busy_.reset();
       }
 
       tasks.signal_.notify_all();
@@ -149,7 +162,14 @@ namespace yae
   bool
   Worker::stop_requested() const
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
+    // keep alive the task queue in case it is
+    // replaced while we are accessing it here:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
     return stop_;
   }
 
@@ -222,6 +242,7 @@ namespace yae
 
       if (task)
       {
+        busy_ = task;
         lock.unlock();
 
         try
@@ -238,6 +259,7 @@ namespace yae
         }
 
         lock.lock();
+        busy_.reset();
         YAE_ASSERT(tasks.busy_ > 0);
         tasks.busy_--;
         tasks.signal_.notify_all();

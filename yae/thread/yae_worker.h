@@ -136,10 +136,10 @@ namespace yae
     Worker & operator = (const Worker &);
 
   protected:
-    mutable boost::mutex mutex_;
     std::string name_;
-    TTaskQueuePtr tasks_;
     Thread<Worker> thread_;
+    TTaskQueuePtr tasks_;
+    TTaskPtr busy_;
     bool stop_;
   };
 
