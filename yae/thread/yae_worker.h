@@ -11,6 +11,7 @@
 
 // standard:
 #include <list>
+#include <vector>
 
 // boost libraries:
 #ifndef Q_MOC_RUN
@@ -43,19 +44,78 @@ namespace yae
       virtual bool cancelled() const;
 
     protected:
+      mutable boost::condition_variable signal_;
       mutable boost::mutex mutex_;
       bool cancelled_;
     };
 
-    Worker(unsigned int offset = 0, unsigned int stride = 1);
+    //----------------------------------------------------------------
+    // TTaskPtr
+    //
+    typedef yae::shared_ptr<Task> TTaskPtr;
+
+
+    //----------------------------------------------------------------
+    // TaskQueue
+    //
+    struct YAE_API TaskQueue
+    {
+      TaskQueue(std::size_t limit = 0):
+        limit_(limit),
+        todo_(0),
+        busy_(0)
+      {}
+
+    protected:
+      friend struct yae::Worker;
+
+      mutable boost::mutex mutex_;
+      boost::condition_variable signal_;
+      std::list<TTaskPtr> fifo_;
+
+      // 0 == unlimited:
+      std::size_t limit_;
+
+      // NOTE: the number of waiting and executin tasks
+      // must be less than or equal to the above limit:
+      std::size_t todo_;
+      std::size_t busy_;
+    };
+
+    //----------------------------------------------------------------
+    // TTaskQueuePtr
+    //
+    typedef yae::shared_ptr<TaskQueue> TTaskQueuePtr;
+
+
+    //----------------------------------------------------------------
+    // Worker
+    //
+    Worker(unsigned int offset = 0,
+           unsigned int stride = 1,
+           const std::string & name = std::string(),
+           const TTaskQueuePtr & task_queue = TTaskQueuePtr(),
+           bool start_now = true);
     ~Worker();
 
     void start();
     void stop();
     bool stop_requested() const;
 
+    inline const std::string & name() const
+    { return name_; }
+
+    inline TTaskQueuePtr get_queue() const
+    { return tasks_; }
+
+    // replace current task queue with a given task queue (if different),
+    // return previous task queue:
+    TTaskQueuePtr set_queue(const TTaskQueuePtr & task_queue);
+
     void set_queue_size_limit(std::size_t n);
-    void add(const yae::shared_ptr<Task> & task);
+    std::size_t get_queue_size_limit() const;
+
+    bool add(const yae::shared_ptr<Task> & task);
     void wait_until_finished();
 
     bool is_busy() const;
@@ -77,10 +137,8 @@ namespace yae
 
   protected:
     mutable boost::mutex mutex_;
-    mutable boost::condition_variable signal_;
-    std::size_t limit_;
-    std::size_t count_;
-    std::list<yae::shared_ptr<Task> > todo_;
+    std::string name_;
+    TTaskQueuePtr tasks_;
     Thread<Worker> thread_;
     bool stop_;
   };

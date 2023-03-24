@@ -7,6 +7,9 @@
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 
+// standard:
+#include <memory>
+
 // aeyae:
 #include "yae_worker.h"
 
@@ -51,14 +54,31 @@ namespace yae
   //----------------------------------------------------------------
   // Worker::Worker
   //
-  Worker::Worker(unsigned int offset, unsigned int stride):
+  Worker::Worker(unsigned int offset,
+                 unsigned int stride,
+                 const std::string & name,
+                 const Worker::TTaskQueuePtr & task_queue,
+                 bool start_now):
     offset_(offset),
     stride_(stride),
-    limit_(0),
-    count_(0),
+    name_(name),
+    tasks_(task_queue),
     stop_(true)
   {
-    start();
+    if (name_.empty())
+    {
+      name_ = yae::strfmt("Worker %p", this);
+    }
+
+    if (!tasks_)
+    {
+      tasks_.reset(new TaskQueue());
+    }
+
+    if (start_now)
+    {
+      start();
+    }
   }
 
   //----------------------------------------------------------------
@@ -97,10 +117,17 @@ namespace yae
       boost::unique_lock<boost::mutex> lock(mutex_);
       stop_ = true;
 
+      // keep alive the task queue in case it is
+      // replaced while we are accessing it here:
+      TTaskQueuePtr task_queue = tasks_;
+
+      // shortcut:
+      TaskQueue & tasks = *task_queue;
+
       for (std::list<yae::shared_ptr<Task> >::iterator
-             i = todo_.begin(); i != todo_.end(); ++i)
+             i = tasks.fifo_.begin(); i != tasks.fifo_.end(); ++i)
       {
-        yae::shared_ptr<Task> & task_ptr = *i;
+        TTaskPtr & task_ptr = *i;
         if (task_ptr)
         {
           task_ptr->cancel();
@@ -108,7 +135,7 @@ namespace yae
         }
       }
 
-      signal_.notify_all();
+      tasks.signal_.notify_all();
     }
 
     thread_.interrupt();
@@ -127,63 +154,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Worker::thread_loop
-  //
-  void
-  Worker::thread_loop()
-  {
-    while (true)
-    {
-      boost::unique_lock<boost::mutex> lock(mutex_);
-      while (todo_.empty() && !stop_)
-      {
-        try
-        {
-          signal_.wait(lock);
-        }
-        catch (...)
-        {}
-      }
-
-      if (stop_)
-      {
-        todo_.clear();
-        count_ = 0;
-        signal_.notify_all();
-        break;
-      }
-
-      yae::shared_ptr<Task> task;
-      while (!todo_.empty())
-      {
-        task = todo_.front();
-        if (task)
-        {
-          break;
-        }
-
-        // cleanup cancelled tasks:
-        todo_.pop_front();
-        count_--;
-        signal_.notify_all();
-      }
-
-      if (task)
-      {
-        lock.unlock();
-
-        task->execute(*this);
-
-        lock.lock();
-        todo_.pop_front();
-        YAE_ASSERT(count_ > 0);
-        count_--;
-        signal_.notify_all();
-      }
-    }
-  }
-
-  //----------------------------------------------------------------
   // Worker::interrupt
   //
   void
@@ -193,39 +163,181 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Worker::thread_loop
+  //
+  void
+  Worker::thread_loop()
+  {
+    while (true)
+    {
+      // keep alive the task queue in case it is
+      // replaced while we are accessing it here:
+      TTaskQueuePtr task_queue = tasks_;
+
+      // shortcut:
+      TaskQueue & tasks = *task_queue;
+
+      boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+      while (tasks.fifo_.empty() && !stop_)
+      {
+        try
+        {
+          tasks.signal_.wait(lock);
+        }
+        catch (...)
+        {}
+      }
+
+      if (stop_)
+      {
+        tasks.fifo_.clear();
+        tasks.todo_ = 0;
+        tasks.signal_.notify_all();
+        break;
+      }
+
+      TTaskPtr task;
+      while (!tasks.fifo_.empty())
+      {
+        YAE_ASSERT(tasks.todo_ > 0);
+        task = tasks.fifo_.front();
+        tasks.fifo_.pop_front();
+        tasks.todo_--;
+
+        if (task)
+        {
+          tasks.busy_++;
+        }
+        else
+        {
+          // wake up anyone that was blocked waiting to add another task:
+          tasks.signal_.notify_all();
+        }
+
+        // break out regardless whether we got a task or not,
+        // so that we can refresh the keep_alive copy
+        // of the tasks_ queue, in case it was replaced:
+        break;
+      }
+
+      if (task)
+      {
+        lock.unlock();
+
+        try
+        {
+          task->execute(*this);
+        }
+        catch (const std::exception & e)
+        {
+          yae_elog("%s: task failed, exception: %s", name_.c_str(), e.what());
+        }
+        catch (...)
+        {
+          yae_elog("%s: task failed, unexpected exception", name_.c_str());
+        }
+
+        lock.lock();
+        YAE_ASSERT(tasks.busy_ > 0);
+        tasks.busy_--;
+        tasks.signal_.notify_all();
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Worker::set_queue
+  //
+  Worker::TTaskQueuePtr
+  Worker::set_queue(const Worker::TTaskQueuePtr & task_queue)
+  {
+    YAE_THROW_IF(!task_queue);
+
+    TTaskQueuePtr prev_queue = tasks_;
+    if (task_queue != prev_queue)
+    {
+      tasks_ = task_queue;
+
+      // unblock thread_loop so it would stop waiting on the old task queue:
+      TaskQueue & prev_tasks = *prev_queue;
+      boost::unique_lock<boost::mutex> lock(prev_tasks.mutex_);
+      prev_tasks.fifo_.push_front(TTaskPtr());
+      prev_tasks.todo_++;
+      prev_tasks.signal_.notify_all();
+    }
+
+    return prev_queue;
+  }
+
+  //----------------------------------------------------------------
   // Worker::set_queue_size_limit
   //
   void
   Worker::set_queue_size_limit(std::size_t n)
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    limit_ = n;
-    signal_.notify_all();
+    // keep alive the task queue in case it is
+    // replaced while we are accessing it here:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+    tasks.limit_ = n;
+    tasks.signal_.notify_all();
+  }
+
+  //----------------------------------------------------------------
+  // Worker::get_queue_size_limit
+  //
+  std::size_t
+  Worker::get_queue_size_limit() const
+  {
+    // keep alive the task queue in case it is replaced at runtime:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+    return tasks.limit_;
   }
 
   //----------------------------------------------------------------
   // Worker::add
   //
-  void
+  bool
   Worker::add(const yae::shared_ptr<Task> & task)
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    while (limit_ && limit_ <= count_ && !stop_)
+    // keep alive the task queue in case it is
+    // replaced while we are accessing it here:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+    while (!stop_ &&
+           tasks.limit_ &&
+           tasks.limit_ <= (tasks.todo_ + tasks.busy_))
     {
       try
       {
-        signal_.wait(lock);
+        tasks.signal_.wait(lock);
       }
       catch (...)
       {}
     }
 
-    if (!stop_)
+    if (stop_)
     {
-      todo_.push_back(task);
-      count_++;
-      signal_.notify_all();
+      return false;
     }
+
+    tasks.fifo_.push_back(task);
+    tasks.todo_++;
+    tasks.signal_.notify_all();
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -234,24 +346,41 @@ namespace yae
   void
   Worker::wait_until_finished()
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    while (!todo_.empty())
+    // keep alive the task queue in case it is replaced at runtime:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+    while (true)
     {
-      // clean up cancelled tasks:
-      if (!todo_.front())
+      if (tasks.fifo_.empty())
       {
-        todo_.pop_front();
-        count_--;
+        if (!tasks.busy_)
+        {
+          // done:
+          break;
+        }
+      }
+      else if (!tasks.fifo_.front())
+      {
+        // clean up cancelled tasks:
+        YAE_ASSERT(tasks.todo_ > 0);
+        tasks.fifo_.pop_front();
+        tasks.todo_--;
         continue;
       }
 
       try
       {
-        signal_.wait(lock);
+        tasks.signal_.wait(lock);
       }
       catch (...)
       {}
     }
+
+    YAE_ASSERT(!tasks.todo_ && !tasks.busy_);
   }
 
   //----------------------------------------------------------------
@@ -260,8 +389,14 @@ namespace yae
   bool
   Worker::is_busy() const
   {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    bool has_tasks = count_ > 0;
+    // keep alive the task queue in case it is replaced at runtime:
+    TTaskQueuePtr task_queue = tasks_;
+
+    // shortcut:
+    TaskQueue & tasks = *task_queue;
+
+    boost::unique_lock<boost::mutex> lock(tasks.mutex_);
+    bool has_tasks = (tasks.todo_ + tasks.busy_) > 0;
     return has_tasks;
   }
 
