@@ -1061,7 +1061,7 @@ namespace yae
   // HDHomeRun::tune_to
   //
   bool
-  HDHomeRun::tune_to(const HDHomeRun::TSessionPtr & session_ptr,
+  HDHomeRun::tune_to(const HDHomeRun::TSessionPtr session_ptr,
                      const uint32_t frequency,
                      TunerStatus & status)
   {

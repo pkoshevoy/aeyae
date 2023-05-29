@@ -162,7 +162,7 @@ namespace yae
                              // should not be shared:
                              bool exclusive_session = false);
 
-    bool tune_to(const HDHomeRun::TSessionPtr & session_ptr,
+    bool tune_to(const HDHomeRun::TSessionPtr session_ptr,
                  const uint32_t frequency,
                  TunerStatus & status);
 
