@@ -1667,7 +1667,7 @@ namespace yae
     {
       std::ostringstream oss;
       std::string tuner_name = session_->tuner_name();
-      oss << tuner_name << " " << frequency << "Hz";
+      oss << tuner_name << " " << frequency << " Hz";
 
       std::string channels = dvr_.get_channels_str(frequency_);
       if (!channels.empty())
@@ -2260,7 +2260,7 @@ namespace yae
     dvr.save_epg(frequency, ctx);
     dvr.save_frequencies();
 
-    ctx.dump();
+    // ctx.dump();
 
 #if 0
     // also store it to disk, to help with post-mortem debugging:
@@ -2493,7 +2493,6 @@ namespace yae
         return;
       }
 
-      // FIXME: pkoshevoy: check whether device is enabled in settings:
       const TunerDevicePtr & device_ptr = *i;
       const TunerDevice & device = *device_ptr;
 
@@ -2529,6 +2528,7 @@ namespace yae
       int num_tuners = device.num_tuners();
       for (int tuner = 0; !done && tuner < num_tuners; tuner++)
       {
+        // check whether device is enabled in settings:
         std::string tuner_name = device.tuner_name(tuner);
         if (!yae::has(enabled_tuners, tuner_name))
         {
@@ -3157,7 +3157,7 @@ namespace yae
           }
         }
 
-        yae_ilog("loading EPG for %s Hz", frequency.c_str());
+        yae_ilog("loading EPG for % 9s Hz", frequency.c_str());
         PacketHandler & packet_handler = *packet_handler_ptr;
         packet_handler.ctx_.load(epg[frequency]);
       }
@@ -4375,12 +4375,12 @@ namespace yae
                 signal_to_noise_quality <= other_signal_to_noise_quality)
             {
               // use the other frequency:
-              yae_ilog("will use %s Hz for %i.%i",
+              yae_ilog("will use % 9s Hz for %i.%i",
                        ch_freq.c_str(), major, minor);
             }
             else
             {
-              yae_ilog("will use %s Hz for %i.%i",
+              yae_ilog("will use % 9s Hz for %i.%i",
                        frequency.c_str(), major, minor);
               ch_freq = frequency;
             }
@@ -4407,7 +4407,7 @@ namespace yae
         continue;
       }
 
-      yae_ilog("no channels found at %s Hz", frequency.c_str());
+      yae_ilog("no channels found at % 9s Hz", frequency.c_str());
       frequency_channel_lut_.erase(frequency);
     }
 
@@ -4420,7 +4420,7 @@ namespace yae
         continue;
       }
 
-      yae_ilog("no signal present at %s Hz", frequency.c_str());
+      yae_ilog("no signal present at % 9s Hz", frequency.c_str());
       frequency_channel_lut_.erase(frequency);
     }
 

@@ -881,7 +881,7 @@ namespace yae
         session.set_tuner_status(status);
       }
 
-      yae_ilog("%p %s %sHz: capturing",
+      yae_ilog("%p %s %s Hz: capturing",
                this,
                session.tuner_name_.c_str(),
                frequency.c_str());
@@ -967,7 +967,7 @@ namespace yae
           double time_since_last_packet = (now - time_of_last_packet).sec();
           if (time_since_last_packet > 5.0)
           {
-            yae_elog("%p %s %sHz: no data received within %f sec, "
+            yae_elog("%p %s %s Hz: no data received within %f sec, "
                      "giving up now",
                      this,
                      tuner_name.c_str(),
@@ -982,7 +982,7 @@ namespace yae
     }
     catch (const std::exception & e)
     {
-      yae_wlog("%p %s %sHz: stream failed: %s",
+      yae_wlog("%p %s %s Hz: stream failed: %s",
                this,
                tuner_name.c_str(),
                frequency.c_str(),
@@ -990,7 +990,7 @@ namespace yae
     }
     catch (...)
     {
-      yae_wlog("%p %s %sHz: stream failed: unexpected exception",
+      yae_wlog("%p %s %s Hz: stream failed: unexpected exception",
                this,
                tuner_name.c_str(),
                frequency.c_str());
