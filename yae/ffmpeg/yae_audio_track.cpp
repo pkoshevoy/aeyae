@@ -83,6 +83,14 @@ namespace yae
   AudioTrack::decoderStartup()
   {
     output_ = override_;
+
+    YAE_ASSERT(output_.ch_layout_.u.mask);
+    if (!output_.ch_layout_.u.mask)
+    {
+      av_channel_layout_default(&output_.ch_layout_,
+                                output_.ch_layout_.nb_channels);
+    }
+
     outputChannels_ = output_.ch_layout_.nb_channels;
     outputBytesPerSample_ = outputChannels_ * output_.get_bytes_per_sample();
 
@@ -510,9 +518,9 @@ namespace yae
   // AudioTrack::setTraitsOverride
   //
   bool
-  AudioTrack::setTraitsOverride(const AudioTraits & override)
+  AudioTrack::setTraitsOverride(const AudioTraits & traits)
   {
-    if (compare<AudioTraits>(override_, override) == 0)
+    if (compare<AudioTraits>(override_, traits) == 0)
     {
       // nothing changed:
       return true;
@@ -529,7 +537,7 @@ namespace yae
       thread_.wait();
     }
 
-    override_ = override;
+    override_ = traits;
 
     if (alreadyDecoding)
     {
@@ -544,9 +552,9 @@ namespace yae
   // AudioTrack::getTraitsOverride
   //
   bool
-  AudioTrack::getTraitsOverride(AudioTraits & override) const
+  AudioTrack::getTraitsOverride(AudioTraits & traits) const
   {
-    override = override_;
+    traits = override_;
     return true;
   }
 

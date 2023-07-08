@@ -70,8 +70,8 @@ namespace yae
     bool getTraits(AudioTraits & traits) const;
 
     // use this for audio format conversion (sample rate, channels, etc...)
-    bool setTraitsOverride(const AudioTraits & override);
-    bool getTraitsOverride(AudioTraits & override) const;
+    bool setTraitsOverride(const AudioTraits & traits);
+    bool getTraitsOverride(AudioTraits & traits) const;
 
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TAudioFramePtr & frame, QueueWaitMgr * terminator);

@@ -104,6 +104,12 @@ namespace yae
 
     reset();
 
+    YAE_ASSERT(dstChannelLayout.u.mask);
+    if (!dstChannelLayout.u.mask)
+    {
+      return false;
+    }
+
     srcTimeBase_ = srcTimeBase;
 
     srcSampleFmt_ = srcSampleFmt;
@@ -119,16 +125,25 @@ namespace yae
     {
       std::ostringstream os;
 
-      std::string src_layout = srcChannelLayout_.describe();
       const char * src_format = av_get_sample_fmt_name(srcSampleFmt_);
 
       os << "abuffer"
          << "=time_base=" << srcTimeBase_.num << '/' << srcTimeBase_.den
          << ":sample_rate=" << srcSampleRate_
-         << ":sample_fmt=" << src_format
-         << ":channel_layout=" << src_layout;
+         << ":sample_fmt=" << src_format;
 
-      if (filterChain && *filterChain && std::strcmp(filterChain, "anull") != 0)
+      if (srcChannelLayout_.u.mask)
+      {
+        std::string src_layout = srcChannelLayout_.describe();
+        os << ":channel_layout=" << src_layout;
+      }
+      else
+      {
+        os << ":channels=" << srcChannelLayout_.nb_channels;
+      }
+
+      if (filterChain && *filterChain &&
+          std::strcmp(filterChain, "anull") != 0)
       {
         os << ',' << filterChain;
       }
@@ -148,10 +163,18 @@ namespace yae
 
     graph_ = avfilter_graph_alloc();
     int err = avfilter_graph_parse2(graph_, filters_.c_str(), &in_, &out_);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    if (err < 0)
+    {
+      reset();
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    }
 
     err = avfilter_graph_config(graph_, NULL);
-    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    if (err < 0)
+    {
+      reset();
+      YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    }
 
     src_ = lookup_src(graph_->nb_filters ? graph_->filters[0] : NULL,
                       "abuffer");

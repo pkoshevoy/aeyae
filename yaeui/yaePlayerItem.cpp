@@ -1409,6 +1409,11 @@ namespace yae
         native.ch_layout_.set_default_layout(2);
       }
 
+      if (!native.ch_layout_.u.mask)
+      {
+        native.ch_layout_.set_default_layout(native.ch_layout_.nb_channels);
+      }
+
       AudioTraits supported;
       audio_->match(native, supported);
 
