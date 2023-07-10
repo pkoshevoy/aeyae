@@ -206,6 +206,12 @@ namespace yae
           continue;
         }
 
+        if (al::ends_with(c->name, "_cuvid"))
+        {
+          // ignore it, use nvdec instead:
+          continue;
+        }
+
         if ((c->capabilities & AV_CODEC_CAP_EXPERIMENTAL) ==
             AV_CODEC_CAP_EXPERIMENTAL)
         {

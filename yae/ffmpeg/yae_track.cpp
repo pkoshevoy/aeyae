@@ -466,6 +466,14 @@ namespace yae
         continue;
       }
 
+      if ((AV_CODEC_HW_CONFIG_METHOD_AD_HOC & hw->methods) ==
+          (AV_CODEC_HW_CONFIG_METHOD_AD_HOC))
+      {
+        // methods requiring this sort of configuration are deprecated
+        // and others should be used instead:
+        continue;
+      }
+
       int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
                               AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
       if ((hw->methods & hw_device_frames) == hw_device_frames)

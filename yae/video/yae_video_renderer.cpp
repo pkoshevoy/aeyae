@@ -438,7 +438,7 @@ namespace yae
       if (!frame_a_)
       {
 #if YAE_DEBUG_VIDEO_RENDERER
-        yae_debug << "First FRAME @ " << to_hhmmss_ms(frame);
+        yae_debug << "First FRAME @ " << to_hhmmss_ms(*frame);
 #endif
         frame_a_ = frame;
         frame_b_ = frame;
@@ -454,7 +454,7 @@ namespace yae
       if (t > f0 || frameDuration == 0.0)
       {
 #if YAE_DEBUG_VIDEO_RENDERER
-        yae_debug << "Next FRAME @ " << to_hhmmss_ms(frame_a_);
+        yae_debug << "Next FRAME @ " << to_hhmmss_ms(*frame_a_);
 #endif
         break;
       }
@@ -475,7 +475,7 @@ namespace yae
       tempo = frame_a_->tempo_;
 
 #if YAE_DEBUG_VIDEO_RENDERER
-      yae_debug << "VIDEO (a) SET CLOCK: " << to_hhmmss_ms(frame_a_);
+      yae_debug << "VIDEO (a) SET CLOCK: " << to_hhmmss_ms(*frame_a_);
 #endif
       TTime t = frame_a_->time_;
       double ta = frame_a_->time_.sec();
@@ -494,7 +494,7 @@ namespace yae
       if (canvas_)
       {
 #if YAE_DEBUG_VIDEO_RENDERER
-        yae_debug << "RENDER VIDEO @ " << to_hhmmss_ms(frame_a_);
+        yae_debug << "RENDER VIDEO @ " << to_hhmmss_ms(*frame_a_);
 #endif
         canvas_->render(frame_a_);
       }

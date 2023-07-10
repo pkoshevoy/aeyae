@@ -569,11 +569,11 @@ namespace yae
   //
   template <typename Traits>
   inline std::string
-  to_hhmmss_ms(const boost::shared_ptr<TFrame<Traits> > & f,
+  to_hhmmss_ms(const TFrame<Traits> & f,
                const char * mm_separator = ":",
                const char * ms_separator = ".")
   {
-    return f->time_.to_hhmmss_ms(mm_separator, ms_separator);
+    return f.time_.to_hhmmss_ms(mm_separator, ms_separator);
   }
 
   //----------------------------------------------------------------
@@ -581,11 +581,11 @@ namespace yae
   //
   template <typename Traits>
   inline std::string
-  to_hhmmss_us(const boost::shared_ptr<TFrame<Traits> > & f,
+  to_hhmmss_us(const TFrame<Traits> & f,
                const char * mm_separator = ":",
                const char * us_separator = ".")
   {
-    return f->time_.to_hhmmss_us(mm_separator, us_separator);
+    return f.time_.to_hhmmss_us(mm_separator, us_separator);
   }
 
   //----------------------------------------------------------------
