@@ -361,6 +361,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_font_provider
+  //
+  static int get_font_provider()
+  {
+#if LIBASS_VERSION < 0x01203000
+    return 1; // ASS_FONTPROVIDER_AUTODETECT
+#endif
+
+#if defined(_WIN32)
+    return ASS_FONTPROVIDER_DIRECTWRITE;
+#endif
+
+#if defined(__APPLE__) && (__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ > 1058)
+    return ASS_FONTPROVIDER_CORETEXT;
+#endif
+
+    return ASS_FONTPROVIDER_FONTCONFIG;
+  }
+
+  //----------------------------------------------------------------
   // TLibass::init
   //
   void
@@ -374,20 +394,15 @@ namespace yae
     std::string defaultFamily =
       QApplication::font().family().toUtf8().constData();
 
-#if LIBASS_VERSION < 0x01203000
-    int fontProvider = 1; // autodetect
-#elif defined(__APPLE__)
-    int fontProvider = ASS_FONTPROVIDER_CORETEXT;
-#elif defined(_WIN32)
-    int fontProvider = ASS_FONTPROVIDER_DIRECTWRITE;
-#else
-    int fontProvider = ASS_FONTPROVIDER_FONTCONFIG;
-#endif
+    int fontProvider = get_font_provider();
 
-#ifdef __APPLE__
-    // ASS_FONTPROVIDER_CORETEXT seems to have trouble with Italics
-    // disabling Harfbuzz appears to work around the problem:
-    ass_set_shaper(renderer_, ASS_SHAPING_SIMPLE);
+#if LIBASS_VERSION >= 0x01203000
+    if (fontProvider == ASS_FONTPROVIDER_CORETEXT)
+    {
+      // ASS_FONTPROVIDER_CORETEXT seems to have trouble with Italics
+      // disabling Harfbuzz appears to work around the problem:
+      ass_set_shaper(renderer_, ASS_SHAPING_SIMPLE);
+    }
 #endif
 
     int updateFontCache = 1;
