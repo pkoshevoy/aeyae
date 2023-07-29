@@ -232,8 +232,8 @@ usage(char ** argv, const char * message = NULL)
   std::cerr
     << "\nUSAGE:\n"
     << argv[0]
-    << " [-no-ui] [-w] [-o ${output_path}]"
-    << " [[-track track_id]"
+    << " [--no-ui] [-w] [-o ${output_path}]"
+    << " [[--track track_id]"
     << " ${source_file}"
     << " [-t time_in time_out]*]+"
     << "\n"
@@ -245,21 +245,21 @@ usage(char ** argv, const char * message = NULL)
     << "\nEXAMPLE:\n"
     << "\n# load and clip two sources, decode and save keyframes:\n"
     << argv[0]
-    << " -track v:000"
+    << " --track v:000"
     << " ~/Movies/foo.ts -t 25s 32s"
     << " ~/Movies/bar.ts -t 00:02:29.440 00:02:36.656"
-    << " -no-ui -w -o ~/Movies/keyframes"
+    << " --no-ui -w -o ~/Movies/keyframes"
     << "\n"
     << "\n# load and clip two sources, remux and save output into one file:\n"
     << argv[0]
-    << " -track v:000"
+    << " --track v:000"
     << " ~/Movies/foo.ts -t 25s 32s"
     << " ~/Movies/bar.ts -t 00:02:29.440 00:02:36.656"
-    << " -no-ui -o ~/Movies/two-clips-joined-together.ts"
+    << " --no-ui -o ~/Movies/two-clips-joined-together.ts"
     << "\n"
     << "\n# load source, show summary and GOP structure, then quit:\n"
     << argv[0]
-    << " -no-ui ~/Movies/foo.ts"
+    << " --no-ui ~/Movies/foo.ts"
     << "\n"
     << "\n# edit a document:\n"
     << argv[0]
@@ -400,9 +400,6 @@ mainMayThrowException(int argc, char ** argv)
   // instantiate the logger:
   yae::logger();
 
-  yae::Application app(argc, argv);
-  QStringList args = app.arguments();
-
   // parse input parameters:
   std::set<std::string> sources;
   std::string curr_source;
@@ -414,14 +411,15 @@ mainMayThrowException(int argc, char ** argv)
   bool save_keyframes = false;
   bool no_ui = false;
 
-  for (QStringList::const_iterator i = args.begin() + 1; i != args.end(); ++i)
+  for (int i = 1; i < argc; i++)
   {
-    std::string arg = i->toUtf8().constData();
+    QString qarg = QString::fromUtf8(argv[i]);
+    std::string arg(argv[i]);
 
-    if (arg == "-track")
+    if (arg == "-track" || arg == "--track")
     {
       ++i;
-      curr_track = i->toUtf8().constData();
+      curr_track = argv[i];
     }
     else if (arg == "-t")
     {
@@ -431,11 +429,11 @@ mainMayThrowException(int argc, char ** argv)
       yae::ClipInfo & trim = clips.back();
 
       ++i;
-      std::string t0 = i->toUtf8().constData();
+      std::string t0 = argv[i];
       trim.t0_ = t0;
 
       ++i;
-      std::string t1 = i->toUtf8().constData();
+      std::string t1 = argv[i];
       trim.t1_ = t1;
 
       clipped.insert(curr_source);
@@ -443,28 +441,26 @@ mainMayThrowException(int argc, char ** argv)
     else if (arg == "-o")
     {
       ++i;
-      output_path = i->toUtf8().constData();
+      output_path = argv[i];
     }
     else if (arg == "-w")
     {
       save_keyframes = true;
     }
-    else if (arg == "-no-ui")
+    else if (arg == "-no-ui" || arg == "--no-ui")
     {
       no_ui = true;
     }
     else
     {
-      if (!QFile(*i).exists())
+      if (!QFile(qarg).exists())
       {
-        usage(argv, yae::str("unknown parameter: ",
-                             i->toUtf8().constData()).c_str());
+        usage(argv, yae::str("unknown parameter: ", arg).c_str());
       }
 
       if (al::iends_with(arg, ".yaerx"))
       {
-        std::string fn = i->toUtf8().constData();
-        std::string json_str = yae::TOpenFile(fn.c_str(), "rb").read();
+        std::string json_str = yae::TOpenFile(arg.c_str(), "rb").read();
 
         std::set<std::string> s;
         std::list<yae::ClipInfo> c;
@@ -489,7 +485,7 @@ mainMayThrowException(int argc, char ** argv)
       else
       {
         std::string filePath;
-        if (yae::convert_path_to_utf8(*i, filePath))
+        if (yae::convert_path_to_utf8(qarg, filePath))
         {
           if (!curr_source.empty() && !yae::has(clipped, curr_source))
           {
@@ -557,6 +553,7 @@ mainMayThrowException(int argc, char ** argv)
     return 0;
   }
 
+  yae::Application app(argc, argv);
   yae::mainWindow = new yae::MainWindow();
 
   bool ok = QObject::connect(&app,
@@ -588,6 +585,10 @@ main(int argc, char ** argv)
 
   try
   {
+#ifdef _WIN32
+    yae::get_main_args_utf8(argc, argv);
+#endif
+
     r = mainMayThrowException(argc, argv);
     std::cout << std::flush;
   }
