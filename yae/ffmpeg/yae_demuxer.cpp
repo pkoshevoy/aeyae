@@ -1004,6 +1004,31 @@ namespace yae
       return true;
     }
 
+    // reassign DTS and PTS to maintain monotonically increasing DTS order:
+    std::list<TPacketPtr> retimed;
+    TPacketPtr pb = packet_ptr;
+    while (!packets.empty())
+    {
+      TPacketPtr pa = packets.back();
+      packets.pop_back();
+
+      // swap the timestamps:
+      AVPacket & a = pa->get();
+      AVPacket & b = pb->get();
+      std::swap(a.dts, b.dts);
+      std::swap(a.pts, b.pts);
+      retimed.push_front(pb);
+
+      pb = pa;
+
+      if (is_monotonically_increasing(packets, b.dts))
+      {
+        packets.push_back(pb);
+        packets.splice(packets.end(), retimed);
+        return true;
+      }
+    }
+
     return false;
   }
 
@@ -1076,7 +1101,14 @@ namespace yae
     bool has_dts = get_dts(dts, stream, packet);
 
     std::list<TPacketPtr> & packets = packets_[packet.stream_index];
+#if 0
     bool valid_dts = is_monotonically_increasing(packets, *stream, dts);
+#else
+    // Try a different strategy for correcting broken timestamps
+    // (let the `append` function handle timestamp retiming).
+    // This fixes "An Idiot Abroad/01 - The 7 Wonders/02 - India.mkv"
+    bool valid_dts = true;
+#endif
 
     if (has_dts && !valid_dts)
     {
