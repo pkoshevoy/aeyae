@@ -1004,6 +1004,13 @@ namespace yae
       return true;
     }
 
+    av_log(NULL, AV_LOG_WARNING,
+           "%s: non-monotonically increasing DTS, "
+           "prev %" PRIi64 ", next %" PRIi64 "\n",
+           packet_ptr->trackId_.c_str(),
+           packets.back()->get().dts,
+           packet.dts);
+
     // reassign DTS and PTS to maintain monotonically increasing DTS order:
     std::list<TPacketPtr> retimed;
     TPacketPtr pb = packet_ptr;
