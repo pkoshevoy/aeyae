@@ -451,6 +451,13 @@ mainMayThrowException(int argc, char ** argv)
     {
       no_ui = true;
     }
+#ifdef __APPLE__
+    else if (al::starts_with(arg, "-psn_"))
+    {
+      // ignore, OSX adds it when double-clicking on the app.
+      continue;
+    }
+#endif
     else
     {
       if (!QFile(qarg).exists())
