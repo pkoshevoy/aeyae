@@ -557,7 +557,7 @@ namespace yae
       TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
 
       // these are expressed in seconds:
-      static const double buffer_duration = 1.0;
+      static const double buffer_duration = 8.0;
       static const double discont_tolerance = 0.1;
 
       // wrap each demuxer in a DemuxerBuffer, build a summary:
