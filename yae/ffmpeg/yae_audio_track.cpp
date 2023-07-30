@@ -168,6 +168,13 @@ namespace yae
           }
         }
 
+        if (!copied.ch_layout.u.mask &&
+            copied.ch_layout.nb_channels)
+        {
+          av_channel_layout_default(&copied.ch_layout,
+                                    copied.ch_layout.nb_channels);
+        }
+
         const char * filterChain = NULL;
         bool frameTraitsChanged = false;
         if (filterGraph_.setup(// input format:
