@@ -121,10 +121,9 @@ namespace yae
   std::string
   ChannelLayout::describe() const
   {
-    std::string desc(512, 0);
-    int n = av_channel_layout_describe(this, &desc[0], desc.size());
-    desc.resize(n);
-    return desc;
+    char desc[512] = { 0 };
+    int n = av_channel_layout_describe(this, desc, sizeof(desc) - 1);
+    return n < 0 ? std::string() : std::string(desc);
   }
 
 
