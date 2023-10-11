@@ -714,6 +714,47 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
       decode(frame.pts, timeBase, cc, terminator);
     }
+
+    // extend the duration of the most recent caption to cover current frame:
+    TTime ptsNow = TTime(timeBase.num * frame.pts,
+                         timeBase.den).rebased(30000);
+    TTime ptsNext = ptsNow + TTime(1001, 30000);
+
+    for (unsigned int i = 0; i < 4; i++)
+    {
+      if (!cc_[i])
+      {
+        continue;
+      }
+
+      SubtitlesTrack & captions = captions_[i];
+      TSubsFrame & last = captions.last_;
+      int64_t nframes =
+        (ptsNext.get(30000) - last.tEnd_.get(30000) + 1000) / 1001;
+
+      // avoid extending caption duration indefinitely:
+      if (nframes && last.tEnd_ < last.time_ + 12.0)
+      {
+        TTime ptsPrev = last.tEnd_;
+        last.tEnd_ += TTime(nframes * 1001, 30000);
+
+        // avoid creating overlapping ASS events,
+        // better to create short adjacent events instead:
+        TSubsFrame sf(last);
+        sf.time_ = ptsPrev;
+
+        // prevent sharing the same private details across several frames:
+        if (sf.private_)
+        {
+          sf.private_ = sf.private_->clone();
+        }
+
+        // yae_debug << "2. captions.push: " << to_str(sf);
+
+        captions.replaceTimingEtc(sf);
+        captions.push(sf, terminator);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -898,47 +939,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         captions.push(sf, terminator);
       }
     }
-#if 1
-    // extend the duration of the most recent caption to cover current frame:
-    TTime ptsNow = TTime(pts * timeBase.num, timeBase.den).rebased(30000);
-    TTime ptsNext = ptsNow + TTime(1001, 30000);
-
-    for (unsigned int i = 0; i < 4; i++)
-    {
-      if (!cc_[i])
-      {
-        continue;
-      }
-
-      SubtitlesTrack & captions = captions_[i];
-      TSubsFrame & last = captions.last_;
-      int64_t nframes =
-        (ptsNext.get(30000) - last.tEnd_.get(30000) + 1000) / 1001;
-
-      // avoid extending caption duration indefinitely:
-      if (nframes && last.tEnd_ < last.time_ + 12.0)
-      {
-        TTime ptsPrev = last.tEnd_;
-        last.tEnd_ += TTime(nframes * 1001, 30000);
-
-        // avoid creating overlapping ASS events,
-        // better to create short adjacent events instead:
-        TSubsFrame sf(last);
-        sf.time_ = ptsPrev;
-
-        // prevent sharing the same private details across several frames:
-        if (sf.private_)
-        {
-          sf.private_ = sf.private_->clone();
-        }
-
-        // yae_debug << "2. captions.push: " << to_str(sf);
-
-        captions.replaceTimingEtc(sf);
-        captions.push(sf, terminator);
-      }
-    }
-#endif
   }
 
 }

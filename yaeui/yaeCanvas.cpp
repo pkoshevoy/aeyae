@@ -974,6 +974,41 @@ namespace yae
 
     YAE_BENCHMARK(benchmark, "Canvas::loadFrame");
 
+#if 0 // ndef NDEBUG
+    {
+      static TOpenFilePtr fout =
+        yae::get_open_file("/tmp/load-frame.log", "w");
+      std::ostringstream oss;
+      oss << frame->time_.to_hhmmss_frac()
+          << ", subs: ";
+
+      for (std::list<TSubsFrame>::const_iterator i = frame->subs_.begin();
+           i != frame->subs_.end(); ++i)
+      {
+        const TSubsFrame & subs = *i;
+        if (subs.render_)
+        {
+          const TSubsFrame::IPrivate * subExt = subs.private_.get();
+          const unsigned int nrects = subExt ? subExt->numRects() : 0;
+          unsigned int nrectsPainted = 0;
+          for (unsigned int j = 0; j < nrects; j++)
+          {
+            TSubsFrame::TRect r;
+            subExt->getRect(j, r);
+            if (r.type_ == kSubtitleASS)
+            {
+              std::string assa = r.getAssScript(subs);
+              oss << assa;
+            }
+          }
+        }
+      }
+      oss << std::endl;
+      fout->write(oss.str());
+      fout->flush();
+    }
+#endif
+
     bool ok = private_->loadFrame(context(), frame);
     showTheGreeting_ = false;
     setSubs(frame->subs_);
@@ -1215,8 +1250,8 @@ namespace yae
 
     TPainterWrapper wrapper((int)w, (int)h);
 
+    bool libassSameSubs = true;
     bool paintedSomeSubs = false;
-    bool libassSameSubs = false;
 
     QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
     TVideoFramePtr frame = currentFrame();
@@ -1337,8 +1372,12 @@ namespace yae
 
       int changeDetected = 0;
       ASS_Image * pic = assTrack->renderFrame(now, &changeDetected);
-      libassSameSubs = !changeDetected;
-      paintedSomeSubs = changeDetected;
+
+      if (changeDetected)
+      {
+        libassSameSubs = false;
+        paintedSomeSubs = true;
+      }
 
       unsigned char bgr[3];
       while (pic && changeDetected)
