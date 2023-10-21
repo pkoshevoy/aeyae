@@ -1250,7 +1250,7 @@ namespace yae
 
     TPainterWrapper wrapper((int)w, (int)h);
 
-    bool libassSameSubs = true;
+    bool libassSameSubs = false;
     bool paintedSomeSubs = false;
 
     QRect canvasBBox(16, 16, (int)w - 32, (int)h - 32);
@@ -1373,9 +1373,12 @@ namespace yae
       int changeDetected = 0;
       ASS_Image * pic = assTrack->renderFrame(now, &changeDetected);
 
-      if (changeDetected)
+      if (!changeDetected)
       {
-        libassSameSubs = false;
+        libassSameSubs = true;
+      }
+      else
+      {
         paintedSomeSubs = true;
       }
 
@@ -1442,6 +1445,14 @@ namespace yae
     }
 
     wrapper.painterEnd();
+
+#if 0
+    std::cerr
+      << "subs in overlay: " << subsInOverlay_
+      << ", same subs: " << libassSameSubs
+      << ", painted some: " << paintedSomeSubs
+      << std::endl;
+#endif
 
     if (reparse && !libassSameSubs)
     {
