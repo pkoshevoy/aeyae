@@ -2792,7 +2792,7 @@ namespace yae
       table_id_ = bin.read(8);
 
       section_syntax_indicator_ = bin.read(1);
-      YAE_THROW_IF(section_syntax_indicator_ != 0x1);
+      // YAE_THROW_IF(section_syntax_indicator_ != 0x1);
 
       private_indicator_ = bin.read(1);
       reserved1_ = bin.read(2);
