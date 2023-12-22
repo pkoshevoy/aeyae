@@ -804,6 +804,14 @@ namespace yae
       threshold_(TLog::kDebug)
     {}
 
+    ~LogToFile()
+    {
+      if (file_)
+      {
+        file_->close();
+      }
+    }
+
     // virtual:
     void destroy()
     { delete this; }

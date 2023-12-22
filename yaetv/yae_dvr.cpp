@@ -1950,7 +1950,7 @@ namespace yae
     YAE_THROW_IF(!yae::mkdir_p(yaetv_.string()));
 
 
-    // load or generate a UUIC for this DVR instance:
+    // load or generate a UUID for this DVR instance:
     {
       Json::Value json;
       std::string uuid_path = (yaetv_ / "uuid.json").string();
@@ -4862,9 +4862,9 @@ namespace yae
       for_each_file_at(yaetv_dir, collect_files);
     }
 
-    // remove all logs except 3 most recent:
+    // remove all logs except 8 most recent:
     std::map<std::string, std::string>::reverse_iterator it = logs.rbegin();
-    for (int i = 0; i < 3 && it != logs.rend(); i++, ++it) {}
+    for (int i = 0; i < 8 && it != logs.rend(); i++, ++it) {}
 
     for (; it != logs.rend(); ++it)
     {
