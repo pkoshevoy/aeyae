@@ -36,6 +36,14 @@ namespace yae
   //----------------------------------------------------------------
   // Recording::Rec::Rec
   //
+  Recording::Rec::Rec(const Recording::Rec & rec)
+  {
+    *this = rec;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::Rec
+  //
   Recording::Rec::Rec(const yae::mpeg_ts::EPG::Channel & channel,
                       const yae::mpeg_ts::EPG::Program & program,
                       Recording::MadeBy rec_cause,
@@ -65,6 +73,28 @@ namespace yae
     rating_ = program.rating_;
     description_ = program.description_;
     max_recordings_ = max_recordings;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::operator =
+  //
+  Recording::Rec &
+  Recording::Rec::operator = (const Recording::Rec & r)
+  {
+    made_by_ = r.made_by_;
+    cancelled_ = r.cancelled_;
+    utc_t0_ = r.utc_t0_;
+    gps_t0_ = r.gps_t0_;
+    gps_t1_ = r.gps_t1_;
+    channel_major_ = r.channel_major_;
+    channel_minor_ = r.channel_minor_;
+    channel_name_ = r.channel_name_;
+    title_ = r.title_;
+    rating_ = r.rating_;
+    description_ = r.description_;
+    device_info_ = r.device_info_;
+    max_recordings_ = r.max_recordings_;
+    return *this;
   }
 
   //----------------------------------------------------------------
@@ -177,6 +207,58 @@ namespace yae
     return program;
   }
 
+  //----------------------------------------------------------------
+  // Recording::Rec::save
+  //
+  bool
+  Recording::Rec::save(const fs::path & basedir) const
+  {
+    fs::path title_path = this->get_title_path(basedir);
+    std::string title_path_str = title_path.string();
+    if (!yae::mkdir_p(title_path_str))
+    {
+      yae_elog("mkdir_p failed for: %s", title_path_str.c_str());
+      return false;
+    }
+
+    std::string basename = this->get_basename();
+    std::string basepath = (title_path / basename).string();
+
+    Json::Value json;
+    yae::save(json, *this);
+
+    std::string path_json = basepath + ".json";
+    if (!yae::TOpenFile(path_json, "wb").save(json))
+    {
+      yae_wlog("failed to save: %s", path_json.c_str());
+      return false;
+    }
+
+    yae_dlog("saved: %s", path_json.c_str());
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::load
+  //
+  bool
+  Recording::Rec::load(const fs::path & basedir)
+  {
+    fs::path title_path = this->get_title_path(basedir);
+    std::string basename = this->get_basename();
+    std::string basepath = (title_path / basename).string();
+    std::string path_json = basepath + ".json";
+
+    Json::Value json;
+    if (!yae::TOpenFile(path_json, "rb").load(json))
+    {
+      yae_wlog("failed to save: %s", path_json.c_str());
+      return false;
+    }
+
+    yae::load(json, *this);
+    return true;
+  }
 
   //----------------------------------------------------------------
   // Recording::Recording
@@ -435,6 +517,11 @@ namespace yae
     save(json["rating"], rec.rating_);
     save(json["description"], rec.description_);
 
+    if (!rec.device_info_.empty())
+    {
+      save(json["device_info"], rec.device_info_);
+    }
+
     if (rec.max_recordings_)
     {
       save(json["max_recordings"], rec.max_recordings_);
@@ -467,6 +554,11 @@ namespace yae
     load(json["title"], rec.title_);
     load(json["rating"], rec.rating_);
     load(json["description"], rec.description_);
+
+    if (json.isMember("device_info"))
+    {
+      load(json["device_info"], rec.device_info_);
+    }
 
     if (json.isMember("max_recordings"))
     {

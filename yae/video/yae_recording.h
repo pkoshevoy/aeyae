@@ -55,6 +55,7 @@ namespace yae
     struct YAE_API Rec
     {
       Rec();
+      Rec(const Rec & rec);
       Rec(const yae::mpeg_ts::EPG::Channel & channel,
           const yae::mpeg_ts::EPG::Program & program,
           Recording::MadeBy rec_cause = Recording::kUnspecified,
@@ -64,6 +65,8 @@ namespace yae
                   const yae::mpeg_ts::EPG::Program & program,
                   Recording::MadeBy rec_cause = Recording::kUnspecified,
                   uint16_t max_recordings = 0);
+
+      Rec & operator = (const Rec & r);
 
       bool operator == (const Rec & r) const;
 
@@ -78,6 +81,9 @@ namespace yae
 
       inline uint32_t gps_t1() const
       { return gps_t1_; }
+
+      inline uint32_t gps_midpoint() const
+      { return gps_t0_ + this->get_duration() / 2; }
 
       inline uint32_t get_duration() const
       { return gps_t1_ - gps_t0_; }
@@ -95,6 +101,10 @@ namespace yae
       yae::mpeg_ts::EPG::Channel to_epg_channel() const;
       yae::mpeg_ts::EPG::Program to_epg_program() const;
 
+      // for updating recording.json during the recording:
+      bool save(const fs::path & basedir) const;
+      bool load(const fs::path & basedir);
+
       Recording::MadeBy made_by_;
       bool cancelled_;
       uint64_t utc_t0_;
@@ -106,6 +116,7 @@ namespace yae
       std::string title_;
       std::string rating_;
       std::string description_;
+      std::string device_info_;
       uint16_t max_recordings_;
     };
 

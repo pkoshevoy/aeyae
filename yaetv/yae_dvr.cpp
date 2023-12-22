@@ -4131,6 +4131,8 @@ namespace yae
            i = epg.channels_.begin(); i != epg.channels_.end(); ++i)
     {
       const uint32_t ch_num = i->first;
+      const yae::mpeg_ts::EPG::Channel & channel = i->second;
+
       uint32_t gps_time = TTime::gps_now().get(1);
 
       std::set<TRecordingPtr> recs;
@@ -4184,6 +4186,40 @@ namespace yae
 
         std::string frequency = found->second;
         TStreamPtr stream = capture_stream(frequency, TTime(num_sec, 1));
+
+        // find the current EPG channel program that corresponds
+        // to the midpoint of the scheduled recording:
+        const yae::mpeg_ts::EPG::Program * program =
+          channel.find(rec.gps_midpoint());
+
+        // update the recording info on disk if it doesn't match
+        {
+          TRecPtr saved_rec_ptr(new Recording::Rec(rec));
+          Recording::Rec & saved_rec = *saved_rec_ptr;
+          saved_rec.load(basedir_);
+
+          const std::string & device_info =
+            stream->packet_handler_->ctx_.log_prefix_;
+
+          if ((program &&
+               program->description_.empty() == false &&
+               program->description_ != saved_rec.description_) ||
+              device_info != saved_rec.device_info_)
+          {
+            saved_rec.device_info_ = device_info;
+
+            if (program)
+            {
+              saved_rec.update(channel,
+                               *program,
+                               rec.made_by_,
+                               rec.max_recordings_);
+            }
+
+            saved_rec.save(basedir_);
+            recording.set_rec(saved_rec_ptr);
+          }
+        }
 
         if (!stream)
         {
@@ -4507,7 +4543,7 @@ namespace yae
       if (dt_sec > 60)
       {
         // slow heartbeat ... possibly dead:
-        yae_ilog("possibly dead DVR instance: "
+        yae_dlog("possibly dead DVR instance: "
                  "uuid: %s, "
                  "host: %s, "
                  "time since last heartbeat: %" PRIi64 "",
