@@ -4193,6 +4193,7 @@ namespace yae
           channel.find(rec.gps_midpoint());
 
         // update the recording info on disk if it doesn't match
+        if (stream && stream->packet_handler_)
         {
           TRecPtr saved_rec_ptr(new Recording::Rec(rec));
           Recording::Rec & saved_rec = *saved_rec_ptr;
