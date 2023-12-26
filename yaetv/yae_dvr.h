@@ -386,6 +386,8 @@ namespace yae
     //----------------------------------------------------------------
     // Blocklist
     //
+    // for explicitly excluding channels from the Program Guide
+    //
     struct Blocklist
     {
       Blocklist(int64_t lastmod = std::numeric_limits<int64_t>::min());
@@ -724,6 +726,10 @@ namespace yae
     bool get_channel_name(uint16_t major,
                           uint16_t minor,
                           std::string & name) const;
+
+    // skip tuning to a given frequency if we've already blocked
+    // every channel that was found there:
+    bool maybe_skip(const std::string & frequency) const;
 
     bool has_preferences() const;
     void get_preferences(Json::Value & preferences) const;

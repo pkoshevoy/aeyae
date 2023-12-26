@@ -2555,6 +2555,14 @@ namespace yae
           const TunerChannel & tuner_channel = *k;
           std::string frequency = tuner_channel.frequency_str();
 
+          if (dvr_.maybe_skip(frequency))
+          {
+            yae_dlog("%s skipping channel scan for %s",
+                     device.name().c_str(),
+                     frequency.c_str());
+            continue;
+          }
+
           Json::Value & cache = tuner_cache["frequencies"][frequency];
           int64_t timestamp = cache.get("timestamp", 0).asInt64();
           int64_t elapsed = now - timestamp;
@@ -2686,6 +2694,13 @@ namespace yae
       // shortucts:
       const uint32_t ch_num = i->first;
       const std::string & frequency = i->second;
+
+      if (dvr_.maybe_skip(frequency))
+      {
+        yae_dlog("skipping EPG update for %s", frequency.c_str());
+        continue;
+      }
+
       const uint16_t major = yae::mpeg_ts::channel_major(ch_num);
       const uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
       const std::string channels_str = dvr_.get_channels_str(frequency);
@@ -4353,15 +4368,26 @@ namespace yae
         const Json::Value & cache = *j;
         const Json::Value & programs = cache["programs"];
         const Json::Value & status = cache["status"];
-        TChannels & channels = frequency_channel_lut_[frequency];
 
         bool no_signal_present =
           !status.get("signal_present", false).asBool();
 
+        uint32_t signal_strength =
+          status.get("signal_strength", 100).asUInt();
+
         uint32_t signal_to_noise_quality =
           status.get("signal_to_noise_quality", 0).asUInt();
 
-        if (no_signal_present)
+        // uint32_t symbol_error_quality =
+        //   status.get("symbol_error_quality", 100).asUInt();
+
+        bool poor_signal_present =
+          (signal_strength < 70 &&
+           signal_to_noise_quality < 70);
+
+        if (no_signal_present ||
+            poor_signal_present ||
+            programs.empty())
         {
           signal_absent.insert(frequency);
           continue;
@@ -4370,6 +4396,8 @@ namespace yae
         {
           signal_present.insert(frequency);
         }
+
+        TChannels & channels = frequency_channel_lut_[frequency];
 
         for (Json::Value::const_iterator k = programs.begin();
              k != programs.end(); ++k)
@@ -4761,6 +4789,58 @@ namespace yae
     }
 
     name = found_minor->second;
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // DVR::maybe_skip
+  //
+  bool
+  DVR::maybe_skip(const std::string & frequency) const
+  {
+    std::map<std::string, Json::Value> tuners;
+    {
+      boost::unique_lock<boost::mutex> lock(tuner_cache_mutex_);
+      for (Json::Value::const_iterator
+             i = tuner_cache_.begin(); i != tuner_cache_.end(); ++i)
+      {
+        const std::string & name = i.key().asString();
+        const Json::Value & cache = *i;
+        Json::Value & tuner = tuners[name];
+        tuner = cache.
+          get("frequencies", Json::Value()).
+          get(frequency, Json::Value());
+      }
+    }
+
+    std::set<uint32_t> blocked_channels;
+    blocklist_.get(blocked_channels);
+
+    for (std::map<std::string, Json::Value>::const_iterator
+           i = tuners.begin(); i != tuners.end(); ++i)
+    {
+      const Json::Value & tuner = i->second;
+      const Json::Value & programs = tuner.get("programs", Json::Value());
+      if (programs.empty())
+      {
+        return false;
+      }
+
+      // check if any of the channels on this frequency are unblocked:
+      for (Json::Value::const_iterator
+             i = programs.begin(), end = programs.end(); i != end; ++i)
+      {
+        const Json::Value & program = *i;
+        uint16_t major = uint16_t(program["major"].asUInt());
+        uint16_t minor = uint16_t(program["minor"].asUInt());
+        uint32_t ch_num = yae::mpeg_ts::channel_number(major, minor);
+        if (!yae::has(blocked_channels, ch_num))
+        {
+          return false;
+        }
+      }
+    }
+
     return true;
   }
 
