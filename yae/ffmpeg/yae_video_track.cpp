@@ -1390,9 +1390,17 @@ namespace yae
       }
 
       // check the side data:
+#if 0
       const int32_t * dm = (const int32_t *)
         av_stream_get_side_data(stream_, AV_PKT_DATA_DISPLAYMATRIX, NULL);
-
+#else
+      const AVPacketSideData * sd =
+        av_packet_side_data_get(stream_->codecpar->coded_side_data,
+                                stream_->codecpar->nb_coded_side_data,
+                                AV_PKT_DATA_DISPLAYMATRIX);
+      YAE_ASSERT(!sd || sd->size == 9 * sizeof(int32_t));
+      const int32_t * dm = sd ? (const int32_t *)(sd->data) : NULL;
+#endif
       if (dm)
       {
         m3x3_t M = yae::make_m3x3(fp16(dm[0]), fp16(dm[3]), 0.0,

@@ -217,7 +217,6 @@ namespace yae
       return;
     }
 
-    avcodec_close(ctx);
     avcodec_free_context(&ctx);
   }
 
