@@ -504,6 +504,7 @@ namespace yae
     yae::save(json, "max_minutes", max_minutes_);
     yae::save(json, "max_recordings", max_recordings_);
     yae::save(json, "skip_duplicates", skip_duplicates_);
+    yae::save(json, "do_not_record", do_not_record_);
     yae::save(json, "disabled", disabled_);
   }
 
@@ -633,6 +634,7 @@ namespace yae
     yae::load(json, "max_minutes", max_minutes_);
     yae::load(json, "max_recordings", max_recordings_);
     yae::load(json, "skip_duplicates", skip_duplicates_);
+    yae::load(json, "do_not_record", do_not_record_);
     yae::load(json, "disabled", disabled_);
   }
 
@@ -968,6 +970,14 @@ namespace yae
           continue;
         }
 
+        if (want->do_not_record())
+        {
+          yae_ilog("skipping, don't want to record: %s: %s",
+                   channel.name_.c_str(),
+                   program.description_.c_str());
+          continue;
+        }
+
         if (want->skip_duplicates())
         {
           TRecPtr rec_ptr = dvr.already_recorded(channel, program);
@@ -1063,6 +1073,14 @@ namespace yae
             yae_dlog("skipping cancelled recording: %s: %s",
                      channel.name_.c_str(),
                      program.title_.c_str());
+            continue;
+          }
+
+          if (wanted->do_not_record())
+          {
+            yae_ilog("cancelling, don't want to record: %s: %s",
+                     channel.name_.c_str(),
+                     program.description_.c_str());
             continue;
           }
 
@@ -3157,6 +3175,7 @@ namespace yae
       const std::string & name = i->first;
       const std::string & path = i->second;
       std::string frequency = name.substr(4, name.size() - 9);
+      YAE_BENCHMARK(probe, "DVR::load_epg");
 
       Json::Value epg;
       if (yae::TOpenFile(path, "rb").load(epg))

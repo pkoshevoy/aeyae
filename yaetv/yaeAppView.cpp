@@ -582,6 +582,60 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // GetWishlistItemDoNotRecord
+  //
+  struct GetWishlistItemDoNotRecord : public TBoolExpr
+  {
+    GetWishlistItemDoNotRecord(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        result = (wi.do_not_record_ && *wi.do_not_record_);
+        return;
+      }
+
+      result = false;
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // OnToggleWishlistItemDoNotRecord
+  //
+  struct OnToggleWishlistItemDoNotRecord : public CheckboxItem::Action
+  {
+    OnToggleWishlistItemDoNotRecord(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void operator()(const CheckboxItem & cbox) const
+    {
+      if (view_.wi_edit_)
+      {
+        Wishlist::Item & wi = view_.wi_edit_->second;
+        if (cbox.checked_.get())
+        {
+          wi.do_not_record_.reset();
+        }
+        else
+        {
+          wi.do_not_record_ = true;
+        }
+      }
+    }
+
+    const AppView & view_;
+  };
+
+  //----------------------------------------------------------------
   // GetWishlistItemEnabled
   //
   struct GetWishlistItemEnabled : public TBoolExpr
@@ -7065,10 +7119,58 @@ namespace yae
     r11.anchors_.top_ = ItemRef::reference(r10, kPropertyBottom);
     r11.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
-    // layout the Enabled row:
+    // layout the Do Not Record row:
     {
       // shortcut:
       Item & row = r11;
+
+      Text & label = row.addNew<Text>("label");
+      label.font_ = style.font_;
+      label.font_.setWeight(62);
+      label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+      label.anchors_.bottom_ = label.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
+      label.elide_ = Qt::ElideNone;
+      label.text_ = TVarRef::constant(TVar("Do Not Record"));
+      label.color_ = label.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      label.background_ = label.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+
+      CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
+      cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
+      cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.width_ = cbox.height_;
+      cbox.checked_ = cbox.addExpr(new GetWishlistItemDoNotRecord(view));
+      cbox.on_toggle_.reset(new OnToggleWishlistItemDoNotRecord(view));
+
+      Text & note = row.addNew<Text>("note");
+      note.font_ = style.font_;
+      note.font_.setWeight(62);
+      note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
+      note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
+      note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
+      note.elide_ = Qt::ElideNone;
+      note.text_ = TVarRef::constant
+        (TVar("optional, enable to prevent recording of matching programs"));
+      note.color_ = note.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
+      note.background_ = note.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    }
+
+    Item & r12 = body.addNew<Item>("r12");
+    r12.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r12.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r12.anchors_.top_ = ItemRef::reference(r11, kPropertyBottom);
+    r12.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+
+    // layout the Enabled row:
+    {
+      // shortcut:
+      Item & row = r12;
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
@@ -7107,16 +7209,16 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
     }
 
-    Item & r12 = body.addNew<Item>("r12");
-    r12.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-    r12.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-    r12.anchors_.top_ = ItemRef::reference(r11, kPropertyBottom);
-    r12.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+    Item & r13 = body.addNew<Item>("r13");
+    r13.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
+    r13.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
+    r13.anchors_.top_ = ItemRef::reference(r12, kPropertyBottom);
+    r13.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
 
     // layout the buttons:
     {
       // shortcut:
-      Item & row = r12;
+      Item & row = r13;
 
       RoundRect & bg_remove = body.addNew<RoundRect>("bg_remove");
       RoundRect & bg_save = body.addNew<RoundRect>("bg_save");

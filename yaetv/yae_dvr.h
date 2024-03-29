@@ -86,6 +86,9 @@ namespace yae
       inline uint16_t max_recordings() const
       { return max_recordings_ ? *max_recordings_ : 0; }
 
+      inline bool do_not_record() const
+      { return do_not_record_ && *do_not_record_; }
+
       inline bool skip_duplicates() const
       { return skip_duplicates_ && *skip_duplicates_; }
 
@@ -94,7 +97,8 @@ namespace yae
 
       inline bool operator == (const Wishlist::Item & other) const
       {
-        return (skip_duplicates_ == other.skip_duplicates_ &&
+        return (do_not_record_ == other.do_not_record_ &&
+                skip_duplicates_ == other.skip_duplicates_ &&
                 max_recordings_ == other.max_recordings_ &&
                 channel_ == other.channel_ &&
                 ((!date_ && !other.date_) ||
@@ -118,6 +122,7 @@ namespace yae
       };
 
       yae::optional<bool> disabled_;
+      yae::optional<bool> do_not_record_;
       yae::optional<bool> skip_duplicates_;
       yae::optional<uint16_t> max_recordings_;
       yae::optional<std::pair<uint16_t, uint16_t> > channel_;
