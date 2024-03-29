@@ -3150,6 +3150,55 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // LogElapsedTime
+  //
+  struct LogElapsedTime
+  {
+    boost::chrono::steady_clock::time_point t0_;
+    std::string where_;
+    std::string what_;
+    int priority_;
+
+    LogElapsedTime(const std::string & where,
+                   const std::string & what,
+                   int priority = yae::TLog::kInfo):
+      t0_(boost::chrono::steady_clock::now()),
+      where_(where),
+      what_(what),
+      priority_(priority)
+    {}
+
+    ~LogElapsedTime()
+    {
+      boost::chrono::steady_clock::time_point
+        t1 = boost::chrono::steady_clock::now();
+
+      uint64 dt_usec =
+        boost::chrono::duration_cast<boost::chrono::microseconds>(t1 - t0_).
+        count();
+
+      yae::log(priority_,
+               where_.c_str(),
+               "elapsed time: %" PRIu64 ".%06" PRIu64 "s, %s",
+               dt_usec / 1000000,
+               dt_usec % 1000000,
+               what_.c_str());
+    }
+
+  protected:
+    // intentionally disabled:
+    LogElapsedTime(const LogElapsedTime &);
+    LogElapsedTime & operator = (const LogElapsedTime &);
+  };
+
+//----------------------------------------------------------------
+// YAE_LOG_ELAPSED_TIME
+//
+#define YAE_LOG_ELAPSED_TIME(varname, what) \
+  yae::LogElapsedTime varname(__FILE__ ":" YAE_STR(__LINE__), \
+                              what, yae::TLog::kInfo)
+
+  //----------------------------------------------------------------
   // DVR::load_epg
   //
   void
