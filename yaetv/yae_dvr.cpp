@@ -3175,7 +3175,7 @@ namespace yae
       const std::string & name = i->first;
       const std::string & path = i->second;
       std::string frequency = name.substr(4, name.size() - 9);
-      YAE_BENCHMARK(probe, "DVR::load_epg");
+      YAE_LOG_ELAPSED_TIME(probe, path);
 
       Json::Value epg;
       if (yae::TOpenFile(path, "rb").load(epg))

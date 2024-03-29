@@ -5841,6 +5841,7 @@ namespace yae
                                                  ett.section_number_,
                                                  ett.last_section_number_);
 
+        // FIXME: expired event_etm entries should be removed!
         TLangText & lang_text = chan.event_etm_[ett.etm_id_event_id_];
         ett.extended_text_message_.get(lang_text);
       }
