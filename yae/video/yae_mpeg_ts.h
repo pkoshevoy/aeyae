@@ -2471,17 +2471,21 @@ namespace yae
       inline std::size_t bucket_index_at(uint32_t gps_time) const
       { return (gps_time / kBucketDuration) % bucket_.size(); }
 
-      inline Bucket & get_current_bucket()
+      inline uint32_t get_current_bucket_index() const
       {
         uint32_t gps_time = this->gps_time_now();
-        std::size_t ix = this->bucket_index_at(gps_time);
+        return this->bucket_index_at(gps_time);
+      }
+
+      inline Bucket & get_current_bucket()
+      {
+        std::size_t ix = this->get_current_bucket_index();
         return bucket_[ix];
       }
 
       inline const Bucket & get_current_bucket() const
       {
-        uint32_t gps_time = this->gps_time_now();
-        std::size_t ix = this->bucket_index_at(gps_time);
+        std::size_t ix = this->get_current_bucket_index();
         return bucket_[ix];
       }
 

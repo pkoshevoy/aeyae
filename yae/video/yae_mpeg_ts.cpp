@@ -5346,7 +5346,17 @@ namespace yae
       YAE_THROW_IF(mgt.private_indicator_ != 1);
 
       boost::unique_lock<boost::mutex> lock(mutex_);
-      Bucket & bucket = get_current_bucket();
+      uint32_t ix_curr = get_current_bucket_index();
+      uint32_t ix_next = (ix_curr + 1) %  bucket_.size();
+
+      // clear the next bucket, so that when we rollover to it
+      // it would not contain entries from 4 days ago:
+      {
+        Bucket & bucket = bucket_[ix_next];
+        bucket = Bucket();
+      }
+
+      Bucket & bucket = bucket_[ix_curr];
       bucket.timestamp_mgt_ = TTime::now();
 
       for (std::size_t i = 0; i < mgt.tables_defined_; i++)
