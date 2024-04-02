@@ -2459,6 +2459,9 @@ namespace yae
 
       void dump(const std::string & lang = std::string("eng")) const;
 
+      // NOTE: this will lock the mutex while accessing the current Bucket:
+      TTime elapsed_time_since_mgt() const;
+
       enum
       {
 #if 1

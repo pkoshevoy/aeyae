@@ -6172,6 +6172,17 @@ namespace yae
       yae_info << oss.str();
     }
 
+    //----------------------------------------------------------------
+    // Context::elapsed_time_since_mgt
+    //
+    TTime
+    Context::elapsed_time_since_mgt() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      const Bucket & bucket = get_current_bucket();
+      return bucket.elapsed_time_since_mgt();
+    }
+
   }
 
 }

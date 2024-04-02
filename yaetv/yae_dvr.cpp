@@ -2375,8 +2375,7 @@ namespace yae
     const DVR::PacketHandler & packet_handler = *handler_ptr;
     const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
 #if 0
-    const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
-    TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
+    TTime elapsed_time_since_mgt = ctx.elapsed_time_since_mgt();
     YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
 
     if (elapsed_time_since_mgt < dvr_.epg_refresh_period_)
@@ -2753,9 +2752,8 @@ namespace yae
 
       const DVR::PacketHandler & packet_handler = *handler_ptr;
       const yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
-      const yae::mpeg_ts::Bucket & bucket = ctx.get_current_bucket();
 
-      TTime elapsed_time_since_mgt = bucket.elapsed_time_since_mgt();
+      TTime elapsed_time_since_mgt = ctx.elapsed_time_since_mgt();
       YAE_ASSERT(elapsed_time_since_mgt.time_ >= 0);
 
       bool update_mgt = dvr_.epg_refresh_period_ <= elapsed_time_since_mgt;
