@@ -719,14 +719,36 @@ namespace yae
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
 
+    std::list<yae::shared_ptr<Wishlist::Item> > wanted;
+    std::list<yae::shared_ptr<Wishlist::Item> > unwanted;
+
     for (std::list<Item>::const_iterator
            i = items_.begin(); i != items_.end(); ++i)
     {
       const Item & item = *i;
       if (item.matches(channel, program))
       {
-        return yae::shared_ptr<Item>(new Item(item));
+        yae::shared_ptr<Item> item_ptr(new Item(item));
+
+        if (item.do_not_record())
+        {
+          unwanted.push_back(item_ptr);
+        }
+        else
+        {
+          wanted.push_back(item_ptr);
+        }
       }
+    }
+
+    // Do Not Record should have higher precedence:
+    if (!unwanted.empty())
+    {
+      return unwanted.front();
+    }
+    else if (!wanted.empty())
+    {
+      return wanted.front();
     }
 
     return yae::shared_ptr<Item>();
