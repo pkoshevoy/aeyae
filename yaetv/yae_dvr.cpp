@@ -4361,6 +4361,8 @@ namespace yae
   {
     YAE_BENCHMARK(probe, "DVR::get_cached_epg");
 
+    const bool is_current_writer = this->is_local_uuid_writer_uuid();
+
     boost::unique_lock<boost::mutex> lock(epg_mutex_);
     YAE_BENCHMARK(probe1, "DVR::get_cached_epg after mutex");
 
@@ -4375,7 +4377,8 @@ namespace yae
         const uint32_t ch_num = i->first;
         const yae::mpeg_ts::EPG::Channel & channel = i->second;
 
-        if (!channel_frequency_lut_.empty() &&
+        if (is_current_writer &&
+            !channel_frequency_lut_.empty() &&
             !yae::has(channel_frequency_lut_, ch_num))
         {
           // don't list channels that disappeared:
@@ -4603,7 +4606,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DVR::is_local_recording_allowed
+  // DVR::check_local_recording_allowed
   //
   bool
   DVR::check_local_recording_allowed() const
@@ -5032,6 +5035,16 @@ namespace yae
     }
 
     return !tuner_names.empty();
+  }
+
+  //----------------------------------------------------------------
+  // DVR::is_local_uuid_writer_uuid
+  //
+  bool
+  DVR::is_local_uuid_writer_uuid() const
+  {
+    boost::unique_lock<boost::mutex> lock(writer_uuid_mutex_);
+    return local_uuid_ == writer_uuid_;
   }
 
   //----------------------------------------------------------------

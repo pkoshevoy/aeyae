@@ -743,7 +743,8 @@ namespace yae
     // returns false if there are no enabled tuners:
     bool discover_enabled_tuners(std::set<std::string> & tuner_names) const;
 
-    // helper:
+    // helpers:
+    bool is_local_uuid_writer_uuid() const;
     std::string get_writer_uuid() const;
 
     // default is us-bcast, can be configured in preferences:
