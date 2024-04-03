@@ -4375,7 +4375,8 @@ namespace yae
         const uint32_t ch_num = i->first;
         const yae::mpeg_ts::EPG::Channel & channel = i->second;
 
-        if (!yae::has(channel_frequency_lut_, ch_num))
+        if (!channel_frequency_lut_.empty() &&
+            !yae::has(channel_frequency_lut_, ch_num))
         {
           // don't list channels that disappeared:
           continue;

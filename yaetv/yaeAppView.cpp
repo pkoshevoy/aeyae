@@ -15,6 +15,7 @@
 #endif
 
 // aeyae:
+#include "yae/api/yae_log.h"
 #include "yae/utils/yae_benchmark.h"
 #include "yae/utils/yae_utils.h"
 
