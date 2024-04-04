@@ -2096,6 +2096,8 @@ namespace yae
     minor = 0;
 
     YAE_OPENGL_HERE();
+    YAE_OGL_11_HERE();
+
     const char * version =
       ((const char *)YAE_OGL_11(glGetString(GL_VERSION)));
 
