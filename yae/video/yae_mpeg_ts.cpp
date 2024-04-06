@@ -5119,7 +5119,7 @@ namespace yae
     //
     Context::Context(const std::string & id):
       id_(id),
-      bucket_(4 * 8),
+      bucket_(1 + 24 / 3),
       network_pid_(0),
       stt_error_(0)
     {}
