@@ -2542,10 +2542,10 @@ namespace yae
 
       std::string id_;
 
-      // 4 days worth of channel guide data in 3 hour long chunks,
+      // 1 days worth of channel guide data in 3 hour long chunks,
       // indexed by an index derived from STT system time:
       //
-      std::vector<Bucket> bucket_; // 4 * (24 / 3)
+      std::vector<Bucket> bucket_; // 1 + (24 / 3)
 
       // unused:
       uint16_t network_pid_;

@@ -5350,7 +5350,7 @@ namespace yae
       uint32_t ix_next = (ix_curr + 1) %  bucket_.size();
 
       // clear the next bucket, so that when we rollover to it
-      // it would not contain entries from 4 days ago:
+      // it would not contain entries from days ago:
       {
         Bucket & bucket = bucket_[ix_next];
         bucket = Bucket();
@@ -6150,10 +6150,14 @@ namespace yae
     Context::load(const Json::Value & json)
     {
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "load");
+      std::vector<Bucket> buckets;
+      yae::load(json["bucket"], buckets);
+
       boost::unique_lock<boost::mutex> lock(mutex_);
-      yae::load(json["bucket"], bucket_);
-      YAE_EXPECT(bucket_.size() == 4 * 8);
-      bucket_.resize(4 * 8);
+      if (buckets.size() == bucket_.size())
+      {
+        bucket_.swap(buckets);
+      }
     }
 
     //----------------------------------------------------------------
