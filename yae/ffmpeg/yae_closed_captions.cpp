@@ -483,6 +483,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TStrPos
+  //
+  typedef std::string::size_type TStrPos;
+
+  //----------------------------------------------------------------
+  // find_linebreak
+  //
+  static TStrPos
+  find_linebreak(const std::string & text, TStrPos start_here)
+  {
+    TStrPos found = text.find("\r\n", start_here);
+    if (found == std::string::npos)
+    {
+      found = text.find("\n", start_here);
+      YAE_ASSERT(found != std::string::npos);
+    }
+    return found;
+  }
+
+  //----------------------------------------------------------------
   // adjust_ass_header
   //
   static std::string
@@ -502,14 +522,13 @@ Style: Default,Monospace,16,&Hffffff,&Hffffff,&H0,&H0,0,0,0,0,100,100,0,0,3,1,0,
 [Events]
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
      */
-    typedef std::string::size_type TStrPos;
     TStrPos c0 = header.find("[V4+ Styles]");
 
     TStrPos c1 = header.find("Format: ", c0 + 12);
-    TStrPos c2 = header.find("\r\n", c1 + 8);
+    TStrPos c2 = find_linebreak(header, c1 + 8);
 
     TStrPos c3 = header.find("Style: ", c2 + 1);
-    TStrPos c4 = header.find("\r\n", c3 + 7);
+    TStrPos c4 = find_linebreak(header, c3 + 7);
 
     std::string format = header.substr(c1 + 8, c2 - c1 - 8);
     std::string style = header.substr(c3 + 7, c4 - c3 - 7);
