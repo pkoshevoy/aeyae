@@ -4667,9 +4667,10 @@ namespace yae
         yae_dlog("possibly dead DVR instance: "
                  "uuid: %s, "
                  "host: %s, "
-                 "time since last heartbeat: %" PRIi64 "",
+                 "time since last heartbeat (%s): %" PRIi64 "",
                  dvr_uuid.c_str(),
                  dvr_host.c_str(),
+                 yae::unix_epoch_time_to_utc_str(heartbeat).c_str(),
                  dt_sec);
 
         if (dt_sec >= 24 * 60 * 60)
