@@ -4670,7 +4670,7 @@ namespace yae
                  "time since last heartbeat (%s): %" PRIi64 "",
                  dvr_uuid.c_str(),
                  dvr_host.c_str(),
-                 yae::unix_epoch_time_to_utc_str(heartbeat).c_str(),
+                 yae::unix_epoch_time_to_localdate(heartbeat).c_str(),
                  dt_sec);
 
         if (dt_sec >= 24 * 60 * 60)
