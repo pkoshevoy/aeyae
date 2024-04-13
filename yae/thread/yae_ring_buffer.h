@@ -29,10 +29,10 @@ namespace yae
   //
   struct YAE_API RingBuffer
   {
-    RingBuffer(std::size_t capacity);
+    RingBuffer(std::size_t capacity = 0);
     ~RingBuffer();
 
-    void open(std::size_t capacity = 0);
+    void open(std::size_t capacity);
     void close();
     bool is_open() const;
 

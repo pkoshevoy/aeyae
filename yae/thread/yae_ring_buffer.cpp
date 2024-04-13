@@ -21,7 +21,10 @@ namespace yae
     head_(0),
     tail_(0)
   {
-    open(capacity);
+    if (capacity)
+    {
+      open(capacity);
+    }
   }
 
   //----------------------------------------------------------------
@@ -38,6 +41,13 @@ namespace yae
   void
   RingBuffer::open(std::size_t capacity)
   {
+    YAE_ASSERT(capacity > 0);
+    if (!capacity)
+    {
+      close();
+      return;
+    }
+
     boost::unique_lock<boost::mutex> lock(mutex_);
     if (capacity != data_.size())
     {

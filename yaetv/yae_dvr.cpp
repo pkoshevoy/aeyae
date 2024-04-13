@@ -1469,8 +1469,7 @@ namespace yae
   DVR::PacketHandler::PacketHandler(DVR & dvr, const std::string & frequency):
     dvr_(dvr),
     ctx_(frequency),
-    ring_buffer_(188 * 262144),
-    packets_(400000), // 75.2MB
+    packets_(400000), // set fifo max capacity at ~75.2MB
     recordings_update_gps_time_(0)
   {
     worker_.set_queue_size_limit(1);
@@ -1759,6 +1758,7 @@ namespace yae
              this,
              packet_handler.ctx_.log_prefix_.c_str());
     packet_handler.ring_buffer_.close();
+    packet_handler.packets_.clear();
 
     // it's as ready as it's going to be:
     packet_handler.epg_ready_.notify_all();

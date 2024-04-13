@@ -32,13 +32,13 @@ namespace yae
       size_(0)
     {}
 
-    void clear()
+    inline void clear()
     {
       size_ = 0;
       data_.clear();
     }
 
-    void push(const TData & v)
+    inline void push(const TData & v)
     {
       if (size_ < capacity_)
       {
@@ -73,6 +73,9 @@ namespace yae
 
     inline std::size_t capacity() const
     { return capacity_; }
+
+    inline void set_capacity(std::size_t capacity)
+    { capacity_ = capacity; }
 
     inline std::size_t size() const
     { return size_; }
