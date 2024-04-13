@@ -121,6 +121,13 @@ namespace yae
       else
       {
         cond_.wait(lock);
+
+        if (data_.size() != capacity)
+        {
+          // RingBuffer was closed while we were waiting:
+          YAE_ASSERT(!open_);
+          break;
+        }
       }
     }
 
@@ -166,6 +173,13 @@ namespace yae
       else if (open_)
       {
         cond_.wait(lock);
+
+        if (data_.size() != capacity)
+        {
+          // RingBuffer was closed while we were waiting:
+          YAE_ASSERT(!open_);
+          break;
+        }
       }
       else
       {
