@@ -1758,7 +1758,6 @@ namespace yae
              this,
              packet_handler.ctx_.log_prefix_.c_str());
     packet_handler.ring_buffer_.close();
-    packet_handler.packets_.clear();
 
     // it's as ready as it's going to be:
     packet_handler.epg_ready_.notify_all();
