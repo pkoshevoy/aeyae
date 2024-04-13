@@ -69,6 +69,7 @@ namespace yae
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
     open_ = false;
+    data_.clear();
     cond_.notify_all();
   }
 
