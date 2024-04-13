@@ -69,7 +69,6 @@ namespace yae
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
     open_ = false;
-    data_.clear();
     cond_.notify_all();
   }
 
@@ -95,7 +94,7 @@ namespace yae
     const std::size_t capacity = data_.size();
 
     std::size_t done = 0;
-    while (open_ && src < end)
+    while (open_ && capacity && src < end)
     {
       std::size_t todo = (end - src);
       std::size_t size = 0;
@@ -146,7 +145,7 @@ namespace yae
     const std::size_t capacity = data_.size();
 
     std::size_t done = 0;
-    while (dst < end)
+    while (capacity && dst < end)
     {
       std::size_t todo = (end - dst);
       std::size_t size = 0;

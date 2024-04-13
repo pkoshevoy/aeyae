@@ -429,14 +429,35 @@ namespace yae
 
       void refresh_cached_recordings();
 
+      //----------------------------------------------------------------
+      // Session
+      //
+      struct Session
+      {
+        Session():
+          ring_buffer_(188 * 262144),
+          packets_(400000) // set fifo max capacity at ~75.2MB
+        {}
+
+        yae::RingBuffer ring_buffer_;
+
+        // buffer packets until we have enough info (EPG)
+        // to enable us to handle them properly:
+        yae::fifo<Packet> packets_;
+      };
+
+      //----------------------------------------------------------------
+      // TSessionPtr
+      //
+      typedef yae::shared_ptr<PacketHandler::Session> TSessionPtr;
+
       DVR & dvr_;
       yae::Worker worker_;
       yae::mpeg_ts::Context ctx_;
-      yae::RingBuffer ring_buffer_;
 
-      // buffer packets until we have enough info (EPG)
-      // to enable us to handle them properly:
-      yae::fifo<Packet> packets_;
+      // session buffers lifetime may be extended by the threads
+      // that reference it:
+      PacketHandler::TSessionPtr session_;
 
       // cache scheduled recordings to avoid lock contention:
       mutable boost::mutex mutex_;

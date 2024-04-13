@@ -1360,7 +1360,8 @@ namespace yae
   {
     (void)worker;
 
-    yae::RingBuffer & ring_buffer = packet_handler_.ring_buffer_;
+    DVR::PacketHandler::TSessionPtr ph_session = packet_handler_.session_;
+    yae::RingBuffer & ring_buffer = ph_session->ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler_.ctx_;
     yae::Data data(188 * 4096);
 
@@ -1469,7 +1470,6 @@ namespace yae
   DVR::PacketHandler::PacketHandler(DVR & dvr, const std::string & frequency):
     dvr_(dvr),
     ctx_(frequency),
-    packets_(400000), // set fifo max capacity at ~75.2MB
     recordings_update_gps_time_(0)
   {
     worker_.set_queue_size_limit(1);
@@ -1480,7 +1480,7 @@ namespace yae
   //
   DVR::PacketHandler::~PacketHandler()
   {
-    ring_buffer_.close();
+    session_.reset();
     worker_.stop();
     worker_.wait_until_finished();
   }
@@ -1493,10 +1493,19 @@ namespace yae
                              const yae::mpeg_ts::Bucket & bucket,
                              uint32_t gps_time)
   {
-    packets_.push(pkt);
+    // keep alive:
+    PacketHandler::TSessionPtr ph_session = session_;
+    if (!ph_session)
+    {
+      return;
+    }
+
+    // shortcut:
+    yae::fifo<Packet> & packets = ph_session->packets_;
+    packets.push(pkt);
 
     if (bucket.guide_.empty() ||
-        (!packets_.full() && !bucket.vct_table_set_.is_complete()))
+        (!packets.full() && !bucket.vct_table_set_.is_complete()))
     {
       return;
     }
@@ -1564,19 +1573,23 @@ namespace yae
           recordings_[ch_num].swap(recs);
         }
       }
-#if 0
-      double ring_buffer_occupancy = ring_buffer_.occupancy();
-      yae_ilog("%sring buffer occupancy: %f",
-               ctx_.log_prefix_.c_str(),
-               ring_buffer_occupancy);
-#endif
     }
+
+    // keep alive:
+    PacketHandler::TSessionPtr ph_session = session_;
+    if (!ph_session)
+    {
+      return;
+    }
+
+    // shortcut:
+    yae::fifo<Packet> & packets = ph_session->packets_;
 
     YAE_TIMESHEET_PROBE(probe, ctx_.timesheet_,
                         "PacketHandler::handle_backlog", "write");
 
     yae::mpeg_ts::IPacketHandler::Packet pkt;
-    while (packets_.pop(pkt))
+    while (packets.pop(pkt))
     {
       const yae::IBuffer & data = *(pkt.data_);
 
@@ -1699,8 +1712,7 @@ namespace yae
     }
 
     PacketHandler & packet_handler = *packet_handler_;
-    packet_handler.packets_.clear();
-    packet_handler.ring_buffer_.open(188 * 262144);
+    packet_handler.session_.reset(new PacketHandler::Session());
 
     if (session_)
     {
@@ -1757,7 +1769,13 @@ namespace yae
     yae_ilog("%p stream stop: %s",
              this,
              packet_handler.ctx_.log_prefix_.c_str());
-    packet_handler.ring_buffer_.close();
+    PacketHandler::TSessionPtr ph_session = packet_handler.session_;
+    if (ph_session)
+    {
+      ph_session->ring_buffer_.close();
+      packet_handler.session_.reset();
+      ph_session.reset();
+    }
 
     // it's as ready as it's going to be:
     packet_handler.epg_ready_.notify_all();
@@ -1773,7 +1791,8 @@ namespace yae
   DVR::Stream::is_open() const
   {
     const PacketHandler & packet_handler = *packet_handler_;
-    if (!packet_handler.ring_buffer_.is_open())
+    PacketHandler::TSessionPtr ph_session = packet_handler.session_;
+    if (!(ph_session && ph_session->ring_buffer_.is_open()))
     {
       return false;
     }
@@ -1800,7 +1819,8 @@ namespace yae
     }
 
     PacketHandler & packet_handler = *packet_handler_;
-    yae::RingBuffer & ring_buffer = packet_handler.ring_buffer_;
+    PacketHandler::TSessionPtr ph_session = packet_handler.session_;
+    yae::RingBuffer & ring_buffer = ph_session->ring_buffer_;
     yae::mpeg_ts::Context & ctx = packet_handler.ctx_;
     YAE_TIMESHEET_PROBE_TOO_SLOW(probe1, ctx.timesheet_,
                                  "DVR::Stream", "push",
@@ -2251,7 +2271,8 @@ namespace yae
       if (packet_handler_ptr)
       {
         PacketHandler & ph = *packet_handler_ptr;
-        ph.ring_buffer_.close();
+        PacketHandler::TSessionPtr ph_session = ph.session_;
+        ph_session->ring_buffer_.close();
         ph.worker_.stop();
         ph.worker_.wait_until_finished();
 
