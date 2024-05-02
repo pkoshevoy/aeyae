@@ -2928,7 +2928,7 @@ namespace yae
     {
       program_number_ = bin.read(16);
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
       pid_ = bin.read(13);
     }
 
