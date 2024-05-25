@@ -69,6 +69,24 @@ namespace yae
               this->getNumberOfAudioTracks());
     }
 
+    inline Timespan getVideoTimespan() const
+    {
+      TTime t0;
+      TTime dt;
+      return (this->getVideoDuration(t0, dt) ?
+              Timespan(t0, t0 + dt) :
+              Timespan());
+    }
+
+    inline Timespan getAudioTimespan() const
+    {
+      TTime t0;
+      TTime dt;
+      return (this->getAudioDuration(t0, dt) ?
+              Timespan(t0, t0 + dt) :
+              Timespan());
+    }
+
     // NOTE: returns false if no track is currently selected:
     virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
     virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
