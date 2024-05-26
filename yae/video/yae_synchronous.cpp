@@ -249,6 +249,10 @@ namespace yae
         << "\nNOTE: master clock realtime enabled: " << enabled
         << "\n\n";
 #endif
+
+      // reset the wallclock origin:
+      this->resetCurrentTime();
+
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       timeSegment.realtime_ = enabled;
       return true;
@@ -282,7 +286,7 @@ namespace yae
 #endif
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       timeSegment.origin_ = boost::get_system_time();
-      timeSegment.t0_ = TTime();
+      timeSegment.t0_ = TTime(0, 0);
       timeSegment.waitForMe_ = boost::system_time();
       timeSegment.delayInSeconds_ = 0.0;
       return true;
@@ -322,7 +326,7 @@ namespace yae
       now += boost::posix_time::microseconds(long(latency * 1e+6));
 
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
-      if (timeSegment.realtime_)
+      if (timeSegment.realtime_ && t0.valid())
       {
         TTime ct = t0 + elapsedTime;
         double dt = (ct - t).sec();
@@ -339,6 +343,7 @@ namespace yae
         }
       }
 
+      // resync:
       timeSegment.origin_ = now;
       timeSegment.t0_ = t;
 

@@ -64,6 +64,10 @@ namespace yae
     //! Specify which is the master reference clock:
     bool setMasterClock(const SharedClock & master);
 
+    //! check if this is the master clock:
+    inline bool isMasterClock() const
+    { return this->allowsSettingTime(); }
+
     //! NOTE: setting current time is permitted
     //! only when this clock is the master clock:
     bool allowsSettingTime() const;

@@ -189,7 +189,11 @@ namespace yae
   void
   VideoRenderer::TPrivate::thread_loop()
   {
-    TTime t0;
+    // master clock reference:
+    TTime t0(0, 0);
+
+    // local clock reference, in case master clock stops advancing:
+    TTime t0_local(0, 0);
 
     frame_a_ = TVideoFramePtr();
     frame_b_ = TVideoFramePtr();
@@ -221,6 +225,33 @@ namespace yae
       bool clockIsAccurate = true;
       bool clockIsRunning =
         clock_.getCurrentTime(t0, elapsedTime, clockIsAccurate);
+
+      if (t0.invalid())
+      {
+        // reference audio track is shorter than the video track?
+        clockIsAccurate = false;
+
+        if (t0_local.valid())
+        {
+          // set the origin:
+          t0 = t0_local;
+        }
+        else if (frame_a_)
+        {
+          t0_local = frame_a_->time_;
+          t0 = t0_local;
+        }
+        else
+        {
+          // assume zero origin:
+          t0 = TTime(0, 1001);
+        }
+      }
+      else
+      {
+        // discard local clock reference:
+        t0_local = TTime(0, 0);
+      }
 
       double clockPosition = t0.sec();
       double playheadPosition = clockPosition + elapsedTime * tempo - drift;
