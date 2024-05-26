@@ -476,4 +476,14 @@ namespace yae
   {
     private_->input_.skipForward(dt, reader);
   }
+
+  //----------------------------------------------------------------
+  // PortaudioRenderer::input
+  //
+  const AudioRendererInput &
+  PortaudioRenderer::input() const
+  {
+    return private_->input_;
+  }
+
 }

@@ -338,4 +338,14 @@ namespace yae
   {
     private_->input_.skipForward(dt, reader);
   }
+
+  //----------------------------------------------------------------
+  // AudioUnitRenderer::input
+  //
+  const AudioRendererInput &
+  AudioUnitRenderer::input() const
+  {
+    return private_->input_;
+  }
+
 }

@@ -565,6 +565,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // VideoRenderer::getCurrentTime
+  //
+  TTime
+  VideoRenderer::getCurrentTime() const
+  {
+    TVideoFramePtr frame = private_->frame_a_;
+    return frame ? frame->time_ : TTime();
+  }
+
+  //----------------------------------------------------------------
   // VideoRenderer::skipToNextFrame
   //
   bool

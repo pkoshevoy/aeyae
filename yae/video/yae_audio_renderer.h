@@ -14,6 +14,7 @@
 
 // aeyae:
 #include "../api/yae_shared_ptr.h"
+#include "yae_audio_renderer_input.h"
 #include "yae_video.h"
 #include "yae_reader.h"
 #include "yae_synchronous.h"
@@ -73,6 +74,9 @@ namespace yae
     //! this is used for single-frame stepping while playback is paused:
     virtual void skipToTime(const TTime & t, IReader * reader) = 0;
     virtual void skipForward(const TTime & dt, IReader * reader) = 0;
+
+    //! accessors:
+    virtual const AudioRendererInput & input() const = 0;
   };
 
   //----------------------------------------------------------------

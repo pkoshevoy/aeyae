@@ -54,6 +54,9 @@ namespace yae
     //! stop the renderer thread and discard current canvas and reader:
     void close();
 
+    //! return the time of currently rendered frame, if any:
+    TTime getCurrentTime() const;
+
     //! try to skip to next frame
     //! if successful pass-back the frame position and return true
     //! otherwise return false.

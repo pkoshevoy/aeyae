@@ -44,6 +44,9 @@ namespace yae
     void maybeReadOneFrame(IReader * reader, TTime & framePosition);
 
   public:
+    //! return the time of current audio frame, if any:
+    TTime getCurrentTime() const;
+
     //! this is used for single-frame stepping while playback is paused:
     void skipToTime(const TTime & t, IReader * reader);
     void skipForward(const TTime & dt, IReader * reader);

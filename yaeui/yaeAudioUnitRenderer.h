@@ -122,6 +122,9 @@ namespace yae
     //! this is used for single-frame stepping while playback is paused:
     virtual void skipToTime(const TTime & t, IReader * reader);
     virtual void skipForward(const TTime & dt, IReader * reader);
+
+    //! accessors:
+    virtual const AudioRendererInput & input() const;
   };
 }
 

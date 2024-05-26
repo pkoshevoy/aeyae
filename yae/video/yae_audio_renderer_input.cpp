@@ -164,6 +164,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AudioRendererInput::getCurrentTime
+  //
+  TTime
+  AudioRendererInput::getCurrentTime() const
+  {
+    TTime framePosition;
+    if (audioFrame_)
+    {
+      framePosition = audioFrame_->time_ +
+        TTime(std::size_t(double(audioFrameOffset_) *
+                          audioFrame_->tempo_ +
+                          0.5),
+              audioFrame_->traits_.sample_rate_);
+    }
+
+    return framePosition;
+  }
+
+  //----------------------------------------------------------------
   // AudioRendererInput::skipToTime
   //
   void
