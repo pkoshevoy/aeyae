@@ -89,6 +89,7 @@ namespace yae
       copied_(false)
     {
       waitingFor_ = boost::get_system_time();
+      this->resetCurrentTime();
     }
 
     //! Check whether a given clock and this clock
