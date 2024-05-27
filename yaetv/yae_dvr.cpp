@@ -2254,6 +2254,12 @@ namespace yae
     {
       TWorkerPtr service_loop_worker;
       std::swap(service_loop_worker, service_loop_worker_);
+
+      if (service_loop_worker)
+      {
+        service_loop_worker->stop();
+        service_loop_worker->wait_until_finished();
+      }
     }
 
     worker_.stop();
@@ -2272,7 +2278,11 @@ namespace yae
       {
         PacketHandler & ph = *packet_handler_ptr;
         PacketHandler::TSessionPtr ph_session = ph.session_;
-        ph_session->ring_buffer_.close();
+        if (ph_session)
+        {
+          ph_session->ring_buffer_.close();
+        }
+
         ph.worker_.stop();
         ph.worker_.wait_until_finished();
 
