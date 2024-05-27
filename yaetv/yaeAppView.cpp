@@ -1189,7 +1189,7 @@ namespace yae
     }
 
     const AppView & view_;
-    const uint32_t duration_;
+    uint32_t duration_;
   };
 
   //----------------------------------------------------------------
@@ -3287,14 +3287,16 @@ namespace yae
            i = rec_times.begin(); i != rec_times.end(); ++i)
     {
       uint32_t gps_t0 = i->first;
+      uint32_t gps_t1 = i->second;
+      int64_t ts = unix_epoch_gps_offset + gps_t0;
+      std::string ts_str = unix_epoch_time_to_localtime_str(ts);
+      std::string highlight_id = "rec " + ts_str;
 
       yae::shared_ptr<Rectangle, Item> & item_ptr = rec_highlight_[gps_t0];
       if (!item_ptr)
       {
-        uint32_t gps_t1 = i->second;
-        int64_t ts = unix_epoch_gps_offset + gps_t0;
-        std::string ts_str = unix_epoch_time_to_localtime_str(ts);
-        item_ptr.reset(new Rectangle(("rec " + ts_str).c_str()));
+        // create new highlight:
+        item_ptr.reset(new Rectangle(highlight_id.c_str()));
 
         Rectangle & highlight = tc.add<Rectangle>(item_ptr);
         highlight.anchors_.top_ = ItemRef::reference(tc, kPropertyTop);
@@ -3305,6 +3307,15 @@ namespace yae
           addExpr(new ProgramTileWidth(view, gps_t1 - gps_t0));
         highlight.color_ = highlight.
           addExpr(style_color_ref(view, &AppStyle::bg_epg_rec_, 0.1));
+      }
+      else
+      {
+        // update existing highlight:
+        Rectangle & highlight = tc.get<Rectangle>(highlight_id.c_str());
+        ProgramTileWidth & program_tile_width =
+          *(highlight.width_.get_expr<ProgramTileWidth>());
+        program_tile_width.duration_ = (gps_t1 - gps_t0);
+        item_ptr->uncache();
       }
 
       rec_highlights[gps_t0] = item_ptr;
