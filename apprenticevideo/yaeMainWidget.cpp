@@ -921,10 +921,10 @@ namespace yae
     TPlaylistItemPtr item = playlistModel_.lookup(index);
     TPlaylistItemPtr next = playlistModel_.lookup(iNext);
 
-    if (item && next && (&(item->group_) != &(next->group_)))
+    if (item && (!next || (&(item->group_) != &(next->group_))))
     {
       const PlaylistGroup * itemGroup = &(item->group_);
-      const PlaylistGroup * nextGroup = &(next->group_);
+      const PlaylistGroup * nextGroup = next ? &(next->group_) : NULL;
 
       if (itemGroup != nextGroup)
       {
