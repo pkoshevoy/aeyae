@@ -3394,6 +3394,8 @@ namespace yae
     rec_highlight_.swap(rec_highlights);
 
     hsv_content.uncache();
+    timeline.uncache();
+
     dataChanged();
   }
 
