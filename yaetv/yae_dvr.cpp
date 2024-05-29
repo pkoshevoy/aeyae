@@ -1996,6 +1996,7 @@ namespace yae
   DVR::DVR(const std::string & yaetv_dir,
            const std::string & basedir):
     hdhr_(yaetv_dir),
+    worker_(0, 1, "DVR"),
     yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     heartbeat_period_(5, 1),
@@ -3292,7 +3293,18 @@ namespace yae
 
         yae_ilog("loading EPG for % 9s Hz", frequency.c_str());
         PacketHandler & packet_handler = *packet_handler_ptr;
-        packet_handler.ctx_.load(epg[frequency]);
+        try
+        {
+          packet_handler.ctx_.load(epg[frequency]);
+        }
+        catch (const std::exception & e)
+        {
+          yae_elog("DVR::load_epg %s, exception: %s", path.c_str(), e.what());
+        }
+        catch (...)
+        {
+          yae_elog("DVR::load_epg %s, unexpected exception", path.c_str());
+        }
       }
     }
   }
