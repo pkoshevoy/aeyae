@@ -69,7 +69,7 @@ namespace yae
     channel_major_ = channel.major_;
     channel_minor_ = channel.minor_;
     channel_name_ = channel.name_;
-    title_ = program.title_;
+    full_title_ = program.title_;
     rating_ = program.rating_;
     description_ = program.description_;
     max_recordings_ = max_recordings;
@@ -89,7 +89,7 @@ namespace yae
     channel_major_ = r.channel_major_;
     channel_minor_ = r.channel_minor_;
     channel_name_ = r.channel_name_;
-    title_ = r.title_;
+    full_title_ = r.full_title_;
     rating_ = r.rating_;
     description_ = r.description_;
     device_info_ = r.device_info_;
@@ -111,11 +111,44 @@ namespace yae
                  channel_major_ == r.channel_major_ &&
                  channel_minor_ == r.channel_minor_ &&
                  channel_name_ == r.channel_name_ &&
-                 title_ == r.title_ &&
+                 full_title_ == r.full_title_ &&
                  rating_ == r.rating_ &&
                  description_ == r.description_ &&
                  max_recordings_ == r.max_recordings_);
     return same;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::get_short_title
+  //
+  std::string
+  Recording::Rec::get_short_title() const
+  {
+    static const char * tokens[] = {
+      " (season premiere)",
+      " (season finale)",
+      " (series premiere)",
+      " (series finale)",
+      " christmas special",
+      " kickoff episode",
+      " sneak peek",
+    };
+
+    std::string short_title = full_title_;
+    std::string title_lower_case = yae::to_lower(full_title_);
+    for (std::size_t i = 0, n = sizeof(tokens) / sizeof(tokens[0]); i < n; i++)
+    {
+      const char * token = tokens[i];
+      std::string::size_type found = title_lower_case.find(token);
+      if (found != std::string::npos)
+      {
+        short_title = full_title_.substr(0, found);
+        break;
+      }
+    }
+
+    short_title = yae::trim_ws(short_title);
+    return short_title;
   }
 
   //----------------------------------------------------------------
@@ -134,7 +167,8 @@ namespace yae
       channel = oss.str().c_str();
     }
 
-    std::string safe_title = sanitize_filename_utf8(title_);
+    std::string title = this->get_short_title();
+    std::string safe_title = sanitize_filename_utf8(title);
     fs::path title_path = basedir / channel / safe_title;
     return title_path;
   }
@@ -145,7 +179,8 @@ namespace yae
   std::string
   Recording::Rec::get_basename() const
   {
-    std::string safe_title = sanitize_filename_utf8(title_);
+    std::string title = this->get_short_title();
+    std::string safe_title = sanitize_filename_utf8(title);
 
     struct tm tm;
     unix_epoch_time_to_localtime(utc_t0_, tm);
@@ -198,7 +233,7 @@ namespace yae
   Recording::Rec::to_epg_program() const
   {
     yae::mpeg_ts::EPG::Program program;
-    program.title_ = title_;
+    program.title_ = full_title_;
     program.rating_ = rating_;
     program.description_ = description_;
     program.gps_time_ = gps_t0_;
@@ -513,7 +548,7 @@ namespace yae
     save(json["channel_major"], rec.channel_major_);
     save(json["channel_minor"], rec.channel_minor_);
     save(json["channel_name"], rec.channel_name_);
-    save(json["title"], rec.title_);
+    save(json["title"], rec.full_title_);
     save(json["rating"], rec.rating_);
     save(json["description"], rec.description_);
 
@@ -532,7 +567,7 @@ namespace yae
     oss << unix_epoch_time_to_localtime_str(rec.utc_t0_) << " "
         << rec.channel_major_ << "."
         << rec.channel_minor_ << " "
-        << rec.title_ << " (now "
+        << rec.full_title_ << " (now "
         << unix_epoch_time_to_localtime_str(TTime::now().get(1)) << ")";
     save(json["_debug"], oss.str());
 #endif
@@ -551,7 +586,7 @@ namespace yae
     load(json["channel_major"], rec.channel_major_);
     load(json["channel_minor"], rec.channel_minor_);
     load(json["channel_name"], rec.channel_name_);
-    load(json["title"], rec.title_);
+    load(json["title"], rec.full_title_);
     load(json["rating"], rec.rating_);
     load(json["description"], rec.description_);
 

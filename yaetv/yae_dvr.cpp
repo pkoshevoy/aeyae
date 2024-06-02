@@ -3973,7 +3973,7 @@ namespace yae
              title_bytes >> 20,
              rec.channel_major_,
              rec.channel_minor_,
-             rec.title_.c_str());
+             rec.full_title_.c_str());
     return false;
   }
 
@@ -4119,7 +4119,7 @@ namespace yae
     std::string playlist = yae::strfmt("%02i.%02i %s",
                                        rec.channel_major_,
                                        rec.channel_minor_,
-                                       rec.title_.c_str());
+                                       rec.get_short_title().c_str());
     return playlist;
   }
 

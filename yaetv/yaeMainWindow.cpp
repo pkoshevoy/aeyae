@@ -901,7 +901,7 @@ namespace yae
     std::string title = strfmt("%i-%i %s, %s",
                                rec.channel_major_,
                                rec.channel_minor_,
-                               rec.title_.c_str(),
+                               rec.full_title_.c_str(),
                                time_str.c_str());
     playerWindow_.setWindowTitle(QString::fromUtf8(title.c_str()));
 

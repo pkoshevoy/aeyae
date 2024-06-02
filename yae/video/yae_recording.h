@@ -91,6 +91,9 @@ namespace yae
       inline bool is_recordable() const
       { return TTime::gps_now().get(1) < gps_t1_; }
 
+      // truncate (season finale), (season premiere), (series premiere), etc...
+      std::string get_short_title() const;
+
       fs::path get_title_path(const fs::path & basedir) const;
 
       std::string get_basename() const;
@@ -113,7 +116,7 @@ namespace yae
       uint16_t channel_major_;
       uint16_t channel_minor_;
       std::string channel_name_;
-      std::string title_;
+      std::string full_title_;
       std::string rating_;
       std::string description_;
       std::string device_info_;
@@ -172,6 +175,12 @@ namespace yae
     {
       yae::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->max_recordings_;
+    }
+
+    inline std::string get_short_title() const
+    {
+      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      return rec->get_short_title();
     }
 
     inline fs::path get_title_path(const fs::path & basedir) const

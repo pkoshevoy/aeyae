@@ -3732,7 +3732,7 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
         title.background_ = title.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-        title.text_ = TVarRef::constant(TVar(rec.title_));
+        title.text_ = TVarRef::constant(TVar(rec.full_title_));
 
         // duration:
         Text & length = row1.addNew<Text>("length");
@@ -4049,7 +4049,7 @@ namespace yae
         title.background_ = title.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
         title.text_ = TVarRef::constant
-          (TVar(QString::fromUtf8(rec.title_.c_str())));
+          (TVar(QString::fromUtf8(rec.get_short_title().c_str())));
 
         count.font_ = style.font_;
         count.font_.setWeight(62);
@@ -4433,7 +4433,7 @@ namespace yae
           std::ostringstream oss;
           oss << rec.channel_major_ << "-"
               << rec.channel_minor_ << " "
-              << rec.title_;
+              << rec.full_title_;
           title.text_ =
             TVarRef::constant(TVar(QString::fromUtf8(oss.str().c_str())));
         }
