@@ -8,11 +8,11 @@ find_package(OpenGL REQUIRED)
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
-if (Qt5_FOUND)
-
+find_package(Qt6 COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
+if (Qt6_FOUND)
+  add_definitions(-DYAE_USE_QT6)
   if (NOT (APPLE OR WIN32))
-    find_package(Qt5DBus)
+    find_package(Qt6DBus)
   endif ()
 
   option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
@@ -20,29 +20,36 @@ if (Qt5_FOUND)
     add_definitions(-DYAE_USE_QOPENGL_WIDGET)
   endif ()
 
-else (Qt5_FOUND)
-  find_package(Qt4 REQUIRED)
-endif ()
+else (Qt6_FOUND)
+  find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
 
-if (QT4_FOUND)
-  if (NOT (APPLE OR WIN32))
-    if (QT_QTDBUS_FOUND)
-      set(QT_USE_QTDBUS TRUE)
+  if (Qt5_FOUND)
+    add_definitions(-DYAE_USE_QT5)
+    if (NOT (APPLE OR WIN32))
+      find_package(Qt5DBus)
     endif ()
-  endif ()
 
-  set(QT_USE_QTOPENGL TRUE)
-  set(QT_USE_QTMAIN TRUE)
-  include(${QT_USE_FILE})
-endif ()
+    option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
+    if (YAE_USE_QOPENGL_WIDGET)
+      add_definitions(-DYAE_USE_QOPENGL_WIDGET)
+    endif ()
 
-if (QT4_FOUND)
-  add_definitions(-DYAE_USE_QT4)
-endif ()
+  else (Qt5_FOUND)
+    find_package(Qt4 REQUIRED)
+    if (QT4_FOUND)
+      add_definitions(-DYAE_USE_QT4)
+      if (NOT (APPLE OR WIN32))
+        if (QT_QTDBUS_FOUND)
+          set(QT_USE_QTDBUS TRUE)
+        endif ()
+      endif ()
 
-if (Qt5_FOUND)
-  add_definitions(-DYAE_USE_QT5)
-endif ()
+      set(QT_USE_QTOPENGL TRUE)
+      set(QT_USE_QTMAIN TRUE)
+      include(${QT_USE_FILE})
+    endif (QT4_FOUND)
+  endif (Qt5_FOUND)
+endif (Qt6_FOUND)
 
 # add_definitions(-DYAE_STATIC)
 
@@ -268,6 +275,11 @@ if (Qt5_FOUND)
   qt5_wrap_ui(project_uis_hxx ${project_uis})
 endif ()
 
+if (Qt6_FOUND)
+  qt6_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+  qt6_wrap_ui(project_uis_hxx ${project_uis})
+endif ()
+
 set(project_sources
   ${project_sources}
   ${project_moc_cxx}
@@ -286,8 +298,8 @@ if (QT4_FOUND)
   endif ()
 endif ()
 
-set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-# set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
+#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 17)
 
 target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
 
@@ -302,6 +314,22 @@ if (Qt5_FOUND)
   if (Qt5DBus_FOUND)
     set(TARGET_LIBS ${TARGET_LIBS}
       Qt5::DBus
+      )
+  endif ()
+endif ()
+
+if (Qt6_FOUND)
+  set(TARGET_LIBS ${TARGET_LIBS}
+    Qt6::Core
+    Qt6::Gui
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
+    Qt6::Widgets
+    )
+
+  if (Qt6DBus_FOUND)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      Qt6::DBus
       )
   endif ()
 endif ()

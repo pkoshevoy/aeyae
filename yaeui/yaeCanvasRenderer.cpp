@@ -1056,37 +1056,250 @@ yae_assert_gl_no_error()
   return false;
 }
 
-#ifdef YAE_USE_QOPENGL_WIDGET
-namespace yae
+#ifndef YAE_USE_QGL_WIDGET
+namespace yaegl
 {
+
+  //----------------------------------------------------------------
+  // get_addr
+  //
+  QFunctionPointer
+  get_addr(QOpenGLContext * opengl, const char * name)
+  {
+    QFunctionPointer func = opengl->getProcAddress(name);
+    YAE_ASSERT(func);
+    return func;
+  }
+
   //----------------------------------------------------------------
   // OpenGLFunctionPointers::OpenGLFunctionPointers
   //
   OpenGLFunctionPointers::OpenGLFunctionPointers()
   {
-    QOpenGLFunctions::initializeOpenGLFunctions();
-    QOpenGLContext * opengl = QOpenGLContext::currentContext();
+    // QOpenGLFunctions::initializeOpenGLFunctions();
+    QOpenGLContext * ctx = QOpenGLContext::currentContext();
+
+    this->glBegin = (TBegin)
+      get_addr(ctx, "glBegin");
+
+    this->glEnd = (TEnd)
+      get_addr(ctx, "glEnd");
+
+    this->glClearAccum = (TClearAccum)
+      get_addr(ctx, "glClearAccum");
+
+    this->glClearColor = (TClearColor)
+      get_addr(ctx, "glClearColor");
+
+    this->glClearDepth = (TClearDepth)
+      get_addr(ctx, "glClearDepth");
+
+    this->glClearStencil = (TClearStencil)
+      get_addr(ctx, "glClearStencil");
+
+    this->glDepthFunc = (TDepthFunc)
+      get_addr(ctx, "glDepthFunc");
+
+    this->glDepthMask = (TDepthMask)
+      get_addr(ctx, "glDepthMask");
+
+    this->glColorMask = (TColorMask)
+      get_addr(ctx, "glColorMask");
+
+    this->glStencilFunc = (TStencilFunc)
+      get_addr(ctx, "glStencilFunc");
+
+    this->glStencilMask = (TStencilMask)
+      get_addr(ctx, "glStencilMask");
+
+    this->glStencilOp = (TStencilOp)
+      get_addr(ctx, "glStencilOp");
+
+    this->glColor3d = (TColor3d)
+      get_addr(ctx, "glColor3d");
+
+    this->glColor3f = (TColor3f)
+      get_addr(ctx, "glColor3f");
+
+    this->glColor3fv = (TColor3fv)
+      get_addr(ctx, "glColor3fv");
+
+    this->glColor4d = (TColor4d)
+      get_addr(ctx, "glColor4d");
+
+    this->glColor4ub = (TColor4ub)
+      get_addr(ctx, "glColor4ub");
+
+    this->glVertex2d = (TVertex2d)
+      get_addr(ctx, "glVertex2d");
+
+    this->glVertex2dv = (TVertex2dv)
+      get_addr(ctx, "glVertex2dv");
+
+    this->glVertex2i = (TVertex2i)
+      get_addr(ctx, "glVertex2i");
+
+    this->glRectd = (TRectd)
+      get_addr(ctx, "glRectd");
+
+    this->glRecti = (TRecti)
+      get_addr(ctx, "glRecti");
+
+    this->glMatrixMode = (TMatrixMode)
+      get_addr(ctx, "glMatrixMode");
+
+    this->glPushMatrix = (TPushMatrix)
+      get_addr(ctx, "glPushMatrix");
+
+    this->glPopMatrix = (TPopMatrix)
+      get_addr(ctx, "glPopMatrix");
+
+    this->glViewport = (TViewport)
+      get_addr(ctx, "glViewport");
+
+    this->glOrtho = (TOrtho)
+      get_addr(ctx, "glOrtho");
+
+    this->glLoadIdentity = (TLoadIdentity)
+      get_addr(ctx, "glLoadIdentity");
+
+    this->glRotated = (TRotated)
+      get_addr(ctx, "glRotated");
+
+    this->glScaled = (TScaled)
+      get_addr(ctx, "glScaled");
+
+    this->glTranslated = (TTranslated)
+      get_addr(ctx, "glTranslated");
+
+    this->glPolygonMode = (TPolygonMode)
+      get_addr(ctx, "glPolygonMode");
+
+    this->glShadeModel = (TShadeModel)
+      get_addr(ctx, "glShadeModel");
+
+    this->glAlphaFunc = (TAlphaFunc)
+      get_addr(ctx, "glAlphaFunc");
+
+    this->glPushAttrib = (TPushAttrib)
+      get_addr(ctx, "glPushAttrib");
+
+    this->glPopAttrib = (TPopAttrib)
+      get_addr(ctx, "glPopAttrib");
+
+    this->glPushClientAttrib = (TPushClientAttrib)
+      get_addr(ctx, "glPushClientAttrib");
+
+    this->glPopClientAttrib = (TPopClientAttrib)
+      get_addr(ctx, "glPopClientAttrib");
+
+    this->glEnable = (TEnable)
+      get_addr(ctx, "glEnable");
+
+    this->glDisable = (TDisable)
+      get_addr(ctx, "glDisable");
+
+    this->glHint = (THint)
+      get_addr(ctx, "glHint");
+
+    this->glBlendFunc = (TBlendFunc)
+      get_addr(ctx, "glBlendFunc");
+
+    this->glLineStipple = (TLineStipple)
+      get_addr(ctx, "glLineStipple");
+
+    this->glLineWidth = (TLineWidth)
+      get_addr(ctx, "glLineWidth");
+
+    this->glScissor = (TScissor)
+      get_addr(ctx, "glScissor");
+
+    this->glBindBuffer = (TBindBuffer)
+      get_addr(ctx, "glBindBuffer");
+
+    this->glCheckFramebufferStatus = (TCheckFramebufferStatus)
+      get_addr(ctx, "glCheckFramebufferStatus");
+
+    this->glDeleteTextures = (TDeleteTextures)
+      get_addr(ctx, "glDeleteTextures");
+
+    this->glGenTextures = (TGenTextures)
+      get_addr(ctx, "glGenTextures");
+
+    this->glGetError = (TGetError)
+      get_addr(ctx, "glGetError");
+
+    this->glGetString = (TGetString)
+      get_addr(ctx, "glGetString");
+
+    this->glGetIntegerv = (TGetIntegerv)
+      get_addr(ctx, "glGetIntegerv");
+
+    this->glGetTexLevelParameteriv = (TGetTexLevelParameteriv)
+      get_addr(ctx, "glGetTexLevelParameteriv");
+
+    this->glIsTexture = (TIsTexture)
+      get_addr(ctx, "glIsTexture");
+
+    this->glTexEnvi = (TTexEnvi)
+      get_addr(ctx, "glTexEnvi");
+
+    this->glTexCoord2d = (TTexCoord2d)
+      get_addr(ctx, "glTexCoord2d");
+
+    this->glTexCoord2i = (TTexCoord2i)
+      get_addr(ctx, "glTexCoord2i");
+
+    this->glTexImage2D = (TTexImage2D)
+      get_addr(ctx, "glTexImage2D");
+
+    this->glTexImage3D = (TTexImage3D)
+      get_addr(ctx, "glTexImage3D");
+
+    this->glTexSubImage2D = (TTexSubImage2D)
+      get_addr(ctx, "glTexSubImage2D");
+
+    this->glTexParameteri = (TTexParameteri)
+      get_addr(ctx, "glTexParameteri");
+
+    this->glPixelStorei = (TPixelStorei)
+      get_addr(ctx, "glPixelStorei");
+
+    this->glActiveTexture = (TActiveTexture)
+      get_addr(ctx, "glActiveTexture");
+
+    this->glBindTexture = (TBindTexture)
+      get_addr(ctx, "glBindTexture");
+
+    this->glDisableVertexAttribArray = (TDisableVertexAttribArray)
+      get_addr(ctx, "glDisableVertexAttribArray");
+
+    this->glVertexAttribPointer = (TVertexAttribPointer)
+      get_addr(ctx, "glVertexAttribPointer");
+
+    this->glUseProgram = (TUseProgram)
+      get_addr(ctx, "glUseProgram");
 
     this->glProgramStringARB = (TProgramStringARB)
-      opengl->getProcAddress("glProgramStringARB");
+      get_addr(ctx, "glProgramStringARB");
 
     this->glGetProgramivARB = (TGetProgramivARB)
-      opengl->getProcAddress("glGetProgramivARB");
+      get_addr(ctx, "glGetProgramivARB");
 
     this->glDeleteProgramsARB = (TDeleteProgramsARB)
-      opengl->getProcAddress("glDeleteProgramsARB");
+      get_addr(ctx, "glDeleteProgramsARB");
 
     this->glBindProgramARB = (TBindProgramARB)
-      opengl->getProcAddress("glBindProgramARB");
+      get_addr(ctx, "glBindProgramARB");
 
     this->glGenProgramsARB = (TGenProgramsARB)
-      opengl->getProcAddress("glGenProgramsARB");
+      get_addr(ctx, "glGenProgramsARB");
 
     this->glProgramLocalParameter4dvARB = (TProgramLocalParameter4dvARB)
-      opengl->getProcAddress("glProgramLocalParameter4dvARB");
+      get_addr(ctx, "glProgramLocalParameter4dvARB");
 
     this->glProgramLocalParameter4dARB = (TProgramLocalParameter4dARB)
-      opengl->getProcAddress("glProgramLocalParameter4dARB");
+      get_addr(ctx, "glProgramLocalParameter4dARB");
   }
 
   //----------------------------------------------------------------
@@ -1110,7 +1323,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL_HERE();
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
   YAE_OPENGL(glBindBuffer(GL_ARRAY_BUFFER, 0));
   yae_assert_gl_no_error();
 
@@ -1123,7 +1336,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OGL_11(glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &maxAttribs));
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
   for (int i = 0; i < maxAttribs; ++i)
   {
     YAE_OPENGL(glVertexAttribPointer(i, 4, GL_FLOAT, GL_FALSE, 0, 0));
@@ -1200,7 +1413,7 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL(glBlendFunc(GL_ONE, GL_ZERO));
   yae_assert_gl_no_error();
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
   YAE_OPENGL(glUseProgram(0));
   yae_assert_gl_no_error();
 #endif
@@ -2134,7 +2347,7 @@ namespace yae
       return false;
     }
 
-#ifndef YAE_USE_QOPENGL_WIDGET
+#ifdef YAE_USE_QGL_WIDGET
     return glTexImage3D != NULL;
 #else
     return true;

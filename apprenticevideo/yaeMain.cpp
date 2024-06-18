@@ -204,18 +204,22 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
 
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
   // setup opengl:
   {
-    QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
-                       QSurfaceFormat::DeprecatedFunctions);
+    QSurfaceFormat fmt;
+    fmt.setVersion(3, 1);
+    fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
+    fmt.setOptions(// QSurfaceFormat::DebugContext |
+                   QSurfaceFormat::DeprecatedFunctions);
+
     fmt.setAlphaBufferSize(0);
     fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
     fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
     QSurfaceFormat::setDefaultFormat(fmt);
   }
-  // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
-  // yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
+  yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
+  yae::Application::setAttribute(Qt::AA_UseOpenGLES, false);
   // yae::Application::setAttribute(Qt::AA_UseSoftwareOpenGL, false);
   yae::Application::setAttribute(Qt::AA_ShareOpenGLContexts, true);
   // yae::Application::setAttribute(Qt::AA_EnableHighDpiScaling, true);

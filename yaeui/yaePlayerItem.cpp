@@ -1115,7 +1115,7 @@ namespace yae
     TIgnoreClockStop ignore_clock_stop(timeline_);
     IReaderPtr reader = reader_;
 
-    QTime startTime = QTime::currentTime();
+    yae::TTime startTime = yae::TTime::now();
     bool done = false;
     while (!done && reader && reader == reader_)
     {
@@ -1134,7 +1134,8 @@ namespace yae
 
       if (!done)
       {
-        if (startTime.elapsed() > 2000)
+        yae::TTime now = yae::TTime::now();
+        if ((now - startTime).get(1000) > 2000)
         {
           // avoid blocking the UI indefinitely:
           break;

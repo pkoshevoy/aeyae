@@ -61,7 +61,7 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
-    QMainWindow(NULL, 0),
+    QMainWindow(NULL, Qt::WindowFlags(0)),
     canvasWidget_(NULL),
     canvas_(NULL),
     view_("MainWindow remux view"),
@@ -79,7 +79,7 @@ namespace yae
 #endif
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
-    canvasLayout->setMargin(0);
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
@@ -91,7 +91,7 @@ namespace yae
 
     QString greeting = tr("drop video files here");
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
     canvasWidget_ = new TCanvasWidget(this);
     canvasWidget_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else

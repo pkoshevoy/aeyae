@@ -29,7 +29,6 @@
 #include <QMimeData>
 #include <QUrl>
 #include <QSpacerItem>
-#include <QDesktopWidget>
 #include <QMenu>
 #include <QShortcut>
 #include <QFileInfo>
@@ -256,7 +255,7 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
-    QMainWindow(NULL, 0),
+    QMainWindow(NULL, Qt::WindowFlags(0)),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),
@@ -303,11 +302,11 @@ namespace yae
                                      this);
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
-    canvasLayout->setMargin(0);
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else
@@ -3212,7 +3211,7 @@ namespace yae
     }
 
     // seek back and forth here:
-    int delta = e->delta();
+    int delta = yae::get_wheel_delta(e);
     double percent = floor(0.5 + fabs(double(delta)) / 120.0);
     percent = std::max<double>(1.0, percent);
     double offset = percent * ((delta < 0) ? 5.0 : -5.0);
@@ -3365,7 +3364,7 @@ namespace yae
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     const IReader * reader = reader_;
 
-    QTime startTime = QTime::currentTime();
+    TTime startTime = TTime::now();
     bool done = false;
     while (!done && reader && reader == reader_)
     {
@@ -3384,7 +3383,8 @@ namespace yae
 
       if (!done)
       {
-        if (startTime.elapsed() > 2000)
+        TTime now = TTime::now();
+        if ((now - startTime).get(1000) > 2000)
         {
           // avoid blocking the UI indefinitely:
           break;
@@ -3556,7 +3556,8 @@ namespace yae
     int ideal_w = ox + int(0.5 + vw * xexpand_);
     int ideal_h = oy + int(0.5 + vh * yexpand_);
 
-    QRect rectMax = QApplication::desktop()->availableGeometry(this);
+    yae::GetScreenInfo get_screen_info(this);
+    QRect rectMax = get_screen_info.available_geometry();
     int max_w = rectMax.width();
     int max_h = rectMax.height();
 

@@ -671,149 +671,149 @@ namespace yae
   void
   PlayerUxItem::translate_ui()
   {
-    actionShowTimeline_->setText(trUtf8("Show &Timeline"));
-    actionShowTimeline_->setShortcut(trUtf8("Ctrl+T"));
+    actionShowTimeline_->setText(tr("Show &Timeline"));
+    actionShowTimeline_->setShortcut(tr("Ctrl+T"));
 
 #ifdef __APPLE__
-    actionShowInFinder_->setText(trUtf8("Show In Finder"));
+    actionShowInFinder_->setText(tr("Show In Finder"));
 #elif defined(_WIN32)
-    actionShowInFinder_->setText(trUtf8("Show In Explorer"));
+    actionShowInFinder_->setText(tr("Show In Explorer"));
 #else
-    actionShowInFinder_->setText(trUtf8("Show In File Manager"));
+    actionShowInFinder_->setText(tr("Show In File Manager"));
 #endif
 
 
-    actionPlay_->setText(trUtf8("Pause"));
-    actionPlay_->setShortcut(trUtf8("Space"));
+    actionPlay_->setText(tr("Pause"));
+    actionPlay_->setShortcut(tr("Space"));
 
-    actionNextChapter_->setText(trUtf8("Skip To &Next Chapter"));
-    actionNextChapter_->setShortcut(trUtf8("Ctrl+N"));
-
-
-
-    actionLoop_->setText(trUtf8("&Loop"));
-    actionLoop_->setShortcut(trUtf8("Ctrl+L"));
-
-    actionSetInPoint_->setText(trUtf8("Set &In Point"));
-    actionSetInPoint_->setShortcut(trUtf8("I"));
-
-    actionSetOutPoint_->setText(trUtf8("Set &Out Point"));
-    actionSetOutPoint_->setShortcut(trUtf8("O"));
+    actionNextChapter_->setText(tr("Skip To &Next Chapter"));
+    actionNextChapter_->setShortcut(tr("Ctrl+N"));
 
 
 
-    actionFullScreen_->setText(trUtf8("&Full Screen (letterbox)"));
-    actionFullScreen_->setShortcut(trUtf8("Ctrl+F"));
+    actionLoop_->setText(tr("&Loop"));
+    actionLoop_->setShortcut(tr("Ctrl+L"));
 
-    actionFillScreen_->setText(trUtf8("F&ull Screen"));
-    actionFillScreen_->setShortcut(trUtf8("Ctrl+G"));
+    actionSetInPoint_->setText(tr("Set &In Point"));
+    actionSetInPoint_->setShortcut(tr("I"));
 
-
-
-    actionCropFrameNone_->setText(trUtf8("None"));
-    actionCropFrameNone_->setShortcut(trUtf8("Alt+X"));
-
-    actionCropFrame1_33_->setText(trUtf8("4:3"));
-    actionCropFrame1_33_->setShortcut(trUtf8("Alt+4"));
-
-    actionCropFrame1_60_->setText(trUtf8("16:10"));
-
-    actionCropFrame1_78_->setText(trUtf8("16:9"));
-    actionCropFrame1_78_->setShortcut(trUtf8("Alt+6"));
-
-    actionCropFrame1_85_->setText(trUtf8("1.85"));
-    actionCropFrame1_85_->setShortcut(trUtf8("Alt+8"));
-
-    actionCropFrame2_35_->setText(trUtf8("2.35"));
-
-    actionCropFrame2_40_->setText(trUtf8("2.40"));
-    actionCropFrame2_40_->setShortcut(trUtf8("Alt+2"));
-
-    actionCropFrameOther_->setText(trUtf8("Other"));
-    actionCropFrameOther_->setToolTip(trUtf8("Edit crop region manually"));
-    actionCropFrameOther_->setShortcut(trUtf8("Alt+Z"));
-
-    actionCropFrameAutoDetect_->setText(trUtf8("Auto Crop"));
-    actionCropFrameAutoDetect_->setShortcut(trUtf8("Alt+C"));
+    actionSetOutPoint_->setText(tr("Set &Out Point"));
+    actionSetOutPoint_->setShortcut(tr("O"));
 
 
 
+    actionFullScreen_->setText(tr("&Full Screen (letterbox)"));
+    actionFullScreen_->setShortcut(tr("Ctrl+F"));
 
-    actionAspectRatioAuto_->setText(trUtf8("Automatic"));
-    actionAspectRatioAuto_->setShortcut(trUtf8("Ctrl+Alt+X"));
+    actionFillScreen_->setText(tr("F&ull Screen"));
+    actionFillScreen_->setShortcut(tr("Ctrl+G"));
 
-    actionAspectRatio1_33_->setText(trUtf8("4:3"));
-    actionAspectRatio1_33_->setShortcut(trUtf8("Ctrl+Alt+4"));
 
-    actionAspectRatio1_60_->setText(trUtf8("16:10"));
 
-    actionAspectRatio1_78_->setText(trUtf8("16:9"));
-    actionAspectRatio1_78_->setShortcut(trUtf8("Ctrl+Alt+6"));
+    actionCropFrameNone_->setText(tr("None"));
+    actionCropFrameNone_->setShortcut(tr("Alt+X"));
 
-    actionAspectRatio1_85_->setText(trUtf8("1.85"));
-    actionAspectRatio2_35_->setText(trUtf8("2.35"));
-    actionAspectRatio2_40_->setText(trUtf8("2.40"));
+    actionCropFrame1_33_->setText(tr("4:3"));
+    actionCropFrame1_33_->setShortcut(tr("Alt+4"));
 
-    actionAspectRatioOther_->setText(trUtf8("Other"));
-    actionAspectRatioOther_->setShortcut(trUtf8("Ctrl+Alt+Z"));
+    actionCropFrame1_60_->setText(tr("16:10"));
+
+    actionCropFrame1_78_->setText(tr("16:9"));
+    actionCropFrame1_78_->setShortcut(tr("Alt+6"));
+
+    actionCropFrame1_85_->setText(tr("1.85"));
+    actionCropFrame1_85_->setShortcut(tr("Alt+8"));
+
+    actionCropFrame2_35_->setText(tr("2.35"));
+
+    actionCropFrame2_40_->setText(tr("2.40"));
+    actionCropFrame2_40_->setShortcut(tr("Alt+2"));
+
+    actionCropFrameOther_->setText(tr("Other"));
+    actionCropFrameOther_->setToolTip(tr("Edit crop region manually"));
+    actionCropFrameOther_->setShortcut(tr("Alt+Z"));
+
+    actionCropFrameAutoDetect_->setText(tr("Auto Crop"));
+    actionCropFrameAutoDetect_->setShortcut(tr("Alt+C"));
+
+
+
+
+    actionAspectRatioAuto_->setText(tr("Automatic"));
+    actionAspectRatioAuto_->setShortcut(tr("Ctrl+Alt+X"));
+
+    actionAspectRatio1_33_->setText(tr("4:3"));
+    actionAspectRatio1_33_->setShortcut(tr("Ctrl+Alt+4"));
+
+    actionAspectRatio1_60_->setText(tr("16:10"));
+
+    actionAspectRatio1_78_->setText(tr("16:9"));
+    actionAspectRatio1_78_->setShortcut(tr("Ctrl+Alt+6"));
+
+    actionAspectRatio1_85_->setText(tr("1.85"));
+    actionAspectRatio2_35_->setText(tr("2.35"));
+    actionAspectRatio2_40_->setText(tr("2.40"));
+
+    actionAspectRatioOther_->setText(tr("Other"));
+    actionAspectRatioOther_->setShortcut(tr("Ctrl+Alt+Z"));
     actionAspectRatioOther_->
-      setToolTip(trUtf8("Specify custom frame aspect ratio"));
+      setToolTip(tr("Specify custom frame aspect ratio"));
 
 
 
-    actionHalfSize_->setText(trUtf8("Half Size"));
-    actionHalfSize_->setShortcut(trUtf8("Ctrl+0"));
+    actionHalfSize_->setText(tr("Half Size"));
+    actionHalfSize_->setShortcut(tr("Ctrl+0"));
 
-    actionFullSize_->setText(trUtf8("Full Size"));
-    actionFullSize_->setShortcut(trUtf8("Ctrl+1"));
+    actionFullSize_->setText(tr("Full Size"));
+    actionFullSize_->setShortcut(tr("Ctrl+1"));
 
-    actionDoubleSize_->setText(trUtf8("Double Size"));
-    actionDoubleSize_->setShortcut(trUtf8("Ctrl+2"));
+    actionDoubleSize_->setText(tr("Double Size"));
+    actionDoubleSize_->setShortcut(tr("Ctrl+2"));
 
-    actionDecreaseSize_->setText(trUtf8("Decrease Size"));
-    actionDecreaseSize_->setShortcut(trUtf8("Ctrl+-"));
+    actionDecreaseSize_->setText(tr("Decrease Size"));
+    actionDecreaseSize_->setShortcut(tr("Ctrl+-"));
 
-    actionIncreaseSize_->setText(trUtf8("Increase Size"));
-    actionIncreaseSize_->setShortcut(trUtf8("Ctrl+="));
+    actionIncreaseSize_->setText(tr("Increase Size"));
+    actionIncreaseSize_->setShortcut(tr("Ctrl+="));
 
-    actionShrinkWrap_->setText(trUtf8("Shrink &Wrap"));
-    actionShrinkWrap_->setShortcut(trUtf8("Ctrl+R"));
+    actionShrinkWrap_->setText(tr("Shrink &Wrap"));
+    actionShrinkWrap_->setShortcut(tr("Ctrl+R"));
 
 
 
-    actionVerticalScaling_->setText(trUtf8("Allow Vertical Upscaling"));
-    actionDeinterlace_->setText(trUtf8("&Deinterlace"));
-    actionSkipColorConverter_->setText(trUtf8("Skip Color Converter"));
-    actionSkipLoopFilter_->setText(trUtf8("Skip Loop Filter"));
+    actionVerticalScaling_->setText(tr("Allow Vertical Upscaling"));
+    actionDeinterlace_->setText(tr("&Deinterlace"));
+    actionSkipColorConverter_->setText(tr("Skip Color Converter"));
+    actionSkipLoopFilter_->setText(tr("Skip Loop Filter"));
     actionSkipNonReferenceFrames_->
-      setText(trUtf8("Skip Non-Reference Frames"));
-    actionDownmixToStereo_->setText(trUtf8("Mix Down To Stereo"));
+      setText(tr("Skip Non-Reference Frames"));
+    actionDownmixToStereo_->setText(tr("Mix Down To Stereo"));
 
 
 
-    actionTempo50_->setText(trUtf8("50%"));
-    actionTempo60_->setText(trUtf8("60%"));
-    actionTempo70_->setText(trUtf8("70%"));
-    actionTempo80_->setText(trUtf8("80%"));
-    actionTempo90_->setText(trUtf8("90%"));
-    actionTempo100_->setText(trUtf8("100%"));
-    actionTempo111_->setText(trUtf8("111%"));
-    actionTempo125_->setText(trUtf8("125%"));
-    actionTempo143_->setText(trUtf8("143%"));
-    actionTempo167_->setText(trUtf8("167%"));
-    actionTempo200_->setText(trUtf8("200%"));
+    actionTempo50_->setText(tr("50%"));
+    actionTempo60_->setText(tr("60%"));
+    actionTempo70_->setText(tr("70%"));
+    actionTempo80_->setText(tr("80%"));
+    actionTempo90_->setText(tr("90%"));
+    actionTempo100_->setText(tr("100%"));
+    actionTempo111_->setText(tr("111%"));
+    actionTempo125_->setText(tr("125%"));
+    actionTempo143_->setText(tr("143%"));
+    actionTempo167_->setText(tr("167%"));
+    actionTempo200_->setText(tr("200%"));
 
 
 
-    menuPlayback_->setTitle(trUtf8("&Playback"));
-    menuPlaybackSpeed_->setTitle(trUtf8("Playback Speed"));
-    menuAudio_->setTitle(trUtf8("&Audio"));
-    menuVideo_->setTitle(trUtf8("&Video"));
-    menuWindowSize_->setTitle(trUtf8("Window Size"));
-    menuCropFrame_->setTitle(trUtf8("Crop Frame"));
-    menuAspectRatio_->setTitle(trUtf8("Aspect Ratio"));
-    menuSubs_->setTitle(trUtf8("&Subtitles"));
-    menuChapters_->setTitle(trUtf8("Chap&ters"));
+    menuPlayback_->setTitle(tr("&Playback"));
+    menuPlaybackSpeed_->setTitle(tr("Playback Speed"));
+    menuAudio_->setTitle(tr("&Audio"));
+    menuVideo_->setTitle(tr("&Video"));
+    menuWindowSize_->setTitle(tr("Window Size"));
+    menuCropFrame_->setTitle(tr("Crop Frame"));
+    menuAspectRatio_->setTitle(tr("Aspect Ratio"));
+    menuSubs_->setTitle(tr("&Subtitles"));
+    menuChapters_->setTitle(tr("Chap&ters"));
   }
 
   //----------------------------------------------------------------
@@ -1494,7 +1494,11 @@ namespace yae
     }
 
     // seek back and forth here:
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     int delta = e->delta();
+#else
+    int delta = e->angleDelta().y();
+#endif
     double percent = floor(0.5 + fabs(double(delta)) / 120.0);
     percent = std::max<double>(1.0, percent);
     double offset = percent * ((delta < 0) ? 5.0 : -5.0);

@@ -134,8 +134,8 @@ namespace yae
   //
   struct YAEUI_API Canvas : public IVideoCanvas
   {
-#ifndef YAE_USE_QOPENGL_WIDGET
-    bool glewInitialized_;
+#ifdef YAE_USE_QGL_WIDGET
+    bool glewInitialized_ = false;
 #endif
 
     //----------------------------------------------------------------

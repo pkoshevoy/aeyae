@@ -2425,8 +2425,8 @@ namespace yae
     popup_ = add_menu("contextMenu");
 
     // translate ui:
-    menuEdit_->setTitle(trUtf8("&Edit"));
-    menuView_->setTitle(trUtf8("&View"));
+    menuEdit_->setTitle(tr("&Edit"));
+    menuView_->setTitle(tr("&View"));
 
     bool ok = connect(&t0_, SIGNAL(mapped(int)),
                       this, SLOT(timecode_changed_t0(int)));
@@ -4403,7 +4403,7 @@ namespace yae
 
     if (mode == RemuxView::kPlayerMode)
     {
-      pl_ux.actionFullScreen_->setText(trUtf8("&Full Screen (letterbox)"));
+      pl_ux.actionFullScreen_->setText(tr("&Full Screen (letterbox)"));
 
       ok = connect(pl_ux.actionSetInPoint_, SIGNAL(triggered()),
                    &pl_ux.timeline_model(), SLOT(setInPoint()));
@@ -4415,7 +4415,7 @@ namespace yae
     }
     else
     {
-      pl_ux.actionFullScreen_->setText(trUtf8("&Full Screen"));
+      pl_ux.actionFullScreen_->setText(tr("&Full Screen"));
 
       if (mode == RemuxView::kLayoutMode)
       {

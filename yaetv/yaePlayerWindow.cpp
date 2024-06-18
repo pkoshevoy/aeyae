@@ -30,7 +30,7 @@ namespace yae
   {
     setupUi(this);
     setAcceptDrops(false);
-    setWindowTitle(trUtf8("yaetv player"));
+    setWindowTitle(tr("yaetv player"));
 
 #if !defined(__APPLE__) && !defined(_WIN32)
     QString fnIcon =
@@ -39,7 +39,7 @@ namespace yae
 #endif
 
     containerLayout_ = new QVBoxLayout(containerWidget);
-    containerLayout_->setMargin(0);
+    containerLayout_->setContentsMargins(0, 0, 0, 0);
     containerLayout_->setSpacing(0);
   }
 

@@ -12,22 +12,14 @@
 // standard C++:
 #include <iostream>
 
-#ifndef YAE_USE_QOPENGL_WIDGET
-// GLEW includes:
-#include <GL/glew.h>
-#endif
-
 // Qt includes:
 #include <QApplication>
+#ifdef YAE_USE_QT4
 #include <QDesktopWidget>
-// #include <QDragEnterEvent>
-// #include <QDropEvent>
-#include <QKeyEvent>
-#ifdef YAE_USE_QOPENGL_WIDGET
-#include <QOpenGLWidget>
 #else
-#include <QGLWidget>
+#include <QScreen>
 #endif
+#include <QKeyEvent>
 #include <QTimer>
 
 // aeyae:
@@ -42,6 +34,117 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // GetScreenInfo
+  //
+  struct GetScreenInfo
+  {
+    const QWidget * widget_ = NULL;
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+    const QWidget * screen_ = NULL;
+#else
+    const QScreen * screen_ = NULL;
+#endif
+    QRect geometry_;
+    QSizeF size_mm_;
+
+    GetScreenInfo(const QWidget * widget):
+      widget_(widget)
+    {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      QDesktopWidget * dw = QApplication::desktop();
+      int sn = dw->screenNumber(widget);
+      screen_ = dw->screen(sn);
+      size_mm_.setWidth(screen->widthMM());
+      size_mm_.setHeight(screen->heightMM());
+#else
+      screen_ = widget->screen();
+      size_mm_ = screen_->physicalSize();
+#endif
+      geometry_ = screen_->geometry();
+    }
+
+    inline double device_pixel_ratio() const
+    {
+#if (QT_VERSION < 0x050000)
+        double s = 1.0;
+#elif (QT_VERSION < 0x050600 || QT_VERSION >= 0x060000)
+        double s = screen_->devicePixelRatio();
+#else
+        double s = screen_->devicePixelRatioF();
+#endif
+        return s;
+    }
+
+    inline QRect available_geometry() const
+    {
+#if (QT_VERSION < 0x050000)
+      return QApplication::desktop()->availableGeometry(widget_->window());
+#else
+      return screen_->availableGeometry();
+#endif
+    }
+
+    inline double screen_width() const
+    {
+      double s = this->device_pixel_ratio();
+      double w = geometry_.width() * s;
+      return w;
+    }
+
+    inline double screen_height() const
+    {
+      double s = this->device_pixel_ratio();
+      double h = geometry_.height() * s;
+      return h;
+    }
+
+    inline double screen_width_mm() const
+    { return size_mm_.width(); }
+
+    inline double screen_height_mm() const
+    { return size_mm_.height(); }
+
+    inline double physical_dpi_x() const
+    {
+      double w = this->screen_width();
+      double w_mm = this->screen_width_mm();
+      double dpi_x = (w * 25.4) / w_mm;
+      return dpi_x;
+    }
+
+    inline double physical_dpi_y() const
+    {
+      double h = this->screen_height();
+      double h_mm = this->screen_height_mm();
+      double dpi_y = (h * 25.4) / h_mm;
+      return dpi_y;
+    }
+
+    inline double logical_dpi_x() const
+    {
+      double s = this->device_pixel_ratio();
+#if (QT_VERSION < 0x050000)
+      double dpi = screen_->logicalDpiX();
+#else
+      double dpi = screen_->logicalDotsPerInchX();
+#endif
+      return dpi * s;
+    }
+
+    inline double logical_dpi_y() const
+    {
+      double s = this->device_pixel_ratio();
+#if (QT_VERSION < 0x050000)
+      double dpi = screen_->logicalDpiY();
+#else
+      double dpi = screen_->logicalDotsPerInchY();
+#endif
+      return dpi * s;
+    }
+  };
+
 
   //----------------------------------------------------------------
   // CanvasWidgetSignalsSlots
@@ -129,7 +232,7 @@ namespace yae
       virtual void doneCurrent()
       { widget_.doneCurrent(); }
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
       //----------------------------------------------------------------
       // CurrentContext
       //
@@ -206,7 +309,7 @@ namespace yae
         TMakeCurrentContext lock(canvas_.Canvas::context());
         YAE_ASSERT(isVisible());
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
         {
           YAE_BENCHMARK(probe2, "canvas_.TWidget::update");
           canvas_.TWidget::update();
@@ -269,7 +372,8 @@ namespace yae
 
       virtual void getScreenGeometry(TVec2D & origin, TVec2D & size) const
       {
-        QRect r = QApplication::desktop()->availableGeometry(canvas_.window());
+        GetScreenInfo get_screen_info(canvas_.window());
+        QRect r = get_screen_info.available_geometry();
         origin[0] = r.x();
         origin[1] = r.y();
         size[0] = r.width();
@@ -281,106 +385,58 @@ namespace yae
         canvas_.window()->resize(int(size.x()), int(size.y()));
       }
 
-      static QWidget * get_screen_widget(const QWidget * widget)
-      {
-        QDesktopWidget * dw = QApplication::desktop();
-        int sn = dw->screenNumber(widget);
-        QWidget * sw = dw->screen(sn);
-        return sw;
-      }
-
-      inline QWidget * screen_widget() const
-      {
-        return get_screen_widget(&canvas_);
-      }
-
-      static double get_device_pixel_ratio(const QWidget * sw)
-      {
-#if QT_VERSION < 0x050000
-        (void)sw;
-        double s = 1.0;
-#elif QT_VERSION < 0x050600
-        double s = sw->devicePixelRatio();
-#else
-        double s = sw->devicePixelRatioF();
-#endif
-        return s;
-      }
-
       virtual double device_pixel_ratio() const
       {
-        QWidget * sw = this->screen_widget();
-        return get_device_pixel_ratio(sw);
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.device_pixel_ratio();
       }
 
       virtual double screen_width() const
       {
-        QWidget * sw = this->screen_widget();
-        double s = this->device_pixel_ratio();
-        double w = sw->width() * s;
-        return w;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.screen_width();
       }
 
       virtual double screen_height() const
       {
-        QWidget * sw = this->screen_widget();
-        double s = this->device_pixel_ratio();
-        double h = sw->height() * s;
-        return h;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.screen_height();
       }
 
       virtual double screen_width_mm() const
       {
-        QWidget * sw = this->screen_widget();
-        double w_mm = sw->widthMM();
-        return w_mm;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.screen_width_mm();
       }
 
       virtual double screen_height_mm() const
       {
-        QWidget * sw = this->screen_widget();
-        double h_mm = sw->heightMM();
-        return h_mm;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.screen_height_mm();
       }
 
       virtual double physical_dpi_x() const
       {
-        QWidget * sw = this->screen_widget();
-        double s = this->device_pixel_ratio();
-        double w = sw->width() * s;
-        double w_mm = sw->widthMM();
-        double dpi = (w * 25.4) / w_mm;
-        return dpi;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.physical_dpi_x();
       }
 
       virtual double physical_dpi_y() const
       {
-        QWidget * sw = this->screen_widget();
-#if 0
-        double s = this->device_pixel_ratio();
-        double h = sw->height() * s;
-        double h_mm = sw->heightMM();
-        double dpi = (h * 25.4) / h_mm;
-#else
-        int dpi = sw->physicalDpiX();
-#endif
-        return dpi;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.physical_dpi_y();
       }
 
       virtual double logical_dpi_x() const
       {
-        QWidget * sw = this->screen_widget();
-        double s = this->device_pixel_ratio();
-        double dpi = sw->logicalDpiX();
-        return dpi * s;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.logical_dpi_x();
       }
 
       virtual double logical_dpi_y() const
       {
-        QWidget * sw = this->screen_widget();
-        double s = this->device_pixel_ratio();
-        double dpi = sw->logicalDpiY();
-        return dpi * s;
+        GetScreenInfo get_screen_info(&canvas_);
+        return get_screen_info.logical_dpi_y();
       }
 
     protected:
@@ -504,8 +560,8 @@ namespace yae
     // helper:
     void updateCanvasSize()
     {
-      QWidget * sw = TDelegate::get_screen_widget(this);
-      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
+      GetScreenInfo get_screen_info(this);
+      double devicePixelRatio = get_screen_info.device_pixel_ratio();
 
       Canvas::resize(devicePixelRatio,
                      TWidget::width(),
@@ -530,8 +586,10 @@ namespace yae
     // virtual:
     void initializeGL()
     {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
       yae_dlog("initializeGL: QGLContext::currentContext(): %p",
                QGLContext::currentContext());
+#endif
     }
 
     // virtual:
@@ -543,8 +601,8 @@ namespace yae
     // virtual:
     void paintGL()
     {
-      QWidget * sw = TDelegate::get_screen_widget(this);
-      double devicePixelRatio = TDelegate::get_device_pixel_ratio(sw);
+      GetScreenInfo get_screen_info(this);
+      double devicePixelRatio = get_screen_info.device_pixel_ratio();
 
       if (devicePixelRatio != Canvas::devicePixelRatio())
       {

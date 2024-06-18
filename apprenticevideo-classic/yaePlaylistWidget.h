@@ -117,7 +117,8 @@ namespace yae
     Q_OBJECT;
 
   public:
-    PlaylistWidget(QWidget * parent = NULL, Qt::WindowFlags f = 0);
+    PlaylistWidget(QWidget * parent = NULL,
+                   Qt::WindowFlags f = Qt::WindowFlags(0));
 
     // virtual:
     QSize minimumSizeHint() const;

@@ -8,33 +8,50 @@ find_package(OpenGL REQUIRED)
 set(CMAKE_PREFIX_PATH "$ENV{CMAKE_PREFIX_PATH}" CACHE PATH
   "search path for .cmake files")
 
-find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
-if (Qt5_FOUND)
-
+find_package(Qt6 COMPONENTS Core Gui Widgets OpenGL OpenGLWidgets)
+if (Qt6_FOUND)
+  add_definitions(-DYAE_USE_QT6)
   if (NOT (APPLE OR WIN32))
-    find_package(Qt5DBus)
+    find_package(Qt6DBus)
   endif ()
 
   option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
   if (YAE_USE_QOPENGL_WIDGET)
     add_definitions(-DYAE_USE_QOPENGL_WIDGET)
   endif ()
-else (Qt5_FOUND)
-  find_package(Qt4 REQUIRED)
-endif ()
 
-if (QT4_FOUND)
-  if (NOT (APPLE OR WIN32))
-    if (QT_QTDBUS_FOUND)
-      set(QT_USE_QTDBUS TRUE)
+else (Qt6_FOUND)
+  find_package(Qt5 COMPONENTS Core Gui Widgets OpenGL)
+
+  if (Qt5_FOUND)
+    add_definitions(-DYAE_USE_QT5)
+    if (NOT (APPLE OR WIN32))
+      find_package(Qt5DBus)
     endif ()
-  endif ()
 
-  set(QT_USE_QTOPENGL TRUE)
-  set(QT_USE_QTMAIN TRUE)
-  include(${QT_USE_FILE})
-endif ()
+    option(YAE_USE_QOPENGL_WIDGET "Use QOpenGLWidget instead of QGLWidget" OFF)
+    if (YAE_USE_QOPENGL_WIDGET)
+      add_definitions(-DYAE_USE_QOPENGL_WIDGET)
+    endif ()
 
+  else (Qt5_FOUND)
+    find_package(Qt4 REQUIRED)
+    if (QT4_FOUND)
+      add_definitions(-DYAE_USE_QT4)
+      if (NOT (APPLE OR WIN32))
+        if (QT_QTDBUS_FOUND)
+          set(QT_USE_QTDBUS TRUE)
+        endif ()
+      endif ()
+
+      set(QT_USE_QTOPENGL TRUE)
+      set(QT_USE_QTMAIN TRUE)
+      include(${QT_USE_FILE})
+    endif (QT4_FOUND)
+  endif (Qt5_FOUND)
+endif (Qt6_FOUND)
+
+# add_definitions(-DYAE_STATIC)
 
 include_directories(AFTER
   .
@@ -79,6 +96,11 @@ endif ()
 if (Qt5_FOUND)
   add_definitions(-DYAE_USE_QT5)
   qt5_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
+endif ()
+
+if (Qt6_FOUND)
+  add_definitions(-DYAE_USE_QT6)
+  qt6_add_resources(project_qrc_cxx ${PROGNAME}.qrc)
 endif ()
 
 if (WIN32)
@@ -135,6 +157,11 @@ endif ()
 if (Qt5_FOUND)
   qt5_wrap_cpp(project_moc_cxx ${project_moc_hxx})
   qt5_wrap_ui(project_uis_hxx ${project_uis})
+endif ()
+
+if (Qt6_FOUND)
+  qt6_wrap_cpp(project_moc_cxx ${project_moc_hxx})
+  qt6_wrap_ui(project_uis_hxx ${project_uis})
 endif ()
 
 set(project_sources
@@ -329,8 +356,24 @@ if (Qt5_FOUND)
   endif ()
 endif ()
 
-set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-# set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
+if (Qt6_FOUND)
+  set(TARGET_LIBS ${TARGET_LIBS}
+    Qt6::Core
+    Qt6::Gui
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
+    Qt6::Widgets
+    )
+
+  if (Qt6DBus_FOUND)
+    set(TARGET_LIBS ${TARGET_LIBS}
+      Qt6::DBus
+      )
+  endif ()
+endif ()
+
+#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
+#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
 
 target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
 
@@ -341,16 +384,20 @@ target_link_libraries(${PROGNAME}
 if (Qt4_FOUND)
   get_filename_component(QT_QMAKE_EXECUTABLE_DIR
     ${QT_QMAKE_EXECUTABLE} DIRECTORY)
-  # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
 endif ()
 
 if (Qt5_FOUND)
   get_filename_component(QT_QMAKE_EXECUTABLE_DIR
     ${Qt5_DIR}/../../../bin ABSOLUTE)
-  # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
 endif ()
 
-if (Qt5_FOUND)
+if (Qt6_FOUND)
+  get_filename_component(QT_QMAKE_EXECUTABLE_DIR
+    ${Qt6_DIR}/../../../bin ABSOLUTE)
+endif ()
+
+if (QT_QMAKE_EXECUTABLE_DIR)
+  # message("QT_QMAKE_EXECUTABLE_DIR: " ${QT_QMAKE_EXECUTABLE_DIR})
   find_program(QT_QMAKE_EXECUTABLE NAMES qmake
     HINTS ${QT_QMAKE_EXECUTABLE_DIR}
     DOC
@@ -397,7 +444,7 @@ if (APPLE)
 endif ()
 
 if (WIN32)
-  if (Qt5_FOUND)
+  if (Qt5_FOUND or Qt6_FOUND)
     execute_process(COMMAND ${QT_QMAKE_EXECUTABLE} -query QT_INSTALL_PLUGINS
       OUTPUT_VARIABLE QT_PLUGINS_DIR
       OUTPUT_STRIP_TRAILING_WHITESPACE)

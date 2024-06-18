@@ -73,7 +73,7 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
-    QMainWindow(NULL, 0),
+    QMainWindow(NULL, Qt::WindowFlags(0)),
     playerWidget_(NULL)
   {
     setupUi(this);
@@ -85,7 +85,7 @@ namespace yae
 #endif
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
-    canvasLayout->setMargin(0);
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
 
     playerWidget_ = new MainWidget(this, NULL, Qt::Widget);

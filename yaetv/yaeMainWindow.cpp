@@ -22,7 +22,6 @@
 #include <QCheckBox>
 #include <QCloseEvent>
 #include <QDesktopServices>
-#include <QDesktopWidget>
 #include <QDirIterator>
 #include <QDragEnterEvent>
 #include <QFileDialog>
@@ -452,7 +451,7 @@ namespace yae
   //
   MainWindow::MainWindow(const std::string & yaetv_dir,
                          const std::string & recordings_dir):
-    QMainWindow(NULL, 0),
+    QMainWindow(NULL, Qt::WindowFlags(0)),
     popup_(NULL),
     shortcutExit_(NULL),
     preferencesDialog_(NULL),
@@ -482,7 +481,7 @@ namespace yae
     this->setWindowIcon(QIcon(fnIcon));
 #endif
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else

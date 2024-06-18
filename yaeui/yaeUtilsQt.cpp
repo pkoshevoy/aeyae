@@ -615,7 +615,7 @@ namespace yae
   {
     int keyPos = 0;
     const int keySize = key.size();
-    const QChar closingTag = 0;
+    const QChar closingTag = QChar(0);
     splitOnGroupTags(key,
                      keyPos,
                      keySize,
@@ -2213,6 +2213,34 @@ namespace yae
       }
     }
 #endif
+  }
+
+  //----------------------------------------------------------------
+  // get_wheel_pos
+  //
+  QPointF
+  get_wheel_pos(const QWheelEvent * e)
+  {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    QPointF pos = QPointF(e->pos());
+#else
+    QPointF pos = e->position();
+#endif
+    return pos;
+ }
+
+  //----------------------------------------------------------------
+  // get_wheel_delta
+  //
+  int
+  get_wheel_delta(const QWheelEvent * e)
+  {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    int delta = e->delta();
+#else
+    int delta = e->angleDelta().y();
+#endif
+    return delta;
   }
 
 }
