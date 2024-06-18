@@ -424,6 +424,10 @@ namespace yae
         dst.width = src.width;
         dst.height = src.height;
         av_channel_layout_copy(&dst.ch_layout, &src.ch_layout);
+#if LIBAVCODEC_VERSION_MAJOR < 61
+        dst.channels = src.channels;
+        dst.channel_layout = src.channel_layout;
+#endif
         dst.nb_samples = src.nb_samples;
         av_frame_copy_props(&dst, &src);
       }
@@ -689,6 +693,9 @@ namespace yae
                                      align);
 
     frame_->format = sample_fmt;
+#if LIBAVCODEC_VERSION_MAJOR < 61
+    frame_->channels = nb_channels;
+#endif
     frame_->nb_samples = nb_samples;
     av_channel_layout_default(&frame_->ch_layout, nb_channels);
 
@@ -1513,6 +1520,9 @@ namespace yae
     encoder.height = frame.height;
     encoder.time_base.num = 1;
     encoder.time_base.den = frame_dur.base_;
+#if LIBAVCODEC_VERSION_MAJOR < 61
+    encoder.ticks_per_frame = frame_dur.time_;
+#endif
     encoder.framerate.num = frame_dur.base_;
     encoder.framerate.den = frame_dur.time_;
     encoder.gop_size = 1; // expressed as number of frames
@@ -1586,7 +1596,11 @@ namespace yae
     }
 
     // send the frame to the encoder:
+#if LIBAVCODEC_VERSION_MAJOR < 61
+    frame.key_frame = 1;
+#else
     frame.flags = AV_FRAME_FLAG_KEY;
+#endif
     frame.pict_type = AV_PICTURE_TYPE_I;
     frame.pts = av_rescale_q(frame.pts, timebase, dst->time_base);
     err = avcodec_send_frame(&encoder, &frame);
