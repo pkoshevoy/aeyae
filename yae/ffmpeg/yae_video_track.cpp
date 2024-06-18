@@ -1390,7 +1390,7 @@ namespace yae
       }
 
       // check the side data:
-#if 0
+#if LIBAVFORMAT_VERSION_MAJOR < 61
       const int32_t * dm = (const int32_t *)
         av_stream_get_side_data(stream_, AV_PKT_DATA_DISPLAYMATRIX, NULL);
 #else
