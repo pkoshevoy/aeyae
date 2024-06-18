@@ -25,7 +25,6 @@
 #ifndef YAE_USE_QGL_WIDGET
 #define YAE_USE_QGL_WIDGET
 #endif
-#include <QGLWidget>
 #else
 #include <QOpenGLWidget>
 #if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
@@ -36,6 +35,7 @@
 #ifdef YAE_USE_QGL_WIDGET
 // GLEW:
 #include <GL/glew.h>
+#include <QGLWidget>
 #else
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
