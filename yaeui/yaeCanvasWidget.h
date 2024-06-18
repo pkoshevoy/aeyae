@@ -56,8 +56,8 @@ namespace yae
       QDesktopWidget * dw = QApplication::desktop();
       int sn = dw->screenNumber(widget);
       screen_ = dw->screen(sn);
-      size_mm_.setWidth(screen->widthMM());
-      size_mm_.setHeight(screen->heightMM());
+      size_mm_.setWidth(screen_->widthMM());
+      size_mm_.setHeight(screen_->heightMM());
 #else
       screen_ = widget->screen();
       size_mm_ = screen_->physicalSize();
