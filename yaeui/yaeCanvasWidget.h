@@ -67,12 +67,10 @@ namespace yae
 
     inline double device_pixel_ratio() const
     {
-#if (QT_VERSION < 0x050000)
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
         double s = 1.0;
-#elif (QT_VERSION < 0x050600 || QT_VERSION >= 0x060000)
-        double s = screen_->devicePixelRatio();
 #else
-        double s = screen_->devicePixelRatioF();
+        double s = screen_->devicePixelRatio();
 #endif
         return s;
     }
