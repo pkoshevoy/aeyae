@@ -108,26 +108,26 @@ namespace yae
 
 namespace yaegl
 {
-  bool assert_no_error();
+  YAEUI_API bool assert_no_error();
 
 #ifndef YAE_USE_QGL_WIDGET
 
   //----------------------------------------------------------------
-  // DEBUGPROC
+  // TDEBUGPROC
   //
-  typedef void (APIENTRYP TDEBUGPROC)(GLenum source​,
-                                    GLenum type​,
-                                    GLuint id​,
-                                    GLenum severity​,
-                                    GLsizei length​,
-                                    const GLchar * message​,
-                                    const void * userParam​);
+  typedef void (APIENTRYP TDEBUGPROC)(GLenum source,
+                                      GLenum type,
+                                      GLuint id,
+                                      GLenum severity,
+                                      GLsizei length,
+                                      const GLchar * message,
+                                      const void * userParam);
 
   //----------------------------------------------------------------
   // TDebugMessageCallback
   //
-  typedef void (APIENTRYP TDebugMessageCallback)(TDEBUGPROC callback​,
-                                                 void * userParam​);
+  typedef void (APIENTRYP TDebugMessageCallback)(TDEBUGPROC callback,
+                                                 void * userParam);
 
   //----------------------------------------------------------------
   // TBegin

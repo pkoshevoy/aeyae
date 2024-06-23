@@ -1042,7 +1042,7 @@ yae_opengl_debug_message_cb(GLenum src,
                             const GLchar * message,
                             const void * userParam)
 {
-  if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+  if (severity != 0x826B) // GL_DEBUG_SEVERITY_NOTIFICATION)
   {
     yae_error
       << "OpenGL debug message, source " << int(src)
@@ -1055,24 +1055,13 @@ yae_opengl_debug_message_cb(GLenum src,
   return;
 }
 
-#ifndef YAE_USE_QGL_WIDGET
 namespace yaegl
 {
-
-  //----------------------------------------------------------------
-  // get_addr
-  //
-  QFunctionPointer
-  get_addr(QOpenGLContext * opengl, const char * name)
-  {
-    QFunctionPointer func = opengl->getProcAddress(name);
-    YAE_ASSERT(func);
-    return func;
-  }
 
   static int depth = 0;
   static std::list<GLenum> mode;
 
+#ifndef YAE_USE_QGL_WIDGET
   static void begin(GLenum mode)
   {
     // yae_dlog("OpenGL (%i) begin: %i", depth, mode);
@@ -1090,6 +1079,7 @@ namespace yaegl
     OpenGLFunctionPointers::get()._glEnd();
     yaegl::mode.pop_back();
   }
+#endif
 
   bool assert_no_error()
   {
@@ -1117,6 +1107,18 @@ namespace yaegl
     // char *crash = NULL;
     // *crash = *crash;
     return false;
+  }
+
+#ifndef YAE_USE_QGL_WIDGET
+  //----------------------------------------------------------------
+  // get_addr
+  //
+  QFunctionPointer
+  get_addr(QOpenGLContext * opengl, const char * name)
+  {
+    QFunctionPointer func = opengl->getProcAddress(name);
+    YAE_ASSERT(func);
+    return func;
   }
 
   //----------------------------------------------------------------
@@ -1365,8 +1367,8 @@ namespace yaegl
     static OpenGLFunctionPointers singleton;
     return singleton;
   }
-}
 #endif
+}
 
 //----------------------------------------------------------------
 // yae_reset_opengl_to_initial_state
