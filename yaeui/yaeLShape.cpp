@@ -56,8 +56,8 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
       YAE_OGL_11(glVertex2d(x0 + weight, y1 - weight));
       YAE_OGL_11(glVertex2d(x0 + weight, y0));
       YAE_OGL_11(glVertex2d(x0, y0));
@@ -65,7 +65,6 @@ namespace yae
       YAE_OGL_11(glVertex2d(x1, y1));
       YAE_OGL_11(glVertex2d(x1, y1 - weight));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------

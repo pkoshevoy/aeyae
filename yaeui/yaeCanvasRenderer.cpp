@@ -1029,32 +1029,6 @@ yae_to_opengl(yae::TPixelFormatId yaePixelFormat,
   return 0;
 }
 
-//----------------------------------------------------------------
-// yae_assert_gl_no_error
-//
-bool
-yae_assert_gl_no_error()
-{
-  YAE_OGL_11_HERE();
-  GLenum err = YAE_OGL_11(glGetError());
-  if (err == GL_NO_ERROR)
-  {
-    return true;
-  }
-
-  for (int i = 0; i < 10 && err != GL_NO_ERROR; i++)
-  {
-    yae_elog("glGetError: %i", err);
-    err = YAE_OGL_11(glGetError());
-  }
-
-  // NOTE: don't call yae_assert_gl_no_error between glBegin/glEnd
-
-  YAE_ASSERT(false);
-  // char *crash = NULL;
-  // *crash = *crash;
-  return false;
-}
 
 //----------------------------------------------------------------
 // yae_opengl_debug_message_cb
@@ -1096,6 +1070,55 @@ namespace yaegl
     return func;
   }
 
+  static int depth = 0;
+  static std::list<GLenum> mode;
+
+  static void begin(GLenum mode)
+  {
+    // yae_dlog("OpenGL (%i) begin: %i", depth, mode);
+    yaegl::depth++;
+    YAE_ASSERT(yaegl::depth == 1);
+    OpenGLFunctionPointers::get()._glBegin(mode);
+    yaegl::mode.push_back(mode);
+  }
+
+  static void end()
+  {
+    yaegl::depth--;
+    // yae_dlog("OpenGL (%i) end", depth);
+    YAE_ASSERT(depth == 0);
+    OpenGLFunctionPointers::get()._glEnd();
+    yaegl::mode.pop_back();
+  }
+
+  bool assert_no_error()
+  {
+    // NOTE: not allowed to call glGetError between glBegin/glEnd
+    YAE_ASSERT(depth == 0);
+    if (depth != 0)
+    {
+      return false;
+    }
+
+    YAE_OGL_11_HERE();
+    GLenum err = YAE_OGL_11(glGetError());
+    if (err == GL_NO_ERROR)
+    {
+      return true;
+    }
+
+    for (int i = 0; i < 10 && err != GL_NO_ERROR; i++)
+    {
+      yae_elog("glGetError: %i", err);
+      err = YAE_OGL_11(glGetError());
+    }
+
+    //  YAE_ASSERT(false);
+    // char *crash = NULL;
+    // *crash = *crash;
+    return false;
+  }
+
   //----------------------------------------------------------------
   // OpenGLFunctionPointers::OpenGLFunctionPointers
   //
@@ -1107,11 +1130,14 @@ namespace yaegl
     this->glDebugMessageCallback = (TDebugMessageCallback)
       get_addr(ctx, "glDebugMessageCallback");
 
-    this->glBegin = (TBegin)
+    this->_glBegin = (TBegin)
       get_addr(ctx, "glBegin");
 
-    this->glEnd = (TEnd)
+    this->_glEnd = (TEnd)
       get_addr(ctx, "glEnd");
+
+    this->glBegin = &yaegl::begin;
+    this->glEnd = &yaegl::end;
 
     this->glClearAccum = (TClearAccum)
       get_addr(ctx, "glClearAccum");
@@ -3001,8 +3027,8 @@ namespace yae
         YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
       }
 
-      YAE_OGL_11(glBegin(GL_QUADS));
       {
+        yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
         const VideoTraits & vtts = frame_->traits_;
         const int hflip = vtts.hflip_ ? 1 : 0;
         const int vflip = vtts.vflip_ ? 1 : 0;
@@ -3023,7 +3049,7 @@ namespace yae
                                 crop.y_ + crop.h_ * (1 - vflip)));
         YAE_OGL_11(glVertex2i(0, int(h)));
       }
-      YAE_OGL_11(glEnd());
+
       yae_assert_gl_no_error();
     }
 
@@ -3757,8 +3783,9 @@ namespace yae
         YAE_OGL_11(glBindTexture(GL_TEXTURE_3D, clut_tex_id_));
       }
 
-      YAE_OGL_11(glBegin(GL_QUADS));
       {
+        yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
+
         YAE_OGL_11(glTexCoord2d(tile.x_.t0_, tile.y_.t0_));
         YAE_OGL_11(glVertex2i(tile.x_.v0_, tile.y_.v0_));
 
@@ -3771,7 +3798,7 @@ namespace yae
         YAE_OGL_11(glTexCoord2d(tile.x_.t0_, tile.y_.t1_));
         YAE_OGL_11(glVertex2i(tile.x_.v0_, tile.y_.v1_));
       }
-      YAE_OGL_11(glEnd());
+
       yae_assert_gl_no_error();
     }
 
@@ -4310,4 +4337,13 @@ namespace yae
     return unsupported;
   }
 
+}
+
+//----------------------------------------------------------------
+// yae_assert_gl_no_error
+//
+bool
+yae_assert_gl_no_error()
+{
+  return yaegl::assert_no_error();
 }

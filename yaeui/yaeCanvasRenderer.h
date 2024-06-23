@@ -108,6 +108,8 @@ namespace yae
 
 namespace yaegl
 {
+  bool assert_no_error();
+
 #ifndef YAE_USE_QGL_WIDGET
 
   //----------------------------------------------------------------
@@ -621,6 +623,9 @@ namespace yaegl
     TBegin glBegin = nullptr;
     TEnd glEnd = nullptr;
 
+    TBegin _glBegin = nullptr;
+    TEnd _glEnd = nullptr;
+
     TClearAccum glClearAccum = nullptr;
     TClearColor glClearColor = nullptr;
     TClearDepth glClearDepth = nullptr;
@@ -866,6 +871,14 @@ namespace yae
       mutex_.lock();
       restore_.push_back(getCurrent());
       YAE_ASSERT(this->makeCurrent());
+#if 0
+      YAE_OPENGL_HERE();
+      if (opengl.glDebugMessageCallback)
+      {
+        opengl.glDebugMessageCallback(yae_opengl_debug_message_cb, NULL);
+        opengl.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      }
+#endif
       return true;
     }
 
@@ -1369,6 +1382,29 @@ namespace yae
                                  bool skipColorConverter,
                                  TPixelFormatId nativeFormat,
                                  TPixelFormatId & adjustedFormat);
+}
+
+namespace yaegl
+{
+
+  //----------------------------------------------------------------
+  // BeginEnd
+  //
+  struct BeginEnd
+  {
+    BeginEnd(GLenum mode)
+    {
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glBegin(mode));
+    }
+
+    ~BeginEnd()
+    {
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glEnd());
+    }
+  };
+
 }
 
 

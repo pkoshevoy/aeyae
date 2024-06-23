@@ -312,6 +312,14 @@ namespace yae
           YAE_BENCHMARK(probe2, "canvas_.TWidget::update");
           canvas_.TWidget::update();
         }
+#if 0
+        QOpenGLContext * ctx = QOpenGLContext::currentContext();
+        QSurface * surface = ctx->surface();
+        yae_dlog("surface class: %i", surface->surfaceClass());
+        yae_dlog("surface type: %i", surface->surfaceType());
+        YAE_ASSERT(surface->supportsOpenGL());
+        ctx->swapBuffers(surface);
+#endif
 #else
         {
           YAE_BENCHMARK(probe3, "canvas_.paintGL");

@@ -552,7 +552,7 @@ namespace yae
         et != QEvent::WindowActivate &&
         et != QEvent::FocusOut &&
         et != QEvent::FocusIn &&
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
         et != QEvent::UpdateRequest &&
 #endif
         et != QEvent::ShortcutOverride)

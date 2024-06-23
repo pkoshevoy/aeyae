@@ -340,8 +340,8 @@ namespace yae
           continue;
         }
 
-        YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
         {
+          yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
           YAE_OGL_11(glTexCoord2d(t[i], t[j]));
           YAE_OGL_11(glVertex2d(x[i], y[j]));
 
@@ -354,7 +354,6 @@ namespace yae
           YAE_OGL_11(glTexCoord2d(t[i + 1], t[j + 1]));
           YAE_OGL_11(glVertex2d(x[i + 1], y[j + 1]));
         }
-        YAE_OGL_11(glEnd());
       }
     }
 
