@@ -64,10 +64,10 @@ namespace yae
       SortByName = 0,
       SortByTime = 1
     };
-#ifdef YAE_USE_QT5
-    Q_ENUM(SortBy);
-#else
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
     Q_ENUMS(SortBy);
+#else
+    Q_ENUM(SortBy);
 #endif
 
     PlaylistModelProxy(QObject * parent = NULL);

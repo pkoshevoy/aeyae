@@ -35,7 +35,7 @@
 // Qt:
 #include <QApplication>
 #include <QDir>
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QSurfaceFormat>
 #endif
 
@@ -204,7 +204,7 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
 
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
   // setup opengl:
   {
     QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |

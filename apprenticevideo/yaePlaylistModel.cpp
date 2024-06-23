@@ -1078,11 +1078,11 @@ namespace yae
       return;
     }
 
-#ifdef YAE_USE_QT5
-    emit dataChanged(index, index, QVector<int>(1, role));
-#else
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
     (void)role;
     emit dataChanged(index, index);
+#else
+    emit dataChanged(index, index, QVector<int>(1, role));
 #endif
   }
 
@@ -1096,11 +1096,11 @@ namespace yae
   {
     // YAE_BENCHMARK(benchmark, "... Model::emitDataChanged 2");
 
-#ifdef YAE_USE_QT5
-    emit dataChanged(first, last, QVector<int>(1, role));
-#else
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
     (void)role;
     emit dataChanged(first, last);
+#else
+    emit dataChanged(first, last, QVector<int>(1, role));
 #endif
   }
 }
