@@ -495,7 +495,7 @@ namespace yae
     playRateGroup->addAction(actionTempo200_);
     actionTempo100_->setChecked(true);
 
-    playRateMapper_ = new QSignalMapper(this);
+    playRateMapper_ = new yae::SignalMapper(this);
     playRateMapper_->setMapping(actionTempo50_, 50);
     playRateMapper_->setMapping(actionTempo60_, 60);
     playRateMapper_->setMapping(actionTempo70_, 70);
@@ -512,7 +512,7 @@ namespace yae
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     bool ok = true;
-    ok = connect(playRateMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(playRateMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
 
@@ -3321,30 +3321,30 @@ namespace yae
     bool ok = true;
 
     delete audioTrackMapper_;
-    audioTrackMapper_ = new QSignalMapper(this);
+    audioTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(audioTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(audioTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(audioSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete videoTrackMapper_;
-    videoTrackMapper_ = new QSignalMapper(this);
+    videoTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(videoTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(videoTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(videoSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete subsTrackMapper_;
-    subsTrackMapper_ = new QSignalMapper(this);
+    subsTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(subsTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(subsTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(subsSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete chapterMapper_;
-    chapterMapper_ = new QSignalMapper(this);
+    chapterMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(chapterMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(chapterMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(skipToChapter(int)));
     YAE_ASSERT(ok);
 

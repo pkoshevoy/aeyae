@@ -35,16 +35,8 @@
 #include <QPoint>
 #include <QRect>
 #include <QShortcut>
+#include <QSignalMapper>
 #include <QString>
-
-//----------------------------------------------------------------
-// YAE_SIGNAL_MAPPED
-//
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-#define YAE_SIGNAL_MAPPED(x) mapped(x)
-#else
-#define YAE_SIGNAL_MAPPED(x) mappedInt(x)
-#endif
 
 
 namespace yae
@@ -269,6 +261,30 @@ namespace yae
     const char * slot_;
 
     bool reconnect_;
+  };
+
+  //----------------------------------------------------------------
+  // SignalMapper
+  //
+  class SignalMapper : public QSignalMapper
+  {
+    Q_OBJECT;
+
+  public:
+    SignalMapper(QObject * parent = nullptr):
+      QSignalMapper(parent)
+    {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      YAE_ASSERT(connect(this, SIGNAL(mapped(int)),
+                         this, SIGNAL(mapped_to(int))));
+#else
+      YAE_ASSERT(connect(this, SIGNAL(mappedInt(int)),
+                         this, SIGNAL(mapped_to(int))));
+#endif
+    }
+
+  signals:
+    void mapped_to(int i);
   };
 
   //----------------------------------------------------------------

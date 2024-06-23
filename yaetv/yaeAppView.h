@@ -15,7 +15,6 @@
 // Qt library:
 #include <QAction>
 #include <QFont>
-#include <QSignalMapper>
 
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"

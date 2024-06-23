@@ -2428,11 +2428,11 @@ namespace yae
     menuEdit_->setTitle(tr("&Edit"));
     menuView_->setTitle(tr("&View"));
 
-    bool ok = connect(&t0_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    bool ok = connect(&t0_, SIGNAL(mapped_to(int)),
                       this, SLOT(timecode_changed_t0(int)));
     YAE_ASSERT(ok);
 
-    ok = connect(&t1_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
+    ok = connect(&t1_, SIGNAL(mapped_to(int)),
                  this, SLOT(timecode_changed_t1(int)));
     YAE_ASSERT(ok);
   }

@@ -14,7 +14,6 @@
 #include <QDialog>
 #include <QMainWindow>
 #include <QMenu>
-#include <QSignalMapper>
 #include <QShortcut>
 #include <QTimer>
 

@@ -308,15 +308,15 @@ namespace yae
     QActionGroup * subsTrackGroup_;
     QActionGroup * chaptersGroup_;
 
-    QSignalMapper * audioTrackMapper_;
-    QSignalMapper * videoTrackMapper_;
-    QSignalMapper * subsTrackMapper_;
-    QSignalMapper * chapterMapper_;
+    yae::SignalMapper * audioTrackMapper_;
+    yae::SignalMapper * videoTrackMapper_;
+    yae::SignalMapper * subsTrackMapper_;
+    yae::SignalMapper * chapterMapper_;
 
     // bookmark selection mechanism:
     std::vector<PlaylistBookmark> bookmarks_;
     QActionGroup * bookmarksGroup_;
-    QSignalMapper * bookmarksMapper_;
+    yae::SignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
 
     // file reader prototype factory instance:

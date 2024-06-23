@@ -1117,7 +1117,12 @@ namespace yaegl
   get_addr(QOpenGLContext * opengl, const char * name)
   {
     QFunctionPointer func = opengl->getProcAddress(name);
-    YAE_ASSERT(func);
+    if (!func)
+    {
+      yae_elog("OpenGL function not found: %s", name);
+      YAE_ASSERT(false);
+    }
+
     return func;
   }
 

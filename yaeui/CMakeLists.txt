@@ -91,6 +91,7 @@ set(project_moc_hxx
 
   # yaeui:
   yaeApplication.h
+  yaeUtilsQt.h
   )
 
 set(project_uis
