@@ -512,7 +512,7 @@ namespace yae
     // associated with it stop working (tested on OpenSUSE 11.4 KDE 4.6),
     // so I am creating these shortcuts as a workaround:
     bool ok = true;
-    ok = connect(playRateMapper_, SIGNAL(mapped(int)),
+    ok = connect(playRateMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
 
@@ -3323,28 +3323,28 @@ namespace yae
     delete audioTrackMapper_;
     audioTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(audioTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(audioSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete videoTrackMapper_;
     videoTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(videoTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(videoSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete subsTrackMapper_;
     subsTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(subsTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(subsSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete chapterMapper_;
     chapterMapper_ = new QSignalMapper(this);
 
-    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
+    ok = connect(chapterMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(skipToChapter(int)));
     YAE_ASSERT(ok);
 

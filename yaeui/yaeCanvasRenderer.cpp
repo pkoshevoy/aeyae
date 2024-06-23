@@ -1056,6 +1056,31 @@ yae_assert_gl_no_error()
   return false;
 }
 
+//----------------------------------------------------------------
+// yae_opengl_debug_message_cb
+//
+extern "C" void
+yae_opengl_debug_message_cb(GLenum src,
+                            GLenum t,
+                            GLuint id,
+                            GLenum severity,
+                            GLsizei length,
+                            const GLchar * message,
+                            const void * userParam)
+{
+  if (severity != GL_DEBUG_SEVERITY_NOTIFICATION)
+  {
+    yae_error
+      << "OpenGL debug message, source " << int(src)
+      << ", type " << int(t)
+      << ", id " << int(id)
+      << ", severity " << int(severity)
+      << ": " << std::string(message, message + length).c_str();
+  }
+
+  return;
+}
+
 #ifndef YAE_USE_QGL_WIDGET
 namespace yaegl
 {
@@ -1078,6 +1103,9 @@ namespace yaegl
   {
     // QOpenGLFunctions::initializeOpenGLFunctions();
     QOpenGLContext * ctx = QOpenGLContext::currentContext();
+
+    this->glDebugMessageCallback = (TDebugMessageCallback)
+      get_addr(ctx, "glDebugMessageCallback");
 
     this->glBegin = (TBegin)
       get_addr(ctx, "glBegin");

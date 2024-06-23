@@ -651,7 +651,7 @@ namespace yae
           bookmarksGroup_ = new QActionGroup(this);
           bookmarksMapper_ = new QSignalMapper(this);
 
-          bool ok = connect(bookmarksMapper_, SIGNAL(mapped(int)),
+          bool ok = connect(bookmarksMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                             this, SLOT(bookmarksSelectItem(int)));
           YAE_ASSERT(ok);
 

@@ -37,6 +37,15 @@
 #include <QShortcut>
 #include <QString>
 
+//----------------------------------------------------------------
+// YAE_SIGNAL_MAPPED
+//
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#define YAE_SIGNAL_MAPPED(x) mapped(x)
+#else
+#define YAE_SIGNAL_MAPPED(x) mappedInt(x)
+#endif
+
 
 namespace yae
 {

@@ -557,7 +557,7 @@ namespace yae
     playRateMapper->setMapping(actionTempo200, 200);
 
     bool ok = true;
-    ok = connect(playRateMapper, SIGNAL(mapped(int)),
+    ok = connect(playRateMapper, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
 
@@ -1707,7 +1707,7 @@ namespace yae
           bookmarksGroup_ = new QActionGroup(this);
           bookmarksMapper_ = new QSignalMapper(this);
 
-          bool ok = connect(bookmarksMapper_, SIGNAL(mapped(int)),
+          bool ok = connect(bookmarksMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                             this, SLOT(bookmarksSelectItem(int)));
           YAE_ASSERT(ok);
 
@@ -3984,28 +3984,28 @@ namespace yae
     delete audioTrackMapper_;
     audioTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(audioTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(audioSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete videoTrackMapper_;
     videoTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(videoTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(videoSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete subsTrackMapper_;
     subsTrackMapper_ = new QSignalMapper(this);
 
-    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(subsTrackMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(subsSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete chapterMapper_;
     chapterMapper_ = new QSignalMapper(this);
 
-    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
+    ok = connect(chapterMapper_, SIGNAL(YAE_SIGNAL_MAPPED(int)),
                  this, SLOT(skipToChapter(int)));
     YAE_ASSERT(ok);
 

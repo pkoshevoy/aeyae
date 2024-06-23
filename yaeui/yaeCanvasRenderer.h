@@ -85,6 +85,18 @@ yae_reset_opengl_to_initial_state();
 YAEUI_API bool
 yae_assert_gl_no_error();
 
+//----------------------------------------------------------------
+// yae_opengl_debug_message_cb
+//
+extern "C" void
+yae_opengl_debug_message_cb(GLenum src,
+                            GLenum t,
+                            GLuint id,
+                            GLenum severity,
+                            GLsizei length,
+                            const GLchar * message,
+                            const void * userParam);
+
 namespace yae
 {
   // forward declarations:
@@ -97,6 +109,23 @@ namespace yae
 namespace yaegl
 {
 #ifndef YAE_USE_QGL_WIDGET
+
+  //----------------------------------------------------------------
+  // DEBUGPROC
+  //
+  typedef void (APIENTRYP TDEBUGPROC)(GLenum source​,
+                                    GLenum type​,
+                                    GLuint id​,
+                                    GLenum severity​,
+                                    GLsizei length​,
+                                    const GLchar * message​,
+                                    const void * userParam​);
+
+  //----------------------------------------------------------------
+  // TDebugMessageCallback
+  //
+  typedef void (APIENTRYP TDebugMessageCallback)(TDEBUGPROC callback​,
+                                                 void * userParam​);
 
   //----------------------------------------------------------------
   // TBegin
@@ -587,6 +616,8 @@ namespace yaegl
   //
   struct YAEUI_API OpenGLFunctionPointers // : public QOpenGLFunctions
   {
+    TDebugMessageCallback glDebugMessageCallback = nullptr;
+
     TBegin glBegin = nullptr;
     TEnd glEnd = nullptr;
 
