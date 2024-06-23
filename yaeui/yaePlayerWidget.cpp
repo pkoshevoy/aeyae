@@ -63,13 +63,13 @@ namespace yae
 
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
-
+#if 0
     // attempt to initialize:
     {
       QResizeEvent e(QSize(64, 64), QSize(0, 0));
       canvas_->TCanvasWidget::event(&e);
     }
-
+#endif
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
   }

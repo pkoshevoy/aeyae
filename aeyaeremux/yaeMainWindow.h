@@ -45,7 +45,7 @@ namespace yae
   //----------------------------------------------------------------
   // TCanvasWidget
   //
-#ifdef YAE_USE_QGL_WIDGET)
+#ifdef YAE_USE_QGL_WIDGET
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
 #else
   typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
