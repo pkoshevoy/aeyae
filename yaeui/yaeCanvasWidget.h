@@ -16,7 +16,8 @@
 #include <QApplication>
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
 #include <QDesktopWidget>
-#else
+#endif
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QScreen>
 #endif
 #include <QKeyEvent>
