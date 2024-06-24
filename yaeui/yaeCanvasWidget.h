@@ -41,17 +41,18 @@ namespace yae
   //
   struct GetScreenInfo
   {
-    const QWidget * widget_ = NULL;
+    const QWidget * widget_;
 #if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
-    const QWidget * screen_ = NULL;
+    const QWidget * screen_;
 #else
-    const QScreen * screen_ = NULL;
+    const QScreen * screen_;
 #endif
     QRect geometry_;
     QSizeF size_mm_;
 
     GetScreenInfo(const QWidget * widget):
-      widget_(widget)
+      widget_(widget),
+      screen_(NULL)
     {
 #if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
       QDesktopWidget * dw = QApplication::desktop();

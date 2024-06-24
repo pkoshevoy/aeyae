@@ -1131,6 +1131,8 @@ namespace yaegl
   //
   OpenGLFunctionPointers::OpenGLFunctionPointers()
   {
+    memset(this, 0, sizeof(*this));
+
     // QOpenGLFunctions::initializeOpenGLFunctions();
     QOpenGLContext * ctx = QOpenGLContext::currentContext();
 
