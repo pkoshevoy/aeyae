@@ -1,8 +1,5 @@
 cmake_minimum_required(VERSION 3.1.0)
 
-set(AEYAE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
-set(CMAKE_CXX_STANDARD ${AEYAE_CXX_STANDARD})
-
 set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
 set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -354,13 +351,16 @@ set_property(TARGET ${PROGNAME} PROPERTY
   )
 
 message("Boost_VERSION: ${Boost_VERSION}")
-#if (Boost_VERSION VERSION_LESS "107000")
-#  message("setting CXX_STANDARD 98")
-#  set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-#else()
-#  message("setting CXX_STANDARD 11")
-#  set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
-#endif()
+if (Boost_VERSION VERSION_LESS "107000")
+  message("setting AEYAE_CXX_STANDARD 98")
+  set(AEYAE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
+else()
+  message("setting AEYAE_CXX_STANDARD 17")
+  set(AEYAE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
+endif()
+
+set(CMAKE_CXX_STANDARD ${AEYAE_CXX_STANDARD})
+set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD  ${AEYAE_CXX_STANDARD})
 
 target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS
