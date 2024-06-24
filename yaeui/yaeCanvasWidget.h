@@ -14,7 +14,7 @@
 
 // Qt includes:
 #include <QApplication>
-#ifdef YAE_USE_QT4
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
 #include <QDesktopWidget>
 #else
 #include <QScreen>
@@ -41,7 +41,7 @@ namespace yae
   struct GetScreenInfo
   {
     const QWidget * widget_ = NULL;
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
     const QWidget * screen_ = NULL;
 #else
     const QScreen * screen_ = NULL;
@@ -52,7 +52,7 @@ namespace yae
     GetScreenInfo(const QWidget * widget):
       widget_(widget)
     {
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
       QDesktopWidget * dw = QApplication::desktop();
       int sn = dw->screenNumber(widget);
       screen_ = dw->screen(sn);
@@ -77,7 +77,7 @@ namespace yae
 
     inline QRect available_geometry() const
     {
-#if (QT_VERSION < 0x050000)
+#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
       return QApplication::desktop()->availableGeometry(widget_->window());
 #else
       return screen_->availableGeometry();
@@ -123,7 +123,7 @@ namespace yae
     inline double logical_dpi_x() const
     {
       double s = this->device_pixel_ratio();
-#if (QT_VERSION < 0x050000)
+#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
       double dpi = screen_->logicalDpiX();
 #else
       double dpi = screen_->logicalDotsPerInchX();
@@ -134,7 +134,7 @@ namespace yae
     inline double logical_dpi_y() const
     {
       double s = this->device_pixel_ratio();
-#if (QT_VERSION < 0x050000)
+#if (QT_VERSION < QT_VERSION_CHECK(5, 14, 0))
       double dpi = screen_->logicalDpiY();
 #else
       double dpi = screen_->logicalDotsPerInchY();

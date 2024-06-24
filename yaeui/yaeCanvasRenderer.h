@@ -618,108 +618,108 @@ namespace yaegl
   //
   struct YAEUI_API OpenGLFunctionPointers // : public QOpenGLFunctions
   {
-    TDebugMessageCallback glDebugMessageCallback = nullptr;
+    TDebugMessageCallback glDebugMessageCallback = NULL;
 
-    TBegin glBegin = nullptr;
-    TEnd glEnd = nullptr;
+    TBegin glBegin = NULL;
+    TEnd glEnd = NULL;
 
-    TBegin _glBegin = nullptr;
-    TEnd _glEnd = nullptr;
+    TBegin _glBegin = NULL;
+    TEnd _glEnd = NULL;
 
-    TClearAccum glClearAccum = nullptr;
-    TClearColor glClearColor = nullptr;
-    TClearDepth glClearDepth = nullptr;
-    TClearStencil glClearStencil = nullptr;
+    TClearAccum glClearAccum = NULL;
+    TClearColor glClearColor = NULL;
+    TClearDepth glClearDepth = NULL;
+    TClearStencil glClearStencil = NULL;
 
-    TDepthFunc glDepthFunc = nullptr;
-    TDepthMask glDepthMask = nullptr;
-    TColorMask glColorMask = nullptr;
+    TDepthFunc glDepthFunc = NULL;
+    TDepthMask glDepthMask = NULL;
+    TColorMask glColorMask = NULL;
 
-    TStencilFunc glStencilFunc = nullptr;
-    TStencilMask glStencilMask = nullptr;
-    TStencilOp glStencilOp = nullptr;
+    TStencilFunc glStencilFunc = NULL;
+    TStencilMask glStencilMask = NULL;
+    TStencilOp glStencilOp = NULL;
 
-    TColor3d glColor3d = nullptr;
-    TColor3f glColor3f = nullptr;
-    TColor3fv glColor3fv = nullptr;
-    TColor4d glColor4d = nullptr;
-    TColor4ub glColor4ub = nullptr;
+    TColor3d glColor3d = NULL;
+    TColor3f glColor3f = NULL;
+    TColor3fv glColor3fv = NULL;
+    TColor4d glColor4d = NULL;
+    TColor4ub glColor4ub = NULL;
 
-    TVertex2d glVertex2d = nullptr;
-    TVertex2dv glVertex2dv = nullptr;
-    TVertex2i glVertex2i = nullptr;
+    TVertex2d glVertex2d = NULL;
+    TVertex2dv glVertex2dv = NULL;
+    TVertex2i glVertex2i = NULL;
 
-    TRecti glRecti = nullptr;
-    TRectd glRectd = nullptr;
+    TRecti glRecti = NULL;
+    TRectd glRectd = NULL;
 
-    TMatrixMode glMatrixMode = nullptr;
-    TPushMatrix glPushMatrix = nullptr;
-    TPopMatrix glPopMatrix = nullptr;
+    TMatrixMode glMatrixMode = NULL;
+    TPushMatrix glPushMatrix = NULL;
+    TPopMatrix glPopMatrix = NULL;
 
-    TViewport glViewport = nullptr;
-    TOrtho glOrtho = nullptr;
+    TViewport glViewport = NULL;
+    TOrtho glOrtho = NULL;
 
-    TLoadIdentity glLoadIdentity = nullptr;
-    TRotated glRotated = nullptr;
-    TScaled glScaled = nullptr;
-    TTranslated glTranslated = nullptr;
+    TLoadIdentity glLoadIdentity = NULL;
+    TRotated glRotated = NULL;
+    TScaled glScaled = NULL;
+    TTranslated glTranslated = NULL;
 
-    TPolygonMode glPolygonMode = nullptr;
-    TShadeModel glShadeModel = nullptr;
-    TAlphaFunc glAlphaFunc = nullptr;
+    TPolygonMode glPolygonMode = NULL;
+    TShadeModel glShadeModel = NULL;
+    TAlphaFunc glAlphaFunc = NULL;
 
-    TPushAttrib glPushAttrib = nullptr;
-    TPopAttrib glPopAttrib = nullptr;
+    TPushAttrib glPushAttrib = NULL;
+    TPopAttrib glPopAttrib = NULL;
 
-    TPushClientAttrib glPushClientAttrib = nullptr;
-    TPopClientAttrib glPopClientAttrib = nullptr;
+    TPushClientAttrib glPushClientAttrib = NULL;
+    TPopClientAttrib glPopClientAttrib = NULL;
 
-    TEnable glEnable = nullptr;
-    TDisable glDisable = nullptr;
+    TEnable glEnable = NULL;
+    TDisable glDisable = NULL;
 
-    THint glHint = nullptr;
-    TBlendFunc glBlendFunc = nullptr;
-    TLineStipple glLineStipple = nullptr;
-    TLineWidth glLineWidth = nullptr;
-    TScissor glScissor = nullptr;
+    THint glHint = NULL;
+    TBlendFunc glBlendFunc = NULL;
+    TLineStipple glLineStipple = NULL;
+    TLineWidth glLineWidth = NULL;
+    TScissor glScissor = NULL;
 
-    TBindBuffer glBindBuffer = nullptr;
-    TCheckFramebufferStatus glCheckFramebufferStatus = nullptr;
-    TDeleteTextures glDeleteTextures = nullptr;
-    TGenTextures glGenTextures = nullptr;
+    TBindBuffer glBindBuffer = NULL;
+    TCheckFramebufferStatus glCheckFramebufferStatus = NULL;
+    TDeleteTextures glDeleteTextures = NULL;
+    TGenTextures glGenTextures = NULL;
 
-    TGetError glGetError = nullptr;
-    TGetString glGetString = nullptr;
-    TGetIntegerv glGetIntegerv = nullptr;
-    TGetTexLevelParameteriv glGetTexLevelParameteriv = nullptr;
-    TIsTexture glIsTexture = nullptr;
+    TGetError glGetError = NULL;
+    TGetString glGetString = NULL;
+    TGetIntegerv glGetIntegerv = NULL;
+    TGetTexLevelParameteriv glGetTexLevelParameteriv = NULL;
+    TIsTexture glIsTexture = NULL;
 
-    TTexEnvi glTexEnvi = nullptr;
-    TTexCoord2d glTexCoord2d = nullptr;
-    TTexCoord2i glTexCoord2i = nullptr;
-    TTexImage2D glTexImage2D = nullptr;
-    TTexImage3D glTexImage3D = nullptr;
-    TTexSubImage2D glTexSubImage2D = nullptr;
+    TTexEnvi glTexEnvi = NULL;
+    TTexCoord2d glTexCoord2d = NULL;
+    TTexCoord2i glTexCoord2i = NULL;
+    TTexImage2D glTexImage2D = NULL;
+    TTexImage3D glTexImage3D = NULL;
+    TTexSubImage2D glTexSubImage2D = NULL;
 
-    TTexParameteri glTexParameteri = nullptr;
+    TTexParameteri glTexParameteri = NULL;
 
-    TPixelStorei glPixelStorei = nullptr;
+    TPixelStorei glPixelStorei = NULL;
 
-    TActiveTexture glActiveTexture = nullptr;
-    TBindTexture glBindTexture = nullptr;
+    TActiveTexture glActiveTexture = NULL;
+    TBindTexture glBindTexture = NULL;
 
-    TDisableVertexAttribArray glDisableVertexAttribArray = nullptr;
-    TVertexAttribPointer glVertexAttribPointer = nullptr;
+    TDisableVertexAttribArray glDisableVertexAttribArray = NULL;
+    TVertexAttribPointer glVertexAttribPointer = NULL;
 
-    TUseProgram glUseProgram = nullptr;
+    TUseProgram glUseProgram = NULL;
 
-    TProgramStringARB glProgramStringARB = nullptr;
-    TGetProgramivARB glGetProgramivARB = nullptr;
-    TDeleteProgramsARB glDeleteProgramsARB = nullptr;
-    TBindProgramARB glBindProgramARB = nullptr;
-    TGenProgramsARB glGenProgramsARB = nullptr;
-    TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB = nullptr;
-    TProgramLocalParameter4dARB glProgramLocalParameter4dARB = nullptr;
+    TProgramStringARB glProgramStringARB = NULL;
+    TGetProgramivARB glGetProgramivARB = NULL;
+    TDeleteProgramsARB glDeleteProgramsARB = NULL;
+    TBindProgramARB glBindProgramARB = NULL;
+    TGenProgramsARB glGenProgramsARB = NULL;
+    TProgramLocalParameter4dvARB glProgramLocalParameter4dvARB = NULL;
+    TProgramLocalParameter4dARB glProgramLocalParameter4dARB = NULL;
 
     OpenGLFunctionPointers();
 

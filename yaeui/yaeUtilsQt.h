@@ -271,7 +271,7 @@ namespace yae
     Q_OBJECT;
 
   public:
-    SignalMapper(QObject * parent = nullptr):
+    SignalMapper(QObject * parent = NULL):
       QSignalMapper(parent)
     {
 #if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
