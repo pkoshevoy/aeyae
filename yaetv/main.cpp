@@ -555,11 +555,8 @@ namespace yae
     {
       QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
                          QSurfaceFormat::DeprecatedFunctions);
-      fmt.setAlphaBufferSize(0);
       // fmt.setVersion(4, 2);
       fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
-      // fmt.setOptions(QSurfaceFormat::DeprecatedFunctions);
-      fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
       QSurfaceFormat::setDefaultFormat(fmt);
     }
     // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);
