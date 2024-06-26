@@ -56,14 +56,14 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_LINE_LOOP));
     {
+      yaegl::BeginEnd mode(GL_LINE_LOOP);
+
       YAE_OGL_11(glVertex2d(x0, y0));
       YAE_OGL_11(glVertex2d(x0, y1));
       YAE_OGL_11(glVertex2d(x1, y1));
       YAE_OGL_11(glVertex2d(x1, y0));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------

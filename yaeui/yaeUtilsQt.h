@@ -35,6 +35,7 @@
 #include <QPoint>
 #include <QRect>
 #include <QShortcut>
+#include <QSignalMapper>
 #include <QString>
 
 
@@ -263,6 +264,30 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // SignalMapper
+  //
+  class SignalMapper : public QSignalMapper
+  {
+    Q_OBJECT;
+
+  public:
+    SignalMapper(QObject * parent = NULL):
+      QSignalMapper(parent)
+    {
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+      YAE_ASSERT(connect(this, SIGNAL(mapped(int)),
+                         this, SIGNAL(mapped_to(int))));
+#else
+      YAE_ASSERT(connect(this, SIGNAL(mappedInt(int)),
+                         this, SIGNAL(mapped_to(int))));
+#endif
+    }
+
+  signals:
+    void mapped_to(int i);
+  };
+
+  //----------------------------------------------------------------
   // swapShortcuts
   //
   inline void
@@ -339,6 +364,31 @@ namespace yae
   //
   void
   show_in_file_manager(const char * path_utf8);
+
+  //----------------------------------------------------------------
+  // get_wheel_pos
+  //
+  QPointF get_wheel_pos(const QWheelEvent * e);
+
+  //----------------------------------------------------------------
+  // get_wheel_delta
+  //
+  // compatibility wrapper for Qt4, Qt5, Qt6;
+  //
+  int get_wheel_delta(const QWheelEvent * e);
+
+  //----------------------------------------------------------------
+  // get_wheel_delta_degrees
+  //
+  // Quoting from QWheelEvent docs:
+  //
+  //  " Most mouse types work in steps of 15 degrees,
+  //    in which case the delta value is a multiple of 120;
+  //    i.e., 120 units * 1/8 = 15 degrees. "
+  //
+  inline double
+  get_wheel_delta_degrees(const QWheelEvent * e)
+  { return yae::get_wheel_delta(e) * 0.125; }
 
 }
 

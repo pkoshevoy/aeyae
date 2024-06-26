@@ -1212,7 +1212,7 @@ namespace yae
       int val = sb->value();
       int min = sb->minimum();
       int max = sb->maximum();
-      int delta = -(e->delta());
+      int delta = -yae::get_wheel_delta(e);
 
       if ((val == min && delta < 0) ||
           (val == max && delta > 0))
@@ -1230,7 +1230,8 @@ namespace yae
         bool scrollToItem = false;
         bool allowGroupSelection = false;
 
-        updateSelection(e->pos(),
+        QPoint pos = yae::get_wheel_pos(e).toPoint();
+        updateSelection(pos,
                         toggleSelection,
                         scrollToItem,
                         allowGroupSelection);

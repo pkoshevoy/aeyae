@@ -45,10 +45,10 @@ namespace yae
   //----------------------------------------------------------------
   // TCanvasWidget
   //
-#if defined(YAE_USE_QOPENGL_WIDGET)
-  typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
-#else
+#ifdef YAE_USE_QGL_WIDGET
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
+#else
+  typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
 #endif
 
   //----------------------------------------------------------------
@@ -308,15 +308,15 @@ namespace yae
     QActionGroup * subsTrackGroup_;
     QActionGroup * chaptersGroup_;
 
-    QSignalMapper * audioTrackMapper_;
-    QSignalMapper * videoTrackMapper_;
-    QSignalMapper * subsTrackMapper_;
-    QSignalMapper * chapterMapper_;
+    yae::SignalMapper * audioTrackMapper_;
+    yae::SignalMapper * videoTrackMapper_;
+    yae::SignalMapper * subsTrackMapper_;
+    yae::SignalMapper * chapterMapper_;
 
     // bookmark selection mechanism:
     std::vector<PlaylistBookmark> bookmarks_;
     QActionGroup * bookmarksGroup_;
-    QSignalMapper * bookmarksMapper_;
+    yae::SignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
 
     // file reader prototype factory instance:

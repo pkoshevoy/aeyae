@@ -371,8 +371,8 @@ namespace yae
     // index of currently selected clip:
     std::size_t selected_;
 
-    QSignalMapper t0_;
-    QSignalMapper t1_;
+    yae::SignalMapper t0_;
+    yae::SignalMapper t1_;
 
     // LUT of top level clip container items:
     std::map<TClipPtr, ItemPtr> clips_;

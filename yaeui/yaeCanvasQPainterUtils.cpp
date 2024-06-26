@@ -405,7 +405,7 @@ namespace yae
     TQImageBuffer * imageBuffer = (TQImageBuffer *)(frame_->data_.get());
     QImage & image = imageBuffer->qimg_;
     vtts.encodedWidth_ = image.bytesPerLine() / 4;
-    vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
+    vtts.encodedHeight_ = image.height();
     vtts.offsetTop_ = 0;
     vtts.offsetLeft_ = 0;
     vtts.visibleWidth_ = w_;

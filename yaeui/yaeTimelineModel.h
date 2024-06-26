@@ -25,6 +25,7 @@
 #include <QTime>
 
 // yae includes:
+#include "yae/utils/yae_time.h"
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_synchronous.h"
@@ -303,7 +304,7 @@ namespace yae
     // or has just one frame (a single picture):
     std::list<SharedClock> stoppedClock_;
     QTimer slideshowTimer_;
-    QTime slideshowTimerStart_;
+    yae::TTime slideshowTimerStart_;
   };
 
   //----------------------------------------------------------------

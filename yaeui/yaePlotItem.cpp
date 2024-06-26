@@ -168,14 +168,13 @@ namespace yae
     int line_width = int(0.5 + item_.line_width_.get());
     YAE_OGL_11(glLineWidth(line_width));
 
-    YAE_OGL_11(glBegin(GL_LINE_STRIP));
+    yaegl::BeginEnd mode(GL_LINE_STRIP);
     for (std::vector<TVec2D>::const_iterator
            i = points.begin(); i != points.end(); ++i)
     {
       const TVec2D & p = *i;
       YAE_OGL_11(glVertex2d(p.x(), p.y()));
     }
-    YAE_OGL_11(glEnd());
   }
 
 

@@ -25,6 +25,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_time.h"
 #include "yae/video/yae_reader_factory.h"
 #include "yae/video/yae_synchronous.h"
 
@@ -76,7 +77,8 @@ namespace yae
     Q_OBJECT;
 
   public:
-    TimelineControls(QWidget * parent = NULL, Qt::WindowFlags f = 0);
+    TimelineControls(QWidget * parent = NULL,
+                     Qt::WindowFlags f = Qt::WindowFlags(0));
     ~TimelineControls();
 
     TimelineModel model_;
@@ -155,7 +157,7 @@ namespace yae
 
     // repaint buffering:
     QTimer repaintTimer_;
-    QTime repaintTimerStartTime_;
+    yae::TTime repaintTimerStartTime_;
   };
 }
 

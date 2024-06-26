@@ -10,7 +10,6 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QDesktopServices>
-#include <QDesktopWidget>
 #include <QDirIterator>
 #include <QDragEnterEvent>
 #include <QFileDialog>
@@ -45,11 +44,11 @@ namespace yae
     popup_ = add_menu("PlayerWidget::popup_");
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(this);
-    canvasLayout->setMargin(0);
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else
@@ -64,13 +63,13 @@ namespace yae
 
     canvas_->setFocusPolicy(Qt::StrongFocus);
     canvas_->setAcceptDrops(false);
-
+#if 0
     // attempt to initialize:
     {
       QResizeEvent e(QSize(64, 64), QSize(0, 0));
       canvas_->TCanvasWidget::event(&e);
     }
-
+#endif
     // insert canvas widget into the main window layout:
     canvasLayout->addWidget(canvas_);
   }

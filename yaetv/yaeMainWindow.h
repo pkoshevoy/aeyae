@@ -14,7 +14,6 @@
 #include <QDialog>
 #include <QMainWindow>
 #include <QMenu>
-#include <QSignalMapper>
 #include <QShortcut>
 #include <QTimer>
 
@@ -46,10 +45,10 @@ namespace yae
   //----------------------------------------------------------------
   // TCanvasWidget
   //
-#if defined(YAE_USE_QOPENGL_WIDGET)
-  typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
-#else
+#ifdef YAE_USE_QGL_WIDGET
   typedef CanvasWidget<QGLWidget> TCanvasWidget;
+#else
+  typedef CanvasWidget<QOpenGLWidget> TCanvasWidget;
 #endif
 
   //----------------------------------------------------------------

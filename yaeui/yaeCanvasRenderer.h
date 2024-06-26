@@ -20,7 +20,23 @@
 #endif
 
 // Qt includes:
-#ifdef YAE_USE_QOPENGL_WIDGET
+#if defined(YAE_USE_QT4) || \
+  (defined(YAE_USE_QT5) && !defined(YAE_USE_QOPENGL_WIDGET))
+#ifndef YAE_USE_QGL_WIDGET
+#define YAE_USE_QGL_WIDGET
+#endif
+#else
+#include <QOpenGLWidget>
+#if (QT_VERSION >= QT_VERSION_CHECK(6, 0, 0))
+#include <QOpenGLVersionFunctionsFactory>
+#endif
+#endif
+
+#ifdef YAE_USE_QGL_WIDGET
+// GLEW:
+#include <GL/glew.h>
+#include <QGLWidget>
+#else
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
 #include <QOpenGLFunctions_1_0>
@@ -29,9 +45,6 @@
 #include <QOpenGLFunctions_1_3>
 #include <QOpenGLFunctions_1_4>
 #include <QOpenGLFunctions_2_0>
-#else
-// GLEW includes:
-#include <GL/glew.h>
 #endif
 
 // yae includes:
@@ -72,6 +85,18 @@ yae_reset_opengl_to_initial_state();
 YAEUI_API bool
 yae_assert_gl_no_error();
 
+//----------------------------------------------------------------
+// yae_opengl_debug_message_cb
+//
+extern "C" void
+yae_opengl_debug_message_cb(GLenum src,
+                            GLenum t,
+                            GLuint id,
+                            GLenum severity,
+                            GLsizei length,
+                            const GLchar * message,
+                            const void * userParam);
+
 namespace yae
 {
   // forward declarations:
@@ -79,8 +104,465 @@ namespace yae
   struct TLegacyCanvas;
   struct TModernCanvas;
   struct TFragmentShader;
+}
 
-#ifdef YAE_USE_QOPENGL_WIDGET
+namespace yaegl
+{
+  YAEUI_API bool assert_no_error();
+
+#ifndef YAE_USE_QGL_WIDGET
+
+  //----------------------------------------------------------------
+  // TDEBUGPROC
+  //
+  typedef void (APIENTRYP TDEBUGPROC)(GLenum source,
+                                      GLenum type,
+                                      GLuint id,
+                                      GLenum severity,
+                                      GLsizei length,
+                                      const GLchar * message,
+                                      const void * userParam);
+
+  //----------------------------------------------------------------
+  // TDebugMessageCallback
+  //
+  typedef void (APIENTRYP TDebugMessageCallback)(TDEBUGPROC callback,
+                                                 void * userParam);
+
+  //----------------------------------------------------------------
+  // TBegin
+  //
+  typedef void (APIENTRYP TBegin)(GLenum mode);
+
+  //----------------------------------------------------------------
+  // TEnd
+  //
+  typedef void (APIENTRYP TEnd)();
+
+  //----------------------------------------------------------------
+  // TClearAccum
+  //
+  typedef void (APIENTRYP TClearAccum)(GLfloat red,
+                                       GLfloat green,
+                                       GLfloat blue,
+                                       GLfloat alpha);
+
+  //----------------------------------------------------------------
+  // TClearColor
+  //
+  typedef void (APIENTRYP TClearColor)(GLclampf red,
+                                       GLclampf green,
+                                       GLclampf blue,
+                                       GLclampf alpha);
+
+  //----------------------------------------------------------------
+  // TClearDepth
+  //
+  typedef void (APIENTRYP TClearDepth)(GLclampd depth);
+
+  //----------------------------------------------------------------
+  // TClearStencil
+  //
+  typedef void (APIENTRYP TClearStencil)(GLint s);
+
+  //----------------------------------------------------------------
+  // TDepthFunc
+  //
+  typedef void (APIENTRYP TDepthFunc)(GLenum func);
+
+  //----------------------------------------------------------------
+  // TDepthMask
+  //
+  typedef void (APIENTRYP TDepthMask)(GLboolean flag);
+
+  //----------------------------------------------------------------
+  // TStencilFunc
+  //
+  typedef void (APIENTRYP TStencilFunc)(GLenum func,
+                                        GLint  ref,
+                                        GLuint mask);
+
+  //----------------------------------------------------------------
+  // TStencilMask
+  //
+  typedef void (APIENTRYP TStencilMask)(GLuint mask);
+
+  //----------------------------------------------------------------
+  // TStencilOp
+  //
+  typedef void (APIENTRYP TStencilOp)(GLenum fail,
+                                      GLenum zfail,
+                                      GLenum zpass);
+
+  //----------------------------------------------------------------
+  // TColorMask
+  //
+  typedef void (APIENTRYP TColorMask)(GLboolean red,
+                                      GLboolean green,
+                                      GLboolean blue,
+                                      GLboolean alpha);
+
+  //----------------------------------------------------------------
+  // TColor3d
+  //
+  typedef void (APIENTRYP TColor3d)(GLdouble r,
+                                    GLdouble g,
+                                    GLdouble b);
+
+  //----------------------------------------------------------------
+  // TColor3f
+  //
+  typedef void (APIENTRYP TColor3f)(GLfloat red,
+                                    GLfloat green,
+                                    GLfloat blue);
+
+  //----------------------------------------------------------------
+  // TColor3fv
+  //
+  typedef void (APIENTRYP TColor3fv)(const GLfloat * v);
+
+  //----------------------------------------------------------------
+  // TColor4d
+  //
+  typedef void (APIENTRYP TColor4d)(GLdouble red,
+                                    GLdouble green,
+                                    GLdouble blue,
+                                    GLdouble alpha);
+
+  //----------------------------------------------------------------
+  // TColor4ub
+  //
+  typedef void (APIENTRYP TColor4ub)(GLubyte red,
+                                     GLubyte green,
+                                     GLubyte blue,
+                                     GLubyte alpha);
+
+  //----------------------------------------------------------------
+  // TVertex2d
+  //
+  typedef void (APIENTRYP TVertex2d)(GLdouble x,
+                                     GLdouble y);
+
+  //----------------------------------------------------------------
+  // TVertex2dv
+  //
+  typedef void (APIENTRYP TVertex2dv)(const GLdouble * v);
+
+  //----------------------------------------------------------------
+  // TVertex2i
+  //
+  typedef void (APIENTRYP TVertex2i)(GLint x,
+                                     GLint y);
+
+  //----------------------------------------------------------------
+  // TRecti
+  //
+  typedef void (APIENTRYP TRecti)(GLint x1,
+                                  GLint y1,
+                                  GLint x2,
+                                  GLint y2);
+
+  //----------------------------------------------------------------
+  // TRectd
+  //
+  typedef void (APIENTRYP TRectd)(GLdouble x1,
+                                  GLdouble y1,
+                                  GLdouble x2,
+                                  GLdouble y2);
+
+  //----------------------------------------------------------------
+  // TMatrixMode
+  //
+  typedef void (APIENTRYP TMatrixMode)(GLenum mode);
+
+  //----------------------------------------------------------------
+  // TPushMatrix
+  //
+  typedef void (APIENTRYP TPushMatrix)(void);
+
+  //----------------------------------------------------------------
+  // TPopMatrix
+  //
+  typedef void (APIENTRYP TPopMatrix)(void);
+
+  //----------------------------------------------------------------
+  // TViewport
+  //
+  typedef void (APIENTRYP TViewport)(GLint   x,
+                                     GLint   y,
+                                     GLsizei width,
+                                     GLsizei height);
+
+  //----------------------------------------------------------------
+  // TOrtho
+  //
+  typedef void (APIENTRYP TOrtho)(GLdouble left,
+                                  GLdouble right,
+                                  GLdouble bottom,
+                                  GLdouble top,
+                                  GLdouble zNear,
+                                  GLdouble zFar);
+
+  //----------------------------------------------------------------
+  // TLoadIdentity
+  //
+  typedef void (APIENTRYP TLoadIdentity)(void);
+
+  //----------------------------------------------------------------
+  // TRotated
+  //
+  typedef void (APIENTRYP TRotated)(GLdouble angle,
+                                    GLdouble x,
+                                    GLdouble y,
+                                    GLdouble z);
+
+  //----------------------------------------------------------------
+  // TScaled
+  //
+  typedef void (APIENTRYP TScaled)(GLdouble x,
+                                   GLdouble y,
+                                   GLdouble z);
+
+  //----------------------------------------------------------------
+  // TTranslated
+  //
+  typedef void (APIENTRYP TTranslated)(GLdouble x,
+                                       GLdouble y,
+                                       GLdouble z);
+
+  //----------------------------------------------------------------
+  // TPolygonMode
+  //
+  typedef void (APIENTRYP TPolygonMode)(GLenum face,
+                                        GLenum mode);
+
+  //----------------------------------------------------------------
+  // TShadeModel
+  //
+  typedef void (APIENTRYP TShadeModel)(GLenum mode);
+
+  //----------------------------------------------------------------
+  // TAlphaFunc
+  //
+  typedef void (APIENTRYP TAlphaFunc)(GLenum func,
+                                      GLclampf ref);
+
+  //----------------------------------------------------------------
+  // TPushAttrib
+  //
+  typedef void (APIENTRYP TPushAttrib)(GLbitfield mask);
+
+  //----------------------------------------------------------------
+  // TPopAttrib
+  //
+  typedef void (APIENTRYP TPopAttrib)(void);
+
+  //----------------------------------------------------------------
+  // TPushClientAttrib
+  //
+  typedef void (APIENTRYP TPushClientAttrib)(GLbitfield mask);
+
+  //----------------------------------------------------------------
+  // TPopClientAttrib
+  //
+  typedef void (APIENTRYP TPopClientAttrib)(void);
+
+  //----------------------------------------------------------------
+  // TEnable
+  //
+  typedef void (APIENTRYP TEnable)(GLenum cap);
+
+  //----------------------------------------------------------------
+  // TDisable
+  //
+  typedef void (APIENTRYP TDisable)(GLenum cap);
+
+  //----------------------------------------------------------------
+  // TBlendFunc
+  //
+  typedef void (APIENTRYP TBlendFunc)(GLenum sfactor,
+                                      GLenum dfactor);
+
+  //----------------------------------------------------------------
+  // THint
+  //
+  typedef void (APIENTRYP THint)(GLenum target,
+                                 GLenum mode);
+
+  //----------------------------------------------------------------
+  // TLineStipple
+  //
+  typedef void (APIENTRYP TLineStipple)(GLint factor,
+                                        GLushort pattern);
+
+  //----------------------------------------------------------------
+  // TLineWidth
+  //
+  typedef void (APIENTRYP TLineWidth)(GLfloat width);
+
+  //----------------------------------------------------------------
+  // TScissor
+  //
+  typedef void (APIENTRYP TScissor)(GLint   x,
+                                    GLint   y,
+                                    GLsizei width,
+                                    GLsizei height);
+
+  //----------------------------------------------------------------
+  // TBindBuffer
+  //
+  typedef void (APIENTRYP TBindBuffer)(GLenum target,
+                                       GLuint buffer);
+
+  //----------------------------------------------------------------
+  // TCheckFramebufferStatus
+  //
+  typedef GLenum (APIENTRYP TCheckFramebufferStatus)(GLenum target);
+
+  //----------------------------------------------------------------
+  // TDeleteTextures
+  //
+  typedef GLenum (APIENTRYP TDeleteTextures)(GLsizei n,
+                                             const GLuint * textures);
+
+  //----------------------------------------------------------------
+  // TGenTextures
+  //
+  typedef GLenum (APIENTRYP TGenTextures)(GLsizei n,
+                                          GLuint * textures);
+
+  //----------------------------------------------------------------
+  // TGetError
+  //
+  typedef GLenum (APIENTRYP TGetError)(void);
+
+  //----------------------------------------------------------------
+  // TGetString
+  //
+  typedef const GLubyte * (APIENTRYP TGetString)(GLenum name);
+
+  //----------------------------------------------------------------
+  // TGetIntegerv
+  //
+  typedef GLenum (APIENTRYP TGetIntegerv)(GLenum pname,
+                                          GLint * params);
+
+  //----------------------------------------------------------------
+  // TGetTexLevelParameteriv
+  //
+  typedef void (APIENTRYP TGetTexLevelParameteriv)(GLenum target,
+                                                   GLint  level,
+                                                   GLenum pname,
+                                                   GLint * params);
+
+  //----------------------------------------------------------------
+  // TIsTexture
+  //
+  typedef GLboolean (APIENTRYP TIsTexture)(GLuint texture);
+
+  //----------------------------------------------------------------
+  // TTexEnvi
+  //
+  typedef void (APIENTRYP TTexEnvi)(GLenum target,
+                                    GLenum pname,
+                                    GLint  param);
+
+  //----------------------------------------------------------------
+  // TTexCoord2d
+  //
+  typedef void (APIENTRYP TTexCoord2d)(GLdouble s,
+                                       GLdouble t);
+
+  //----------------------------------------------------------------
+  // TTexCoord2i
+  //
+  typedef void (APIENTRYP TTexCoord2i)(GLint s,
+                                       GLint t);
+
+  //----------------------------------------------------------------
+  // TTexImage2D
+  //
+  typedef void (APIENTRYP TTexImage2D)(GLenum  target,
+                                       GLint   level,
+                                       GLint   internalformat,
+                                       GLsizei width,
+                                       GLsizei height,
+                                       GLint   border,
+                                       GLint   format,
+                                       GLenum  type,
+                                       const GLvoid * data);
+
+  //----------------------------------------------------------------
+  // TTexImage3D
+  //
+  typedef void (APIENTRYP TTexImage3D)(GLenum  target,
+                                       GLint   level,
+                                       GLint   internalformat,
+                                       GLsizei width,
+                                       GLsizei height,
+                                       GLsizei depth,
+                                       GLint   border,
+                                       GLenum  format,
+                                       GLenum  type,
+                                       const void * data);
+
+  //----------------------------------------------------------------
+  // TTexSubImage2D
+  //
+  typedef void (APIENTRYP TTexSubImage2D)(GLenum  target,
+                                          GLint   level,
+                                          GLint   xoffset,
+                                          GLint   yoffset,
+                                          GLsizei width,
+                                          GLsizei height,
+                                          GLenum  format,
+                                          GLenum  type,
+                                          const GLvoid * data);
+
+  //----------------------------------------------------------------
+  // TTexParameteri
+  //
+  typedef void (APIENTRYP TTexParameteri)(GLenum target,
+                                          GLenum pname,
+                                          GLint  param);
+
+  //----------------------------------------------------------------
+  // TPixelStorei
+  //
+  typedef void (APIENTRYP TPixelStorei)(GLenum pname,
+                                        GLint  param);
+
+  //----------------------------------------------------------------
+  // TActiveTexture
+  //
+  typedef void (APIENTRYP TActiveTexture)(GLenum texture);
+
+  //----------------------------------------------------------------
+  // TBindTexture
+  //
+  typedef void (APIENTRYP TBindTexture)(GLenum target,
+                                        GLuint texture);
+
+  //----------------------------------------------------------------
+  // TDisableVertexAttribArray
+  //
+  typedef void (APIENTRYP TDisableVertexAttribArray)(GLuint index);
+
+  //----------------------------------------------------------------
+  // TVertexAttribPointer
+  //
+  typedef void (APIENTRYP TVertexAttribPointer)(GLuint index,
+                                                GLint size,
+                                                GLenum type,
+                                                GLboolean normalized,
+                                                GLsizei stride,
+                                                const void * pointer);
+
+  //----------------------------------------------------------------
+  // TUseProgram
+  //
+  typedef void (APIENTRYP TUseProgram)(GLuint program);
+
   //----------------------------------------------------------------
   // TProgramStringARB
   //
@@ -132,10 +614,105 @@ namespace yae
                                                        GLdouble w);
 
   //----------------------------------------------------------------
-  // YAE_GL_FRAGMENT_PROGRAM_ARB
+  // OpenGLFunctionPointers
   //
-  struct YAEUI_API OpenGLFunctionPointers : public QOpenGLFunctions
+  struct YAEUI_API OpenGLFunctionPointers // : public QOpenGLFunctions
   {
+    TDebugMessageCallback glDebugMessageCallback;
+
+    TBegin glBegin;
+    TEnd glEnd;
+
+    TBegin _glBegin;
+    TEnd _glEnd;
+
+    TClearAccum glClearAccum;
+    TClearColor glClearColor;
+    TClearDepth glClearDepth;
+    TClearStencil glClearStencil;
+
+    TDepthFunc glDepthFunc;
+    TDepthMask glDepthMask;
+    TColorMask glColorMask;
+
+    TStencilFunc glStencilFunc;
+    TStencilMask glStencilMask;
+    TStencilOp glStencilOp;
+
+    TColor3d glColor3d;
+    TColor3f glColor3f;
+    TColor3fv glColor3fv;
+    TColor4d glColor4d;
+    TColor4ub glColor4ub;
+
+    TVertex2d glVertex2d;
+    TVertex2dv glVertex2dv;
+    TVertex2i glVertex2i;
+
+    TRecti glRecti;
+    TRectd glRectd;
+
+    TMatrixMode glMatrixMode;
+    TPushMatrix glPushMatrix;
+    TPopMatrix glPopMatrix;
+
+    TViewport glViewport;
+    TOrtho glOrtho;
+
+    TLoadIdentity glLoadIdentity;
+    TRotated glRotated;
+    TScaled glScaled;
+    TTranslated glTranslated;
+
+    TPolygonMode glPolygonMode;
+    TShadeModel glShadeModel;
+    TAlphaFunc glAlphaFunc;
+
+    TPushAttrib glPushAttrib;
+    TPopAttrib glPopAttrib;
+
+    TPushClientAttrib glPushClientAttrib;
+    TPopClientAttrib glPopClientAttrib;
+
+    TEnable glEnable;
+    TDisable glDisable;
+
+    THint glHint;
+    TBlendFunc glBlendFunc;
+    TLineStipple glLineStipple;
+    TLineWidth glLineWidth;
+    TScissor glScissor;
+
+    TBindBuffer glBindBuffer;
+    TCheckFramebufferStatus glCheckFramebufferStatus;
+    TDeleteTextures glDeleteTextures;
+    TGenTextures glGenTextures;
+
+    TGetError glGetError;
+    TGetString glGetString;
+    TGetIntegerv glGetIntegerv;
+    TGetTexLevelParameteriv glGetTexLevelParameteriv;
+    TIsTexture glIsTexture;
+
+    TTexEnvi glTexEnvi;
+    TTexCoord2d glTexCoord2d;
+    TTexCoord2i glTexCoord2i;
+    TTexImage2D glTexImage2D;
+    TTexImage3D glTexImage3D;
+    TTexSubImage2D glTexSubImage2D;
+
+    TTexParameteri glTexParameteri;
+
+    TPixelStorei glPixelStorei;
+
+    TActiveTexture glActiveTexture;
+    TBindTexture glBindTexture;
+
+    TDisableVertexAttribArray glDisableVertexAttribArray;
+    TVertexAttribPointer glVertexAttribPointer;
+
+    TUseProgram glUseProgram;
+
     TProgramStringARB glProgramStringARB;
     TGetProgramivARB glGetProgramivARB;
     TDeleteProgramsARB glDeleteProgramsARB;
@@ -148,6 +725,12 @@ namespace yae
 
     static OpenGLFunctionPointers & get();
   };
+#endif
+}
+
+namespace yae
+{
+#ifndef YAE_USE_QGL_WIDGET
 
   //----------------------------------------------------------------
   // ogl_context
@@ -161,6 +744,7 @@ namespace yae
       throw std::runtime_error("QOpenGLContext::currentContext() is NULL");
     }
 
+    YAE_ASSERT(context->isValid());
     return *context;
   }
 
@@ -169,7 +753,12 @@ namespace yae
   //
   inline static QOpenGLFunctions_1_1 & ogl_11()
   {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return *(ogl_context().versionFunctions<QOpenGLFunctions_1_1>());
+#else
+    QOpenGLContext & ctx = ogl_context();
+    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_1>(&ctx);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -177,7 +766,12 @@ namespace yae
   //
   inline static QOpenGLFunctions_1_2 & ogl_12()
   {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return *(ogl_context().versionFunctions<QOpenGLFunctions_1_2>());
+#else
+    QOpenGLContext & ctx = ogl_context();
+    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_2>(&ctx);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -185,7 +779,12 @@ namespace yae
   //
   inline static QOpenGLFunctions_1_3 & ogl_13()
   {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return *(ogl_context().versionFunctions<QOpenGLFunctions_1_3>());
+#else
+    QOpenGLContext & ctx = ogl_context();
+    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_3>(&ctx);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -193,7 +792,12 @@ namespace yae
   //
   inline static QOpenGLFunctions_1_4 & ogl_14()
   {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return *(ogl_context().versionFunctions<QOpenGLFunctions_1_4>());
+#else
+    QOpenGLContext & ctx = ogl_context();
+    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_4>(&ctx);
+#endif
   }
 
   //----------------------------------------------------------------
@@ -201,16 +805,31 @@ namespace yae
   //
   inline static QOpenGLFunctions_2_0 & ogl_20()
   {
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     return *(ogl_context().versionFunctions<QOpenGLFunctions_2_0>());
+#else
+    QOpenGLContext & ctx = ogl_context();
+    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_0>(&ctx);
+#endif
   }
 
-#define YAE_OGL_11_HERE() QOpenGLFunctions_1_1 & ogl_11 = yae::ogl_11()
-#define YAE_OGL_12_HERE() QOpenGLFunctions_1_2 & ogl_12 = yae::ogl_12()
-#define YAE_OGL_13_HERE() QOpenGLFunctions_1_3 & ogl_13 = yae::ogl_13()
-#define YAE_OGL_14_HERE() QOpenGLFunctions_1_4 & ogl_14 = yae::ogl_14()
-#define YAE_OGL_20_HERE() QOpenGLFunctions_2_0 & ogl_20 = yae::ogl_20()
+#define YAE_OGL_11_HERE() \
+  yaegl::OpenGLFunctionPointers & ogl_11 = yaegl::OpenGLFunctionPointers::get()
+
+#define YAE_OGL_12_HERE() \
+  yaegl::OpenGLFunctionPointers & ogl_12 = yaegl::OpenGLFunctionPointers::get()
+
+#define YAE_OGL_13_HERE() \
+  yaegl::OpenGLFunctionPointers & ogl_13 = yaegl::OpenGLFunctionPointers::get()
+
+#define YAE_OGL_14_HERE() \
+  yaegl::OpenGLFunctionPointers & ogl_14 = yaegl::OpenGLFunctionPointers::get()
+
+#define YAE_OGL_20_HERE() \
+  yaegl::OpenGLFunctionPointers & ogl_20 = yaegl::OpenGLFunctionPointers::get()
+
 #define YAE_OPENGL_HERE() \
-  yae::OpenGLFunctionPointers & opengl = yae::OpenGLFunctionPointers::get()
+  yaegl::OpenGLFunctionPointers & opengl = yaegl::OpenGLFunctionPointers::get()
 
 
 #define YAE_OGL_11(x) ogl_11.x
@@ -252,6 +871,14 @@ namespace yae
       mutex_.lock();
       restore_.push_back(getCurrent());
       YAE_ASSERT(this->makeCurrent());
+#if 0
+      YAE_OPENGL_HERE();
+      if (opengl.glDebugMessageCallback)
+      {
+        opengl.glDebugMessageCallback(yae_opengl_debug_message_cb, NULL);
+        opengl.glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+      }
+#endif
       return true;
     }
 
@@ -755,6 +1382,29 @@ namespace yae
                                  bool skipColorConverter,
                                  TPixelFormatId nativeFormat,
                                  TPixelFormatId & adjustedFormat);
+}
+
+namespace yaegl
+{
+
+  //----------------------------------------------------------------
+  // BeginEnd
+  //
+  struct BeginEnd
+  {
+    BeginEnd(GLenum mode)
+    {
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glBegin(mode));
+    }
+
+    ~BeginEnd()
+    {
+      YAE_OGL_11_HERE();
+      YAE_OGL_11(glEnd());
+    }
+  };
+
 }
 
 

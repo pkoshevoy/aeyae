@@ -70,8 +70,8 @@ namespace yae
     YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
     YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
       YAE_OGL_11(glTexCoord2d(0.0, 0.0));
       YAE_OGL_11(glVertex2d(x0, y0));
 
@@ -84,7 +84,6 @@ namespace yae
       YAE_OGL_11(glTexCoord2d(u1, v1));
       YAE_OGL_11(glVertex2d(x1, y1));
     }
-    YAE_OGL_11(glEnd());
 
     texture.unbind();
   }

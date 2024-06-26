@@ -420,7 +420,12 @@ namespace yae
                         // does not end before the method is called,
                         // otherwise the method will be called
                         // with a dangling reference to the arg:
-                        const QGenericArgument & arg = QGenericArgument(0)):
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+                        const QGenericArgument & arg = QGenericArgument(0)
+#else
+                        const QMetaMethodArgument & arg = QMetaMethodArgument()
+#endif
+                        ):
       InputArea(id),
       object_(object),
       method_(method),
@@ -442,7 +447,12 @@ namespace yae
 
     QObject & object_;
     const char * method_;
+
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QGenericArgument arg_;
+#else
+    QMetaMethodArgument arg_;
+#endif
   };
 
 }

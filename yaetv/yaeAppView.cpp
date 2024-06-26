@@ -2531,17 +2531,17 @@ namespace yae
   void
   AppView::translate_ui()
   {
-    action_toggle_fullscreen_->setText(trUtf8("Toggle Full Screen View"));
-    action_block_channel_->setText(trUtf8("Block Channel"));
-    action_watch_recording_->setText(trUtf8("Watch Now"));
+    action_toggle_fullscreen_->setText(tr("Toggle Full Screen View"));
+    action_block_channel_->setText(tr("Block Channel"));
+    action_watch_recording_->setText(tr("Watch Now"));
 
-    action_delete_recording_->setText(trUtf8("Delete"));
+    action_delete_recording_->setText(tr("Delete"));
 #ifdef __APPLE__
-    action_show_in_finder_->setText(trUtf8("Show In Finder"));
+    action_show_in_finder_->setText(tr("Show In Finder"));
 #elif defined(_WIN32)
-    action_show_in_finder_->setText(trUtf8("Show In Explorer"));
+    action_show_in_finder_->setText(tr("Show In Explorer"));
 #else
-    action_show_in_finder_->setText(trUtf8("Show In File Manager"));
+    action_show_in_finder_->setText(tr("Show In File Manager"));
 #endif
   }
 
@@ -2685,7 +2685,7 @@ namespace yae
       const uint16_t major = yae::mpeg_ts::channel_major(clicked_ch_num_);
       const uint16_t minor = yae::mpeg_ts::channel_minor(clicked_ch_num_);
       action_block_channel_->setText
-        (trUtf8("Block Channel %1-%2").arg(major).arg(minor));
+        (tr("Block Channel %1-%2").arg(major).arg(minor));
 
       menu.addAction(action_block_channel_);
     }
@@ -3023,7 +3023,7 @@ namespace yae
 
         Text & maj_min = tile.addNew<Text>("maj_min");
         maj_min.font_ = style.font_;
-        maj_min.font_.setWeight(57);
+        maj_min.font_.setWeight(QFont::Normal);
         maj_min.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.36);
         maj_min.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
         maj_min.anchors_.left_ = ItemRef::reference(tile, kPropertyLeft);
@@ -3112,7 +3112,7 @@ namespace yae
 
           Text & hhmm = body.addNew<Text>("hhmm");
           hhmm.font_ = style.font_;
-          hhmm.font_.setWeight(62);
+          hhmm.font_.setWeight(QFont::Normal);
           hhmm.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
           hhmm.anchors_.top_ = ItemRef::reference(body, kPropertyTop);
           hhmm.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
@@ -3151,7 +3151,7 @@ namespace yae
 
           Text & title = body.addNew<Text>("title");
           title.font_ = style.font_;
-          title.font_.setWeight(62);
+          title.font_.setWeight(QFont::Normal);
           title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
           title.anchors_.vcenter_ = ItemRef::reference(rec, kPropertyVCenter);
           title.anchors_.left_ = ItemRef::reference(rec, kPropertyRight);
@@ -3742,7 +3742,7 @@ namespace yae
         length.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         length.font_ = style.font_;
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-        length.font_.setWeight(62);
+        length.font_.setWeight(QFont::Normal);
         length.elide_ = Qt::ElideRight;
         length.color_ = length.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -3759,7 +3759,7 @@ namespace yae
         date.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         date.font_ = style.font_;
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-        date.font_.setWeight(62);
+        date.font_.setWeight(QFont::Normal);
         date.elide_ = Qt::ElideRight;
         date.color_ = date.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -3891,7 +3891,7 @@ namespace yae
 
         Text & desc = row.addNew<Text>("desc");
         desc.font_ = style.font_;
-        desc.font_.setWeight(62);
+        desc.font_.setWeight(QFont::Normal);
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         desc.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
@@ -4036,7 +4036,7 @@ namespace yae
         Text & count = row.addNew<Text>("count");
 
         title.font_ = style.font_;
-        title.font_.setWeight(62);
+        title.font_.setWeight(QFont::Normal);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         title.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         title.anchors_.left_ = ItemRef::reference(chan, kPropertyRight);
@@ -4052,7 +4052,7 @@ namespace yae
           (TVar(QString::fromUtf8(rec.get_short_title().c_str())));
 
         count.font_ = style.font_;
-        count.font_.setWeight(62);
+        count.font_.setWeight(QFont::Normal);
         count.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         count.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
         count.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
@@ -4393,7 +4393,7 @@ namespace yae
         badge.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.1));
         badge.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.1));
         badge.font_ = style.font_large_;
-        badge.font_.setWeight(62);
+        badge.font_.setWeight(QFont::Normal);
         badge.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
         badge.elide_ = Qt::ElideRight;
         badge.color_ = badge.
@@ -4420,7 +4420,7 @@ namespace yae
         title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.26));
         title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.26));
         title.font_ = style.font_;
-        title.font_.setWeight(62);
+        title.font_.setWeight(QFont::Normal);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         title.elide_ = Qt::ElideRight;
         title.color_ = title.
@@ -4463,7 +4463,7 @@ namespace yae
         length.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         length.font_ = style.font_;
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-        length.font_.setWeight(62);
+        length.font_.setWeight(QFont::Normal);
         length.elide_ = Qt::ElideRight;
         length.color_ = length.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -4479,7 +4479,7 @@ namespace yae
         date.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         date.font_ = style.font_;
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-        date.font_.setWeight(62);
+        date.font_.setWeight(QFont::Normal);
         date.elide_ = Qt::ElideRight;
         date.color_ = date.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -4495,7 +4495,7 @@ namespace yae
         nbytes.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.26));
         nbytes.font_ = style.font_;
         nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-        nbytes.font_.setWeight(62);
+        nbytes.font_.setWeight(QFont::Normal);
         nbytes.elide_ = Qt::ElideRight;
         nbytes.color_ = nbytes.
           addExpr(style_color_ref(view, &AppStyle::fg_epg_));
@@ -6098,7 +6098,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6143,7 +6143,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemChannel(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6177,7 +6177,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6202,7 +6202,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6247,7 +6247,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemTitle(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6281,7 +6281,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6306,7 +6306,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6351,7 +6351,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemDescription(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6385,7 +6385,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6411,7 +6411,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6469,7 +6469,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text_t0.text_ = text_t0.addExpr(new GetWishlistItemStart(view));
       text_t0.font_ = style.font_;
-      text_t0.font_.setWeight(62);
+      text_t0.font_.setWeight(QFont::Normal);
       text_t0.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       edit_t0.anchors_.fill(text_t0);
@@ -6541,7 +6541,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text_t1.text_ = text_t1.addExpr(new GetWishlistItemEnd(view));
       text_t1.font_ = style.font_;
-      text_t1.font_.setWeight(62);
+      text_t1.font_.setWeight(QFont::Normal);
       text_t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       edit_t1.anchors_.fill(text_t1);
@@ -6569,7 +6569,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_t0_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6595,7 +6595,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6642,7 +6642,7 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
         text.text_ = TVarRef::constant(TVar(name));
         text.font_ = style.font_;
-        text.font_.setWeight(62);
+        text.font_.setWeight(QFont::Normal);
         text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
         WishlistWeekdayToggle & btn_ia =
@@ -6654,7 +6654,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::offset(row, kPropertyVCenter, 1);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6679,7 +6679,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6724,7 +6724,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemDate(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6757,7 +6757,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6782,7 +6782,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6827,7 +6827,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemMinDuration(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6860,7 +6860,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6886,7 +6886,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -6931,7 +6931,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemMaxDuration(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -6964,7 +6964,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -6990,7 +6990,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -7035,7 +7035,7 @@ namespace yae
         addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
       text.text_ = text.addExpr(new GetWishlistItemMax(view));
       text.font_ = style.font_;
-      text.font_.setWeight(62);
+      text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
@@ -7068,7 +7068,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::reference(text_bg, kPropertyBottom);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -7093,7 +7093,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -7115,7 +7115,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -7140,7 +7140,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -7162,7 +7162,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -7188,7 +7188,7 @@ namespace yae
 
       Text & label = row.addNew<Text>("label");
       label.font_ = style.font_;
-      label.font_.setWeight(62);
+      label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
       label.anchors_.bottom_ = label.
         addExpr(new RoundUp(row, kPropertyVCenter));
@@ -7210,7 +7210,7 @@ namespace yae
 
       Text & note = row.addNew<Text>("note");
       note.font_ = style.font_;
-      note.font_.setWeight(62);
+      note.font_.setWeight(QFont::Normal);
       note.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       note.anchors_.top_ = ItemRef::offset(cbox, kPropertyBottom, 1);
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);

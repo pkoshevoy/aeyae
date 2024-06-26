@@ -167,7 +167,7 @@ namespace yae
     // bookmark selection mechanism:
     std::vector<PlaylistBookmark> bookmarks_;
     QActionGroup * bookmarksGroup_;
-    QSignalMapper * bookmarksMapper_;
+    yae::SignalMapper * bookmarksMapper_;
     QAction * bookmarksMenuSeparator_;
   };
 

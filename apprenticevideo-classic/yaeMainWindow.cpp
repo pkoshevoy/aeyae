@@ -29,7 +29,6 @@
 #include <QMimeData>
 #include <QUrl>
 #include <QSpacerItem>
-#include <QDesktopWidget>
 #include <QMenu>
 #include <QShortcut>
 #include <QFileInfo>
@@ -256,7 +255,7 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
-    QMainWindow(NULL, 0),
+    QMainWindow(NULL, Qt::WindowFlags(0)),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),
@@ -303,11 +302,11 @@ namespace yae
                                      this);
 
     QVBoxLayout * canvasLayout = new QVBoxLayout(canvasContainer_);
-    canvasLayout->setMargin(0);
+    canvasLayout->setContentsMargins(0, 0, 0, 0);
     canvasLayout->setSpacing(0);
 
     // setup the canvas widget (QML quick widget):
-#ifdef YAE_USE_QOPENGL_WIDGET
+#ifndef YAE_USE_QGL_WIDGET
     canvas_ = new TCanvasWidget(this);
     canvas_->setUpdateBehavior(QOpenGLWidget::NoPartialUpdate);
 #else
@@ -544,7 +543,7 @@ namespace yae
     playRateGroup->addAction(actionTempo200);
     actionTempo100->setChecked(true);
 
-    QSignalMapper * playRateMapper = new QSignalMapper(this);
+    yae::SignalMapper * playRateMapper = new yae::SignalMapper(this);
     playRateMapper->setMapping(actionTempo50, 50);
     playRateMapper->setMapping(actionTempo60, 60);
     playRateMapper->setMapping(actionTempo70, 70);
@@ -558,7 +557,7 @@ namespace yae
     playRateMapper->setMapping(actionTempo200, 200);
 
     bool ok = true;
-    ok = connect(playRateMapper, SIGNAL(mapped(int)),
+    ok = connect(playRateMapper, SIGNAL(mapped_to(int)),
                  this, SLOT(playbackSetTempo(int)));
     YAE_ASSERT(ok);
 
@@ -1706,9 +1705,9 @@ namespace yae
         if (!bookmarksGroup_)
         {
           bookmarksGroup_ = new QActionGroup(this);
-          bookmarksMapper_ = new QSignalMapper(this);
+          bookmarksMapper_ = new yae::SignalMapper(this);
 
-          bool ok = connect(bookmarksMapper_, SIGNAL(mapped(int)),
+          bool ok = connect(bookmarksMapper_, SIGNAL(mapped_to(int)),
                             this, SLOT(bookmarksSelectItem(int)));
           YAE_ASSERT(ok);
 
@@ -3212,7 +3211,7 @@ namespace yae
     }
 
     // seek back and forth here:
-    int delta = e->delta();
+    int delta = yae::get_wheel_delta(e);
     double percent = floor(0.5 + fabs(double(delta)) / 120.0);
     percent = std::max<double>(1.0, percent);
     double offset = percent * ((delta < 0) ? 5.0 : -5.0);
@@ -3365,7 +3364,7 @@ namespace yae
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
     const IReader * reader = reader_;
 
-    QTime startTime = QTime::currentTime();
+    TTime startTime = TTime::now();
     bool done = false;
     while (!done && reader && reader == reader_)
     {
@@ -3384,7 +3383,8 @@ namespace yae
 
       if (!done)
       {
-        if (startTime.elapsed() > 2000)
+        TTime now = TTime::now();
+        if ((now - startTime).get(1000) > 2000)
         {
           // avoid blocking the UI indefinitely:
           break;
@@ -3556,7 +3556,8 @@ namespace yae
     int ideal_w = ox + int(0.5 + vw * xexpand_);
     int ideal_h = oy + int(0.5 + vh * yexpand_);
 
-    QRect rectMax = QApplication::desktop()->availableGeometry(this);
+    yae::GetScreenInfo get_screen_info(this);
+    QRect rectMax = get_screen_info.available_geometry();
     int max_w = rectMax.width();
     int max_h = rectMax.height();
 
@@ -3981,30 +3982,30 @@ namespace yae
     bool ok = true;
 
     delete audioTrackMapper_;
-    audioTrackMapper_ = new QSignalMapper(this);
+    audioTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(audioTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(audioTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(audioSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete videoTrackMapper_;
-    videoTrackMapper_ = new QSignalMapper(this);
+    videoTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(videoTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(videoTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(videoSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete subsTrackMapper_;
-    subsTrackMapper_ = new QSignalMapper(this);
+    subsTrackMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(subsTrackMapper_, SIGNAL(mapped(int)),
+    ok = connect(subsTrackMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(subsSelectTrack(int)));
     YAE_ASSERT(ok);
 
     delete chapterMapper_;
-    chapterMapper_ = new QSignalMapper(this);
+    chapterMapper_ = new yae::SignalMapper(this);
 
-    ok = connect(chapterMapper_, SIGNAL(mapped(int)),
+    ok = connect(chapterMapper_, SIGNAL(mapped_to(int)),
                  this, SLOT(skipToChapter(int)));
     YAE_ASSERT(ok);
 

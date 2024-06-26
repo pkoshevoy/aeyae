@@ -350,18 +350,19 @@ namespace yae
                           "Bitstream Vera Sans");
 
     font_small_.setStyleHint(QFont::SansSerif);
-    font_small_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  // QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
+
+    uint32_t style_strategy = QFont::PreferOutline;
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    style_strategy |= QFont::OpenGLCompatible;
+#endif
+    font_small_.setStyleStrategy((QFont::StyleStrategy)style_strategy);
 
     // main font:
     font_ = font_small_;
     font_large_ = font_small_;
-    font_large_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
+
+    style_strategy |= QFont::PreferAntialias;
+    font_large_.setStyleStrategy((QFont::StyleStrategy)style_strategy);
 
     static bool hasImpact =
       QFontInfo(QFont("impact")).family().
@@ -400,10 +401,9 @@ namespace yae
                           "Courier New");
     font_fixed_.setStyleHint(QFont::Monospace);
     font_fixed_.setFixedPitch(true);
-    font_fixed_.setStyleStrategy((QFont::StyleStrategy)
-                                 (QFont::PreferOutline |
-                                  // QFont::PreferAntialias |
-                                  QFont::OpenGLCompatible));
+
+    style_strategy &= ~(QFont::PreferAntialias);
+    font_fixed_.setStyleStrategy((QFont::StyleStrategy)style_strategy);
 
     anchors_.top_ = ItemRef::constant(0);
     anchors_.left_ = ItemRef::constant(0);

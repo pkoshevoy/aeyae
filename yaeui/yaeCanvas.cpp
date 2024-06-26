@@ -18,12 +18,6 @@
 #include <boost/thread.hpp>
 
 // Qt includes:
-#ifdef YAE_USE_QOPENGL_WIDGET
-#define GL_GLEXT_PROTOTYPES
-#include <QtOpenGL>
-#else
-#include <GL/glew.h>
-#endif
 #include <QApplication>
 #include <QEvent>
 #include <QKeyEvent>
@@ -34,16 +28,16 @@
 #include "yae/video/yae_pixel_format_traits.h"
 #include "yae/thread/yae_threading.h"
 
-// local includes:
-#include <yaeCanvas.h>
-#include <yaeCanvasQPainterUtils.h>
-#include <yaeUtilsQt.h>
+// yaeui:
+#include "yaeCanvas.h"
+#include "yaeCanvasQPainterUtils.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
 {
 
-#ifndef YAE_USE_QOPENGL_WIDGET
+#ifdef YAE_USE_QGL_WIDGET
   //----------------------------------------------------------------
   // initializeGlew
   //
@@ -55,7 +49,7 @@ namespace yae
     {
       yae_error
         << "GLEW init failed: " << glewGetErrorString(err);
-      YAE_ASSERT(false);
+      // YAE_ASSERT(false);
     }
 
     return true;
@@ -67,7 +61,7 @@ namespace yae
   // Canvas::Canvas
   //
   Canvas::Canvas(const yae::shared_ptr<IOpenGLContext> & ctx):
-#ifndef YAE_USE_QOPENGL_WIDGET
+#ifdef YAE_USE_QGL_WIDGET
     glewInitialized_(false),
 #endif
     eventReceiver_(*this),
@@ -117,7 +111,7 @@ namespace yae
   {
     TMakeCurrentContext currentContext(context());
 
-#ifndef YAE_USE_QOPENGL_WIDGET
+#ifdef YAE_USE_QGL_WIDGET
     if (!glewInitialized_)
     {
       // initialize OpenGL GLEW wrapper:
@@ -716,7 +710,7 @@ namespace yae
     // this is just to prevent concurrent OpenGL access to the same context:
     TMakeCurrentContext lock(context());
 
-#ifndef YAE_USE_QOPENGL_WIDGET
+#ifdef YAE_USE_QGL_WIDGET
     if (!glewInitialized_)
     {
       // initialize OpenGL GLEW wrapper:
@@ -1538,10 +1532,14 @@ namespace yae
                  "Bitstream Vera Sans");
 
     ft.setStyleHint(QFont::SansSerif);
-    ft.setStyleStrategy((QFont::StyleStrategy)
-                        (QFont::PreferOutline |
-                         // QFont::PreferAntialias |
-                         QFont::OpenGLCompatible));
+
+    uint32_t style_strategy = QFont::PreferOutline;
+    style_strategy |= QFont::PreferAntialias;
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    style_strategy |= QFont::OpenGLCompatible;
+#endif
+    ft.setStyleStrategy((QFont::StyleStrategy)style_strategy);
+
     int px = std::max<int>(12, 56.0 * std::min<double>(w / max_w, h / max_h));
     ft.setPixelSize(px);
     painter.setFont(ft);
@@ -1557,8 +1555,11 @@ namespace yae
 #else
     vtts.pixelFormat_ = kPixelFormatBGRA;
 #endif
-    vtts.encodedWidth_ = subsFrm.bytesPerLine() / 4;
-    vtts.encodedHeight_ = subsFrm.byteCount() / subsFrm.bytesPerLine();
+    std::size_t image_height = subsFrm.height();
+    std::size_t image_row_bytes = subsFrm.bytesPerLine();
+
+    vtts.encodedWidth_ = image_row_bytes / 4;
+    vtts.encodedHeight_ = image_height;
     vtts.offsetTop_ = 0;
     vtts.offsetLeft_ = 0;
     vtts.visibleWidth_ = (int)w;
@@ -1568,7 +1569,7 @@ namespace yae
     vtts.hflip_ = false;
 
     bool ok = overlay_->loadFrame(context(), vf);
-    YAE_ASSERT(ok);
+    // YAE_ASSERT(ok);
     return ok;
   }
 

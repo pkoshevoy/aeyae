@@ -39,8 +39,9 @@ namespace yae
   // forward declarations:
   struct ItemViewStyle;
 
-
   // helper: convert from device independent "pixels" to device pixels:
+  TVec2D device_pixel_pos(Canvas * canvas, const QWheelEvent * e);
+
   template <typename TEvent>
   TVec2D
   device_pixel_pos(Canvas * canvas, const TEvent * e)

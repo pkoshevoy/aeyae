@@ -72,21 +72,21 @@ namespace yae
                           color.g(),
                           color.b(),
                           color.a()));
-    YAE_OGL_11(glBegin(GL_LINES));
 
-    YAE_OGL_11(glVertex2d(r0, y1 - 1));
-    YAE_OGL_11(glVertex2d(r1, y1 - 1));
-
-    for (int i = i0; i < i1; i++)
     {
-      double t = t0 - offset + double(i) * dt;
-      double x = round(sx.get(t));
-      double z = (i % mod_n == 0) ? 7.0 : 2.0;
-      YAE_OGL_11(glVertex2d(x, y1 - 1));
-      YAE_OGL_11(glVertex2d(x, y1 + z));
-    }
+      yaegl::BeginEnd mode(GL_LINES);
+      YAE_OGL_11(glVertex2d(r0, y1 - 1));
+      YAE_OGL_11(glVertex2d(r1, y1 - 1));
 
-    YAE_OGL_11(glEnd());
+      for (int i = i0; i < i1; i++)
+      {
+        double t = t0 - offset + double(i) * dt;
+        double x = round(sx.get(t));
+        double z = (i % mod_n == 0) ? 7.0 : 2.0;
+        YAE_OGL_11(glVertex2d(x, y1 - 1));
+        YAE_OGL_11(glVertex2d(x, y1 + z));
+      }
+    }
 
     // draw tickmark labels:
     int i00 = i0 - (i0 % mod_n);

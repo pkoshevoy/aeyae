@@ -682,7 +682,11 @@ namespace yae
     timecode = timecode.simplified();
     timecode.replace(' ', separator);
 
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
     QStringList hh_mm_ss_ff = timecode.split(':', QString::SkipEmptyParts);
+#else
+    QStringList hh_mm_ss_ff = timecode.split(':', Qt::SkipEmptyParts);
+#endif
     int nc = hh_mm_ss_ff.size();
 
     if (!nc)
@@ -818,13 +822,15 @@ namespace yae
 
           if (unknownDuration_ || timelineDuration_ * frameRate_ < 2.0)
           {
+            yae::TTime now = yae::TTime::now();
+
             // this is probably a slideshow, delay it:
             if (!slideshowTimer_.isActive())
             {
               slideshowTimer_.start();
-              slideshowTimerStart_.start();
+              slideshowTimerStart_ = now;
             }
-            else if (slideshowTimerStart_.elapsed() >
+            else if ((now - slideshowTimerStart_).get(1000) >
                      slideshowTimer_.interval() * 2)
             {
 #ifndef NDEBUG

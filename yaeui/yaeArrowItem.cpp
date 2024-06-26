@@ -41,8 +41,9 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
+
       YAE_OGL_11(glVertex2d(x0, y));
       YAE_OGL_11(glVertex2d(x, y1));
       YAE_OGL_11(glVertex2d(x + a, y1 - a));
@@ -53,7 +54,6 @@ namespace yae
       YAE_OGL_11(glVertex2d(x + a, y0 + a));
       YAE_OGL_11(glVertex2d(x, y0));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------
@@ -80,8 +80,9 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
+
       YAE_OGL_11(glVertex2d(x1, y));
       YAE_OGL_11(glVertex2d(x, y0));
       YAE_OGL_11(glVertex2d(x - a, y0 + a));
@@ -92,7 +93,6 @@ namespace yae
       YAE_OGL_11(glVertex2d(x - a, y1 - a));
       YAE_OGL_11(glVertex2d(x, y1));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------
@@ -119,8 +119,9 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
+
       YAE_OGL_11(glVertex2d(x, y0));
       YAE_OGL_11(glVertex2d(x0, y));
       YAE_OGL_11(glVertex2d(x0 + a, y + a));
@@ -131,7 +132,6 @@ namespace yae
       YAE_OGL_11(glVertex2d(x1 - a, y + a));
       YAE_OGL_11(glVertex2d(x1, y));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------
@@ -158,8 +158,9 @@ namespace yae
                           color.b(),
                           Color::transform(color.a(), opacity)));
 
-    YAE_OGL_11(glBegin(GL_TRIANGLE_FAN));
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
+
       YAE_OGL_11(glVertex2d(x, y1));
       YAE_OGL_11(glVertex2d(x1, y));
       YAE_OGL_11(glVertex2d(x1 - a, y - a));
@@ -170,7 +171,6 @@ namespace yae
       YAE_OGL_11(glVertex2d(x0 + a, y - a));
       YAE_OGL_11(glVertex2d(x0, y));
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------

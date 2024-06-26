@@ -108,8 +108,9 @@ namespace yae
     YAE_OGL_11(glPolygonStipple(kCheckerBoardBitmap));
     YAE_OGL_11(glEnable(GL_POLYGON_STIPPLE));
 #endif
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+
     {
+      yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
       YAE_OGL_11(glVertex2d(x0, y0));
       YAE_OGL_11(glVertex2d(x1, y1));
       YAE_OGL_11(glVertex2d(x0, y3));
@@ -121,7 +122,7 @@ namespace yae
       YAE_OGL_11(glVertex2d(x0, y0));
       YAE_OGL_11(glVertex2d(x1, y1));
     }
-    YAE_OGL_11(glEnd());
+
 #if 0
     YAE_OGL_11(glDisable(GL_POLYGON_STIPPLE));
 #endif

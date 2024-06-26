@@ -77,7 +77,7 @@ namespace yae
     unsigned char a0 = Color::transform(c0->a(), opacity);
 
     YAE_OGL_11_HERE();
-    YAE_OGL_11(glBegin(GL_TRIANGLE_STRIP));
+    yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
     for (++i; i != gradient.end(); ++i)
     {
       double t1 = i->first;
@@ -99,7 +99,6 @@ namespace yae
       std::swap(c0, c1);
       std::swap(a0, a1);
     }
-    YAE_OGL_11(glEnd());
   }
 
   //----------------------------------------------------------------

@@ -14,7 +14,7 @@
 #include <map>
 
 // Qt library:
-#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5)
+#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5) || defined(YAE_USE_QT6)
 #include <QColor>
 #endif
 
@@ -147,7 +147,7 @@ namespace yae
       return v;
     }
 
-#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5)
+#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5) || defined(YAE_USE_QT6)
     Color(const QColor & c)
     {
       set_a((unsigned char)(c.alpha()));

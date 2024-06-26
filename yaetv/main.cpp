@@ -21,7 +21,7 @@
 // Qt:
 #include <QCoreApplication>
 #include <QDir>
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QSurfaceFormat>
 #endif
 
@@ -550,14 +550,13 @@ namespace yae
     yae::Application::setOrganizationName(yae::kOrganization);
     yae::Application::setOrganizationDomain("sourceforge.net");
 
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
     // setup opengl:
     {
       QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
                          QSurfaceFormat::DeprecatedFunctions);
-      fmt.setAlphaBufferSize(0);
+      // fmt.setVersion(4, 2);
       fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
-      fmt.setSwapBehavior(QSurfaceFormat::DoubleBuffer);
       QSurfaceFormat::setDefaultFormat(fmt);
     }
     // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);

@@ -225,10 +225,12 @@ namespace yae
     clockFont.setPixelSize(11);
     clockFont.setStyleHint(QFont::Monospace);
     clockFont.setFixedPitch(true);
-    clockFont.setStyleStrategy((QFont::StyleStrategy)
-                               (QFont::PreferOutline |
-                                // QFont::PreferAntialias |
-                                QFont::OpenGLCompatible));
+
+    uint32_t style_strategy = QFont::PreferOutline;
+#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    style_strategy |= QFont::OpenGLCompatible;
+#endif
+    clockFont.setStyleStrategy((QFont::StyleStrategy)style_strategy);
     // clockFont.setWeight(QFont::Normal);
 
     QFontMetrics fm(clockFont);
@@ -288,12 +290,13 @@ namespace yae
       return;
     }
 
+    yae::TTime now = yae::TTime::now();
     if (!repaintTimer_.isActive())
     {
       repaintTimer_.start();
-      repaintTimerStartTime_.start();
+      repaintTimerStartTime_ = now;
     }
-    else if (repaintTimerStartTime_.elapsed() > 500)
+    else if ((now - repaintTimerStartTime_).get(1000) > 500)
     {
       // this shouldn't happen, but for some reason it does on the Mac,
       // sometimes the timer remains active but the timeout signal is

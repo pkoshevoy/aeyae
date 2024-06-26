@@ -291,7 +291,7 @@ namespace yae
     const unsigned char * data = frame->data_->data(0);
     std::size_t rowSize = frame->data_->rowBytes(0);
 
-#ifdef YAE_USE_QT5
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
     image = QImage(data,
                    frame->traits_.visibleWidth_,
                    frame->traits_.visibleHeight_,
@@ -312,7 +312,7 @@ namespace yae
       image.setColorTable(palette);
     }
 
-#ifndef YAE_USE_QT5
+#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
     // make a deep copy to avoid leaving QImage with dangling pointers
     // to frame data:
     image = image.copy();

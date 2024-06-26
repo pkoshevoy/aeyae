@@ -27,6 +27,7 @@
 #include "yaePlayerItem.h"
 #include "yaePlayerShortcuts.h"
 #include "yaeTimelineItem.h"
+#include "yaeUtilsQt.h"
 
 
 namespace yae
@@ -341,11 +342,11 @@ namespace yae
     QActionGroup * subsTrackGroup_;
     QActionGroup * chaptersGroup_;
 
-    QSignalMapper * playRateMapper_;
-    QSignalMapper * audioTrackMapper_;
-    QSignalMapper * videoTrackMapper_;
-    QSignalMapper * subsTrackMapper_;
-    QSignalMapper * chapterMapper_;
+    yae::SignalMapper * playRateMapper_;
+    yae::SignalMapper * audioTrackMapper_;
+    yae::SignalMapper * videoTrackMapper_;
+    yae::SignalMapper * subsTrackMapper_;
+    yae::SignalMapper * chapterMapper_;
 
     // (live) timeline update timer:
     QTimer timelineTimer_;
