@@ -362,6 +362,20 @@ namespace yae
     // frame size may have changed, so update output traits accordingly:
     output_ = override_;
 
+    if (native_.pixelFormat_ != kInvalidPixelFormat &&
+        override_.pixelFormat_ == kInvalidPixelFormat)
+    {
+      // Sony_Whale_Tracks.ts doesn't probe the pixel format during probing:
+      output_.pixelFormat_ = native_.pixelFormat_;
+      output_.av_fmt_ = native_.av_fmt_;
+      output_.av_rng_ = native_.av_rng_;
+      output_.av_pri_ = native_.av_pri_;
+      output_.av_trc_ = native_.av_trc_;
+      output_.av_csp_ = native_.av_csp_;
+      output_.colorspace_ = native_.colorspace_;
+      output_.dynamic_range_ = native_.dynamic_range_;
+    }
+
     double sourcePixelAspectRatio =
       overrideSourcePAR_ ? overrideSourcePAR_ :  native_.pixelAspectRatio_;
 
@@ -1242,6 +1256,27 @@ namespace yae
       specs.color_trc = codecParams.color_trc;
       specs.chroma_location = codecParams.chroma_location;
       specs.sample_aspect_ratio = codecParams.sample_aspect_ratio;
+
+      YAE_ASSERT(specs.format != AV_PIX_FMT_NONE);
+      if (specs.format == AV_PIX_FMT_NONE)
+      {
+        // Sony_Whale_Tracks.ts?
+        Track track(context_, stream_, hwdec_);
+        VideoTrack video_track(&track);
+        AVCodecContext * ctx = video_track.open();
+        if (ctx->pix_fmt != AV_PIX_FMT_NONE)
+        {
+          specs.width = ctx->width;
+          specs.height = ctx->height;
+          specs.format = ctx->pix_fmt;
+          specs.colorspace = ctx->colorspace;
+          specs.color_range = ctx->color_range;
+          specs.color_primaries = ctx->color_primaries;
+          specs.color_trc = ctx->color_trc;
+          specs.chroma_location = ctx->chroma_sample_location;
+          specs.sample_aspect_ratio = ctx->sample_aspect_ratio;
+        }
+      }
     }
 
     specs.guess_missing_specs();
@@ -1436,10 +1471,10 @@ namespace yae
     }
 
     return
+      // t.pixelFormat_ != kInvalidPixelFormat &&
       t.frameRate_ > 0.0 &&
       t.encodedWidth_ > 0 &&
-      t.encodedHeight_ > 0 &&
-      t.pixelFormat_ != kInvalidPixelFormat;
+      t.encodedHeight_ > 0;
   }
 
   //----------------------------------------------------------------

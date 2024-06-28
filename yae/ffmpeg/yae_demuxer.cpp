@@ -262,6 +262,17 @@ namespace yae
       }
 
       TrackPtr baseTrack(new Track(ctx, stream, hwdec));
+      if (codecType == AVMEDIA_TYPE_VIDEO &&
+          stream->codecpar->format == AV_PIX_FMT_NONE)
+      {
+        AVCodecContext * codec_ctx = baseTrack->open();
+        if (codec_ctx)
+        {
+          YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,
+                                                     codec_ctx) >= 0);
+          baseTrack->close();
+        }
+      }
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {
@@ -4398,8 +4409,9 @@ namespace yae
       decoder.setTraitsOverride(traits, deint, source_par);
 
       const pixelFormat::Traits * ptts = NULL;
-      if (!decoder.getTraitsOverride(traits) ||
-          !(ptts = pixelFormat::getTraits(traits.pixelFormat_)))
+      if (traits.pixelFormat_ != kInvalidPixelFormat &&
+          (!decoder.getTraitsOverride(traits) ||
+           !(ptts = pixelFormat::getTraits(traits.pixelFormat_))))
       {
         YAE_ASSERT(false);
         return false;

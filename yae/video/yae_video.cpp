@@ -225,18 +225,21 @@ namespace yae
     }
 
     const char * pix_fmt = av_get_pix_fmt_name(av_fmt_);
-    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(av_fmt_);
-    const AVComponentDescriptor & luma = desc->comp[0];
-
-    oss << ", " << luma.depth << "-bit "
-        << (av_rng_ == AVCOL_RANGE_JPEG ? "full" : "narrow")
-        << " range" << " " << pix_fmt;
-
-    if (csp.empty())
+    if (pix_fmt)
     {
-      oss << ", csp: " << av_color_space_name(av_csp_)
-          << ", pri: " << av_color_primaries_name(av_pri_)
-          << ", trc: " << av_color_transfer_name(av_trc_);
+      const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(av_fmt_);
+      const AVComponentDescriptor & luma = desc->comp[0];
+
+      oss << ", " << luma.depth << "-bit "
+          << (av_rng_ == AVCOL_RANGE_JPEG ? "full" : "narrow")
+          << " range" << " " << pix_fmt;
+
+      if (csp.empty())
+      {
+        oss << ", csp: " << av_color_space_name(av_csp_)
+            << ", pri: " << av_color_primaries_name(av_pri_)
+            << ", trc: " << av_color_transfer_name(av_trc_);
+      }
     }
 
 

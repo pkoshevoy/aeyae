@@ -299,6 +299,17 @@ namespace yae
       }
 
       TrackPtr baseTrack(new Track(context_, stream, hwdec_));
+      if (codecType == AVMEDIA_TYPE_VIDEO &&
+          stream->codecpar->format == AV_PIX_FMT_NONE)
+      {
+        AVCodecContext * codec_ctx = baseTrack->open();
+        if (codec_ctx)
+        {
+          YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,
+                                                     codec_ctx) >= 0);
+          baseTrack->close();
+        }
+      }
 
       if (codecType == AVMEDIA_TYPE_VIDEO)
       {

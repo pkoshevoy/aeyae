@@ -1346,10 +1346,10 @@ namespace yae
         vtts.pixelAspectRatio_ = 0.0;
 
         yae_dlog("native: %s %ux%u, output: %s %ux%u",
-                 ptts_native->name_,
+                 ptts_native ? ptts_native->name_ : "none",
                  native_w,
                  native_h,
-                 ptts_output->name_,
+                 ptts_output ? ptts_output->name_ : "none",
                  vtts.encodedWidth_ ? vtts.encodedWidth_ : native_w,
                  vtts.encodedHeight_ ? vtts.encodedHeight_ : native_h);
 
@@ -1362,7 +1362,7 @@ namespace yae
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-      if (!ptts)
+      if (!ptts && vtts.pixelFormat_ != kInvalidPixelFormat)
       {
         // unsupported pixel format:
         reader->selectVideoTrack(num_video_tracks);

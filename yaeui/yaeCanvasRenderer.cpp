@@ -4233,6 +4233,10 @@ namespace yae
     {
       unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
     }
+    else if (nativeFormat == kInvalidPixelFormat)
+    {
+      return false;
+    }
 
     if (!unsupported)
     {
