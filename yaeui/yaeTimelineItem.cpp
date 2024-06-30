@@ -967,7 +967,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("PREV"));
       txt.alignment_ = Qt::AlignCenter;
@@ -1008,7 +1008,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("NEXT"));
       txt.alignment_ = Qt::AlignCenter;
@@ -1049,7 +1049,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("SEL *"));
       txt.alignment_ = Qt::AlignCenter;
@@ -1090,7 +1090,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("DEL"));
       txt.alignment_ = Qt::AlignCenter;
@@ -1165,7 +1165,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("CROP"));
       txt.elide_ = Qt::ElideNone;
@@ -1205,7 +1205,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("DAR"));
       txt.elide_ = Qt::ElideNone;
@@ -1244,7 +1244,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("VID"));
       txt.elide_ = Qt::ElideNone;
@@ -1283,7 +1283,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("AUD"));
       txt.elide_ = Qt::ElideNone;
@@ -1322,7 +1322,7 @@ namespace yae
       Text & txt = bg.addNew<Text>("txt");
       txt.anchors_.center(bg);
       txt.font_ = style.font_large_;
-      txt.font_.setWeight(QFont::DemiBold);
+      txt.font_.setWeight(QFont::Normal);
       txt.fontSize_ = ItemRef::reference(bg, kPropertyHeight, 0.33);
       txt.text_ = TVarRef::constant(TVar("TXT"));
       txt.elide_ = Qt::ElideNone;
