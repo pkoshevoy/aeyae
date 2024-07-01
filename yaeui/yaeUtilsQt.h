@@ -274,7 +274,7 @@ namespace yae
     SignalMapper(QObject * parent = NULL):
       QSignalMapper(parent)
     {
-#if (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
       YAE_ASSERT(connect(this, SIGNAL(mapped(int)),
                          this, SIGNAL(mapped_to(int))));
 #else
