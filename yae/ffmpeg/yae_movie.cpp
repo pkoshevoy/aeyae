@@ -651,7 +651,9 @@ namespace yae
 
     try
     {
+      int err_count = 0;
       int err = 0;
+
       while (!err)
       {
         boost::this_thread::interruption_point();
@@ -711,7 +713,11 @@ namespace yae
           }
         }
 
-        if (err)
+        if (!err)
+        {
+          err_count = 0;
+        }
+        else
         {
           if (!playbackEnabled_ && err == AVERROR_EOF)
           {
@@ -729,6 +735,12 @@ namespace yae
 
           if (err != AVERROR_EOF)
           {
+            err_count++;
+            if (err_count > 100)
+            {
+              break;
+            }
+
             // keep trying, it may be able recover:
             err = 0;
             continue;
