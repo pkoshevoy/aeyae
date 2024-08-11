@@ -604,6 +604,8 @@ namespace yae
     void resizeGL(int width, int height)
     {
       yae_dlog("resizeGL(%i, %i)", width, height);
+      TWidget::resizeGL(width, height);
+      TWidget::update();
     }
 
     // virtual:

@@ -1257,7 +1257,7 @@ namespace yae
       specs.chroma_location = codecParams.chroma_location;
       specs.sample_aspect_ratio = codecParams.sample_aspect_ratio;
 
-      YAE_ASSERT(specs.format != AV_PIX_FMT_NONE);
+      // YAE_ASSERT(specs.format != AV_PIX_FMT_NONE);
       if (specs.format == AV_PIX_FMT_NONE)
       {
         // Sony_Whale_Tracks.ts?
