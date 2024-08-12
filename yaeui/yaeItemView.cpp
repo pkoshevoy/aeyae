@@ -450,9 +450,19 @@ namespace yae
     YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
     YAE_OGL_11(glLineWidth(1.0));
 
-    YAE_OGL_11(glEnable(GL_BLEND));
-    YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     YAE_OGL_11(glShadeModel(GL_SMOOTH));
+    YAE_OGL_11(glEnable(GL_BLEND));
+
+    if (ogl_11.glBlendFuncSeparate)
+    {
+      // for Wayland compatibility:
+      YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                                     GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+    }
+    else
+    {
+      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    }
 
     const Segment & xregion = root_->xExtent();
     const Segment & yregion = root_->yExtent();

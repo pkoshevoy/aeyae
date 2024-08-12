@@ -823,7 +823,17 @@ namespace yae
 
     YAE_OGL_11_HERE();
     YAE_OGL_11(glEnable(GL_BLEND));
-    YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+    if (ogl_11.glBlendFuncSeparate)
+    {
+      // for Wayland compatibility:
+      YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                                     GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+    }
+    else
+    {
+      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    }
 
     // sanity check:
     yae_assert_gl_no_error();
@@ -888,7 +898,17 @@ namespace yae
         TGLSaveState restore_state(GL_ENABLE_BIT);
         YAE_OGL_11_HERE();
         YAE_OGL_11(glEnable(GL_BLEND));
-        YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+
+        if (ogl_11.glBlendFuncSeparate)
+        {
+          // for Wayland compatibility:
+          YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+                                         GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
+        }
+        else
+        {
+          YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        }
 
         SetupModelview modelview(canvas_x,
                                  canvas_y,

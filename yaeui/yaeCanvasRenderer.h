@@ -389,6 +389,14 @@ namespace yaegl
                                       GLenum dfactor);
 
   //----------------------------------------------------------------
+  // TBlendFuncSeparate
+  //
+  typedef void (APIENTRYP TBlendFuncSeparate)(GLenum srcRGB,
+                                              GLenum dstRGB,
+                                              GLenum srcAlpha,
+                                              GLenum dstAlpha);
+
+  //----------------------------------------------------------------
   // THint
   //
   typedef void (APIENTRYP THint)(GLenum target,
@@ -685,6 +693,7 @@ namespace yaegl
 
     THint glHint;
     TBlendFunc glBlendFunc;
+    TBlendFuncSeparate glBlendFuncSeparate;
     TLineStipple glLineStipple;
     TLineWidth glLineWidth;
     TScissor glScissor;

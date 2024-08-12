@@ -1271,6 +1271,9 @@ namespace yaegl
     this->glBlendFunc = (TBlendFunc)
       get_addr(ctx, "glBlendFunc");
 
+    this->glBlendFuncSeparate = (TBlendFuncSeparate)
+      get_addr(ctx, "glBlendFuncSeparate");
+
     this->glLineStipple = (TLineStipple)
       get_addr(ctx, "glLineStipple");
 
@@ -1437,10 +1440,10 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL(glDisable(GL_SCISSOR_TEST));
   yae_assert_gl_no_error();
 
-  YAE_OPENGL(glColorMask(true, true, true, true));
+  YAE_OPENGL(glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
   yae_assert_gl_no_error();
 
-  YAE_OPENGL(glClearColor(0, 0, 0, 0));
+  YAE_OPENGL(glClearColor(0, 0, 0, 1));
   yae_assert_gl_no_error();
 
   YAE_OPENGL(glDepthMask(true));
@@ -1479,13 +1482,20 @@ yae_reset_opengl_to_initial_state()
   YAE_OPENGL(glBlendFunc(GL_ONE, GL_ZERO));
   yae_assert_gl_no_error();
 
+  if (ogl_11.glBlendFuncSeparate)
+  {
+    // for Wayland compatibility:
+    YAE_OGL_11(glBlendFuncSeparate(GL_ONE, GL_ZERO, GL_ONE, GL_ZERO));
+    yae_assert_gl_no_error();
+  }
+
 #ifndef YAE_USE_QGL_WIDGET
   YAE_OPENGL(glUseProgram(0));
   yae_assert_gl_no_error();
 #endif
 
   YAE_OGL_11(glShadeModel(GL_FLAT));
-  YAE_OGL_11(glClearDepth(0));
+  YAE_OGL_11(glClearDepth(1));
   YAE_OPENGL(glClearStencil(0));
   YAE_OGL_11(glClearAccum(0, 0, 0, 0));
   YAE_OPENGL(glHint(GL_POLYGON_SMOOTH_HINT, GL_FASTEST));
