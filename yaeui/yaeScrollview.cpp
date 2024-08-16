@@ -336,22 +336,22 @@ namespace yae
       BBox bbox;
       Item::get(kPropertyBBox, bbox);
 
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glEnable(GL_SCISSOR_TEST));
+      YAE_OPENGL_HERE();
+      YAE_OPENGL(glEnable(GL_SCISSOR_TEST));
       yae_assert_gl_no_error();
-      YAE_OGL_11(glScissor(bbox.x_, canvas->canvasHeight() - bbox.bottom(),
+      YAE_OPENGL(glScissor(bbox.x_, canvas->canvasHeight() - bbox.bottom(),
                            bbox.w_, bbox.h_));
       yae_assert_gl_no_error();
     }
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glTranslated(origin.x(), origin.y(), 0.0));
     content.paint(xView, yView, canvas);
 
     if (clipContent_)
     {
-      YAE_OGL_11(glDisable(GL_SCISSOR_TEST));
+      YAE_OPENGL(glDisable(GL_SCISSOR_TEST));
     }
 
     return true;

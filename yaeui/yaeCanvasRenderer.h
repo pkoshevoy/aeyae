@@ -39,12 +39,7 @@
 #else
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
-#include <QOpenGLFunctions_1_0>
-#include <QOpenGLFunctions_1_1>
-#include <QOpenGLFunctions_1_2>
-#include <QOpenGLFunctions_1_3>
-#include <QOpenGLFunctions_1_4>
-#include <QOpenGLFunctions_2_0>
+#include <QOpenGLFunctions>
 #endif
 
 // yae includes:
@@ -629,7 +624,7 @@ namespace yaegl
   //----------------------------------------------------------------
   // OpenGLFunctionPointers
   //
-  struct YAEUI_API OpenGLFunctionPointers // : public QOpenGLFunctions
+  struct YAEUI_API OpenGLFunctionPointers
   {
     TDebugMessageCallback glDebugMessageCallback;
 
@@ -747,127 +742,15 @@ namespace yae
 {
 #ifndef YAE_USE_QGL_WIDGET
 
-  //----------------------------------------------------------------
-  // ogl_context
-  //
-  inline static QOpenGLContext & ogl_context()
-  {
-    QOpenGLContext * context = QOpenGLContext::currentContext();
-    YAE_ASSERT(context);
-    if (!context)
-    {
-      throw std::runtime_error("QOpenGLContext::currentContext() is NULL");
-    }
-
-    YAE_ASSERT(context->isValid());
-    return *context;
-  }
-
-  //----------------------------------------------------------------
-  // ogl_11
-  //
-  inline static QOpenGLFunctions_1_1 & ogl_11()
-  {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_1>());
-#else
-    QOpenGLContext & ctx = ogl_context();
-    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_1>(&ctx);
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // ogl_12
-  //
-  inline static QOpenGLFunctions_1_2 & ogl_12()
-  {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_2>());
-#else
-    QOpenGLContext & ctx = ogl_context();
-    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_2>(&ctx);
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // ogl_13
-  //
-  inline static QOpenGLFunctions_1_3 & ogl_13()
-  {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_3>());
-#else
-    QOpenGLContext & ctx = ogl_context();
-    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_3>(&ctx);
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // ogl_14
-  //
-  inline static QOpenGLFunctions_1_4 & ogl_14()
-  {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    return *(ogl_context().versionFunctions<QOpenGLFunctions_1_4>());
-#else
-    QOpenGLContext & ctx = ogl_context();
-    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_1_4>(&ctx);
-#endif
-  }
-
-  //----------------------------------------------------------------
-  // ogl_20
-  //
-  inline static QOpenGLFunctions_2_0 & ogl_20()
-  {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
-    return *(ogl_context().versionFunctions<QOpenGLFunctions_2_0>());
-#else
-    QOpenGLContext & ctx = ogl_context();
-    return *QOpenGLVersionFunctionsFactory::get<QOpenGLFunctions_2_0>(&ctx);
-#endif
-  }
-
-#define YAE_OGL_11_HERE() \
-  yaegl::OpenGLFunctionPointers & ogl_11 = yaegl::OpenGLFunctionPointers::get()
-
-#define YAE_OGL_12_HERE() \
-  yaegl::OpenGLFunctionPointers & ogl_12 = yaegl::OpenGLFunctionPointers::get()
-
-#define YAE_OGL_13_HERE() \
-  yaegl::OpenGLFunctionPointers & ogl_13 = yaegl::OpenGLFunctionPointers::get()
-
-#define YAE_OGL_14_HERE() \
-  yaegl::OpenGLFunctionPointers & ogl_14 = yaegl::OpenGLFunctionPointers::get()
-
-#define YAE_OGL_20_HERE() \
-  yaegl::OpenGLFunctionPointers & ogl_20 = yaegl::OpenGLFunctionPointers::get()
-
 #define YAE_OPENGL_HERE() \
   yaegl::OpenGLFunctionPointers & opengl = yaegl::OpenGLFunctionPointers::get()
 
-
-#define YAE_OGL_11(x) ogl_11.x
-#define YAE_OGL_12(x) ogl_12.x
-#define YAE_OGL_13(x) ogl_13.x
-#define YAE_OGL_14(x) ogl_14.x
-#define YAE_OGL_20(x) ogl_20.x
 #define YAE_OPENGL(x) opengl.x
-#define YAE_OGL_FN(x) true
+#define YAE_OGL_FN(x) opengl.x
 
 #else
-#define YAE_OGL_11_HERE()
-#define YAE_OGL_12_HERE()
-#define YAE_OGL_13_HERE()
-#define YAE_OGL_14_HERE()
-#define YAE_OGL_20_HERE()
-#define YAE_OPENGL_HERE()
 
-#define YAE_OGL_11(x) x
-#define YAE_OGL_12(x) x
-#define YAE_OGL_13(x) x
-#define YAE_OGL_14(x) x
-#define YAE_OGL_20(x) x
+#define YAE_OPENGL_HERE()
 #define YAE_OPENGL(x) x
 #define YAE_OGL_FN(x) x
 
@@ -1409,14 +1292,14 @@ namespace yaegl
   {
     BeginEnd(GLenum mode)
     {
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glBegin(mode));
+      YAE_OPENGL_HERE();
+      YAE_OPENGL(glBegin(mode));
     }
 
     ~BeginEnd()
     {
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glEnd());
+      YAE_OPENGL_HERE();
+      YAE_OPENGL(glEnd());
     }
   };
 

@@ -106,8 +106,8 @@ namespace yae
   {
     ready_.uncache();
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glDeleteTextures(1, &texId_));
     texId_ = 0;
   }
 
@@ -307,24 +307,23 @@ namespace yae
     y[3] = y[0] + floor(bbox.h_ + 0.5);
     y[2] = y[3] - iw_ / 2;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_TEXTURE_2D));
-
     YAE_OPENGL_HERE();
+    YAE_OPENGL(glEnable(GL_TEXTURE_2D));
+
     if (YAE_OGL_FN(glActiveTexture))
     {
       YAE_OPENGL(glActiveTexture(GL_TEXTURE0));
       yae_assert_gl_no_error();
     }
 
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, texId_));
+    YAE_OPENGL(glBindTexture(GL_TEXTURE_2D, texId_));
 
-    YAE_OGL_11(glDisable(GL_LIGHTING));
-    YAE_OGL_11(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
+    YAE_OPENGL(glDisable(GL_LIGHTING));
+    YAE_OPENGL(glPolygonMode(GL_FRONT_AND_BACK, GL_FILL));
 
     double opacity = item.opacity_.get();
-    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+    YAE_OPENGL(glColor4d(1.0, 1.0, 1.0, opacity));
+    YAE_OPENGL(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
 
     for (int j = 0; j < 3; j++)
     {
@@ -342,17 +341,17 @@ namespace yae
 
         {
           yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
-          YAE_OGL_11(glTexCoord2d(t[i], t[j]));
-          YAE_OGL_11(glVertex2d(x[i], y[j]));
+          YAE_OPENGL(glTexCoord2d(t[i], t[j]));
+          YAE_OPENGL(glVertex2d(x[i], y[j]));
 
-          YAE_OGL_11(glTexCoord2d(t[i], t[j + 1]));
-          YAE_OGL_11(glVertex2d(x[i], y[j + 1]));
+          YAE_OPENGL(glTexCoord2d(t[i], t[j + 1]));
+          YAE_OPENGL(glVertex2d(x[i], y[j + 1]));
 
-          YAE_OGL_11(glTexCoord2d(t[i + 1], t[j]));
-          YAE_OGL_11(glVertex2d(x[i + 1], y[j]));
+          YAE_OPENGL(glTexCoord2d(t[i + 1], t[j]));
+          YAE_OPENGL(glVertex2d(x[i + 1], y[j]));
 
-          YAE_OGL_11(glTexCoord2d(t[i + 1], t[j + 1]));
-          YAE_OGL_11(glVertex2d(x[i + 1], y[j + 1]));
+          YAE_OPENGL(glTexCoord2d(t[i + 1], t[j + 1]));
+          YAE_OPENGL(glVertex2d(x[i + 1], y[j + 1]));
         }
       }
     }
@@ -364,8 +363,8 @@ namespace yae
       yae_assert_gl_no_error();
     }
 
-    YAE_OGL_11(glBindTexture(GL_TEXTURE_2D, 0));
-    YAE_OGL_11(glDisable(GL_TEXTURE_2D));
+    YAE_OPENGL(glBindTexture(GL_TEXTURE_2D, 0));
+    YAE_OPENGL(glDisable(GL_TEXTURE_2D));
   }
 
 

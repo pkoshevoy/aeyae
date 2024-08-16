@@ -64,25 +64,25 @@ namespace yae
     double x1 = x0 + bbox.w_;
     double y1 = y0 + bbox.h_;
 
-    YAE_OGL_11_HERE();
+    YAE_OPENGL_HERE();
 
     double opacity = opacity_.get();
-    YAE_OGL_11(glColor4d(1.0, 1.0, 1.0, opacity));
-    YAE_OGL_11(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
+    YAE_OPENGL(glColor4d(1.0, 1.0, 1.0, opacity));
+    YAE_OPENGL(glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE));
 
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
-      YAE_OGL_11(glTexCoord2d(0.0, 0.0));
-      YAE_OGL_11(glVertex2d(x0, y0));
+      YAE_OPENGL(glTexCoord2d(0.0, 0.0));
+      YAE_OPENGL(glVertex2d(x0, y0));
 
-      YAE_OGL_11(glTexCoord2d(0.0, v1));
-      YAE_OGL_11(glVertex2d(x0, y1));
+      YAE_OPENGL(glTexCoord2d(0.0, v1));
+      YAE_OPENGL(glVertex2d(x0, y1));
 
-      YAE_OGL_11(glTexCoord2d(u1, 0.0));
-      YAE_OGL_11(glVertex2d(x1, y0));
+      YAE_OPENGL(glTexCoord2d(u1, 0.0));
+      YAE_OPENGL(glVertex2d(x1, y0));
 
-      YAE_OGL_11(glTexCoord2d(u1, v1));
-      YAE_OGL_11(glVertex2d(x1, y1));
+      YAE_OPENGL(glTexCoord2d(u1, v1));
+      YAE_OPENGL(glVertex2d(x1, y1));
     }
 
     texture.unbind();

@@ -229,8 +229,8 @@ namespace yae
                Canvas * canvas) const
     {
       TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-      YAE_OGL_11_HERE();
-      YAE_OGL_11(glTranslated(dragVec_.x(), dragVec_.y(), 0.0));
+      YAE_OPENGL_HERE();
+      YAE_OPENGL(glTranslated(dragVec_.x(), dragVec_.y(), 0.0));
       return ClickableItem::paint(xregion, yregion, canvas);
     }
 

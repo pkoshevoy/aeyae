@@ -49,9 +49,9 @@ namespace yae
                GLushort pattern,
                GLubyte zoom)
   {
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glLineStipple(zoom, pattern));
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glLineStipple(zoom, pattern));
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
@@ -59,10 +59,10 @@ namespace yae
     {
       yaegl::BeginEnd mode(GL_LINE_LOOP);
 
-      YAE_OGL_11(glVertex2d(x0, y0));
-      YAE_OGL_11(glVertex2d(x0, y1));
-      YAE_OGL_11(glVertex2d(x1, y1));
-      YAE_OGL_11(glVertex2d(x1, y0));
+      YAE_OPENGL(glVertex2d(x0, y0));
+      YAE_OPENGL(glVertex2d(x0, y1));
+      YAE_OPENGL(glVertex2d(x1, y1));
+      YAE_OPENGL(glVertex2d(x1, y0));
     }
   }
 
@@ -86,12 +86,12 @@ namespace yae
     const Color & fg = fg_.get();
     const Color & bg = bg_.get();
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glLineWidth(border));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glLineWidth(border));
 
     TGLSaveState pushAttr(GL_ENABLE_BIT);
-    YAE_OGL_11(glEnable(GL_LINE_STIPPLE));
-    YAE_OGL_11(glDisable(GL_LINE_SMOOTH));
+    YAE_OPENGL(glEnable(GL_LINE_STIPPLE));
+    YAE_OPENGL(glDisable(GL_LINE_SMOOTH));
 
     drawLineRect(x0, y0, x1, y1, fg, opacity, 0xff00, 2);
     drawLineRect(x0, y0, x1, y1, bg, opacity, 0x00ff, 2);

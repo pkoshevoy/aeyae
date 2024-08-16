@@ -433,35 +433,35 @@ namespace yae
     double w = double(canvas->canvasWidth());
     double h = double(canvas->canvasHeight());
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glViewport(GLint(x + 0.5), GLint(y + 0.5),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glViewport(GLint(x + 0.5), GLint(y + 0.5),
                           GLsizei(w + 0.5), GLsizei(h + 0.5)));
 
     TGLSaveMatrixState pushMatrix0(GL_MODELVIEW);
-    YAE_OGL_11(glLoadIdentity());
+    YAE_OPENGL(glLoadIdentity());
     TGLSaveMatrixState pushMatrix1(GL_PROJECTION);
-    YAE_OGL_11(glLoadIdentity());
-    YAE_OGL_11(glOrtho(0.0, w, h, 0.0, -1.0, 1.0));
+    YAE_OPENGL(glLoadIdentity());
+    YAE_OPENGL(glOrtho(0.0, w, h, 0.0, -1.0, 1.0));
 
-    YAE_OGL_11(glDisable(GL_LIGHTING));
-    YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
-    YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
-    YAE_OGL_11(glDisable(GL_POLYGON_SMOOTH));
-    YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
-    YAE_OGL_11(glLineWidth(1.0));
+    YAE_OPENGL(glDisable(GL_LIGHTING));
+    YAE_OPENGL(glEnable(GL_LINE_SMOOTH));
+    YAE_OPENGL(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
+    YAE_OPENGL(glDisable(GL_POLYGON_SMOOTH));
+    YAE_OPENGL(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
+    YAE_OPENGL(glLineWidth(1.0));
 
-    YAE_OGL_11(glShadeModel(GL_SMOOTH));
-    YAE_OGL_11(glEnable(GL_BLEND));
+    YAE_OPENGL(glShadeModel(GL_SMOOTH));
+    YAE_OPENGL(glEnable(GL_BLEND));
 
-    if (ogl_11.glBlendFuncSeparate)
+    if (YAE_OGL_FN(glBlendFuncSeparate))
     {
       // for Wayland compatibility:
-      YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+      YAE_OPENGL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
                                      GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
     }
     else
     {
-      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+      YAE_OPENGL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     }
 
     const Segment & xregion = root_->xExtent();

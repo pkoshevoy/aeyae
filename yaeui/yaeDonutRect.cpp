@@ -98,33 +98,33 @@ namespace yae
     double opacity = opacity_.get();
     const Color & color = color_.get();
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
 #if 0
-    YAE_OGL_11(glRasterPos2d(x0, y0));
-    YAE_OGL_11(glPolygonStipple(kCheckerBoardBitmap));
-    YAE_OGL_11(glEnable(GL_POLYGON_STIPPLE));
+    YAE_OPENGL(glRasterPos2d(x0, y0));
+    YAE_OPENGL(glPolygonStipple(kCheckerBoardBitmap));
+    YAE_OPENGL(glEnable(GL_POLYGON_STIPPLE));
 #endif
 
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
-      YAE_OGL_11(glVertex2d(x0, y0));
-      YAE_OGL_11(glVertex2d(x1, y1));
-      YAE_OGL_11(glVertex2d(x0, y3));
-      YAE_OGL_11(glVertex2d(x1, y2));
-      YAE_OGL_11(glVertex2d(x3, y3));
-      YAE_OGL_11(glVertex2d(x2, y2));
-      YAE_OGL_11(glVertex2d(x3, y0));
-      YAE_OGL_11(glVertex2d(x2, y1));
-      YAE_OGL_11(glVertex2d(x0, y0));
-      YAE_OGL_11(glVertex2d(x1, y1));
+      YAE_OPENGL(glVertex2d(x0, y0));
+      YAE_OPENGL(glVertex2d(x1, y1));
+      YAE_OPENGL(glVertex2d(x0, y3));
+      YAE_OPENGL(glVertex2d(x1, y2));
+      YAE_OPENGL(glVertex2d(x3, y3));
+      YAE_OPENGL(glVertex2d(x2, y2));
+      YAE_OPENGL(glVertex2d(x3, y0));
+      YAE_OPENGL(glVertex2d(x2, y1));
+      YAE_OPENGL(glVertex2d(x0, y0));
+      YAE_OPENGL(glVertex2d(x1, y1));
     }
 
 #if 0
-    YAE_OGL_11(glDisable(GL_POLYGON_STIPPLE));
+    YAE_OPENGL(glDisable(GL_POLYGON_STIPPLE));
 #endif
   }
 

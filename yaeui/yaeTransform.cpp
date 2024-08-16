@@ -244,15 +244,15 @@ namespace yae
     Segment vregion(v0, v1 - v0);
 
     TGLSaveMatrixState pushMatrix(GL_MODELVIEW);
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glTranslated(origin.x(), origin.y(), 0.0));
-    YAE_OGL_11(glRotated(degrees, 0.0, 0.0, 1.0));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glTranslated(origin.x(), origin.y(), 0.0));
+    YAE_OPENGL(glRotated(degrees, 0.0, 0.0, 1.0));
 
     TGLSaveClientState pushClientAttr(GL_CLIENT_ALL_ATTRIB_BITS);
-    YAE_OGL_11(glEnable(GL_LINE_SMOOTH));
-    YAE_OGL_11(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
-    YAE_OGL_11(glEnable(GL_POLYGON_SMOOTH));
-    YAE_OGL_11(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
+    YAE_OPENGL(glEnable(GL_LINE_SMOOTH));
+    YAE_OPENGL(glHint(GL_LINE_SMOOTH_HINT, GL_NICEST));
+    YAE_OPENGL(glEnable(GL_POLYGON_SMOOTH));
+    YAE_OPENGL(glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST));
 
     this->paintChildren(uregion, vregion, canvas);
 

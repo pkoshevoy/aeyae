@@ -35,8 +35,8 @@ namespace yae
     double a = weight * M_SQRT1_2;
     double w = weight * 0.5;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
@@ -44,15 +44,15 @@ namespace yae
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
 
-      YAE_OGL_11(glVertex2d(x0, y));
-      YAE_OGL_11(glVertex2d(x, y1));
-      YAE_OGL_11(glVertex2d(x + a, y1 - a));
-      YAE_OGL_11(glVertex2d(x0 + 2.0 * a + w, y + w));
-      YAE_OGL_11(glVertex2d(x1, y + w));
-      YAE_OGL_11(glVertex2d(x1, y - w));
-      YAE_OGL_11(glVertex2d(x0 + 2.0 * a + w, y - w));
-      YAE_OGL_11(glVertex2d(x + a, y0 + a));
-      YAE_OGL_11(glVertex2d(x, y0));
+      YAE_OPENGL(glVertex2d(x0, y));
+      YAE_OPENGL(glVertex2d(x, y1));
+      YAE_OPENGL(glVertex2d(x + a, y1 - a));
+      YAE_OPENGL(glVertex2d(x0 + 2.0 * a + w, y + w));
+      YAE_OPENGL(glVertex2d(x1, y + w));
+      YAE_OPENGL(glVertex2d(x1, y - w));
+      YAE_OPENGL(glVertex2d(x0 + 2.0 * a + w, y - w));
+      YAE_OPENGL(glVertex2d(x + a, y0 + a));
+      YAE_OPENGL(glVertex2d(x, y0));
     }
   }
 
@@ -74,8 +74,8 @@ namespace yae
     double a = weight * M_SQRT1_2;
     double w = weight * 0.5;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
@@ -83,15 +83,15 @@ namespace yae
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
 
-      YAE_OGL_11(glVertex2d(x1, y));
-      YAE_OGL_11(glVertex2d(x, y0));
-      YAE_OGL_11(glVertex2d(x - a, y0 + a));
-      YAE_OGL_11(glVertex2d(x1 - 2.0 * a - w, y - w));
-      YAE_OGL_11(glVertex2d(x0, y - w));
-      YAE_OGL_11(glVertex2d(x0, y + w));
-      YAE_OGL_11(glVertex2d(x1 - 2.0 * a - w, y + w));
-      YAE_OGL_11(glVertex2d(x - a, y1 - a));
-      YAE_OGL_11(glVertex2d(x, y1));
+      YAE_OPENGL(glVertex2d(x1, y));
+      YAE_OPENGL(glVertex2d(x, y0));
+      YAE_OPENGL(glVertex2d(x - a, y0 + a));
+      YAE_OPENGL(glVertex2d(x1 - 2.0 * a - w, y - w));
+      YAE_OPENGL(glVertex2d(x0, y - w));
+      YAE_OPENGL(glVertex2d(x0, y + w));
+      YAE_OPENGL(glVertex2d(x1 - 2.0 * a - w, y + w));
+      YAE_OPENGL(glVertex2d(x - a, y1 - a));
+      YAE_OPENGL(glVertex2d(x, y1));
     }
   }
 
@@ -113,8 +113,8 @@ namespace yae
     double a = weight * M_SQRT1_2;
     double w = weight * 0.5;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
@@ -122,15 +122,15 @@ namespace yae
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
 
-      YAE_OGL_11(glVertex2d(x, y0));
-      YAE_OGL_11(glVertex2d(x0, y));
-      YAE_OGL_11(glVertex2d(x0 + a, y + a));
-      YAE_OGL_11(glVertex2d(x - w, 2.0 * a + w));
-      YAE_OGL_11(glVertex2d(x - w, y1));
-      YAE_OGL_11(glVertex2d(x + w, y1));
-      YAE_OGL_11(glVertex2d(x + w, 2.0 * a + w));
-      YAE_OGL_11(glVertex2d(x1 - a, y + a));
-      YAE_OGL_11(glVertex2d(x1, y));
+      YAE_OPENGL(glVertex2d(x, y0));
+      YAE_OPENGL(glVertex2d(x0, y));
+      YAE_OPENGL(glVertex2d(x0 + a, y + a));
+      YAE_OPENGL(glVertex2d(x - w, 2.0 * a + w));
+      YAE_OPENGL(glVertex2d(x - w, y1));
+      YAE_OPENGL(glVertex2d(x + w, y1));
+      YAE_OPENGL(glVertex2d(x + w, 2.0 * a + w));
+      YAE_OPENGL(glVertex2d(x1 - a, y + a));
+      YAE_OPENGL(glVertex2d(x1, y));
     }
   }
 
@@ -152,8 +152,8 @@ namespace yae
     double a = weight * M_SQRT1_2;
     double w = weight * 0.5;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           Color::transform(color.a(), opacity)));
@@ -161,15 +161,15 @@ namespace yae
     {
       yaegl::BeginEnd mode(GL_TRIANGLE_FAN);
 
-      YAE_OGL_11(glVertex2d(x, y1));
-      YAE_OGL_11(glVertex2d(x1, y));
-      YAE_OGL_11(glVertex2d(x1 - a, y - a));
-      YAE_OGL_11(glVertex2d(x + w, y1 - 2.0 * a - w));
-      YAE_OGL_11(glVertex2d(x + w, y0));
-      YAE_OGL_11(glVertex2d(x - w, y0));
-      YAE_OGL_11(glVertex2d(x - w, y1 - 2.0 * a - w));
-      YAE_OGL_11(glVertex2d(x0 + a, y - a));
-      YAE_OGL_11(glVertex2d(x0, y));
+      YAE_OPENGL(glVertex2d(x, y1));
+      YAE_OPENGL(glVertex2d(x1, y));
+      YAE_OPENGL(glVertex2d(x1 - a, y - a));
+      YAE_OPENGL(glVertex2d(x + w, y1 - 2.0 * a - w));
+      YAE_OPENGL(glVertex2d(x + w, y0));
+      YAE_OPENGL(glVertex2d(x - w, y0));
+      YAE_OPENGL(glVertex2d(x - w, y1 - 2.0 * a - w));
+      YAE_OPENGL(glVertex2d(x0 + a, y - a));
+      YAE_OPENGL(glVertex2d(x0, y));
     }
   }
 

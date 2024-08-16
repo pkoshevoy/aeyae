@@ -156,8 +156,8 @@ namespace yae
 
     ready_.uncache();
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glDeleteTextures(1, &texId_));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glDeleteTextures(1, &texId_));
     texId_ = 0;
   }
 

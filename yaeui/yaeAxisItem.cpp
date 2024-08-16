@@ -67,24 +67,24 @@ namespace yae
     int i0 = int((sx.invert(r0) - t0) / dt);
     int i1 = int((sx.invert(r1) - t0) / dt) + 1;
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           color.a()));
 
     {
       yaegl::BeginEnd mode(GL_LINES);
-      YAE_OGL_11(glVertex2d(r0, y1 - 1));
-      YAE_OGL_11(glVertex2d(r1, y1 - 1));
+      YAE_OPENGL(glVertex2d(r0, y1 - 1));
+      YAE_OPENGL(glVertex2d(r1, y1 - 1));
 
       for (int i = i0; i < i1; i++)
       {
         double t = t0 - offset + double(i) * dt;
         double x = round(sx.get(t));
         double z = (i % mod_n == 0) ? 7.0 : 2.0;
-        YAE_OGL_11(glVertex2d(x, y1 - 1));
-        YAE_OGL_11(glVertex2d(x, y1 + z));
+        YAE_OPENGL(glVertex2d(x, y1 - 1));
+        YAE_OPENGL(glVertex2d(x, y1 + z));
       }
     }
 

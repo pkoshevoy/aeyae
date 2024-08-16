@@ -159,21 +159,21 @@ namespace yae
       p.set_y(sy(v));
     }
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glColor4ub(color.r(),
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glColor4ub(color.r(),
                           color.g(),
                           color.b(),
                           color.a()));
 
     int line_width = int(0.5 + item_.line_width_.get());
-    YAE_OGL_11(glLineWidth(line_width));
+    YAE_OPENGL(glLineWidth(line_width));
 
     yaegl::BeginEnd mode(GL_LINE_STRIP);
     for (std::vector<TVec2D>::const_iterator
            i = points.begin(); i != points.end(); ++i)
     {
       const TVec2D & p = *i;
-      YAE_OGL_11(glVertex2d(p.x(), p.y()));
+      YAE_OPENGL(glVertex2d(p.x(), p.y()));
     }
   }
 

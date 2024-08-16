@@ -76,7 +76,7 @@ namespace yae
     const double opacity = opacity_.get();
     unsigned char a0 = Color::transform(c0->a(), opacity);
 
-    YAE_OGL_11_HERE();
+    YAE_OPENGL_HERE();
     yaegl::BeginEnd mode(GL_TRIANGLE_STRIP);
     for (++i; i != gradient.end(); ++i)
     {
@@ -87,13 +87,13 @@ namespace yae
       TVec2D p0 = (o + u * t0);
       TVec2D p1 = (o + u * t1);
 
-      YAE_OGL_11(glColor4ub(c0->r(), c0->g(), c0->b(), a0));
-      YAE_OGL_11(glVertex2dv(p0.coord_));
-      YAE_OGL_11(glVertex2dv((p0 + v).coord_));
+      YAE_OPENGL(glColor4ub(c0->r(), c0->g(), c0->b(), a0));
+      YAE_OPENGL(glVertex2dv(p0.coord_));
+      YAE_OPENGL(glVertex2dv((p0 + v).coord_));
 
-      YAE_OGL_11(glColor4ub(c1->r(), c1->g(), c1->b(), a1));
-      YAE_OGL_11(glVertex2dv(p1.coord_));
-      YAE_OGL_11(glVertex2dv((p1 + v).coord_));
+      YAE_OPENGL(glColor4ub(c1->r(), c1->g(), c1->b(), a1));
+      YAE_OPENGL(glVertex2dv(p1.coord_));
+      YAE_OPENGL(glVertex2dv((p1 + v).coord_));
 
       std::swap(t0, t1);
       std::swap(c0, c1);

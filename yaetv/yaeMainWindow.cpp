@@ -489,7 +489,7 @@ namespace yae
     QGLFormat contextFormat;
     contextFormat.setSwapInterval(1);
     contextFormat.setSampleBuffers(false);
-    canvas_ = new TCanvasWidget(contextFormat, this, NULL);
+    canvas_ = new TCanvasWidget(contextFormat, this, canvas_);
 #endif
     canvas_->setObjectName(tr("app view canvas"));
 

@@ -223,9 +223,6 @@ namespace yae
       virtual bool makeCurrent()
       {
         widget_.makeCurrent();
-#ifndef NDEBUG
-        YAE_OGL_11_HERE();
-#endif
         return true;
       }
 

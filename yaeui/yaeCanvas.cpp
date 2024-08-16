@@ -608,31 +608,31 @@ namespace yae
       }
     }
 
-    YAE_OGL_11_HERE();
+    YAE_OPENGL_HERE();
 
-    YAE_OGL_11(glTranslated(x, y, 0));
+    YAE_OPENGL(glTranslated(x, y, 0));
 
     double scale =
       mode == Canvas::kScaleToFit ?
       std::min(canvas_w / cropped_w, canvas_h / cropped_h) :
       std::max(canvas_w / cropped_w, canvas_h / cropped_h);
 
-    YAE_OGL_11(glScaled(scale, scale, 1));
+    YAE_OPENGL(glScaled(scale, scale, 1));
 
     if (camera_rotation && camera_rotation % 90 == 0)
     {
-      YAE_OGL_11(glTranslated(0.5 * cropped_w,
+      YAE_OPENGL(glTranslated(0.5 * cropped_w,
                               0.5 * cropped_h, 0));
-      YAE_OGL_11(glRotated(double(camera_rotation), 0, 0, 1));
+      YAE_OPENGL(glRotated(double(camera_rotation), 0, 0, 1));
 
       if (camera_rotation % 180 != 0)
       {
-        YAE_OGL_11(glTranslated(-0.5 * cropped_h,
+        YAE_OPENGL(glTranslated(-0.5 * cropped_h,
                                 -0.5 * cropped_w, 0));
       }
       else
       {
-        YAE_OGL_11(glTranslated(-0.5 * cropped_w,
+        YAE_OPENGL(glTranslated(-0.5 * cropped_w,
                                 -0.5 * cropped_h, 0));
       }
     }
@@ -649,7 +649,7 @@ namespace yae
   {
     YAE_BENCHMARK(benchmark, "paint_checker_board");
 
-    YAE_OGL_11_HERE();
+    YAE_OPENGL_HERE();
 
     SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
 
@@ -670,9 +670,9 @@ namespace yae
         int x1 = std::min(x + edgeSize, int(canvas_w));
 
         float * color = (evenRow ^ evenCol) ? zebra[0] : zebra[1];
-        YAE_OGL_11(glColor3fv(color));
+        YAE_OPENGL(glColor3fv(color));
 
-        YAE_OGL_11(glRecti(x, y, x1, y1));
+        YAE_OPENGL(glRecti(x, y, x1, y1));
       }
     }
   }
@@ -688,12 +688,12 @@ namespace yae
   {
     YAE_BENCHMARK(benchmark, "paint_black_rectangle");
 
-    YAE_OGL_11_HERE();
+    YAE_OPENGL_HERE();
 
     SetupModelview modelview(canvas_x, canvas_y, canvas_w, canvas_h);
 
-    YAE_OGL_11(glColor3d(0.0, 0.0, 0.0));
-    YAE_OGL_11(glRectd(canvas_x,
+    YAE_OPENGL(glColor3d(0.0, 0.0, 0.0));
+    YAE_OPENGL(glRectd(canvas_x,
                        canvas_y,
                        canvas_x + canvas_w,
                        canvas_y + canvas_h));
@@ -760,13 +760,12 @@ namespace yae
     }
 
     TGLSaveMatrixState push_modelview(GL_MODELVIEW);
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glLoadIdentity());
-    YAE_OGL_11(glViewport(0, 0, canvasWidth, canvasHeight));
+    YAE_OPENGL(glLoadIdentity());
+    YAE_OPENGL(glViewport(0, 0, canvasWidth, canvasHeight));
 
     TGLSaveMatrixState push_projection(GL_PROJECTION);
-    YAE_OGL_11(glLoadIdentity());
-    YAE_OGL_11(glOrtho(// left:
+    YAE_OPENGL(glLoadIdentity());
+    YAE_OPENGL(glOrtho(// left:
                        0,
 
                        // right:
@@ -821,18 +820,18 @@ namespace yae
   {
     yae::paint_checker_board(canvas_x, canvas_y, canvas_w, canvas_h);
 
-    YAE_OGL_11_HERE();
-    YAE_OGL_11(glEnable(GL_BLEND));
+    YAE_OPENGL_HERE();
+    YAE_OPENGL(glEnable(GL_BLEND));
 
-    if (ogl_11.glBlendFuncSeparate)
+    if (YAE_OGL_FN(glBlendFuncSeparate))
     {
       // for Wayland compatibility:
-      YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+      YAE_OPENGL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
                                      GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
     }
     else
     {
-      YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+      YAE_OPENGL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
     }
 
     // sanity check:
@@ -896,18 +895,18 @@ namespace yae
       if (overlay_ && overlay_->pixelTraits())
       {
         TGLSaveState restore_state(GL_ENABLE_BIT);
-        YAE_OGL_11_HERE();
-        YAE_OGL_11(glEnable(GL_BLEND));
+        YAE_OPENGL_HERE();
+        YAE_OPENGL(glEnable(GL_BLEND));
 
-        if (ogl_11.glBlendFuncSeparate)
+        if (YAE_OGL_FN(glBlendFuncSeparate))
         {
           // for Wayland compatibility:
-          YAE_OGL_11(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+          YAE_OPENGL(glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
                                          GL_ONE, GL_ONE_MINUS_SRC_ALPHA));
         }
         else
         {
-          YAE_OGL_11(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+          YAE_OPENGL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
         }
 
         SetupModelview modelview(canvas_x,
