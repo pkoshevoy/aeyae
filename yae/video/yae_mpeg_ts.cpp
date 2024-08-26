@@ -14,6 +14,7 @@
 #include "yae/api/yae_assert.h"
 #include "yae/api/yae_log.h"
 #include "yae/utils/yae_time.h"
+#include "yae/utils/yae_type_name.h"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_mpeg_ts.h"
 
@@ -4807,6 +4808,38 @@ namespace yae
       }
     }
 
+    //----------------------------------------------------------------
+    // to_str
+    //
+    static std::string
+    to_str(const Descriptor & desc)
+    {
+      return yae::strfmt("0x%02X %i %s",
+                         desc.descriptor_tag_,
+                         desc.descriptor_length_,
+                         // typeid(desc).name(),
+                         yae::type_name(desc).c_str());
+    }
+
+    //----------------------------------------------------------------
+    // to_str
+    //
+    static std::string
+    to_str(const std::vector<TDescriptorPtr> & descriptors)
+    {
+      std::ostringstream oss;
+      oss << "[ ";
+      const char * sep = "";
+      for (std::size_t i = 0, n = descriptors.size(); i < n; i++)
+      {
+        const Descriptor * desc = descriptors[i].get();
+        YAE_ASSERT(desc);
+        oss << sep << (desc ? to_str(*desc).c_str() : "NULL");
+        sep = ", ";
+      }
+      oss << " ]";
+      return oss.str();
+    }
 
     //----------------------------------------------------------------
     // Context::consume
@@ -4896,6 +4929,14 @@ namespace yae
             {
               const ProgramMapTable::ElementaryStream & es = pmt.es_[i];
               pid_es_[es.elementary_pid_] = pmt.program_number_;
+#if 0
+              yae_dlog("%sPMT ver %i, prog %i, es %i desc: %s",
+                       log_prefix_.c_str(),
+                       int(pmt.version_number_),
+                       int(pmt.program_number_),
+                       int(es.elementary_pid_),
+                       to_str(es.descriptor_).c_str());
+#endif
             }
           }
         }
