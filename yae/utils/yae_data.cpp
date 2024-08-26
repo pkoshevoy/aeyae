@@ -345,10 +345,14 @@ namespace yae
   TBufferPtr
   Bitstream::read_bytes(std::size_t num_bytes)
   {
+    TBufferPtr data;
+    if (!num_bytes)
+    {
+      return data;
+    }
+
     YAE_SILENT_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
-
-    TBufferPtr data;
 
     if (IBitstream::is_byte_aligned())
     {

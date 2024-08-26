@@ -259,6 +259,10 @@ namespace yae
     const char * getName() const;
     const char * getLang() const;
 
+    // NOTE: for MPEG-TS this corresponds to PID:
+    inline int getStreamId() const
+    { return stream_ ? stream_->id : std::numeric_limits<int>::max(); }
+
     // accessor to stream index of this track within AVFormatContext:
     inline int streamIndex() const
     {

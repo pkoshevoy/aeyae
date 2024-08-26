@@ -3297,6 +3297,23 @@ namespace yae
     std::ostringstream oss;
     oss << track_id;
 
+    if (track)
+    {
+      int prog_id = summary.find_program(track_id);
+      if (yae::has(summary.programs_, prog_id))
+      {
+        const yae::TProgramInfo & prog = yae::get(summary.programs_, prog_id);
+        if (prog.id_)
+        {
+          int pid = track->getStreamId();
+          if (pid != std::numeric_limits<int>::max())
+          {
+            oss << ", PID 0x" << std::hex << pid << " (" << std::dec << pid << ")";
+          }
+        }
+      }
+    }
+
     const char * codec_name = track ? track->getCodecName() : NULL;
     if (codec_name)
     {
