@@ -24,7 +24,7 @@ namespace yae
   // type_name
   //
   template <typename T>
-  inline std::string type_name(T t)
+  inline std::string type_name(const T & t)
   {
 #ifdef __GXX_ABI_VERSION
     int status = 0;
