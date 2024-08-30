@@ -384,6 +384,14 @@ namespace yae
     inline bool starts_with(const void * d, std::size_t z) const
     { return size() < z ? false : memcmp(get(), d, z) == 0; }
 
+    inline bool same_as(const Data & other) const
+    {
+      return
+        (data_ == other.data_) ? true :
+        (data_ && other.data_) ? data_->same_as(*other.data_) :
+        (this->empty() && other.empty());
+    }
+
   protected:
     TBufferPtr data_;
   };

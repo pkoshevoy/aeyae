@@ -80,7 +80,7 @@ namespace yae
       uint64_t transport_private_data_length_ : 8;
 
       // ptr:
-      TBufferPtr transport_private_data_;
+      Data transport_private_data_;
 
       struct YAE_API Extension
       {
@@ -116,14 +116,14 @@ namespace yae
         uint64_t marker3_ : 1;
 
         // ptr:
-        TBufferPtr reserved_;
+        Data reserved_;
       };
 
       // ptr:
       yae::optional<Extension> extension_;
 
       // ptr:
-      TBufferPtr stuffing_; // 0xFF
+      Data stuffing_; // 0xFF
     };
 
 
@@ -174,7 +174,7 @@ namespace yae
       yae::optional<AdaptationField> adaptation_field_;
 
       // ptr:
-      TBufferPtr payload_;
+      Data payload_;
     };
 
 
@@ -263,7 +263,7 @@ namespace yae
       uint64_t pack_stuffing_length_ : 3;
 
       // ptr:
-      TBufferPtr stuffing_;
+      Data stuffing_;
 
       // ptr:
       yae::optional<SystemHeader> system_header_;
@@ -439,7 +439,7 @@ namespace yae
           uint8_t pes_extension_flag_2_ : 1;
 
           // ptr:
-          TBufferPtr pes_private_data_;
+          Data pes_private_data_;
 
           // 8:
           uint8_t pack_field_length_;
@@ -496,7 +496,7 @@ namespace yae
             uint64_t tref_marker3_ : 1;
 
             // ptr:
-            TBufferPtr reserved_;
+            Data reserved_;
           };
 
           // ptr:
@@ -507,17 +507,17 @@ namespace yae
         yae::optional<Extension> extension_;
 
         // ptr:
-        TBufferPtr stuffing_;
+        Data stuffing_;
       };
 
       // ptr:
       yae::optional<PES> pes_;
 
       // ptr:
-      TBufferPtr data_;
+      Data data_;
 
       // ptr:
-      TBufferPtr padding_;
+      Data padding_;
     };
 
 
@@ -572,7 +572,7 @@ namespace yae
           uint8_t compression_type_;
           uint8_t mode_;
           uint8_t number_bytes_;
-          TBufferPtr compressed_string_;
+          Data compressed_string_;
         };
 
         std::vector<Segment> segment_;
@@ -632,7 +632,7 @@ namespace yae
     {
       void load_body(IBitstream & bin);
 
-      TBufferPtr payload_;
+      Data payload_;
     };
 
 
@@ -708,7 +708,7 @@ namespace yae
       void load_body(IBitstream & bin);
 
       uint32_t format_identifier_;
-      TBufferPtr additional_identification_info_;
+      Data additional_identification_info_;
     };
 
 
@@ -767,7 +767,7 @@ namespace yae
       uint16_t ca_system_id_;
       uint16_t reserved_ : 3;
       uint16_t ca_pid_ : 13;
-      TBufferPtr private_data_;
+      Data private_data_;
     };
 
 
@@ -835,7 +835,7 @@ namespace yae
       void load_body(IBitstream & bin);
 
       uint32_t copyright_identifier_;
-      TBufferPtr additional_copyright_info_;
+      Data additional_copyright_info_;
     };
 
 
@@ -950,7 +950,7 @@ namespace yae
       uint16_t iod_label_ : 8;
 
       // IOD is defined in 8.6.3.1 of ISO/IEC 14496-1:
-      TBufferPtr initial_object_descriptor_;
+      Data initial_object_descriptor_;
     };
 
 
@@ -1009,7 +1009,7 @@ namespace yae
       void load_body(IBitstream & bin);
 
       // defined in 11.2.4.3 of ISO/IEC 14496-1
-      TBufferPtr mux_code_table_entries_;
+      Data mux_code_table_entries_;
     };
 
 
@@ -1091,14 +1091,14 @@ namespace yae
 
       uint8_t textlen_ : 7;
       uint8_t text_code_ : 1;
-      TBufferPtr text_;
+      Data text_;
 
       uint8_t language_flag_ : 1;
       uint8_t language2_flag_ : 1;
       uint8_t reserved2_ : 6;
       uint8_t language_[3];
       uint8_t language2_[3];
-      TBufferPtr additional_info_;
+      Data additional_info_;
     };
 
 
@@ -1309,7 +1309,7 @@ namespace yae
     {
       void load_body(IBitstream & bin);
 
-      TBufferPtr rc_information_;
+      Data rc_information_;
     };
 
 
@@ -1324,7 +1324,7 @@ namespace yae
 
       uint8_t reserved_ : 3;
       uint8_t attribute_count_ : 5;
-      TBufferPtr attribute_;
+      Data attribute_;
     };
 
 
@@ -1371,7 +1371,7 @@ namespace yae
       uint8_t substream2_lang_[3];
       uint8_t substream3_lang_[3];
 
-      TBufferPtr additional_info_;
+      Data additional_info_;
     };
 
 
@@ -1447,7 +1447,7 @@ namespace yae
     public:
       virtual void load(IBitstream & bin);
 
-      TBufferPtr private_data_;
+      Data private_data_;
     };
 
     //----------------------------------------------------------------
@@ -1986,7 +1986,7 @@ namespace yae
         void load(IBitstream & bin, std::size_t nbytes);
 
         uint32_t identifier_;
-        TBufferPtr private_;
+        Data private_;
       };
 
       yae::shared_ptr<Command> command_;
@@ -2005,12 +2005,12 @@ namespace yae
         uint16_t splice_descriptor_tag_ : 8;
         uint16_t descriptor_length_ : 8;
         uint32_t identified_;
-        TBufferPtr private_;
+        Data private_;
       };
 
       std::vector<SpliceDescriptor> descriptor_;
 
-      TBufferPtr alignment_stuffing_;
+      Data alignment_stuffing_;
 
       uint32_t ecrc32_;
     };
@@ -2028,7 +2028,7 @@ namespace yae
     {
       void load_body(IBitstream & bin, std::size_t n_bytes);
 
-      TBufferPtr body_;
+      Data body_;
     };
 
 
@@ -2340,13 +2340,13 @@ namespace yae
       //
       struct YAE_API Packet
       {
-        Packet(uint16_t pid = 0x1FFF, const TBufferPtr & data = TBufferPtr()):
+        Packet(uint16_t pid = 0x1FFF, const Data & data = Data()):
           pid_(pid),
           data_(data)
         {}
 
         uint16_t pid_;
-        TBufferPtr data_;
+        Data data_;
       };
 
       virtual ~IPacketHandler() {}

@@ -363,7 +363,7 @@ namespace yae
   // Recording::write
   //
   void
-  Recording::Writer::write(const yae::IBuffer & data)
+  Recording::Writer::write(const yae::Data & data)
   {
     YAE_EXPECT(mpg_.write(data.get(), data.size()));
 
@@ -503,7 +503,7 @@ namespace yae
   // Recording::write
   //
   void
-  Recording::write(const fs::path & basedir, const yae::IBuffer & data)
+  Recording::write(const fs::path & basedir, const yae::Data & data)
   {
     yae::shared_ptr<Writer> writer_ptr = get_writer(basedir);
     if (!writer_ptr)

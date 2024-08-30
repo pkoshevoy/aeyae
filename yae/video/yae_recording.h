@@ -209,7 +209,7 @@ namespace yae
     {
       Writer();
 
-      void write(const yae::IBuffer & data);
+      void write(const yae::Data & data);
 
       enum { kTimebase = 1000 };
 
@@ -231,7 +231,7 @@ namespace yae
     yae::shared_ptr<Writer> get_writer(const fs::path & basedir);
 
   public:
-    void write(const fs::path & basedir, const yae::IBuffer & data);
+    void write(const fs::path & basedir, const yae::Data & data);
 
     bool is_recording() const;
     void set_stream(const yae::shared_ptr<IStream> & s);

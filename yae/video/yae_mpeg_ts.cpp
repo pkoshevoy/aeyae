@@ -137,7 +137,7 @@ namespace yae
 
       if (!(!(reserved_ || ext.reserved_) ||
             (reserved_ && ext.reserved_ &&
-             reserved_->same_as(*(ext.reserved_)))))
+             reserved_.same_as(ext.reserved_))))
       {
         return false;
       }
@@ -262,7 +262,7 @@ namespace yae
 
       if (!(!(transport_private_data_ || af.transport_private_data_) ||
             (transport_private_data_ && af.transport_private_data_ &&
-             transport_private_data_->same_as(*(af.transport_private_data_)))))
+             transport_private_data_.same_as(af.transport_private_data_))))
       {
         return false;
       }
@@ -276,7 +276,7 @@ namespace yae
 
       if (!(!(stuffing_ || af.stuffing_) ||
             (stuffing_ && af.stuffing_ &&
-             stuffing_->same_as(*(af.stuffing_)))))
+             stuffing_.same_as(af.stuffing_))))
       {
         return false;
       }
@@ -361,7 +361,7 @@ namespace yae
       }
 
       if (!(!(payload_ || pkt.payload_) ||
-            (payload_ && pkt.payload_ && payload_->same_as(*(pkt.payload_)))))
+            (payload_ && pkt.payload_ && payload_.same_as(pkt.payload_))))
       {
         return false;
       }
@@ -1145,9 +1145,8 @@ namespace yae
         return false;
       }
 
-      const IBuffer & data = *(compressed_string_);
-      const uint8_t * src = data.get();
-      const uint8_t * end = data.end();
+      const uint8_t * src = compressed_string_.get();
+      const uint8_t * end = compressed_string_.end();
 
       if ((mode_ < 0x07) ||
           (0x09 <= mode_ && mode_ < 0x11) ||
@@ -3535,8 +3534,8 @@ namespace yae
     //----------------------------------------------------------------
     // decrypt
     //
-    static TBufferPtr
-    decrypt(const TBufferPtr & payload, uint64_t encryption_algorithm)
+    static Data
+    decrypt(const Data & payload, uint64_t encryption_algorithm)
     {
       throw std::runtime_error("decryption not implemented");
       return payload;
@@ -3576,7 +3575,7 @@ namespace yae
 
       std::size_t consumed_bytes = (bin.position() - start_pos) >> 3;
       std::size_t payload_size = section_length_ - consumed_bytes - 4;
-      TBufferPtr payload = bin.read_bytes(payload_size);
+      Data payload = bin.read_bytes(payload_size);
       if (encrypted_packet_)
       {
         payload = decrypt(payload, encryption_algorithm_);
@@ -3631,7 +3630,7 @@ namespace yae
       descriptor_loop_length_ = decrypted.read(16);
       descriptor_.clear();
 
-      TBufferPtr desc_payload = decrypted.read_bytes(descriptor_loop_length_);
+      Data desc_payload = decrypted.read_bytes(descriptor_loop_length_);
       yae::Bitstream desc_reader(desc_payload);
       while (desc_reader.has_enough_bytes(6))
       {
@@ -4034,7 +4033,7 @@ namespace yae
         const TSPacket & pkt = *i;
         if (pkt.payload_)
         {
-          payload_bytes += pkt.payload_->size();
+          payload_bytes += pkt.payload_.size();
         }
       }
 
@@ -4047,8 +4046,8 @@ namespace yae
         const TSPacket & pkt = *i;
         if (pkt.payload_)
         {
-          const unsigned char * src = pkt.payload_->get();
-          const std::size_t src_bytes = pkt.payload_->size();
+          const unsigned char * src = pkt.payload_.get();
+          const std::size_t src_bytes = pkt.payload_.size();
           memcpy(dst, src, src_bytes);
           dst += src_bytes;
         }
@@ -5301,7 +5300,7 @@ namespace yae
     {
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "handle");
       boost::unique_lock<boost::mutex> lock(mutex_);
-      YAE_ASSERT(packet.data_->size() == 188);
+      YAE_ASSERT(packet.data_.size() == 188);
 
       uint32_t gps_time = gps_time_now();
       std::size_t bx = bucket_index_at(gps_time);

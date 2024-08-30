@@ -1520,7 +1520,7 @@ namespace yae
   static void
   write(const DVR & dvr,
         const std::set<TRecordingPtr> & recs,
-        const yae::IBuffer & data)
+        const yae::Data & data)
   {
     for (std::set<TRecordingPtr>::const_iterator
            i = recs.begin(); i != recs.end(); ++i)
@@ -1591,7 +1591,7 @@ namespace yae
     yae::mpeg_ts::IPacketHandler::Packet pkt;
     while (packets.pop(pkt))
     {
-      const yae::IBuffer & data = *(pkt.data_);
+      const yae::Data & data = pkt.data_;
 
       std::map<uint16_t, uint32_t>::const_iterator found =
         bucket.pid_to_ch_num_.find(pkt.pid_);

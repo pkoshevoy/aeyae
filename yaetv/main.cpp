@@ -140,7 +140,7 @@ namespace yae
       yae::mpeg_ts::IPacketHandler::Packet packet;
       while (packets_.pop(packet))
       {
-        const yae::IBuffer & data = *(packet.data_);
+        const yae::Data & data = packet.data_;
 
         uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
         if (!program_id)
