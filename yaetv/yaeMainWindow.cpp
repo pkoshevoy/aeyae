@@ -98,7 +98,7 @@ namespace yae
 
     bookmark["position_in_sec"] = position_in_sec;
 
-    std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
+    std::string filepath = rec.get_filepath(dvr.basedir_, ".seen");
     yae::atomic_save(filepath, seen);
   }
 
@@ -109,7 +109,7 @@ namespace yae
   load_bookmark(const DVR & dvr, const Recording::Rec & rec)
   {
     yae::shared_ptr<IBookmark> bookmark_ptr;
-    std::string filepath = rec.get_filepath(dvr.basedir_.string(), ".seen");
+    std::string filepath = rec.get_filepath(dvr.basedir_, ".seen");
     Json::Value seen;
 
     if (yae::attempt_load(filepath, seen))
@@ -872,11 +872,11 @@ namespace yae
     }
 
     const Recording::Rec & rec = *rec_ptr;
-    std::string path = rec.get_filepath(dvr_.basedir_.string());
+    std::string mpg_path = rec.get_filepath(dvr_.basedir_, ".mpg");
     bool hwdec = true;
 
     IReaderPtr reader = yae::openFile(readerFactory_,
-                                      QString::fromUtf8(path.c_str()),
+                                      QString::fromUtf8(mpg_path.c_str()),
                                       hwdec);
     if (!reader)
     {
@@ -957,7 +957,7 @@ namespace yae
 
       if (appView.now_playing_)
       {
-        std::string filename = rec.get_basename() + ".mpg";
+        std::string filename = rec.get_filename(dvr.basedir_, ".mpg");
 
         if (appView.now_playing_->filename_ == filename)
         {
@@ -1026,12 +1026,13 @@ namespace yae
     void execute() const
     {
       // shortcuts:
+      DVR & dvr = mainWindow_.dvr_;
       AppView & appView = *(mainWindow_.view_);
       const Recording::Rec & rec = *rec_;
 
       if (appView.now_playing_)
       {
-        std::string filename = rec.get_basename() + ".mpg";
+        std::string filename = rec.get_filename(dvr.basedir_, ".mpg");
 
         if (appView.now_playing_->filename_ == filename)
         {
@@ -1363,8 +1364,10 @@ namespace yae
       }
 
       const Recording::Rec & rec = *live_rec_;
-      std::string basepath = rec.get_filepath(dvr_.basedir_, "");
-      std::string filename = rec.get_basename() + ".mpg";
+      fs::path title_path = rec.get_title_path(dvr_.basedir_);
+      std::string mpg_path = rec.get_title_filepath(title_path, ".mpg");
+      std::string basepath = mpg_path.substr(0, mpg_path.size() - 4);
+      std::string filename = mpg_path.substr(title_path.string().size() + 1);
       app_view.now_playing_.reset(new DVR::Playback(app_view.sidebar_sel_,
                                                     filename,
                                                     basepath));

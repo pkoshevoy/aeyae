@@ -96,9 +96,29 @@ namespace yae
 
       fs::path get_title_path(const fs::path & basedir) const;
 
-      std::string get_basename() const;
+      // for backwards compatibility with old recordings
+      // that were recorded at the full_title_ path:
+      fs::path get_title_path(const fs::path & basedir,
+                              const std::string & title) const;
+
+      inline std::string get_basename() const
+      { return this->get_basename(this->get_short_title()); }
+
+      std::string get_basename(const std::string & title) const;
+
+      std::string get_basepath(const fs::path & basedir) const;
+      std::string get_filename(const fs::path & basedir,
+                               const char * ext) const;
+
       std::string get_filepath(const fs::path & basedir,
                                const char * suffix = ".mpg") const;
+
+      std::string get_title_filepath(const fs::path & title_path,
+                                     const char * suffix) const;
+
+      std::string get_title_filepath(const fs::path & title_path,
+                                     const std::string & title,
+                                     const char * suffix) const;
 
       // helpers for interop with code that expect EPG::Channel, etc...
       yae::mpeg_ts::EPG::Channel to_epg_channel() const;

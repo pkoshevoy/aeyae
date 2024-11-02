@@ -4102,7 +4102,7 @@ namespace yae
       else
       {
         yae_ilog("found an incomplete recording: %s, %s",
-                 recorded.get_basename().c_str(),
+                 json_path.c_str(),
                  program.description_.c_str());
       }
     }
@@ -4178,14 +4178,14 @@ namespace yae
     YAE_BENCHMARK(probe, "DVR::is_ready_to_play");
 
     yae::shared_ptr<Playback> result;
-    std::string mpg = rec.get_filepath(basedir_);
+    fs::path title_path = rec.get_title_path(basedir_);
+    std::string mpg_path = rec.get_title_filepath(title_path, ".mpg");
 
-    if (fs::exists(mpg))
+    if (fs::exists(mpg_path))
     {
       std::string playlist = yae::get_playlist(rec);
-      std::string basename = rec.get_basename();
-      std::string filename = basename + ".mpg";
-      std::string basepath = rec.get_filepath(basedir_, "");
+      std::string basepath = mpg_path.substr(0, mpg_path.size() - 4);
+      std::string filename = mpg_path.substr(title_path.string().size() + 1);
       result.reset(new Playback(playlist, filename, basepath));
     }
 

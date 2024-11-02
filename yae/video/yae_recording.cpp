@@ -158,6 +158,28 @@ namespace yae
   fs::path
   Recording::Rec::get_title_path(const fs::path & basedir) const
   {
+    // check if there is a recording at the full_title_ path
+    // for backwards compatibility with old recordings:
+    fs::path title_path = this->get_title_path(basedir, full_title_);
+    std::string fn_rec = this->get_title_filepath(title_path, ".json");
+    if (fs::exists(fn_rec))
+    {
+      // for backwards compatibility with old recordings
+      // that were recorded at the full_title_ path:
+      return title_path;
+    }
+
+    std::string short_title = this->get_short_title();
+    return this->get_title_path(basedir, short_title);
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::get_title_path
+  //
+  fs::path
+  Recording::Rec::get_title_path(const fs::path & basedir,
+                                 const std::string & title) const
+  {
     // title path:
     std::string channel;
     {
@@ -168,7 +190,6 @@ namespace yae
       channel = oss.str().c_str();
     }
 
-    std::string title = this->get_short_title();
     std::string safe_title = sanitize_filename_utf8(title);
     fs::path title_path = basedir / channel / safe_title;
     return title_path;
@@ -178,9 +199,8 @@ namespace yae
   // Recording::Rec::get_basename
   //
   std::string
-  Recording::Rec::get_basename() const
+  Recording::Rec::get_basename(const std::string & title) const
   {
-    std::string title = this->get_short_title();
     std::string safe_title = sanitize_filename_utf8(title);
 
     struct tm tm;
@@ -201,14 +221,69 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Recording::Rec::get_basepath
+  //
+  std::string
+  Recording::Rec::get_basepath(const fs::path & basedir) const
+  {
+    fs::path title_path = this->get_title_path(basedir);
+    std::string json_path = this->get_title_filepath(title_path, ".json");
+    std::string basepath = json_path.substr(0, json_path.size() - 5);
+    return basepath;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::get_filename
+  //
+  std::string
+  Recording::Rec::get_filename(const fs::path & basedir,
+                               const char * ext) const
+  {
+    fs::path title_path = this->get_title_path(basedir);
+    std::string filepath = this->get_title_filepath(title_path, ext);
+    std::string filename = filepath.substr(title_path.string().size() + 1);
+    return filename;
+  }
+
+  //----------------------------------------------------------------
   // Recording::Rec::get_filepath
   //
   std::string
   Recording::Rec::get_filepath(const fs::path & basedir,
                                const char * ext) const
   {
-    fs::path title_path = get_title_path(basedir);
-    std::string basename = get_basename();
+    fs::path title_path = this->get_title_path(basedir);
+    return this->get_title_filepath(title_path, ext);
+  }
+
+  //---------------------------------------------------------------
+  // Recording::Rec::get_title_filepath
+  //
+  std::string
+  Recording::Rec::get_title_filepath(const fs::path & title_path,
+                                     const char * ext) const
+  {
+    // for backwards compatibility with old recordings
+    // which used short_title for the basename:
+    std::string title = this->get_short_title();
+    std::string filepath = this->get_title_filepath(title_path, title, ext);
+    if (fs::exists(filepath))
+    {
+      return filepath;
+    }
+
+    return this->get_title_filepath(title_path, full_title_, ext);
+  }
+
+  //---------------------------------------------------------------
+  // Recording::Rec::get_title_filepath
+  //
+  std::string
+  Recording::Rec::get_title_filepath(const fs::path & title_path,
+                                     const std::string & title,
+                                     const char * ext) const
+  {
+    std::string basename = this->get_basename(title);
     std::string basepath = (title_path / basename).string();
     std::string filepath = basepath + ext;
     return filepath;
@@ -257,13 +332,10 @@ namespace yae
       return false;
     }
 
-    std::string basename = this->get_basename();
-    std::string basepath = (title_path / basename).string();
-
     Json::Value json;
     yae::save(json, *this);
 
-    std::string path_json = basepath + ".json";
+    std::string path_json = this->get_title_filepath(title_path, ".json");
     if (!yae::TOpenFile(path_json, "wb").save(json))
     {
       yae_wlog("failed to save: %s", path_json.c_str());
@@ -281,9 +353,7 @@ namespace yae
   Recording::Rec::load(const fs::path & basedir)
   {
     fs::path title_path = this->get_title_path(basedir);
-    std::string basename = this->get_basename();
-    std::string basepath = (title_path / basename).string();
-    std::string path_json = basepath + ".json";
+    std::string path_json = this->get_title_filepath(title_path, ".json");
 
     Json::Value json;
     if (!yae::TOpenFile(path_json, "rb").load(json))
@@ -437,9 +507,8 @@ namespace yae
       return writer_ptr;
     }
 
-    std::string basename = rec.get_basename();
-    std::string basepath = (title_path / basename).string();
-    std::string path_mpg = basepath + ".mpg";
+    std::string path_mpg = rec.get_title_filepath(title_path, ".mpg");
+    std::string basepath = path_mpg.substr(0, path_mpg.size() - 4);
 
     writer_ptr.reset(new Recording::Writer());
     Recording::Writer & writer = *writer_ptr;
@@ -459,7 +528,7 @@ namespace yae
     }
 
     writer.dat_time_ = 0;
-    writer.mpg_size_ = yae::stat_filesize((basepath + ".mpg").c_str());
+    writer.mpg_size_ = yae::stat_filesize(path_mpg.c_str());
 
     uint64_t misalignment = writer.mpg_size_ % 188;
     if (misalignment)

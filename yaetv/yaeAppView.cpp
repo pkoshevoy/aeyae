@@ -4307,7 +4307,7 @@ namespace yae
       const std::string & name = i->first;
       const TRecPtr & rec_ptr = i->second;
       const Recording::Rec & rec = *rec_ptr;
-      std::string basepath = rec.get_filepath(dvr_->basedir_, "");
+      std::string basepath = rec.get_basepath(dvr_->basedir_);
 
       layout.index_[name] = layout.names_.size();
       layout.names_.push_back(name);
@@ -4588,12 +4588,12 @@ namespace yae
 
     const TRecPtr & rec_ptr = found->second;
     const Recording::Rec & rec = *rec_ptr;
-    std::string filepath = rec.get_filepath(dvr_->basedir_);
+    std::string mpg_path = rec.get_filepath(dvr_->basedir_, ".mpg");
 
 #ifdef __APPLE__
-    yae::showInFinder(filepath.c_str());
+    yae::showInFinder(mpg_path.c_str());
 #else
-    yae::show_in_file_manager(filepath.c_str());
+    yae::show_in_file_manager(mpg_path.c_str());
 #endif
   }
 
@@ -4755,7 +4755,7 @@ namespace yae
 
     const TRecPtr & rec_ptr = found->second;
     const Recording::Rec & rec = *rec_ptr;
-    std::string basepath = rec.get_filepath(dvr_->basedir_, "");
+    std::string basepath = rec.get_basepath(dvr_->basedir_);
     now_playing_.reset(new DVR::Playback(sidebar_sel_, name, basepath));
 
     yae::queue_call(*this, &AppView::emit_playback, rec_ptr);
