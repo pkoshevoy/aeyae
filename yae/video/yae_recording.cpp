@@ -129,6 +129,7 @@ namespace yae
       " (season finale)",
       " (series premiere)",
       " (series finale)",
+      " (time period ftc)",
       " christmas special",
       " kickoff episode",
       " sneak peek",
