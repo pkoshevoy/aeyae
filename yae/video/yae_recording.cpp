@@ -130,6 +130,7 @@ namespace yae
       " (series premiere)",
       " (series finale)",
       " (time period ftc)",
+      " (time period ltc)",
       " christmas special",
       " kickoff episode",
       " sneak peek",
