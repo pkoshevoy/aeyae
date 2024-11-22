@@ -31,6 +31,26 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // AvFilterGraphSegPtr
+  //
+  struct AvFilterGraphSegPtr : public boost::shared_ptr<AVFilterGraphSegment>
+  {
+    explicit AvFilterGraphSegPtr(AVFilterGraphSegment * seg = NULL):
+      boost::shared_ptr<AVFilterGraphSegment>(seg, &AvFilterGraphSegPtr::destroy)
+    {}
+
+    inline void reset(AVFilterGraphSegment * seg = NULL)
+    {
+      if (this->get() != seg)
+      {
+        *this = AvFilterGraphSegPtr(seg);
+      }
+    }
+
+    static void destroy(AVFilterGraphSegment * seg);
+  };
+
+  //----------------------------------------------------------------
   // scale_filter_chain
   //
   YAE_API std::string

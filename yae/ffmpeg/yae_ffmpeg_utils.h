@@ -286,6 +286,74 @@ namespace yae
     inline bool has_data() const
     { return ((frame_->buf[0] && frame_->buf[0]->data) || frame_->data[0]); }
 
+    inline bool has_decode_error_flag(int flag) const
+    { return (frame_->decode_error_flags & flag) == flag; }
+
+    inline bool has_flag(int flag) const
+    { return (frame_->flags & flag) == flag; }
+
+    inline void set_flag(int flag, bool value = true)
+    {
+      if (value)
+      {
+        frame_->flags |= flag;
+      }
+      else
+      {
+        frame_->flags &= ~flag;
+      }
+    }
+
+    inline void clear_flag(int flag)
+    { this->set_flag(flag, false); }
+
+    inline bool is_progressive() const
+    { return !this->is_interlaced(); }
+
+#if (LIBAVUTIL_VERSION_INT < AV_VERSION_INT(58, 7, 100))
+    inline bool is_interlaced() const
+    { return frame_->interlaced_frame; }
+
+    inline void set_interlaced(bool interlaced)
+    { frame_->interlaced_frame = interlaced ? 1 : 0; }
+
+    inline bool is_tff() const
+    { return frame_->top_field_first; }
+
+    inline void set_tff(bool tff)
+    { frame_->top_field_first = tff ? 1 : 0; }
+
+    inline bool is_keyframe() const
+    { return frame_->key_frame; }
+
+    inline void set_keyframe(bool keyframe)
+    {
+      frame_->key_frame = keyframe ? 1 : 0;
+      frame_->pict_type = keyframe ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+    }
+#else
+    inline bool is_interlaced() const
+    { return this->has_flag(AV_FRAME_FLAG_INTERLACED); }
+
+    inline void set_interlaced(bool interlaced)
+    { this->set_flag(AV_FRAME_FLAG_INTERLACED, interlaced); }
+
+    inline bool is_tff() const
+    { return this->has_flag(AV_FRAME_FLAG_TOP_FIELD_FIRST); }
+
+    inline void set_tff(bool tff)
+    { this->set_flag(AV_FRAME_FLAG_TOP_FIELD_FIRST, tff); }
+
+    inline bool is_keyframe() const
+    { return this->has_flag(AV_FRAME_FLAG_KEY); }
+
+    inline void set_keyframe(bool keyframe)
+    {
+      this->set_flag(AV_FRAME_FLAG_KEY, keyframe);
+      frame_->pict_type = keyframe ? AV_PICTURE_TYPE_I : AV_PICTURE_TYPE_NONE;
+    }
+#endif
+
     inline const AVHWFramesContext * get_hw_frames_ctx() const
     {
       return (frame_->hw_frames_ctx ?

@@ -20,6 +20,15 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // AvFilterGraphSegPtr::destroy
+  //
+  void
+  AvFilterGraphSegPtr::destroy(AVFilterGraphSegment * seg)
+  {
+    avfilter_graph_segment_free(&seg);
+  }
+
+  //----------------------------------------------------------------
   // color_scale_filter
   //
   static std::string
@@ -663,7 +672,15 @@ namespace yae
       graph_->nb_threads = nb_threads_;
     }
 
-    int err = avfilter_graph_parse2(graph_, filters_.c_str(), &in_, &out_);
+    AVFilterGraphSegment * seg = NULL;
+    int err = avfilter_graph_segment_parse(graph_,
+                                           filters_.c_str(),
+                                           0, // flags
+                                           &seg);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    yae::AvFilterGraphSegPtr seg_ptr(seg);
+    err = avfilter_graph_segment_create_filters(seg, 0);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     if (hw_frames_.ref_)
@@ -689,6 +706,8 @@ namespace yae
     par->format = src.format;
     par->frame_rate = src_framerate_;
     par->time_base = src_timebase_;
+    par->color_space = src.colorspace;
+    par->color_range = src.color_range;
 
     if (src.sample_aspect_ratio.num > 0 &&
         src.sample_aspect_ratio.den > 0)
@@ -700,6 +719,15 @@ namespace yae
 
     err = av_buffersrc_parameters_set(src_, par);
     av_freep(&par);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_segment_apply_opts(seg, 0);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_segment_init(seg, 0);
+    YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+
+    err = avfilter_graph_segment_link(seg, 0, &in_, &out_);
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
 
     err = avfilter_graph_config(graph_, NULL);
@@ -758,6 +786,7 @@ namespace yae
     }
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
+    YAE_ASSERT(yae::same_specs(*frame, dst_specs_));
 
     // some filters (yadif) may change the timebase:
     out_timebase = sink_->inputs[0]->time_base;
