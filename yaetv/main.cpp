@@ -30,6 +30,11 @@
 #include <iostream>
 #include <stdexcept>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
@@ -37,6 +42,10 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // ffmpeg includes:

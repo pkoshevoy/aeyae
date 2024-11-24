@@ -48,12 +48,21 @@
 #include <vector>
 #include <math.h>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/lexical_cast.hpp>
 #include <boost/thread.hpp>
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // aeyae:

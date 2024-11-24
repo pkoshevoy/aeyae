@@ -22,6 +22,11 @@
 #include <sstream>
 #include <vector>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/algorithm/string.hpp>
@@ -31,6 +36,10 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <boost/shared_ptr.hpp>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // jsoncpp:
@@ -1474,7 +1483,7 @@ namespace yae
     {
       return (func_ == other.func_ ?
               context_ < other.context_ :
-              func_ < other.func_);
+              std::size_t(func_) < std::size_t(other.func_));
     }
 
   protected:

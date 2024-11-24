@@ -14,6 +14,12 @@
 #include <string>
 #include <stdexcept>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#define GL_SILENCE_DEPRECATION
+#endif
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
@@ -40,6 +46,10 @@
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
 #include <QOpenGLFunctions>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // yae includes:

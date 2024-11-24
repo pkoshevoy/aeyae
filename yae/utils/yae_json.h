@@ -19,9 +19,18 @@
 #include <time.h>
 #include <vector>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/lexical_cast.hpp>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // jsoncpp:
