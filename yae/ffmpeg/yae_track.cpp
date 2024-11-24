@@ -493,12 +493,16 @@ namespace yae
     ctx->opaque = this;
 
     const enum AVPixelFormat * codec_pix_fmts = NULL;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(61, 13, 100)
+    codec_pix_fmts = ctx->codec->pix_fmts;
+#else
     avcodec_get_supported_config(ctx,
                                  NULL, // use ctx->codec
                                  AV_CODEC_CONFIG_PIX_FORMAT,
                                  0, // flags
                                  (const void **)&codec_pix_fmts,
                                  NULL);
+#endif
 
     if (codec_pix_fmts && !yae::has<AVPixelFormat>(codec_pix_fmts,
                                                    ctx->pix_fmt,

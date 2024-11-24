@@ -20,6 +20,7 @@
 
 // std includes:
 #include <math.h>
+#include <stdint.h>
 #include <string.h>
 #include <vector>
 
@@ -652,8 +653,7 @@ namespace yae
   //----------------------------------------------------------------
   // TAudioTempoFilterI32
   //
-  typedef AudioTempoFilter<int, -2147483648, 2147483647>
-  TAudioTempoFilterI32;
+  typedef AudioTempoFilter<int, INT32_MIN, INT32_MAX> TAudioTempoFilterI32;
 
   //----------------------------------------------------------------
   // TAudioTempoFilterF32

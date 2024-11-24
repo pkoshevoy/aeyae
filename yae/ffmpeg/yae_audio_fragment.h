@@ -184,14 +184,13 @@ namespace yae
       // shortcuts:
       const uint32_t window = rdft.po2_size() / 2;
       const uint32_t half_window = window / 2;
-      rdft_t::re_t * correlation =
-        rdft.re_buffer().template data<rdft_t::re_t>();
+      rdft_t::re_t * correlation = rdft.re_buffer().data<rdft_t::re_t>();
 
       // calculate cross correlation in frequency domain:
       {
-        const rdft_t::cx_t * xa = other.cx_.template data<rdft_t::cx_t>();
-        const rdft_t::cx_t * xb = this->cx_.template data<rdft_t::cx_t>();
-        rdft_t::cx_t * xc = rdft.cx_buffer().template data<rdft_t::cx_t>();
+        const rdft_t::cx_t * xa = other.cx_.data<rdft_t::cx_t>();
+        const rdft_t::cx_t * xb = this->cx_.data<rdft_t::cx_t>();
+        rdft_t::cx_t * xc = rdft.cx_buffer().data<rdft_t::cx_t>();
 
         for (uint32_t i = 0; i <= half_window; i++, xa++, xb++, xc++)
         {
@@ -200,7 +199,7 @@ namespace yae
         }
 
         // apply inverse rDFT transform:
-        xc = rdft.cx_buffer().template data<rdft_t::cx_t>();
+        xc = rdft.cx_buffer().data<rdft_t::cx_t>();
         rdft.c2r(xc, correlation);
       }
 

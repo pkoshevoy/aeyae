@@ -706,8 +706,11 @@ namespace yae
     par->format = src.format;
     par->frame_rate = src_framerate_;
     par->time_base = src_timebase_;
+
+#if LIBAVFILTER_VERSION_INT >= AV_VERSION_INT(9, 16, 100)
     par->color_space = src.colorspace;
     par->color_range = src.color_range;
+#endif
 
     if (src.sample_aspect_ratio.num > 0 &&
         src.sample_aspect_ratio.den > 0)

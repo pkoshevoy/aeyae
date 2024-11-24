@@ -4111,12 +4111,16 @@ namespace yae
     }
 
     const enum AVPixelFormat * codec_pix_fmts = NULL;
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(61, 13, 100)
+    codec_pix_fmts = codec->pix_fmts;
+#else
     avcodec_get_supported_config(NULL, // optional AVCodecContext
                                  codec,
                                  AV_CODEC_CONFIG_PIX_FORMAT,
                                  0, // flags
                                  (const void **)&codec_pix_fmts, // &configs
                                  NULL); // optional &num_configs
+#endif
 
     TPixelFormatId pixel_format = ffmpeg_to_yae(codec_pix_fmts[0]);
     TVideoFramePtr vf_ptr = decode_keyframe(decoder_ptr,
@@ -4177,7 +4181,7 @@ namespace yae
     encoder.height = frame.height;
     encoder.time_base.num = 1;
     encoder.time_base.den = frame_dur.base_;
-#if LIBAVCODEC_VERSION_MAJOR < 60
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(60, 12, 100)
     encoder.ticks_per_frame = frame_dur.time_;
 #endif
     encoder.framerate.num = frame_dur.base_;
