@@ -451,10 +451,10 @@ namespace yae
   //----------------------------------------------------------------
   // AvFrm::AvFrm
   //
-  AvFrm::AvFrm(const AvFrm & frame):
+  AvFrm::AvFrm(const AvFrm & avfrm):
     frame_(av_frame_alloc())
   {
-    assign_frame(*frame_, *(frame.frame_));
+    assign_frame(*frame_, *(avfrm.frame_));
   }
 
   //----------------------------------------------------------------
@@ -469,11 +469,11 @@ namespace yae
   // AvFrm::operator =
   //
   AvFrm &
-  AvFrm::operator = (const AvFrm & frame)
+  AvFrm::operator = (const AvFrm & avfrm)
   {
-    if (this != &frame)
+    if (this != &avfrm)
     {
-      assign_frame(*frame_, *(frame.frame_));
+      assign_frame(*frame_, *(avfrm.frame_));
     }
 
     return *this;
@@ -1040,10 +1040,10 @@ namespace yae
              unsigned char fill_luma,
              unsigned char fill_chroma)
   {
-    yae::AvFrm frm;
-    frm.alloc_video_buffers(pix_fmt, luma_w, luma_h);
+    yae::AvFrm avfrm;
+    avfrm.alloc_video_buffers(pix_fmt, luma_w, luma_h);
 
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
     frame.colorspace = csp;
     frame.color_primaries = pri;
     frame.color_trc = trc;
@@ -1063,7 +1063,7 @@ namespace yae
       memset(frame.data[comp.plane], fill, frame.linesize[comp.plane] * h);
     }
 
-    return frm;
+    return avfrm;
   }
 
   //----------------------------------------------------------------
@@ -1087,7 +1087,7 @@ namespace yae
     const AVComponentDescriptor & luma = desc->comp[0];
     const double c1 = ~((~0) << luma.depth);
 
-    yae::AvFrm frm =
+    yae::AvFrm avfrm =
       make_avfrm(pix_fmt,
                  luma_w,
                  luma_h,
@@ -1097,7 +1097,7 @@ namespace yae
                  AVCOL_RANGE_JPEG);
 
     // shortcut:
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
     const int r_plane = desc->comp[0].plane;
     const int g_plane = desc->comp[1].plane;
     const int b_plane = desc->comp[2].plane;
@@ -1126,7 +1126,7 @@ namespace yae
       }
     }
 
-    return frm;
+    return avfrm;
   }
 
   //----------------------------------------------------------------
@@ -1162,7 +1162,7 @@ namespace yae
     // max chroma:
     const double c1 = full_rng ? full_luma : (240 << depth_8);
 
-    yae::AvFrm frm =
+    yae::AvFrm avfrm =
       make_avfrm(pix_fmt,
                  luma_w,
                  luma_h,
@@ -1172,7 +1172,7 @@ namespace yae
                  full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
 
     // shortcut:
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
     const int y_plane = desc->comp[0].plane;
     const int u_plane = desc->comp[1].plane;
     const int v_plane = desc->comp[2].plane;
@@ -1201,7 +1201,7 @@ namespace yae
       }
     }
 
-    return frm;
+    return avfrm;
   }
 
   //----------------------------------------------------------------
@@ -1237,7 +1237,7 @@ namespace yae
     // max chroma:
     const double c1 = full_rng ? full_luma : (240 << depth_8);
 
-    yae::AvFrm frm =
+    yae::AvFrm avfrm =
       make_avfrm(pix_fmt,
                  luma_w,
                  luma_h,
@@ -1247,7 +1247,7 @@ namespace yae
                  full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
 
     // shortcut:
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
     const int chroma_w = luma_w >> 1;
     const int y_plane = desc->comp[0].plane;
     const int u_plane = desc->comp[1].plane;
@@ -1292,7 +1292,7 @@ namespace yae
       }
     }
 
-    return frm;
+    return avfrm;
   }
 
   //----------------------------------------------------------------
@@ -1328,7 +1328,7 @@ namespace yae
     // max chroma:
     const double c1 = full_rng ? full_luma : (240 << depth_8);
 
-    yae::AvFrm frm =
+    yae::AvFrm avfrm =
       make_avfrm(pix_fmt,
                  luma_w,
                  luma_h,
@@ -1338,7 +1338,7 @@ namespace yae
                  full_rng ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG);
 
     // shortcut:
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
 
     const int chroma_w = luma_w >> 1;
     const int chroma_h = luma_h >> 1;
@@ -1401,7 +1401,7 @@ namespace yae
       }
     }
 
-    return frm;
+    return avfrm;
   }
 
   //----------------------------------------------------------------
@@ -1479,16 +1479,24 @@ namespace yae
       return false;
     }
 
-    yae::AvFrm frm = src;
-    AVFrame & frame = frm.get();
+    const enum AVPixelFormat * codec_pix_fmts = NULL;
+    avcodec_get_supported_config(NULL, // optional AVCodecContext
+                                 codec,
+                                 AV_CODEC_CONFIG_PIX_FORMAT,
+                                 0, // flags
+                                 (const void **)&codec_pix_fmts, // &configs
+                                 NULL); // optional &num_configs
+
+    yae::AvFrm avfrm = src;
+    AVFrame & frame = avfrm.get();
     // convert to full-range, and pixel format supported by the encoder:
     {
       yae::AvFrmSpecs specs = src;
 
       specs.format =
         (src.get_pix_fmt() != AV_PIX_FMT_PAL8 &&
-         yae::has(codec->pix_fmts, src.get_pix_fmt())) ? src.get_pix_fmt() :
-        codec->pix_fmts[0];
+         yae::has(codec_pix_fmts, src.get_pix_fmt())) ? src.get_pix_fmt() :
+        codec_pix_fmts[0];
 
       yae::VideoFilterGraph vf;
       if (vf.setup(src, framerate, timebase, specs))
@@ -1666,13 +1674,13 @@ namespace yae
   // save_as_png
   //
   bool
-  save_as_png(const yae::AvFrm & frm,
+  save_as_png(const yae::AvFrm & avfrm,
               const std::string & prefix,
               const yae::TTime & frame_dur)
   {
-    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const AVPixelFormat pix_fmt = avfrm.get_pix_fmt();
     const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
-    const AVFrame & frame = frm.get();
+    const AVFrame & frame = avfrm.get();
 
     std::string path;
     {
@@ -1684,20 +1692,20 @@ namespace yae
       path = oss.str();
     }
 
-    return save_as(path, frm, frame_dur);
+    return save_as(path, avfrm, frame_dur);
   }
 
   //----------------------------------------------------------------
   // save_as_jpg
   //
   bool
-  save_as_jpg(const yae::AvFrm & frm,
+  save_as_jpg(const yae::AvFrm & avfrm,
               const std::string & prefix,
               const yae::TTime & frame_dur)
   {
-    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const AVPixelFormat pix_fmt = avfrm.get_pix_fmt();
     const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
-    const AVFrame & frame = frm.get();
+    const AVFrame & frame = avfrm.get();
 
     std::string path;
     {
@@ -1709,20 +1717,20 @@ namespace yae
       path = oss.str();
     }
 
-    return save_as(path, frm, frame_dur);
+    return save_as(path, avfrm, frame_dur);
   }
 
   //----------------------------------------------------------------
   // save_as_tiff
   //
   bool
-  save_as_tiff(const yae::AvFrm & frm,
+  save_as_tiff(const yae::AvFrm & avfrm,
                const std::string & prefix,
                const yae::TTime & frame_dur)
   {
-    const AVPixelFormat pix_fmt = frm.get_pix_fmt();
+    const AVPixelFormat pix_fmt = avfrm.get_pix_fmt();
     const char * pix_fmt_txt = av_get_pix_fmt_name(pix_fmt);
-    const AVFrame & frame = frm.get();
+    const AVFrame & frame = avfrm.get();
 
     std::string path;
     {
@@ -1734,7 +1742,7 @@ namespace yae
       path = oss.str();
     }
 
-    return save_as(path, frm, frame_dur);
+    return save_as(path, avfrm, frame_dur);
   }
 
   //----------------------------------------------------------------

@@ -42,6 +42,18 @@ namespace yae
     typedef AVComplexFloat cx_t;
 
     //----------------------------------------------------------------
+    // rdft_t
+    //
+    rdft_t():
+      r2c_(NULL),
+      c2r_(NULL),
+      r2c_tx_(NULL),
+      c2r_tx_(NULL),
+      n_levels_(0),
+      po2_size_(0)
+    {}
+
+    //----------------------------------------------------------------
     // ~rdft_t
     //
     ~rdft_t()
@@ -141,13 +153,14 @@ namespace yae
     { c2r_tx_(c2r_, dst, const_cast<cx_t *>(src), sizeof(cx_t)); }
 
   protected:
-    AVTXContext * r2c_ = NULL;
-    AVTXContext * c2r_ = NULL;
-    av_tx_fn r2c_tx_ = NULL;
-    av_tx_fn c2r_tx_ = NULL;
+    AVTXContext * r2c_;
+    AVTXContext * c2r_;
 
-    uint32_t n_levels_ = 0; // log2(N)
-    uint32_t po2_size_ = 0; // N
+    av_tx_fn r2c_tx_;
+    av_tx_fn c2r_tx_;
+
+    uint32_t n_levels_; // log2(N)
+    uint32_t po2_size_; // N
 
     TDataBuffer re_buffer_; // N
     TDataBuffer cx_buffer_; // N / 2 + 1

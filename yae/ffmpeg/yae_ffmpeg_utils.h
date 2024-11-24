@@ -258,10 +258,10 @@ namespace yae
   struct YAE_API AvFrm
   {
     AvFrm(const AVFrame * frame = NULL);
-    AvFrm(const AvFrm & frame);
+    AvFrm(const AvFrm & avfrm);
     ~AvFrm();
 
-    AvFrm & operator = (const AvFrm & frame);
+    AvFrm & operator = (const AvFrm & avfrm);
 
     inline const AVFrame & get() const
     { return *frame_; }
@@ -405,8 +405,8 @@ namespace yae
   struct YAE_API AvFrmSpecs
   {
     AvFrmSpecs();
-    AvFrmSpecs(const AVFrame & src);
-    AvFrmSpecs(const AvFrm & src);
+    AvFrmSpecs(const AVFrame & frame);
+    AvFrmSpecs(const AvFrm & avfrm);
     AvFrmSpecs(const VideoTraits & vtts);
 
     void clear();
@@ -712,8 +712,8 @@ namespace yae
   // guess_specs
   //
   inline AvFrmSpecs
-  guess_specs(const AvFrm & src)
-  { return guess_specs(AvFrmSpecs(src)); }
+  guess_specs(const AvFrm & avfrm)
+  { return guess_specs(AvFrmSpecs(avfrm)); }
 
   //----------------------------------------------------------------
   // change_specs
@@ -789,14 +789,14 @@ namespace yae
   //
   YAE_API bool
   save_as(const std::string & path,
-          const yae::AvFrm & src,
+          const yae::AvFrm & avfrm,
           const yae::TTime & frame_dur = yae::TTime(1, 25));
 
   //----------------------------------------------------------------
   // save_as_png
   //
   YAE_API bool
-  save_as_png(const yae::AvFrm & frm,
+  save_as_png(const yae::AvFrm & avfrm,
               const std::string & prefix,
               const yae::TTime & frame_dur = yae::TTime(1, 25));
 
@@ -804,7 +804,7 @@ namespace yae
   // save_as_jpg
   //
   YAE_API bool
-  save_as_jpg(const yae::AvFrm & frm,
+  save_as_jpg(const yae::AvFrm & avfrm,
               const std::string & prefix,
               const yae::TTime & frame_dur = yae::TTime(1, 25));
 
@@ -812,7 +812,7 @@ namespace yae
   // save_as_tiff
   //
   YAE_API bool
-  save_as_tiff(const yae::AvFrm & frm,
+  save_as_tiff(const yae::AvFrm & avfrm,
                const std::string & prefix,
                const yae::TTime & frame_dur = yae::TTime(1, 25));
 

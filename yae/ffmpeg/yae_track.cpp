@@ -63,15 +63,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // TimePos::to_str
-  //
-  std::string
-  TimePos::to_str(const TFrameBase & f, double dur) const
-  {
-    return (f.time_ + dur).to_hhmmss_ms();
-  }
-
-  //----------------------------------------------------------------
   // TimePos::seek
   //
   int
@@ -501,19 +492,27 @@ namespace yae
     avcodec_parameters_to_context(ctx, &params);
     ctx->opaque = this;
 
-    if (codec->pix_fmts && !yae::has<AVPixelFormat>(codec->pix_fmts,
-                                                    ctx->pix_fmt,
-                                                    AV_PIX_FMT_NONE))
+    const enum AVPixelFormat * codec_pix_fmts = NULL;
+    avcodec_get_supported_config(ctx,
+                                 NULL, // use ctx->codec
+                                 AV_CODEC_CONFIG_PIX_FORMAT,
+                                 0, // flags
+                                 (const void **)&codec_pix_fmts,
+                                 NULL);
+
+    if (codec_pix_fmts && !yae::has<AVPixelFormat>(codec_pix_fmts,
+                                                   ctx->pix_fmt,
+                                                   AV_PIX_FMT_NONE))
     {
       AVPixelFormat found =
-        yae::find_nearest_pix_fmt(ctx->pix_fmt, codec->pix_fmts);
+        yae::find_nearest_pix_fmt(ctx->pix_fmt, codec_pix_fmts);
 
       if (found == AV_PIX_FMT_NONE)
       {
         yae_elog("%s doesn't support pixel format %s",
                  codec->name,
                  av_get_pix_fmt_name(ctx->pix_fmt));
-        found = codec->pix_fmts[0];
+        found = codec_pix_fmts[0];
       }
 
       if (found != AV_PIX_FMT_NONE)

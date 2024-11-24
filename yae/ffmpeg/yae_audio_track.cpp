@@ -248,7 +248,6 @@ namespace yae
       TAudioFramePtr afPtr(new TAudioFrame());
       TAudioFrame & af = *afPtr;
 
-      af.pos_ = decoded.pkt_pos;
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
       af.trackId_ = Track::id();

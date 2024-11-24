@@ -82,7 +82,6 @@ namespace yae
     virtual std::string to_str() const = 0;
     virtual bool lt(const TFrameBase & f, double dur = 0.0) const = 0;
     virtual bool gt(const TFrameBase & f, double dur = 0.0) const = 0;
-    virtual std::string to_str(const TFrameBase & f, double dur) const = 0;
     virtual int seek(AVFormatContext * ctx, const AVStream * s) const = 0;
   };
 
@@ -105,9 +104,6 @@ namespace yae
     // virtual:
     bool lt(const TFrameBase & f, double dur = 0.0) const;
     bool gt(const TFrameBase & f, double dur = 0.0) const;
-
-    // virtual:
-    std::string to_str(const TFrameBase & f, double dur) const;
 
     // virtual:
     int seek(AVFormatContext * ctx, const AVStream * s) const;

@@ -4110,7 +4110,15 @@ namespace yae
       return false;
     }
 
-    TPixelFormatId pixel_format = ffmpeg_to_yae(codec->pix_fmts[0]);
+    const enum AVPixelFormat * codec_pix_fmts = NULL;
+    avcodec_get_supported_config(NULL, // optional AVCodecContext
+                                 codec,
+                                 AV_CODEC_CONFIG_PIX_FORMAT,
+                                 0, // flags
+                                 (const void **)&codec_pix_fmts, // &configs
+                                 NULL); // optional &num_configs
+
+    TPixelFormatId pixel_format = ffmpeg_to_yae(codec_pix_fmts[0]);
     TVideoFramePtr vf_ptr = decode_keyframe(decoder_ptr,
                                             packet_ptr,
                                             pixel_format,
@@ -4130,8 +4138,8 @@ namespace yae
     const AVPacket & packet = pkt.get();
 
     // convert TVideoFramePtr to AVFrame:
-    AvFrm frm;
-    int err = convert_to(frm, vf_ptr);
+    AvFrm avfrm;
+    int err = convert_to(avfrm, vf_ptr);
     if (err)
     {
       av_log(NULL, AV_LOG_ERROR,
@@ -4143,7 +4151,7 @@ namespace yae
 
     // feed it to the encoder:
     TVideoFrame & vf = *vf_ptr;
-    AVFrame & frame = frm.get();
+    AVFrame & frame = avfrm.get();
 
     VideoTraits traits;
     decoder.getTraitsOverride(traits);
@@ -4169,7 +4177,9 @@ namespace yae
     encoder.height = frame.height;
     encoder.time_base.num = 1;
     encoder.time_base.den = frame_dur.base_;
+#if LIBAVCODEC_VERSION_MAJOR < 60
     encoder.ticks_per_frame = frame_dur.time_;
+#endif
     encoder.framerate.num = frame_dur.base_;
     encoder.framerate.den = frame_dur.time_;
     encoder.gop_size = 1; // expressed as number of frames
@@ -4243,7 +4253,7 @@ namespace yae
     }
 
     // send the frame to the encoder:
-    frame.key_frame = 1;
+    avfrm.set_keyframe(true);
     frame.pict_type = AV_PICTURE_TYPE_I;
     frame.pts = av_rescale_q(vf.time_.time_,
                              Rational(1, vf.time_.base_),

@@ -191,9 +191,6 @@ namespace yae
     bool gt(const TFrameBase & f, double dur = 0.0) const;
 
     // virtual:
-    std::string to_str(const TFrameBase & f, double dur) const;
-
-    // virtual:
     int seek(AVFormatContext * ctx, const AVStream * s) const;
 
     // bytes:
@@ -255,17 +252,6 @@ namespace yae
   {
     (void)dur;
     return f.time_.sec() < sec_;
-  }
-
-  //----------------------------------------------------------------
-  // BytePos::to_str
-  //
-  std::string
-  BytePos::to_str(const TFrameBase & f, double dur) const
-  {
-    return yae::strfmt("offset %" PRIu64 " (%s)",
-                       f.pos_,
-                       (f.time_ + dur).to_hhmmss_ms().c_str());
   }
 
 
