@@ -15,7 +15,7 @@
 #include <stdexcept>
 #include <utility>
 
-#ifdef __APPLE__
+#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wdeprecated-declarations"
 #endif
@@ -27,7 +27,7 @@
 #include <boost/thread.hpp>
 #endif
 
-#ifdef __APPLE__
+#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
 #pragma GCC diagnostic pop
 #endif
 
