@@ -80,7 +80,8 @@ namespace yae
     //----------------------------------------------------------------
     // TState
     //
-    enum TState {
+    enum TState
+    {
       kLoadFragment = 0,
       kAdjustPosition = 1,
       kReloadFragment = 2,
@@ -103,21 +104,6 @@ namespace yae
     {
       position_[0] = 0;
       position_[1] = 0;
-
-      realToComplex_ = NULL;
-      complexToReal_ = NULL;
-    }
-
-    //----------------------------------------------------------------
-    // ~AudioTempoFilter
-    //
-    ~AudioTempoFilter()
-    {
-      av_rdft_end(realToComplex_);
-      realToComplex_ = NULL;
-
-      av_rdft_end(complexToReal_);
-      complexToReal_ = NULL;
     }
 
     //----------------------------------------------------------------
@@ -128,36 +114,16 @@ namespace yae
       channels_ = numChannels;
 
       // pick a segment window size:
-      window_ = sampleRate / 24;
+      unsigned int window = std::max<unsigned int>(2, sampleRate / 24);
+
+      // initialize rDFT transforms:
+      rdft_.init(window * 2);
 
       // adjust window size to be a power-of-two integer:
-      unsigned int nlevels = floor_log2(window_);
-      unsigned int pot = 1 << nlevels;
-      YAE_ASSERT(pot <= window_);
-
-      if (pot < window_)
-      {
-        window_ = pot * 2;
-        nlevels++;
-      }
-
-      // attempt to persuade coverity scan that window_ is greater than 1:
-      YAE_ASSERT(window_ > 1);
-      window_ = std::max<unsigned int>(window_, 2);
-
-      // initialize FFT contexts:
-      av_rdft_end(realToComplex_);
-      realToComplex_ = NULL;
-
-      av_rdft_end(complexToReal_);
-      complexToReal_ = NULL;
-
-      realToComplex_ = av_rdft_init(nlevels + 1, DFT_R2C);
-      complexToReal_ = av_rdft_init(nlevels + 1, IDFT_C2R);
-      correlation_.resize<FFTComplex>(window_);
+      window_ = rdft_.po2_size() / 2;
 
       unsigned int samplesToBuffer = window_ * 3;
-      buffer_.resize(samplesToBuffer * channels_);
+      buffer_.assign(samplesToBuffer * channels_, 0);
 
       // sample the Hann window function:
       hann_.resize(window_);
@@ -238,13 +204,8 @@ namespace yae
             break;
           }
 
-          // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(window_,
-                                                  float(tmin),
-                                                  float(tmax));
-
-          // apply FFT:
-          currFrag().transform(realToComplex_);
+          // downsample and apply forward dDFT:
+          currFrag().template tx_r2c<TSample>(rdft_, float(tmin), float(tmax));
 
           // must load the second fragment before alignment can start:
           if (!nfrag_)
@@ -279,13 +240,8 @@ namespace yae
             break;
           }
 
-          // build a multi-resolution pyramid for fragment alignment:
-          currFrag().template downsample<TSample>(window_,
-                                                  float(tmin),
-                                                  float(tmax));
-
-          // apply FFT:
-          currFrag().transform(realToComplex_);
+          // downsample and apply forward dDFT:
+          currFrag().template tx_r2c<TSample>(rdft_, float(tmin), float(tmax));
 
           state_ = kOutputOverlapAdd;
         }
@@ -389,13 +345,8 @@ namespace yae
 
         if (nfrag_)
         {
-          // build a multi-resolution pyramid for fragment alignment:
-          frag.template downsample<TSample>(window_,
-                                            float(tmin),
-                                            float(tmax));
-
-          // apply FFT:
-          frag.transform(realToComplex_);
+          // downsample and apply forward dDFT:
+          frag.template tx_r2c<TSample>(rdft_, float(tmin), float(tmax));
 
           // align current fragment to previous fragment:
           if (adjustPosition())
@@ -619,15 +570,8 @@ namespace yae
         (double)(prev.position_[0] - origin_[0] + window_ / 2);
 
       const int drift = (int)(prevOutputPosition - idealOutputPosition);
-
       const int deltaMax = window_ / 2;
-
-      const int correction = frag.alignTo(prev,
-                                          window_,
-                                          deltaMax,
-                                          drift,
-                                          correlation_.data<FFTSample>(),
-                                          complexToReal_);
+      const int correction = frag.alignTo(prev, deltaMax, drift, rdft_);
 
       if (correction)
       {
@@ -692,9 +636,7 @@ namespace yae
     TState state_;
 
     // for fast correlation calculation in frequency domain:
-    RDFTContext * realToComplex_;
-    RDFTContext * complexToReal_;
-    TDataBuffer correlation_;
+    yae::rdft_t rdft_;
   };
 
   //----------------------------------------------------------------

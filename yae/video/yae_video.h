@@ -10,6 +10,7 @@
 #define YAE_VIDEO_H_
 
 // standard C++ library:
+#include <cstring>
 #include <list>
 #include <map>
 #include <set>
@@ -328,8 +329,29 @@ namespace yae
     inline TSample * data() const
     { return (TSample *)(data_ + alignmentOffset_); }
 
+    template <typename TSample>
+    inline TSample * get() const
+    { return (TSample *)(data_ + alignmentOffset_); }
+
+    template <typename TSample>
+    inline TSample * end() const
+    { return (TSample *)(data_ + alignmentOffset_+ rows_ * rowBytes_); }
+
+    template <typename TSample>
+    inline std::size_t num() const
+    { return this->size() / sizeof(TSample); }
+
     inline unsigned char * data() const
     { return data_ + alignmentOffset_; }
+
+    inline unsigned char * get() const
+    { return data_ + alignmentOffset_; }
+
+    inline unsigned char * end() const
+    { return data_ + alignmentOffset_+ rows_ * rowBytes_; }
+
+    inline std::size_t size() const
+    { return rows_ * rowBytes_; }
 
     // bytes per sample row:
     inline std::size_t rowBytes() const
@@ -338,6 +360,10 @@ namespace yae
     // rows per plane:
     inline std::size_t rows() const
     { return rows_; }
+
+    // helper:
+    inline void memset(uint8_t c)
+    { std::memset(this->data(), c, this->size()); }
 
   protected:
     unsigned char * data_;

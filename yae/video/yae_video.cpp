@@ -20,6 +20,7 @@
 // ffmpeg includes:
 extern "C"
 {
+#include <libavutil/cpu.h>
 #include <libavutil/pixdesc.h>
 }
 
@@ -380,6 +381,9 @@ namespace yae
     std::size_t planeSize = (rowBytes * rows);
     std::size_t alignmentOffset = 0;
     std::size_t currentSize = rows_ * rowBytes_;
+
+    static const std::size_t max_alignment = av_cpu_max_align();
+    alignment = std::max<std::size_t>(alignment, max_alignment);
 
     if (alignment_ == alignment && currentSize == planeSize)
     {
