@@ -9,12 +9,21 @@
 // system includes:
 #include <iostream>
 
+#ifdef __APPLE__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #include <boost/thread/thread_time.hpp>
 #include <boost/date_time/posix_time/time_formatters.hpp>
+#endif
+
+#ifdef __APPLE__
+#pragma GCC diagnostic pop
 #endif
 
 // aeyae:
