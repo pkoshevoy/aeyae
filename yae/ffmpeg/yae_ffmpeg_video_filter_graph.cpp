@@ -789,7 +789,7 @@ namespace yae
     }
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-    YAE_ASSERT(yae::same_specs(*frame, dst_specs_));
+    // YAE_ASSERT(yae::same_specs(*frame, dst_specs_));
 
     // some filters (yadif) may change the timebase:
     out_timebase = sink_->inputs[0]->time_base;

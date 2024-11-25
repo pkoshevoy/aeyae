@@ -146,11 +146,13 @@ namespace yae
     // NOTE: both input and output array pointers must be
     // aligned to av_cpu_max_align()
     //
+    // NOTE: the inverse transform always overwrites the input.
+    //
     inline void c2r(// input N/2 + 1 complex samples:
-                    const cx_t * src,
+                    cx_t * src,
                     // output N real samples:
                     re_t * dst)
-    { c2r_tx_(c2r_, dst, const_cast<cx_t *>(src), sizeof(cx_t)); }
+    { c2r_tx_(c2r_, dst, src, sizeof(cx_t)); }
 
   protected:
     AVTXContext * r2c_;

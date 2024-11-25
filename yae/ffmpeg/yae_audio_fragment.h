@@ -184,12 +184,18 @@ namespace yae
       // shortcuts:
       const uint32_t window = rdft.po2_size() / 2;
       const uint32_t half_window = window / 2;
+
+      // rdft.re_buffer().memset(0);
+      YAE_ASSERT(rdft.re_buffer().num<rdft_t::re_t>() == window * 2);
       rdft_t::re_t * correlation = rdft.re_buffer().data<rdft_t::re_t>();
 
       // calculate cross correlation in frequency domain:
       {
         const rdft_t::cx_t * xa = other.cx_.data<rdft_t::cx_t>();
         const rdft_t::cx_t * xb = this->cx_.data<rdft_t::cx_t>();
+
+        rdft.cx_buffer().memset(0);
+        YAE_ASSERT(rdft.cx_buffer().num<rdft_t::cx_t>() == window + 1);
         rdft_t::cx_t * xc = rdft.cx_buffer().data<rdft_t::cx_t>();
 
         for (uint32_t i = 0; i <= half_window; i++, xa++, xb++, xc++)
