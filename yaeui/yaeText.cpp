@@ -197,6 +197,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // enable_high_dpi_scaling
+  //
+  static bool
+  enable_high_dpi_scaling()
+  {
+    bool enable = true;
+
+#if (QT_VERSION < QT_VERSION_CHECK(5, 6, 0))
+    enable = false;
+#elif (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+    enable = QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling);
+#endif
+
+    return enable;
+  }
+
+  //----------------------------------------------------------------
   // calcBBox
   //
   static void
@@ -216,15 +233,13 @@ namespace yae
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
 
-#if QT_VERSION >= 0x050600
-    if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
+    if (enable_high_dpi_scaling())
     {
       bbox.x_ -= 0.8;
       bbox.y_ -= 0.8;
       bbox.w_ += 1.6;
       bbox.h_ += 1.6;
     }
-#endif
   }
 
   //----------------------------------------------------------------
@@ -274,15 +289,13 @@ namespace yae
     bbox.w_ = std::max(0.0, std::min(maxWidth, rect.width() / supersample));
     bbox.h_ = std::max(0.0, std::min(maxHeight, rect.height() / supersample));
 
-#if QT_VERSION >= 0x050600
-    if (QCoreApplication::testAttribute(Qt::AA_EnableHighDpiScaling))
+    if (enable_high_dpi_scaling())
     {
       bbox.x_ -= 0.8;
       bbox.y_ -= 0.8;
       bbox.w_ += 1.6;
       bbox.h_ += 1.6;
     }
-#endif
   }
 
   //----------------------------------------------------------------

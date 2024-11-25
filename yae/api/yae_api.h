@@ -100,10 +100,8 @@
   _Pragma("GCC diagnostic pop")
 #elif __GNUC__
 #  define YAE_DISABLE_DEPRECATION_WARNINGS \
-  _Pragma("GCC diagnostic ignored \"-Wdeprecated-builtins\"") \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define YAE_ENABLE_DEPRECATION_WARNINGS \
-  _Pragma("GCC diagnostic warning \"-Wdeprecated-builtins\"") \
   _Pragma("GCC diagnostic warning \"-Wdeprecated-declarations\"")
 #else
 #  define YAE_DISABLE_DEPRECATION_WARNINGS
