@@ -9,16 +9,20 @@
 #ifndef YAE_RING_BUFFER_H_
 #define YAE_RING_BUFFER_H_
 
+// aeyae:
+#include "yae/utils/yae_data.h"
+
 // standard:
 #include <vector>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// yae:
-#include "../utils/yae_data.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

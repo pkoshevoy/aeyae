@@ -9,20 +9,6 @@
 #ifndef YAE_CANVAS_H_
 #define YAE_CANVAS_H_
 
-// standard:
-#include <list>
-#include <set>
-
-// boost:
-#ifndef Q_MOC_RUN
-#include <boost/thread.hpp>
-#endif
-
-// Qt:
-#include <QEvent>
-#include <QObject>
-#include <QString>
-
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_threading.h"
@@ -32,7 +18,25 @@
 #include "yae/video/yae_video_canvas.h"
 #include "yae/video/yae_synchronous.h"
 
-// yaeiu:
+// standard:
+#include <list>
+#include <set>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/thread.hpp>
+#endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
+#include <QEvent>
+#include <QObject>
+#include <QString>
+
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeLibass.h"
 #include "yaeThumbnailProvider.h"

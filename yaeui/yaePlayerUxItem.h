@@ -9,7 +9,10 @@
 #ifndef YAE_PLAYER_UX_ITEM_H_
 #define YAE_PLAYER_UX_ITEM_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QAction>
 #include <QObject>
 #include <QMenu>

@@ -9,11 +9,14 @@
 #ifndef YAE_SPINNER_VIEW_H_
 #define YAE_SPINNER_VIEW_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QObject>
 #include <QString>
 
-// local:
+// yaeui:
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 #include "yaeSpinnerItem.h"

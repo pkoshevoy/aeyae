@@ -13,10 +13,10 @@
 #include "yae/api/yae_api.h"
 #include "yae/video/yae_video.h"
 
-// standard C++ library:
+// standard:
 #include <string>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavfilter/avfilter.h>

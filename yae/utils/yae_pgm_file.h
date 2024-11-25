@@ -9,13 +9,13 @@
 #ifndef YAE_PGM_FILE_H_
 #define YAE_PGM_FILE_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <string>
 #include <stdio.h>
-
-// yae includes:
-#include "../api/yae_api.h"
-#include "../utils/yae_utils.h"
 
 
 namespace yae

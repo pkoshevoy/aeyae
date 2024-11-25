@@ -2221,7 +2221,7 @@ namespace yae
   QPointF
   get_wheel_pos(const QWheelEvent * e)
   {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     QPointF pos = QPointF(e->pos());
 #else
     QPointF pos = e->position();
@@ -2235,7 +2235,7 @@ namespace yae
   int
   get_wheel_delta(const QWheelEvent * e)
   {
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     int delta = e->delta();
 #else
     int delta = e->angleDelta().y();

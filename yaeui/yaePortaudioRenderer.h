@@ -9,13 +9,13 @@
 #ifndef YAE_PORTAUDIO_RENDERER_H_
 #define YAE_PORTAUDIO_RENDERER_H_
 
-// system includes:
-#include <string>
-
-// yae includes:
-#include "yae/video/yae_video.h"
+// aeyae:
 #include "yae/video/yae_audio_renderer.h"
 #include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
+
+// standard:
+#include <string>
 
 
 namespace yae

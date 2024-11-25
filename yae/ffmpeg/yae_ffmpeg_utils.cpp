@@ -6,6 +6,13 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/utils/yae_time.h"
+#include "yae/video/yae_texture_generator.h"
+
 // system:
 #ifdef _WIN32
 #include <windows.h>
@@ -16,25 +23,22 @@
 #include <string>
 #include <cstring>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
 #endif
 
-// ffmpeg includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// ffmpeg:
 extern "C"
 {
 #include <libavformat/avformat.h>
 #include <libavutil/log.h>
 }
-
-// aeyae:
-#include "yae/ffmpeg/yae_demuxer.h"
-#include "yae/ffmpeg/yae_ffmpeg_utils.h"
-#include "yae/ffmpeg/yae_track.h"
-#include "yae/utils/yae_time.h"
-#include "yae/video/yae_texture_generator.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;

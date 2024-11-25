@@ -6,7 +6,16 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_remux.h"
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
+
+// system:
 #ifdef _WIN32
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -20,6 +29,7 @@
 #include <wchar.h>
 #endif
 
+// standard:
 #include <iomanip>
 #include <iostream>
 #include <limits>
@@ -27,10 +37,14 @@
 #include <stdexcept>
 #include <string>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/locale.hpp>
 
-// APPLE includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// APPLE:
 #ifdef __APPLE__
 #include <ApplicationServices/ApplicationServices.h>
 #ifdef check
@@ -42,21 +56,12 @@
 #include <signal.h>
 #endif
 
-// Qt includes:
+// Qt:
 #include <QCoreApplication>
 #include <QDir>
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QSurfaceFormat>
 #endif
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_demuxer.h"
-#include "yae/ffmpeg/yae_remux.h"
-#include "yae/utils/yae_plugin_registry.h"
-#include "yae/utils/yae_utils.h"
-#include "yae/video/yae_reader.h"
-#include "yae/video/yae_video.h"
 
 // local:
 #include "yaeMainWindow.h"

@@ -9,10 +9,13 @@
 #ifndef YAE_TEXT_H_
 #define YAE_TEXT_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QFont>
 
-// local interfaces:
+// yaeui:
 #include "yaeItem.h"
 
 

@@ -9,12 +9,12 @@
 #ifndef YAE_AUDIO_RENDERER_INPUT_H_
 #define YAE_AUDIO_RENDERER_INPUT_H_
 
-// system includes:
-#include <string>
-
-// yae includes:
+// aeyae:
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_synchronous.h"
+
+// standard:
+#include <string>
 
 
 namespace yae

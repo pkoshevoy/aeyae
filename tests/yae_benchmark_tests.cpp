@@ -6,16 +6,20 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 
-// boost library:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/test/unit_test.hpp>
 #include <boost/thread.hpp>
 
-// aeyae:
-#include "yae/utils/yae_benchmark.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 //----------------------------------------------------------------

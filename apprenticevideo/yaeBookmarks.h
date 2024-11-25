@@ -9,7 +9,7 @@
 #ifndef YAE_BOOKMARKS_H_
 #define YAE_BOOKMARKS_H_
 
-// yae includes:
+// aeyae:
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_reader.h"
 

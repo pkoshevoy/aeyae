@@ -9,12 +9,22 @@
 #ifndef YAE_TIMELINE_CONTROLS_H_
 #define YAE_TIMELINE_CONTROLS_H_
 
-// boost includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_time.h"
+#include "yae/video/yae_reader_factory.h"
+#include "yae/video/yae_synchronous.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QWidget>
 #include <QUrl>
 #include <QImage>
@@ -22,12 +32,6 @@
 #include <QLineEdit>
 #include <QTimer>
 #include <QTime>
-
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/utils/yae_time.h"
-#include "yae/video/yae_reader_factory.h"
-#include "yae/video/yae_synchronous.h"
 
 // yaeui:
 #include "yaeTimelineModel.h"
@@ -78,7 +82,7 @@ namespace yae
 
   public:
     TimelineControls(QWidget * parent = NULL,
-                     Qt::WindowFlags f = Qt::WindowFlags(0));
+                     Qt::WindowFlags f = Qt::WindowFlags());
     ~TimelineControls();
 
     TimelineModel model_;

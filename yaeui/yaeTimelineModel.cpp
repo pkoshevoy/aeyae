@@ -6,11 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// std includes:
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -22,9 +25,6 @@
 #include <QPen>
 #include <QFontMetrics>
 #include <QTime>
-
-// aeyae:
-#include "yae/utils/yae_benchmark.h"
 
 // yaeui:
 #include "yaeTimelineModel.h"
@@ -682,7 +682,7 @@ namespace yae
     timecode = timecode.simplified();
     timecode.replace(' ', separator);
 
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     QStringList hh_mm_ss_ff = timecode.split(':', QString::SkipEmptyParts);
 #else
     QStringList hh_mm_ss_ff = timecode.split(':', Qt::SkipEmptyParts);

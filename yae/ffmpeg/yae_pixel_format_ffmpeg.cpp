@@ -6,10 +6,17 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
+#include "yae/utils/yae_linear_algebra.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <cstring>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavutil/avutil.h>
@@ -17,13 +24,6 @@ extern "C"
 #include <libavutil/pixdesc.h>
 #include <libswscale/swscale.h>
 }
-
-// yae includes:
-#include "yae_ffmpeg_utils.h"
-#include "yae_pixel_format_ffmpeg.h"
-#include "../utils/yae_linear_algebra.h"
-#include "../video/yae_pixel_format_traits.h"
-#include "../video/yae_video.h"
 
 
 namespace yae

@@ -9,14 +9,14 @@
 #ifndef YAE_SEGMENT_H_
 #define YAE_SEGMENT_H_
 
-// standard libraries:
-#include <cmath>
-
 // aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_assert.h"
 
-// local interfaces:
+// standard:
+#include <cmath>
+
+// yaeui:
 #include "yaeVec.h"
 
 

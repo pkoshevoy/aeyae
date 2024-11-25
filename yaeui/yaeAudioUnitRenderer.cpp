@@ -6,9 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/video/yae_audio_renderer_input.h"
+
+// standard:
 #include <iostream>
 #include <stdexcept>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -16,8 +21,7 @@
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/video/yae_audio_renderer_input.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // yaeui:
 #include "yaeAudioUnitRenderer.h"

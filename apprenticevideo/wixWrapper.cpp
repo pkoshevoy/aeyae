@@ -6,10 +6,18 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system imports:
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/utils/yae_utils.h"
+
+// system:
+#ifdef _WIN32
 #include <windows.h>
 #define _OLEAUT32_
 #include <unknwn.h>
+#endif
+
+// standard:
 #include <iostream>
 #include <string.h>
 #include <stdlib.h>
@@ -23,6 +31,8 @@
 #include <map>
 #include <set>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -30,9 +40,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 
-// local imports:
-#include "yae/api/yae_version.h"
-#include "yae/utils/yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace shortcut:
 namespace fs = boost::filesystem;

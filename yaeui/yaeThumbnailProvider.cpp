@@ -6,25 +6,29 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_settings.h"
+#include "yae/thread/yae_threading.h"
+#include "yae/video/yae_pixel_format_traits.h"
+
+// standard:
 #include <map>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // Qt headers:
 #include <QtGlobal>
 #include <QFileInfo>
 #include <QUrl>
 
-// yae includes:
-#include "yae/api/yae_settings.h"
-#include "yae/thread/yae_threading.h"
-#include "yae/video/yae_pixel_format_traits.h"
-
-// local includes:
+// yaeui:
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 

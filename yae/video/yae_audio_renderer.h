@@ -9,15 +9,15 @@
 #ifndef YAE_AUDIO_RENDERER_H_
 #define YAE_AUDIO_RENDERER_H_
 
-// system includes:
-#include <string>
-
 // aeyae:
-#include "../api/yae_shared_ptr.h"
-#include "yae_audio_renderer_input.h"
-#include "yae_video.h"
-#include "yae_reader.h"
-#include "yae_synchronous.h"
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/video/yae_audio_renderer_input.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_synchronous.h"
+#include "yae/video/yae_video.h"
+
+// standard:
+#include <string>
 
 
 namespace yae

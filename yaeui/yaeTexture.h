@@ -9,10 +9,13 @@
 #ifndef YAE_TEXTURE_H_
 #define YAE_TEXTURE_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QImage>
 
-// local interfaces:
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeItem.h"
 

@@ -6,14 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae includes:
+// aeyae:
 #include "yae/utils/yae_benchmark.h"
 
-// local includes:
+// local:
 #include "yaePlaylistModelProxy.h"
 #include "yaeUtilsQt.h"
 
-// Qt includes:
+// Qt:
 #include <QItemSelectionModel>
 
 

@@ -6,11 +6,11 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt library:
-#include <QKeySequence>
-
 // aeyae:
 #include "yae/utils/yae_utils.h"
+
+// Qt library:
+#include <QKeySequence>
 
 // yaeui:
 #include "yaeAxisItem.h"

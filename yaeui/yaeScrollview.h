@@ -9,7 +9,10 @@
 #ifndef YAE_SCROLLVIEW_H_
 #define YAE_SCROLLVIEW_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeExpression.h"
 #include "yaeInputArea.h"

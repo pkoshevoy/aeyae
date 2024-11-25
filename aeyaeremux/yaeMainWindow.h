@@ -9,6 +9,11 @@
 #ifndef YAE_MAIN_WINDOW_H_
 #define YAE_MAIN_WINDOW_H_
 
+// aeyae:
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_remux.h"
+#include "yae/thread/yae_task_runner.h"
+
 // Qt:
 #include <QDialog>
 #include <QMainWindow>
@@ -19,11 +24,6 @@
 // Qt uic generated files:
 #include "ui_yaeAbout.h"
 #include "ui_yaeMainWindow.h"
-
-// aeyae:
-#include "yae/ffmpeg/yae_demuxer.h"
-#include "yae/ffmpeg/yae_remux.h"
-#include "yae/thread/yae_task_runner.h"
 
 // yaeui:
 #ifdef __APPLE__

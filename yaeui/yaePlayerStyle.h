@@ -12,7 +12,7 @@
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 
-// local:
+// yaeui:
 #include "yaeColor.h"
 #include "yaeGradient.h"
 #include "yaeItemView.h"

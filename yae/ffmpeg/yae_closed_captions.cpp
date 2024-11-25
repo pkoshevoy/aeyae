@@ -6,15 +6,19 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard libraries:
-#include <vector>
-
-// boost library:
-#include <boost/algorithm/string.hpp>
-
-// yae includes:
+// aeyae:
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/utils/yae_utils.h"
+
+// standard:
+#include <vector>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/algorithm/string.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace shortcuts:
 namespace al = boost::algorithm;

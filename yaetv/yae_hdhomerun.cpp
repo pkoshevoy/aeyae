@@ -6,6 +6,14 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_log.h"
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_data.h"
+#include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_mpeg_ts.h"
+
 // standard:
 #include <iomanip>
 #include <iostream>
@@ -13,11 +21,15 @@
 #include <stdio.h>
 #include <vector>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/locale.hpp>
 #include <boost/filesystem.hpp>
 #endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // ffmpeg:
 extern "C" {
@@ -30,15 +42,7 @@ extern "C" {
 // jsoncpp:
 #include "json/json.h"
 
-// yae:
-#include "yae/api/yae_log.h"
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_data.h"
-#include "yae/utils/yae_time.h"
-#include "yae/utils/yae_utils.h"
-#include "yae/video/yae_mpeg_ts.h"
-
-// epg:
+// local:
 #include "yae_hdhomerun.h"
 #include "yae_signal_handler.h"
 

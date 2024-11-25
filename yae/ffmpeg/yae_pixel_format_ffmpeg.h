@@ -13,11 +13,11 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
-// yae includes:
-#include "../video/yae_pixel_formats.h"
-#include "../video/yae_video.h"
+// aeyae:
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_video.h"
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavutil/avutil.h>

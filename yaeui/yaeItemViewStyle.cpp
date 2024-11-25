@@ -6,11 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QApplication>
 #include <QFontInfo>
 
-// local:
+// yaeui:
 #include "yaeItemViewStyle.h"
 
 
@@ -352,7 +355,7 @@ namespace yae
     font_small_.setStyleHint(QFont::SansSerif);
 
     uint32_t style_strategy = QFont::PreferOutline;
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     style_strategy |= QFont::OpenGLCompatible;
 #endif
     font_small_.setStyleStrategy((QFont::StyleStrategy)style_strategy);

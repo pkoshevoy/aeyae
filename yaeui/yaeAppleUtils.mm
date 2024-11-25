@@ -6,14 +6,14 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// standard:
 #include <vector>
 #include <string>
 
 // posix:
 #include <pthread.h>
 
-// Apple imports:
+// system:
 #import <ApplicationServices/ApplicationServices.h>
 #import <Cocoa/Cocoa.h>
 

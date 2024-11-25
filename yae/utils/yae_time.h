@@ -9,7 +9,11 @@
 #ifndef YAE_TIME_H_
 #define YAE_TIME_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
+
+// standard:
 #include <algorithm>
 #include <iostream>
 #include <limits>
@@ -19,10 +23,6 @@
 #include <string>
 #include <time.h>
 #include <vector>
-
-// yae includes:
-#include "yae/api/yae_api.h"
-#include "yae/api/yae_assert.h"
 
 
 namespace yae

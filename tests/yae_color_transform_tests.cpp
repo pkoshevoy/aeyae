@@ -6,16 +6,20 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard:
-#include <cmath>
-
-// boost library:
-#include <boost/test/unit_test.hpp>
-
 // aeyae:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/video/yae_color_transform.h"
 #include "yae/video/yae_texture_generator.h"
+
+// standard:
+#include <cmath>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/test/unit_test.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace access:
 using namespace yae;

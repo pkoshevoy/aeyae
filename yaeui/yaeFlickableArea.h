@@ -9,12 +9,19 @@
 #ifndef YAE_FLICKABLE_AREA_H_
 #define YAE_FLICKABLE_AREA_H_
 
-// boost includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #endif
 
-// local interfaces:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 #include "yaeScrollview.h"

@@ -9,12 +9,12 @@
 #ifndef YAE_PLUGIN_REGISTRY_H_
 #define YAE_PLUGIN_REGISTRY_H_
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_plugin_interface.h"
+
+// standard:
 #include <list>
 #include <map>
-
-// aeyae:
-#include "../api/yae_plugin_interface.h"
 
 
 namespace yae

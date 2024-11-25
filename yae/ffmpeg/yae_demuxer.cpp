@@ -6,19 +6,19 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard lib:
+// aeyae:
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_pixel_format_traits.h"
+
+// standard:
 #include <algorithm>
 #include <inttypes.h>
 #include <iomanip>
 #include <iterator>
 #include <limits>
 #include <stdio.h>
-
-// yae includes:
-#include "yae_demuxer.h"
-#include "yae_pixel_format_ffmpeg.h"
-#include "../utils/yae_utils.h"
-#include "../video/yae_pixel_format_traits.h"
 
 // ffmpeg:
 extern "C"

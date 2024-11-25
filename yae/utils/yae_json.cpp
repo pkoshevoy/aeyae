@@ -6,7 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae includes:
+// aeyae:
 #include "yae/utils/yae_json.h"
 #include "yae/utils/yae_time.h"
 

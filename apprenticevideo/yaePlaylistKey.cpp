@@ -6,22 +6,26 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_utils.h"
+
 // standard:
 #include <list>
 #include <string>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/filesystem.hpp>
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QFileInfo>
 #include <QUrl>
-
-// yae includes:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_utils.h"
 
 // local:
 #include "yaePlaylistKey.h"

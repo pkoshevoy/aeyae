@@ -9,10 +9,13 @@
 #ifndef YAE_APPLICATION_H_
 #define YAE_APPLICATION_H_
 
-// std includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <string>
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #include <QEvent>
 #include <QString>

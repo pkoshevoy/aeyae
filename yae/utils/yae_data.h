@@ -9,18 +9,18 @@
 #ifndef YAE_DATA_H_
 #define YAE_DATA_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
+#include "yae/api/yae_shared_ptr.h"
+
+// standard:
 #include <algorithm>
 #include <inttypes.h>
 #include <limits>
 #include <string>
 #include <string.h>
 #include <vector>
-
-// yae includes:
-#include "yae/api/yae_api.h"
-#include "yae/api/yae_assert.h"
-#include "yae/api/yae_shared_ptr.h"
 
 
 namespace yae

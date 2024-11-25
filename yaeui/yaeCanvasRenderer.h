@@ -9,27 +9,32 @@
 #ifndef YAE_CANVAS_RENDERER_H_
 #define YAE_CANVAS_RENDERER_H_
 
-// system includes:
+// aeyae:
+#include "yae/video/yae_auto_crop.h"
+#include "yae/video/yae_color_transform.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <deque>
 #include <string>
 #include <stdexcept>
 
-#ifdef __APPLE__
-#define GL_SILENCE_DEPRECATION
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-// boost includes:
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// Qt includes:
-#if defined(YAE_USE_QT4) || \
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
+#ifdef __APPLE__
+#define GL_SILENCE_DEPRECATION
+#endif
+
+#if defined(YAE_USE_QT4) ||                                     \
   (defined(YAE_USE_QT5) && !defined(YAE_USE_QOPENGL_WIDGET))
 #ifndef YAE_USE_QGL_WIDGET
 #define YAE_USE_QGL_WIDGET
@@ -50,16 +55,6 @@
 #include <QtOpenGL>
 #include <QOpenGLFunctions>
 #endif
-
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
-
-// yae includes:
-#include "yae/video/yae_auto_crop.h"
-#include "yae/video/yae_color_transform.h"
-#include "yae/video/yae_pixel_format_traits.h"
-#include "yae/video/yae_video.h"
 
 
 //----------------------------------------------------------------

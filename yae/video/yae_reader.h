@@ -9,16 +9,16 @@
 #ifndef YAE_READER_H_
 #define YAE_READER_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_plugin_interface.h"
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/video/yae_synchronous.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <string>
 #include <list>
-
-// aeyae:
-#include "../api/yae_shared_ptr.h"
-#include "../api/yae_plugin_interface.h"
-#include "../thread/yae_queue.h"
-#include "../video/yae_synchronous.h"
-#include "../video/yae_video.h"
 
 
 namespace yae

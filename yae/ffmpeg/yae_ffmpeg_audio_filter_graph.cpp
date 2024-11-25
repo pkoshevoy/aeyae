@@ -6,13 +6,13 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
-#include <sstream>
-#include <cstring>
-
 // aeyae:
-#include "yae_ffmpeg_audio_filter_graph.h"
-#include "yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_ffmpeg_audio_filter_graph.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+
+// standard:
+#include <cstring>
+#include <sstream>
 
 
 namespace yae

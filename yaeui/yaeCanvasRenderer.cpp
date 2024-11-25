@@ -6,7 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/utils/yae_benchmark.h"
+
+// standard:
 #include <algorithm>
 #include <deque>
 #include <iostream>
@@ -16,14 +20,14 @@
 #include <sstream>
 #include <string.h>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/thread.hpp>
 
-// yae includes:
-#include "yae/ffmpeg/yae_ffmpeg_utils.h"
-#include "yae/utils/yae_benchmark.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
-// local includes:
+// yaeui:
 #include "yaeCanvasRenderer.h"
 
 

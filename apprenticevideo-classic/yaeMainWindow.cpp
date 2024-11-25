@@ -6,19 +6,30 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video_renderer.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 #include <list>
 #include <math.h>
 
-// GLEW includes:
+// GLEW:
 #include <GL/glew.h>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/algorithm/string.hpp>
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
@@ -35,13 +46,6 @@
 #include <QProcess>
 #include <QDesktopServices>
 #include <QDirIterator>
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_reader_ffmpeg.h"
-#include "yae/video/yae_pixel_formats.h"
-#include "yae/video/yae_pixel_format_traits.h"
-#include "yae/video/yae_video_renderer.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -255,7 +259,6 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
-    QMainWindow(NULL, Qt::WindowFlags(0)),
     audioTrackGroup_(NULL),
     videoTrackGroup_(NULL),
     subsTrackGroup_(NULL),

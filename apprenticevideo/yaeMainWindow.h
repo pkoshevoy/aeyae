@@ -9,14 +9,14 @@
 #ifndef YAE_MAIN_WINDOW_H_
 #define YAE_MAIN_WINDOW_H_
 
-// Qt includes:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/video/yae_reader.h"
+
+// Qt:
 #include <QDialog>
 #include <QMainWindow>
 #include <QShortcut>
-
-// yae includes:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/video/yae_reader.h"
 
 // local includes:
 #include "yaeMainWidget.h"

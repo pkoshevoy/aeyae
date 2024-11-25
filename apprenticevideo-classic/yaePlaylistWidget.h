@@ -9,21 +9,21 @@
 #ifndef YAE_PLAYLIST_WIDGET_H_
 #define YAE_PLAYLIST_WIDGET_H_
 
-// std includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_tree.h"
+
+// standard:
 #include <set>
 #include <vector>
 
-// Qt includes:
+// Qt:
 #include <QAbstractScrollArea>
 #include <QEvent>
 #include <QRect>
 #include <QScrollBar>
 #include <QRubberBand>
 #include <QTimer>
-
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/utils/yae_tree.h"
 
 // local:
 #include "yaeBookmarks.h"
@@ -118,7 +118,7 @@ namespace yae
 
   public:
     PlaylistWidget(QWidget * parent = NULL,
-                   Qt::WindowFlags f = Qt::WindowFlags(0));
+                   Qt::WindowFlags f = Qt::WindowFlags());
 
     // virtual:
     QSize minimumSizeHint() const;

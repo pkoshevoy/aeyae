@@ -6,14 +6,14 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
-#include <sstream>
-#include <cstring>
-
 // aeyae:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_ffmpeg_video_filter_graph.h"
 #include "yae/utils/yae_benchmark.h"
+
+// standard:
+#include <cstring>
+#include <sstream>
 
 
 namespace yae

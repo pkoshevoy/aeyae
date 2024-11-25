@@ -6,15 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae_synchronous.h"
+
+// standard:
 #include <iostream>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
-// boost includes:
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
@@ -22,12 +22,7 @@
 #include <boost/date_time/posix_time/time_formatters.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
-
-// aeyae:
-#include "yae_synchronous.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace access:
 using boost::posix_time::to_simple_string;

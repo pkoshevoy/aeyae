@@ -9,7 +9,10 @@
 #ifndef YAE_IMAGE_LIVE_H_
 #define YAE_IMAGE_LIVE_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeItem.h"
 
 

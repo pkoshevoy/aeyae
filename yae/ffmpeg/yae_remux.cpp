@@ -6,6 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_demuxer.h"
+#include "yae/ffmpeg/yae_remux.h"
+#include "yae/utils/yae_json.h"
+
 // standard:
 #include <iomanip>
 #include <iostream>
@@ -13,17 +19,15 @@
 #include <list>
 #include <string>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/filesystem/path.hpp>
 
+YAE_ENABLE_DEPRECATION_WARNINGS
+
 // jsoncpp:
 #include "json/json.h"
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_demuxer.h"
-#include "yae/ffmpeg/yae_remux.h"
-#include "yae/utils/yae_json.h"
 
 // namespace shortcuts:
 namespace fs = boost::filesystem;

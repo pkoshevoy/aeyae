@@ -9,12 +9,15 @@
 #ifndef YAE_TEXT_INPUT_H_
 #define YAE_TEXT_INPUT_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QEvent>
 #include <QFont>
 #include <QObject>
 
-// local interfaces:
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItem.h"
 #include "yaeText.h"

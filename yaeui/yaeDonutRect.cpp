@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeDonutRect.h"
 
 

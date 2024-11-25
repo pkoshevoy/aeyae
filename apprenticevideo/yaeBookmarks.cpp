@@ -6,10 +6,13 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <limits>
 
-// Qt includes:
+// Qt:
 #include <QString>
 #include <QXmlStreamReader>
 #include <QXmlStreamWriter>

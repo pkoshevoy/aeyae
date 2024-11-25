@@ -9,8 +9,15 @@
 #ifndef YAE_RECORDING_H_
 #define YAE_RECORDING_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/video/yae_istream.h"
+#include "yae/video/yae_mpeg_ts.h"
+
 // standard:
 #include <string>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -18,10 +25,7 @@
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/video/yae_istream.h"
-#include "yae/video/yae_mpeg_ts.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace shortcut:
 namespace fs = boost::filesystem;

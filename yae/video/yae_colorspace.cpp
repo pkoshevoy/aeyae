@@ -6,6 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_assert.h"
+#include "yae/video/yae_colorspace.h"
+
 // standard:
 #include <algorithm>
 #include <cmath>
@@ -19,14 +23,14 @@ extern "C"
 #include <libavutil/pixdesc.h>
 }
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_assert.h"
-#include "yae/video/yae_colorspace.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

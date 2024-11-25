@@ -6,7 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/thread/yae_threading.h"
+
+// standard:
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -14,19 +19,18 @@
 #include <math.h>
 #include <deque>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/thread.hpp>
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QApplication>
 #include <QEvent>
 #include <QKeyEvent>
 #include <QMenu>
-
-// yae includes:
-#include "yae/video/yae_video.h"
-#include "yae/video/yae_pixel_format_traits.h"
-#include "yae/thread/yae_threading.h"
 
 // yaeui:
 #include "yaeCanvas.h"
@@ -1554,7 +1558,7 @@ namespace yae
 
     uint32_t style_strategy = QFont::PreferOutline;
     style_strategy |= QFont::PreferAntialias;
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     style_strategy |= QFont::OpenGLCompatible;
 #endif
     ft.setStyleStrategy((QFont::StyleStrategy)style_strategy);

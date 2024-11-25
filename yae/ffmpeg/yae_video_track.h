@@ -9,18 +9,22 @@
 #ifndef YAE_VIDEO_TRACK_H_
 #define YAE_VIDEO_TRACK_H_
 
-// boost library:
-#ifndef Q_MOC_RUN
-#include <boost/chrono/chrono.hpp>
-#include <boost/shared_ptr.hpp>
-#endif
-
-// yae includes:
+// aeyae:
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_ffmpeg_video_filter_graph.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/ffmpeg/yae_track.h"
 #include "yae/thread/yae_queue.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/chrono/chrono.hpp>
+#include <boost/shared_ptr.hpp>
+#endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

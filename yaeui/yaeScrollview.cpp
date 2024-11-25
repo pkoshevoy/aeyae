@@ -9,7 +9,7 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 
-// local:
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeFlickableArea.h"
 #include "yaeItemView.h"

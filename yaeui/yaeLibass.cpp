@@ -6,21 +6,21 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard libraries:
+// aeyae:
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QFont>
 #include <QString>
 
-// yae includes:
-#include "yae/utils/yae_utils.h"
-
-// local includes:
+// yaeui:
 #include "yaeLibass.h"
 #include "yaeUtilsQt.h"
 

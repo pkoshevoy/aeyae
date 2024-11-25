@@ -9,7 +9,7 @@
 // aeyae:
 #include "yae/api/yae_log.h"
 
-// local:
+// yaeui:
 #include "yaeCheckboxItem.h"
 #include "yaeItemViewStyle.h"
 #include "yaeLShape.h"

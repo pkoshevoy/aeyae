@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeColor.h"
 #include "yaeDashedRect.h"
 #include "yaeDonutRect.h"

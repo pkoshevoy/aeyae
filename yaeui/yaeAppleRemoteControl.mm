@@ -6,10 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Apple imports:
+// system:
 #import <Cocoa/Cocoa.h>
 
-// local imports:
+// yaeui:
 #import "yaeAppleRemoteControl.h"
 #import "AppleRemote.h"
 #import "MultiClickRemoteBehavior.h"

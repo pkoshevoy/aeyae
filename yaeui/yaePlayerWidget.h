@@ -9,16 +9,20 @@
 #ifndef YAE_PLAYER_WIDGET_H_
 #define YAE_PLAYER_WIDGET_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // Qt:
 #include <QDialog>
 #include <QMenu>
 #include <QWidget>
 
-// local:
+// yaeui:
 #include "yaeCanvasWidget.h"
 #include "yaeConfirmView.h"
 #include "yaePlayerShortcuts.h"
 #include "yaePlayerView.h"
+
 
 namespace yae
 {

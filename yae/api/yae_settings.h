@@ -9,17 +9,17 @@
 #ifndef YAE_SETTINGS_H_
 #define YAE_SETTINGS_H_
 
-// standard C++ library:
+// aeyae:
+#include "yae_api.h"
+#include "yae_assert.h"
+#include "yae_settings_interface.h"
+
+// standard:
 #include <algorithm>
 #include <cstring>
 #include <string>
 #include <utility>
 #include <vector>
-
-// aeyae:
-#include "yae_api.h"
-#include "yae_assert.h"
-#include "yae_settings_interface.h"
 
 
 namespace yae

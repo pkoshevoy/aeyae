@@ -6,11 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// std includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #include <QKeyEvent>
 #include <QMouseEvent>
@@ -227,7 +230,7 @@ namespace yae
     clockFont.setFixedPitch(true);
 
     uint32_t style_strategy = QFont::PreferOutline;
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     style_strategy |= QFont::OpenGLCompatible;
 #endif
     clockFont.setStyleStrategy((QFont::StyleStrategy)style_strategy);

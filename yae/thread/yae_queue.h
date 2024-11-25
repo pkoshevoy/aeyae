@@ -9,17 +9,21 @@
 #ifndef YAE_QUEUE_H_
 #define YAE_QUEUE_H_
 
-// system includes:
+// aeyae:
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <set>
 #include <list>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// yae includes:
-#include "../video/yae_video.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

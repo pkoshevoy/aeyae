@@ -6,10 +6,13 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // standard:
 #include <math.h>
 
-// local:
+// yaeui:
 #include "yaeArrowItem.h"
 #include "yaeBBox.h"
 

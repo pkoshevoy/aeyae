@@ -6,18 +6,22 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_type_name.h"
+
+// standard:
 #include <iostream>
 #include <list>
 #include <set>
 #include <vector>
 
-// boost library:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/test/unit_test.hpp>
 
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_type_name.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 //----------------------------------------------------------------

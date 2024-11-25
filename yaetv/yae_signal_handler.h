@@ -9,14 +9,21 @@
 #ifndef YAE_SIGNAL_HANDLER_H_
 #define YAE_SIGNAL_HANDLER_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // standard:
 #include <set>
 #include <utility>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

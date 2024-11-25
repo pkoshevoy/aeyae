@@ -9,29 +9,33 @@
 #ifndef YAE_TRACK_H_
 #define YAE_TRACK_H_
 
-// system includes:
+// aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_time.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <limits>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 
-// ffmpeg includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// ffmpeg:
 extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 }
-
-// yae includes:
-#include "yae/ffmpeg/yae_ffmpeg_utils.h"
-#include "yae/thread/yae_queue.h"
-#include "yae/thread/yae_threading.h"
-#include "yae/utils/yae_time.h"
-#include "yae/video/yae_video.h"
 
 
 namespace yae

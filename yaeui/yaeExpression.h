@@ -9,13 +9,13 @@
 #ifndef YAE_EXPRESSION_H_
 #define YAE_EXPRESSION_H_
 
-// standard libraries:
-#include <stdexcept>
-
-// yae includes:
+// aeyae:
 #include "yae/api/yae_api.h"
 
-// local:
+// standard:
+#include <stdexcept>
+
+// yaeui:
 #include "yaeProperty.h"
 
 

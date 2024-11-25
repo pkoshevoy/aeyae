@@ -6,17 +6,20 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <algorithm>
 
-// Qt library:
+// Qt:
 #include <QApplication>
 #include <QImage>
 #include <QLineEdit>
 #include <QPainter>
 #include <QTextLayout>
 
-// local interfaces:
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeItemFocus.h"
 #include "yaeTextInput.h"

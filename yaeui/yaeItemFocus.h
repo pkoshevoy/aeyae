@@ -9,17 +9,17 @@
 #ifndef YAE_ITEM_FOCUS_H_
 #define YAE_ITEM_FOCUS_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+
+// standard:
 #include <algorithm>
 #include <limits>
 #include <map>
 #include <set>
 #include <utility>
 
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
-
-// local interfaces:
+// yaeui:
 #include "yaeExpression.h"
 #include "yaeInputArea.h"
 #include "yaeItem.h"

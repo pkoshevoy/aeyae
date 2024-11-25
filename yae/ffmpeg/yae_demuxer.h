@@ -9,26 +9,7 @@
 #ifndef YAE_DEMUXER_H_
 #define YAE_DEMUXER_H_
 
-// system includes:
-#include <list>
-#include <map>
-#include <string>
-#include <vector>
-
-// boost includes:
-#ifndef Q_MOC_RUN
-#include <boost/shared_ptr.hpp>
-#include <boost/thread.hpp>
-#endif
-
-// ffmpeg includes:
-extern "C"
-{
-#include <libavformat/avformat.h>
-#include <libavutil/log.h>
-}
-
-// yae includes:
+// aeyae:
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_audio_track.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
@@ -36,6 +17,29 @@ extern "C"
 #include "yae/ffmpeg/yae_video_track.h"
 #include "yae/video/yae_video.h"
 #include "yae/video/yae_synchronous.h"
+
+// sstandard:
+#include <list>
+#include <map>
+#include <string>
+#include <vector>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#include <boost/thread.hpp>
+#endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// ffmpeg includes:
+extern "C"
+{
+#include <libavformat/avformat.h>
+#include <libavutil/log.h>
+}
 
 
 namespace yae

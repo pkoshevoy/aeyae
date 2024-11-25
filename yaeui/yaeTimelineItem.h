@@ -9,13 +9,16 @@
 #ifndef YAE_TIMELINE_ITEM_H_
 #define YAE_TIMELINE_ITEM_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // standard:
 #include <list>
 
-// Qt includes:
+// Qt:
 #include <QObject>
 
-// local interfaces:
+// yaeui:
 #include "yaeGradient.h"
 #include "yaeInputArea.h"
 #include "yaeItem.h"

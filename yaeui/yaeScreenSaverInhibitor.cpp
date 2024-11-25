@@ -6,18 +6,14 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_assert.h"
+
+// system:
 #ifdef _WIN32
 #include <windows.h>
 #endif
 
-// standard C++:
-#include <iostream>
-
-// Qt includes:
-#include <QApplication>
-#include <QTimer>
-
-// platform includes:
 #ifdef __APPLE__
 #include <AvailabilityMacros.h>
 #include <CoreServices/CoreServices.h>
@@ -26,8 +22,12 @@
 #include <QtDBus/QtDBus>
 #endif
 
-// aeyae:
-#include "yae/api/yae_assert.h"
+// standard:
+#include <iostream>
+
+// Qt:
+#include <QApplication>
+#include <QTimer>
 
 // yaeui:
 #include "yaeScreenSaverInhibitor.h"

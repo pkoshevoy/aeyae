@@ -9,10 +9,16 @@
 #ifndef YAE_LRU_CACHE_H_
 #define YAE_LRU_CACHE_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_utils.h"
+
 // standard:
 #include <algorithm>
 #include <list>
 #include <map>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -21,9 +27,7 @@
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/utils/yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

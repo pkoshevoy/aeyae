@@ -6,12 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // system:
 #include <limits>
 #include <map>
 #include <math.h>
 
-// local:
+// yaeui:
 #include "yaeAxisItem.h"
 
 

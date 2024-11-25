@@ -6,16 +6,23 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost library:
 #ifndef Q_MOC_RUN
 #include <boost/chrono.hpp>
 #endif
 
-// Qt library:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QApplication>
 #include <QTimer>
 
-// local interfaces:
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeFlickableArea.h"
 #include "yaeScrollview.h"

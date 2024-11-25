@@ -9,12 +9,12 @@
 #ifndef YAE_CANVAS_QPAINTER_UTILS_H_
 #define YAE_CANVAS_QPAINTER_UTILS_H_
 
-// Qt includes:
+// aeyae:
+#include "yae/video/yae_video.h"
+
+// Qt:
 #include <QImage>
 #include <QPainter>
-
-// yae includes:
-#include "yae/video/yae_video.h"
 
 
 namespace yae

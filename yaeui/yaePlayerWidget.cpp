@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QActionGroup>
 #include <QApplication>
 #include <QDesktopServices>
@@ -21,7 +24,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
-// local:
+// yaeui:
 #include "yaePlayerWidget.h"
 
 

@@ -9,16 +9,16 @@
 #ifndef YAE_CLOSED_CAPTIONS_H_
 #define YAE_CLOSED_CAPTIONS_H_
 
-// standard libraries:
-#include <map>
-#include <string>
-
-// yae includes:
+// aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/ffmpeg/yae_track.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 
-// ffmpeg includes:
+// standard:
+#include <map>
+#include <string>
+
+// ffmpeg:
 extern "C"
 {
 #include <libavcodec/avcodec.h>

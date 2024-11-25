@@ -31,7 +31,7 @@ namespace yae
 
     uint32_t style_strategy = QFont::PreferOutline;
     style_strategy |= QFont::PreferAntialias;
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     style_strategy |= QFont::OpenGLCompatible;
 #endif
     font_small_.setStyleStrategy((QFont::StyleStrategy)style_strategy);

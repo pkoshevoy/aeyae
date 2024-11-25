@@ -9,7 +9,10 @@
 #ifndef YAE_LSHAPE_H_
 #define YAE_LSHAPE_H_
 
-// local:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeItem.h"
 
 

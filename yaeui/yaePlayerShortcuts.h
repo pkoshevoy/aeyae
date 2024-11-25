@@ -9,6 +9,9 @@
 #ifndef YAE_PLAYER_SHORTCUTS_H_
 #define YAE_PLAYER_SHORTCUTS_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // Qt:
 #include <QShortcut>
 #include <QWidget>

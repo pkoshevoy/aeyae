@@ -9,7 +9,7 @@
 #ifndef YAE_VIDEO_CANVAS_H_
 #define YAE_VIDEO_CANVAS_H_
 
-// yae includes:
+// aeyae:
 #include "yae_video.h"
 
 

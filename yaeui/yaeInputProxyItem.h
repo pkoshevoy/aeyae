@@ -9,7 +9,10 @@
 #ifndef YAE_INPUT_PROXY_ITEM_H_
 #define YAE_INPUT_PROXY_ITEM_H_
 
-// local:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItemFocus.h"
 

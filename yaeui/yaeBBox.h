@@ -9,7 +9,10 @@
 #ifndef YAE_BBOX_H_
 #define YAE_BBOX_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeSegment.h"
 #include "yaeVec.h"
 

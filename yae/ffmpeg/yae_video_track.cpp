@@ -6,17 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// boost library:
-#include <boost/algorithm/string.hpp>
-
-// ffmpeg includes:
-extern "C"
-{
-#include <libavutil/display.h>
-#include <libavutil/mastering_display_metadata.h>
-}
-
-// yae includes:
+// aeyae:
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
@@ -26,6 +16,20 @@ extern "C"
 #include "yae/utils/yae_utils.h"
 #include "yae/video/yae_pixel_format_traits.h"
 #include "yae/video/yae_texture_generator.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/algorithm/string.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// ffmpeg:
+extern "C"
+{
+#include <libavutil/display.h>
+#include <libavutil/mastering_display_metadata.h>
+}
 
 // namespace shortcuts:
 namespace al = boost::algorithm;

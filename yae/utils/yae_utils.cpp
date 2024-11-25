@@ -22,7 +22,10 @@
 #define _FILE_OFFSET_BITS 64
 #endif
 
-// system includes:
+// aeyae:
+#include "yae/utils/yae_utils.h"
+
+// system:
 #ifdef __APPLE__
 #include <CoreServices/CoreServices.h>
 #include <sys/param.h>
@@ -40,18 +43,17 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <fcntl.h>
+
+// standard:
 #include <iostream>
+#include <math.h>
 #include <sstream>
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
 #include <vector>
-#include <math.h>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost includes:
 #ifndef Q_MOC_RUN
@@ -61,12 +63,7 @@
 #include <boost/uuid/uuid_io.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
-
-// aeyae:
-#include "yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

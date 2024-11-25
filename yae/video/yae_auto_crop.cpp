@@ -6,19 +6,23 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae_pixel_format_traits.h"
+#include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_auto_crop.h"
+
+// system:
 #include <iostream>
 #include <map>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/thread.hpp>
 
-// yae includes:
-#include "yae_video.h"
-#include "yae_auto_crop.h"
-#include "yae_pixel_format_traits.h"
-#include "../thread/yae_threading.h"
-#include "../utils/yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

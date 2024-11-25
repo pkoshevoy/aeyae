@@ -9,6 +9,11 @@
 #ifndef YAE_AUDIO_FRAGMENT_H_
 #define YAE_AUDIO_FRAGMENT_H_
 
+// aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_rdft.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_video.h"
+
 #ifdef _WIN32
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -18,7 +23,7 @@
 #endif
 #endif
 
-// std includes:
+// standard:
 #include <math.h>
 #include <string.h>
 #include <iostream>
@@ -26,15 +31,10 @@
 #include <vector>
 #include <limits>
 
-// yae includes:
-#include "../utils/yae_utils.h"
-#include "../video/yae_video.h"
-#include "yae/ffmpeg/yae_ffmpeg_rdft.h"
-
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
-#include <libavcodec/avfft.h>
+#include <libavutil/tx.h>
 }
 
 
@@ -95,8 +95,8 @@ namespace yae
     template <typename TSample>
     void
     tx_r2c(yae::rdft_t & rdft,
-           rdft_t::re_t min0 = rdft_t::re_t(std::numeric_limits<TSample>::min()),
-           rdft_t::re_t max0 = rdft_t::re_t(std::numeric_limits<TSample>::max()))
+           float min0 = float(std::numeric_limits<TSample>::min()),
+           float max0 = float(std::numeric_limits<TSample>::max()))
     {
       // shortcuts:
       const unsigned char * src = data_.empty() ? NULL : &data_[0];

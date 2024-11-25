@@ -9,10 +9,13 @@
 #ifndef YAE_ASPECT_RATIO_ITEM_H_
 #define YAE_ASPECT_RATIO_ITEM_H_
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QObject>
 
-// local:
+// yaeui:
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"
 

@@ -6,12 +6,15 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-
-// boost library:
-#include <boost/test/unit_test.hpp>
-
 // aeyae:
 #include "yae/utils/yae_data.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/test/unit_test.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // shortcut:
 using namespace yae;

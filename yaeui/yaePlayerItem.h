@@ -9,12 +9,6 @@
 #ifndef YAE_PLAYER_ITEM_H_
 #define YAE_PLAYER_ITEM_H_
 
-// standard:
-#include <limits>
-
-// Qt library
-#include <QObject>
-
 // aeyae:
 #include "yae/utils/yae_time.h"
 #include "yae/video/yae_audio_renderer.h"
@@ -23,7 +17,13 @@
 #include "yae/video/yae_video_canvas.h"
 #include "yae/video/yae_video_renderer.h"
 
-// local:
+// standard:
+#include <limits>
+
+// Qt:
+#include <QObject>
+
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeItem.h"
 #include "yaeTimelineModel.h"

@@ -1494,7 +1494,7 @@ namespace yae
     }
 
     // seek back and forth here:
-#if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
+#if (QT_VERSION < QT_VERSION_CHECK(5, 15, 0))
     int delta = e->delta();
 #else
     int delta = e->angleDelta().y();

@@ -6,19 +6,23 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_log.h"
+#include "yae/utils/yae_timesheet.h"
+
+// standard:
 #include <iostream>
 #include <iomanip>
 #include <map>
 #include <string>
 #include <sstream>
 
-// boost library:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/thread.hpp>
 
-// aeyae:
-#include "../api/yae_log.h"
-#include "yae_timesheet.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

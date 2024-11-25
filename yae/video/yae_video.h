@@ -9,7 +9,15 @@
 #ifndef YAE_VIDEO_H_
 #define YAE_VIDEO_H_
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_linear_algebra.h"
+#include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_colorspace.h"
+#include "yae/video/yae_pixel_formats.h"
+
+// standard:
 #include <cstring>
 #include <list>
 #include <map>
@@ -17,7 +25,7 @@
 #include <string>
 #include <vector>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavcodec/packet.h>
@@ -26,18 +34,14 @@ extern "C"
 #include <libavutil/samplefmt.h>
 }
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/utils/yae_linear_algebra.h"
-#include "yae/utils/yae_time.h"
-#include "yae/utils/yae_utils.h"
-#include "yae/video/yae_colorspace.h"
-#include "yae/video/yae_pixel_formats.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

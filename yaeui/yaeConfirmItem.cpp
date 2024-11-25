@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeConfirmItem.h"
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
@@ -14,6 +17,7 @@
 #include "yaeRectangle.h"
 #include "yaeRoundRect.h"
 #include "yaeText.h"
+
 
 namespace yae
 {

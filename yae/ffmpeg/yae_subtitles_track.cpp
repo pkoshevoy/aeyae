@@ -6,7 +6,7 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae includes:
+// aeyae:
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/utils/yae_utils.h"

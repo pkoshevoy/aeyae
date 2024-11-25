@@ -6,16 +6,23 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <cmath>
 #include <iomanip>
 #include <limits>
 #include <sstream>
 
-// boost library:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/chrono.hpp>
 
-// Qt library:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QApplication>
 #include <QFontMetricsF>
 #include <QKeyEvent>
@@ -25,7 +32,7 @@
 #include <QUrl>
 #include <QWheelEvent>
 
-// local interfaces:
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItem.h"
 

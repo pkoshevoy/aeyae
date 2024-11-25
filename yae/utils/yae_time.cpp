@@ -6,7 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <ctype.h>
 #include <iomanip>
 #include <iterator>
@@ -16,15 +20,12 @@
 #include <sstream>
 #include <time.h>
 
+// system:
 #ifdef _WIN32
 #include <windows.h>
 #else
 #include <sys/time.h>
 #endif
-
-// yae includes:
-#include "yae/utils/yae_time.h"
-#include "yae/utils/yae_utils.h"
 
 
 namespace yae

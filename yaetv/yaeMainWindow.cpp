@@ -6,17 +6,30 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_live_reader.h"
+#include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_plugin_registry.h"
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_pixel_format_traits.h"
+#include "yae/video/yae_video_renderer.h"
+
+// standard:
 #include <iostream>
 #include <sstream>
 #include <list>
 #include <math.h>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/algorithm/string.hpp>
 #include <boost/interprocess/smart_ptr/unique_ptr.hpp>
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QActionGroup>
 #include <QApplication>
 #include <QCheckBox>
@@ -37,15 +50,6 @@
 
 // jsoncpp:
 #include "json/json.h"
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_live_reader.h"
-#include "yae/utils/yae_benchmark.h"
-#include "yae/utils/yae_plugin_registry.h"
-#include "yae/video/yae_pixel_formats.h"
-#include "yae/video/yae_pixel_format_traits.h"
-#include "yae/video/yae_video_renderer.h"
 
 // local:
 #include "yaeMainWindow.h"
@@ -451,7 +455,6 @@ namespace yae
   //
   MainWindow::MainWindow(const std::string & yaetv_dir,
                          const std::string & recordings_dir):
-    QMainWindow(NULL, Qt::WindowFlags(0)),
     popup_(NULL),
     shortcutExit_(NULL),
     preferencesDialog_(NULL),

@@ -9,15 +9,15 @@
 #ifndef YAE_OPTION_ITEM_H_
 #define YAE_OPTION_ITEM_H_
 
+// aeyae:
+#include "yae/video/yae_video.h"
+
 // standard:
 #include <string>
 #include <vector>
 
-// Qt library:
+// Qt:
 #include <QObject>
-
-// aeyae:
-#include "yae/video/yae_video.h"
 
 // yaeui:
 #include "yaeItem.h"

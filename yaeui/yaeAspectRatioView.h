@@ -9,7 +9,10 @@
 #ifndef YAE_ASPECT_RATIO_VIEW_H_
 #define YAE_ASPECT_RATIO_VIEW_H_
 
-// local:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeAspectRatioItem.h"
 #include "yaeItemView.h"
 #include "yaeItemViewStyle.h"

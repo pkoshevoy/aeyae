@@ -10,10 +10,10 @@
 #define YAE_LOG_H_
 
 // aeyae:
-#include "../api/yae_api.h"
-#include "../api/yae_shared_ptr.h"
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_shared_ptr.h"
 
-// standard C++ library:
+// standard:
 #include <map>
 #include <sstream>
 #include <string>

@@ -6,11 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QImage>
 #include <QString>
 
-// local interfaces:
+// yaeui:
 #include "yaeCanvasRenderer.h"
 #include "yaeImage.h"
 #include "yaeTexture.h"

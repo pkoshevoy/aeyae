@@ -6,7 +6,7 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local interfaces:
+// yaeui:
 #include "yaeBBox.h"
 #include "yaeRectangle.h"
 

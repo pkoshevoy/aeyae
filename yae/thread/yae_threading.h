@@ -9,16 +9,20 @@
 #ifndef YAE_THREADING_H_
 #define YAE_THREADING_H_
 
-// system includes:
+// aeyae:
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <iostream>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "../video/yae_video.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

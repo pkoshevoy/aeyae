@@ -9,7 +9,10 @@
 #ifndef YAE_FRAME_CROP_VIEW_H_
 #define YAE_FRAME_CROP_VIEW_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeFrameCropItem.h"
 #include "yaeItemView.h"
 

@@ -9,7 +9,10 @@
 #ifndef YAE_PLOT_ITEM_H_
 #define YAE_PLOT_ITEM_H_
 
-// local:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeItem.h"
 
 

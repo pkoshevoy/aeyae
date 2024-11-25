@@ -6,11 +6,14 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <algorithm>
 #include <cmath>
 
-// local interfaces:
+// local:
 #include "yaePlaylistViewStyle.h"
 #include "yaeText.h"
 #include "yaeTexture.h"

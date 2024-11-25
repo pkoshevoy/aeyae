@@ -6,16 +6,20 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/thread/yae_threading.h"
+#include "yae/video/yae_video_renderer.h"
+
+// standard:
 #include <algorithm>
 #include <limits>
 
-// boost libraries:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/thread/thread.hpp>
 
-// yae includes:
-#include "yae_video_renderer.h"
-#include "../thread/yae_threading.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 //----------------------------------------------------------------
 // YAE_DEBUG_VIDEO_RENDERER

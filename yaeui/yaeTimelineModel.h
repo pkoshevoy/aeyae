@@ -9,12 +9,22 @@
 #ifndef YAE_TIMELINE_MODEL_H_
 #define YAE_TIMELINE_MODEL_H_
 
-// boost includes:
+// aeyae:
+#include "yae/utils/yae_time.h"
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_synchronous.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQuickItem>
 #else
@@ -23,12 +33,6 @@
 #include <QEvent>
 #include <QTimer>
 #include <QTime>
-
-// yae includes:
-#include "yae/utils/yae_time.h"
-#include "yae/video/yae_video.h"
-#include "yae/video/yae_reader.h"
-#include "yae/video/yae_synchronous.h"
 
 
 namespace yae

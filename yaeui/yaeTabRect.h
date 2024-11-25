@@ -9,7 +9,10 @@
 #ifndef YAE_TAB_RECT_H_
 #define YAE_TAB_RECT_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeInputArea.h"
 #include "yaeItemView.h"
 

@@ -9,7 +9,10 @@
 #ifndef YAE_SHARED_PTR_H_
 #define YAE_SHARED_PTR_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <algorithm>
 #include <cassert>
 #include <iostream>
@@ -26,12 +29,11 @@
 #else
 # define YAE_USE_BOOST_ATOMICS
 # ifndef Q_MOC_RUN
+YAE_DISABLE_DEPRECATION_WARNINGS
 #  include <boost/atomic.hpp>
+YAE_ENABLE_DEPRECATION_WARNINGS
 # endif
 #endif
-
-// aeyae:
-#include "../api/yae_api.h"
 
 
 namespace yae

@@ -9,12 +9,12 @@
 #ifndef YAE_SETTINGS_INTERFACE_H_
 #define YAE_SETTINGS_INTERFACE_H_
 
-// standard C++ library:
-#include <cstddef>
-#include <limits>
-
 // aeyae:
 #include "yae_api.h"
+
+// standard:
+#include <cstddef>
+#include <limits>
 
 
 namespace yae

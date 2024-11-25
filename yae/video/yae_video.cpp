@@ -6,7 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++ library:
+// aeyae:
+#include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
@@ -17,17 +22,12 @@
 #include <string.h>
 #include <math.h>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavutil/cpu.h>
 #include <libavutil/pixdesc.h>
 }
-
-// yae includes:
-#include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
-#include "yae/video/yae_reader.h"
-#include "yae/video/yae_video.h"
 
 
 namespace yae

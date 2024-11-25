@@ -9,6 +9,10 @@
 #ifndef YAE_AUDIO_TEMPO_FILTER_H_
 #define YAE_AUDIO_TEMPO_FILTER_H_
 
+// aeyae:
+#include "yae/ffmpeg/yae_audio_fragment.h"
+#include "yae/video/yae_video.h"
+
 #ifdef _WIN32
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
@@ -18,15 +22,11 @@
 #endif
 #endif
 
-// std includes:
+// standard:
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
 #include <vector>
-
-// yae includes:
-#include "yae_audio_fragment.h"
-#include "../video/yae_video.h"
 
 
 namespace yae

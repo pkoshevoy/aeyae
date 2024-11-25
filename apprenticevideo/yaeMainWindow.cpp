@@ -6,14 +6,22 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
+
 // system:
 #include <list>
 #include <math.h>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/algorithm/string.hpp>
 #endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // Qt:
 #include <QApplication>
@@ -26,10 +34,6 @@
 #include <QShortcut>
 #include <QUrl>
 #include <QVBoxLayout>
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_reader_ffmpeg.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -73,7 +77,6 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow(const TReaderFactoryPtr & readerFactory):
-    QMainWindow(NULL, Qt::WindowFlags(0)),
     playerWidget_(NULL)
   {
     setupUi(this);

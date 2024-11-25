@@ -9,18 +9,6 @@
 #ifndef YAE_DVR_H_
 #define YAE_DVR_H_
 
-// standard:
-#include <list>
-#include <map>
-#include <string>
-
-// boost:
-#ifndef Q_MOC_RUN
-#include <boost/filesystem.hpp>
-#include <boost/random/mersenne_twister.hpp>
-#include <boost/thread.hpp>
-#endif
-
 // aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_log.h"
@@ -33,7 +21,23 @@
 #include "yae/video/yae_mpeg_ts.h"
 #include "yae/video/yae_recording.h"
 
-// epg:
+// standard:
+#include <list>
+#include <map>
+#include <string>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/filesystem.hpp>
+#include <boost/random/mersenne_twister.hpp>
+#include <boost/thread.hpp>
+#endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// local:
 #include "yae_hdhomerun.h"
 
 // namespace shortcut:

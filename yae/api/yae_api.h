@@ -82,19 +82,28 @@
 // YAE_DISABLE_DEPRECATION_WARNINGS
 //
 #if defined(__ICL) || defined (__INTEL_COMPILER)
-#  define YAE_DISABLE_DEPRECATION_WARNINGS                               \
+#  define YAE_DISABLE_DEPRECATION_WARNINGS \
   __pragma(warning(push)) __pragma(warning(disable:1478))
-#  define YAE_ENABLE_DEPRECATION_WARNINGS                                \
+#  define YAE_ENABLE_DEPRECATION_WARNINGS \
   __pragma(warning(pop))
 #elif defined(_MSC_VER)
-#  define YAE_DISABLE_DEPRECATION_WARNINGS                               \
+#  define YAE_DISABLE_DEPRECATION_WARNINGS \
   __pragma(warning(push)) __pragma(warning(disable:4996))
-#  define YAE_ENABLE_DEPRECATION_WARNINGS                                \
+#  define YAE_ENABLE_DEPRECATION_WARNINGS \
   __pragma(warning(pop))
-#elif __GNUC__
-#  define YAE_DISABLE_DEPRECATION_WARNINGS                               \
+#elif defined(__clang__) && __clang__
+#  define YAE_DISABLE_DEPRECATION_WARNINGS \
+  _Pragma("GCC diagnostic push") \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-builtins\"") \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
-#  define YAE_ENABLE_DEPRECATION_WARNINGS                                \
+#  define YAE_ENABLE_DEPRECATION_WARNINGS \
+  _Pragma("GCC diagnostic pop")
+#elif __GNUC__
+#  define YAE_DISABLE_DEPRECATION_WARNINGS \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-builtins\"") \
+  _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
+#  define YAE_ENABLE_DEPRECATION_WARNINGS \
+  _Pragma("GCC diagnostic warning \"-Wdeprecated-builtins\"") \
   _Pragma("GCC diagnostic warning \"-Wdeprecated-declarations\"")
 #else
 #  define YAE_DISABLE_DEPRECATION_WARNINGS

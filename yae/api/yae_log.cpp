@@ -6,10 +6,17 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "../api/yae_log.h"
+#include "../api/yae_message_carrier_interface.h"
+#include "../utils/yae_utils.h"
+
 // standard:
 #include <inttypes.h>
 #include <stdarg.h>
 #include <stdint.h>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost library:
 #ifndef Q_MOC_RUN
@@ -17,10 +24,7 @@
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "../api/yae_log.h"
-#include "../api/yae_message_carrier_interface.h"
-#include "../utils/yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

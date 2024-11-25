@@ -9,15 +9,15 @@
 #ifndef YAE_VIDEO_RENDERER_H_
 #define YAE_VIDEO_RENDERER_H_
 
-// system includes:
-#include <string>
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_synchronous.h"
+#include "yae/video/yae_video.h"
+#include "yae/video/yae_video_canvas.h"
 
-// yae includes:
-#include "../api/yae_shared_ptr.h"
-#include "yae_video.h"
-#include "yae_reader.h"
-#include "yae_synchronous.h"
-#include "yae_video_canvas.h"
+// standard:
+#include <string>
 
 
 namespace yae

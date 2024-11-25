@@ -9,21 +9,21 @@
 #ifndef YAE_COLOR_H_
 #define YAE_COLOR_H_
 
-// standard libraries:
-#include <algorithm>
-#include <map>
-
-// Qt library:
-#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5) || defined(YAE_USE_QT6)
-#include <QColor>
-#endif
-
-// yae includes:
+// aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/utils/yae_utils.h"
 
-// local interfaces:
+// standard:
+#include <algorithm>
+#include <map>
+
+// Qt:
+#if defined(YAE_USE_QT4) || defined(YAE_USE_QT5) || defined(YAE_USE_QT6)
+#include <QColor>
+#endif
+
+// yaeui:
 #include "yaeVec.h"
 
 

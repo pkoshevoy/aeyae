@@ -9,14 +9,18 @@
 #ifndef YAE_TASK_RUNNER_H_
 #define YAE_TASK_RUNNER_H_
 
-// boost libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

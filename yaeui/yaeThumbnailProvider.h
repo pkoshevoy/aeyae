@@ -9,15 +9,22 @@
 #ifndef YAE_THUMBNAIL_PROVIDER_H_
 #define YAE_THUMBNAIL_PROVIDER_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/video/yae_reader_factory.h"
+
+// standard:
 #include <map>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #endif
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QImage>
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQuickImageProvider>
@@ -25,10 +32,7 @@
 #include <QSize>
 #include <QString>
 
-// yae includes:
-#include "yae/video/yae_reader_factory.h"
-
-// local includes:
+// yaeui:
 #include "yaeImageProvider.h"
 
 

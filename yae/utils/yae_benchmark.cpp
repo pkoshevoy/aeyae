@@ -6,6 +6,11 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_assert.h"
+#include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_stacktrace.h"
+
 // standard:
 #include <algorithm>
 #include <cstring>
@@ -16,14 +21,13 @@
 #include <string>
 #include <sstream>
 
-// boost library:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #include <boost/chrono/chrono.hpp>
 #include <boost/thread.hpp>
 
-// aeyae:
-#include "yae/api/yae_assert.h"
-#include "yae/utils/yae_benchmark.h"
-#include "yae/utils/yae_stacktrace.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 //----------------------------------------------------------------

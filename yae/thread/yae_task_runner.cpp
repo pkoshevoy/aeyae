@@ -6,17 +6,21 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
-#include <list>
-#include <map>
-
-// boost libraries:
-#include <boost/thread.hpp>
-
 // aeyae:
 #include "yae/api/yae_log.h"
 #include "yae_threading.h"
 #include "yae_task_runner.h"
+
+// standard:
+#include <list>
+#include <map>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/thread.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

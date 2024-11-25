@@ -9,21 +9,21 @@
 #ifndef YAE_UTILS_QT_H_
 #define YAE_UTILS_QT_H_
 
-// std includes:
+// aeyae:
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_reader_factory.h"
+#include "yae/video/yae_reader.h"
+
+// standard:
 #include <list>
 #include <string.h>
 #include <cstdio>
 #include <sstream>
 
-// yae includes:
-#include "yae/utils/yae_utils.h"
-#include "yae/video/yae_reader_factory.h"
-#include "yae/video/yae_reader.h"
-
 // yaeui:
 #include "yaeApplication.h"
 
-// Qt includes:
+// Qt:
 #include <QAction>
 #include <QApplication>
 #if !defined(_WIN32) && !defined(__APPLE__)

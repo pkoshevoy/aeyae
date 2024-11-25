@@ -9,13 +9,13 @@
 #ifndef YAE_TREE_H_
 #define YAE_TREE_H_
 
-// std includes:
+// aeyae:
+#include "yae/api/yae_assert.h"
+
+// standard:
 #include <assert.h>
 #include <list>
 #include <map>
-
-// yae includes:
-#include "yae/api/yae_assert.h"
 
 
 namespace yae

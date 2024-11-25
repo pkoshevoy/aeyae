@@ -9,7 +9,12 @@
 #ifndef YAE_UTILS_H_
 #define YAE_UTILS_H_
 
-// std includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
+#include "yae/utils/yae_data.h"
+
+// standard:
 #include <cstdio>
 #include <iterator>
 #include <list>
@@ -22,10 +27,7 @@
 #include <sstream>
 #include <vector>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -38,17 +40,10 @@
 #include <boost/shared_ptr.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // jsoncpp:
 #include "json/json.h"
-
-// yae includes:
-#include "../api/yae_api.h"
-#include "../api/yae_assert.h"
-#include "../utils/yae_data.h"
 
 // namespace shortcut:
 namespace fs = boost::filesystem;

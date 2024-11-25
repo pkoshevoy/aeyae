@@ -9,25 +9,29 @@
 #ifndef YAE_SUBTITLES_TRACK_H_
 #define YAE_SUBTITLES_TRACK_H_
 
-// system includes:
+// aeyae:
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <vector>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost includes:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #endif
 
-// ffmpeg includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// ffmpeg:
 extern "C"
 {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 }
-
-// yae includes:
-#include "yae/ffmpeg/yae_track.h"
-#include "yae/thread/yae_queue.h"
-#include "yae/video/yae_video.h"
 
 
 namespace yae

@@ -9,11 +9,11 @@
 #ifndef YAE_READER_FACTORY_H_
 #define YAE_READER_FACTORY_H_
 
-// system includes:
-#include <string>
-
 // aeyae:
 #include "yae/video/yae_reader.h"
+
+// standard:
+#include <string>
 
 
 namespace yae

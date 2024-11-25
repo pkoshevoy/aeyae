@@ -9,7 +9,10 @@
 #ifndef YAE_IMAGE_H_
 #define YAE_IMAGE_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeItem.h"
 #include "yaeThumbnailProvider.h"

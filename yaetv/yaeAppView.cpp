@@ -6,27 +6,22 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_log.h"
+#include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_utils.h"
+
 // standard:
 #include <utility>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/lexical_cast.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
-
-// aeyae:
-#include "yae/api/yae_log.h"
-#include "yae/utils/yae_benchmark.h"
-#include "yae/utils/yae_utils.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // yaeui:
 #ifdef __APPLE__

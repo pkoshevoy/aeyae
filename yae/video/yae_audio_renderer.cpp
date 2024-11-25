@@ -6,7 +6,7 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae includes:
+// aeyae:
 #include "yae_audio_renderer.h"
 
 

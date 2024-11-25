@@ -6,14 +6,22 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_version.h"
+#include "yae/ffmpeg/yae_remux.h"
+
 // standard:
 #include <iostream>
 #include <sstream>
 #include <list>
 #include <math.h>
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/algorithm/string.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // Qt:
 #include <QApplication>
@@ -25,10 +33,6 @@
 #include <QShortcut>
 #include <QUrl>
 #include <QVBoxLayout>
-
-// aeyae:
-#include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_remux.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -61,7 +65,6 @@ namespace yae
   // MainWindow::MainWindow
   //
   MainWindow::MainWindow():
-    QMainWindow(NULL, Qt::WindowFlags(0)),
     canvasWidget_(NULL),
     canvas_(NULL),
     view_("MainWindow remux view"),

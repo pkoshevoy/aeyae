@@ -6,14 +6,21 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <limits>
 #include <math.h>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #include <boost/random/mersenne_twister.hpp>
 
-// local:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// yaeui:
 #include "yaePlotItem.h"
 
 

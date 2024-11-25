@@ -9,7 +9,10 @@
 #ifndef YAE_TEXTURED_RECT_H_
 #define YAE_TEXTURED_RECT_H_
 
-// local interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeTexture.h"
 
 

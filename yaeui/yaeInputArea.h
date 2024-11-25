@@ -9,18 +9,18 @@
 #ifndef YAE_INPUT_AREA_H_
 #define YAE_INPUT_AREA_H_
 
-// standard libraries:
-#include <list>
-#include <stdexcept>
-
-// Qt interfaces:
-#include <QObject>
-#include <QPersistentModelIndex>
-
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 
-// local interfaces:
+// standard:
+#include <list>
+#include <stdexcept>
+
+// Qt:
+#include <QObject>
+#include <QPersistentModelIndex>
+
+// yaeui:
 #include "yaeItem.h"
 #include "yaeVec.h"
 

@@ -9,26 +9,30 @@
 #ifndef YAE_LIBASS_H_
 #define YAE_LIBASS_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/thread/yae_threading.h"
+
+// standard:
 #include <list>
 #include <string>
 #include <vector>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// libass includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// libass:
 extern "C"
 {
 #include <ass/ass.h>
 }
-
-// yae includes:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/thread/yae_queue.h"
-#include "yae/thread/yae_threading.h"
 
 
 namespace yae

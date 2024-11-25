@@ -6,12 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <iostream>
 #include <algorithm>
 #include <limits>
 
-// Qt includes:
+// Qt:
 #include <QCryptographicHash>
 #include <QCursor>
 #include <QFileInfo>
@@ -19,9 +22,6 @@
 #include <QPainter>
 #include <QPaintEvent>
 #include <QUrl>
-
-// aeyae:
-#include "yae/utils/yae_utils.h"
 
 // yaeui:
 #include "yaeCanvasQPainterUtils.h"

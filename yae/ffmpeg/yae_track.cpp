@@ -6,18 +6,22 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
+#include "yae/ffmpeg/yae_track.h"
+#include "yae/utils/yae_benchmark.h"
+
 // standard:
 #include <map>
 #include <set>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
-// yae includes:
-#include "yae/ffmpeg/yae_ffmpeg_utils.h"
-#include "yae/ffmpeg/yae_track.h"
-#include "yae/utils/yae_benchmark.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace shortcuts:
 namespace al = boost::algorithm;

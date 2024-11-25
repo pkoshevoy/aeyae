@@ -6,10 +6,13 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QObject>
 
-// local interfaces:
+// yaeui:
 #include "yaeArrowItem.h"
 #include "yaeItemFocus.h"
 #include "yaeRectangle.h"

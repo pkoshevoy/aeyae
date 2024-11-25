@@ -9,10 +9,13 @@
 #ifndef YAE_FRAME_CROP_ITEM_H_
 #define YAE_FRAME_CROP_ITEM_H_
 
-// Qt interfaces:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QObject>
 
-// local interfaces:
+// yaeui:
 #include "yaeItem.h"
 #include "yaeItemView.h"
 

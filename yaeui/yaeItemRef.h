@@ -9,21 +9,25 @@
 #ifndef YAE_ITEM_REF_H_
 #define YAE_ITEM_REF_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
+
+// standard:
 #include <map>
 #include <stdexcept>
 #include <string>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/shared_ptr.hpp>
 #endif
 
-// yae includes:
-#include "yae/api/yae_api.h"
-#include "yae/api/yae_assert.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
-// local interfaces:
+// yaeui:
 #include "yaeProperty.h"
 #include "yaeExpression.h"
 

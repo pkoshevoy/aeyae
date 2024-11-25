@@ -6,12 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
-#include <string.h>
-
 // aeyae:
 #include "yae_pixel_formats.h"
 #include "yae_pixel_format_traits.h"
+
+// standard:
+#include <string.h>
 
 
 namespace yae

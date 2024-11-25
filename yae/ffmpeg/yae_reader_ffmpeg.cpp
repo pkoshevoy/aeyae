@@ -13,22 +13,20 @@
 #define __STDC_CONSTANT_MACROS
 #endif
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_settings.h"
+#include "yae/ffmpeg/yae_movie.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
+#include "yae/thread/yae_queue.h"
+#include "yae/video/yae_reader.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <sstream>
 #include <iostream>
 #include <typeinfo>
 #include <limits>
 #include <set>
-
-// yae includes:
-#include "yae/api/yae_settings.h"
-#include "yae/ffmpeg/yae_movie.h"
-#include "yae/thread/yae_queue.h"
-#include "yae/video/yae_reader.h"
-#include "yae/video/yae_video.h"
-
-// local includes:
-#include "yae_reader_ffmpeg.h"
 
 
 //----------------------------------------------------------------

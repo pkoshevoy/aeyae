@@ -9,12 +9,12 @@
 #ifndef YAE_SCREENSAVER_INHIBITOR_H_
 #define YAE_SCREENSAVER_INHIBITOR_H_
 
-// Qt includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// Qt:
 #include <QObject>
 #include <QTimer>
-
-// yae includes:
-#include "yae/api/yae_api.h"
 
 
 namespace yae

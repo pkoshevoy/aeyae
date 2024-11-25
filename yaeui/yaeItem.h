@@ -9,7 +9,11 @@
 #ifndef YAE_ITEM_H_
 #define YAE_ITEM_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <cmath>
 #include <iostream>
 #include <list>
@@ -20,22 +24,22 @@
 #include <cstring>
 #include <vector>
 
-// boost includes:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/chrono/chrono.hpp>
 #endif
 
-// Qt interfaces:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QEvent>
 #include <QKeyEvent>
 #include <QWheelEvent>
 #include <QPersistentModelIndex>
 
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_utils.h"
-
-// local interfaces:
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeExpression.h"
 #include "yaeItemRef.h"

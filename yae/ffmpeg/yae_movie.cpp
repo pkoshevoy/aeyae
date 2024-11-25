@@ -6,9 +6,9 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// yae includes:
-#include "yae_closed_captions.h"
-#include "yae_movie.h"
+// aeyae:
+#include "yae/ffmpeg/yae_closed_captions.h"
+#include "yae/ffmpeg/yae_movie.h"
 
 
 namespace yae

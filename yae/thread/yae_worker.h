@@ -9,18 +9,22 @@
 #ifndef YAE_WORKER_H_
 #define YAE_WORKER_H_
 
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/thread/yae_threading.h"
+
 // standard:
 #include <list>
 #include <vector>
 
-// boost libraries:
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
 #ifndef Q_MOC_RUN
 #include <boost/thread.hpp>
 #endif
 
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/thread/yae_threading.h"
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 
 namespace yae

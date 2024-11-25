@@ -6,10 +6,13 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// standard:
 #include <algorithm>
 
-// local interfaces:
+// yaeui:
 #include "yaeBBox.h"
 #include "yaeCanvasRenderer.h"
 #include "yaeColor.h"

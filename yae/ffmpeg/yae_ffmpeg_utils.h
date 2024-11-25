@@ -9,11 +9,17 @@
 #ifndef YAE_FFMPEG_UTILS_H_
 #define YAE_FFMPEG_UTILS_H_
 
-// standard C++ library:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/api/yae_log.h"
+#include "yae/api/yae_message_carrier_interface.h"
+#include "yae/video/yae_video.h"
+
+// standard:
 #include <string>
 #include <iostream>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavcodec/avcodec.h>
@@ -24,12 +30,6 @@ extern "C"
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
 }
-
-// aeyae:
-#include "yae/api/yae_api.h"
-#include "yae/api/yae_log.h"
-#include "yae/api/yae_message_carrier_interface.h"
-#include "yae/video/yae_video.h"
 
 
 //----------------------------------------------------------------

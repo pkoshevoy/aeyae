@@ -9,16 +9,16 @@
 #ifndef YAE_PROPERTY_H_
 #define YAE_PROPERTY_H_
 
-// standard libraries:
-#include <cmath>
-
-// Qt interfaces:
-#include <QVariant>
-
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 
-// local interfaces:
+// standard:
+#include <cmath>
+
+// Qt:
+#include <QVariant>
+
+// yaeui:
 #include "yaeBBox.h"
 #include "yaeColor.h"
 #include "yaeSegment.h"

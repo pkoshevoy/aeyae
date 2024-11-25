@@ -6,5 +6,12 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 #define BOOST_TEST_MODULE "aeyae test suite"
 #include <boost/test/unit_test.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS

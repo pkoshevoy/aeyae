@@ -9,13 +9,16 @@
 #ifndef YAE_ITEM_VIEW_STYLE_H_
 #define YAE_ITEM_VIEW_STYLE_H_
 
+// aeyae:
+#include "yae/api/yae_api.h"
+
 // standard:
 #include <map>
 
-// Qt library:
+// Qt:
 #include <QFont>
 
-// local:
+// yaeui:
 #include "yaeColor.h"
 #include "yaeItemView.h"
 #include "yaeTexture.h"

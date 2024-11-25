@@ -6,13 +6,13 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt includes:
+// aeyae:
+#include "yae/api/yae_assert.h"
+
+// Qt:
 #include <QToolButton>
 #include <QPixmap>
 #include <QStyle>
-
-// yae:
-#include "yae/api/yae_assert.h"
 
 // local:
 #include "yaeLineEdit.h"

@@ -6,6 +6,8 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/api/yae_version.h"
 
 // system:
 #ifdef _WIN32
@@ -30,10 +32,7 @@
 #include <iostream>
 #include <stdexcept>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -44,18 +43,13 @@
 #include <boost/thread/thread.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // ffmpeg includes:
 extern "C"
 {
 #include <libavutil/md5.h>
 }
-
-// aeyae:
-#include "yae/api/yae_version.h"
 
 // yaeui:
 #include "yaeUtilsQt.h"

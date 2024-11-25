@@ -10,13 +10,13 @@
 #define YAE_FFMPEG_VIDEO_FILTER_GRAPH_H_
 
 // aeyae:
-#include "../api/yae_api.h"
-#include "../video/yae_video.h"
+#include "yae/api/yae_api.h"
+#include "yae/video/yae_video.h"
 
-// standard C++ library:
+// standard:
 #include <string>
 
-// ffmpeg includes:
+// ffmpeg:
 extern "C"
 {
 #include <libavfilter/avfilter.h>

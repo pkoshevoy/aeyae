@@ -6,8 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// system includes:
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+#include "yae/video/yae_pixel_formats.h"
+#include "yae/video/yae_pixel_format_traits.h"
+
+// standard:
 #include <list>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -15,14 +22,11 @@
 #include <boost/filesystem.hpp>
 #endif
 
-// Qt includes:
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// Qt:
 #include <QFileInfo>
 #include <QProcess>
-
-// aeyae:
-#include "yae/utils/yae_benchmark.h"
-#include "yae/video/yae_pixel_formats.h"
-#include "yae/video/yae_pixel_format_traits.h"
 
 // yaeui:
 #include "yaeThumbnailProvider.h"

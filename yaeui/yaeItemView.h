@@ -9,24 +9,24 @@
 #ifndef YAE_ITEM_VIEW_H_
 #define YAE_ITEM_VIEW_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_utils.h"
+
+// standard:
 #include <list>
 #include <map>
 #include <set>
 
-// Qt interfaces:
+// Qt:
 #include <QFont>
 #include <QMouseEvent>
 #include <QObject>
 #include <QString>
 #include <QTimer>
 
-// yae includes:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_benchmark.h"
-#include "yae/utils/yae_utils.h"
-
-// local interfaces:
+// yaeui:
 #include "yaeCanvas.h"
 #include "yaeItem.h"
 #include "yaeImageProvider.h"

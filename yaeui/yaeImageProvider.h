@@ -9,20 +9,20 @@
 #ifndef YAE_IMAGE_PROVIDER_H_
 #define YAE_IMAGE_PROVIDER_H_
 
-// standard libraries:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/video/yae_reader.h"
+
+// standard:
 #include <map>
 
-// Qt includes:
+// Qt:
 #include <QImage>
 #ifdef YAE_USE_PLAYER_QUICK_WIDGET
 #include <QQuickImageProvider>
 #endif
 #include <QSize>
 #include <QString>
-
-// yae includes:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/video/yae_reader.h"
 
 
 namespace yae

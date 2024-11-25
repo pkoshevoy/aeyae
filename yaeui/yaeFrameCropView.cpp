@@ -6,7 +6,10 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// local includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+
+// yaeui:
 #include "yaeFrameCropView.h"
 #include "yaeItemViewStyle.h"
 

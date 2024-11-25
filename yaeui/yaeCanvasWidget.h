@@ -9,10 +9,14 @@
 #ifndef YAE_CANVAS_WIDGET_H_
 #define YAE_CANVAS_WIDGET_H_
 
-// standard C++:
+// aeyae:
+#include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_benchmark.h"
+
+// standard:
 #include <iostream>
 
-// Qt includes:
+// Qt:
 #include <QApplication>
 #if (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
 #include <QDesktopWidget>
@@ -22,10 +26,6 @@
 #endif
 #include <QKeyEvent>
 #include <QTimer>
-
-// aeyae:
-#include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_benchmark.h"
 
 // yaeui:
 #include "yaeCanvas.h"

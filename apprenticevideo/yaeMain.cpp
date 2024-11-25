@@ -6,6 +6,10 @@
 // Copyright : Pavel Koshevoy
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/ffmpeg/yae_live_reader.h"
+#include "yae/utils/yae_utils.h"
+
 // system:
 #ifdef _WIN32
 #ifndef _USE_MATH_DEFINES
@@ -20,17 +24,22 @@
 #include <wchar.h>
 #endif
 
-#include <stdlib.h>
-#include <iostream>
-#include <stdexcept>
-
 #ifndef _WIN32
 #include <signal.h>
 #endif
 
+// standard:
+#include <stdlib.h>
+#include <iostream>
+#include <stdexcept>
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
 // boost:
 #include <boost/locale.hpp>
 #include <boost/filesystem/path.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // Qt:
 #include <QApplication>
@@ -38,10 +47,6 @@
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
 #include <QSurfaceFormat>
 #endif
-
-// yae:
-#include "yae/ffmpeg/yae_live_reader.h"
-#include "yae/utils/yae_utils.h"
 
 // yaeui:
 #include "yaeAppleUtils.h"

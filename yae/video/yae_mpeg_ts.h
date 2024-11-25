@@ -9,17 +9,21 @@
 #ifndef YAE_MPEG_TS_H_
 #define YAE_MPEG_TS_H_
 
-// system includes:
+// aeyae:
+#include "yae/api/yae_api.h"
+#include "yae/utils/yae_data.h"
+#include "yae/utils/yae_json.h"
+#include "yae/utils/yae_time.h"
+#include "yae/utils/yae_timesheet.h"
+
+// standard:
 #include <bitset>
 #include <inttypes.h>
 #include <list>
 #include <map>
 #include <string>
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
+YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -27,19 +31,10 @@
 #include <boost/thread.hpp>
 #endif
 
-#if (defined(__clang__) && __clang__) || (defined(__GNUC__) && __GNUC__ > 4)
-#pragma GCC diagnostic pop
-#endif
+YAE_ENABLE_DEPRECATION_WARNINGS
 
 // jsoncpp:
 #include "json/json.h"
-
-// yae includes:
-#include "yae/api/yae_api.h"
-#include "yae/utils/yae_data.h"
-#include "yae/utils/yae_json.h"
-#include "yae/utils/yae_time.h"
-#include "yae/utils/yae_timesheet.h"
 
 
 namespace yae

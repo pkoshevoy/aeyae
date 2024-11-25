@@ -6,12 +6,15 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// standard C++:
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
+// standard:
 #include <iostream>
 #include <limits>
 #include <list>
 
-// Qt library:
+// Qt:
 #include <QApplication>
 #include <QFontInfo>
 #include <QFontMetricsF>
@@ -20,9 +23,6 @@
 #include <QTabletEvent>
 #include <QTouchEvent>
 #include <QWheelEvent>
-
-// aeyae:
-#include "yae/utils/yae_benchmark.h"
 
 // yaeui:
 #include "yaeCanvasRenderer.h"
