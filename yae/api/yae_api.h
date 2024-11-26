@@ -94,6 +94,7 @@
 #elif defined(__clang__) && __clang__
 #  define YAE_DISABLE_DEPRECATION_WARNINGS \
   _Pragma("GCC diagnostic push") \
+  _Pragma("GCC diagnostic ignored \"-Wunknown-warning-option\"") \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-builtins\"") \
   _Pragma("GCC diagnostic ignored \"-Wdeprecated-declarations\"")
 #  define YAE_ENABLE_DEPRECATION_WARNINGS \
