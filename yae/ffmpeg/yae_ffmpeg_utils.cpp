@@ -825,6 +825,101 @@ namespace yae
     return *this;
   }
 
+  //----------------------------------------------------------------
+  // guess_color_primaries
+  //
+  AVColorPrimaries
+  guess_color_primaries(const AvFrmSpecs & src)
+  {
+    if (src.has_primaries() || !src.has_colorspace())
+    {
+      return src.color_primaries;
+    }
+
+    AVColorPrimaries color_primaries =
+      (src.colorspace == AVCOL_SPC_RGB ||
+       src.colorspace == AVCOL_SPC_BT709) ? AVCOL_PRI_BT709 :
+      (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_PRI_BT470M :
+      (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_PRI_BT470BG :
+      (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_PRI_SMPTE170M :
+      (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_PRI_SMPTE240M :
+      (src.colorspace == AVCOL_SPC_BT2020_NCL ||
+       src.colorspace == AVCOL_SPC_BT2020_CL ||
+       src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_PRI_BT2020 :
+      src.color_primaries;
+
+    return color_primaries;
+  }
+
+  //----------------------------------------------------------------
+  // guess_color_trc
+  //
+  AVColorTransferCharacteristic
+  guess_color_trc(const AvFrmSpecs & src)
+  {
+    if (src.has_color_trc() || !src.has_colorspace())
+    {
+      return src.color_trc;
+    }
+
+    AVColorTransferCharacteristic color_trc =
+      (src.colorspace == AVCOL_SPC_RGB) ? AVCOL_TRC_IEC61966_2_1 :
+      (src.colorspace == AVCOL_SPC_BT709) ? AVCOL_TRC_BT709 :
+      (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_TRC_GAMMA22 :
+      (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_TRC_GAMMA28 :
+      (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_TRC_SMPTE170M :
+      (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_TRC_SMPTE240M :
+      // just guessing here ... could be bt709 or ARIB STD-B67
+      (src.colorspace == AVCOL_SPC_BT2020_NCL ||
+       src.colorspace == AVCOL_SPC_BT2020_CL ||
+       src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_TRC_SMPTE2084 :
+      src.color_trc;
+
+    return color_trc;
+  }
+
+  //----------------------------------------------------------------
+  // guess_colorspace
+  //
+  AVColorSpace
+  guess_colorspace(const AvFrmSpecs & src)
+  {
+    if (src.has_colorspace() || !(src.has_primaries() &&
+                                  src.has_color_trc()))
+    {
+      return src.colorspace;
+    }
+
+    // derive based on primaries and trc:
+    AVColorSpace colorspace =
+      (src.color_primaries == AVCOL_PRI_BT709 &&
+       src.color_trc == AVCOL_TRC_BT709) ? AVCOL_SPC_BT709 :
+
+      (src.color_primaries == AVCOL_PRI_BT470M &&
+       src.color_trc == AVCOL_TRC_GAMMA22) ? AVCOL_SPC_FCC :
+
+      (src.color_primaries == AVCOL_PRI_BT470BG &&
+       src.color_trc == AVCOL_TRC_GAMMA28) ? AVCOL_SPC_BT470BG :
+
+      (src.color_primaries == AVCOL_PRI_SMPTE170M &&
+       src.color_trc == AVCOL_TRC_SMPTE170M) ? AVCOL_SPC_SMPTE170M :
+
+      (src.color_primaries == AVCOL_PRI_SMPTE240M &&
+       src.color_trc == AVCOL_TRC_SMPTE240M) ? AVCOL_SPC_SMPTE240M :
+
+      (src.color_primaries == AVCOL_PRI_BT2020 &&
+       (src.color_trc == AVCOL_TRC_BT2020_10 ||
+        src.color_trc == AVCOL_TRC_BT2020_12 ||
+        src.color_trc == AVCOL_TRC_SMPTE2084 ||
+        src.color_trc == AVCOL_TRC_ARIB_STD_B67)) ? AVCOL_SPC_BT2020_NCL :
+
+      (src.color_primaries == AVCOL_PRI_SMPTE428 &&
+       src.color_trc == AVCOL_TRC_SMPTE428) ? AVCOL_SPC_RGB :
+
+      src.colorspace;
+
+    return colorspace;
+  }
 
   //----------------------------------------------------------------
   // guess_specs
@@ -847,96 +942,31 @@ namespace yae
       (src.chroma_location != AVCHROMA_LOC_UNSPECIFIED) ? src.chroma_location :
       AVCHROMA_LOC_UNSPECIFIED;
 
-    bool has_colorspace = (src.colorspace != AVCOL_SPC_UNSPECIFIED &&
-                           src.colorspace != AVCOL_SPC_RESERVED);
-
-    bool has_primaries = (src.color_primaries != AVCOL_PRI_UNSPECIFIED &&
-                          src.color_primaries != AVCOL_PRI_RESERVED0 &&
-                          src.color_primaries != AVCOL_PRI_RESERVED);
-
-    bool has_trc = (src.color_trc != AVCOL_TRC_UNSPECIFIED &&
-                    src.color_trc != AVCOL_TRC_RESERVED0 &&
-                    src.color_trc != AVCOL_TRC_RESERVED);
-
-    if (has_colorspace && !has_primaries)
+    if (!specs.has_primaries())
     {
-      specs.color_primaries =
-        (src.colorspace == AVCOL_SPC_RGB ||
-         src.colorspace == AVCOL_SPC_BT709) ? AVCOL_PRI_BT709 :
-        (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_PRI_BT470M :
-        (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_PRI_BT470BG :
-        (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_PRI_SMPTE170M :
-        (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_PRI_SMPTE240M :
-        (src.colorspace == AVCOL_SPC_BT2020_NCL ||
-         src.colorspace == AVCOL_SPC_BT2020_CL ||
-         src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_PRI_BT2020 :
-        src.color_primaries;
+      specs.color_primaries = yae::guess_color_primaries(src);
     }
 
-    if (has_colorspace && !has_trc)
+    if (!specs.has_color_trc())
     {
-      specs.color_trc =
-        (src.colorspace == AVCOL_SPC_RGB) ? AVCOL_TRC_IEC61966_2_1 :
-        (src.colorspace == AVCOL_SPC_BT709) ? AVCOL_TRC_BT709 :
-        (src.colorspace == AVCOL_SPC_FCC) ? AVCOL_TRC_GAMMA22 :
-        (src.colorspace == AVCOL_SPC_BT470BG) ? AVCOL_TRC_GAMMA28 :
-        (src.colorspace == AVCOL_SPC_SMPTE170M) ? AVCOL_TRC_SMPTE170M :
-        (src.colorspace == AVCOL_SPC_SMPTE240M) ? AVCOL_TRC_SMPTE240M :
-        // just guessing here ... could be bt709 or ARIB STD-B67
-        (src.colorspace == AVCOL_SPC_BT2020_NCL ||
-         src.colorspace == AVCOL_SPC_BT2020_CL ||
-         src.colorspace == AVCOL_SPC_ICTCP) ? AVCOL_TRC_SMPTE2084 :
-        src.color_trc;
+      specs.color_trc = yae::guess_color_trc(src);
     }
 
-    if (!has_colorspace && has_primaries && has_trc)
+    if (!specs.has_colorspace())
     {
-      // derive based on primaries and trc:
-      specs.colorspace =
-        (src.color_primaries == AVCOL_PRI_BT709 &&
-         src.color_trc == AVCOL_TRC_BT709) ? AVCOL_SPC_BT709 :
-
-        (src.color_primaries == AVCOL_PRI_BT470M &&
-         src.color_trc == AVCOL_TRC_GAMMA22) ? AVCOL_SPC_FCC :
-
-        (src.color_primaries == AVCOL_PRI_BT470BG &&
-         src.color_trc == AVCOL_TRC_GAMMA28) ? AVCOL_SPC_BT470BG :
-
-        (src.color_primaries == AVCOL_PRI_SMPTE170M &&
-         src.color_trc == AVCOL_TRC_SMPTE170M) ? AVCOL_SPC_SMPTE170M :
-
-        (src.color_primaries == AVCOL_PRI_SMPTE240M &&
-         src.color_trc == AVCOL_TRC_SMPTE240M) ? AVCOL_SPC_SMPTE240M :
-
-        (src.color_primaries == AVCOL_PRI_BT2020 &&
-         (src.color_trc == AVCOL_TRC_BT2020_10 ||
-          src.color_trc == AVCOL_TRC_BT2020_12 ||
-          src.color_trc == AVCOL_TRC_SMPTE2084 ||
-          src.color_trc == AVCOL_TRC_ARIB_STD_B67)) ? AVCOL_SPC_BT2020_NCL :
-
-        (src.color_primaries == AVCOL_PRI_SMPTE428 &&
-         src.color_trc == AVCOL_TRC_SMPTE428) ? AVCOL_SPC_RGB :
-
-        src.colorspace;
-
-      YAE_ASSERT(specs.colorspace != AVCOL_SPC_RGB || is_rgb);
+      specs.colorspace = yae::guess_colorspace(src);
     }
+
+    YAE_ASSERT(specs.colorspace != AVCOL_SPC_RGB || is_rgb);
 
     if (yae::has_color_specs(specs))
     {
       return specs;
     }
 
-    bool got_colorspace = (specs.colorspace != AVCOL_SPC_UNSPECIFIED &&
-                           specs.colorspace != AVCOL_SPC_RESERVED);
-
-    bool got_primaries = (specs.color_primaries != AVCOL_PRI_UNSPECIFIED &&
-                          specs.color_primaries != AVCOL_PRI_RESERVED0 &&
-                          specs.color_primaries != AVCOL_PRI_RESERVED);
-
-    bool got_trc = (specs.color_trc != AVCOL_TRC_UNSPECIFIED &&
-                    specs.color_trc != AVCOL_TRC_RESERVED0 &&
-                    specs.color_trc != AVCOL_TRC_RESERVED);
+    bool got_colorspace = specs.has_colorspace();
+    bool got_primaries = specs.has_primaries();
+    bool got_trc = specs.has_color_trc();
 
     const bool is_sd =
       (src.width && src.width < 1280) &&
@@ -1027,6 +1057,36 @@ namespace yae
     return dst_specs;
   }
 
+
+  //----------------------------------------------------------------
+  // sanitize_color_specs
+  //
+  void
+  sanitize_color_specs(yae::AvFrmSpecs & specs)
+  {
+    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get((AVPixelFormat)(specs.format));
+    if (desc)
+    {
+      if ((desc->flags & AV_PIX_FMT_FLAG_RGB) != AV_PIX_FMT_FLAG_RGB)
+      {
+        if (specs.colorspace == AVCOL_SPC_RGB)
+        {
+          // clear the nonsense colorspace value:
+          AvFrmSpecs sanitized(specs);
+          sanitized.colorspace = AVCOL_SPC_UNSPECIFIED;
+          sanitized = yae::guess_specs(sanitized);
+          yae::copy_color_specs(specs, sanitized);
+        }
+      }
+      else if (specs.colorspace != AVCOL_SPC_RGB)
+      {
+        AvFrmSpecs sanitized(specs);
+        sanitized.colorspace = AVCOL_SPC_RGB;
+        sanitized = yae::guess_specs(sanitized);
+        yae::copy_color_specs(specs, sanitized);
+      }
+    }
+  }
 
   //----------------------------------------------------------------
   // make_avfrm

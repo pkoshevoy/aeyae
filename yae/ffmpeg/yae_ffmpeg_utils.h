@@ -428,6 +428,26 @@ namespace yae
     inline bool is_sdr() const
     { return !is_hdr(); }
 
+    inline bool has_colorspace() const
+    {
+      return (this->colorspace != AVCOL_SPC_UNSPECIFIED &&
+              this->colorspace != AVCOL_SPC_RESERVED);
+    }
+
+    inline bool has_primaries() const
+    {
+      return (this->color_primaries != AVCOL_PRI_UNSPECIFIED &&
+              this->color_primaries != AVCOL_PRI_RESERVED0 &&
+              this->color_primaries != AVCOL_PRI_RESERVED);
+    }
+
+    inline bool has_color_trc() const
+    {
+      return (this->color_trc != AVCOL_TRC_UNSPECIFIED &&
+              this->color_trc != AVCOL_TRC_RESERVED0 &&
+              this->color_trc != AVCOL_TRC_RESERVED);
+    }
+
     int width;
     int height;
     AVPixelFormat format;
@@ -703,6 +723,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // guess_color_primaries
+  //
+  AVColorPrimaries
+  guess_color_primaries(const AvFrmSpecs & src);
+
+  //----------------------------------------------------------------
+  // guess_color_trc
+  //
+  AVColorTransferCharacteristic
+  guess_color_trc(const AvFrmSpecs & src);
+
+  //----------------------------------------------------------------
+  // guess_colorspace
+  //
+  AVColorSpace
+  guess_colorspace(const AvFrmSpecs & src);
+
+  //----------------------------------------------------------------
   // guess_specs
   //
   YAE_API AvFrmSpecs
@@ -739,6 +777,11 @@ namespace yae
                         dst_height);
   }
 
+  //----------------------------------------------------------------
+  // sanitize_color_specs
+  //
+  void
+  sanitize_color_specs(AvFrmSpecs & specs);
 
   //----------------------------------------------------------------
   // has

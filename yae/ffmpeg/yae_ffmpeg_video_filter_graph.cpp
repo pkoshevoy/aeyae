@@ -582,6 +582,7 @@ namespace yae
     src_framerate_ = src_framerate;
     src_specs_ = yae::copy_specs(src);
     dst_specs_ = yae::copy_specs(dst_specs);
+    yae::sanitize_color_specs(dst_specs_);
 
     if (src.hw_frames_ctx)
     {
@@ -789,7 +790,7 @@ namespace yae
     }
 
     YAE_ASSERT_NO_AVERROR_OR_RETURN(err, false);
-    // YAE_ASSERT(yae::same_specs(*frame, dst_specs_));
+    YAE_ASSERT(yae::same_specs(*frame, dst_specs_));
 
     // some filters (yadif) may change the timebase:
     out_timebase = sink_->inputs[0]->time_base;
