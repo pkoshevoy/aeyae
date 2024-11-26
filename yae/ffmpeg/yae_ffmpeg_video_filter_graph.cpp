@@ -582,7 +582,6 @@ namespace yae
     src_framerate_ = src_framerate;
     src_specs_ = yae::copy_specs(src);
     dst_specs_ = yae::copy_specs(dst_specs);
-    yae::sanitize_color_specs(dst_specs_);
 
     if (src.hw_frames_ctx)
     {

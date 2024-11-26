@@ -1082,6 +1082,7 @@ namespace yae
       {
         AvFrmSpecs sanitized(specs);
         sanitized.colorspace = AVCOL_SPC_RGB;
+        sanitized.color_range = AVCOL_RANGE_JPEG;
         sanitized = yae::guess_specs(sanitized);
         yae::copy_color_specs(specs, sanitized);
       }
@@ -1565,6 +1566,8 @@ namespace yae
         (src.get_pix_fmt() != AV_PIX_FMT_PAL8 &&
          yae::has(codec_pix_fmts, src.get_pix_fmt())) ? src.get_pix_fmt() :
         codec_pix_fmts[0];
+
+      yae::sanitize_color_specs(specs);
 
       yae::VideoFilterGraph vf;
       if (vf.setup(src, framerate, timebase, specs))

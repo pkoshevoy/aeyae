@@ -470,7 +470,7 @@ namespace yae
         native_.pixelFormat_ != kPixelFormatY400A)
     {
       // sws_getContext doesn't support Y400A, so drop the alpha channel:
-      output_.pixelFormat_ = kPixelFormatGRAY8;
+      output_.setPixelFormat(kPixelFormatGRAY8);
     }
   }
 
@@ -850,6 +850,7 @@ namespace yae
 #endif
 
       std::string filterChain(filters.str().c_str());
+      yae::sanitize_color_specs(outSpecs);
 
       if (filterGraph_.setup(decoded,
                              frameRate_,
@@ -994,7 +995,7 @@ namespace yae
         }
 
         vf.traits_ = output_;
-        vf.traits_.pixelFormat_ = ffmpeg_to_yae(yae::pix_fmt(output));
+        vf.traits_.setPixelFormat(ffmpeg_to_yae(yae::pix_fmt(output)));
 
         // preserve output color specs:
         vf.traits_.av_rng_ = outSpecs.color_range;
@@ -1316,7 +1317,7 @@ namespace yae
     }
 
     //! pixel format:
-    t.pixelFormat_ = ffmpeg_to_yae(t.av_fmt_);
+    t.setPixelFormat(ffmpeg_to_yae(t.av_fmt_));
 
     //! frame rate:
     const AVRational & r_frame_rate = stream_->r_frame_rate;

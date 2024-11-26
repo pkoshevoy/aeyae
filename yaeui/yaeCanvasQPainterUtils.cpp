@@ -388,11 +388,9 @@ namespace yae
 
     VideoTraits & vtts = frame_->traits_;
 #ifdef _BIG_ENDIAN
-    vtts.av_fmt_ = AV_PIX_FMT_ARGB;
-    vtts.pixelFormat_ = kPixelFormatARGB;
+    vtts.setPixelFormat(kPixelFormatARGB);
 #else
-    vtts.av_fmt_ = AV_PIX_FMT_BGRA;
-    vtts.pixelFormat_ = kPixelFormatBGRA;
+    vtts.setPixelFormat(kPixelFormatBGRA);
 #endif
     vtts.av_csp_ = AVCOL_SPC_RGB;
     vtts.av_pri_ = AVCOL_PRI_BT709;

@@ -81,7 +81,7 @@ namespace yae
     VideoTraits & vtts = frame->traits_;
     QImage::Format qimageFormat = image.format();
 
-    vtts.pixelFormat_ =
+    TPixelFormatId pixelFormat =
 #ifdef _BIG_ENDIAN
       (qimageFormat == QImage::Format_ARGB32) ? kPixelFormatARGB :
 #else
@@ -91,7 +91,8 @@ namespace yae
       (qimageFormat == QImage::Format_Grayscale8) ? kPixelFormatGRAY8 :
       kInvalidPixelFormat;
 
-    YAE_ASSERT(vtts.pixelFormat_ != kInvalidPixelFormat);
+    YAE_ASSERT(pixelFormat != kInvalidPixelFormat);
+    vtts.setPixelFormat(pixelFormat);
 
     vtts.encodedWidth_ = image.bytesPerLine() / 4;
     vtts.encodedHeight_ = image.byteCount() / image.bytesPerLine();
@@ -143,19 +144,19 @@ namespace yae
       pixelFormat::getTraits(vtts.pixelFormat_);
 
     VideoTraits traits = vtts;
-    traits.pixelFormat_ = kPixelFormatGRAY8;
+    traits.setPixelFormat(kPixelFormatGRAY8);
 
     if (ptts)
     {
       if ((ptts->flags_ & pixelFormat::kAlpha) &&
           (ptts->flags_ & pixelFormat::kColor))
       {
-        traits.pixelFormat_ = kPixelFormatBGRA;
+        traits.setPixelFormat(kPixelFormatBGRA);
       }
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
       {
-        traits.pixelFormat_ = kPixelFormatRGB24;
+        traits.setPixelFormat(kPixelFormatRGB24);
       }
     }
 

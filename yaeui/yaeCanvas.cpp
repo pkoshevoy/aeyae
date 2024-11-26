@@ -1574,9 +1574,9 @@ namespace yae
 
     VideoTraits & vtts = vf->traits_;
 #ifdef _BIG_ENDIAN
-    vtts.pixelFormat_ = kPixelFormatARGB;
+    vtts.setPixelFormat(kPixelFormatARGB);
 #else
-    vtts.pixelFormat_ = kPixelFormatBGRA;
+    vtts.setPixelFormat(kPixelFormatBGRA);
 #endif
     std::size_t image_height = subsFrm.height();
     std::size_t image_row_bytes = subsFrm.bytesPerLine();

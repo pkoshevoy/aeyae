@@ -3818,25 +3818,25 @@ namespace yae
 
       if (unsupported)
       {
-        vtts.pixelFormat_ = kPixelFormatGRAY8;
+        vtts.setPixelFormat(kPixelFormatGRAY8);
 
         if (ptts)
         {
           if ((ptts->flags_ & pixelFormat::kAlpha) &&
               (ptts->flags_ & pixelFormat::kColor))
           {
-            vtts.pixelFormat_ = kPixelFormatBGRA;
+            vtts.setPixelFormat(kPixelFormatBGRA);
           }
           else if ((ptts->flags_ & pixelFormat::kColor) ||
                    (ptts->flags_ & pixelFormat::kPaletted))
           {
             if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
             {
-              vtts.pixelFormat_ = kPixelFormatYUYV422;
+              vtts.setPixelFormat(kPixelFormatYUYV422);
             }
             else
             {
-              vtts.pixelFormat_ = kPixelFormatBGR24;
+              vtts.setPixelFormat(kPixelFormatBGR24);
             }
           }
         }
@@ -3844,7 +3844,7 @@ namespace yae
         reader->setVideoTraitsOverride(vtts);
       }
 #elif 0
-      vtts.pixelFormat_ = kPixelFormatYUV420P9;
+      vtts.setPixelFormat(kPixelFormatYUV420P9);
       reader->setVideoTraitsOverride(vtts);
       canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
 #endif

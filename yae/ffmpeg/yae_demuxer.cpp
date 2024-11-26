@@ -4040,7 +4040,7 @@ namespace yae
       double source_par =
         source_dar ? (source_dar / native_dar) : 0.0;
 
-      traits.pixelFormat_ = pixel_format;
+      traits.setPixelFormat(pixel_format);
       traits.offsetTop_ = 0;
       traits.offsetLeft_ = 0;
       traits.visibleWidth_ = envelope_w;
@@ -4416,7 +4416,7 @@ namespace yae
 
       if (pixel_format != kInvalidPixelFormat)
       {
-        traits.pixelFormat_ = pixel_format;
+        traits.setPixelFormat(pixel_format);
       }
 
       bool deint = false;
