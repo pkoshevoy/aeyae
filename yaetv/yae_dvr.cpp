@@ -11,6 +11,7 @@
 #include "yae/utils/yae_benchmark.h"
 
 // standard:
+#include <ctype.h>
 #include <iomanip>
 #include <iostream>
 #include <iterator>
@@ -22,6 +23,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost includes:
 #ifndef Q_MOC_RUN
+#include <boost/algorithm/string.hpp>
 #include <boost/asio.hpp>
 #include <boost/random/mersenne_twister.hpp>
 #include <boost/thread.hpp>
@@ -167,6 +169,54 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // deregex_and_tolower
+  //
+  std::string
+  deregex_and_tolower(const std::string & text_or_regex)
+  {
+    std::ostringstream oss;
+    const char * str = &text_or_regex[0];
+    const char * end = str + text_or_regex.size();
+    const char * iter = str;
+    uint32_t prev_uc = 0;
+    uint32_t uc = 0;
+
+    while (iter < end)
+    {
+      prev_uc = uc;
+      const char * prev = iter;
+      if (!yae::utf8_to_unicode(iter, end, uc))
+      {
+        oss << *iter;
+        iter++;
+        continue;
+      }
+
+      // if not plain printable ASCII:
+      if (uc >= 0x80)
+      {
+        oss << std::string(prev, iter);
+        continue;
+      }
+
+      // strip all non
+      uint8_t c = uint8_t(uc);
+      if (::isalnum(c))
+      {
+        c = char(::tolower(uc));
+        oss << c;
+      }
+      else if (::isspace(c) && prev_uc != ' ')
+      {
+        uc = ' ';
+        oss << ' ';
+      }
+    }
+
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
   // Wishlist::Item::to_txt
   //
   std::string
@@ -175,10 +225,23 @@ namespace yae
     const char * sep = "";
     std::ostringstream oss;
 
-    if (when_)
+    if (!title_.empty())
     {
-      const Timespan & when = *when_;
-      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
+      oss << sep << title_;
+      sep = ", ";
+    }
+
+    if (!description_.empty())
+    {
+      oss << sep << description_;
+      sep = ", ";
+    }
+
+    if (date_)
+    {
+      const struct tm & tm = *date_;
+      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
+      oss << sep << yae::unix_epoch_time_to_localdate(ts);
       sep = ", ";
     }
 
@@ -200,11 +263,10 @@ namespace yae
       sep = ", ";
     }
 
-    if (date_)
+    if (when_)
     {
-      const struct tm & tm = *date_;
-      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
-      oss << sep << yae::unix_epoch_time_to_localdate(ts);
+      const Timespan & when = *when_;
+      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
       sep = ", ";
     }
 
@@ -222,16 +284,9 @@ namespace yae
       sep = ", ";
     }
 
-    if (!title_.empty())
+    if (this->do_not_record())
     {
-      oss << sep << title_;
-      sep = ", ";
-    }
-
-    if (!description_.empty())
-    {
-      oss << sep << description_;
-      sep = ", ";
+      oss << sep << "DNR";
     }
 
     return std::string(oss.str().c_str());
@@ -246,10 +301,38 @@ namespace yae
     const char * sep = "";
     std::ostringstream oss;
 
-    if (when_)
+    if (channel_)
     {
-      const Timespan & when = *when_;
-      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
+      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
+      oss << sep << strfmt("%02i.%02i", ch_num.first, ch_num.second);
+      sep = ", ";
+    }
+    else
+    {
+      oss << sep << "00.00";
+      sep = ", ";
+    }
+
+    if (!title_.empty())
+    {
+      // YAE_BREAKPOINT_IF(al::ends_with(title_, "13 News.*"));
+      std::string title = deregex_and_tolower(title_);
+      oss << sep << title;
+      sep = ", ";
+    }
+
+    if (!description_.empty())
+    {
+      std::string desc = deregex_and_tolower(description_);
+      oss << sep << desc;
+      sep = ", ";
+    }
+
+    if (date_)
+    {
+      const struct tm & tm = *date_;
+      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
+      oss << sep << yae::unix_epoch_time_to_localdate(ts);
       sep = ", ";
     }
 
@@ -262,7 +345,7 @@ namespace yae
       {
         if ((weekdays & wday) == wday)
         {
-          oss << s << kWeekdays[i];
+          oss << s << "wd_" << int(i);
           s = " ";
         }
 
@@ -272,11 +355,10 @@ namespace yae
       sep = ", ";
     }
 
-    if (date_)
+    if (when_)
     {
-      const struct tm & tm = *date_;
-      int64_t ts = yae::localtime_to_unix_epoch_time(tm);
-      oss << sep << yae::unix_epoch_time_to_localdate(ts);
+      const Timespan & when = *when_;
+      oss << sep << when.t0_.to_hhmm() << " - " << when.t1_.to_hhmm();
       sep = ", ";
     }
 
@@ -291,30 +373,6 @@ namespace yae
     {
       uint16_t max_minutes = *max_minutes_;
       oss << sep << "LEQ " << max_minutes << " min";
-      sep = ", ";
-    }
-
-    if (!title_.empty())
-    {
-      oss << sep << title_;
-      sep = ", ";
-    }
-
-    if (!description_.empty())
-    {
-      oss << sep << description_;
-      sep = ", ";
-    }
-
-    if (channel_)
-    {
-      const std::pair<uint16_t, uint16_t> & ch_num = *channel_;
-      oss << sep << strfmt("%02i.%02i", ch_num.first, ch_num.second);
-      sep = ", ";
-    }
-    else
-    {
-      oss << sep << "00.00";
       sep = ", ";
     }
 
@@ -420,30 +478,31 @@ namespace yae
     }
 
     bool match_title = !title_.empty();
-    if (match_title)
+    if (match_title &&
+        !boost::iequals(program.title_, title_))
     {
       if (!rx_title_)
       {
         rx_title_.reset(boost::regex(title_, boost::regex::icase));
       }
 
-      if (!(program.title_ == title_ ||
-            boost::regex_match(program.title_, *rx_title_)))
+      if (!boost::regex_match(program.title_, *rx_title_))
       {
         return false;
       }
     }
 
     bool match_description = !description_.empty();
-    if (match_description)
+    if (match_description &&
+        !boost::iequals(program.description_, description_))
     {
       if (!rx_description_)
       {
-        rx_description_.reset(boost::regex(description_, boost::regex::icase));
+        rx_description_.reset(boost::regex(description_,
+                                           boost::regex::icase));
       }
 
-      if (!(program.description_ == description_ ||
-            boost::regex_match(program.description_, *rx_description_)))
+      if (!boost::regex_match(program.description_, *rx_description_))
       {
         return false;
       }

@@ -3909,6 +3909,16 @@ namespace yae
         desc.background_ = desc.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       }
+      else
+      {
+        Text & desc = row_ptr->get<Text>("desc");
+        TVar tvar_txt(wi.to_txt());
+        if (desc.text_.get() != tvar_txt)
+        {
+          desc.text_ = TVarRef::constant(tvar_txt);
+          row_ptr->uncache();
+        }
+      }
 
       rows[row_id] = row_ptr;
     }
