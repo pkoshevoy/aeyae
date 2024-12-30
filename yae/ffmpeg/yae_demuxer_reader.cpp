@@ -61,7 +61,7 @@ namespace yae
   DemuxerReader::init(const TDemuxerInterfacePtr & demuxer_ptr, bool hwdec)
   {
     hwdec_ = hwdec;
-    demuxer_ = demuxer_ptr;
+    demuxer_.reset(demuxer_ptr->clone());
     selectedVideoTrack_ = std::numeric_limits<std::size_t>::max();
     selectedAudioTrack_ = std::numeric_limits<std::size_t>::max();
     skipLoopFilter_ = false;
