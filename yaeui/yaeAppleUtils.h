@@ -18,6 +18,22 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // get_macos_version
+  //
+  void get_macos_version(uint32_t & major,
+                         uint32_t & minor,
+                         uint32_t & patch);
+
+  //----------------------------------------------------------------
+  // u32_macos_version
+  //
+  // wrapper for get_macos_version,
+  // returns yae::semver_u32(major, minor, patch, scale)
+  //
+  uint32_t get_macos_semver_u32(uint32_t scale = 1000);
+
   //----------------------------------------------------------------
   // absoluteUrlFrom
   //

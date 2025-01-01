@@ -189,14 +189,18 @@ mainMayThrowException(int argc, char ** argv)
   std::cerr.setf(std::ios::scientific);
   */
 
-#ifdef __APPLE__
-  if (QSysInfo::MacintoshVersion == 0x000a)
+#if defined(__APPLE__) // && (QT_VERSION < QT_VERSION_CHECK(5, 0, 0))
+  const uint32_t macos_major_minor = yae::get_macos_semver_u32(1000) / 1000;
+  const uint32_t macos_mavericks = yae::semver_u32(10,  9, 0, 1000) / 1000;
+  const uint32_t macos_yosemite = yae::semver_u32(10, 10, 0, 1000) / 1000;
+
+  if (macos_major_minor == macos_mavericks)
   {
     // add a workaround for Qt 4.7 QTBUG-32789
     // that manifests as misaligned text on OS X Mavericks:
     QFont::insertSubstitution(".Lucida Grande UI", "Lucida Grande");
   }
-  else if (QSysInfo::MacintoshVersion >= 0x000b)
+  else if (macos_major_minor >= macos_yosemite)
   {
     // add a workaround for Qt 4.8 QTBUG-40833
     // that manifests as misaligned text on OS X Yosemite:

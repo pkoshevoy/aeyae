@@ -32,6 +32,42 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // get_macos_version
+  //
+  // https://developer.apple.com/documentation/foundation/nsprocessinfo
+  //
+  void
+  get_macos_version(uint32_t & major,
+                    uint32_t & minor,
+                    uint32_t & patch)
+  {
+    NSProcessInfo * processInfo = [NSProcessInfo processInfo];
+    if (!processInfo)
+    {
+      return;
+    }
+
+    major = uint32_t(processInfo.operatingSystemVersion.majorVersion);
+    minor = uint32_t(processInfo.operatingSystemVersion.minorVersion);
+    patch = uint32_t(processInfo.operatingSystemVersion.patchVersion);
+  }
+
+  //----------------------------------------------------------------
+  // get_macos_semver_u32
+  //
+  uint32_t
+  get_macos_semver_u32(uint32_t scale)
+  {
+    uint32_t major = 0;
+    uint32_t minor = 0;
+    uint32_t patch = 0;
+    yae::get_macos_version(major, minor, patch);
+
+    uint32_t v = yae::semver_u32(major, minor, patch, scale);
+    return v;
+  }
+
+  //----------------------------------------------------------------
   // stringFrom
   //
   static std::string

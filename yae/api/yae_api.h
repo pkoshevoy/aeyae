@@ -128,6 +128,17 @@ namespace yae
   // int64
   //
   typedef ::int64_t int64;
+
+  //----------------------------------------------------------------
+  // semver_u32
+  //
+  inline uint32_t
+  semver_u32(uint32_t major,
+             uint32_t minor,
+             uint32_t patch,
+             uint32_t scale = 1000)
+  { return patch + scale * (minor + scale * major); }
+
 }
 
 
