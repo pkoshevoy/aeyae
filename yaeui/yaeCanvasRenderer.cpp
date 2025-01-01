@@ -2783,6 +2783,7 @@ namespace yae
   void
   TModernCanvas::clear(IOpenGLContext & context)
   {
+    YAE_BENCHMARK(benchmark, "TModernCanvas::clear");
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(context);
 
@@ -2804,7 +2805,7 @@ namespace yae
   TModernCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
-    // YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+    YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
 
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -2980,6 +2981,7 @@ namespace yae
   void
   TModernCanvas::draw(double opacity) const
   {
+    YAE_BENCHMARK(benchmark, "TModernCanvas::draw");
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty())
     {
@@ -3243,6 +3245,7 @@ namespace yae
   void
   TLegacyCanvas::clear(IOpenGLContext & context)
   {
+    YAE_BENCHMARK(benchmark, "TLegacyCanvas::clear");
     boost::lock_guard<boost::mutex> lock(mutex_);
     TMakeCurrentContext currentContext(context);
     YAE_OPENGL_HERE();
@@ -3406,7 +3409,7 @@ namespace yae
   TLegacyCanvas::loadFrame(IOpenGLContext & context,
                            const TVideoFramePtr & frame)
   {
-    // YAE_BENCHMARK(benchmark, "TModernCanvas::loadFrame");
+    YAE_BENCHMARK(benchmark, "TLegacyCanvas::loadFrame");
 
     // video traits shortcut:
     const VideoTraits & vtts = frame->traits_;
@@ -3724,6 +3727,7 @@ namespace yae
   void
   TLegacyCanvas::draw(double opacity) const
   {
+    YAE_BENCHMARK(benchmark, "TLegacyCanvas::draw");
     boost::lock_guard<boost::mutex> lock(mutex_);
     if (texId_.empty() || !frame_)
     {
@@ -3908,6 +3912,7 @@ namespace yae
   void
   CanvasRenderer::clear(IOpenGLContext & context)
   {
+    YAE_BENCHMARK(benchmark, "CanvasRenderer::clear");
     renderer_->clear(context);
   }
 
@@ -3953,7 +3958,7 @@ namespace yae
   CanvasRenderer::loadFrame(IOpenGLContext & context,
                             const TVideoFramePtr & frame)
   {
-    // YAE_BENCHMARK(benchmark, "CanvasRenderer::loadFrame");
+    YAE_BENCHMARK(benchmark, "CanvasRenderer::loadFrame");
 
     if (modern_)
     {
@@ -3975,6 +3980,7 @@ namespace yae
   void
   CanvasRenderer::draw(double opacity) const
   {
+    YAE_BENCHMARK(benchmark, "CanvasRenderer::draw");
     renderer_->draw(opacity);
   }
 
@@ -4151,6 +4157,7 @@ namespace yae
                           double h_max,
                           double opacity) const
   {
+    YAE_BENCHMARK(benchmark, "TBaseCanvas::paintImage");
     double croppedWidth = 0.0;
     double croppedHeight = 0.0;
     int cameraRotation = 0;

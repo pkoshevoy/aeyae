@@ -222,7 +222,7 @@ namespace yae
   {
     private_->clear(context());
     clearOverlay();
-    refresh();
+    this->requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -390,6 +390,7 @@ namespace yae
         dynamic_cast<PaintCanvasEvent *>(event);
       if (repaintEvent)
       {
+        YAE_BENCHMARK(benchmark, "PaintCanvasEvent");
         refresh();
         repaintEvent->payload_.setDelivered(true);
         event->accept();
@@ -400,6 +401,7 @@ namespace yae
         dynamic_cast<RenderFrameEvent *>(event);
       if (renderEvent)
       {
+        YAE_BENCHMARK(benchmark, "RenderFrameEvent");
         event->accept();
 
         TVideoFramePtr frame;
@@ -412,6 +414,7 @@ namespace yae
         dynamic_cast<InitializeBackendEvent *>(event);
       if (initBackendEvent)
       {
+        YAE_BENCHMARK(benchmark, "InitializeBackendEvent");
         event->accept();
 
         initializePrivateBackend();
@@ -423,6 +426,7 @@ namespace yae
         dynamic_cast<UpdateOverlayEvent *>(event);
       if (overlayEvent)
       {
+        YAE_BENCHMARK(benchmark, "UpdateOverlayEvent");
         event->accept();
 
         updateOverlay(true);
@@ -434,6 +438,7 @@ namespace yae
         dynamic_cast<LibassInitDoneEvent *>(event);
       if (libassInitDoneEvent)
       {
+        YAE_BENCHMARK(benchmark, "LibassInitDoneEvent");
         event->accept();
 
         libass_.asyncInitStop();
@@ -453,6 +458,7 @@ namespace yae
         continue;
       }
 
+      YAE_BENCHMARK(benchmark, "layer->processEvent");
       if (layer->processEvent(this, event))
       {
         event->accept();
@@ -1030,7 +1036,7 @@ namespace yae
     showTheGreeting_ = false;
     setSubs(frame->subs_);
 
-    refresh();
+    this->requestRepaint();
 
     if (ok && delegate_)
     {
@@ -1503,7 +1509,7 @@ namespace yae
     }
 
     updateGreeting();
-    refresh();
+    this->requestRepaint();
   }
 
   //----------------------------------------------------------------
@@ -1765,7 +1771,7 @@ namespace yae
     if (renderMode_ != renderMode)
     {
       renderMode_ = renderMode;
-      refresh();
+      this->requestRepaint();
     }
   }
 

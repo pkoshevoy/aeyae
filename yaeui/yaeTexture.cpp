@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_benchmark.h"
 
 // Qt:
 #include <QImage>
@@ -28,6 +29,7 @@ namespace yae
   unsigned int
   downsampleImage(QImage & img, double supersampled)
   {
+    YAE_BENCHMARK(probe, "yae::downsampleImage");
     unsigned int n = 1;
 
     while (supersampled >= 2.0)
@@ -58,6 +60,7 @@ namespace yae
                   GLenum textureFilterMin,
                   GLenum textureFilterMag)
   {
+    YAE_BENCHMARK(probe, "yae::uploadTexture2D");
     QImage::Format imgFormat = img.format();
 
     TPixelFormatId formatId = pixelFormatIdFor(imgFormat);
@@ -263,6 +266,7 @@ namespace yae
                  GLuint ih,
                  double opacity)
   {
+    YAE_BENCHMARK(probe, "yae::paintTexture2D");
     GLsizei widthPowerOfTwo = powerOfTwoGEQ<GLsizei>(iw);
     GLsizei heightPowerOfTwo = powerOfTwoGEQ<GLsizei>(ih);
 
@@ -371,6 +375,7 @@ namespace yae
   bool
   Texture::TPrivate::uploadTexture(const Texture & item)
   {
+    YAE_BENCHMARK(probe, "Texture::TPrivate::uploadTexture");
     bool ok = yae::uploadTexture2D(image_, texId_,
                                    // should this be a user option?
                                    GL_LINEAR_MIPMAP_LINEAR);
@@ -402,6 +407,7 @@ namespace yae
       return false;
     }
 
+    YAE_BENCHMARK(probe, "Texture::TPrivate::bind");
     uMax = u1_;
     vMax = v1_;
 
@@ -435,6 +441,7 @@ namespace yae
       return;
     }
 
+    YAE_BENCHMARK(probe, "Texture::TPrivate::unbind");
     YAE_OPENGL_HERE();
 
     if (YAE_OGL_FN(glActiveTexture))

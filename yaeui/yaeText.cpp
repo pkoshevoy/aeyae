@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_benchmark.h"
 
 // standard:
 #include <algorithm>
@@ -426,6 +427,7 @@ namespace yae
   bool
   Text::TPrivate::uploadTexture(const Text & item)
   {
+    YAE_BENCHMARK(probe, "Text::TPrivate::uploadTexture");
     QRectF maxRect;
     getMaxRect(item, maxRect);
 
@@ -496,6 +498,7 @@ namespace yae
   void
   Text::TPrivate::paint(const Text & item)
   {
+    YAE_BENCHMARK(probe, "Text::TPrivate::paint");
     BBox bbox;
     item.Item::get(kPropertyBBoxContent, bbox);
 

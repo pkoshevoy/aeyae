@@ -6,6 +6,9 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
+// aeyae:
+#include "yae/utils/yae_benchmark.h"
+
 // yaeui:
 #include "yaeBBox.h"
 #include "yaeRectangle.h"
@@ -34,6 +37,7 @@ namespace yae
             const Color & color,
             const Color & colorBorder)
   {
+    YAE_BENCHMARK(probe, "paintRect");
     double x0 = bbox.x_;
     double y0 = bbox.y_;
     double x1 = bbox.w_ + x0;
@@ -89,6 +93,7 @@ namespace yae
   void
   Rectangle::paintContent() const
   {
+    YAE_BENCHMARK(probe, "Rectangle::paintContent");
     BBox bbox;
     Item::get(kPropertyBBox, bbox);
 

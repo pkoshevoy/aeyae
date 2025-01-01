@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_benchmark.h"
 
 // Qt:
 #include <QImage>
@@ -120,6 +121,7 @@ namespace yae
   bool
   RoundRect::TPrivate::uploadTexture(const RoundRect & item)
   {
+    YAE_BENCHMARK(probe, "RoundRect::TPrivate::uploadTexture");
     sig_.assign(item);
 
     // get the corner radius:
@@ -277,6 +279,7 @@ namespace yae
   void
   RoundRect::TPrivate::paint(const RoundRect & item)
   {
+    YAE_BENCHMARK(probe, "RoundRect::TPrivate::paint");
     BBox bbox;
     item.Item::get(kPropertyBBox, bbox);
 
