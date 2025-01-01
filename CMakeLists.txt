@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.1.0)
 
+set(CMAKE_BUILD_RPATH_USE_ORIGIN ON)
+set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -86,6 +88,14 @@ set(TARGET_LIBS
   ${Boost_LIBRARIES}
   ${CMAKE_THREAD_LIBS_INIT}
   )
+
+if (NOT (WIN32 OR APPLE))
+  set(TARGET_LIBS
+    ${TARGET_LIBS}
+    dl
+    )
+endif ()
+
 
 
 if (WIN32)
@@ -185,8 +195,15 @@ set(jsoncpp_sources
   jsoncpp/src/lib_json/json_writer.cpp
   )
 
-add_library(${PROGNAME} SHARED
+set(BUILD_STATIC_LIBAEYAE FALSE CACHE BOOL "build static libaeyae")
+set(EXTRA_LIBS "" CACHE STRING "additional libraries to link")
 
+set(TARGET_LIBS
+  ${TARGET_LIBS}
+  ${EXTRA_LIBS}
+  )
+
+set(LIBAEYAE_SOURCES
   ${jsoncpp_sources}
 
   yae/api/yae_api.h
@@ -289,6 +306,12 @@ add_library(${PROGNAME} SHARED
   yae/video/yae_video_renderer.h
   )
 
+if (${BUILD_STATIC_LIBAEYAE})
+  add_library(${PROGNAME} STATIC ${LIBAEYAE_SOURCES})
+else (${BUILD_STATIC_LIBAEYAE})
+  add_library(${PROGNAME} SHARED ${LIBAEYAE_SOURCES})
+endif ()
+
 add_custom_command(
   OUTPUT "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
   BYPRODUCTS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h"
@@ -307,27 +330,40 @@ add_custom_target("aeyae_update_revision" ALL
   DEPENDS "${PROJECT_BINARY_DIR}/yae/api/yae_version.h.tmp"
   COMMAND "${CMAKE_COMMAND}" -E echo "updating ${PROJECT_BINARY_DIR}/yae/api/yae_version.h")
 
-add_dependencies(aeyae "aeyae_update_revision")
+add_dependencies(${PROGNAME} "aeyae_update_revision")
 
-set_property(TARGET aeyae PROPERTY CXX_STANDARD 98)
-# set_property(TARGET aeyae PROPERTY CXX_STANDARD 11)
+set_property(TARGET ${PROGNAME} PROPERTY
+  VERSION 1.0-${CMAKE_SYSTEM_VERSION}
+  )
 
-target_compile_definitions(aeyae PRIVATE
+message("Boost_VERSION: ${Boost_VERSION}")
+if (Boost_VERSION VERSION_LESS "107000")
+  message("setting AEYAE_CXX_STANDARD 98")
+  set(AEYAE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
+else()
+  message("setting AEYAE_CXX_STANDARD 17")
+  set(AEYAE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
+endif()
+
+set(CMAKE_CXX_STANDARD ${AEYAE_CXX_STANDARD})
+set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD  ${AEYAE_CXX_STANDARD})
+
+target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS
   -DJSON_DLL_BUILD
   )
 
-target_link_libraries(aeyae PRIVATE ${TARGET_LIBS})
+target_link_libraries(${PROGNAME} PRIVATE ${TARGET_LIBS})
 
-add_subdirectory(tests)
+#add_subdirectory(tests)
 add_subdirectory(yaeui)
 add_subdirectory(apprenticevideo)
-add_subdirectory(apprenticevideo-classic)
-add_subdirectory(aeyaeremux)
-add_subdirectory(yaetv)
+#add_subdirectory(apprenticevideo-classic)
+#add_subdirectory(aeyaeremux)
+#add_subdirectory(yaetv)
 add_subdirectory(yamka)
 #add_subdirectory(yathe)
 
 if (NOT (WIN32 OR APPLE))
-  install(TARGETS aeyae DESTINATION lib)
+  install(TARGETS ${PROGNAME} DESTINATION lib)
 endif()
