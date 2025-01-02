@@ -1152,6 +1152,12 @@ namespace yaegl
     this->glBegin = &yaegl::begin;
     this->glEnd = &yaegl::end;
 
+    this->glFlush = (TFlush)
+      get_addr(ctx, "glFlush");
+
+    this->glFinish = (TFinish)
+      get_addr(ctx, "glFinish");
+
     this->glClear = (TClear)
       get_addr(ctx, "glClear");
 

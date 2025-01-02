@@ -144,6 +144,16 @@ namespace yaegl
   typedef void (APIENTRYP TEnd)();
 
   //----------------------------------------------------------------
+  // TFlush
+  //
+  typedef void (APIENTRYP TFlush)();
+
+  //----------------------------------------------------------------
+  // TFinish
+  //
+  typedef void (APIENTRYP TFinish)();
+
+  //----------------------------------------------------------------
   // TClear
   //
   typedef void (APIENTRYP TClear)(GLbitfield mask);
@@ -642,6 +652,9 @@ namespace yaegl
 
     TBegin _glBegin;
     TEnd _glEnd;
+
+    TFlush glFlush;
+    TFinish glFinish;
 
     TClear glClear;
     TClearAccum glClearAccum;
