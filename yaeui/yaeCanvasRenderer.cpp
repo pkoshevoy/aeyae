@@ -1124,7 +1124,7 @@ namespace yaegl
     if (!func)
     {
       yae_elog("OpenGL function not found: %s", name);
-      YAE_ASSERT(false);
+      // YAE_ASSERT(false);
     }
 
     return func;
@@ -2841,7 +2841,18 @@ namespace yae
         texId_.clear();
       }
 
-      shader_ = findSomeShaderFor(vtts.pixelFormat_);
+      const TFragmentShader * found = findSomeShaderFor(vtts.pixelFormat_);
+      if (shader_ != found)
+      {
+        shader_ = found;
+        const pixelFormat::Traits * ptts =
+          pixelFormat::getTraits(vtts.pixelFormat_);
+
+        std::ostringstream oss;
+        oss << "found shader for " << ptts->name_ << ":\n";
+        yae_show_program_listing(oss, found->program_->code_);
+        yae_warn << oss.str();
+      }
 
       if (!supportedChannels && !shader_)
       {
@@ -3982,6 +3993,27 @@ namespace yae
   {
     YAE_BENCHMARK(benchmark, "CanvasRenderer::draw");
     renderer_->draw(opacity);
+
+    static TTime lastlog_ = TTime(0, 1000);
+    static TTime prev_ = TTime(0, 1000);
+    static FramerateEstimator estimator_;
+    TTime now = TTime::now();
+
+    if ((now - prev_).get(1000) > 1000)
+    {
+      estimator_.clear();
+    }
+
+    estimator_.push(now);
+    prev_ = now;
+
+    if (estimator_.num_samples() > 2 &&
+        (now - lastlog_).get(1000) >= 1000)
+    {
+      double fps = estimator_.window_avg();
+      yae_warn << "estimated output framerate: " << fps;
+      lastlog_ = now;
+    }
   }
 
   //----------------------------------------------------------------

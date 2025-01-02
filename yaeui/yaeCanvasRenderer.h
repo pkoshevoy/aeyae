@@ -18,6 +18,7 @@
 // standard:
 #include <deque>
 #include <string>
+#include <string.h>
 #include <stdexcept>
 
 YAE_DISABLE_DEPRECATION_WARNINGS
