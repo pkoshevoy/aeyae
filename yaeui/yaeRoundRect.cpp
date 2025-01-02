@@ -121,7 +121,7 @@ namespace yae
   bool
   RoundRect::TPrivate::uploadTexture(const RoundRect & item)
   {
-    YAE_BENCHMARK(probe, "RoundRect::TPrivate::uploadTexture");
+    // YAE_BENCHMARK(probe, "RoundRect::TPrivate::uploadTexture");
     sig_.assign(item);
 
     // get the corner radius:
@@ -279,7 +279,7 @@ namespace yae
   void
   RoundRect::TPrivate::paint(const RoundRect & item)
   {
-    YAE_BENCHMARK(probe, "RoundRect::TPrivate::paint");
+    // YAE_BENCHMARK(probe, "RoundRect::TPrivate::paint");
     BBox bbox;
     item.Item::get(kPropertyBBox, bbox);
 

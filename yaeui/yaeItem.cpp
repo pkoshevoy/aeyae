@@ -904,6 +904,7 @@ namespace yae
   void
   Item::uncache()
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::uncache ") + id_).c_str());
     for (std::vector<ItemPtr>::iterator i = children_.begin();
          i != children_.end(); ++i)
     {
@@ -920,6 +921,7 @@ namespace yae
   void
   Item::uncacheSelf()
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::uncacheSelf ") + id_).c_str());
     anchors_.uncache();
     margins_.uncache();
     width_.uncache();
@@ -1226,6 +1228,7 @@ namespace yae
   double
   Item::width() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::width ") + id_).c_str());
     if (width_.isValid() || width_.isCached())
     {
       return width_.get();
@@ -1278,6 +1281,7 @@ namespace yae
   double
   Item::height() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::height ") + id_).c_str());
     if (height_.isValid() || height_.isCached())
     {
       return height_.get();
@@ -1307,6 +1311,7 @@ namespace yae
   double
   Item::left() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::left ") + id_).c_str());
     if (anchors_.left_.isValid())
     {
       double l = anchors_.left_.get();
@@ -1347,6 +1352,7 @@ namespace yae
   double
   Item::right() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::right ") + id_).c_str());
     if (anchors_.right_.isValid())
     {
       double r = anchors_.right_.get();
@@ -1366,6 +1372,7 @@ namespace yae
   double
   Item::top() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::top ") + id_).c_str());
     if (anchors_.top_.isValid())
     {
       double t = anchors_.top_.get();
@@ -1406,6 +1413,7 @@ namespace yae
   double
   Item::bottom() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::bottom ") + id_).c_str());
     if (anchors_.bottom_.isValid())
     {
       double b = anchors_.bottom_.get();
@@ -1425,6 +1433,7 @@ namespace yae
   double
   Item::hcenter() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::hcenter ") + id_).c_str());
     if (anchors_.hcenter_.isValid())
     {
       double hc = anchors_.hcenter_.get();
@@ -1446,6 +1455,7 @@ namespace yae
   double
   Item::vcenter() const
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::vcenter ") + id_).c_str());
     if (anchors_.vcenter_.isValid())
     {
       double vc = anchors_.vcenter_.get();
@@ -1496,6 +1506,7 @@ namespace yae
   Item &
   Item::operator[](const char * id)
   {
+    // YAE_BENCHMARK(benc, (std::string("Item::operator[] ") + id_).c_str());
     if (strcmp(id, "/") == 0)
     {
       Item * p = this;
@@ -1607,6 +1618,7 @@ namespace yae
                          // in the coordinate system of the root item:
                          std::list<InputHandler> & inputHandlers)
   {
+    // YAE_BENCHMARK(benc, (std::string("getInputHandlers ") + id_).c_str());
     if (!overlaps(itemCSysPoint))
     {
       return;
@@ -1638,6 +1650,7 @@ namespace yae
                         // in the coordinate system of the root item:
                         std::list<VisibleItem> & visibleItems)
   {
+    // YAE_BENCHMARK(benc, (std::string("getVisibleItems ") + id_).c_str());
     if (!(visible() && overlaps(itemCSysPoint)))
     {
       return;
@@ -1738,6 +1751,8 @@ namespace yae
                       const Segment & yregion,
                       Canvas * canvas) const
   {
+    // YAE_BENCHMARK(benc, "Item::paintChildren");
+
     // only paint childen that are visible in the painted region, in Z order:
     std::map<double, std::list<ItemPtr> > order;
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
@@ -1800,6 +1815,7 @@ namespace yae
       return false;
     }
 
+    YAE_BENCHMARK(benc, (std::string("paint ") + id_).c_str());
     this->paintContent();
     painted_ = true;
 
@@ -1820,6 +1836,7 @@ namespace yae
       return;
     }
 
+    // YAE_BENCHMARK(benc, (std::string("unpaint ") + id_).c_str());
     this->unpaintContent();
     painted_ = false;
 
@@ -1846,6 +1863,7 @@ namespace yae
       return false;
     }
 
+    // YAE_BENCHMARK(benc, (std::string("visit ") + id_).c_str());
     std::map<double, std::list<ItemPtr> > order;
     for (std::vector<ItemPtr>::const_iterator i = children_.begin();
          i != children_.end(); ++i)

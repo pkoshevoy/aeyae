@@ -255,7 +255,7 @@ namespace yae
 
         oss
           << "  "
-          << std::left << std::setw(40) << std::setfill(' ')
+          << std::left << std::setw(60) << std::setfill(' ')
           << indent(entry.name_.c_str(), entry.depth_)
           << " : "
 
@@ -269,19 +269,27 @@ namespace yae
 
           << std::fixed << std::setprecision(3) << std::setw(13)
           << double(entry.t_ * 1000) / double(timebase)
-          << " msec total, "
-
-          << std::fixed << std::setprecision(3) << std::setw(13)
-          << double(entry.t_ * 1000) / double(entry.n_ * timebase)
-          << " msec avg, "
-
-          << std::fixed << std::setprecision(3) << std::setw(13)
-          << double(entry.min_ * 1000) / double(timebase)
-          << " msec min, "
+          << " ms sum, "
 
           << std::fixed << std::setprecision(3) << std::setw(13)
           << double(entry.max_ * 1000) / double(timebase)
-          << " msec max\n";
+          << " ms max, "
+
+          << std::fixed << std::setprecision(3) << std::setw(13)
+          << double(entry.t_ * 1000) / double(entry.n_ * timebase)
+          << " ms avg";
+
+        if (entry.t_ > 0)
+        {
+          double fps = double(entry.n_ * timebase) / double(entry.t_);
+          if (fps < 121.0)
+          {
+            oss << ", " << std::fixed << std::setprecision(3) << std::setw(13)
+                << fps << " fps";
+          }
+        }
+
+        oss << '\n';
       }
     }
 

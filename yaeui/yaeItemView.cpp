@@ -400,7 +400,7 @@ namespace yae
   void
   ItemView::paint(Canvas * canvas)
   {
-    YAE_BENCHMARK(benchmark, "ItemView::paint ");
+    YAE_BENCHMARK(benchmark, ("ItemView::paint " + root_->id_).c_str());
 
     requestRepaintEvent_.setDelivered(true);
 

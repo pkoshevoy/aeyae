@@ -800,6 +800,14 @@ namespace yae
     paint_canvas(0, 0, double(canvasWidth), double(canvasHeight));
     paint_layers(0, 0, double(canvasWidth), double(canvasHeight));
 
+    // avoid stalling the GPU, make sure all un-issued commands in the
+    // OpenGL drivers command queue are flushed to the GPU command queue,
+    // see https://www.khronos.org/opengl/wiki/Synchronization
+    YAE_OPENGL(glFlush());
+
+    // block until all rendering commands that have been sent have completed:
+    YAE_OPENGL(glFinish());
+
     // reset OpenGL to default/initial state:
     yae_reset_opengl_to_initial_state();
   }

@@ -37,7 +37,7 @@ namespace yae
             const Color & color,
             const Color & colorBorder)
   {
-    YAE_BENCHMARK(probe, "paintRect");
+    // YAE_BENCHMARK(probe, "paintRect");
     double x0 = bbox.x_;
     double y0 = bbox.y_;
     double x1 = bbox.w_ + x0;
@@ -93,7 +93,7 @@ namespace yae
   void
   Rectangle::paintContent() const
   {
-    YAE_BENCHMARK(probe, "Rectangle::paintContent");
+    // YAE_BENCHMARK(probe, "Rectangle::paintContent");
     BBox bbox;
     Item::get(kPropertyBBox, bbox);
 
