@@ -16,8 +16,9 @@
 // system:
 #import <ApplicationServices/ApplicationServices.h>
 #import <Cocoa/Cocoa.h>
+#import <CoreServices/CoreServices.h>
 
-#if __MAC_OS_X_VERSION_MAX_ALLOWED >= 1050
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1050
 #include <objc/runtime.h>
 #include <objc/message.h>
 #else
@@ -41,15 +42,22 @@ namespace yae
                     uint32_t & minor,
                     uint32_t & patch)
   {
-    NSProcessInfo * processInfo = [NSProcessInfo processInfo];
-    if (!processInfo)
-    {
-      return;
-    }
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 101000
+    NSOperatingSystemVersion os =
+      [[NSProcessInfo processInfo] operatingSystemVersion];
 
-    major = uint32_t(processInfo.operatingSystemVersion.majorVersion);
-    minor = uint32_t(processInfo.operatingSystemVersion.minorVersion);
-    patch = uint32_t(processInfo.operatingSystemVersion.patchVersion);
+    major = uint32_t(os.majorVersion);
+    minor = uint32_t(os.minorVersion);
+    patch = uint32_t(os.patchVersion);
+#else
+    SInt32 maj, min, pat;
+    Gestalt(gestaltSystemVersionMajor, &maj);
+    Gestalt(gestaltSystemVersionMinor, &min);
+    Gestalt(gestaltSystemVersionBugFix, &pat);
+    major = maj;
+    minor = min;
+    patch = pat;
+#endif
   }
 
   //----------------------------------------------------------------
