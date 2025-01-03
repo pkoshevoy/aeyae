@@ -35,6 +35,7 @@
 #include <windows.h>
 #include <io.h>
 #include <share.h>
+#include <shellapi.h>
 #else
 #include <dirent.h>
 #include <dlfcn.h>
