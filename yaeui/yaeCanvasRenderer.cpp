@@ -4000,6 +4000,7 @@ namespace yae
     YAE_BENCHMARK(benchmark, "CanvasRenderer::draw");
     renderer_->draw(opacity);
 
+#ifndef NDEBUG
     static TTime lastlog_ = TTime(0, 1000);
     static TTime prev_ = TTime(0, 1000);
     static FramerateEstimator estimator_;
@@ -4020,6 +4021,7 @@ namespace yae
       yae_warn << "estimated output framerate: " << fps;
       lastlog_ = now;
     }
+#endif
   }
 
   //----------------------------------------------------------------
