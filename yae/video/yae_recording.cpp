@@ -94,6 +94,8 @@ namespace yae
     description_ = r.description_;
     device_info_ = r.device_info_;
     max_recordings_ = r.max_recordings_;
+    title_path_ = r.title_path_;
+    title_filepath_no_ext_ = r.title_filepath_no_ext_;
     return *this;
   }
 
@@ -159,10 +161,24 @@ namespace yae
   fs::path
   Recording::Rec::get_title_path(const fs::path & basedir) const
   {
+    if (title_path_.empty())
+    {
+      title_path_ = this->find_title_path(basedir);
+    }
+
+    return title_path_;
+  }
+
+  //----------------------------------------------------------------
+  // Recording::Rec::find_title_path
+  //
+  fs::path
+  Recording::Rec::find_title_path(const fs::path & basedir) const
+  {
     // check if there is a recording at the full_title_ path
     // for backwards compatibility with old recordings:
     fs::path title_path = this->get_title_path(basedir, full_title_);
-    std::string fn_rec = this->get_title_filepath(title_path, ".json");
+    std::string fn_rec = this->find_title_filepath(title_path, ".json");
     if (fs::exists(fn_rec))
     {
       // for backwards compatibility with old recordings
@@ -263,6 +279,24 @@ namespace yae
   std::string
   Recording::Rec::get_title_filepath(const fs::path & title_path,
                                      const char * ext) const
+  {
+    if (title_filepath_no_ext_.empty())
+    {
+      std::string filepath = this->find_title_filepath(title_path, ".json");
+      title_filepath_no_ext_ = filepath.substr(0, filepath.size() - 5);
+    }
+
+    return ((ext && *ext) ?
+            (title_filepath_no_ext_ + ext) :
+            title_filepath_no_ext_);
+  }
+
+  //---------------------------------------------------------------
+  // Recording::Rec::get_title_filepath
+  //
+  std::string
+  Recording::Rec::find_title_filepath(const fs::path & title_path,
+                                      const char * ext) const
   {
     // for backwards compatibility with old recordings
     // which used short_title for the basename:

@@ -98,7 +98,13 @@ namespace yae
       // truncate (season finale), (season premiere), (series premiere), etc...
       std::string get_short_title() const;
 
+      // use find_title_path to cache the title path once,
+      // then return the cached title_path_:
       fs::path get_title_path(const fs::path & basedir) const;
+
+      // for backwards compatibility with old recordings
+      // that were recorded at the full_title_ path:
+      fs::path find_title_path(const fs::path & basedir) const;
 
       // for backwards compatibility with old recordings
       // that were recorded at the full_title_ path:
@@ -119,6 +125,9 @@ namespace yae
 
       std::string get_title_filepath(const fs::path & title_path,
                                      const char * suffix) const;
+
+      std::string find_title_filepath(const fs::path & title_path,
+                                      const char * suffix) const;
 
       std::string get_title_filepath(const fs::path & title_path,
                                      const std::string & title,
@@ -145,6 +154,11 @@ namespace yae
       std::string description_;
       std::string device_info_;
       uint16_t max_recordings_;
+
+    protected:
+      // cached values:
+      mutable fs::path title_path_;
+      mutable std::string title_filepath_no_ext_;
     };
 
     Recording();
