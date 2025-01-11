@@ -30,26 +30,6 @@ namespace yae
   Worker::Task::~Task()
   {}
 
-  //----------------------------------------------------------------
-  // Worker::Task::cancel
-  //
-  void
-  Worker::Task::cancel()
-  {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    cancelled_ = true;
-  }
-
-  //----------------------------------------------------------------
-  // Worker::Task::cancelled
-  //
-  bool
-  Worker::Task::cancelled() const
-  {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    return cancelled_;
-  }
-
 
   //----------------------------------------------------------------
   // Worker::Worker

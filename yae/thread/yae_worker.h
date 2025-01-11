@@ -44,10 +44,23 @@ namespace yae
       virtual ~Task();
 
       virtual void execute(const Worker & worker) = 0;
-      virtual void cancel();
-      virtual bool cancelled() const;
+
+      inline void cancel()
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        cancelled_ = true;
+        this->cleanup();
+      }
+
+      inline bool is_cancelled() const
+      {
+        boost::unique_lock<boost::mutex> lock(mutex_);
+        return cancelled_;
+      }
 
     protected:
+      virtual void cleanup() {}
+
       mutable boost::condition_variable signal_;
       mutable boost::mutex mutex_;
       bool cancelled_;

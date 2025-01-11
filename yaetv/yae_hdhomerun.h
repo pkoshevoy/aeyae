@@ -22,42 +22,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // IAssert
-  //
-  struct IAssert
-  {
-    virtual ~IAssert() {}
-    virtual bool eval() const = 0;
-
-    inline bool operator()() const
-    {
-      if (!this->eval())
-      {
-        throw std::runtime_error("false predicate");
-      }
-
-      return true;
-    }
-  };
-
-
-  //----------------------------------------------------------------
-  // DontStop
-  //
-  struct DontStop : IAssert
-  {
-    DontStop():
-      stop_(false)
-    {}
-
-    virtual bool eval() const
-    { return !stop_; }
-
-    bool stop_;
-  };
-
-
-  //----------------------------------------------------------------
   // TunerDevice
   //
   struct TunerDevice

@@ -112,11 +112,37 @@ namespace yae
   //----------------------------------------------------------------
   // CollectRecordings
   //
-  struct CollectRecordings : CollectFiles
+  struct CollectRecordings
   {
-    CollectRecordings(std::map<std::string, std::string> & dst):
-      CollectFiles(dst, recording_rx, boost::regex::icase)
+    CollectRecordings(DVR::FindExistingRecordings & observer,
+                      FoundRecordings & recordings):
+      observer_(observer),
+      recordings_(recordings),
+      pattern_(recording_rx, boost::regex::icase)
     {}
+
+    bool operator()(bool is_folder,
+                    const std::string & name,
+                    const std::string & path)
+    {
+      if (observer_.is_cancelled())
+      {
+        // the task was cancelled:
+        return false;
+      }
+
+      if (!is_folder && boost::regex_match(name, pattern_))
+      {
+        observer_.add_to(recordings_, name, path);
+      }
+
+      return true;
+    }
+
+  protected:
+    DVR::FindExistingRecordings & observer_;
+    FoundRecordings & recordings_;
+    boost::regex pattern_;
   };
 
 
@@ -1580,7 +1606,7 @@ namespace yae
   // write
   //
   static void
-  write(const DVR & dvr,
+  write(DVR & dvr,
         const std::set<TRecordingPtr> & recs,
         const yae::Data & data)
   {
@@ -1594,7 +1620,7 @@ namespace yae
         yae::shared_ptr<Recording::Rec> rec_ptr = recording.get_rec();
         Recording::Rec & rec = *rec_ptr;
         uint32_t num_sec = rec.get_duration();
-        yae::make_room_for(dvr.basedir_, rec, num_sec);
+        dvr.make_room_for(rec, num_sec);
       }
 
       recording.write(dvr.basedir_, data);
@@ -1701,7 +1727,7 @@ namespace yae
 
     // virtual:
     void execute(const yae::Worker & worker);
-    void cancel();
+    void cleanup();
 
     yae::weak_ptr<IStream> stream_;
   };
@@ -1740,14 +1766,11 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // CaptureStream::cancel
+  // CaptureStream::cleanup
   //
   void
-  CaptureStream::cancel()
+  CaptureStream::cleanup()
   {
-    yae::Worker::Task::cancel();
-
-    boost::unique_lock<boost::mutex> lock(mutex_);
     DVR::TStreamPtr stream_ptr = stream_.lock();
     if (stream_ptr)
     {
@@ -1943,8 +1966,12 @@ namespace yae
     dvr_.set_next_epg_refresh(now);
     dvr_.set_next_schedule_refresh(now);
     dvr_.set_next_storage_cleanup(now);
+    dvr_.set_next_find_recordings(now + dvr_.find_recordings_period_);
     dvr_.set_next_log_cleanup(now + dvr_.log_cleanup_period_);
     dvr_.set_next_heartbeat(now);
+
+    bool call_add_existing_recording = true;
+    dvr_.find_recordings(call_add_existing_recording);
 
     yae::mpeg_ts::EPG epg;
     dvr_.get_epg(epg);
@@ -1952,9 +1979,15 @@ namespace yae
     dvr_.update_epg();
 
     // pull EPG, evaluate wishlist, start captures, etc...
-    while (!keep_going_.stop_)
+    while (!this->is_cancelled())
     {
       now = TTime::now().rebased(1);
+
+      if (dvr_.next_find_recordings() <= now)
+      {
+        dvr_.set_next_find_recordings(now + dvr_.find_recordings_period_);
+        dvr_.find_recordings();
+      }
 
       if (dvr_.next_log_cleanup() <= now)
       {
@@ -2004,7 +2037,7 @@ namespace yae
         dvr_.evaluate(epg);
       }
 
-      if (dvr_.worker_.is_idle())
+      if (dvr_.service_worker_.is_idle())
       {
         bool blocklist_changed = dvr_.load_blocklist();
 
@@ -2041,16 +2074,6 @@ namespace yae
     }
   }
 
-  //----------------------------------------------------------------
-  // DVR::ServiceLoop::cancel
-  //
-  void
-  DVR::ServiceLoop::cancel()
-  {
-    yae::Worker::Task::cancel();
-    keep_going_.stop_ = true;
-  }
-
 
   //----------------------------------------------------------------
   // DVR::DVR
@@ -2058,7 +2081,8 @@ namespace yae
   DVR::DVR(const std::string & yaetv_dir,
            const std::string & basedir):
     hdhr_(yaetv_dir),
-    worker_(0, 1, "DVR"),
+    service_worker_(0, 1, "DVR_service_worker"),
+    storage_worker_(0, 1, "DVR_storage_worker"),
     yaetv_(yaetv_dir),
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     heartbeat_period_(5, 1),
@@ -2066,6 +2090,7 @@ namespace yae
     epg_refresh_period_(30 * 60, 1),
     schedule_refresh_period_(30, 1),
     storage_cleanup_period_(300, 1),
+    find_recordings_period_(30, 1),
     log_cleanup_period_(24 * 60 * 60, 1),
     margin_(60, 1)
   {
@@ -2160,35 +2185,16 @@ namespace yae
                basedir_.string().c_str());
     }
 
-    std::map<std::string, std::string> recordings;
-    {
-      CollectRecordings collect_recordings(recordings);
-      for_each_file_at(basedir_.string(), collect_recordings);
-    }
+    // clear existing recordings:
+    recordings_.reset(new FoundRecordings());
 
-    uint64_t recordings_bytes = 0;
-    for (std::map<std::string, std::string>::iterator
-           i = recordings.begin(); i != recordings.end(); ++i)
-    {
-      const std::string & name = i->first;
-      const std::string & path = i->second;
-      uint64_t num_bytes = yae::stat_filesize(path.c_str());
-      recordings_bytes += num_bytes;
-
-      yae_ilog("recorded %.3f GB, %s",
-               double(num_bytes) / 1000000000.0,
-               name.c_str());
-    }
-
-    yae_ilog("total size of recordings: %.3F GB",
-             double(recordings_bytes) / 1000000000.0);
-
-    // (re)start the service loop:
-    worker_.start();
+    // (re)start the workers:
+    service_worker_.start();
+    storage_worker_.start();
 
     if (!service_loop_worker_)
     {
-      service_loop_worker_.reset(new yae::Worker());
+      service_loop_worker_.reset(new yae::Worker(0, 1, "servce_loop_worker"));
     }
 
     TWorkerPtr service_loop_worker_ptr = service_loop_worker_;
@@ -2225,8 +2231,10 @@ namespace yae
   {
     std::map<std::string, std::string> recs;
     {
+      bool skip_folders = true;
+      std::string yaetv_subdir = (basedir_ / ".yaetv").string();
       CollectFiles collect_files(recs, rec_sched_rx);
-      for_each_file_at((basedir_ / ".yaetv").string(), collect_files);
+      for_each_file_at(yaetv_subdir, collect_files, skip_folders);
     }
 
     // remove cancelled/expired explicitly scheduled items:
@@ -2325,8 +2333,11 @@ namespace yae
       }
     }
 
-    worker_.stop();
-    worker_.wait_until_finished();
+    storage_worker_.stop();
+    storage_worker_.wait_until_finished();
+
+    service_worker_.stop();
+    service_worker_.wait_until_finished();
 
     // clear the schedule:
     boost::unique_lock<boost::mutex> lock(mutex_);
@@ -2437,10 +2448,8 @@ namespace yae
                        TunerStatus & tuner_status);
     // virtual:
     void execute(const yae::Worker & worker);
-    void cancel();
 
     DVR & dvr_;
-    DontStop keep_going_;
   };
 
   //----------------------------------------------------------------
@@ -2753,13 +2762,19 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ScanChannels::cancel
+  // DVR::find_recordings
   //
   void
-  ScanChannels::cancel()
+  DVR::find_recordings(bool call_add_existing_recording)
   {
-    yae::Worker::Task::cancel();
-    keep_going_.stop_ = true;
+    if (storage_worker_.is_busy())
+    {
+      return;
+    }
+
+    yae::shared_ptr<FindExistingRecordings, yae::Worker::Task> task;
+    task.reset(new FindExistingRecordings(*this, call_add_existing_recording));
+    storage_worker_.add(task);
   }
 
   //----------------------------------------------------------------
@@ -2770,7 +2785,7 @@ namespace yae
   {
     yae::shared_ptr<ScanChannels, yae::Worker::Task> task;
     task.reset(new ScanChannels(*this));
-    worker_.add(task);
+    service_worker_.add(task);
   }
 
 
@@ -2939,7 +2954,7 @@ namespace yae
   {
     yae::shared_ptr<UpdateProgramGuide, yae::Worker::Task> task;
     task.reset(new UpdateProgramGuide(*this));
-    worker_.add(task);
+    service_worker_.add(task);
   }
 
   //----------------------------------------------------------------
@@ -2963,7 +2978,7 @@ namespace yae
 
       static const uint64_t min_free_bytes = 9000000000ull;
       yae_dlog("storage cleanup to free up %" PRIu64 " bytes", min_free_bytes);
-      yae::make_room_for(dvr_.basedir_.string(), min_free_bytes);
+      dvr_.make_room_for(min_free_bytes);
     }
 
     DVR & dvr_;
@@ -2977,7 +2992,7 @@ namespace yae
   {
     yae::shared_ptr<StorageCleanup, yae::Worker::Task> task;
     task.reset(new StorageCleanup(*this));
-    worker_.add(task);
+    service_worker_.add(task);
   }
 
   //----------------------------------------------------------------
@@ -3321,9 +3336,10 @@ namespace yae
 
     std::map<std::string, std::string> epg_by_freq;
     {
-      std::string epg_dir = (basedir_ / ".yaetv").string();
+      bool skip_folders = true;
+      std::string yaetv_subdir = (basedir_ / ".yaetv").string();
       CollectFiles collect_files(epg_by_freq, epg_by_freq_rx);
-      for_each_file_at(epg_dir, collect_files);
+      for_each_file_at(yaetv_subdir, collect_files, skip_folders);
     }
 
     for (std::map<std::string, std::string>::const_iterator
@@ -3926,9 +3942,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // get_playlist
+  //
+  static std::string
+  get_playlist(const Recording::Rec & rec)
+  {
+    std::string playlist = yae::strfmt("%02i.%02i %s",
+                                       rec.channel_major_,
+                                       rec.channel_minor_,
+                                       rec.get_short_title().c_str());
+    return playlist;
+  }
+
+  //----------------------------------------------------------------
   // DVR::delete_recording
   //
-  void
+  uint64_t
   DVR::delete_recording(const Recording::Rec & rec)
   {
     // shortcut:
@@ -3944,17 +3973,36 @@ namespace yae
       }
     }
 
+    std::string playlist = yae::get_playlist(rec);
     std::string filepath = rec.get_filepath(basedir_);
+    std::string filename = rec.get_filename(basedir_, ".mpg");
+
     yae_ilog("deleting recording %s", filepath.c_str());
-    remove_recording(filepath);
+    uint64_t bytes_removed = remove_recording(filepath);
+
+    // update found recordings:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      TFoundRecordingsPtr found_recordings_ptr;
+      found_recordings_ptr.reset(new FoundRecordings(*recordings_));
+
+      FoundRecordings & found_recordings = *found_recordings_ptr;
+      found_recordings.mpg_path_.erase(filename);
+      found_recordings.by_filename_.erase(filename);
+      found_recordings.by_playlist_[playlist].erase(filename);
+      found_recordings.by_channel_[ch_num].erase(gps_t0);
+
+      recordings_ = found_recordings_ptr;
+    }
+
+    return bytes_removed;
   }
 
   //----------------------------------------------------------------
   // remove_excess_recordings
   //
   void
-  remove_excess_recordings(const fs::path & basedir,
-                           const Recording::Rec & rec)
+  DVR::remove_excess_recordings(const Recording::Rec & rec)
   {
     YAE_BENCHMARK(probe, "remove_excess_recordings");
 
@@ -3964,20 +4012,36 @@ namespace yae
       return;
     }
 
-    std::map<std::string, std::string> recordings;
+    TFoundRecordingsPtr found_recordings;
     {
-      std::string title_path = rec.get_title_path(basedir).string();
-      CollectRecordings collect_recordings(recordings);
-      for_each_file_at(title_path, collect_recordings);
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      found_recordings = recordings_;
     }
 
+    if (!found_recordings)
+    {
+      // can't cleanup old recordings until we have found some recordings:
+      return;
+    }
+
+    std::string playlist = yae::get_playlist(rec);
+    const TRecs & recordings =
+      yae::get(found_recordings->by_playlist_, playlist, TRecs());
+
+    if (recordings.empty())
+    {
+      // haven't found any recordings for this playlist yet:
+      return;
+    }
+
+    std::list<TRecPtr> recs;
     std::size_t num_recordings = 0;
-    std::list<std::pair<std::string, TRecPtr> > recs;
-    for (std::map<std::string, std::string>::iterator
+
+    for (TRecs::const_iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
-      const std::string & mpg = i->second;
-      TRecPtr rec_ptr = load_recording(mpg);
+      const std::string & filename = i->first;
+      const TRecPtr & rec_ptr = i->second;
 
       if (rec.utc_t0_ == rec_ptr->utc_t0_)
       {
@@ -3985,12 +4049,12 @@ namespace yae
         continue;
       }
 
-      recs.push_back(std::make_pair(mpg, rec_ptr));
+      recs.push_back(rec_ptr);
       num_recordings++;
     }
 
     std::size_t removed_recordings = 0;
-    for (std::list<std::pair<std::string, TRecPtr> >::const_iterator
+    for (std::list<TRecPtr>::const_iterator
            i = recs.begin(); i != recs.end(); ++i)
     {
       if (num_recordings - removed_recordings <= rec.max_recordings_)
@@ -3998,14 +4062,13 @@ namespace yae
         break;
       }
 
-      const std::string & mpg = i->first;
-      const TRecPtr & rec_ptr = i->second;
+      const TRecPtr & rec_ptr = *i;
       if (rec.utc_t0_ <= rec_ptr->utc_t0_)
       {
         continue;
       }
 
-      if (remove_recording(mpg))
+      if (this->delete_recording(*rec_ptr))
       {
         removed_recordings++;
       }
@@ -4016,36 +4079,18 @@ namespace yae
   // make_room_for
   //
   bool
-  make_room_for(const fs::path & basedir,
-                const Recording::Rec & rec,
-                uint64_t num_sec)
-  {
-    YAE_BENCHMARK(probe, "make_room_for rec");
-
-    // remove any existing old recordings beyond max recordings limit:
-    yae::remove_excess_recordings(basedir, rec);
-
-    uint64_t title_bytes = ((120 + num_sec) * 20000000) >> 3;
-    if (yae::make_room_for(basedir.string(), title_bytes))
-    {
-      return true;
-    }
-
-    yae_elog("failed to free up disk space (%" PRIu64 " MiB) for %i.%i %s",
-             title_bytes >> 20,
-             rec.channel_major_,
-             rec.channel_minor_,
-             rec.full_title_.c_str());
-    return false;
-  }
-
-  //----------------------------------------------------------------
-  // make_room_for
-  //
-  bool
-  make_room_for(const std::string & path, uint64_t required_bytes)
+  DVR::make_room_for(uint64_t required_bytes)
   {
     YAE_BENCHMARK(probe, "make_room_for");
+
+    std::string path = basedir_.string();
+    TFoundRecordingsPtr found_recordings = this->get_existing_recordings();
+
+    if (!found_recordings)
+    {
+      // can't cleanup old recordings until we have found some recordings:
+      return false;
+    }
 
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
@@ -4074,14 +4119,12 @@ namespace yae
       return true;
     }
 
-    std::map<std::string, std::string> recordings;
-    {
-      CollectRecordings collect_recordings(recordings);
-      for_each_file_at(path, collect_recordings);
-    }
+    // shortcut:
+    const std::map<std::string, std::string> & recordings =
+      found_recordings->mpg_path_;
 
     std::size_t removed_bytes = 0;
-    for (std::map<std::string, std::string>::iterator
+    for (std::map<std::string, std::string>::const_iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
       if (required_bytes < available_bytes + removed_bytes)
@@ -4090,7 +4133,8 @@ namespace yae
       }
 
       const std::string & mpg = i->second;
-      removed_bytes += remove_recording(mpg);
+      TRecPtr rec_ptr = load_recording(mpg);
+      removed_bytes += this->delete_recording(*rec_ptr);
     }
 
     if (required_bytes < available_bytes + removed_bytes)
@@ -4107,8 +4151,25 @@ namespace yae
   bool
   DVR::make_room_for(const Recording::Rec & rec, uint64_t num_sec)
   {
-    cleanup_yaetv_dir();
-    return yae::make_room_for(basedir_, rec, num_sec);
+    this->cleanup_yaetv_dir();
+
+    YAE_BENCHMARK(probe, "make_room_for rec");
+
+    // remove any existing old recordings beyond max recordings limit:
+    this->remove_excess_recordings(rec);
+
+    uint64_t title_bytes = ((120 + num_sec) * 20000000) >> 3;
+    if (this->make_room_for(title_bytes))
+    {
+      return true;
+    }
+
+    yae_elog("failed to free up disk space (%" PRIu64 " MiB) for %i.%i %s",
+             title_bytes >> 20,
+             rec.channel_major_,
+             rec.channel_minor_,
+             rec.full_title_.c_str());
+    return false;
   }
 
   //----------------------------------------------------------------
@@ -4127,23 +4188,15 @@ namespace yae
     }
 
     Recording::Rec rec(channel, program);
-    std::map<std::string, std::string> recordings;
-    {
-      std::string title_path = rec.get_title_path(basedir_).string();
-      CollectRecordings collect_recordings(recordings);
-      for_each_file_at(title_path, collect_recordings);
-    }
+    std::string playlist = yae::get_playlist(rec);
 
-    for (std::map<std::string, std::string>::iterator
+    TFoundRecordingsPtr found_recordings_ptr = this->get_existing_recordings();
+    const TRecs & recordings = found_recordings_ptr->by_playlist_[playlist];
+
+    for (TRecs::const_iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
-      const std::string & mpg = i->second;
-      TRecPtr rec_ptr = load_recording(mpg);
-      if (!rec_ptr)
-      {
-        continue;
-      }
-
+      const TRecPtr & rec_ptr = i->second;
       const Recording::Rec & recorded = *rec_ptr;
       if (recorded.cancelled_ ||
           rec.utc_t0_ <= recorded.utc_t0_ ||
@@ -4153,82 +4206,139 @@ namespace yae
       }
 
       // check that the existing recording is approximately complete:
-      std::string json_path = mpg.substr(0, mpg.size() - 4) + ".json";
+      std::string json_path = recorded.get_filepath(basedir_, ".json");
+      std::string mpg_path = recorded.get_filepath(basedir_, ".mpg");
       int64_t utc_t0 = yae::stat_lastmod(json_path.c_str());
-      int64_t utc_t1 = yae::stat_lastmod(mpg.c_str());
+      int64_t utc_t1 = yae::stat_lastmod(mpg_path.c_str());
+
+      // FIXME: this assumes that the .json won't be updated
+      // after the recording has started...
       int64_t recorded_duration = utc_t1 - utc_t0;
       if (program.duration_ <= recorded_duration)
       {
         return rec_ptr;
       }
-      else
-      {
-        yae_ilog("found an incomplete recording: %s, %s",
-                 json_path.c_str(),
-                 program.description_.c_str());
-      }
+
+      yae_ilog("found an incomplete recording: %s, %s",
+               json_path.c_str(),
+               program.description_.c_str());
     }
 
     return TRecPtr();
   }
 
+
   //----------------------------------------------------------------
-  // get_playlist
+  // DVR::FindExistingRecordings::FindExistingRecordings
   //
-  static std::string
-  get_playlist(const Recording::Rec & rec)
+  DVR::FindExistingRecordings::
+  FindExistingRecordings(DVR & dvr, bool call_add_existing_recording):
+    dvr_(dvr),
+    call_add_existing_recording_(call_add_existing_recording)
+  {}
+
+  //----------------------------------------------------------------
+  // DVR::FindExistingRecordings::execute
+  //
+  void
+  DVR::FindExistingRecordings::execute(const yae::Worker & worker)
   {
-    std::string playlist = yae::strfmt("%02i.%02i %s",
-                                       rec.channel_major_,
-                                       rec.channel_minor_,
-                                       rec.get_short_title().c_str());
-    return playlist;
+    YAE_BENCHMARK(probe, "DVR::FindExistingRecordings");
+    TFoundRecordingsPtr found_recordings_ptr(new FoundRecordings());
+    {
+      FoundRecordings & found_recordings = *found_recordings_ptr;
+      CollectRecordings collect_recordings(*this, found_recordings);
+      for_each_file_at(dvr_.basedir_.string(), collect_recordings);
+    }
+    dvr_.set_existing_recordings(found_recordings_ptr);
+  }
+
+  //----------------------------------------------------------------
+  // DVR::FindExistingRecordings::add_to
+  //
+  void
+  DVR::FindExistingRecordings::add_to(FoundRecordings & found_recordings,
+                                      const std::string & filename,
+                                      const std::string & filepath)
+  {
+    TRecPtr rec_ptr = load_recording(filepath);
+
+    if (!rec_ptr)
+    {
+      return;
+    }
+
+    const Recording::Rec & recorded = *rec_ptr;
+    std::string playlist = yae::get_playlist(recorded);
+
+    found_recordings.mpg_path_[filename] = filepath;
+    found_recordings.by_filename_[filename] = rec_ptr;
+    found_recordings.by_playlist_[playlist][filename] = rec_ptr;
+
+    uint32_t ch_num = yae::mpeg_ts::channel_number(recorded.channel_major_,
+                                                   recorded.channel_minor_);
+    found_recordings.by_channel_[ch_num][recorded.gps_t0_] = rec_ptr;
+
+    if (call_add_existing_recording_)
+    {
+      dvr_.add_existing_recording(filename,
+                                  filepath,
+                                  playlist,
+                                  ch_num,
+                                  rec_ptr);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::add_existing_recording
+  //
+  void
+  DVR::add_existing_recording(const std::string & filename,
+                              const std::string & filepath,
+                              const std::string & playlist,
+                              uint32_t ch_num,
+                              TRecPtr rec_ptr)
+  {
+    TFoundRecordingsPtr recordings_ptr;
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      recordings_ptr.reset(new FoundRecordings(*recordings_));
+    }
+
+    FoundRecordings & found_recordings = *recordings_ptr;
+    found_recordings.mpg_path_[filename] = filepath;
+    found_recordings.by_filename_[filename] = rec_ptr;
+    found_recordings.by_playlist_[playlist][filename] = rec_ptr;
+
+    const Recording::Rec & recorded = *rec_ptr;
+    found_recordings.by_channel_[ch_num][recorded.gps_t0_] = rec_ptr;
+
+    // and update:
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      recordings_.swap(recordings_ptr);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // DVR::set_existing_recordings
+  //
+  void
+  DVR::set_existing_recordings(const TFoundRecordingsPtr & found)
+  {
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    recordings_ = found;
   }
 
   //----------------------------------------------------------------
   // DVR::get_existing_recordings
   //
-  void
-  DVR::get_existing_recordings(FoundRecordings & found) const
+  TFoundRecordingsPtr
+  DVR::get_existing_recordings() const
   {
-    YAE_BENCHMARK(probe, "DVR::get_existing_recordings");
-
-    std::map<std::string, std::string> recordings;
-    {
-      CollectRecordings collect_recordings(recordings);
-      for_each_file_at(basedir_.string(), collect_recordings);
-    }
-
-    TRecs rec_by_fn;
-    std::map<std::string, TRecs> rec_by_pl;
-    std::map<uint32_t, TRecsByTime> rec_by_ch;
-
-    for (std::map<std::string, std::string>::iterator
-           i = recordings.begin(); i != recordings.end(); ++i)
-    {
-      const std::string & filename = i->first;
-      const std::string & filepath = i->second;
-
-      TRecPtr rec_ptr = load_recording(filepath);
-      if (!rec_ptr)
-      {
-        continue;
-      }
-
-      const Recording::Rec & recorded = *rec_ptr;
-      std::string playlist = yae::get_playlist(recorded);
-
-      rec_by_fn[filename] = rec_ptr;
-      rec_by_pl[playlist][filename] = rec_ptr;
-
-      uint32_t ch_num = yae::mpeg_ts::channel_number(recorded.channel_major_,
-                                                     recorded.channel_minor_);
-      rec_by_ch[ch_num][recorded.gps_t0_] = rec_ptr;
-    }
-
-    found.by_filename_.swap(rec_by_fn);
-    found.by_playlist_.swap(rec_by_pl);
-    found.by_channel_.swap(rec_by_ch);
+    boost::unique_lock<boost::mutex> lock(mutex_);
+    TFoundRecordingsPtr recordings_ptr = recordings_;
+    return recordings_ptr;
   }
 
   //----------------------------------------------------------------
@@ -4731,9 +4841,10 @@ namespace yae
     // to the same storage:
     std::map<std::string, std::string> dvr_instances;
     {
-      std::string heartbeat_dir = (basedir_ / ".yaetv").string();
+      bool skip_folders = true;
+      std::string yaetv_subdir = (basedir_ / ".yaetv").string();
       CollectFiles collect_files(dvr_instances, heartbeat_rx);
-      for_each_file_at(heartbeat_dir, collect_files);
+      for_each_file_at(yaetv_subdir, collect_files, skip_folders);
     }
 
     static const int64_t one_day = 24 * 60 * 60;
@@ -5182,8 +5293,9 @@ namespace yae
   {
     std::map<std::string, std::string> logs;
     {
+      bool skip_folders = true;
       CollectFiles collect_files(logs, yaetv_log_rx);
-      for_each_file_at(yaetv_dir, collect_files);
+      for_each_file_at(yaetv_dir, collect_files, skip_folders);
     }
 
     // remove all logs except 8 most recent:

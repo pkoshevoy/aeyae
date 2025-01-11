@@ -337,7 +337,9 @@ namespace yae
   //
   template <typename TVisitor>
   static void
-  for_each_file_at(const std::string & path_utf8, TVisitor & callback)
+  for_each_file_at(const std::string & path_utf8,
+                   TVisitor & callback,
+                   bool skip_subfolders = false)
   {
     TOpenFolder folder;
     if (folder.open(path_utf8))
@@ -360,6 +362,11 @@ namespace yae
         if (is_subfolder)
         {
           if (name == "." || name == "..")
+          {
+            continue;
+          }
+
+          if (skip_subfolders)
           {
             continue;
           }

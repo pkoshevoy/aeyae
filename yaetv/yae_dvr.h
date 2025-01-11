@@ -199,6 +199,9 @@ namespace yae
   //
   struct FoundRecordings
   {
+    // .mpg filepaths indexed by the filename:
+    std::map<std::string, std::string> mpg_path_;
+
     // indexed by filename:
     TRecs by_filename_;
 
@@ -519,10 +522,32 @@ namespace yae
 
       // virtual:
       void execute(const yae::Worker & worker);
-      void cancel();
 
       DVR & dvr_;
-      DontStop keep_going_;
+    };
+
+
+    //----------------------------------------------------------------
+    // FindExistingRecordings
+    //
+    // search the basedir for recordings ... noticeably slow over WiFi
+    // when there is a large number of recordings
+    //
+    struct FindExistingRecordings : yae::Worker::Task
+    {
+      FindExistingRecordings(DVR & dvr,
+                             bool call_add_existing_recording = false);
+
+      // virtual:
+      void execute(const yae::Worker & worker);
+
+      // this will be called by CollectRecordings for each recording it finds:
+      void add_to(FoundRecordings & found,
+                  const std::string & name,
+                  const std::string & path);
+
+      DVR & dvr_;
+      bool call_add_existing_recording_;
     };
 
 
@@ -537,6 +562,7 @@ namespace yae
 
     void init_packet_handlers();
     void shutdown();
+    void find_recordings(bool call_add_existing_recording = false);
     void scan_channels();
     void update_epg();
     void cleanup_storage();
@@ -594,16 +620,33 @@ namespace yae
                          const yae::mpeg_ts::EPG::Program & program) const;
 
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
-    void delete_recording(const Recording::Rec & rec);
+
+    // return number of bytes removed from storage:
+    uint64_t delete_recording(const Recording::Rec & rec);
+
+    void remove_excess_recordings(const Recording::Rec & rec);
 
     bool make_room_for(const Recording::Rec & rec, uint64_t num_sec);
+    bool make_room_for(uint64_t required_bytes);
 
     // find an earlier recording with the same program description:
     TRecPtr
     already_recorded(const yae::mpeg_ts::EPG::Channel & channel,
                      const yae::mpeg_ts::EPG::Program & program) const;
 
-    void get_existing_recordings(FoundRecordings & found) const;
+    // this will be called async from FindExistingRecordings task,
+    // for each recording it finds:
+    void add_existing_recording(const std::string & filename,
+                                const std::string & filepath,
+                                const std::string & playlist,
+                                uint32_t ch_num,
+                                TRecPtr rec_ptr);
+
+    // this will be called async from FindExistingRecordings task:
+    void set_existing_recordings(const TFoundRecordingsPtr & recordings);
+
+    // this is non-blocking, returns the most recently cached value:
+    TFoundRecordingsPtr get_existing_recordings() const;
 
     //----------------------------------------------------------------
     // ChanTime
@@ -705,6 +748,18 @@ namespace yae
       next_storage_cleanup_ = t;
     }
 
+    inline TTime next_find_recordings() const
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      return TTime(next_find_recordings_);
+    }
+
+    inline void set_next_find_recordings(const TTime & t)
+    {
+      boost::unique_lock<boost::mutex> lock(mutex_);
+      next_find_recordings_ = t;
+    }
+
     inline TTime next_log_cleanup() const
     {
       boost::unique_lock<boost::mutex> lock(mutex_);
@@ -779,9 +834,15 @@ namespace yae
     mutable boost::mutex mutex_;
 
     mutable yae::HDHomeRun hdhr_;
-    yae::Worker worker_;
+    yae::Worker service_worker_;
     fs::path yaetv_;
     fs::path basedir_;
+
+    // for async execution of FindExistingRecordings ...
+    // since this task can take a long time depending on the number
+    // of recording and the cost of access to the basedir
+    // we move it to a separate thread to avoid blocking other tasks:
+    yae::Worker storage_worker_;
 
     // keep track of existing streams, but don't extend their lifetime:
     std::map<std::string, TWorkerPtr> stream_worker_;
@@ -801,10 +862,14 @@ namespace yae
     TTime epg_refresh_period_;
     TTime schedule_refresh_period_;
     TTime storage_cleanup_period_;
+    TTime find_recordings_period_;
     TTime log_cleanup_period_;
     TTime margin_;
 
   protected:
+    // NOTE: this will be updated async, periodically:
+    TFoundRecordingsPtr recordings_;
+
     std::string local_uuid_;
 
     mutable boost::mutex writer_uuid_mutex_;
@@ -820,6 +885,7 @@ namespace yae
     TTime next_epg_refresh_;
     TTime next_schedule_refresh_;
     TTime next_storage_cleanup_;
+    TTime next_find_recordings_;
     TTime next_log_cleanup_;
 
     mutable boost::mutex epg_mutex_;

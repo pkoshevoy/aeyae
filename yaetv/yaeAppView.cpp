@@ -2819,9 +2819,7 @@ namespace yae
       DVR * dvr = app_.model();
       if (dvr)
       {
-        TFoundRecordingsPtr found_ptr(new FoundRecordings());
-        FoundRecordings & found = *found_ptr;
-        dvr->get_existing_recordings(found);
+        TFoundRecordingsPtr found_ptr = dvr->get_existing_recordings();
         app_.found_recordings(found_ptr);
       }
     }
