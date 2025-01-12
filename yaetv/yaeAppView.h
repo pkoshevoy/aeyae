@@ -87,9 +87,6 @@ namespace yae
     // helper:
     TRecPtr now_playing() const;
 
-    // for async scanning of available recordings:
-    void found_recordings(const TFoundRecordingsPtr & found);
-
   signals:
     void confirm_delete(TRecPtr);
     void playback(TRecPtr);
@@ -202,6 +199,9 @@ namespace yae
     // scheduled recordings, indexed by channel number:
     std::map<uint32_t, TScheduledRecordings> schedule_;
 
+    // existing recordings:
+    TFoundRecordingsPtr found_recordings_;
+
     // all recordings, indexed by filename:
     TRecs recordings_;
 
@@ -245,7 +245,6 @@ namespace yae
   protected:
     mutable boost::mutex mutex_;
     yae::Worker worker_;
-    TFoundRecordingsPtr found_recordings_;
   };
 
 }

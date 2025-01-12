@@ -2805,39 +2805,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // GetRecordings
-  //
-  struct GetRecordings : yae::Worker::Task
-  {
-    GetRecordings(AppView & app):
-      app_(app)
-    {}
-
-    // virtual:
-    void execute(const yae::Worker & worker)
-    {
-      DVR * dvr = app_.model();
-      if (dvr)
-      {
-        TFoundRecordingsPtr found_ptr = dvr->get_existing_recordings();
-        app_.found_recordings(found_ptr);
-      }
-    }
-
-    AppView & app_;
-  };
-
-  //----------------------------------------------------------------
-  // AppView::set_found_recordings
-  //
-  void
-  AppView::found_recordings(const TFoundRecordingsPtr & found)
-  {
-    boost::unique_lock<boost::mutex> lock(mutex_);
-    found_recordings_ = found;
-  }
-
-  //----------------------------------------------------------------
   // AppView::sync_ui
   //
   void
@@ -2871,33 +2838,26 @@ namespace yae
       dvr_->schedule_.get(schedule);
       bool same_schedule = (schedule == schedule_);
 
-      TRecs recordings;
-      std::map<std::string, TRecs> playlists;
-      std::map<uint32_t, TRecsByTime> rec_by_channel;
-      {
-        boost::unique_lock<boost::mutex> lock(mutex_);
-        if (found_recordings_)
-        {
-          const FoundRecordings & found = *found_recordings_;
-          recordings = found.by_filename_;
-          playlists = found.by_playlist_;
-          rec_by_channel = found.by_channel_;
-        }
-      }
+      TFoundRecordingsPtr found_recordings = dvr_->get_existing_recordings();
 
-      if (worker_.is_idle())
-      {
-        yae::shared_ptr<GetRecordings, yae::Worker::Task> task;
-        task.reset(new GetRecordings(*this));
-        worker_.add(task);
-      }
+      const TRecs &
+        recordings = found_recordings->by_filename_;
 
-      bool same_recordings = yae::same(recordings, recordings_);
+      const std::map<std::string, TRecs> &
+        playlists = found_recordings->by_playlist_;
+
+      const std::map<uint32_t, TRecsByTime> &
+        rec_by_channel = found_recordings->by_channel_;
+
+      bool same_recordings =
+        found_recordings == found_recordings_;
+
       if (!same_recordings)
       {
-        recordings_.swap(recordings);
-        playlists_.swap(playlists);
-        rec_by_channel_.swap(rec_by_channel);
+        found_recordings_ = found_recordings;
+        recordings_ = recordings;
+        playlists_ = playlists;
+        rec_by_channel_ = rec_by_channel;
         sync_ui_playlists();
       }
 

@@ -4326,6 +4326,13 @@ namespace yae
   void
   DVR::set_existing_recordings(const TFoundRecordingsPtr & found)
   {
+    const TRecs & prev = this->get_existing_recordings()->by_filename_;
+    const TRecs & next = found->by_filename_;
+    if (yae::same(prev, next))
+    {
+      return;
+    }
+
     boost::unique_lock<boost::mutex> lock(mutex_);
     recordings_ = found;
   }
