@@ -87,13 +87,19 @@ namespace yae
   {
     ChannelLayout(int nb_channels = 0)
     {
-      this->set_default_layout(nb_channels);
+      memset(this, 0, sizeof(AVChannelLayout));
     }
 
     ChannelLayout(const AVChannelLayout & other)
     {
-      int err = av_channel_layout_copy(this, &other);
-      YAE_ASSERT(!err);
+      memset(this, 0, sizeof(AVChannelLayout));
+      this->assign(other);
+    }
+
+    ChannelLayout(const ChannelLayout & other)
+    {
+      memset(this, 0, sizeof(AVChannelLayout));
+      this->assign(other);
     }
 
     ~ChannelLayout()
@@ -101,12 +107,21 @@ namespace yae
       av_channel_layout_uninit(this);
     }
 
-    inline ChannelLayout & operator = (const AVChannelLayout & other)
+    inline ChannelLayout & assign(const AVChannelLayout & other)
     {
-      int err = av_channel_layout_copy(this, &other);
-      YAE_ASSERT(!err);
+      if (this != &other)
+      {
+        int err = av_channel_layout_copy(this, &other);
+        YAE_ASSERT(!err);
+      }
       return *this;
     }
+
+    inline ChannelLayout & operator = (const AVChannelLayout & other)
+    { return this->assign(other); }
+
+    inline ChannelLayout & operator = (const ChannelLayout & other)
+    { return this->assign(other); }
 
     inline bool operator == (const AVChannelLayout & other) const
     { return av_channel_layout_compare(this, &other) == 0; }
