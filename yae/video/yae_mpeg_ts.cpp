@@ -63,7 +63,7 @@ namespace yae
       piecewise_rate_flag_ = bin.read(1);
       seamless_splice_flag_ = bin.read(1);
       reserved1_ = bin.read(5);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x1F);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x1F);
 
       if (ltw_flag_)
       {
@@ -74,7 +74,7 @@ namespace yae
       if (piecewise_rate_flag_)
       {
         reserved2_ = bin.read(2);
-        YAE_SILENT_THROW_IF(reserved2_ != 0x3);
+        // YAE_SILENT_THROW_IF(reserved2_ != 0x3);
 
         piecewise_rate_ = bin.read(22);
       }
@@ -420,7 +420,7 @@ namespace yae
 
       packet_rate_restriction_flag_ = bin.read(1);
       reserved_ = bin.read(7);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7F);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7F);
 
       while (bin.next_bits(1, 1))
       {
@@ -528,7 +528,7 @@ namespace yae
       YAE_SILENT_THROW_IF(marker2_ != 1);
 
       reserved_ = bin.read(5);
-      YAE_SILENT_THROW_IF(reserved_ != 0x1F);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x1F);
 
       pack_stuffing_length_ = bin.read(3);
       stuffing_ = bin.read_bytes(pack_stuffing_length_);
@@ -728,7 +728,7 @@ namespace yae
       if (escr_flag_)
       {
         escr_reserved_ = bin.read(2);
-        YAE_SILENT_THROW_IF(escr_reserved_ != 0x3);
+        // YAE_SILENT_THROW_IF(escr_reserved_ != 0x3);
 
         escr_base_32_30_ = bin.read(3);
         escr_marker1_ = bin.read(1);
@@ -776,12 +776,12 @@ namespace yae
         {
           freeze_.field_id_ = bin.read(2);
           freeze_.reserved_ = bin.read(3);
-          YAE_SILENT_THROW_IF(freeze_.reserved_ != 0x7);
+          // YAE_SILENT_THROW_IF(freeze_.reserved_ != 0x7);
         }
         else
         {
           mode_.reserved_ = bin.read(5);
-          YAE_SILENT_THROW_IF(mode_.reserved_ != 0x1F);
+          // YAE_SILENT_THROW_IF(mode_.reserved_ != 0x1F);
         }
       }
 
@@ -848,7 +848,7 @@ namespace yae
       program_packet_sequence_counter_flag_ = bin.read(1);
       pstd_buffer_flag_ = bin.read(1);
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       pes_extension_flag_2_ = bin.read(1);
 
@@ -997,6 +997,11 @@ namespace yae
     void
     MultipleStringStructure::load(IBitstream & bin)
     {
+      if (bin.exhausted())
+      {
+        return;
+      }
+
       number_strings_ = bin.read(8);
 
       strings_.resize(number_strings_);
@@ -1005,6 +1010,31 @@ namespace yae
         Message & message = strings_[i];
         message.load(bin);
       }
+    }
+
+    //----------------------------------------------------------------
+    // MultipleStringStructure::load
+    //
+    void
+    MultipleStringStructure::load(IBitstream & bin, uint8_t nbytes)
+    {
+      if (!nbytes)
+      {
+        return;
+      }
+
+      std::size_t start_pos = bin.position();
+      std::size_t stop_pos = bin.position_plus_nbytes(nbytes);
+      this->load(bin);
+
+      std::size_t end_pos = bin.position();
+      YAE_ASSERT(end_pos == stop_pos);
+
+      std::size_t consumed_bits = end_pos - start_pos;
+      YAE_THROW_IF(end_pos > stop_pos);
+      YAE_SILENT_THROW_IF((consumed_bits & 0x7) != 0);
+
+      bin.seek(stop_pos);
     }
 
     //----------------------------------------------------------------
@@ -1977,7 +2007,7 @@ namespace yae
     CaptionServiceDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       number_of_services_ = bin.read(5);
       service_.resize(number_of_services_);
@@ -2044,7 +2074,7 @@ namespace yae
       bin.read_bytes(language_, 3);
       digital_cc_ = bin.read(1);
       reserved1_ = bin.read(1);
-      YAE_SILENT_THROW_IF(reserved1_ != 1);
+      // YAE_SILENT_THROW_IF(reserved1_ != 1);
 
       if (digital_cc_)
       {
@@ -2060,7 +2090,7 @@ namespace yae
       easy_reader_ = bin.read(1);
       wide_aspect_ratio_ = bin.read(1);
       reserved3_ = bin.read(14);
-      YAE_SILENT_THROW_IF(reserved3_ != 0x3FFF);
+      // YAE_SILENT_THROW_IF(reserved3_ != 0x3FFF);
     }
 
 
@@ -2138,12 +2168,7 @@ namespace yae
       }
 
       rating_description_length_ = bin.read(8);
-      std::size_t stop_pos =
-        bin.position_plus_nbytes(rating_description_length_);
-      rating_description_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      rating_description_text_.load(bin, rating_description_length_);
     }
 
     //----------------------------------------------------------------
@@ -2163,7 +2188,7 @@ namespace yae
     {
       rating_dimension_ = bin.read(8);
       reserved_ = bin.read(4);
-      YAE_SILENT_THROW_IF(reserved_ != 0xF);
+      // YAE_SILENT_THROW_IF(reserved_ != 0xF);
       rating_value_ = bin.read(4);
     }
 
@@ -2204,7 +2229,7 @@ namespace yae
     ServiceLocationDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       pcr_pid_ = bin.read(13);
       number_elements_ = bin.read(8);
@@ -2255,7 +2280,7 @@ namespace yae
     {
       stream_type_ = bin.read(8);
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       elementary_pid_ = bin.read(13);
       bin.read_bytes(iso_639_language_code_, 3);
@@ -2277,7 +2302,7 @@ namespace yae
     TimeShiftedServiceDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       number_of_services_ = bin.read(5);
       service_.resize(number_of_services_);
@@ -2307,11 +2332,11 @@ namespace yae
     TimeShiftedServiceDescriptor::Service::load(IBitstream & bin)
     {
       reserved1_ = bin.read(6);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x3F);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x3F);
 
       time_shift_ = bin.read(10);
       reserved2_ = bin.read(4);
-      YAE_SILENT_THROW_IF(reserved2_ != 0xF);
+      // YAE_SILENT_THROW_IF(reserved2_ != 0xF);
 
       major_channel_number_ = bin.read(10);
       minor_channel_number_ = bin.read(10);
@@ -2354,16 +2379,7 @@ namespace yae
     {
       dcc_request_type_ = bin.read(8);
       dcc_request_text_length_ = bin.read(8);
-
-      std::size_t start_pos = bin.position();
-      dcc_request_text_.load(bin);
-
-      std::size_t end_pos = bin.position();
-      std::size_t consumed = end_pos - start_pos;
-      YAE_SILENT_THROW_IF((consumed & 0x7) != 0);
-
-      std::size_t consumed_bytes = consumed >> 3;
-      bin.skip_bytes(dcc_request_text_length_ - consumed_bytes);
+      dcc_request_text_.load(bin, dcc_request_text_length_);
     }
 
     //----------------------------------------------------------------
@@ -2403,7 +2419,7 @@ namespace yae
     GenreDescriptor::load_body(IBitstream & bin)
     {
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       attribute_count_  = bin.read(5);
       attribute_ = bin.read_bytes(attribute_count_);
@@ -2457,7 +2473,7 @@ namespace yae
     {
       std::size_t start_pos = bin.position();
       reserved1_ = bin.read(1);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x1);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x1);
 
       bsid_flag_ = bin.read(1);
       mainid_flag_ = bin.read(1);
@@ -2467,7 +2483,7 @@ namespace yae
       substream2_flag_ = bin.read(1);
       substream3_flag_ = bin.read(1);
       reserved2_ = bin.read(1);
-      YAE_SILENT_THROW_IF(reserved2_ != 0x1);
+      // YAE_SILENT_THROW_IF(reserved2_ != 0x1);
 
       full_service_flag_ = bin.read(1);
       audio_service_type_ = bin.read(3);
@@ -2477,14 +2493,14 @@ namespace yae
       language_flag_ = bin.read(1);
       language2_flag_ = bin.read(1);
       reserved3_ = bin.read(1);
-      YAE_SILENT_THROW_IF(reserved3_ != 0x1);
+      // YAE_SILENT_THROW_IF(reserved3_ != 0x1);
       bsid_ = bin.read(5);
       YAE_RETURN_IF(bin.exhausted());
 
       if (mainid_flag_)
       {
         reserved4_ = bin.read(3);
-        YAE_SILENT_THROW_IF(reserved4_ != 0x7);
+        // YAE_SILENT_THROW_IF(reserved4_ != 0x7);
 
         priority_ = bin.read(2);
         mainid_ = bin.read(3);
@@ -2796,7 +2812,7 @@ namespace yae
 
       private_indicator_ = bin.read(1);
       reserved1_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       section_length_ = bin.read(12);
       YAE_SILENT_THROW_IF(!bin.has_enough_bytes(section_length_));
@@ -2812,7 +2828,7 @@ namespace yae
       }
 
       reserved2_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved2_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved2_ != 0x3);
 
       version_number_ = bin.read(5);
       current_next_indicator_ = bin.read(1);
@@ -2848,7 +2864,7 @@ namespace yae
       section_syntax_indicator_ = bin.read(1);
       private_indicator_ = bin.read(1);
       reserved1_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       section_length_ = bin.read(12);
       YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
@@ -2857,7 +2873,7 @@ namespace yae
       {
         table_id_extension_ = bin.read(16);
         reserved2_ = bin.read(2);
-        YAE_SILENT_THROW_IF(reserved2_ != 0x3);
+        // YAE_SILENT_THROW_IF(reserved2_ != 0x3);
 
         version_number_ = bin.read(5);
         current_next_indicator_ = bin.read(1);
@@ -3145,7 +3161,7 @@ namespace yae
       table_type_version_number_ = bin.read(5);
       number_bytes_ = bin.read(32);
       reserved3_ = bin.read(4);
-      YAE_SILENT_THROW_IF(reserved3_ != 0xF);
+      // YAE_SILENT_THROW_IF(reserved3_ != 0xF);
 
       table_type_descriptors_length_ = bin.read(12);
       descriptor_.clear();
@@ -3249,7 +3265,7 @@ namespace yae
     {
       bin.read<uint16_t>(short_name_, 7);
       reserved1_ = bin.read(4);
-      YAE_SILENT_THROW_IF(reserved1_ != 0xF);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0xF);
 
       major_channel_number_ = bin.read(10);
       YAE_THROW_IF(major_channel_number_ < 1 || major_channel_number_ > 99);
@@ -3272,12 +3288,12 @@ namespace yae
 
       hide_guide_ = bin.read(1);
       reserved3_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved3_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved3_ != 0x7);
 
       service_type_ = bin.read(6);
       source_id_ = bin.read(16);
       reserved4_ = bin.read(6);
-      YAE_SILENT_THROW_IF(reserved4_ != 0x3F);
+      // YAE_SILENT_THROW_IF(reserved4_ != 0x3F);
 
       descriptors_length_ = bin.read(10);
       descriptor_.clear();
@@ -3311,13 +3327,7 @@ namespace yae
     {
       protocol_version_ = bin.read(8);
       rating_region_name_length_ = bin.read(8);
-
-      std::size_t stop_pos =
-        bin.position_plus_nbytes(rating_region_name_length_);
-      rating_region_name_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      rating_region_name_text_.load(bin, rating_region_name_length_);
 
       dimensions_defined_ = bin.read(8);
       dimension_.resize(dimensions_defined_);
@@ -3328,12 +3338,12 @@ namespace yae
       }
 
       reserved_ = bin.read(6);
-      YAE_SILENT_THROW_IF(reserved_ != 0x3F);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x3F);
 
       descriptors_length_ = bin.read(10);
       descriptor_.clear();
 
-      stop_pos = bin.position_plus_nbytes(descriptors_length_);
+      std::size_t stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -3359,14 +3369,10 @@ namespace yae
     RatingRegionTable::Dimension::load(IBitstream & bin)
     {
       dimension_name_length_ = bin.read(8);
-      std::size_t stop_pos = bin.position_plus_nbytes(dimension_name_length_);
-      dimension_name_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      dimension_name_text_.load(bin, dimension_name_length_);
 
       reserved_ = bin.read(3);
-      YAE_SILENT_THROW_IF(reserved_ != 0x7);
+      // YAE_SILENT_THROW_IF(reserved_ != 0x7);
 
       graduated_scale_ = bin.read(1);
       values_defined_ = bin.read(4);
@@ -3394,19 +3400,10 @@ namespace yae
     RatingRegionTable::Dimension::Rating::load(IBitstream & bin)
     {
       abbrev_rating_value_length_ = bin.read(8);
-      std::size_t stop_pos =
-        bin.position_plus_nbytes(abbrev_rating_value_length_);
-      abbrev_rating_value_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      abbrev_rating_value_text_.load(bin, abbrev_rating_value_length_);
 
       rating_value_length_ = bin.read(8);
-      stop_pos = bin.position_plus_nbytes(rating_value_length_);
-      rating_value_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      rating_value_text_.load(bin, rating_value_length_);
     }
 
 
@@ -3457,29 +3454,25 @@ namespace yae
     EventInformationTable::Event::load(IBitstream & bin)
     {
       reserved1_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       event_id_ = bin.read(14);
       start_time_ = bin.read(32);
       reserved2_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved2_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved2_ != 0x3);
 
       etm_location_ = bin.read(2);
       length_in_seconds_ = bin.read(20);
       title_length_ = bin.read(8);
-      std::size_t stop_pos = bin.position_plus_nbytes(title_length_);
-      title_text_.load(bin);
-      YAE_THROW_IF(bin.position() > stop_pos);
-      YAE_EXPECT(bin.position() == stop_pos);
-      bin.seek(stop_pos);
+      title_text_.load(bin, title_length_);
 
       reserved3_ = bin.read(4);
-      YAE_SILENT_THROW_IF(reserved3_ != 0xF);
+      // YAE_SILENT_THROW_IF(reserved3_ != 0xF);
 
       descriptors_length_ = bin.read(12);
       descriptor_.clear();
 
-      stop_pos = bin.position_plus_nbytes(descriptors_length_);
+      std::size_t stop_pos = bin.position_plus_nbytes(descriptors_length_);
       while (bin.position() < stop_pos)
       {
         TDescriptorPtr descriptor = load_descriptor(bin);
@@ -3559,7 +3552,7 @@ namespace yae
       YAE_SILENT_THROW_IF(section_syntax_indicator_ != 0x0);
 
       reserved1_ = bin.read(2);
-      YAE_SILENT_THROW_IF(reserved1_ != 0x3);
+      // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       section_length_ = bin.read(12);
       YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
@@ -6012,7 +6005,7 @@ namespace yae
           }
           else if (!bx_fallback)
           {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             yae_debug
               << id_ << " bucket " << bx << " has EPG for "
               << gps_time << ", lacking some program description(s), "

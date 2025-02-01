@@ -539,6 +539,8 @@ namespace yae
       MultipleStringStructure();
 
       void load(IBitstream & bin);
+      void load(IBitstream & bin, uint8_t nbytes);
+
       std::string to_str() const;
 
       // map text by language:

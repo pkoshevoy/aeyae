@@ -287,8 +287,9 @@ namespace yae
   uint64_t
   Bitstream::read_bits(std::size_t num_bits)
   {
+    YAE_ASSERT(num_bits <= 64 && IBitstream::has_enough_bits(num_bits));
     YAE_THROW_IF(64 < num_bits);
-    YAE_SILENT_THROW_IF(!IBitstream::has_enough_bits(num_bits));
+    YAE_THROW_IF(!IBitstream::has_enough_bits(num_bits));
 
     // output value:
     uint64_t v = 0;
@@ -351,7 +352,7 @@ namespace yae
       return data;
     }
 
-    YAE_SILENT_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
+    YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 
     if (IBitstream::is_byte_aligned())
