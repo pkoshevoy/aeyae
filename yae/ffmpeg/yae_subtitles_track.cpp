@@ -590,8 +590,9 @@ namespace yae
 
         if (!strstr(header.c_str(), "[Events]"))
         {
-          header += "\n[Events]\n";
-          header += "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
+          header +=
+            "\n[Events]\nFormat: Layer, Start, End, Style, Name, "
+            "MarginL, MarginR, MarginV, Effect, Text\n";
 
           // store the modified subtitle header as extradata for libass:
           TPlanarBufferPtr buffer(new TPlanarBuffer(1),
