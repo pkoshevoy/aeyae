@@ -377,6 +377,7 @@ namespace yae
         return kSubsXSUB;
 
       case AV_CODEC_ID_SSA:
+      case AV_CODEC_ID_ASS:
         return kSubsSSA;
 
       case AV_CODEC_ID_MOV_TEXT:
@@ -586,6 +587,21 @@ namespace yae
         std::string header((const char *)(ctx->subtitle_header),
                            (const char *)(ctx->subtitle_header +
                                           ctx->subtitle_header_size));
+
+        if (!strstr(header.c_str(), "[Events]"))
+        {
+          header += "\n[Events]\n";
+          header += "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n";
+
+          // store the modified subtitle header as extradata for libass:
+          TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                                  &IPlanarBuffer::deallocator);
+          buffer->resize(0, header.size(), 1, 1);
+          unsigned char * dst = buffer->data(0);
+          memcpy(dst, &header[0], header.size());
+          extraData_ = buffer;
+        }
+
         std::string eventFormat;
         if (find_ass_events_format(header.c_str(), eventFormat))
         {
@@ -617,7 +633,7 @@ namespace yae
         }
       }
 
-      if (ctx)
+      if (ctx && !extraData_)
       {
         TPlanarBufferPtr buffer(new TPlanarBuffer(1),
                                 &IPlanarBuffer::deallocator);
