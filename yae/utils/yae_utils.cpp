@@ -810,6 +810,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // join
+  //
+  std::string
+  join(const char * separator, const std::vector<std::string> & tokens)
+  {
+    const char * sep = "";
+    std::ostringstream oss;
+    for (std::vector<std::string>::const_iterator
+           i = tokens.begin(); i != tokens.end(); ++i)
+    {
+      const std::string & str = *i;
+      oss << sep << str;
+      sep = separator;
+    }
+    return oss.str();
+  }
+
+  //----------------------------------------------------------------
   // sanitize_file_name
   //
   std::string

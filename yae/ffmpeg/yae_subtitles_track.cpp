@@ -590,9 +590,28 @@ namespace yae
 
         if (!strstr(header.c_str(), "[Events]"))
         {
-          header +=
-            "\n[Events]\nFormat: Layer, Start, End, Style, Name, "
-            "MarginL, MarginR, MarginV, Effect, Text\n";
+          std::vector<std::string> lines;
+          yae::split(lines, "\n",
+                     (const char *)(ctx->subtitle_header),
+                     (const char *)(ctx->subtitle_header +
+                                    ctx->subtitle_header_size));
+          for (std::vector<std::string>::iterator
+                 i = lines.begin(); i != lines.end(); ++i)
+          {
+            std::string & line = *i;
+            yae::strip_tail_ws(line);
+          }
+
+          const char * events_format =
+            "Format: Layer, Start, End, Style, Name, "
+            "MarginL, MarginR, MarginV, Effect, Text";
+
+          lines.push_back(std::string(""));
+          lines.push_back(std::string("[Events]"));
+          lines.push_back(std::string(events_format));
+          lines.push_back(std::string(""));
+
+          header = yae::join("\n", lines);
 
           // store the modified subtitle header as extradata for libass:
           TPlanarBufferPtr buffer(new TPlanarBuffer(1),

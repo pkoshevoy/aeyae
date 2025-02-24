@@ -1401,6 +1401,11 @@ namespace yae
         const char * separators,
         const char * src,
         const char * end = NULL);
+  //----------------------------------------------------------------
+  // join
+  //
+  YAE_API std::string
+  join(const char * separator, const std::vector<std::string> & tokens);
 
   //----------------------------------------------------------------
   // sanitize_filename_utf8

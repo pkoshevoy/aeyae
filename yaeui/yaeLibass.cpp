@@ -9,9 +9,17 @@
 // aeyae:
 #include "yae/utils/yae_utils.h"
 
+// yaeui:
+#include "yaeLibass.h"
+#include "yaeUtilsQt.h"
+
 // standard:
 #include <iostream>
 #include <sstream>
+
+// freetype:
+#include <ft2build.h>
+#include FT_FREETYPE_H
 
 // Qt:
 #include <QApplication>
@@ -19,10 +27,6 @@
 #include <QFileInfo>
 #include <QFont>
 #include <QString>
-
-// yaeui:
-#include "yaeLibass.h"
-#include "yaeUtilsQt.h"
 
 //----------------------------------------------------------------
 // YAE_DUMP_TMP_TRACK_ASS
@@ -463,8 +467,27 @@ namespace yae
         continue;
       }
 
+      // parse the font attachment to figure out its name:
+      std::string family_name = font.filename_;
+      {
+        FT_Library lib;
+        if (FT_Init_FreeType(&lib) != 0)
+        {
+          continue;
+        }
+
+        FT_Face face;
+        if (FT_New_Memory_Face(lib, font.data_, font.size_, 0, &face) == 0)
+        {
+          family_name = face->family_name;
+          FT_Done_Face(face);
+        }
+
+        FT_Done_FreeType(lib);
+      }
+
       ass_add_font(library_,
-                   (char *)font.filename_,
+                   const_cast<char *>(family_name.c_str()),
                    (char *)font.data_,
                    (int)font.size_);
     }
