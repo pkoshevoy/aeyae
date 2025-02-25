@@ -86,6 +86,9 @@ namespace yae
     inline const TData & back() const
     { return data_.back(); }
 
+    inline bool has(const TData & data) const
+    { return yae::has(data_, data); }
+
   protected:
     std::list<TData> data_;
     std::size_t capacity_;

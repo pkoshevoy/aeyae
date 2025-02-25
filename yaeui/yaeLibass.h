@@ -13,6 +13,7 @@
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_fifo.h"
 
 // standard:
 #include <list>
@@ -73,9 +74,17 @@ namespace yae
   struct AssTrack
   {
     AssTrack(TLibass & libass,
+             const std::string & trackId,
              const unsigned char * header,
              const std::size_t headerSize);
     ~AssTrack();
+
+    inline const std::string & trackId() const
+    { return trackId_; }
+
+    // detect subtitle track changes:
+    bool sameHeader(const unsigned char * header,
+                    const std::size_t headerSize) const;
 
     // call this after seeking to flush earlier events:
     void flushEvents();
@@ -117,8 +126,9 @@ namespace yae
 
     TLibass & libass_;
     ASS_Track * track_;
+    std::string trackId_;
     std::vector<char> header_;
-    std::list<Dialogue> buffer_;
+    yae::fifo<Dialogue> buffer_;
   };
 
   //----------------------------------------------------------------
@@ -159,7 +169,8 @@ namespace yae
     void addCustomFont(const TFontAttachment & customFont);
 
     // add an events new track:
-    TAssTrackPtr track(const unsigned char * codecPrivate,
+    TAssTrackPtr track(const std::string & trackId,
+                       const unsigned char * codecPrivate,
                        const std::size_t codecPrivateSize);
 
   protected:

@@ -1453,6 +1453,9 @@ namespace yae
 #endif
     }
 
+    // (re)init libass:
+    canvas_->libassAsyncInit();
+
     // renderers have to be started before the reader, because they
     // may need to specify reader output format override, which is
     // too late if the reader already started the decoding loops;

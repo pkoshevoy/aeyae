@@ -306,6 +306,9 @@ namespace yae
                        const unsigned char * data,
                        const std::size_t size);
 
+    // call this after adding custom embedded fonts:
+    void libassAsyncInit();
+
     // discard currently stored image data, repaint the canvas:
     void clear();
     void clearOverlay();
@@ -340,6 +343,7 @@ namespace yae
     TVideoFramePtr currentFrame() const;
 
     // helpers:
+    void resetSubs();
     void setSubs(const std::list<TSubsFrame> & subs);
     bool updateOverlay(bool reparse);
 

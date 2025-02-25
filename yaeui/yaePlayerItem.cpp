@@ -426,8 +426,12 @@ namespace yae
             break;
           }
         }
+
       }
     }
+
+    // (re)init libass:
+    canvas->libassAsyncInit();
 
     // replace the previous reader before we start the new reader,
     // in case it's a DemuxerReader that shares some Tracks
@@ -1390,7 +1394,7 @@ namespace yae
     Canvas * canvas = get_canvas();
     if (canvas)
     {
-      canvas->setSubs(std::list<TSubsFrame>());
+      canvas->resetSubs();
     }
   }
 

@@ -33,6 +33,10 @@
 //
 // #define YAE_DUMP_TMP_TRACK_ASS
 
+#ifndef NDEBUG
+#define YAE_LIBASS_DEBUG
+#endif
+
 
 namespace yae
 {
@@ -108,8 +112,8 @@ namespace yae
 
     fontsConf = QDir::toNativeSeparators(fn).toUtf8().constData();
 
-#if !defined(NDEBUG)
-    yae_debug << "fonts.conf: " << fontsConf;
+#ifdef YAE_LIBASS_DEBUG
+    yae_warn << "fonts.conf: " << fontsConf;
 #endif
 
     std::string xml = os.str().c_str();
@@ -118,8 +122,8 @@ namespace yae
     try
     {
       TOpenFile out(fontsConf.c_str(), "w");
-#if !defined(NDEBUG)
-      yae_debug << "fonts.conf content:\n" << xml;
+#ifdef YAE_LIBASS_DEBUG
+      yae_warn << "fonts.conf content:\n" << xml;
 #endif
       nout = fwrite(xml.c_str(), 1, xml.size(), out.file_);
     }
@@ -136,9 +140,13 @@ namespace yae
   // AssTrack::AssTrack
   //
   AssTrack::AssTrack(TLibass & libass,
+                     const std::string & trackId,
                      const unsigned char * codecPrivate,
                      const std::size_t codecPrivateSize):
-    libass_(libass)
+    libass_(libass),
+    track_(NULL),
+    trackId_(trackId),
+    buffer_(10)
   {
     track_ = ass_new_track(libass_.library_);
 
@@ -159,8 +167,8 @@ namespace yae
         tmp = oss.str().c_str();
       }
 
-#ifndef NDEBUG
-      yae_debug << "libass header:\n" << tmp;
+#ifdef YAE_LIBASS_DEBUG
+      yae_warn << "libass header:\n" << tmp;
 #endif
       header_.assign(&(tmp[0]), &(tmp[0]) + tmp.size());
 
@@ -184,11 +192,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AssTrack::sameHeader
+  //
+  bool
+  AssTrack::sameHeader(const unsigned char * header,
+                       const std::size_t headerSize) const
+  {
+    return (header_.size() == headerSize &&
+            (!headerSize ||
+             memcmp(&header_[0], header, headerSize) == 0));
+  }
+
+  //----------------------------------------------------------------
   // AssTrack::flushEvents
   //
   void
   AssTrack::flushEvents()
   {
+#ifdef YAE_LIBASS_DEBUG
+    yae_warn << "ass_flush_events";
+#endif
     ass_flush_events(track_);
     buffer_.clear();
   }
@@ -207,16 +230,16 @@ namespace yae
     }
 
     Dialogue line(pts, data, size);
-    if (has(buffer_, line))
+    if (buffer_.has(line))
     {
-#if 0 // ndef NDEBUG
-      yae_debug << "ass_process_data: DROPPING DUPLICATE: " << line.data_;
+#ifdef YAE_LIBASS_DEBUG
+      yae_warn << "ass_process_data: DROPPING DUPLICATE: " << line.data_;
 #endif
       return;
     }
 
-#if 0 // ndef NDEBUG
-    yae_debug << "ass_process_data: " << line.data_;
+#ifdef YAE_LIBASS_DEBUG
+    yae_warn << "ass_process_data: " << line.data_;
 #endif
 
 #ifdef YAE_DUMP_TMP_TRACK_ASS
@@ -234,13 +257,9 @@ namespace yae
         // user skipped back in time, purge cached subs:
         flushEvents();
       }
-      else
-      {
-        buffer_.pop_front();
-      }
     }
 
-    buffer_.push_back(line);
+    buffer_.push(line);
     ass_process_data(track_, (char *)data, (int)size);
   }
 
@@ -346,21 +365,17 @@ namespace yae
   TLibass::addCustomFont(const TFontAttachment & font)
   {
     fonts_.push(font);
-
-    if (isReady())
-    {
-      addCustomFonts();
-    }
   }
 
   //----------------------------------------------------------------
   // TLibass::track
   //
   TAssTrackPtr
-  TLibass::track(const unsigned char * codecPrivate,
-                 const std::size_t codecPrivateSize)
+  TLibass::track(const std::string & trackId,
+                 const unsigned char * header,
+                 const std::size_t headerSize)
   {
-    TAssTrackPtr track(new AssTrack(*this, codecPrivate, codecPrivateSize));
+    TAssTrackPtr track(new AssTrack(*this, trackId, header, headerSize));
     return track;
   }
 
@@ -409,6 +424,9 @@ namespace yae
     }
 #endif
 
+    // call ass_add_font first:
+    this->addCustomFonts();
+
     int updateFontCache = 1;
     ass_set_fonts(renderer_,
                   NULL, // default font file
@@ -422,8 +440,6 @@ namespace yae
       // remove the temporary fontconfig file:
       QFile::remove(QString::fromUtf8(fontsConf.c_str()));
     }
-
-    addCustomFonts();
   }
 
   //----------------------------------------------------------------
@@ -467,27 +483,8 @@ namespace yae
         continue;
       }
 
-      // parse the font attachment to figure out its name:
-      std::string family_name = font.filename_;
-      {
-        FT_Library lib;
-        if (FT_Init_FreeType(&lib) != 0)
-        {
-          continue;
-        }
-
-        FT_Face face;
-        if (FT_New_Memory_Face(lib, font.data_, font.size_, 0, &face) == 0)
-        {
-          family_name = face->family_name;
-          FT_Done_Face(face);
-        }
-
-        FT_Done_FreeType(lib);
-      }
-
       ass_add_font(library_,
-                   const_cast<char *>(family_name.c_str()),
+                   (char *)font.filename_,
                    (char *)font.data_,
                    (int)font.size_);
     }

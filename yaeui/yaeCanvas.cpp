@@ -78,9 +78,7 @@ namespace yae
     devicePixelRatio_(1.0),
     w_(0),
     h_(0)
-  {
-    libass_.asyncInit(&Canvas::libassInitDoneCallback, this);
-  }
+  {}
 
   //----------------------------------------------------------------
   // Canvas::~Canvas
@@ -212,6 +210,15 @@ namespace yae
                         const std::size_t size)
   {
     libass_.addCustomFont(TFontAttachment(filename, data, size));
+  }
+
+  //----------------------------------------------------------------
+  // Canvas::libassAsyncInit
+  //
+  void
+  Canvas::libassAsyncInit()
+  {
+    libass_.asyncInit(&Canvas::libassInitDoneCallback, this);
   }
 
   //----------------------------------------------------------------
@@ -1091,6 +1098,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Canvas::resetSubs
+  //
+  void
+  Canvas::resetSubs()
+  {
+    captions_.reset();
+    subtitles_.reset();
+    this->setSubs(std::list<TSubsFrame>());
+  }
+
+  //----------------------------------------------------------------
   // Canvas::setSubs
   //
   void
@@ -1353,16 +1371,31 @@ namespace yae
           TAssTrackPtr & assTrack = (subs.traits_ == kSubsCEA608 ?
                                      captions_ : subtitles_);
 
+          if (assTrack && assTrack->trackId() != subs.trackId_)
+          {
+            assTrack.reset();
+          }
+
+#ifndef NDEBUG
+          YAE_ASSERT(!(assTrack &&
+                       subs.traits_ == kSubsSSA &&
+                       subs.extraData_) ||
+                     assTrack->sameHeader(subs.extraData_->data(0),
+                                          subs.extraData_->rowBytes(0)));
+#endif
+
           if (!assTrack)
           {
             if (subs.traits_ == kSubsSSA && subs.extraData_)
             {
-              assTrack = libass_.track(subs.extraData_->data(0),
+              assTrack = libass_.track(subs.trackId_,
+                                       subs.extraData_->data(0),
                                        subs.extraData_->rowBytes(0));
             }
             else if (subExt->headerSize())
             {
-              assTrack = libass_.track(subExt->header(),
+              assTrack = libass_.track(subs.trackId_,
+                                       subExt->header(),
                                        subExt->headerSize());
             }
           }
