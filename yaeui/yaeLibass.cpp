@@ -17,10 +17,6 @@
 #include <iostream>
 #include <sstream>
 
-// freetype:
-#include <ft2build.h>
-#include FT_FREETYPE_H
-
 // Qt:
 #include <QApplication>
 #include <QDir>
