@@ -1884,6 +1884,26 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // extend
+  //
+  void
+  extend(std::vector<TAttachment> & attachments,
+         const std::vector<TAttachment> & atts)
+  {
+    for (std::size_t i = 0, n = atts.size(); i < n; i++)
+    {
+      const TAttachment & att = atts[i];
+      if (yae::has(attachments, att))
+      {
+        continue;
+      }
+
+      attachments.push_back(att);
+    }
+  }
+
+
+  //----------------------------------------------------------------
   // DemuxerSummary::extend
   //
   void
@@ -1892,6 +1912,7 @@ namespace yae
                          const std::set<std::string> & redacted_tracks,
                          double tolerance)
   {
+    yae::extend(attachments_, s.attachments_);
     yae::extend(metadata_, s.metadata_);
 
     for (std::map<std::string, TDictionary>::const_iterator
@@ -2607,6 +2628,7 @@ namespace yae
   DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
   {
     yae::summarize(*this, summary, tolerance);
+    yae::extend(summary.attachments_, src_.demuxer()->attachments());
 
     src_.get_decoders(summary.decoders_);
     src_.get_chapters(summary.chapters_);
@@ -3814,6 +3836,7 @@ namespace yae
     }
 
     // copy the rest:
+    summary.attachments_ = src_summary_.attachments_;
     summary.metadata_ = src_summary_.metadata_;
     summary.trk_meta_ = src_summary_.trk_meta_;
     summary.streams_ = src_summary_.streams_;

@@ -204,14 +204,15 @@ namespace yae
     // map global track IDs to native ffmpeg stream index:
     std::map<std::string, int> streamIndex_;
 
+    // fonts, posters, etc...
+    std::vector<TAttachment> attachments_;
+
     // a set of local audio, video, subtitle track indexes, for each program:
     std::vector<TProgramInfo> programs_;
 
     // lookup table for the local program index,
     // indexed by the native ffmpeg stream index:
     std::map<int, unsigned int> streamIndexToProgramIndex_;
-
-    std::vector<TAttachment> attachments_;
 
     // this flag is observed from a callback passed to ffmpeg;
     // this is used to interrupt blocking ffmpeg APIs:
@@ -464,6 +465,9 @@ namespace yae
 
     // chapters, indexed by start time:
     std::map<TTime, TChapter> chapters_;
+
+    // a list of attachments:
+    std::vector<TAttachment> attachments_;
 
     // program metadata, indexed by program id:
     std::map<int, TProgramInfo> programs_;

@@ -381,6 +381,12 @@ namespace yae
       return data_->get()[i];
     }
 
+    inline bool operator == (const Data & other) const
+    { return this->same_as(other); }
+
+    inline bool operator != (const Data & other) const
+    { return !this->same_as(other); }
+
     inline bool starts_with(const void * d, std::size_t z) const
     { return size() < z ? false : memcmp(get(), d, z) == 0; }
 

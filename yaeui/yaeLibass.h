@@ -54,17 +54,14 @@ namespace yae
   //
   struct YAEUI_API TFontAttachment
   {
-    TFontAttachment(const char * filename = NULL,
-                    const unsigned char * data = NULL,
-                    std::size_t size = 0):
+    TFontAttachment(const std::string & filename = std::string(),
+                    const Data & data = Data()):
       filename_(filename),
-      data_(data),
-      size_(size)
+      data_(data)
     {}
 
-    const char * filename_;
-    const unsigned char * data_;
-    std::size_t size_;
+    std::string filename_;
+    Data data_;
   };
 
 

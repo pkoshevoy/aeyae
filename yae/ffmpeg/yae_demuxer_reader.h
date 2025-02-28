@@ -146,6 +146,7 @@ namespace yae
     virtual bool getChapterInfo(std::size_t i, TChapter & c) const;
 
     // attachments (fonts, thumbnails, etc...)
+    // these are stored in the demuxer summary:
     virtual std::size_t getNumberOfAttachments() const;
     virtual const TAttachment * getAttachmentInfo(std::size_t i) const;
 

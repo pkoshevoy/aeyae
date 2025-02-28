@@ -1154,8 +1154,9 @@ namespace yae
   std::size_t
   DemuxerReader::getNumberOfAttachments() const
   {
-    // FIXME: pkoshevoy: write me!
-    return 0;
+    const DemuxerSummary & summary = demuxer_->summary();
+    const std::vector<TAttachment> & attachments = summary.attachments_;
+    return attachments.size();
   }
 
   //----------------------------------------------------------------
@@ -1164,8 +1165,9 @@ namespace yae
   const TAttachment *
   DemuxerReader::getAttachmentInfo(std::size_t i) const
   {
-    // FIXME: pkoshevoy: write me!
-    return NULL;
+    const DemuxerSummary & summary = demuxer_->summary();
+    const std::vector<TAttachment> & attachments = summary.attachments_;
+    return (i < attachments.size()) ? &attachments[i] : NULL;
   }
 
   //----------------------------------------------------------------

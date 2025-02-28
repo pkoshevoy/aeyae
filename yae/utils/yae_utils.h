@@ -738,6 +738,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // has
+  //
+  template <typename TValue>
+  inline bool
+  has(const std::vector<TValue> & values, const TValue & value)
+  {
+    typename std::vector<TValue>::const_iterator found =
+      std::find(values.begin(), values.end(), value);
+    return found != values.end();
+  }
+
+  //----------------------------------------------------------------
   // is_size_one
   //
   template <typename TContainer>

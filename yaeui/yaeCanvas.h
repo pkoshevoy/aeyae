@@ -302,9 +302,8 @@ namespace yae
 
     // this is called to add custom fonts that may have been
     // embedded in the video file:
-    void libassAddFont(const char * filename,
-                       const unsigned char * data,
-                       const std::size_t size);
+    void libassAddFont(const std::string & filename,
+                       const Data & data);
 
     // call this after adding custom embedded fonts:
     void libassAsyncInit();

@@ -710,8 +710,13 @@ namespace yae
   {
     TAttachment(const unsigned char * data = NULL, std::size_t size = 0);
 
-    const unsigned char * data_;
-    std::size_t size_;
+    inline bool operator == (const TAttachment & other) const
+    { return metadata_ == other.metadata_ && data_ == other.data_; }
+
+    inline bool operator != (const TAttachment & other) const
+    { return !this->operator == (other); }
+
+    yae::Data data_;
     TDictionary metadata_;
   };
 

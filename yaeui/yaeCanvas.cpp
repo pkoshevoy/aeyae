@@ -205,11 +205,10 @@ namespace yae
   // Canvas::libassAddFont
   //
   void
-  Canvas::libassAddFont(const char * filename,
-                        const unsigned char * data,
-                        const std::size_t size)
+  Canvas::libassAddFont(const std::string & filename,
+                        const Data & data)
   {
-    libass_.addCustomFont(TFontAttachment(filename, data, size));
+    libass_.addCustomFont(TFontAttachment(filename, data));
   }
 
   //----------------------------------------------------------------

@@ -480,9 +480,9 @@ namespace yae
       }
 
       ass_add_font(library_,
-                   (char *)font.filename_,
-                   (char *)font.data_,
-                   (int)font.size_);
+                   &font.filename_[0],
+                   font.data_.get<char>(),
+                   font.data_.size());
     }
   }
 }

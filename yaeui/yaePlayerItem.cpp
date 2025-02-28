@@ -394,10 +394,9 @@ namespace yae
       TIter mimetypeFound = att->metadata_.find(std::string("mimetype"));
       TIter filenameFound = att->metadata_.find(std::string("filename"));
 
-      const char * filename =
+      const std::string & filename =
         filenameFound != att->metadata_.end() ?
-        filenameFound->second.c_str() :
-        NULL;
+        filenameFound->second : std::string();
 
       if (mimetypeFound != att->metadata_.end())
       {
@@ -420,7 +419,7 @@ namespace yae
           {
             if (canvas)
             {
-              canvas->libassAddFont(filename, att->data_, att->size_);
+              canvas->libassAddFont(filename, att->data_);
             }
 
             break;
