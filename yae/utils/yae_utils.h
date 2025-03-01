@@ -1486,9 +1486,77 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // CallbackInterface
+  //
+  struct YAE_API CallbackInterface
+  {
+    virtual ~CallbackInterface() {}
+    virtual void call() const = 0;
+  };
+
+  //----------------------------------------------------------------
+  // TCallbackInterfacePtr
+  //
+  typedef boost::shared_ptr<CallbackInterface> TCallbackInterfacePtr;
+
+  //----------------------------------------------------------------
+  // SimpleCallback
+  //
+  struct SimpleCallback
+  {
+    SimpleCallback(const TCallbackInterfacePtr & cb = TCallbackInterfacePtr()):
+      cb_(cb)
+    {}
+
+    inline void operator ()() const
+    {
+      TCallbackInterfacePtr callback = cb_;
+      if (callback)
+      {
+        callback->call();
+      }
+    }
+
+    TCallbackInterfacePtr cb_;
+  };
+
+
+  //----------------------------------------------------------------
+  // MemberCallback
+  //
+  template <typename TObject, typename TCallable>
+  struct MemberCallback : CallbackInterface
+  {
+    MemberCallback(TObject & object, TCallable TObject::* const method):
+      object_(object),
+      method_(method)
+    {}
+
+    virtual void call() const
+    { (object_.*method_)(); }
+
+  protected:
+    TObject & object_;
+    TCallable TObject::* const method_;
+  };
+
+  //----------------------------------------------------------------
+  // make_member_cb
+  //
+  template <typename TObject, typename TCallable>
+  inline static SimpleCallback
+  make_member_cb(TObject & object, TCallable TObject::* const callable)
+  {
+    TCallbackInterfacePtr cb
+      (new MemberCallback<TObject, TCallable>(object, callable));
+    return SimpleCallback(cb);
+  }
+
+
+  //----------------------------------------------------------------
   // ContextCallback
   //
-  struct YAE_API ContextCallback
+  struct YAE_API ContextCallback : CallbackInterface
   {
     typedef void(*TFuncPtr)(void *);
 
@@ -1496,7 +1564,11 @@ namespace yae
 
     void reset(TFuncPtr func = NULL, void * context = NULL);
     bool is_null() const;
-    void operator()() const;
+
+    virtual void call() const;
+
+    inline void operator()() const
+    { this->call(); }
 
     inline bool operator < (const ContextCallback & other) const
     {
@@ -1509,6 +1581,16 @@ namespace yae
     TFuncPtr func_;
     void * context_;
   };
+
+  //----------------------------------------------------------------
+  // make_context_cb
+  //
+  inline static SimpleCallback
+  make_context_cb(ContextCallback::TFuncPtr func = NULL, void * ctx = NULL)
+  {
+    TCallbackInterfacePtr cb(new ContextCallback(func, ctx));
+    return SimpleCallback(cb);
+  }
 
 
   //----------------------------------------------------------------

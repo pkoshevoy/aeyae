@@ -2119,10 +2119,10 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ContextCallback::operator
+  // ContextCallback::call
   //
   void
-  ContextCallback::operator()() const
+  ContextCallback::call() const
   {
     if (func_)
     {

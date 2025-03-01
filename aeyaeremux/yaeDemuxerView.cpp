@@ -2154,8 +2154,10 @@ namespace yae
           set_right(ItemRef::reference(btn, kPropertyHeight, 1.5));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
+        SimpleCallback on_export =
+          yae::make_member_cb(view, &RemuxView::remux);
         Item & ia = output.add
-          (new InvokeMethodOnClick("export_ia", view, "remux"));
+          (new CallOnClick<SimpleCallback>("export_ia", on_export));
         ia.anchors_.fill(btn);
       }
 

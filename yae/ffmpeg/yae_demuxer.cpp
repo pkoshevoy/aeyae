@@ -2995,6 +2995,17 @@ namespace yae
       }
     }
 
+    // setup attachments:
+    for (std::size_t i = 0, n = summary.attachments_.size(); i < n; i++)
+    {
+      const TAttachment & att = summary.attachments_[i];
+      AVStream * dst = avformat_new_stream(muxer, NULL);
+      dst->codecpar->codec_type = AVMEDIA_TYPE_ATTACHMENT;
+      dst->codecpar->extradata = att.data_.get();
+      dst->codecpar->extradata_size = att.data_.size();
+      setDictionary(dst->metadata, att.metadata_);
+    }
+
     // open the muxer:
     AVDictionary * options = NULL;
     int err = avio_open2(&(muxer->pb),
