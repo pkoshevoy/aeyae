@@ -326,10 +326,17 @@ namespace yae
         // and SubtitlesTrack object:
         baseTrack = TrackPtr();
 
-        if (stream->codecpar->codec_id != AV_CODEC_ID_NONE)
+        // don't discard closed captions packets, though they don't
+        // get to have their own stand-alone subtitles track;
+        stream->discard = AVDISCARD_DEFAULT;
+
+        // don't add CEA-608 as a single track...
+        // because it's actually 4 channels
+        // and it makes a poor user experience
+        if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
+            stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
           program->subs_.push_back(subttTracks_.size());
-          stream->discard = AVDISCARD_DEFAULT;
 
           SubttTrackPtr track(new SubtitlesTrack(stream));
 
