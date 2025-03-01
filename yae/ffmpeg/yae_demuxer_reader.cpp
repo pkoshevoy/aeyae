@@ -31,17 +31,6 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // c608
-  //
-  const unsigned int c608 = MKTAG('c', '6', '0', '8');
-
-  //----------------------------------------------------------------
-  // c708
-  //
-  const unsigned int c708 = MKTAG('c', '7', '0', '8');
-
-
-  //----------------------------------------------------------------
   // DemuxerReader::DemuxerReader
   //
   DemuxerReader::DemuxerReader(const TDemuxerInterfacePtr & demuxer,
@@ -1492,23 +1481,6 @@ namespace yae
         }
         else
         {
-          bool closedCaptions = false;
-          if (stream)
-          {
-            if (stream->codecpar->codec_tag == c608)
-            {
-              // convert to CEA708 packets wrapping CEA608 data, it's
-              // the only format ffmpeg captions decoder understands:
-              closedCaptions = convert_quicktime_c608(packet);
-            }
-            else if (stream->codecpar->codec_tag == c708)
-            {
-              // convert to CEA708 packets wrapping CEA608 data, it's
-              // the only format ffmpeg captions decoder understands:
-              closedCaptions = convert_quicktime_c708(packet);
-            }
-          }
-
           TrackPtr decoder =
             packetPtr->demuxer_->getTrack(packetPtr->trackId_);
 
@@ -1516,138 +1488,8 @@ namespace yae
             boost::dynamic_pointer_cast<SubtitlesTrack, Track>(decoder);
 
           SubtitlesTrack * subs = subttTrack.get();
-
-          if (stream && videoTrack && (closedCaptions || subs))
-          {
-            static const Rational tb(1, AV_TIME_BASE);
-
-            // shortcut:
-            AVCodecContext * subsDec = subs ? subs->codecContext() : NULL;
-
-            TSubsFrame sf;
-            sf.time_.time_ = av_rescale_q(packet.pts,
-                                          stream->time_base,
-                                          tb);
-            sf.time_.base_ = AV_TIME_BASE;
-            sf.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
-
-            if (subs)
-            {
-              sf.render_ = subs->render_;
-              sf.traits_ = subs->format_;
-              sf.extraData_ = subs->extraData_;
-            }
-            else
-            {
-              sf.traits_ = kSubsCEA608;
-            }
-
-            // copy the reference frame size:
-            if (subsDec)
-            {
-              sf.rw_ = subsDec->width;
-              sf.rh_ = subsDec->height;
-            }
-
-            if (subs && subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
-            {
-              sf.rw_ = subs->vobsub_.w_;
-              sf.rh_ = subs->vobsub_.h_;
-            }
-
-            if (packet.data && packet.size)
-            {
-              TPlanarBufferPtr buffer(new TPlanarBuffer(1),
-                                      &IPlanarBuffer::deallocator);
-              buffer->resize(0, packet.size, 1);
-              unsigned char * dst = buffer->data(0);
-              memcpy(dst, packet.data, packet.size);
-
-              sf.data_ = buffer;
-            }
-
-            for (int i = 0; i < packet.side_data_elems; i++)
-            {
-              const AVPacketSideData & side_data = packet.side_data[i];
-              if (side_data.type == AV_PKT_DATA_MPEGTS_STREAM_ID)
-              {
-                continue;
-              }
-
-              TPlanarBufferPtr buffer(new TPlanarBuffer(1),
-                                      &IPlanarBuffer::deallocator);
-              buffer->resize(0, side_data.size, 1, 1);
-              unsigned char * dst = buffer->data(0);
-              memcpy(dst, side_data.data, side_data.size);
-
-              sf.sideData_[side_data.type].push_back(buffer);
-            }
-
-            if (subsDec)
-            {
-              // decode the subtitle:
-              int gotSub = 0;
-              AVSubtitle sub;
-              err = avcodec_decode_subtitle2(subsDec,
-                                             &sub,
-                                             &gotSub,
-                                             &packet);
-
-              if (err >= 0 && gotSub)
-              {
-                const uint8_t * hdr = subsDec->subtitle_header;
-                const std::size_t sz = subsDec->subtitle_header_size;
-                sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
-                                              &TSubsPrivate::deallocator);
-
-                static const Rational tb_msec(1, 1000);
-
-                if (packet.pts != AV_NOPTS_VALUE)
-                {
-                  sf.time_.time_ = av_rescale_q(packet.pts,
-                                                stream->time_base,
-                                                tb);
-
-                  sf.time_.time_ += av_rescale_q(sub.start_display_time,
-                                                 tb_msec,
-                                                 tb);
-                }
-
-                if (packet.pts != AV_NOPTS_VALUE &&
-                    sub.end_display_time > sub.start_display_time)
-                {
-                  double dt =
-                    double(sub.end_display_time - sub.start_display_time) *
-                    double(tb_msec.num) /
-                    double(tb_msec.den);
-
-                  // avoid subs that are visible for more than 5 seconds:
-                  if (dt > 0.5 && dt < 5.0)
-                  {
-                    sf.tEnd_ = sf.time_;
-                    sf.tEnd_ += dt;
-                  }
-                }
-
-                subs->addTimingEtc(sf);
-              }
-
-              err = 0;
-            }
-            else if (closedCaptions)
-            {
-              // let the captions decoder handle it:
-              videoTrack->cc_.decode(stream->time_base,
-                                     packet,
-                                     &outputTerminator_);
-            }
-
-            if (subs)
-            {
-              sf.trackId_ = subs->Track::id();
-              subs->push(sf, &outputTerminator_);
-            }
-          }
+          CaptionsDecoder * cc = videoTrack ? &(videoTrack->cc_) : NULL;
+          process_subs_and_cc(stream, packet, subs, cc, outputTerminator_);
         }
       }
     }

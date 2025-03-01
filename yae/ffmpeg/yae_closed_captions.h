@@ -163,6 +163,16 @@ namespace yae
     unsigned char dataChannel_[2];
   };
 
+  //----------------------------------------------------------------
+  // process_subs_and_cc
+  //
+  void
+  process_subs_and_cc(const AVStream * stream,
+                      AVPacket & packet,
+                      SubtitlesTrack * subs,
+                      CaptionsDecoder * cc,
+                      QueueWaitMgr & outputTerminator);
+
 }
 
 

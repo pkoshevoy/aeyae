@@ -26,11 +26,26 @@ namespace al = boost::algorithm;
 
 namespace yae
 {
+  //----------------------------------------------------------------
+  // c608
+  //
+  const unsigned int c608 = MKTAG('c', '6', '0', '8');
+
+  //----------------------------------------------------------------
+  // c708
+  //
+  const unsigned int c708 = MKTAG('c', '7', '0', '8');
 
   //----------------------------------------------------------------
   // kAvTimeBase
   //
   static const Rational kAvTimeBase(1, AV_TIME_BASE);
+
+  //----------------------------------------------------------------
+  // kTimeBaseMillisec
+  //
+  static const Rational tb_msec(1, 1000);
+
 
   //----------------------------------------------------------------
   // cc_data_channel
@@ -961,6 +976,169 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
         captions.push(sf, terminator);
       }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // process_subs_and_cc
+  //
+  void
+  process_subs_and_cc(const AVStream * stream,
+                      AVPacket & packet,
+                      SubtitlesTrack * subs,
+                      CaptionsDecoder * cc,
+                      QueueWaitMgr & outputTerminator)
+  {
+    if (!(stream && cc))
+    {
+      return;
+    }
+
+    bool closedCaptions = false;
+    if (stream->codecpar->codec_tag == c608)
+    {
+      // convert to CEA708 packets wrapping CEA608 data, it's
+      // the only format ffmpeg captions decoder understands:
+      closedCaptions = convert_quicktime_c608(packet);
+    }
+    else if (stream->codecpar->codec_tag == c708)
+    {
+      // convert to CEA708 packets wrapping CEA608 data, it's
+      // the only format ffmpeg captions decoder understands:
+      closedCaptions = convert_quicktime_c708(packet);
+    }
+
+    if (closedCaptions)
+    {
+      subs = NULL;
+    }
+    else if (!subs)
+    {
+      return;
+    }
+
+    // shortcut:
+    AVCodecContext * subsDec = subs ? subs->codecContext() : NULL;
+
+    TSubsFrame sf;
+    sf.time_.time_ = av_rescale_q(packet.pts,
+                                  stream->time_base,
+                                  kAvTimeBase);
+    sf.time_.base_ = AV_TIME_BASE;
+    sf.tEnd_ = TTime(std::numeric_limits<int64>::max(), AV_TIME_BASE);
+
+    if (subs)
+    {
+      sf.render_ = subs->render_;
+      sf.traits_ = subs->format_;
+      sf.extraData_ = subs->extraData_;
+    }
+    else
+    {
+      sf.traits_ = kSubsCEA608;
+    }
+
+    // copy the reference frame size:
+    if (subsDec)
+    {
+      sf.rw_ = subsDec->width;
+      sf.rh_ = subsDec->height;
+    }
+
+    if (subs && subs->format_ == kSubsDVD && !(sf.rw_ && sf.rh_))
+    {
+      sf.rw_ = subs->vobsub_.w_;
+      sf.rh_ = subs->vobsub_.h_;
+    }
+
+    if (packet.data && packet.size)
+    {
+      TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                              &IPlanarBuffer::deallocator);
+      buffer->resize(0, packet.size, 1);
+      unsigned char * dst = buffer->data(0);
+      memcpy(dst, packet.data, packet.size);
+
+      sf.data_ = buffer;
+    }
+
+    for (int i = 0; i < packet.side_data_elems; i++)
+    {
+      const AVPacketSideData & side_data = packet.side_data[i];
+      if (side_data.type == AV_PKT_DATA_MPEGTS_STREAM_ID)
+      {
+        continue;
+      }
+
+      TPlanarBufferPtr buffer(new TPlanarBuffer(1),
+                              &IPlanarBuffer::deallocator);
+      buffer->resize(0, side_data.size, 1, 1);
+      unsigned char * dst = buffer->data(0);
+      memcpy(dst, side_data.data, side_data.size);
+
+      sf.sideData_[side_data.type].push_back(buffer);
+    }
+
+    if (subsDec)
+    {
+      // decode the subtitle:
+      int gotSub = 0;
+      AVSubtitle sub;
+      int err = avcodec_decode_subtitle2(subsDec,
+                                         &sub,
+                                         &gotSub,
+                                         &packet);
+
+      if (err >= 0 && gotSub)
+      {
+        const uint8_t * hdr = subsDec->subtitle_header;
+        const std::size_t sz = subsDec->subtitle_header_size;
+        sf.private_ = TSubsPrivatePtr(new TSubsPrivate(sub, hdr, sz),
+                                      &TSubsPrivate::deallocator);
+
+        if (packet.pts != AV_NOPTS_VALUE)
+        {
+          sf.time_.time_ = av_rescale_q(packet.pts,
+                                        stream->time_base,
+                                        kAvTimeBase);
+
+          sf.time_.time_ += av_rescale_q(sub.start_display_time,
+                                         tb_msec,
+                                         kAvTimeBase);
+        }
+
+        if (packet.pts != AV_NOPTS_VALUE &&
+            sub.end_display_time > sub.start_display_time &&
+            (packet.duration > 0 ||
+             sub.format != 0)) // 0 == graphics, DVB bitmap subs
+        {
+          if (sub.end_display_time !=
+              std::numeric_limits<uint32_t>::max())
+          {
+            double dt =
+              double(sub.end_display_time - sub.start_display_time) *
+              double(tb_msec.num) /
+              double(tb_msec.den);
+            sf.tEnd_ = sf.time_;
+            sf.tEnd_ += dt;
+          }
+        }
+
+        subs->addTimingEtc(sf);
+      }
+
+      err = 0;
+    }
+    else if (closedCaptions)
+    {
+      // let the captions decoder handle it:
+      cc->decode(stream->time_base, packet, &outputTerminator);
+    }
+
+    if (subs)
+    {
+      sf.trackId_ = subs->Track::id();
+      subs->push(sf, &outputTerminator);
     }
   }
 
