@@ -331,6 +331,8 @@ namespace yae
     bool is_playback_paused();
     void toggle_playback();
 
+    void emit_remux();
+
   protected:
     TClipPtr output_clip() const;
 

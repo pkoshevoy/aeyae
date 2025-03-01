@@ -2154,10 +2154,10 @@ namespace yae
           set_right(ItemRef::reference(btn, kPropertyHeight, 1.5));
         txt.text_ = TVarRef::constant(TVar(QObject::tr("Export")));
 
-        SimpleCallback on_export =
-          yae::make_member_cb(view, &RemuxView::remux);
+        SimpleCallback callback =
+          yae::make_member_cb(view, &RemuxView::emit_remux);
         Item & ia = output.add
-          (new CallOnClick<SimpleCallback>("export_ia", on_export));
+          (new CallOnClick<SimpleCallback>("export_ia", callback));
         ia.anchors_.fill(btn);
       }
 
@@ -4511,6 +4511,15 @@ namespace yae
   {
     pl_ux_->togglePlayback();
   }
+
+  //----------------------------------------------------------------
+  // RemuxView::emit_remux
+  //
+  void RemuxView::emit_remux()
+  {
+    emit remux();
+  }
+
 
   //----------------------------------------------------------------
   // RemuxModel::output_clip
