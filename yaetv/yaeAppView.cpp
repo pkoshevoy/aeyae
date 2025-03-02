@@ -129,10 +129,9 @@ namespace yae
   //
   struct EditWishlistItem : public InputArea
   {
-    EditWishlistItem(const char * id, AppView & view, std::string & sel):
+    EditWishlistItem(const char * id, AppView & view):
       InputArea(id),
-      view_(view),
-      sel_(sel)
+      view_(view)
     {}
 
     // virtual:
@@ -144,14 +143,12 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      sel_ = Item::id_;
       view_.edit_wishlist_item(Item::id_);
       view_.dataChanged();
       return true;
     }
 
     AppView & view_;
-    std::string & sel_;
   };
 
   //----------------------------------------------------------------
@@ -695,11 +692,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // GetWishlistItemRemoveBtnText
+  // GetWishlistItemCloseBtnText
   //
-  struct GetWishlistItemRemoveBtnText : public TVarExpr
+  struct GetWishlistItemCloseBtnText : public TVarExpr
   {
-    GetWishlistItemRemoveBtnText(const AppView & view):
+    GetWishlistItemCloseBtnText(const AppView & view):
       view_(view)
     {}
 
@@ -711,7 +708,7 @@ namespace yae
         const std::string & wi_key = view_.wi_edit_->first;
         if (!wi_key.empty())
         {
-          result = TVar("Remove");
+          result = TVar("Close");
           return;
         }
       }
@@ -723,11 +720,11 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // RemoveWishlistItem
+  // CloseWishlistItem
   //
-  struct RemoveWishlistItem : public InputArea
+  struct CloseWishlistItem : public InputArea
   {
-    RemoveWishlistItem(const char * id, AppView & view):
+    CloseWishlistItem(const char * id, AppView & view):
       InputArea(id),
       view_(view)
     {}
@@ -736,6 +733,47 @@ namespace yae
     bool onPress(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      view_.wi_edit_.reset();
+      view_.sidebar_sel_pop();
+      view_.dataChanged();
+      return true;
+    }
+
+    AppView & view_;
+  };
+
+  //----------------------------------------------------------------
+  // RemoveWishlistItemVisible
+  //
+  struct RemoveWishlistItemVisible : TBoolExpr
+  {
+    RemoveWishlistItemVisible(const AppView & view):
+      view_(view)
+    {}
+
+     // virtual:
+    void evaluate(bool & result) const
+    {
+      result = (view_.wi_edit_ && !view_.wi_edit_->first.empty());
+    }
+
+    const AppView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // RemoveWishlistItem
+  //
+  struct RemoveWishlistItem : public CloseWishlistItem
+  {
+    RemoveWishlistItem(const char * id, AppView & view):
+      CloseWishlistItem(id, view)
+    {}
 
     // virtual:
     bool onClick(const TVec2D & itemCSysOrigin,
@@ -749,42 +787,26 @@ namespace yae
         view_.remove_wishlist_item(wi_key);
       }
 
-      view_.wi_edit_.reset();
-      view_.sidebar_sel_ = "view_mode_program_guide";
-      parent_->uncache();
-      return true;
+      return CloseWishlistItem::onClick(itemCSysOrigin, rootCSysPoint);
     }
-
-    AppView & view_;
   };
 
   //----------------------------------------------------------------
   // SaveWishlistItem
   //
-  struct SaveWishlistItem : public InputArea
+  struct SaveWishlistItem : public CloseWishlistItem
   {
     SaveWishlistItem(const char * id, AppView & view):
-      InputArea(id),
-      view_(view)
+      CloseWishlistItem(id, view)
     {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    { return true; }
 
     // virtual:
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
       view_.save_wishlist_item();
-      view_.wi_edit_.reset();
-      view_.sidebar_sel_ = "view_mode_program_guide";
-      parent_->uncache();
-      return true;
+      return CloseWishlistItem::onClick(itemCSysOrigin, rootCSysPoint);
     }
-
-    AppView & view_;
   };
 
 
@@ -2449,6 +2471,10 @@ namespace yae
                  this, SLOT(on_show_in_finder()));
     YAE_ASSERT(ok);
 
+    ok = connect(action_new_wishlist_item_, SIGNAL(triggered()),
+                 this, SLOT(on_new_wishlist_item()));
+    YAE_ASSERT(ok);
+
     ok = connect(action_watch_recording_, SIGNAL(triggered()),
                  this, SLOT(on_watch_recording()));
     YAE_ASSERT(ok);
@@ -2520,6 +2546,10 @@ namespace yae
       yae::add<QAction>(this, "action_show_in_finder");
     action_show_in_finder_->setCheckable(false);
 
+    action_new_wishlist_item_ =
+      yae::add<QAction>(this, "action_new_wishlist_item");
+    action_new_wishlist_item_->setCheckable(false);
+
     action_watch_recording_ =
       yae::add<QAction>(this, "action_watch_recording");
     action_watch_recording_->setCheckable(false);
@@ -2547,6 +2577,7 @@ namespace yae
 #else
     action_show_in_finder_->setText(tr("Show In File Manager"));
 #endif
+    action_new_wishlist_item_->setText(tr("New Wishlist"));
   }
 
   //----------------------------------------------------------------
@@ -2698,6 +2729,7 @@ namespace yae
       menu.addAction(action_watch_recording_);
       menu.addAction(action_delete_recording_);
       menu.addAction(action_show_in_finder_);
+      menu.addAction(action_new_wishlist_item_);
     }
     else
     {
@@ -3805,9 +3837,7 @@ namespace yae
       yae::shared_ptr<Item> & row_ptr = wl_sidebar_[row_id];
       if (!row_ptr)
       {
-        row_ptr.reset(new EditWishlistItem(row_id.c_str(),
-                                           view,
-                                           view.sidebar_sel_));
+        row_ptr.reset(new EditWishlistItem(row_id.c_str(), view));
 
         Item & row = body.add<Item>(row_ptr);
         row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
@@ -3910,7 +3940,7 @@ namespace yae
       sidebar_sel = "view_mode_program_guide";
     }
 
-    view.sidebar_sel_ = sidebar_sel;
+    view.sidebar_sel_set(sidebar_sel);
     wl_sidebar_.swap(rows);
     dataChanged();
   }
@@ -4107,7 +4137,7 @@ namespace yae
       sidebar_sel = "view_mode_recordings";
     }
 
-    view.sidebar_sel_ = sidebar_sel;
+    view.sidebar_sel_set(sidebar_sel);
     pl_sidebar_.swap(rows);
     dataChanged();
   }
@@ -4570,6 +4600,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::on_new_wishlist_item
+  //
+  void
+  AppView::on_new_wishlist_item()
+  {
+    YAE_ASSERT(!clicked_rec_.empty());
+
+    TRecs::iterator found = recordings_.find(clicked_rec_);
+    YAE_ASSERT(found != recordings_.end());
+    if (found == recordings_.end())
+    {
+      return;
+    }
+
+    const TRecPtr & rec_ptr = found->second;
+    const Recording::Rec & rec = *rec_ptr;
+    yae::mpeg_ts::EPG::Channel channel = rec.to_epg_channel();
+    yae::mpeg_ts::EPG::Program program = rec.to_epg_program();
+
+    this->add_wishlist_item(channel, program);
+  }
+
+  //----------------------------------------------------------------
   // AppView::on_watch_recording
   //
   void
@@ -4754,6 +4807,41 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::sidebar_sel_push
+  //
+  void
+  AppView::sidebar_sel_set(const std::string & sel)
+  {
+    if (sidebar_sel_ == sel)
+    {
+      return;
+    }
+
+    if (!prev_sel_.empty())
+    {
+      sidebar_sel_pop();
+    }
+
+    prev_sel_.push_back(sidebar_sel_);
+    sidebar_sel_ = sel;
+  }
+
+  //----------------------------------------------------------------
+  // AppView::sidebar_sel_pop
+  //
+  void
+  AppView::sidebar_sel_pop()
+  {
+    if (prev_sel_.empty())
+    {
+      return;
+    }
+
+    sidebar_sel_ = prev_sel_.back();
+    prev_sel_.pop_back();
+  }
+
+  //----------------------------------------------------------------
   // AppView::add_wishlist_item
   //
   void
@@ -4763,12 +4851,12 @@ namespace yae
     AppView & view = *this;
     AppStyle & style = *style_;
 
-    sidebar_sel_ = "wl: add";
+    prev_sel_.push_back(sidebar_sel_);
+    view.sidebar_sel_set("wl: add");
     wi_edit_.reset(new std::pair<std::string, Wishlist::Item>
                    (std::string(), Wishlist::Item()));
 
-    wishlist_ui_->uncache();
-    requestRepaint();
+    dataChanged();
   }
 
   //----------------------------------------------------------------
@@ -4777,12 +4865,6 @@ namespace yae
   void
   AppView::add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & prog_sel)
   {
-    // shortcuts:
-    AppView & view = *this;
-    AppStyle & style = *style_;
-
-    sidebar_sel_ = "wl: add";
-
     Wishlist::Item wi;
     if (prog_sel)
     {
@@ -4794,22 +4876,41 @@ namespace yae
 
       if (epg_.find(ch_num, gps_time, channel, program))
       {
-        TTime t0((program->tm_.tm_hour * 60 +
-                  program->tm_.tm_min) * 60 +
-                 program->tm_.tm_sec, 1);
-
-        wi.title_ = program->title_;
-        wi.weekday_mask_ = (1 << program->tm_.tm_wday);
-        wi.when_ = Timespan(t0, t0 + TTime(program->duration_, 1));
-        wi.channel_ = std::make_pair(channel->major_, channel->minor_);
+        this->add_wishlist_item(*channel, *program);
+        return;
       }
     }
+
+    this->add_wishlist_item();
+  }
+
+  //----------------------------------------------------------------
+  // AppView::add_wishlist_item
+  //
+  void
+  AppView::add_wishlist_item(const yae::mpeg_ts::EPG::Channel & channel,
+                             const yae::mpeg_ts::EPG::Program & program)
+  {
+    // shortcuts:
+    AppView & view = *this;
+    AppStyle & style = *style_;
+
+    view.sidebar_sel_set("wl: add");
+
+    Wishlist::Item wi;
+    TTime t0((program.tm_.tm_hour * 60 +
+              program.tm_.tm_min) * 60 +
+             program.tm_.tm_sec, 1);
+
+    wi.title_ = program.title_;
+    wi.weekday_mask_ = (1 << program.tm_.tm_wday);
+    wi.when_ = Timespan(t0, t0 + TTime(program.duration_, 1));
+    wi.channel_ = std::make_pair(channel.major_, channel.minor_);
 
     wi_edit_.reset(new std::pair<std::string, Wishlist::Item>
                    (std::string(), wi));
 
-    wishlist_ui_->uncache();
-    requestRepaint();
+    dataChanged();
   }
 
   //----------------------------------------------------------------
@@ -4821,6 +4922,8 @@ namespace yae
     // shortcuts:
     AppView & view = *this;
     AppStyle & style = *style_;
+
+    view.sidebar_sel_set(row_id);
 
     std::string wi_key = row_id.substr(4);
     std::map<std::string, Wishlist::Item>::const_iterator found =
@@ -4837,8 +4940,7 @@ namespace yae
                      (std::string(), Wishlist::Item()));
     }
 
-    wishlist_ui_->uncache();
-    requestRepaint();
+    dataChanged();
   }
 
   //----------------------------------------------------------------
@@ -4859,7 +4961,7 @@ namespace yae
   {
     if (wi_edit_)
     {
-      const std::string & wi_key = wi_edit_->first;
+      std::string & wi_key = wi_edit_->first;
       const Wishlist::Item & wi = wi_edit_->second;
       dvr_->wishlist_update(wi_key, wi);
       dataChanged();
@@ -7208,9 +7310,11 @@ namespace yae
 
       RoundRect & bg_remove = body.addNew<RoundRect>("bg_remove");
       RoundRect & bg_save = body.addNew<RoundRect>("bg_save");
+      RoundRect & bg_close = body.addNew<RoundRect>("bg_close");
 
       Text & tx_remove = body.addNew<Text>("tx_remove");
       Text & tx_save = body.addNew<Text>("tx_save");
+      Text & tx_close = body.addNew<Text>("tx_close");
 
       tx_remove.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
       tx_remove.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
@@ -7222,10 +7326,11 @@ namespace yae
       tx_remove.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
       tx_remove.elide_ = Qt::ElideNone;
       tx_remove.setAttr("oneline", true);
-      tx_remove.text_ = tx_remove.
-        addExpr(new GetWishlistItemRemoveBtnText(view));
+      tx_remove.text_ = TVarRef::constant(TVar("Remove"));
 
       bg_remove.anchors_.fill(tx_remove);
+      bg_remove.visible_ =
+        bg_remove.addExpr(new RemoveWishlistItemVisible(view));
       bg_remove.margins_.
         set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
       bg_remove.margins_.
@@ -7243,10 +7348,11 @@ namespace yae
       RemoveWishlistItem & on_remove = bg_remove.
         add(new RemoveWishlistItem("on_remove", *this));
       on_remove.anchors_.fill(bg_remove);
+      tx_remove.visible_ = bg_remove.visible_;
 
       tx_save.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
-      tx_save.anchors_.left_ = ItemRef::reference(tx_remove, kPropertyRight);
-      tx_save.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 1.6));
+      tx_save.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
+      tx_save.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
       tx_save.text_ = TVarRef::constant(TVar("Save"));
       tx_save.color_ = tx_save.
         addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
@@ -7270,6 +7376,38 @@ namespace yae
       SaveWishlistItem & on_save = bg_save.
         add(new SaveWishlistItem("on_save", *this));
       on_save.anchors_.fill(bg_save);
+
+      tx_close.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
+      tx_close.anchors_.right_ = ItemRef::reference(tx_save, kPropertyLeft);
+      tx_close.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 1.6));
+      tx_close.color_ = tx_close.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+      tx_close.background_ = tx_close.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      tx_close.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
+      tx_close.elide_ = Qt::ElideNone;
+      tx_close.setAttr("oneline", true);
+      tx_close.text_ = tx_close.
+        addExpr(new GetWishlistItemCloseBtnText(view));
+
+      bg_close.anchors_.fill(tx_close);
+      bg_close.margins_.
+        set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_close.margins_.
+        set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
+      bg_close.margins_.
+        set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_close.margins_.
+        set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
+      bg_close.color_ = bg_close.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      bg_close.background_ = bg_close.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_close.radius_ = ItemRef::scale(bg_close, kPropertyHeight, 0.1);
+
+      CloseWishlistItem & on_close = bg_close.
+        add(new CloseWishlistItem("on_close", *this));
+      on_close.anchors_.fill(bg_close);
     }
   }
 

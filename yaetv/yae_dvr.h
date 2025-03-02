@@ -149,7 +149,7 @@ namespace yae
     void get(std::map<std::string, Item> & wishlist) const;
 
     bool remove(const std::string & wi_key);
-    void update(const std::string & wi_key, const Wishlist::Item & new_item);
+    void update(std::string & wi_key, const Wishlist::Item & new_item);
 
     yae::shared_ptr<Item>
     matches(const yae::mpeg_ts::EPG::Channel & channel,
@@ -583,7 +583,7 @@ namespace yae
     void get(std::map<std::string, Wishlist::Item> & wishlist) const;
 
     bool wishlist_remove(const std::string & wi_key);
-    void wishlist_update(const std::string & wi_key,
+    void wishlist_update(std::string & wi_key,
                          const Wishlist::Item & new_item);
 
     void get_epg(yae::mpeg_ts::EPG & epg,

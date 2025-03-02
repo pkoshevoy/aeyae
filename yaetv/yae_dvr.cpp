@@ -775,7 +775,7 @@ namespace yae
   // Wishlist::update
   //
   void
-  Wishlist::update(const std::string & wi_key, const Wishlist::Item & new_item)
+  Wishlist::update(std::string & wi_key, const Wishlist::Item & new_item)
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
 
@@ -796,6 +796,7 @@ namespace yae
     }
 
     items_.push_back(new_item);
+    wi_key = new_item.to_key() + strfmt(", index %03u", items_.size() - 1);
   }
 
   //----------------------------------------------------------------
@@ -3173,7 +3174,7 @@ namespace yae
   // DVR::wishlist_update
   //
   void
-  DVR::wishlist_update(const std::string & wi_key,
+  DVR::wishlist_update(std::string & wi_key,
                        const Wishlist::Item & new_item)
   {
     // update the wishlist:

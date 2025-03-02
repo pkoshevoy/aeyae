@@ -104,6 +104,10 @@ namespace yae
     inline void emit_watch_live(uint32_t ch_num, TTime seek_pos)
     { emit watch_live(ch_num, seek_pos); }
 
+    // helpers:
+    void sidebar_sel_set(const std::string & sel);
+    void sidebar_sel_pop();
+
   public slots:
     void layoutChanged();
     void dataChanged();
@@ -121,6 +125,7 @@ namespace yae
     void on_toggle_fullscreen();
     void on_block_channel();
     void on_show_in_finder();
+    void on_new_wishlist_item();
     void on_watch_recording();
     void on_delete_recording();
 
@@ -132,6 +137,8 @@ namespace yae
     void watch_now(yae::shared_ptr<DVR::Playback> playback_ptr, TRecPtr rec);
     void add_wishlist_item();
     void add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & program_sel);
+    void add_wishlist_item(const yae::mpeg_ts::EPG::Channel & channel,
+                           const yae::mpeg_ts::EPG::Program & program);
     void edit_wishlist_item(const std::string & row_id);
     void remove_wishlist_item(const std::string & wi_key);
     void save_wishlist_item();
@@ -172,8 +179,10 @@ namespace yae
     QAction * action_show_in_finder_;
     QAction * action_watch_recording_;
     QAction * action_delete_recording_;
+    QAction * action_new_wishlist_item_;
 
     // UI state:
+    std::list<std::string> prev_sel_;
     std::string sidebar_sel_;
     std::string clicked_rec_;
     uint32_t clicked_ch_num_;
