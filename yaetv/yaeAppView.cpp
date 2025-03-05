@@ -2577,7 +2577,7 @@ namespace yae
 #else
     action_show_in_finder_->setText(tr("Show In File Manager"));
 #endif
-    action_new_wishlist_item_->setText(tr("New Wishlist"));
+    action_new_wishlist_item_->setText(tr("Add Wishlist Item"));
   }
 
   //----------------------------------------------------------------
@@ -2727,9 +2727,9 @@ namespace yae
     else if (!clicked_rec_.empty())
     {
       menu.addAction(action_watch_recording_);
-      menu.addAction(action_delete_recording_);
-      menu.addAction(action_show_in_finder_);
+      // menu.addAction(action_delete_recording_);
       menu.addAction(action_new_wishlist_item_);
+      menu.addAction(action_show_in_finder_);
     }
     else
     {
