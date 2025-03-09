@@ -1591,10 +1591,10 @@ namespace yae
 
     // shortcut:
     yae::fifo<Packet> & packets = ph_session->packets_;
+    YAE_ASSERT(!packets.full());
     packets.push(pkt);
 
-    if (bucket.guide_.empty() ||
-        (!packets.full() && !bucket.vct_table_set_.is_complete()))
+    if (!packets.full() && !bucket.vct_table_set_.is_complete())
     {
       return;
     }
@@ -1639,7 +1639,7 @@ namespace yae
       std::numeric_limits<boost::random::mt11213b::result_type>::max();
 
     boost::unique_lock<boost::mutex> lock(mutex_);
-    if (recordings_update_gps_time_ < gps_time)
+    if (recordings_update_gps_time_ < gps_time && !bucket.guide_.empty())
     {
       YAE_TIMESHEET_PROBE(probe, ctx_.timesheet_,
                           "PacketHandler::handle_backlog",
