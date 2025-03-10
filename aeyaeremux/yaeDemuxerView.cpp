@@ -4119,6 +4119,7 @@ namespace yae
   {
     requestUncache();
     requestRepaint();
+    this->update_actions(view_mode_);
   }
 
   //----------------------------------------------------------------
@@ -4480,6 +4481,8 @@ namespace yae
 
     requestRepaint();
 
+    this->update_actions(mode);
+
     emit view_mode_changed();
   }
 
@@ -4627,7 +4630,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // RemuxView::update_player
+  // RemuxView::maybe_update_player
   //
   void
   RemuxView::maybe_update_player()
@@ -4643,7 +4646,14 @@ namespace yae
     pl_ux.setVisible(true);
 
     bool hwdec = true;
-    reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
+    if (serial_demuxer_)
+    {
+      reader_.reset(DemuxerReader::create(serial_demuxer_, hwdec));
+    }
+    else
+    {
+      reader_.reset();
+    }
 
     const IBookmark * bookmark = NULL;
     bool start_from_zero_time = true;
@@ -4707,6 +4717,24 @@ namespace yae
 
     menu.addAction(pl_ux.actionFullScreen_);
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // RemuxView::update_actions
+  //
+  void
+  RemuxView::update_actions(RemuxView::ViewMode mode)
+  {
+    if (mode != RemuxView::kLayoutMode)
+    {
+      return;
+    }
+
+    const RemuxModel & model = *model_;
+    const bool has_clips = !model.clips_.empty();
+    PlayerUxItem & pl_ux = *pl_ux_;
+    pl_ux.actionSetInPoint_->setEnabled(has_clips);
+    pl_ux.actionSetOutPoint_->setEnabled(has_clips);
   }
 
   //----------------------------------------------------------------

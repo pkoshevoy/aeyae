@@ -345,6 +345,7 @@ namespace yae
     bool populateContextMenu(QMenu & menu);
 
     // helpers:
+    void update_actions(RemuxView::ViewMode mode);
     bool popup_context_menu(const QPoint & global_pos);
     void insert_menus(QMenuBar * menubar, QAction * before);
 

@@ -184,6 +184,12 @@ namespace yae
                        const IBookmark * bookmark,
                        const TTime & seekTime)
   {
+    if (personal_canvas_)
+    {
+      Canvas & canvas = *personal_canvas_;
+      canvas.clear();
+    }
+
     if (!reader)
     {
       return;
