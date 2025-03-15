@@ -191,6 +191,9 @@ namespace yae
                                data));
     yae_assert_gl_no_error();
 
+    // disabled because the padding data ptr is not adjusted
+    // and apparently this has had no adverse effect:
+#if 0
     if (ih < (unsigned int)heightPowerOfTwo)
     {
       // copy the padding row:
@@ -220,6 +223,7 @@ namespace yae
       YAE_OPENGL(glPixelStorei(GL_UNPACK_SKIP_ROWS, 0));
       yae_assert_gl_no_error();
 
+      // this crashes on m1 macmini running macos 11.7:
       YAE_OPENGL(glTexSubImage2D(GL_TEXTURE_2D,
                                  0, // mipmap level
                                  iw, // x-offset
@@ -251,7 +255,7 @@ namespace yae
                                  dataType,
                                  data));
     }
-
+#endif
     YAE_OPENGL(glDisable(GL_TEXTURE_2D));
     return true;
   }
