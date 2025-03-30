@@ -4824,7 +4824,7 @@ namespace yae
     json["has_tuners"] = check_local_recording_allowed();
     json["heartbeat"] = (Json::Value::Int64)(TTime::now().get(1));
 
-    YAE_ASSERT(yae::atomic_save(heartbeat_path, json));
+    YAE_EXPECT(yae::atomic_save(heartbeat_path, json));
   }
 
   //----------------------------------------------------------------
