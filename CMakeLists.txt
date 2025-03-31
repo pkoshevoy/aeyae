@@ -256,6 +256,9 @@ set(LIBAEYAE_SOURCES
   yae/ffmpeg/yae_video_track.cpp
   yae/ffmpeg/yae_video_track.h
 
+  yae/mp4/yae_mp4.cpp
+  yae/mp4/yae_mp4.h
+
   yae/thread/yae_queue.h
   yae/thread/yae_ring_buffer.cpp
   yae/thread/yae_ring_buffer.h

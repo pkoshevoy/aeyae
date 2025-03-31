@@ -27,6 +27,59 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // load_be32
+  //
+  inline uint32_t load_be32(const uint8_t * data)
+  {
+    return (uint32_t(data[0]) << 24 |
+            uint32_t(data[1]) << 16 |
+            uint32_t(data[2]) << 8 |
+            uint32_t(data[3]));
+  }
+
+  //----------------------------------------------------------------
+  // save_be32
+  //
+  inline void save_be32(uint8_t * data, uint32_t v)
+  {
+    data[0] = uint8_t((v >> 24) & 0xFF);
+    data[1] = uint8_t((v >> 16) & 0xFF);
+    data[2] = uint8_t((v >> 8) & 0xFF);
+    data[3] = uint8_t(v & 0xFF);
+  }
+
+  //----------------------------------------------------------------
+  // load_be64
+  //
+  inline uint64_t load_be64(const uint8_t * data)
+  {
+    return (uint64_t(data[0]) << 56 |
+            uint64_t(data[1]) << 48 |
+            uint64_t(data[2]) << 40 |
+            uint64_t(data[3]) << 32 |
+            uint64_t(data[4]) << 24 |
+            uint64_t(data[5]) << 16 |
+            uint64_t(data[6]) << 8 |
+            uint64_t(data[7]));
+  }
+
+  //----------------------------------------------------------------
+  // save_be64
+  //
+  inline void save_be64(uint8_t * data, uint64_t v)
+  {
+    data[0] = uint8_t((v >> 56) & 0xFF);
+    data[1] = uint8_t((v >> 48) & 0xFF);
+    data[2] = uint8_t((v >> 40) & 0xFF);
+    data[3] = uint8_t((v >> 32) & 0xFF);
+    data[4] = uint8_t((v >> 24) & 0xFF);
+    data[5] = uint8_t((v >> 16) & 0xFF);
+    data[6] = uint8_t((v >> 8) & 0xFF);
+    data[7] = uint8_t(v & 0xFF);
+  }
+
+
+  //----------------------------------------------------------------
   // IBuffer
   //
   struct YAE_API IBuffer
