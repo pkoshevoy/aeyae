@@ -156,8 +156,8 @@ namespace yae
     {
       FullBox(): version_(0), flags_(0) {}
 
-      void load(Mp4Context & mp4, IBitstream & bin) override;
-      void to_json(Json::Value & out) const override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       uint8_t version_;
       uint32_t flags_;
@@ -173,15 +173,15 @@ namespace yae
       typedef TBox TBase;
       typedef BoxWithChildren<TBox> TSelf;
 
-      const TBoxPtrVec * has_children() const override
+      const TBoxPtrVec * has_children() const YAE_OVERRIDE
       { return &children_; }
 
-      void load(Mp4Context & mp4, IBitstream & bin) override
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE
       {
         const std::size_t box_pos = bin.position();
         TBase::load(mp4, bin);
 
-        const std::size_t end_pos = box_pos + Box::size_ * 8;
+        const std::size_t end_pos = box_pos + TBox::size_ * 8;
         while (bin.position() < end_pos)
         {
           TBoxPtr box = mp4.parse(bin, end_pos);
@@ -193,7 +193,7 @@ namespace yae
         }
       }
 
-      void to_json(Json::Value & out) const override
+      void to_json(Json::Value & out) const YAE_OVERRIDE
       {
         TBase::to_json(out);
 
@@ -225,8 +225,8 @@ namespace yae
     //
     struct YAE_API ContainerList : public BoxWithChildren<FullBox>
     {
-      void load(Mp4Context & mp4, IBitstream & bin) override;
-      void to_json(Json::Value & out) const override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
     };
 
     //----------------------------------------------------------------
@@ -236,8 +236,8 @@ namespace yae
     {
       FileTypeBox(): minor_(0) {}
 
-      void load(Mp4Context & mp4, IBitstream & bin) override;
-      void to_json(Json::Value & out) const override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       FourCC major_;
       uint32_t minor_;
@@ -249,7 +249,7 @@ namespace yae
     //
     struct YAE_API FreeSpaceBox : public Box
     {
-      void load(Mp4Context & mp4, IBitstream & bin) override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
     };
 
     //----------------------------------------------------------------
@@ -257,7 +257,7 @@ namespace yae
     //
     struct YAE_API MediaDataBox : public Box
     {
-      void load(Mp4Context & mp4, IBitstream & bin) override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
 
       Data data_;
     };
@@ -267,8 +267,8 @@ namespace yae
     //
     struct YAE_API ProgressiveDownloadInfoBox : public FullBox
     {
-      void load(Mp4Context & mp4, IBitstream & bin) override;
-      void to_json(Json::Value & out) const override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       std::vector<uint32_t> rate_; // bytes per sec
       std::vector<uint32_t> initial_delay_;
@@ -281,8 +281,8 @@ namespace yae
     {
       MovieHeaderBox();
 
-      void load(Mp4Context & mp4, IBitstream & bin) override;
-      void to_json(Json::Value & out) const override;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       uint64_t creation_time_;
       uint64_t modification_time_;

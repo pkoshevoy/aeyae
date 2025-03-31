@@ -1,3 +1,11 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created   : Sun Mar 30 12:09:04 PM MDT 2025
+// Copyright : Pavel Koshevoy
+// License   : MIT -- http://www.opensource.org/licenses/mit-license.php
+
 // aeyae:
 #include "yae_mp4.h"
 
@@ -382,36 +390,35 @@ MovieHeaderBox::to_json(Json::Value & out) const
   out["next_track_ID"] = next_track_ID_;
 }
 
-
-namespace yae::mp4
+template <typename TBox>
+struct create
 {
   //----------------------------------------------------------------
   // create
   //
-  template <typename TBox>
-  TBox *
-  create(const char * fourcc)
+  static TBox *
+  box(const char * fourcc)
   {
     TBox * box = new TBox();
     box->type_.set(fourcc);
     box->size_ = 0;
     return box;
   }
+};
 
-  // explicitly instantiate box constructor functions:
-  template Box * create<Box>(const char * fourcc);
-  template Container * create<Container>(const char * fourcc);
-  template ContainerEx * create<ContainerEx>(const char * fourcc);
-  template ContainerList * create<ContainerList>(const char * fourcc);
-  template FileTypeBox * create<FileTypeBox>(const char * fourcc);
-  template FreeSpaceBox * create<FreeSpaceBox>(const char * fourcc);
-  template MediaDataBox * create<MediaDataBox>(const char * fourcc);
+// explicitly instantiate box constructor functions:
+template Box * create<Box>::box(const char * fourcc);
+template Container * create<Container>::box(const char * fourcc);
+template ContainerEx * create<ContainerEx>::box(const char * fourcc);
+template ContainerList * create<ContainerList>::box(const char * fourcc);
+template FileTypeBox * create<FileTypeBox>::box(const char * fourcc);
+template FreeSpaceBox * create<FreeSpaceBox>::box(const char * fourcc);
+template MediaDataBox * create<MediaDataBox>::box(const char * fourcc);
 
-  template ProgressiveDownloadInfoBox *
-  create<ProgressiveDownloadInfoBox>(const char * fourcc);
+template ProgressiveDownloadInfoBox *
+create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
 
-  template MovieHeaderBox * create<MovieHeaderBox>(const char * fourcc);
-}
+template MovieHeaderBox * create<MovieHeaderBox>::box(const char * fourcc);
 
 
 //----------------------------------------------------------------
@@ -441,7 +448,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
   BoxFactory()
   {
     TBoxConstructor create_container =
-      (TBoxConstructor)(&yae::mp4::create<Container>);
+      (TBoxConstructor)(create<Container>::box);
     this->add("moov", create_container);
     this->add("mvex", create_container);
     this->add("trak", create_container);
@@ -456,17 +463,17 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("schi", create_container);
     this->add("udta", create_container);
 
-    this->add("meta", &yae::mp4::create<ContainerEx>);
+    this->add("meta", create<ContainerEx>::box);
 
-    this->add("stsd", &yae::mp4::create<ContainerList>);
+    this->add("stsd", create<ContainerList>::box);
 
-    this->add("ftyp", &yae::mp4::create<FileTypeBox>);
-    this->add("free", &yae::mp4::create<FreeSpaceBox>);
-    this->add("skip", &yae::mp4::create<FreeSpaceBox>);
-    this->add("mdat", &yae::mp4::create<MediaDataBox>);
+    this->add("ftyp", create<FileTypeBox>::box);
+    this->add("free", create<FreeSpaceBox>::box);
+    this->add("skip", create<FreeSpaceBox>::box);
+    this->add("mdat", create<MediaDataBox>::box);
 
-    this->add("pdin", &yae::mp4::create<ProgressiveDownloadInfoBox>);
-    this->add("mvhd", &yae::mp4::create<MovieHeaderBox>);
+    this->add("pdin", create<ProgressiveDownloadInfoBox>::box);
+    this->add("mvhd", create<MovieHeaderBox>::box);
   }
 
   // helper:
@@ -495,7 +502,7 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
   TBoxConstructor box_constructor = NULL;
   if (parse_mdat_data_ && box->type_.same_as("mdat"))
   {
-    box_constructor = (TBoxConstructor)&yae::mp4::create<Container>;
+    box_constructor = (TBoxConstructor)(create<Container>::box);
   }
   else
   {
