@@ -813,5 +813,9 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
     box->load(*this, bin);
   }
 
+  // sanity check:
+  YAE_ASSERT(bin.position() == box_end);
+  bin.seek(box_end);
+
   return box;
 }
