@@ -348,6 +348,18 @@ namespace yae
       std::vector<uint32_t> track_IDs_;
     };
 
+    //----------------------------------------------------------------
+    // TrackGroupTypeBox
+    //
+    struct YAE_API TrackGroupTypeBox : public FullBox
+    {
+      TrackGroupTypeBox(): track_group_id_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t track_group_id_;
+    };
 
   }
 

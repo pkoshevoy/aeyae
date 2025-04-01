@@ -15,19 +15,36 @@ using namespace yae::iso_14496_12;
 
 
 //----------------------------------------------------------------
+// create
+//
+template <typename TBox>
+struct create
+{
+  static TBox *
+  box(const char * fourcc)
+  {
+    TBox * box = new TBox();
+    box->type_.set(fourcc);
+    box->size_ = 0;
+    return box;
+  }
+};
+
+
+//----------------------------------------------------------------
 // Box::load
 //
 void
 Box::load(Mp4Context & mp4, IBitstream & bin)
 {
   (void)mp4;
-  uint32_t size32 = bin.read_bits(32);
+  uint32_t size32 = bin.read<uint32_t>();
   bin.read_bytes(type_.str_, 4);
 
   if (size32 == 1)
   {
     // load largesize:
-    size_ = bin.read_bits(64);
+    size_ = bin.read<uint64_t>();
   }
   else if (size32 == 0)
   {
@@ -108,8 +125,8 @@ void
 FullBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   Box::load(mp4, bin);
-  version_ = bin.read_bits(8);
-  flags_ = bin.read_bits(24);
+  version_ = bin.read<uint8_t>();
+  flags_ = bin.read<uint32_t>(24);
 }
 
 //----------------------------------------------------------------
@@ -125,6 +142,24 @@ FullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<Container>::box
+//
+template Container *
+create<Container>::box(const char * fourcc);
+
+//----------------------------------------------------------------
+// create<ContainerEx>::box
+//
+template ContainerEx *
+create<ContainerEx>::box(const char * fourcc);
+
+//----------------------------------------------------------------
+// create<ContainerList>::box
+//
+template ContainerList *
+create<ContainerList>::box(const char * fourcc);
+
+//----------------------------------------------------------------
 // ContainerList::load
 //
 void
@@ -134,7 +169,7 @@ ContainerList::load(Mp4Context & mp4, IBitstream & bin)
   TBase::load(mp4, bin);
 
   const std::size_t end_pos = box_pos + Box::size_ * 8;
-  const uint32_t entry_count = bin.read_bits(32);
+  const uint32_t entry_count = bin.read<uint32_t>();
   for (uint32_t i = 0; i < entry_count; ++i)
   {
     TBoxPtr box = mp4.parse(bin, end_pos);
@@ -169,6 +204,12 @@ ContainerList::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FileTypeBox>::box
+//
+template FileTypeBox *
+create<FileTypeBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
 // FileTypeBox::load
 //
 void
@@ -179,7 +220,7 @@ FileTypeBox::load(Mp4Context & mp4, IBitstream & bin)
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
   bin.read_bytes(major_.str_, 4);
-  minor_ = bin.read_bits(32);
+  minor_ = bin.read<uint32_t>();
 
   while (bin.position() < box_end)
   {
@@ -209,6 +250,12 @@ FileTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FreeSpaceBox>::box
+//
+template FreeSpaceBox *
+create<FreeSpaceBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
 // FreeSpaceBox::load
 //
 void
@@ -221,6 +268,12 @@ FreeSpaceBox::load(Mp4Context & mp4, IBitstream & bin)
   bin.seek(box_end);
 }
 
+
+//----------------------------------------------------------------
+// create<MediaDataBox>::box
+//
+template MediaDataBox *
+create<MediaDataBox>::box(const char * fourcc);
 
 //----------------------------------------------------------------
 // MediaDataBox::load
@@ -246,6 +299,12 @@ MediaDataBox::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// create<ProgressiveDownloadInfoBox>::box
+//
+template ProgressiveDownloadInfoBox *
+create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
 // ProgressiveDownloadInfoBox::load
 //
 void
@@ -257,8 +316,8 @@ ProgressiveDownloadInfoBox::load(Mp4Context & mp4, IBitstream & bin)
   const std::size_t box_end = box_pos + Box::size_ * 8;
   while (bin.position() < box_end)
   {
-    uint32_t rate = bin.read_bits(32);
-    uint32_t initial_delay = bin.read_bits(32);
+    uint32_t rate = bin.read<uint32_t>();
+    uint32_t initial_delay = bin.read<uint32_t>();
     rate_.push_back(rate);
     initial_delay_.push_back(initial_delay);
   }
@@ -282,6 +341,12 @@ ProgressiveDownloadInfoBox::to_json(Json::Value & out) const
   }
 }
 
+
+//----------------------------------------------------------------
+// create<MovieHeaderBox>::box
+//
+template MovieHeaderBox *
+create<MovieHeaderBox>::box(const char * fourcc);
 
 //----------------------------------------------------------------
 // MovieHeaderBox::MovieHeaderBox
@@ -325,43 +390,43 @@ MovieHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if (version_ == 1)
   {
-    creation_time_ = bin.read_bits(64);
-    modification_time_ = bin.read_bits(64);
-    timescale_ = bin.read_bits(32);
-    duration_ = bin.read_bits(64);
+    creation_time_ = bin.read<uint64_t>();
+    modification_time_ = bin.read<uint64_t>();
+    timescale_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint64_t>();
   }
   else
   {
-    creation_time_ = bin.read_bits(32);
-    modification_time_ = bin.read_bits(32);
-    timescale_ = bin.read_bits(32);
-    duration_ = bin.read_bits(32);
+    creation_time_ = bin.read<uint32_t>();
+    modification_time_ = bin.read<uint32_t>();
+    timescale_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint32_t>();
   }
 
-  rate_ = bin.read<int32_t>(32);
-  volume_ = bin.read<int16_t>(16);
-  reserved_16_ = bin.read_bits(16);
-  reserved_[0] = bin.read_bits(32);
-  reserved_[1] = bin.read_bits(32);
+  rate_ = bin.read<int32_t>();
+  volume_ = bin.read<int16_t>();
+  reserved_16_ = bin.read<uint16_t>();
+  reserved_[0] = bin.read<uint32_t>();
+  reserved_[1] = bin.read<uint32_t>();
 
-  matrix_[0] = bin.read<int32_t>(32);
-  matrix_[1] = bin.read<int32_t>(32);
-  matrix_[2] = bin.read<int32_t>(32);
-  matrix_[3] = bin.read<int32_t>(32);
-  matrix_[4] = bin.read<int32_t>(32);
-  matrix_[5] = bin.read<int32_t>(32);
-  matrix_[6] = bin.read<int32_t>(32);
-  matrix_[7] = bin.read<int32_t>(32);
-  matrix_[8] = bin.read<int32_t>(32);
+  matrix_[0] = bin.read<int32_t>();
+  matrix_[1] = bin.read<int32_t>();
+  matrix_[2] = bin.read<int32_t>();
+  matrix_[3] = bin.read<int32_t>();
+  matrix_[4] = bin.read<int32_t>();
+  matrix_[5] = bin.read<int32_t>();
+  matrix_[6] = bin.read<int32_t>();
+  matrix_[7] = bin.read<int32_t>();
+  matrix_[8] = bin.read<int32_t>();
 
-  pre_defined_[0] = bin.read_bits(32);
-  pre_defined_[1] = bin.read_bits(32);
-  pre_defined_[2] = bin.read_bits(32);
-  pre_defined_[3] = bin.read_bits(32);
-  pre_defined_[4] = bin.read_bits(32);
-  pre_defined_[5] = bin.read_bits(32);
+  pre_defined_[0] = bin.read<uint32_t>();
+  pre_defined_[1] = bin.read<uint32_t>();
+  pre_defined_[2] = bin.read<uint32_t>();
+  pre_defined_[3] = bin.read<uint32_t>();
+  pre_defined_[4] = bin.read<uint32_t>();
+  pre_defined_[5] = bin.read<uint32_t>();
 
-  next_track_ID_ = bin.read_bits(32);
+  next_track_ID_ = bin.read<uint32_t>();
 }
 
 //----------------------------------------------------------------
@@ -390,6 +455,12 @@ MovieHeaderBox::to_json(Json::Value & out) const
   out["next_track_ID"] = next_track_ID_;
 }
 
+
+//----------------------------------------------------------------
+// create<TrackHeaderBox>::box
+//
+template TrackHeaderBox *
+create<TrackHeaderBox>::box(const char * fourcc);
 
 //----------------------------------------------------------------
 // TrackHeaderBox::TrackHeaderBox
@@ -430,41 +501,41 @@ TrackHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if (version_ == 1)
   {
-    creation_time_ = bin.read_bits(64);
-    modification_time_ = bin.read_bits(64);
-    track_ID_ = bin.read_bits(32);
-    reserved1_ = bin.read_bits(32);
-    duration_ = bin.read_bits(64);
+    creation_time_ = bin.read<uint64_t>();
+    modification_time_ = bin.read<uint64_t>();
+    track_ID_ = bin.read<uint32_t>();
+    reserved1_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint64_t>();
   }
   else
   {
-    creation_time_ = bin.read_bits(32);
-    modification_time_ = bin.read_bits(32);
-    track_ID_ = bin.read_bits(32);
-    reserved1_ = bin.read_bits(32);
-    duration_ = bin.read_bits(32);
+    creation_time_ = bin.read<uint32_t>();
+    modification_time_ = bin.read<uint32_t>();
+    track_ID_ = bin.read<uint32_t>();
+    reserved1_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint32_t>();
   }
 
-  reserved2_[0] = bin.read_bits(32);
-  reserved2_[1] = bin.read_bits(32);
+  reserved2_[0] = bin.read<uint32_t>();
+  reserved2_[1] = bin.read<uint32_t>();
 
-  layer_ = bin.read<int16_t>(16);
-  alternate_group_ = bin.read<int16_t>(16);
-  volume_ = bin.read<int16_t>(16);
-  reserved3_ = bin.read_bits(16);
+  layer_ = bin.read<int16_t>();
+  alternate_group_ = bin.read<int16_t>();
+  volume_ = bin.read<int16_t>();
+  reserved3_ = bin.read<uint16_t>();
 
-  matrix_[0] = bin.read<int32_t>(32);
-  matrix_[1] = bin.read<int32_t>(32);
-  matrix_[2] = bin.read<int32_t>(32);
-  matrix_[3] = bin.read<int32_t>(32);
-  matrix_[4] = bin.read<int32_t>(32);
-  matrix_[5] = bin.read<int32_t>(32);
-  matrix_[6] = bin.read<int32_t>(32);
-  matrix_[7] = bin.read<int32_t>(32);
-  matrix_[8] = bin.read<int32_t>(32);
+  matrix_[0] = bin.read<int32_t>();
+  matrix_[1] = bin.read<int32_t>();
+  matrix_[2] = bin.read<int32_t>();
+  matrix_[3] = bin.read<int32_t>();
+  matrix_[4] = bin.read<int32_t>();
+  matrix_[5] = bin.read<int32_t>();
+  matrix_[6] = bin.read<int32_t>();
+  matrix_[7] = bin.read<int32_t>();
+  matrix_[8] = bin.read<int32_t>();
 
-  width_ = bin.read_bits(32);
-  height_ = bin.read_bits(32);
+  width_ = bin.read<uint32_t>();
+  height_ = bin.read<uint32_t>();
 }
 
 //----------------------------------------------------------------
@@ -497,6 +568,12 @@ TrackHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<TrackReferenceTypeBox>::box
+//
+template TrackReferenceTypeBox *
+create<TrackReferenceTypeBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
 // TrackReferenceTypeBox::load
 //
 void
@@ -508,7 +585,7 @@ TrackReferenceTypeBox::load(Mp4Context & mp4, IBitstream & bin)
     const std::size_t box_end = box_pos + Box::size_ * 8;
     while (bin.position() < box_end)
     {
-      uint32_t track_ID = bin.read_bits(32);
+      uint32_t track_ID = bin.read<uint32_t>();
       track_IDs_.push_back(track_ID);
     }
 }
@@ -531,38 +608,30 @@ TrackReferenceTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create
+// create<TrackGroupTypeBox>::box
 //
-template <typename TBox>
-struct create
+template TrackGroupTypeBox *
+create<TrackGroupTypeBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackGroupTypeBox::load
+//
+void
+TrackGroupTypeBox::load(Mp4Context & mp4, IBitstream & bin)
 {
-  static TBox *
-  box(const char * fourcc)
-  {
-    TBox * box = new TBox();
-    box->type_.set(fourcc);
-    box->size_ = 0;
-    return box;
-  }
-};
+  FullBox::load(mp4, bin);
+  track_group_id_ = bin.read<uint32_t>();
+}
 
-// explicitly instantiate box constructor functions:
-template Box * create<Box>::box(const char * fourcc);
-template Container * create<Container>::box(const char * fourcc);
-template ContainerEx * create<ContainerEx>::box(const char * fourcc);
-template ContainerList * create<ContainerList>::box(const char * fourcc);
-template FileTypeBox * create<FileTypeBox>::box(const char * fourcc);
-template FreeSpaceBox * create<FreeSpaceBox>::box(const char * fourcc);
-template MediaDataBox * create<MediaDataBox>::box(const char * fourcc);
-
-template ProgressiveDownloadInfoBox *
-create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
-
-template MovieHeaderBox * create<MovieHeaderBox>::box(const char * fourcc);
-template TrackHeaderBox * create<TrackHeaderBox>::box(const char * fourcc);
-
-template TrackReferenceTypeBox *
-create<TrackReferenceTypeBox>::box(const char * fourcc);
+//----------------------------------------------------------------
+// TrackGroupTypeBox::to_json
+//
+void
+TrackGroupTypeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["track_group_id"] = track_group_id_;
+}
 
 
 //----------------------------------------------------------------
@@ -596,6 +665,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("moov", create_container);
     this->add("mvex", create_container);
     this->add("trak", create_container);
+    this->add("tref", create_container);
+    this->add("trgr", create_container);
     this->add("moof", create_container);
     this->add("traf", create_container);
     this->add("edts", create_container);
@@ -627,6 +698,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("vdep", create<TrackReferenceTypeBox>::box);
     this->add("vplx", create<TrackReferenceTypeBox>::box);
     this->add("subt", create<TrackReferenceTypeBox>::box);
+
+    this->add("msrc", create<TrackGroupTypeBox>::box);
   }
 
   // helper:

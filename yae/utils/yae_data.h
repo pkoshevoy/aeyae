@@ -563,6 +563,10 @@ namespace yae
     inline TData read(std::size_t num_bits)
     { return TData(this->read_bits(num_bits)); }
 
+    template <typename TData>
+    inline TData read()
+    { return TData(this->read_bits(sizeof(TData) << 3)); }
+
     virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
 
     inline void read_bytes(void * dst, std::size_t dst_size)
