@@ -287,9 +287,7 @@ MediaDataBox::load(Mp4Context & mp4, IBitstream & bin)
   const std::size_t box_end = box_pos + Box::size_ * 8;
   if (mp4.load_mdat_data_)
   {
-    std::size_t cur_pos = bin.position();
-    std::size_t num_bytes = (box_end - cur_pos) / 8;
-    data_ = bin.read_bytes(num_bytes);
+    data_ = bin.read_bytes_until(box_end);
   }
   else
   {
@@ -619,8 +617,12 @@ create<TrackGroupTypeBox>::box(const char * fourcc);
 void
 TrackGroupTypeBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
   track_group_id_ = bin.read<uint32_t>();
+  data_ = bin.read_bytes_until(box_end);
 }
 
 //----------------------------------------------------------------

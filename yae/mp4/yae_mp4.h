@@ -359,6 +359,7 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       uint32_t track_group_id_;
+      Data data_;
     };
 
   }

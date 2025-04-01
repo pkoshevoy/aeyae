@@ -569,6 +569,15 @@ namespace yae
 
     virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
 
+    inline TBufferPtr read_bytes_until(std::size_t end_pos)
+    {
+      std::size_t cur_pos = this->position();
+      YAE_ASSERT(cur_pos <= end_pos);
+
+      std::size_t n_bytes = (cur_pos < end_pos) ? (end_pos - cur_pos) / 8 : 0;
+      return this->read_bytes(n_bytes);
+    }
+
     inline void read_bytes(void * dst, std::size_t dst_size)
     {
       TBufferPtr src = this->read_bytes(dst_size);
