@@ -637,6 +637,74 @@ TrackGroupTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<MediaHeaderBox>::box
+//
+template MediaHeaderBox *
+create<MediaHeaderBox>::box(const char * fourcc);
+
+//----------------------------------------------------------------
+// MediaHeaderBox::MediaHeaderBox
+//
+MediaHeaderBox::MediaHeaderBox():
+  creation_time_(0),
+  modification_time_(0),
+  timescale_(0),
+  duration_(0),
+  pre_defined_(0)
+{
+  language_[0] = 0;
+  language_[1] = 0;
+  language_[2] = 0;
+  language_[3] = 0;
+}
+
+//----------------------------------------------------------------
+// MediaHeaderBox::load
+//
+void
+MediaHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  if (version_ == 1)
+  {
+    creation_time_ = bin.read<uint64_t>();
+    modification_time_ = bin.read<uint64_t>();
+    timescale_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint64_t>();
+  }
+  else
+  {
+    creation_time_ = bin.read<uint32_t>();
+    modification_time_ = bin.read<uint32_t>();
+    timescale_ = bin.read<uint32_t>();
+    duration_ = bin.read<uint32_t>();
+  }
+
+  bin.skip(1); // padding 0 bit
+  language_[0] = 0x60 + bin.read<char>(5);
+  language_[1] = 0x60 + bin.read<char>(5);
+  language_[2] = 0x60 + bin.read<char>(5);
+  pre_defined_ = bin.read<uint16_t>();
+}
+
+//----------------------------------------------------------------
+// MediaHeaderBox::to_json
+//
+void
+MediaHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["creation_time"] = Json::UInt64(creation_time_);
+  out["modification_time"] = Json::UInt64(modification_time_);
+  out["timescale"] = timescale_;
+  out["duration"] = Json::UInt64(duration_);
+  out["language"] = language_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -692,6 +760,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("pdin", create<ProgressiveDownloadInfoBox>::box);
     this->add("mvhd", create<MovieHeaderBox>::box);
     this->add("tkhd", create<TrackHeaderBox>::box);
+    this->add("mdhd", create<MediaHeaderBox>::box);
 
     this->add("hint", create<TrackReferenceTypeBox>::box);
     this->add("cdsc", create<TrackReferenceTypeBox>::box);

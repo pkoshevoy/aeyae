@@ -362,6 +362,25 @@ namespace yae
       Data data_;
     };
 
+    //----------------------------------------------------------------
+    // MediaHeaderBox
+    //
+    struct YAE_API MediaHeaderBox : public FullBox
+    {
+      MediaHeaderBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint64_t creation_time_; // seconds since 1904/01/01 00:00:00, UTC
+      uint64_t modification_time_; // seconds since 1904/01/01 00:00:00, UTC
+      uint32_t timescale_;
+      uint64_t duration_;
+
+      char language_[4]; // ISO-639-2/T language code
+      uint16_t pre_defined_; // zero
+    };
+
   }
 
 }
