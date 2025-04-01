@@ -390,12 +390,118 @@ MovieHeaderBox::to_json(Json::Value & out) const
   out["next_track_ID"] = next_track_ID_;
 }
 
+
+//----------------------------------------------------------------
+// TrackHeaderBox::TrackHeaderBox
+//
+TrackHeaderBox::TrackHeaderBox():
+  creation_time_(0),
+  modification_time_(0),
+  track_ID_(0),
+  reserved1_(0),
+  duration_(0),
+  layer_(0),
+  alternate_group_(0),
+  volume_(0x0100), // fixed point 8.8, set to 0 for non-audio tracks
+  reserved3_(0),
+  width_(0), // fixed point 16.16
+  height_(0) // fixed point 16.16
+{
+  reserved2_[0] = 0;
+  reserved2_[1] = 0;
+  matrix_[0] = 0x00010000;
+  matrix_[1] = 0x00000000;
+  matrix_[2] = 0x00000000;
+  matrix_[3] = 0x00000000;
+  matrix_[4] = 0x00010000;
+  matrix_[5] = 0x00000000;
+  matrix_[6] = 0x00000000;
+  matrix_[7] = 0x00000000;
+  matrix_[8] = 0x40000000;
+}
+
+//----------------------------------------------------------------
+// TrackHeaderBox::load
+//
+void
+TrackHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  if (version_ == 1)
+  {
+    creation_time_ = bin.read_bits(64);
+    modification_time_ = bin.read_bits(64);
+    track_ID_ = bin.read_bits(32);
+    reserved1_ = bin.read_bits(32);
+    duration_ = bin.read_bits(64);
+  }
+  else
+  {
+    creation_time_ = bin.read_bits(32);
+    modification_time_ = bin.read_bits(32);
+    track_ID_ = bin.read_bits(32);
+    reserved1_ = bin.read_bits(32);
+    duration_ = bin.read_bits(32);
+  }
+
+  reserved2_[0] = bin.read_bits(32);
+  reserved2_[1] = bin.read_bits(32);
+
+  layer_ = bin.read<int16_t>(16);
+  alternate_group_ = bin.read<int16_t>(16);
+  volume_ = bin.read<int16_t>(16);
+  reserved3_ = bin.read_bits(16);
+
+  matrix_[0] = bin.read<int32_t>(32);
+  matrix_[1] = bin.read<int32_t>(32);
+  matrix_[2] = bin.read<int32_t>(32);
+  matrix_[3] = bin.read<int32_t>(32);
+  matrix_[4] = bin.read<int32_t>(32);
+  matrix_[5] = bin.read<int32_t>(32);
+  matrix_[6] = bin.read<int32_t>(32);
+  matrix_[7] = bin.read<int32_t>(32);
+  matrix_[8] = bin.read<int32_t>(32);
+
+  width_ = bin.read_bits(32);
+  height_ = bin.read_bits(32);
+}
+
+//----------------------------------------------------------------
+// TrackHeaderBox::to_json
+//
+void
+TrackHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["creation_time"] = Json::UInt64(creation_time_);
+  out["modification_time"] = Json::UInt64(modification_time_);
+  out["track_ID"] = track_ID_;
+  out["duration"] = Json::UInt64(duration_);
+
+  out["layer"] = Json::Int(layer_);
+  out["alternate_group"] = Json::Int(alternate_group_);
+  out["volume"] = double(volume_) / double(0x0100);
+
+  Json::Value & matrix = out["matrix"];
+  for (int i = 0; i < 9; ++i)
+  {
+    double v = double(matrix_[i]) / double(0x00010000);
+    matrix.append(v);
+  }
+
+  out["width"] = double(width_) / double(0x00010000);
+  out["height"] = double(height_) / double(0x00010000);
+}
+
+
+//----------------------------------------------------------------
+// create
+//
 template <typename TBox>
 struct create
 {
-  //----------------------------------------------------------------
-  // create
-  //
   static TBox *
   box(const char * fourcc)
   {
@@ -419,6 +525,7 @@ template ProgressiveDownloadInfoBox *
 create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
 
 template MovieHeaderBox * create<MovieHeaderBox>::box(const char * fourcc);
+template TrackHeaderBox * create<TrackHeaderBox>::box(const char * fourcc);
 
 
 //----------------------------------------------------------------
@@ -474,6 +581,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
 
     this->add("pdin", create<ProgressiveDownloadInfoBox>::box);
     this->add("mvhd", create<MovieHeaderBox>::box);
+    this->add("tkhd", create<TrackHeaderBox>::box);
   }
 
   // helper:

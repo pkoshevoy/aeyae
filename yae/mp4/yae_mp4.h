@@ -284,8 +284,8 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      uint64_t creation_time_;
-      uint64_t modification_time_;
+      uint64_t creation_time_; // seconds since 1904/01/01 00:00:00, UTC
+      uint64_t modification_time_; // seconds since 1904/01/01 00:00:00, UTC
       uint32_t timescale_;
       uint64_t duration_;
 
@@ -298,6 +298,43 @@ namespace yae
 
       uint32_t pre_defined_[6]; // zeros
       uint32_t next_track_ID_; // non-zero
+    };
+
+    //----------------------------------------------------------------
+    // TrackHeaderBox
+    //
+    struct YAE_API TrackHeaderBox : public FullBox
+    {
+      TrackHeaderBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline bool is_track_enabled() const
+      { return (FullBox::flags_ & 0x000001) == 0x000001; }
+
+      inline bool is_track_in_movie() const
+      { return (FullBox::flags_ & 0x000002) == 0x000002; }
+
+      inline bool is_track_in_preview() const
+      { return (FullBox::flags_ & 0x000004) == 0x000004; }
+
+      uint64_t creation_time_; // seconds since 1904/01/01 00:00:00, UTC
+      uint64_t modification_time_; // seconds since 1904/01/01 00:00:00, UTC
+      uint32_t track_ID_; // unique, non-zero
+      uint32_t reserved1_;
+      uint64_t duration_; // in mvhd timescale
+
+      uint32_t reserved2_[2];
+      int16_t layer_; // front-to-back, lower number closer to viewer
+      int16_t alternate_group_;
+      int16_t volume_; // fixed point 8.8 0x0100 if audio else 0
+      uint16_t reserved3_;
+
+      int32_t matrix_[9]; // 16.16 fixed point numbers
+
+      uint32_t width_; // fixed point 16.16
+      uint32_t height_; // fixed point 16.16
     };
 
   }
