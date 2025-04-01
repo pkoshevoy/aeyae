@@ -497,6 +497,40 @@ TrackHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// TrackReferenceTypeBox::load
+//
+void
+TrackReferenceTypeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+    const std::size_t box_pos = bin.position();
+    Box::load(mp4, bin);
+
+    const std::size_t box_end = box_pos + Box::size_ * 8;
+    while (bin.position() < box_end)
+    {
+      uint32_t track_ID = bin.read_bits(32);
+      track_IDs_.push_back(track_ID);
+    }
+}
+
+//----------------------------------------------------------------
+// TrackReferenceTypeBox::to_json
+//
+void
+TrackReferenceTypeBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  Json::Value & track_IDs = out["track_IDs"];
+  for (std::size_t i = 0, n = track_IDs_.size(); i < n; ++i)
+  {
+    uint32_t track_ID = track_IDs_[i];
+    track_IDs.append(track_ID);
+  }
+}
+
+
+//----------------------------------------------------------------
 // create
 //
 template <typename TBox>
@@ -526,6 +560,9 @@ create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
 
 template MovieHeaderBox * create<MovieHeaderBox>::box(const char * fourcc);
 template TrackHeaderBox * create<TrackHeaderBox>::box(const char * fourcc);
+
+template TrackReferenceTypeBox *
+create<TrackReferenceTypeBox>::box(const char * fourcc);
 
 
 //----------------------------------------------------------------
@@ -582,6 +619,14 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("pdin", create<ProgressiveDownloadInfoBox>::box);
     this->add("mvhd", create<MovieHeaderBox>::box);
     this->add("tkhd", create<TrackHeaderBox>::box);
+
+    this->add("hint", create<TrackReferenceTypeBox>::box);
+    this->add("cdsc", create<TrackReferenceTypeBox>::box);
+    this->add("font", create<TrackReferenceTypeBox>::box);
+    this->add("hind", create<TrackReferenceTypeBox>::box);
+    this->add("vdep", create<TrackReferenceTypeBox>::box);
+    this->add("vplx", create<TrackReferenceTypeBox>::box);
+    this->add("subt", create<TrackReferenceTypeBox>::box);
   }
 
   // helper:

@@ -337,6 +337,18 @@ namespace yae
       uint32_t height_; // fixed point 16.16
     };
 
+    //----------------------------------------------------------------
+    // TrackReferenceTypeBox
+    //
+    struct YAE_API TrackReferenceTypeBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::vector<uint32_t> track_IDs_;
+    };
+
+
   }
 
 }
