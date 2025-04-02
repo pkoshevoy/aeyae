@@ -381,6 +381,22 @@ namespace yae
       uint16_t pre_defined_; // zero
     };
 
+    //----------------------------------------------------------------
+    // HandlerBox
+    //
+    struct YAE_API HandlerBox : public FullBox
+    {
+      HandlerBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t pre_defined_; // zero
+      FourCC handler_type_;
+      uint32_t reserved_[3]; // zero
+      std::string name_; // null-terminated UTF-8
+    };
+
   }
 
 }

@@ -133,6 +133,69 @@ namespace yae
     size_ = size;
   }
 
+
+  //----------------------------------------------------------------
+  // IBitstream::read_string
+  //
+  std::size_t
+  IBitstream::read_string(std::string & str, std::size_t num_bytes)
+  {
+    YAE_ASSERT((position_ % 8) == 0);
+
+    std::size_t end_pos = position_ + (num_bytes << 3);
+    YAE_ASSERT(end_pos <= end_);
+    end_pos = std::min(end_pos, end_);
+
+    return this->read_string_until(str, end_pos);
+  }
+
+  //----------------------------------------------------------------
+  // IBitstream::read_string_until
+  //
+  std::size_t
+  IBitstream::read_string_until(std::string & str, std::size_t end_pos)
+  {
+    YAE_ASSERT((position_ % 8) == 0);
+    YAE_ASSERT(end_pos <= end_);
+    end_pos = std::min(end_pos, end_);
+
+    std::size_t n = 0;
+    while (position_ < end_pos)
+    {
+      char c = this->read<char>(8);
+      str.push_back(c);
+      n += 1;
+    }
+
+    return n;
+  }
+
+  //----------------------------------------------------------------
+  // IBitstream::read_string_until_null
+  //
+  std::size_t
+  IBitstream::read_string_until_null(std::string & str, std::size_t end_pos)
+  {
+    YAE_ASSERT((position_ % 8) == 0);
+    YAE_ASSERT(end_pos <= end_);
+    end_pos = std::min(end_pos, end_);
+
+    std::size_t n = 0;
+    while (position_ < end_pos)
+    {
+      char c = this->read<char>(8);
+      str.push_back(c);
+      n += 1;
+
+      if (!c)
+      {
+        break;
+      }
+    }
+
+    return n;
+  }
+
   //----------------------------------------------------------------
   // IBitstream::read_bits_ue
   //

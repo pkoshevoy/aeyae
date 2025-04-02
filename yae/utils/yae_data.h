@@ -584,6 +584,15 @@ namespace yae
       memcpy(dst, src->get(), src->size());
     }
 
+    // returns number of bytes consumed:
+    std::size_t read_string(std::string & s, std::size_t num_bytes);
+
+    // returns number of bytes consumed:
+    std::size_t read_string_until(std::string & s, std::size_t end_pos);
+
+    // returns number of bytes consumed (including the null byte):
+    std::size_t read_string_until_null(std::string & s, std::size_t end_pos);
+
     inline std::size_t bits_left() const
     { return end_ - position_; }
 

@@ -21,7 +21,7 @@ template <typename TBox>
 struct create
 {
   static TBox *
-  box(const char * fourcc)
+  please(const char * fourcc)
   {
     TBox * box = new TBox();
     box->type_.set(fourcc);
@@ -142,22 +142,22 @@ FullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<Container>::box
+// create<Container>::please
 //
 template Container *
-create<Container>::box(const char * fourcc);
+create<Container>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// create<ContainerEx>::box
+// create<ContainerEx>::please
 //
 template ContainerEx *
-create<ContainerEx>::box(const char * fourcc);
+create<ContainerEx>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// create<ContainerList>::box
+// create<ContainerList>::please
 //
 template ContainerList *
-create<ContainerList>::box(const char * fourcc);
+create<ContainerList>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // ContainerList::load
@@ -204,10 +204,10 @@ ContainerList::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<FileTypeBox>::box
+// create<FileTypeBox>::please
 //
 template FileTypeBox *
-create<FileTypeBox>::box(const char * fourcc);
+create<FileTypeBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // FileTypeBox::load
@@ -250,10 +250,10 @@ FileTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<FreeSpaceBox>::box
+// create<FreeSpaceBox>::please
 //
 template FreeSpaceBox *
-create<FreeSpaceBox>::box(const char * fourcc);
+create<FreeSpaceBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // FreeSpaceBox::load
@@ -270,10 +270,10 @@ FreeSpaceBox::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
-// create<MediaDataBox>::box
+// create<MediaDataBox>::please
 //
 template MediaDataBox *
-create<MediaDataBox>::box(const char * fourcc);
+create<MediaDataBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // MediaDataBox::load
@@ -297,10 +297,10 @@ MediaDataBox::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
-// create<ProgressiveDownloadInfoBox>::box
+// create<ProgressiveDownloadInfoBox>::please
 //
 template ProgressiveDownloadInfoBox *
-create<ProgressiveDownloadInfoBox>::box(const char * fourcc);
+create<ProgressiveDownloadInfoBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // ProgressiveDownloadInfoBox::load
@@ -341,10 +341,10 @@ ProgressiveDownloadInfoBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<MovieHeaderBox>::box
+// create<MovieHeaderBox>::please
 //
 template MovieHeaderBox *
-create<MovieHeaderBox>::box(const char * fourcc);
+create<MovieHeaderBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // MovieHeaderBox::MovieHeaderBox
@@ -455,10 +455,10 @@ MovieHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<TrackHeaderBox>::box
+// create<TrackHeaderBox>::please
 //
 template TrackHeaderBox *
-create<TrackHeaderBox>::box(const char * fourcc);
+create<TrackHeaderBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // TrackHeaderBox::TrackHeaderBox
@@ -566,10 +566,10 @@ TrackHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<TrackReferenceTypeBox>::box
+// create<TrackReferenceTypeBox>::please
 //
 template TrackReferenceTypeBox *
-create<TrackReferenceTypeBox>::box(const char * fourcc);
+create<TrackReferenceTypeBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // TrackReferenceTypeBox::load
@@ -606,10 +606,10 @@ TrackReferenceTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<TrackGroupTypeBox>::box
+// create<TrackGroupTypeBox>::please
 //
 template TrackGroupTypeBox *
-create<TrackGroupTypeBox>::box(const char * fourcc);
+create<TrackGroupTypeBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // TrackGroupTypeBox::load
@@ -637,10 +637,10 @@ TrackGroupTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<MediaHeaderBox>::box
+// create<MediaHeaderBox>::please
 //
 template MediaHeaderBox *
-create<MediaHeaderBox>::box(const char * fourcc);
+create<MediaHeaderBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // MediaHeaderBox::MediaHeaderBox
@@ -705,6 +705,56 @@ MediaHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<HandlerBox>::please
+//
+template HandlerBox *
+create<HandlerBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// HandlerBox::HandlerBox
+//
+HandlerBox::HandlerBox():
+  pre_defined_(0)
+{
+  reserved_[0] = 0;
+  reserved_[1] = 0;
+  reserved_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// HandlerBox::load
+//
+void
+HandlerBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  pre_defined_ = bin.read<uint32_t>();
+  bin.read_bytes(handler_type_.str_, 4);
+  reserved_[0] = bin.read<uint32_t>();
+  reserved_[1] = bin.read<uint32_t>();
+  reserved_[2] = bin.read<uint32_t>();
+
+  name_.clear();
+  bin.read_string_until_null(name_, box_end);
+  bin.seek(box_end);
+}
+
+//----------------------------------------------------------------
+// HandlerBox::to_json
+//
+void
+HandlerBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["handler_type"] = handler_type_.str_;
+  out["name"] = name_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -731,7 +781,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
   BoxFactory()
   {
     TBoxConstructor create_container =
-      (TBoxConstructor)(create<Container>::box);
+      (TBoxConstructor)(create<Container>::please);
     this->add("moov", create_container);
     this->add("mvex", create_container);
     this->add("trak", create_container);
@@ -748,29 +798,30 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("schi", create_container);
     this->add("udta", create_container);
 
-    this->add("meta", create<ContainerEx>::box);
+    this->add("meta", create<ContainerEx>::please);
 
-    this->add("stsd", create<ContainerList>::box);
+    this->add("stsd", create<ContainerList>::please);
 
-    this->add("ftyp", create<FileTypeBox>::box);
-    this->add("free", create<FreeSpaceBox>::box);
-    this->add("skip", create<FreeSpaceBox>::box);
-    this->add("mdat", create<MediaDataBox>::box);
+    this->add("ftyp", create<FileTypeBox>::please);
+    this->add("free", create<FreeSpaceBox>::please);
+    this->add("skip", create<FreeSpaceBox>::please);
+    this->add("mdat", create<MediaDataBox>::please);
 
-    this->add("pdin", create<ProgressiveDownloadInfoBox>::box);
-    this->add("mvhd", create<MovieHeaderBox>::box);
-    this->add("tkhd", create<TrackHeaderBox>::box);
-    this->add("mdhd", create<MediaHeaderBox>::box);
+    this->add("pdin", create<ProgressiveDownloadInfoBox>::please);
+    this->add("mvhd", create<MovieHeaderBox>::please);
+    this->add("tkhd", create<TrackHeaderBox>::please);
+    this->add("mdhd", create<MediaHeaderBox>::please);
+    this->add("hdlr", create<HandlerBox>::please);
 
-    this->add("hint", create<TrackReferenceTypeBox>::box);
-    this->add("cdsc", create<TrackReferenceTypeBox>::box);
-    this->add("font", create<TrackReferenceTypeBox>::box);
-    this->add("hind", create<TrackReferenceTypeBox>::box);
-    this->add("vdep", create<TrackReferenceTypeBox>::box);
-    this->add("vplx", create<TrackReferenceTypeBox>::box);
-    this->add("subt", create<TrackReferenceTypeBox>::box);
+    this->add("hint", create<TrackReferenceTypeBox>::please);
+    this->add("cdsc", create<TrackReferenceTypeBox>::please);
+    this->add("font", create<TrackReferenceTypeBox>::please);
+    this->add("hind", create<TrackReferenceTypeBox>::please);
+    this->add("vdep", create<TrackReferenceTypeBox>::please);
+    this->add("vplx", create<TrackReferenceTypeBox>::please);
+    this->add("subt", create<TrackReferenceTypeBox>::please);
 
-    this->add("msrc", create<TrackGroupTypeBox>::box);
+    this->add("msrc", create<TrackGroupTypeBox>::please);
   }
 
   // helper:
@@ -799,7 +850,7 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
   TBoxConstructor box_constructor = NULL;
   if (parse_mdat_data_ && box->type_.same_as("mdat"))
   {
-    box_constructor = (TBoxConstructor)(create<Container>::box);
+    box_constructor = (TBoxConstructor)(create<Container>::please);
   }
   else
   {
