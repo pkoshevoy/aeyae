@@ -755,6 +755,13 @@ HandlerBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<NullMediaHeaderBox>::please
+//
+template NullMediaHeaderBox *
+create<NullMediaHeaderBox>::please(const char * fourcc);
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -812,6 +819,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("tkhd", create<TrackHeaderBox>::please);
     this->add("mdhd", create<MediaHeaderBox>::please);
     this->add("hdlr", create<HandlerBox>::please);
+    this->add("nmhd", create<NullMediaHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

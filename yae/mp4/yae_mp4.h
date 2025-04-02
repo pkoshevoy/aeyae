@@ -397,6 +397,11 @@ namespace yae
       std::string name_; // null-terminated UTF-8
     };
 
+    //----------------------------------------------------------------
+    // NullMediaHeaderBox
+    //
+    struct YAE_API NullMediaHeaderBox : public FullBox {};
+
   }
 
 }
