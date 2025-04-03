@@ -492,6 +492,23 @@ namespace yae
       std::vector<int32_t> sample_offset_;
     };
 
+    //----------------------------------------------------------------
+    // CompositionToDecodeBox
+    //
+    struct YAE_API CompositionToDecodeBox : public FullBox
+    {
+      CompositionToDecodeBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      int64_t composition_to_dts_shift_;
+      int64_t least_decode_to_display_delta_;
+      int64_t greatest_decode_to_display_delta_;
+      int64_t composition_start_time_;
+      int64_t composition_end_time_;
+    };
+
   }
 
 }

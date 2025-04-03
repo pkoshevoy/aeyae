@@ -993,6 +993,74 @@ CompositionOffsetBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<CompositionToDecodeBox>::please
+//
+template CompositionToDecodeBox *
+create<CompositionToDecodeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CompositionToDecodeBox::CompositionToDecodeBox
+//
+CompositionToDecodeBox::CompositionToDecodeBox():
+  composition_to_dts_shift_(0),
+  least_decode_to_display_delta_(0),
+  greatest_decode_to_display_delta_(0),
+  composition_start_time_(0),
+  composition_end_time_(0)
+{}
+
+//----------------------------------------------------------------
+// CompositionToDecodeBox::load
+//
+void
+CompositionToDecodeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  if (FullBox::version_ == 0)
+  {
+    composition_to_dts_shift_ = bin.read<int32_t>();
+    least_decode_to_display_delta_ = bin.read<int32_t>();
+    greatest_decode_to_display_delta_ = bin.read<int32_t>();
+    composition_start_time_ = bin.read<int32_t>();
+    composition_end_time_ = bin.read<int32_t>();
+  }
+  else
+  {
+    composition_to_dts_shift_ = bin.read<int64_t>();
+    least_decode_to_display_delta_ = bin.read<int64_t>();
+    greatest_decode_to_display_delta_ = bin.read<int64_t>();
+    composition_start_time_ = bin.read<int64_t>();
+    composition_end_time_ = bin.read<int64_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// CompositionToDecodeBox::to_json
+//
+void
+CompositionToDecodeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["composition_to_dts_shift"] =
+    Json::Int64(composition_to_dts_shift_);
+
+  out["least_decode_to_display_delta"] =
+    Json::Int64(least_decode_to_display_delta_);
+
+  out["greatest_decode_to_display_delta"] =
+    Json::Int64(greatest_decode_to_display_delta_);
+
+  out["composition_start_time"] =
+    Json::Int64(composition_start_time_);
+
+  out["composition_end_time"] =
+    Json::Int64(composition_end_time_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1056,6 +1124,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stdp", create<DegradationPriorityBox>::please);
     this->add("stts", create<TimeToSampleBox>::please);
     this->add("ctts", create<CompositionOffsetBox>::please);
+    this->add("cslg", create<CompositionToDecodeBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
