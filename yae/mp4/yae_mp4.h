@@ -509,6 +509,21 @@ namespace yae
       int64_t composition_end_time_;
     };
 
+    //----------------------------------------------------------------
+    // SyncSampleBox
+    //
+    struct YAE_API SyncSampleBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return sample_number_.size(); }
+
+      // keyframes:
+      std::vector<uint32_t> sample_number_;
+    };
+
   }
 
 }

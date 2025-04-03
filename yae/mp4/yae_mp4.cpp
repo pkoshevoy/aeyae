@@ -1061,6 +1061,42 @@ CompositionToDecodeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SyncSampleBox>::please
+//
+template SyncSampleBox *
+create<SyncSampleBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SyncSampleBox::load
+//
+void
+SyncSampleBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  sample_number_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t sample_number = bin.read<uint32_t>();
+    sample_number_.push_back(sample_number);
+  }
+}
+
+//----------------------------------------------------------------
+// SyncSampleBox::to_json
+//
+void
+SyncSampleBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(sample_number_.size());
+  yae::save(out["sample_number"], sample_number_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1125,6 +1161,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stts", create<TimeToSampleBox>::please);
     this->add("ctts", create<CompositionOffsetBox>::please);
     this->add("cslg", create<CompositionToDecodeBox>::please);
+    this->add("stss", create<SyncSampleBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
