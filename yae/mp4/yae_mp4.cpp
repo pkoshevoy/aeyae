@@ -894,7 +894,7 @@ DegradationPriorityBox::load(Mp4Context & mp4, IBitstream & bin)
   const std::size_t box_end = box_pos + Box::size_ * 8;
   priority_.clear();
 
-  while (bin.position() < box_end)
+  while (bin.position() + 16 <= box_end)
   {
     uint16_t priority = bin.read<uint16_t>();
     priority_.push_back(priority);
@@ -909,6 +909,46 @@ DegradationPriorityBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
   yae::save(out["priority"], priority_);
+}
+
+
+//----------------------------------------------------------------
+// create<TimeToSampleBox>::please
+//
+template TimeToSampleBox *
+create<TimeToSampleBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TimeToSampleBox::load
+//
+void
+TimeToSampleBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  sample_count_.clear();
+  sample_delta_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t sample_count = bin.read<uint32_t>();
+    uint32_t sample_delta = bin.read<uint32_t>();
+    sample_count_.push_back(sample_count);
+    sample_delta_.push_back(sample_delta);
+  }
+}
+
+//----------------------------------------------------------------
+// TimeToSampleBox::to_json
+//
+void
+TimeToSampleBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(sample_count_.size());
+  yae::save(out["sample_count"], sample_count_);
+  yae::save(out["sample_delta"], sample_delta_);
 }
 
 
@@ -974,6 +1014,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("elng", create<ExtendedLanguageBox>::please);
     this->add("btrt", create<BitRateBox>::please);
     this->add("stdp", create<DegradationPriorityBox>::please);
+    this->add("stts", create<TimeToSampleBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

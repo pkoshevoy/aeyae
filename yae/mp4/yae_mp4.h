@@ -461,6 +461,21 @@ namespace yae
       // sample count is specified in 'stsz' SampleSizeBox:
       std::vector<uint16_t> priority_;
     };
+
+    //----------------------------------------------------------------
+    // TimeToSampleBox
+    //
+    struct YAE_API TimeToSampleBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return sample_count_.size(); }
+
+      std::vector<uint32_t> sample_count_;
+      std::vector<uint32_t> sample_delta_;
+    };
   }
 
 }
