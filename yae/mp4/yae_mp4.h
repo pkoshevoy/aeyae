@@ -418,6 +418,38 @@ namespace yae
       std::string extended_language_;
     };
 
+    //----------------------------------------------------------------
+    // SampleEntryBox
+    //
+    struct YAE_API SampleEntryBox : public Box
+    {
+      SampleEntryBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint8_t reserved_[2]; // zero
+      uint16_t data_reference_index_;
+    };
+
+    //----------------------------------------------------------------
+    // BitRateBox
+    //
+    struct YAE_API BitRateBox : public Box
+    {
+      BitRateBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // size of decoding buffer for the elementary stream, in bytes:
+      uint32_t bufferSizeDB_;
+
+      // bits/second rate over 1s window:
+      uint32_t maxBitrate_;
+      uint32_t avgBitrate_;
+    };
+
   }
 
 }

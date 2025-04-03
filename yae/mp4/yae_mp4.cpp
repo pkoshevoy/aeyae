@@ -802,6 +802,79 @@ ExtendedLanguageBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// SampleEntryBox::SampleEntryBox
+//
+SampleEntryBox::SampleEntryBox():
+  data_reference_index_(0)
+{
+  reserved_[0] = 0;
+  reserved_[1] = 0;
+}
+
+//----------------------------------------------------------------
+// SampleEntryBox::load
+//
+void
+SampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  reserved_[0] = bin.read<uint8_t>();
+  reserved_[1] = bin.read<uint8_t>();
+  data_reference_index_ = bin.read<uint16_t>();
+}
+
+//----------------------------------------------------------------
+// SampleEntryBox::to_json
+//
+void
+SampleEntryBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["data_reference_index"] = Json::UInt(data_reference_index_);
+}
+
+
+//----------------------------------------------------------------
+// create<BitRateBox>::please
+//
+template BitRateBox *
+create<BitRateBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// BitRateBox::BitRateBox
+//
+BitRateBox::BitRateBox():
+  bufferSizeDB_(0),
+  maxBitrate_(0),
+  avgBitrate_(0)
+{}
+
+//----------------------------------------------------------------
+// BitRateBox::load
+//
+void
+BitRateBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  bufferSizeDB_ = bin.read<uint32_t>();
+  maxBitrate_ = bin.read<uint32_t>();
+  avgBitrate_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// BitRateBox::to_json
+//
+void
+BitRateBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["bufferSizeDB"] = bufferSizeDB_;
+  out["maxBitrate"] = maxBitrate_;
+  out["avgBitrate"] = avgBitrate_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -861,6 +934,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("hdlr", create<HandlerBox>::please);
     this->add("nmhd", create<NullMediaHeaderBox>::please);
     this->add("elng", create<ExtendedLanguageBox>::please);
+    this->add("btrt", create<BitRateBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
