@@ -80,21 +80,12 @@ Box::to_json(Json::Value & out) const
 }
 
 //----------------------------------------------------------------
-// Box::find_child
-//
-// breadth-first search through children, does not check 'this'
+// Box::find
 //
 const Box *
-Box::find_child(const char * fourcc) const
+Box::find(const TBoxPtrVec & boxes, const char * fourcc)
 {
-  if (!this->has_children())
-  {
-    return NULL;
-  }
-
-  const TBoxPtrVec & boxes = *(this->has_children());
   const std::size_t num_boxes = boxes.size();
-
   for (std::size_t i = 0; i < num_boxes; ++i)
   {
     const TBoxPtr & box = boxes[i];
@@ -115,6 +106,23 @@ Box::find_child(const char * fourcc) const
   }
 
   return NULL;
+}
+
+//----------------------------------------------------------------
+// Box::find_child
+//
+// breadth-first search through children, does not check 'this'
+//
+const Box *
+Box::find_child(const char * fourcc) const
+{
+  if (!this->has_children())
+  {
+    return NULL;
+  }
+
+  const TBoxPtrVec & boxes = *(this->has_children());
+  return Box::find(boxes, fourcc);
 }
 
 
@@ -762,6 +770,38 @@ create<NullMediaHeaderBox>::please(const char * fourcc);
 
 
 //----------------------------------------------------------------
+// create<ExtendedLanguageBox>::please
+//
+template ExtendedLanguageBox *
+create<ExtendedLanguageBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ExtendedLanguageBox::load
+//
+void
+ExtendedLanguageBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  extended_language_.clear();
+  bin.read_string_until_null(extended_language_, box_end);
+  bin.seek(box_end);
+}
+
+//----------------------------------------------------------------
+// ExtendedLanguageBox::to_json
+//
+void
+ExtendedLanguageBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["extended_language"] = extended_language_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -820,6 +860,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mdhd", create<MediaHeaderBox>::please);
     this->add("hdlr", create<HandlerBox>::please);
     this->add("nmhd", create<NullMediaHeaderBox>::please);
+    this->add("elng", create<ExtendedLanguageBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

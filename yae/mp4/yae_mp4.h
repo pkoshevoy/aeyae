@@ -124,8 +124,11 @@ namespace yae
       virtual const TBoxPtrVec * has_children() const
       { return NULL; }
 
+      // breadth-first search through given boxes:
+      static const Box * find(const TBoxPtrVec & boxes, const char * fourcc);
+
       // breadth-first search through children, does not check 'this':
-      const Box * find_child(const char * fourcc) const;
+      virtual const Box * find_child(const char * fourcc) const;
 
       // check 'this', if not found then breadth-first search through children:
       template <typename TBox>
@@ -401,6 +404,19 @@ namespace yae
     // NullMediaHeaderBox
     //
     struct YAE_API NullMediaHeaderBox : public FullBox {};
+
+    //----------------------------------------------------------------
+    // ExtendedLanguageBox
+    //
+    struct YAE_API ExtendedLanguageBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // null-terminated C string containing an RFC 4646 (BCP 47) compliant
+      // language tag string, such as "en-US", "fr-FR", "zh-CN":
+      std::string extended_language_;
+    };
 
   }
 
