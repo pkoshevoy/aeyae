@@ -7,7 +7,9 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
-#include "yae_mp4.h"
+#include "yae/mp4/yae_mp4.h"
+#include "yae/utils/yae_json.h"
+
 
 // namespace access:
 using namespace yae;
@@ -875,6 +877,42 @@ BitRateBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<DegradationPriorityBox>::please
+//
+template DegradationPriorityBox *
+create<DegradationPriorityBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DegradationPriorityBox::load
+//
+void
+DegradationPriorityBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  priority_.clear();
+
+  while (bin.position() < box_end)
+  {
+    uint16_t priority = bin.read<uint16_t>();
+    priority_.push_back(priority);
+  }
+}
+
+//----------------------------------------------------------------
+// DegradationPriorityBox::to_json
+//
+void
+DegradationPriorityBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  yae::save(out["priority"], priority_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -935,6 +973,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("nmhd", create<NullMediaHeaderBox>::please);
     this->add("elng", create<ExtendedLanguageBox>::please);
     this->add("btrt", create<BitRateBox>::please);
+    this->add("stdp", create<DegradationPriorityBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

@@ -450,6 +450,17 @@ namespace yae
       uint32_t avgBitrate_;
     };
 
+    //----------------------------------------------------------------
+    // DegradationPriorityBox
+    //
+    struct YAE_API DegradationPriorityBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // sample count is specified in 'stsz' SampleSizeBox:
+      std::vector<uint16_t> priority_;
+    };
   }
 
 }
