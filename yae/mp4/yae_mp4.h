@@ -524,6 +524,21 @@ namespace yae
       std::vector<uint32_t> sample_number_;
     };
 
+    //----------------------------------------------------------------
+    // ShadowSyncSampleBox
+    //
+    struct YAE_API ShadowSyncSampleBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return shadowed_sample_number_.size(); }
+
+      std::vector<uint32_t> shadowed_sample_number_;
+      std::vector<uint32_t> sync_sample_number_;
+    };
+
   }
 
 }

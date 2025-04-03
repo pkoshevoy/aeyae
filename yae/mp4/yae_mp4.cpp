@@ -1097,6 +1097,46 @@ SyncSampleBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ShadowSyncSampleBox>::please
+//
+template ShadowSyncSampleBox *
+create<ShadowSyncSampleBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ShadowSyncSampleBox::load
+//
+void
+ShadowSyncSampleBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  shadowed_sample_number_.clear();
+  sync_sample_number_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t shadowed_sample_number = bin.read<uint32_t>();
+    uint32_t sync_sample_number = bin.read<uint32_t>();
+    shadowed_sample_number_.push_back(shadowed_sample_number);
+    sync_sample_number_.push_back(sync_sample_number);
+  }
+}
+
+//----------------------------------------------------------------
+// ShadowSyncSampleBox::to_json
+//
+void
+ShadowSyncSampleBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(shadowed_sample_number_.size());
+  yae::save(out["shadowed_sample_number"], shadowed_sample_number_);
+  yae::save(out["sync_sample_number"], sync_sample_number_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1162,6 +1202,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("ctts", create<CompositionOffsetBox>::please);
     this->add("cslg", create<CompositionToDecodeBox>::please);
     this->add("stss", create<SyncSampleBox>::please);
+    this->add("stsh", create<ShadowSyncSampleBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
