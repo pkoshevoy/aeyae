@@ -476,6 +476,22 @@ namespace yae
       std::vector<uint32_t> sample_count_;
       std::vector<uint32_t> sample_delta_;
     };
+
+    //----------------------------------------------------------------
+    // CompositionOffsetBox
+    //
+    struct YAE_API CompositionOffsetBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return sample_count_.size(); }
+
+      std::vector<uint32_t> sample_count_;
+      std::vector<int32_t> sample_offset_;
+    };
+
   }
 
 }

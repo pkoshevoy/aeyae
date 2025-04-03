@@ -953,6 +953,46 @@ TimeToSampleBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<CompositionOffsetBox>::please
+//
+template CompositionOffsetBox *
+create<CompositionOffsetBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CompositionOffsetBox::load
+//
+void
+CompositionOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  sample_count_.clear();
+  sample_offset_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t sample_count = bin.read<uint32_t>();
+    int32_t sample_offset = bin.read<int32_t>();
+    sample_count_.push_back(sample_count);
+    sample_offset_.push_back(sample_offset);
+  }
+}
+
+//----------------------------------------------------------------
+// CompositionOffsetBox::to_json
+//
+void
+CompositionOffsetBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(sample_count_.size());
+  yae::save(out["sample_count"], sample_count_);
+  yae::save(out["sample_offset"], sample_offset_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1015,6 +1055,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("btrt", create<BitRateBox>::please);
     this->add("stdp", create<DegradationPriorityBox>::please);
     this->add("stts", create<TimeToSampleBox>::please);
+    this->add("ctts", create<CompositionOffsetBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
