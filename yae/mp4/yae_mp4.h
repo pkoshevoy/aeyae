@@ -539,6 +539,28 @@ namespace yae
       std::vector<uint32_t> sync_sample_number_;
     };
 
+    //----------------------------------------------------------------
+    // SampleDependencyTypeBox
+    //
+    struct YAE_API SampleDependencyTypeBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_sample_count() const
+      { return samples_.size(); }
+
+      struct Sample
+      {
+        uint8_t is_leading_ : 2;
+        uint8_t depends_on_ : 2;
+        uint8_t is_depended_on_ : 2;
+        uint8_t has_redundancy_ : 2;
+      };
+
+      std::vector<Sample> samples_;
+    };
+
   }
 
 }

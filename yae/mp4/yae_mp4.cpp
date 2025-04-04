@@ -1137,6 +1137,67 @@ ShadowSyncSampleBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SampleDependencyTypeBox>::please
+//
+template SampleDependencyTypeBox *
+create<SampleDependencyTypeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleDependencyTypeBox::load
+//
+void
+SampleDependencyTypeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  samples_.clear();
+
+  while (bin.position() + 8 <= box_end)
+  {
+    Sample sample;
+    sample.is_leading_ = bin.read<uint8_t>(2);
+    sample.depends_on_ = bin.read<uint8_t>(2);
+    sample.is_depended_on_ = bin.read<uint8_t>(2);
+    sample.has_redundancy_ = bin.read<uint8_t>(2);
+    samples_.push_back(sample);
+  }
+}
+
+//----------------------------------------------------------------
+// SampleDependencyTypeBox::to_json
+//
+void
+SampleDependencyTypeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  const std::size_t num_samples = samples_.size();
+  out["sample_count"] = Json::UInt(num_samples);
+
+  Json::Value & is_leading = out["is_leading"];
+  Json::Value & depends_on = out["depends_on"];
+  Json::Value & is_depended_on = out["is_depended_on"];
+  Json::Value & has_redundancy = out["has_redundancy"];
+
+  is_leading = Json::arrayValue;
+  depends_on = Json::arrayValue;
+  is_depended_on = Json::arrayValue;
+  has_redundancy = Json::arrayValue;
+
+  for (std::size_t i = 0; i < num_samples; ++i)
+  {
+    const Sample & sample = samples_[i];
+    is_leading.append(Json::UInt(sample.is_leading_));
+    depends_on.append(Json::UInt(sample.depends_on_));
+    is_depended_on.append(Json::UInt(sample.is_depended_on_));
+    has_redundancy.append(Json::UInt(sample.has_redundancy_));
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1203,6 +1264,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("cslg", create<CompositionToDecodeBox>::please);
     this->add("stss", create<SyncSampleBox>::please);
     this->add("stsh", create<ShadowSyncSampleBox>::please);
+    this->add("sdtp", create<SampleDependencyTypeBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
