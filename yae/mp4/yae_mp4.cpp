@@ -1251,6 +1251,73 @@ EditListBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<DataEntryUrlBox>::please
+//
+template DataEntryUrlBox *
+create<DataEntryUrlBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DataEntryUrlBox::load
+//
+void
+DataEntryUrlBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  location_.clear();
+  bin.read_string_until_null(location_, box_end);
+  bin.seek(box_end);
+}
+
+//----------------------------------------------------------------
+// DataEntryUrlBox::to_json
+//
+void
+DataEntryUrlBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["location"] = location_;
+}
+
+
+//----------------------------------------------------------------
+// create<DataEntryUrnBox>::please
+//
+template DataEntryUrnBox *
+create<DataEntryUrnBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DataEntryUrnBox::load
+//
+void
+DataEntryUrnBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  name_.clear();
+  location_.clear();
+  bin.read_string_until_null(name_, box_end);
+  bin.read_string_until_null(location_, box_end);
+  bin.seek(box_end);
+}
+
+//----------------------------------------------------------------
+// DataEntryUrnBox::to_json
+//
+void
+DataEntryUrnBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["name"] = name_;
+  out["location"] = location_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1297,6 +1364,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("meta", create<ContainerEx>::please);
 
     this->add("stsd", create<ContainerList>::please);
+    this->add("dref", create<ContainerList>::please);
 
     this->add("ftyp", create<FileTypeBox>::please);
     this->add("free", create<FreeSpaceBox>::please);
@@ -1319,6 +1387,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stsh", create<ShadowSyncSampleBox>::please);
     this->add("sdtp", create<SampleDependencyTypeBox>::please);
     this->add("elst", create<EditListBox>::please);
+    this->add("url ", create<DataEntryUrlBox>::please);
+    this->add("urn ", create<DataEntryUrnBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

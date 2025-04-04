@@ -578,6 +578,31 @@ namespace yae
       std::vector<int16_t> media_rate_fraction_;
     };
 
+    //----------------------------------------------------------------
+    // DataEntryUrlBox
+    //
+    struct YAE_API DataEntryUrlBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // null-terminated UTF-8 string:
+      std::string location_;
+    };
+
+    //----------------------------------------------------------------
+    // DataEntryUrnBox
+    //
+    struct YAE_API DataEntryUrnBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // null-terminated UTF-8 strings:
+      std::string name_;
+      std::string location_;
+    };
+
   }
 
 }
