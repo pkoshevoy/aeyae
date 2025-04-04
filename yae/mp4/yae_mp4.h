@@ -603,6 +603,21 @@ namespace yae
       std::string location_;
     };
 
+    //----------------------------------------------------------------
+    // SampleSizeBox
+    //
+    struct YAE_API SampleSizeBox : public FullBox
+    {
+      SampleSizeBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t sample_size_;
+      uint32_t sample_count_;
+      std::vector<uint32_t> entry_size_;
+    };
+
   }
 
 }
