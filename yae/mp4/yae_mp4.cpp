@@ -1371,6 +1371,54 @@ SampleSizeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<CompactSampleSizeBox>::please
+//
+template CompactSampleSizeBox *
+create<CompactSampleSizeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CompactSampleSizeBox::CompactSampleSizeBox
+//
+CompactSampleSizeBox::CompactSampleSizeBox():
+  reserved_(0),
+  field_size_(0),
+  sample_count_(0)
+{}
+
+//----------------------------------------------------------------
+// CompactSampleSizeBox::load
+//
+void
+CompactSampleSizeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  reserved_ = bin.read<uint32_t>(24);
+  field_size_ = bin.read<uint8_t>();
+  sample_count_ = bin.read<uint32_t>();
+  entry_size_.clear();
+
+  for (uint32_t i = 0; i < sample_count_; ++i)
+  {
+    uint16_t entry_size = bin.read<uint16_t>(field_size_);
+    entry_size_.push_back(entry_size);
+  }
+}
+
+//----------------------------------------------------------------
+// CompactSampleSizeBox::to_json
+//
+void
+CompactSampleSizeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["field_size"] = field_size_;
+  out["sample_count"] = sample_count_;
+  yae::save(out["entry_size"], entry_size_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1443,6 +1491,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("url ", create<DataEntryUrlBox>::please);
     this->add("urn ", create<DataEntryUrnBox>::please);
     this->add("stsz", create<SampleSizeBox>::please);
+    this->add("stz2", create<CompactSampleSizeBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

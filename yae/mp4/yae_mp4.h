@@ -618,6 +618,22 @@ namespace yae
       std::vector<uint32_t> entry_size_;
     };
 
+    //----------------------------------------------------------------
+    // CompactSampleSizeBox
+    //
+    struct YAE_API CompactSampleSizeBox : public FullBox
+    {
+      CompactSampleSizeBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t reserved_;
+      uint8_t field_size_; // 4, 8, 16 bits
+      uint32_t sample_count_;
+      std::vector<uint16_t> entry_size_;
+    };
+
   }
 
 }
