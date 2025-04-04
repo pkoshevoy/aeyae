@@ -1198,6 +1198,59 @@ SampleDependencyTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<EditListBox>::please
+//
+template EditListBox *
+create<EditListBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// EditListBox::load
+//
+void
+EditListBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  segment_duration_.clear();
+  media_time_.clear();
+  media_rate_integer_.clear();
+  media_rate_fraction_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint64_t segment_duration =
+      (FullBox::version_ == 1) ? bin.read<uint64_t>() : bin.read<uint32_t>();
+
+    uint64_t media_time =
+      (FullBox::version_ == 1) ? bin.read<int64_t>() : bin.read<int32_t>();
+
+    int16_t media_rate_integer = bin.read<int16_t>();
+    int16_t media_rate_fraction = bin.read<int16_t>();
+
+    segment_duration_.push_back(segment_duration);
+    media_time_.push_back(media_time);
+    media_rate_integer_.push_back(media_rate_integer);
+    media_rate_fraction_.push_back(media_rate_fraction);
+  }
+}
+
+//----------------------------------------------------------------
+// EditListBox::to_json
+//
+void
+EditListBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(this->get_entry_count());
+  yae::save(out["segment_duration"], segment_duration_);
+  yae::save(out["media_time"], media_time_);
+  yae::save(out["media_rate_integer"], media_rate_integer_);
+  yae::save(out["media_rate_fraction"], media_rate_fraction_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1265,6 +1318,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stss", create<SyncSampleBox>::please);
     this->add("stsh", create<ShadowSyncSampleBox>::please);
     this->add("sdtp", create<SampleDependencyTypeBox>::please);
+    this->add("elst", create<EditListBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

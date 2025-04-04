@@ -561,6 +561,23 @@ namespace yae
       std::vector<Sample> samples_;
     };
 
+    //----------------------------------------------------------------
+    // EditListBox
+    //
+    struct YAE_API EditListBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return segment_duration_.size(); }
+
+      std::vector<uint64_t> segment_duration_;
+      std::vector<int64_t> media_time_;
+      std::vector<int16_t> media_rate_integer_;
+      std::vector<int16_t> media_rate_fraction_;
+    };
+
   }
 
 }
