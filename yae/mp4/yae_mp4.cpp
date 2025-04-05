@@ -1837,6 +1837,75 @@ MovieExtendsHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// DefaulSampleFlags::load
+//
+void
+DefaulSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
+{
+  (void)mp4;
+  reserved_ = bin.read<uint8_t>(4);
+  is_leading_ = bin.read<uint8_t>(2);
+  depends_on_ = bin.read<uint8_t>(2);
+  is_depended_on_ = bin.read<uint8_t>(2);
+  has_redundancy_ = bin.read<uint8_t>(2);
+  sample_padding_value_ = bin.read<uint8_t>(3);
+  sample_is_non_sync_sample_ = bin.read<uint8_t>(1);
+  sample_degradation_priority_ = bin.read<uint16_t>();
+}
+
+//----------------------------------------------------------------
+// DefaulSampleFlags::to_json
+//
+void
+DefaulSampleFlags::to_json(Json::Value & out) const
+{
+  out["is_leading"] = is_leading_;
+  out["depends_on"] = depends_on_;
+  out["is_depended_on"] = is_depended_on_;
+  out["has_redundancy"] = has_redundancy_;
+  out["sample_padding_value"] = sample_padding_value_;
+  out["sample_is_non_sync_sample"] = sample_is_non_sync_sample_;
+  out["sample_degradation_priority"] = sample_degradation_priority_;
+}
+
+
+//----------------------------------------------------------------
+// create<TrackExtendsBox>::please
+//
+template TrackExtendsBox *
+create<TrackExtendsBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackExtendsBox::load
+//
+void
+TrackExtendsBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  track_ID_ = bin.read<uint32_t>();
+  default_sample_description_index_ = bin.read<uint32_t>();
+  default_sample_duration_ = bin.read<uint32_t>();
+  default_sample_size_ = bin.read<uint32_t>();
+  default_sample_flags_.load(mp4, bin);
+}
+
+//----------------------------------------------------------------
+// TrackExtendsBox::to_json
+//
+void
+TrackExtendsBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["track_ID"] = track_ID_;
+  out["default_sample_description_index"] = default_sample_description_index_;
+  out["default_sample_duration"] = default_sample_duration_;
+  out["default_sample_size"] = default_sample_size_;
+  default_sample_flags_.to_json(out["default_sample_flags"]);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1918,6 +1987,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("saiz", create<SampleAuxiliaryInformationSizesBox>::please);
     this->add("saio", create<SampleAuxiliaryInformationOffsetsBox>::please);
     this->add("mehd", create<MovieExtendsHeaderBox>::please);
+    this->add("trex", create<TrackExtendsBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

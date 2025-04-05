@@ -770,6 +770,48 @@ namespace yae
       uint64_t fragment_duration_;
     };
 
+    //----------------------------------------------------------------
+    // DefaulSampleFlags
+    //
+    // see ISO/IEC 14496-12:2015(E), 8.8.3.1
+    //
+    struct YAE_API DefaulSampleFlags
+    {
+      void load(Mp4Context & mp4, IBitstream & bin);
+      void to_json(Json::Value & out) const;
+
+      uint32_t reserved_ : 4; // 0
+      uint32_t is_leading_ : 2;
+      uint32_t depends_on_ : 2;
+      uint32_t is_depended_on_ : 2;
+      uint32_t has_redundancy_ : 2;
+      uint32_t sample_padding_value_ : 3;
+      uint32_t sample_is_non_sync_sample_ : 1;
+      uint32_t sample_degradation_priority_ : 16;
+    };
+
+    //----------------------------------------------------------------
+    // TrackExtendsBox
+    //
+    struct YAE_API TrackExtendsBox : public FullBox
+    {
+      TrackExtendsBox():
+        track_ID_(0),
+        default_sample_description_index_(0),
+        default_sample_duration_(0),
+        default_sample_size_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t track_ID_;
+      uint32_t default_sample_description_index_;
+      uint32_t default_sample_duration_;
+      uint32_t default_sample_size_;
+      DefaulSampleFlags default_sample_flags_;
+    };
+
   }
 
 }
