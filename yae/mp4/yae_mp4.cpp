@@ -2235,6 +2235,146 @@ MovieFragmentRandomAccessOffsetBoxBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<TrackFragmentBaseMediaDecodeTimeBox>::please
+//
+template TrackFragmentBaseMediaDecodeTimeBox *
+create<TrackFragmentBaseMediaDecodeTimeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackFragmentBaseMediaDecodeTimeBox::load
+//
+void
+TrackFragmentBaseMediaDecodeTimeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  baseMediaDecodeTime_ =
+    (FullBox::version_ == 1) ?
+    bin.read<uint64_t>() :
+    bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// TrackFragmentBaseMediaDecodeTimeBox::to_json
+//
+void
+TrackFragmentBaseMediaDecodeTimeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["baseMediaDecodeTime"] = Json::UInt64(baseMediaDecodeTime_);
+}
+
+
+//----------------------------------------------------------------
+// create<LevelAssignmentBox>::please
+//
+template LevelAssignmentBox *
+create<LevelAssignmentBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// LevelAssignmentBox::Level::Level
+//
+LevelAssignmentBox::Level::Level()
+{
+  memset(this, 0, sizeof(*this));
+}
+
+//----------------------------------------------------------------
+// LevelAssignmentBox::Level::load
+//
+void
+LevelAssignmentBox::Level::load(IBitstream & bin)
+{
+  track_id_ = bin.read<uint32_t>();
+  padding_flag_ = bin.read<uint8_t>(1);
+  assignment_type_ = bin.read<uint8_t>(7);
+
+  if (assignment_type_ == 0 ||
+      assignment_type_ == 1)
+  {
+    grouping_type_ = bin.read<uint32_t>();
+  }
+
+  if (assignment_type_ == 1)
+  {
+    grouping_type_parameter_ = bin.read<uint32_t>();
+  }
+
+  if (assignment_type_ == 4)
+  {
+    sub_track_id_ = bin.read<uint32_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// LevelAssignmentBox::Level::to_json
+//
+void
+LevelAssignmentBox::Level::to_json(Json::Value & out) const
+{
+  out["track_id"] = track_id_;
+  out["padding_flag"] = Json::UInt(padding_flag_);
+  out["assignment_type"] = Json::UInt(assignment_type_);
+
+  if (assignment_type_ == 0 ||
+      assignment_type_ == 1)
+  {
+    out["grouping_type"] = Json::UInt(grouping_type_);
+  }
+
+  if (assignment_type_ == 1)
+  {
+    out["grouping_type_parameter"] = Json::UInt(grouping_type_parameter_);
+  }
+
+  if (assignment_type_ == 4)
+  {
+    out["sub_track_id"] = Json::UInt(sub_track_id_);
+  }
+}
+
+//----------------------------------------------------------------
+// LevelAssignmentBox::load
+//
+void
+LevelAssignmentBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  levels_.clear();
+
+  uint32_t level_count = bin.read<uint8_t>();
+  for (uint32_t i = 0; i < level_count; ++i)
+  {
+    Level level;
+    level.load(bin);
+    levels_.push_back(level);
+  }
+}
+
+//----------------------------------------------------------------
+// LevelAssignmentBox::to_json
+//
+void
+LevelAssignmentBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  uint32_t num_levels = levels_.size();
+  out["level_count"] = num_levels;
+
+  Json::Value & levels = out["levels"];
+  levels = Json::arrayValue;
+
+  for (std::size_t i = 0; i < num_levels; ++i)
+  {
+    const Level & level = levels_[i];
+    Json::Value v;
+    level.to_json(v);
+    levels.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2323,6 +2463,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("trun", create<TrackRunBox>::please);
     this->add("tfra", create<TrackFragmentRandomAccessBox>::please);
     this->add("mfro", create<MovieFragmentRandomAccessOffsetBoxBox>::please);
+    this->add("tfdt", create<TrackFragmentBaseMediaDecodeTimeBox>::please);
+    this->add("leva", create<LevelAssignmentBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

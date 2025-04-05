@@ -940,6 +940,53 @@ namespace yae
       uint32_t size_; // number of bytes of the enclosing 'mfra' box
     };
 
+    //----------------------------------------------------------------
+    // TrackFragmentBaseMediaDecodeTimeBox
+    //
+    struct YAE_API TrackFragmentBaseMediaDecodeTimeBox : public FullBox
+    {
+      TrackFragmentBaseMediaDecodeTimeBox(): baseMediaDecodeTime_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // the sum of the decode durations of all earlier samples in the media,
+      // expressed in the media's timescale:
+      uint64_t baseMediaDecodeTime_; // PTS of the 1st sample in the fragment
+    };
+
+    //----------------------------------------------------------------
+    // LevelAssignmentBox
+    //
+    struct YAE_API LevelAssignmentBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct YAE_API Level
+      {
+        Level();
+
+        void load(IBitstream & bin);
+        void to_json(Json::Value & out) const;
+
+        uint32_t track_id_;
+        uint8_t padding_flag_ : 1;
+        uint8_t assignment_type_ : 7;
+
+        // assignment type 0, 1:
+        uint32_t grouping_type_;
+
+        // assignment type 1:
+        uint32_t grouping_type_parameter_;
+
+        // assignment type 4:
+        uint32_t sub_track_id_;
+      };
+
+      std::vector<Level> levels_;
+    };
+
   }
 
 }
