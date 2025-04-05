@@ -720,6 +720,26 @@ namespace yae
       std::vector<Entry> entries_;
     };
 
+    //----------------------------------------------------------------
+    // SampleAuxiliaryInformationSizesBox
+    //
+    struct YAE_API SampleAuxiliaryInformationSizesBox : public FullBox
+    {
+      SampleAuxiliaryInformationSizesBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // if ((flags & 1) == 1):
+      uint32_t aux_info_type_;
+      uint32_t aux_info_type_parameters_;
+
+      uint8_t default_sample_info_size_;
+
+      // if default_sample_info_size == 0:
+      std::vector<uint8_t> sample_info_size_;
+    };
+
   }
 
 }

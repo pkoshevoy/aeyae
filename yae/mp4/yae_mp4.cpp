@@ -1631,6 +1631,20 @@ SubSampleInformationBox::load(Mp4Context & mp4, IBitstream & bin)
 }
 
 //----------------------------------------------------------------
+// save
+//
+static void
+save(Json::Value & entry, const SubSampleInformationBox::Entry & x)
+{
+  entry["sample_delta"] = Json::UInt(x.sample_delta_);
+  entry["subsample_count"] = Json::UInt(x.subsample_size_.size());
+  yae::save(entry["subsample_size"], x.subsample_size_);
+  yae::save(entry["subsample_priority"], x.subsample_priority_);
+  yae::save(entry["discardable"], x.discardable_);
+  yae::save(entry["codec_specific_parameters"], x.codec_specific_parameters_);
+}
+
+//----------------------------------------------------------------
 // SubSampleInformationBox::to_json
 //
 void
@@ -1645,16 +1659,76 @@ SubSampleInformationBox::to_json(Json::Value & out) const
   for (uint32_t i = 0, entry_count = entries_.size(); i < entry_count; ++i)
   {
     const Entry & x = entries_[i];
-
     Json::Value entry;
-    entry["sample_delta"] = Json::UInt(x.sample_delta_);
-    entry["subsample_count"] = Json::UInt(x.subsample_size_.size());
-    yae::save(entry["subsample_size"], x.subsample_size_);
-    yae::save(entry["subsample_priority"], x.subsample_priority_);
-    yae::save(entry["discardable"], x.discardable_);
-    yae::save(entry["codec_specific_parameters"], x.codec_specific_parameters_);
-
+    ::save(entry, x);
     entries.append(entry);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<SampleAuxiliaryInformationSizesBox>::please
+//
+template SampleAuxiliaryInformationSizesBox *
+create<SampleAuxiliaryInformationSizesBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox
+//
+SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox():
+  aux_info_type_(0),
+  aux_info_type_parameters_(0),
+  default_sample_info_size_(0)
+{}
+
+//----------------------------------------------------------------
+// SampleAuxiliaryInformationSizesBox::load
+//
+void
+SampleAuxiliaryInformationSizesBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  if ((FullBox::flags_ & 1) == 1)
+  {
+    aux_info_type_ = bin.read<uint32_t>();
+    aux_info_type_parameters_ = bin.read<uint32_t>();
+  }
+
+  default_sample_info_size_ = bin.read<uint8_t>();
+
+  sample_info_size_.clear();
+  uint32_t sample_count = bin.read<uint32_t>();
+  if (default_sample_info_size_ == 0)
+  {
+    for (uint32_t i = 0; i < sample_count; ++i)
+    {
+      uint32_t sample_info_size = bin.read<uint32_t>();
+      sample_info_size_.push_back(sample_info_size);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// SampleAuxiliaryInformationSizesBox::to_json
+//
+void
+SampleAuxiliaryInformationSizesBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  if ((FullBox::flags_ & 1) == 1)
+  {
+    out["aux_info_type"] = aux_info_type_;
+    out["aux_info_type_parameters"] = aux_info_type_parameters_;
+  }
+
+  out["default_sample_info_size"] = default_sample_info_size_;
+  out["sample_count"] = Json::UInt(sample_info_size_.size());
+
+  if (default_sample_info_size_ == 0)
+  {
+    yae::save(out["sample_info_size"], sample_info_size_);
   }
 }
 
@@ -1738,6 +1812,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("co64", create<ChunkLargeOffsetBox>::please);
     this->add("padb", create<PaddingBitsBox>::please);
     this->add("subs", create<SubSampleInformationBox>::please);
+    this->add("saiz", create<SampleAuxiliaryInformationSizesBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
