@@ -2375,6 +2375,41 @@ LevelAssignmentBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<TrackExtensionPropertiesBox>::please
+//
+template TrackExtensionPropertiesBox *
+create<TrackExtensionPropertiesBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackExtensionPropertiesBox::load
+//
+void
+TrackExtensionPropertiesBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t end_pos = box_pos + Box::size_ * 8;
+  track_id_ = bin.read<uint32_t>();
+
+  ContainerEx::load_children(mp4, bin, end_pos);
+}
+
+//----------------------------------------------------------------
+// TrackExtensionPropertiesBox::to_json
+//
+void
+TrackExtensionPropertiesBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["track_id"] = track_id_;
+
+  Json::Value & children = out["children"];
+  ContainerEx::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2465,6 +2500,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mfro", create<MovieFragmentRandomAccessOffsetBoxBox>::please);
     this->add("tfdt", create<TrackFragmentBaseMediaDecodeTimeBox>::please);
     this->add("leva", create<LevelAssignmentBox>::please);
+    this->add("dref", create<TrackExtensionPropertiesBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

@@ -185,6 +185,14 @@ namespace yae
         TBase::load(mp4, bin);
 
         const std::size_t end_pos = box_pos + TBox::size_ * 8;
+        this->load_children(mp4, bin, end_pos);
+      }
+
+      void load_children(Mp4Context & mp4,
+                         IBitstream & bin,
+                         std::size_t end_pos)
+      {
+        children_.clear();
         while (bin.position() < end_pos)
         {
           TBoxPtr box = mp4.parse(bin, end_pos);
@@ -199,8 +207,12 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE
       {
         TBase::to_json(out);
-
         Json::Value & children = out["children"];
+        this->children_to_json(children);
+      }
+
+      void children_to_json(Json::Value & children) const
+      {
         for (uint64_t i = 0, n = children_.size(); i < n; ++i)
         {
           const Box & box = *(children_[i]);
@@ -985,6 +997,19 @@ namespace yae
       };
 
       std::vector<Level> levels_;
+    };
+
+    //----------------------------------------------------------------
+    // TrackExtensionPropertiesBox
+    //
+    struct YAE_API TrackExtensionPropertiesBox : public ContainerEx
+    {
+      TrackExtensionPropertiesBox(): track_id_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t track_id_;
     };
 
   }
