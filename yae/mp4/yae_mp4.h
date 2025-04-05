@@ -771,12 +771,14 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // DefaulSampleFlags
+    // DefaultSampleFlags
     //
     // see ISO/IEC 14496-12:2015(E), 8.8.3.1
     //
-    struct YAE_API DefaulSampleFlags
+    struct YAE_API DefaultSampleFlags
     {
+      DefaultSampleFlags();
+
       void load(Mp4Context & mp4, IBitstream & bin);
       void to_json(Json::Value & out) const;
 
@@ -809,7 +811,7 @@ namespace yae
       uint32_t default_sample_description_index_;
       uint32_t default_sample_duration_;
       uint32_t default_sample_size_;
-      DefaulSampleFlags default_sample_flags_;
+      DefaultSampleFlags default_sample_flags_;
     };
 
     //----------------------------------------------------------------
@@ -823,6 +825,40 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       uint32_t sequence_number_;
+    };
+
+    //----------------------------------------------------------------
+    // TrackFragmentHeaderBox
+    //
+    struct YAE_API TrackFragmentHeaderBox : public FullBox
+    {
+      TrackFragmentHeaderBox():
+        track_ID_(0),
+        base_data_offset_(0),
+        sample_description_index_(0),
+        default_sample_duration_(0),
+        default_sample_size_(0)
+      {}
+
+      enum Flags {
+        kBaseDataOffsetPresent         = 0x000001,
+        kSampleDescriptionIndexPresent = 0x000002,
+        kDefaultSampleDurationPresent  = 0x000008,
+        kDefaultSampleSizePresent      = 0x000010,
+        kDefaultSampleFlagsPresent     = 0x000020,
+        kDurationIsEmpty               = 0x010000,
+        kDefaultBaseIsMoof             = 0x020000,
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t track_ID_;
+      uint32_t base_data_offset_;
+      uint32_t sample_description_index_;
+      uint32_t default_sample_duration_;
+      uint32_t default_sample_size_;
+      DefaultSampleFlags default_sample_flags_;
     };
 
   }

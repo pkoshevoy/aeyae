@@ -1837,10 +1837,18 @@ MovieExtendsHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// DefaulSampleFlags::load
+// DefaultSampleFlags::DefaultSampleFlags
+//
+DefaultSampleFlags::DefaultSampleFlags()
+{
+  memset(this, 0, sizeof(*this));
+}
+
+//----------------------------------------------------------------
+// DefaultSampleFlags::load
 //
 void
-DefaulSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
+DefaultSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
 {
   (void)mp4;
   reserved_ = bin.read<uint8_t>(4);
@@ -1854,10 +1862,10 @@ DefaulSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
 }
 
 //----------------------------------------------------------------
-// DefaulSampleFlags::to_json
+// DefaultSampleFlags::to_json
 //
 void
-DefaulSampleFlags::to_json(Json::Value & out) const
+DefaultSampleFlags::to_json(Json::Value & out) const
 {
   out["is_leading"] = is_leading_;
   out["depends_on"] = depends_on_;
@@ -1866,33 +1874,6 @@ DefaulSampleFlags::to_json(Json::Value & out) const
   out["sample_padding_value"] = sample_padding_value_;
   out["sample_is_non_sync_sample"] = sample_is_non_sync_sample_;
   out["sample_degradation_priority"] = sample_degradation_priority_;
-}
-
-
-//----------------------------------------------------------------
-// create<MovieFragmentHeaderBox>::please
-//
-template MovieFragmentHeaderBox *
-create<MovieFragmentHeaderBox>::please(const char * fourcc);
-
-//----------------------------------------------------------------
-// MovieFragmentHeaderBox::load
-//
-void
-MovieFragmentHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
-{
-  FullBox::load(mp4, bin);
-  sequence_number_ = bin.read<uint32_t>();
-}
-
-//----------------------------------------------------------------
-// MovieFragmentHeaderBox::to_json
-//
-void
-MovieFragmentHeaderBox::to_json(Json::Value & out) const
-{
-  FullBox::to_json(out);
-  out["sequence_number"] = sequence_number_;
 }
 
 
@@ -1929,6 +1910,110 @@ TrackExtendsBox::to_json(Json::Value & out) const
   out["default_sample_duration"] = default_sample_duration_;
   out["default_sample_size"] = default_sample_size_;
   default_sample_flags_.to_json(out["default_sample_flags"]);
+}
+
+
+//----------------------------------------------------------------
+// create<MovieFragmentHeaderBox>::please
+//
+template MovieFragmentHeaderBox *
+create<MovieFragmentHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MovieFragmentHeaderBox::load
+//
+void
+MovieFragmentHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  sequence_number_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// MovieFragmentHeaderBox::to_json
+//
+void
+MovieFragmentHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["sequence_number"] = sequence_number_;
+}
+
+
+//----------------------------------------------------------------
+// create<TrackFragmentHeaderBox>::please
+//
+template TrackFragmentHeaderBox *
+create<TrackFragmentHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackFragmentHeaderBox::load
+//
+void
+TrackFragmentHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  track_ID_ = bin.read<uint32_t>();
+
+  if ((FullBox::flags_ & kBaseDataOffsetPresent) != 0)
+  {
+    base_data_offset_ = bin.read<uint32_t>();
+  }
+
+  if ((FullBox::flags_ & kSampleDescriptionIndexPresent) != 0)
+  {
+    sample_description_index_ = bin.read<uint32_t>();
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleDurationPresent) != 0)
+  {
+    default_sample_duration_ = bin.read<uint32_t>();
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleSizePresent) != 0)
+  {
+    default_sample_size_ = bin.read<uint32_t>();
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleFlagsPresent) != 0)
+  {
+    default_sample_flags_.load(mp4, bin);
+  }
+}
+
+//----------------------------------------------------------------
+// TrackFragmentHeaderBox::to_json
+//
+void
+TrackFragmentHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["track_ID"] = track_ID_;
+
+  if ((FullBox::flags_ & kBaseDataOffsetPresent) != 0)
+  {
+    out["base_data_offset"] = base_data_offset_;
+  }
+
+  if ((FullBox::flags_ & kSampleDescriptionIndexPresent) != 0)
+  {
+    out["sample_description_index"] = sample_description_index_;
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleDurationPresent) != 0)
+  {
+    out["default_sample_duration"] = default_sample_duration_;
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleSizePresent) != 0)
+  {
+    out["default_sample_size"] = default_sample_size_;
+  }
+
+  if ((FullBox::flags_ & kDefaultSampleFlagsPresent) != 0)
+  {
+    default_sample_flags_.to_json(out["default_sample_flags"]);
+  }
 }
 
 
@@ -2016,6 +2101,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mehd", create<MovieExtendsHeaderBox>::please);
     this->add("trex", create<TrackExtendsBox>::please);
     this->add("mfhd", create<MovieFragmentHeaderBox>::please);
+    this->add("tfhd", create<TrackFragmentHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
