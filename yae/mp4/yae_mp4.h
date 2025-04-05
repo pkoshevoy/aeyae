@@ -927,6 +927,19 @@ namespace yae
       std::vector<uint32_t> sample_number_;
     };
 
+    //----------------------------------------------------------------
+    // MovieFragmentRandomAccessOffsetBoxBox
+    //
+    struct YAE_API MovieFragmentRandomAccessOffsetBoxBox : public FullBox
+    {
+      MovieFragmentRandomAccessOffsetBoxBox(): size_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t size_; // number of bytes of the enclosing 'mfra' box
+    };
+
   }
 
 }

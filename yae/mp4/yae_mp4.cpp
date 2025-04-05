@@ -2208,6 +2208,33 @@ TrackFragmentRandomAccessBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<MovieFragmentRandomAccessOffsetBoxBox>::please
+//
+template MovieFragmentRandomAccessOffsetBoxBox *
+create<MovieFragmentRandomAccessOffsetBoxBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MovieFragmentRandomAccessOffsetBoxBox::load
+//
+void
+MovieFragmentRandomAccessOffsetBoxBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  size_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// MovieFragmentRandomAccessOffsetBoxBox::to_json
+//
+void
+MovieFragmentRandomAccessOffsetBoxBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["size"] = size_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2295,6 +2322,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("tfhd", create<TrackFragmentHeaderBox>::please);
     this->add("trun", create<TrackRunBox>::please);
     this->add("tfra", create<TrackFragmentRandomAccessBox>::please);
+    this->add("mfro", create<MovieFragmentRandomAccessOffsetBoxBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
