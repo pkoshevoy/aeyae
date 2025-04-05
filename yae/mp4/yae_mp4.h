@@ -700,6 +700,26 @@ namespace yae
       std::vector<Sample> samples_;
     };
 
+    //----------------------------------------------------------------
+    // SubSampleInformationBox
+    //
+    struct YAE_API SubSampleInformationBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct Entry
+      {
+        uint32_t sample_delta_;
+        std::vector<uint32_t> subsample_size_;
+        std::vector<uint8_t> subsample_priority_;
+        std::vector<uint8_t> discardable_;
+        std::vector<uint32_t> codec_specific_parameters_;
+      };
+
+      std::vector<Entry> entries_;
+    };
+
   }
 
 }

@@ -1587,6 +1587,79 @@ PaddingBitsBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SubSampleInformationBox>::please
+//
+template SubSampleInformationBox *
+create<SubSampleInformationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SubSampleInformationBox::load
+//
+void
+SubSampleInformationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  entries_.clear();
+
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    Entry entry;
+    entry.sample_delta_ = bin.read<uint32_t>();
+
+    uint16_t subsample_count = bin.read<uint16_t>();
+    for (uint16_t j = 0; j < subsample_count; ++j)
+    {
+      uint32_t subsample_size =
+        (FullBox::version_ == 1) ?
+        bin.read<uint32_t>() :
+        bin.read<uint16_t>();
+
+      uint8_t subsample_priority = bin.read<uint8_t>();
+      uint8_t discardable = bin.read<uint8_t>();
+      uint32_t codec_specific_parameters = bin.read<uint32_t>();
+
+      entry.subsample_size_.push_back(subsample_size);
+      entry.subsample_priority_.push_back(subsample_priority);
+      entry.discardable_.push_back(discardable);
+      entry.codec_specific_parameters_.push_back(codec_specific_parameters);
+    }
+
+    entries_.push_back(entry);
+  }
+}
+
+//----------------------------------------------------------------
+// SubSampleInformationBox::to_json
+//
+void
+SubSampleInformationBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["entry_count"] = Json::UInt(entries_.size());
+  Json::Value & entries = out["entries"];
+  entries = Json::arrayValue;
+
+  for (uint32_t i = 0, entry_count = entries_.size(); i < entry_count; ++i)
+  {
+    const Entry & x = entries_[i];
+
+    Json::Value entry;
+    entry["sample_delta"] = Json::UInt(x.sample_delta_);
+    entry["subsample_count"] = Json::UInt(x.subsample_size_.size());
+    yae::save(entry["subsample_size"], x.subsample_size_);
+    yae::save(entry["subsample_priority"], x.subsample_priority_);
+    yae::save(entry["discardable"], x.discardable_);
+    yae::save(entry["codec_specific_parameters"], x.codec_specific_parameters_);
+
+    entries.append(entry);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1664,6 +1737,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stco", create<ChunkOffsetBox>::please);
     this->add("co64", create<ChunkLargeOffsetBox>::please);
     this->add("padb", create<PaddingBitsBox>::please);
+    this->add("subs", create<SubSampleInformationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
