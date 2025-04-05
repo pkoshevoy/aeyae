@@ -171,7 +171,7 @@ namespace yae
     // BoxWithChildren
     //
     template <typename TBox>
-    struct BoxWithChildren : public TBox
+    struct YAE_API BoxWithChildren : public TBox
     {
       typedef TBox TBase;
       typedef BoxWithChildren<TBox> TSelf;
@@ -550,7 +550,7 @@ namespace yae
       inline std::size_t get_sample_count() const
       { return samples_.size(); }
 
-      struct Sample
+      struct YAE_API Sample
       {
         uint8_t is_leading_ : 2;
         uint8_t depends_on_ : 2;
@@ -688,7 +688,7 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      struct Sample
+      struct YAE_API Sample
       {
         uint8_t reserved1_ : 1;
         uint8_t pad1_ : 3;
@@ -708,7 +708,7 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      struct Entry
+      struct YAE_API Entry
       {
         uint32_t sample_delta_;
         std::vector<uint32_t> subsample_size_;
@@ -771,15 +771,15 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // DefaultSampleFlags
+    // SampleFlags
     //
     // see ISO/IEC 14496-12:2015(E), 8.8.3.1
     //
-    struct YAE_API DefaultSampleFlags
+    struct YAE_API SampleFlags
     {
-      DefaultSampleFlags();
+      SampleFlags();
 
-      void load(Mp4Context & mp4, IBitstream & bin);
+      void load(IBitstream & bin);
       void to_json(Json::Value & out) const;
 
       uint32_t reserved_ : 4; // 0
@@ -811,7 +811,7 @@ namespace yae
       uint32_t default_sample_description_index_;
       uint32_t default_sample_duration_;
       uint32_t default_sample_size_;
-      DefaultSampleFlags default_sample_flags_;
+      SampleFlags default_sample_flags_;
     };
 
     //----------------------------------------------------------------
@@ -858,7 +858,38 @@ namespace yae
       uint32_t sample_description_index_;
       uint32_t default_sample_duration_;
       uint32_t default_sample_size_;
-      DefaultSampleFlags default_sample_flags_;
+      SampleFlags default_sample_flags_;
+    };
+
+    //----------------------------------------------------------------
+    // TrackRunBox
+    //
+    struct YAE_API TrackRunBox : public FullBox
+    {
+      TrackRunBox():
+        sample_count_(0),
+        data_offset_(0)
+      {}
+
+      enum Flags {
+        kDataOffsetPresent                   = 0x000001,
+        kFirstSampleFlagsPresent             = 0x000004,
+        kSampleDurationPresent               = 0x000100,
+        kSampleSizePresent                   = 0x000200,
+        kSampleFlagsPresent                  = 0x000400,
+        kSampleCompositionTimeOffsetsPresent = 0x000800,
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t sample_count_;
+      int32_t data_offset_;
+      SampleFlags first_sample_flags_;
+      std::vector<uint32_t> sample_duration_;
+      std::vector<uint32_t> sample_size_;
+      std::vector<SampleFlags> sample_flags_;
+      std::vector<int64_t> sample_composition_time_offset_;
     };
 
   }

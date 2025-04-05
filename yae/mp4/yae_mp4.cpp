@@ -1837,20 +1837,19 @@ MovieExtendsHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// DefaultSampleFlags::DefaultSampleFlags
+// SampleFlags::SampleFlags
 //
-DefaultSampleFlags::DefaultSampleFlags()
+SampleFlags::SampleFlags()
 {
   memset(this, 0, sizeof(*this));
 }
 
 //----------------------------------------------------------------
-// DefaultSampleFlags::load
+// SampleFlags::load
 //
 void
-DefaultSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
+SampleFlags::load(IBitstream & bin)
 {
-  (void)mp4;
   reserved_ = bin.read<uint8_t>(4);
   is_leading_ = bin.read<uint8_t>(2);
   depends_on_ = bin.read<uint8_t>(2);
@@ -1862,10 +1861,10 @@ DefaultSampleFlags::load(Mp4Context & mp4, IBitstream & bin)
 }
 
 //----------------------------------------------------------------
-// DefaultSampleFlags::to_json
+// SampleFlags::to_json
 //
 void
-DefaultSampleFlags::to_json(Json::Value & out) const
+SampleFlags::to_json(Json::Value & out) const
 {
   out["is_leading"] = is_leading_;
   out["depends_on"] = depends_on_;
@@ -1895,7 +1894,7 @@ TrackExtendsBox::load(Mp4Context & mp4, IBitstream & bin)
   default_sample_description_index_ = bin.read<uint32_t>();
   default_sample_duration_ = bin.read<uint32_t>();
   default_sample_size_ = bin.read<uint32_t>();
-  default_sample_flags_.load(mp4, bin);
+  default_sample_flags_.load(bin);
 }
 
 //----------------------------------------------------------------
@@ -1977,7 +1976,7 @@ TrackFragmentHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if ((FullBox::flags_ & kDefaultSampleFlagsPresent) != 0)
   {
-    default_sample_flags_.load(mp4, bin);
+    default_sample_flags_.load(bin);
   }
 }
 
@@ -2013,6 +2012,122 @@ TrackFragmentHeaderBox::to_json(Json::Value & out) const
   if ((FullBox::flags_ & kDefaultSampleFlagsPresent) != 0)
   {
     default_sample_flags_.to_json(out["default_sample_flags"]);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<TrackRunBox>::please
+//
+template TrackRunBox *
+create<TrackRunBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackRunBox::load
+//
+void
+TrackRunBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  sample_count_ = bin.read<uint32_t>();
+
+  if ((FullBox::flags_ & kDataOffsetPresent) != 0)
+  {
+    data_offset_ = bin.read<int32_t>();
+  }
+
+  if ((FullBox::flags_ & kFirstSampleFlagsPresent) != 0)
+  {
+    // if this flag and field are used, sample_flags shall not be present:
+    YAE_ASSERT((FullBox::flags_ & kSampleFlagsPresent) == 0);
+
+    first_sample_flags_.load(bin);
+  }
+
+  sample_duration_.clear();
+  sample_size_.clear();
+  sample_flags_.clear();
+  sample_composition_time_offset_.clear();
+
+  for (uint32_t i = 0; i < sample_count_; ++i)
+  {
+    if ((FullBox::flags_ & kSampleDurationPresent) != 0)
+    {
+      uint32_t sample_duration = bin.read<uint32_t>();
+      sample_duration_.push_back(sample_duration);
+    }
+
+    if ((FullBox::flags_ & kSampleSizePresent) != 0)
+    {
+      uint32_t sample_size = bin.read<uint32_t>();
+      sample_size_.push_back(sample_size);
+    }
+
+    if ((FullBox::flags_ & kSampleFlagsPresent) != 0)
+    {
+      SampleFlags sample_flags;
+      sample_flags.load(bin);
+      sample_flags_.push_back(sample_flags);
+    }
+
+    if ((FullBox::flags_ & kSampleCompositionTimeOffsetsPresent) != 0)
+    {
+      int64_t v =
+        (FullBox::version_ == 0) ?
+        bin.read<uint32_t>() :
+        bin.read<int32_t>();
+      sample_composition_time_offset_.push_back(v);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// TrackRunBox::to_json
+//
+void
+TrackRunBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["sample_count"] = sample_count_;
+
+  if ((FullBox::flags_ & kDataOffsetPresent) != 0)
+  {
+    out["data_offset"] = data_offset_;
+  }
+
+  if ((FullBox::flags_ & kFirstSampleFlagsPresent) != 0)
+  {
+    first_sample_flags_.to_json(out["first_sample_flags"]);
+  }
+
+  if ((FullBox::flags_ & kSampleDurationPresent) != 0)
+  {
+    yae::save(out["sample_duration"], sample_duration_);
+  }
+
+  if ((FullBox::flags_ & kSampleSizePresent) != 0)
+  {
+    yae::save(out["sample_size"], sample_size_);
+  }
+
+  if ((FullBox::flags_ & kSampleFlagsPresent) != 0)
+  {
+    Json::Value & sample_flags = out["sample_flags"];
+    sample_flags = Json::arrayValue;
+
+    for (std::size_t i = 0, n = sample_flags_.size(); i < n; ++i)
+    {
+      const SampleFlags & x = sample_flags_[i];
+      Json::Value v;
+      x.to_json(v);
+      sample_flags.append(v);
+    }
+  }
+
+  if ((FullBox::flags_ & kSampleCompositionTimeOffsetsPresent) != 0)
+  {
+    yae::save(out["sample_composition_time_offset"],
+              sample_composition_time_offset_);
   }
 }
 
@@ -2102,6 +2217,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("trex", create<TrackExtendsBox>::please);
     this->add("mfhd", create<MovieFragmentHeaderBox>::please);
     this->add("tfhd", create<TrackFragmentHeaderBox>::please);
+    this->add("trun", create<TrackRunBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
