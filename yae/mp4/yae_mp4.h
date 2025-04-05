@@ -1012,6 +1012,26 @@ namespace yae
       uint32_t track_id_;
     };
 
+    //----------------------------------------------------------------
+    // AlternativeStartupSequencePropertiesBox
+    //
+    struct YAE_API AlternativeStartupSequencePropertiesBox : public FullBox
+    {
+      AlternativeStartupSequencePropertiesBox():
+        min_initial_alt_startup_offset_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // version 0:
+      int32_t min_initial_alt_startup_offset_;
+
+      // version 1:
+      std::vector<uint32_t> grouping_type_parameters_;
+      std::vector<int32_t> min_initial_alt_startup_offsets_;
+    };
+
   }
 
 }

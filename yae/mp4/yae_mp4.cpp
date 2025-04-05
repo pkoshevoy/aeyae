@@ -2410,6 +2410,67 @@ TrackExtensionPropertiesBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<AlternativeStartupSequencePropertiesBox>::please
+//
+template AlternativeStartupSequencePropertiesBox *
+create<AlternativeStartupSequencePropertiesBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// AlternativeStartupSequencePropertiesBox::load
+//
+void
+AlternativeStartupSequencePropertiesBox::load(Mp4Context & mp4,
+                                              IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  grouping_type_parameters_.clear();
+  min_initial_alt_startup_offsets_.clear();
+
+  if (FullBox::version_ == 0)
+  {
+    min_initial_alt_startup_offset_ = bin.read<int32_t>();
+  }
+  else if (FullBox::version_ == 1)
+  {
+    uint32_t num_entries = bin.read<uint32_t>();
+    for (uint32_t i = 0; i < num_entries; ++i)
+    {
+      uint32_t grouping_type_parameter = bin.read<uint32_t>();
+      int32_t min_initial_alt_startup_offset = bin.read<int32_t>();
+
+      grouping_type_parameters_.
+        push_back(grouping_type_parameter);
+
+      min_initial_alt_startup_offsets_.
+        push_back(min_initial_alt_startup_offset);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// AlternativeStartupSequencePropertiesBox::to_json
+//
+void
+AlternativeStartupSequencePropertiesBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  if (FullBox::version_ == 0)
+  {
+    out["min_initial_alt_startup_offset"] = min_initial_alt_startup_offset_;
+  }
+  else if (FullBox::version_ == 1)
+  {
+    yae::save(out["grouping_type_parameters"],
+              grouping_type_parameters_);
+
+    yae::save(out["min_initial_alt_startup_offsets"],
+              min_initial_alt_startup_offsets_);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2500,7 +2561,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mfro", create<MovieFragmentRandomAccessOffsetBoxBox>::please);
     this->add("tfdt", create<TrackFragmentBaseMediaDecodeTimeBox>::please);
     this->add("leva", create<LevelAssignmentBox>::please);
-    this->add("dref", create<TrackExtensionPropertiesBox>::please);
+    this->add("trep", create<TrackExtensionPropertiesBox>::please);
+    this->add("assp", create<AlternativeStartupSequencePropertiesBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
