@@ -1419,6 +1419,51 @@ CompactSampleSizeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SampleToChunkBox>::please
+//
+template SampleToChunkBox *
+create<SampleToChunkBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleToChunkBox::load
+//
+void
+SampleToChunkBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  first_chunk_.clear();
+  samples_per_chunk_.clear();
+  sample_description_index_.clear();
+
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t first_chunk = bin.read<uint32_t>();
+    uint32_t samples_per_chunk = bin.read<uint32_t>();
+    uint32_t sample_description_index = bin.read<uint32_t>();
+
+    first_chunk_.push_back(first_chunk);
+    samples_per_chunk_.push_back(samples_per_chunk);
+    sample_description_index_.push_back(sample_description_index);
+  }
+}
+
+//----------------------------------------------------------------
+// SampleToChunkBox::to_json
+//
+void
+SampleToChunkBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(this->get_entry_count());
+  yae::save(out["first_chunk"], first_chunk_);
+  yae::save(out["samples_per_chunk"], samples_per_chunk_);
+  yae::save(out["sample_description_index"], sample_description_index_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1492,6 +1537,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("urn ", create<DataEntryUrnBox>::please);
     this->add("stsz", create<SampleSizeBox>::please);
     this->add("stz2", create<CompactSampleSizeBox>::please);
+    this->add("stsc", create<SampleToChunkBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

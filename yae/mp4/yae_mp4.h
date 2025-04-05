@@ -634,6 +634,22 @@ namespace yae
       std::vector<uint16_t> entry_size_;
     };
 
+    //----------------------------------------------------------------
+    // SampleToChunkBox
+    //
+    struct YAE_API SampleToChunkBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return first_chunk_.size(); }
+
+      std::vector<uint32_t> first_chunk_;
+      std::vector<uint32_t> samples_per_chunk_;
+      std::vector<uint32_t> sample_description_index_;
+    };
+
   }
 
 }
