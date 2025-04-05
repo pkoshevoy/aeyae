@@ -2133,6 +2133,81 @@ TrackRunBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<TrackFragmentRandomAccessBox>::please
+//
+template TrackFragmentRandomAccessBox *
+create<TrackFragmentRandomAccessBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackFragmentRandomAccessBox::load
+//
+void
+TrackFragmentRandomAccessBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  track_ID_ = bin.read<uint32_t>();
+
+  reserved_ = bin.read<uint32_t>(26);
+  length_size_of_traf_num_ = bin.read<uint8_t>(2);
+  length_size_of_trun_num_ = bin.read<uint8_t>(2);
+  length_size_of_sample_num_ = bin.read<uint8_t>(2);
+
+  uint8_t traf_number_bits = (length_size_of_traf_num_ + 1) * 8;
+  uint8_t trun_number_bits = (length_size_of_trun_num_ + 1) * 8;
+  uint8_t sample_number_bits = (length_size_of_sample_num_ + 1) * 8;
+
+  time_.clear();
+  moof_offset_.clear();
+  traf_number_.clear();
+  trun_number_.clear();
+  sample_number_.clear();
+
+  uint32_t num_entries = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < num_entries; ++i)
+  {
+    uint64_t time =
+      (FullBox::version_ == 1) ?
+      bin.read<uint64_t>() :
+      bin.read<uint32_t>();
+
+    uint64_t moof_offset =
+      (FullBox::version_ == 1) ?
+      bin.read<uint64_t>() :
+      bin.read<uint32_t>();
+
+    uint32_t traf_number = bin.read<uint32_t>(traf_number_bits);
+    uint32_t trun_number = bin.read<uint32_t>(trun_number_bits);
+    uint32_t sample_number = bin.read<uint32_t>(sample_number_bits);
+
+    time_.push_back(time);
+    moof_offset_.push_back(moof_offset);
+    traf_number_.push_back(traf_number);
+    trun_number_.push_back(trun_number);
+    sample_number_.push_back(sample_number);
+  }
+}
+
+//----------------------------------------------------------------
+// TrackFragmentRandomAccessBox::to_json
+//
+void
+TrackFragmentRandomAccessBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["track_ID"] = track_ID_;
+  out["length_size_of_traf_num"] = length_size_of_traf_num_;
+  out["length_size_of_trun_num"] = length_size_of_trun_num_;
+  out["length_size_of_sample_num"] = length_size_of_sample_num_;
+
+  yae::save(out["time"], time_);
+  yae::save(out["moof_offset"], moof_offset_);
+  yae::save(out["traf_number"], traf_number_);
+  yae::save(out["trun_number"], trun_number_);
+  yae::save(out["sample_number"], sample_number_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2167,6 +2242,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("trgr", create_container);
     this->add("moof", create_container);
     this->add("traf", create_container);
+    this->add("mfra", create_container);
     this->add("edts", create_container);
     this->add("mdia", create_container);
     this->add("minf", create_container);
@@ -2218,6 +2294,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mfhd", create<MovieFragmentHeaderBox>::please);
     this->add("tfhd", create<TrackFragmentHeaderBox>::please);
     this->add("trun", create<TrackRunBox>::please);
+    this->add("tfra", create<TrackFragmentRandomAccessBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

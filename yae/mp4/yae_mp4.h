@@ -313,14 +313,20 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
+      enum Flags {
+        kTrackEnabled   = 0x000001,
+        kTrackInMovie   = 0x000002,
+        kTrackInPreview = 0x000004,
+      };
+
       inline bool is_track_enabled() const
-      { return (FullBox::flags_ & 0x000001) == 0x000001; }
+      { return (FullBox::flags_ & kTrackEnabled) != 0; }
 
       inline bool is_track_in_movie() const
-      { return (FullBox::flags_ & 0x000002) == 0x000002; }
+      { return (FullBox::flags_ & kTrackInMovie) != 0; }
 
       inline bool is_track_in_preview() const
-      { return (FullBox::flags_ & 0x000004) == 0x000004; }
+      { return (FullBox::flags_ & kTrackInPreview) != 0; }
 
       uint64_t creation_time_; // seconds since 1904/01/01 00:00:00, UTC
       uint64_t modification_time_; // seconds since 1904/01/01 00:00:00, UTC
@@ -890,6 +896,35 @@ namespace yae
       std::vector<uint32_t> sample_size_;
       std::vector<SampleFlags> sample_flags_;
       std::vector<int64_t> sample_composition_time_offset_;
+    };
+
+    //----------------------------------------------------------------
+    // TrackFragmentRandomAccessBox
+    //
+    struct YAE_API TrackFragmentRandomAccessBox : public FullBox
+    {
+      TrackFragmentRandomAccessBox():
+        track_ID_(0),
+        reserved_(0),
+        length_size_of_traf_num_(0),
+        length_size_of_trun_num_(0),
+        length_size_of_sample_num_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t track_ID_;
+      uint32_t reserved_ : 26;
+      uint32_t length_size_of_traf_num_ : 2;
+      uint32_t length_size_of_trun_num_ : 2;
+      uint32_t length_size_of_sample_num_ : 2;
+
+      std::vector<uint64_t> time_;
+      std::vector<uint64_t> moof_offset_;
+      std::vector<uint32_t> traf_number_;
+      std::vector<uint32_t> trun_number_;
+      std::vector<uint32_t> sample_number_;
     };
 
   }
