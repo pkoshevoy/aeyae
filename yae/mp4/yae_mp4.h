@@ -737,7 +737,24 @@ namespace yae
       uint8_t default_sample_info_size_;
 
       // if default_sample_info_size == 0:
-      std::vector<uint8_t> sample_info_size_;
+      std::vector<uint8_t> sample_info_sizes_;
+    };
+
+    //----------------------------------------------------------------
+    // SampleAuxiliaryInformationOffsetsBox
+    //
+    struct YAE_API SampleAuxiliaryInformationOffsetsBox : public FullBox
+    {
+      SampleAuxiliaryInformationOffsetsBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // if ((flags & 1) == 1):
+      uint32_t aux_info_type_;
+      uint32_t aux_info_type_parameters_;
+
+      std::vector<uint64_t> offsets_;
     };
 
   }
