@@ -1464,6 +1464,129 @@ SampleToChunkBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ChunkOffsetBox>::please
+//
+template ChunkOffsetBox *
+create<ChunkOffsetBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ChunkOffsetBox::load
+//
+void
+ChunkOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  chunk_offset_.clear();
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t chunk_offset = bin.read<uint32_t>();
+    chunk_offset_.push_back(chunk_offset);
+  }
+}
+
+//----------------------------------------------------------------
+// ChunkOffsetBox::to_json
+//
+void
+ChunkOffsetBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(this->get_entry_count());
+  yae::save(out["chunk_offset"], chunk_offset_);
+}
+
+
+//----------------------------------------------------------------
+// create<ChunkLargeOffsetBox>::please
+//
+template ChunkLargeOffsetBox *
+create<ChunkLargeOffsetBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ChunkLargeOffsetBox::load
+//
+void
+ChunkLargeOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  chunk_offset_.clear();
+  uint32_t entry_count = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count; ++i)
+  {
+    uint32_t chunk_offset = bin.read<uint64_t>();
+    chunk_offset_.push_back(chunk_offset);
+  }
+}
+
+//----------------------------------------------------------------
+// ChunkLargeOffsetBox::to_json
+//
+void
+ChunkLargeOffsetBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = Json::UInt(this->get_entry_count());
+  yae::save(out["chunk_offset"], chunk_offset_);
+}
+
+
+//----------------------------------------------------------------
+// create<PaddingBitsBox>::please
+//
+template PaddingBitsBox *
+create<PaddingBitsBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// PaddingBitsBox::load
+//
+void
+PaddingBitsBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  sample_count_ = bin.read<uint32_t>();
+  samples_.clear();
+
+  for (uint32_t i = 0, n = (sample_count_ + 1) >> 1; i < n; ++i)
+  {
+    Sample sample;
+    sample.reserved1_ = bin.read<uint8_t>(1);
+    sample.pad1_ = bin.read<uint8_t>(3);
+    sample.reserved2_ = bin.read<uint8_t>(1);
+    sample.pad2_ = bin.read<uint8_t>(3);
+    samples_.push_back(sample);
+  }
+}
+
+//----------------------------------------------------------------
+// PaddingBitsBox::to_json
+//
+void
+PaddingBitsBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["sample_count"] = Json::UInt(sample_count_);
+
+  Json::Value & pad1 = out["pad1"];
+  Json::Value & pad2 = out["pad2"];
+
+  pad1 = Json::arrayValue;
+  pad2 = Json::arrayValue;
+
+  for (std::size_t i = 0, n = samples_.size(); i < n; ++i)
+  {
+    const Sample & sample = samples_[i];
+    pad1.append(Json::UInt(sample.pad1_));
+    pad2.append(Json::UInt(sample.pad2_));
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1538,6 +1661,9 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stsz", create<SampleSizeBox>::please);
     this->add("stz2", create<CompactSampleSizeBox>::please);
     this->add("stsc", create<SampleToChunkBox>::please);
+    this->add("stco", create<ChunkOffsetBox>::please);
+    this->add("co64", create<ChunkLargeOffsetBox>::please);
+    this->add("padb", create<PaddingBitsBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

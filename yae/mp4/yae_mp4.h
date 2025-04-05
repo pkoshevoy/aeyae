@@ -650,6 +650,56 @@ namespace yae
       std::vector<uint32_t> sample_description_index_;
     };
 
+    //----------------------------------------------------------------
+    // ChunkOffsetBox
+    //
+    struct YAE_API ChunkOffsetBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return chunk_offset_.size(); }
+
+      std::vector<uint32_t> chunk_offset_;
+    };
+
+    //----------------------------------------------------------------
+    // ChunkLargeOffsetBox
+    //
+    struct YAE_API ChunkLargeOffsetBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return chunk_offset_.size(); }
+
+      std::vector<uint64_t> chunk_offset_;
+    };
+
+    //----------------------------------------------------------------
+    // PaddingBitsBox
+    //
+    struct YAE_API PaddingBitsBox : public FullBox
+    {
+      PaddingBitsBox(): sample_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct Sample
+      {
+        uint8_t reserved1_ : 1;
+        uint8_t pad1_ : 3;
+        uint8_t reserved2_ : 1;
+        uint8_t pad2_ : 3;
+      };
+
+      uint32_t sample_count_;
+      std::vector<Sample> samples_;
+    };
+
   }
 
 }
