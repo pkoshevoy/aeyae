@@ -757,6 +757,19 @@ namespace yae
       std::vector<uint64_t> offsets_;
     };
 
+    //----------------------------------------------------------------
+    // MovieExtendsHeaderBox
+    //
+    struct YAE_API MovieExtendsHeaderBox : public FullBox
+    {
+      MovieExtendsHeaderBox(): fragment_duration_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint64_t fragment_duration_;
+    };
+
   }
 
 }

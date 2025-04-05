@@ -1802,6 +1802,41 @@ SampleAuxiliaryInformationOffsetsBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<MovieExtendsHeaderBox>::please
+//
+template MovieExtendsHeaderBox *
+create<MovieExtendsHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MovieExtendsHeaderBox::load
+//
+void
+MovieExtendsHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  if (FullBox::version_ == 1)
+  {
+    fragment_duration_ = bin.read<uint64_t>();
+  }
+  else
+  {
+    fragment_duration_ = bin.read<uint32_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// MovieExtendsHeaderBox::to_json
+//
+void
+MovieExtendsHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["fragment_duration"] = Json::UInt64(fragment_duration_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -1882,6 +1917,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("subs", create<SubSampleInformationBox>::please);
     this->add("saiz", create<SampleAuxiliaryInformationSizesBox>::please);
     this->add("saio", create<SampleAuxiliaryInformationOffsetsBox>::please);
+    this->add("mehd", create<MovieExtendsHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
