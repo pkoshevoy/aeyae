@@ -1870,6 +1870,33 @@ DefaulSampleFlags::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<MovieFragmentHeaderBox>::please
+//
+template MovieFragmentHeaderBox *
+create<MovieFragmentHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MovieFragmentHeaderBox::load
+//
+void
+MovieFragmentHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  sequence_number_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// MovieFragmentHeaderBox::to_json
+//
+void
+MovieFragmentHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["sequence_number"] = sequence_number_;
+}
+
+
+//----------------------------------------------------------------
 // create<TrackExtendsBox>::please
 //
 template TrackExtendsBox *
@@ -1988,6 +2015,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("saio", create<SampleAuxiliaryInformationOffsetsBox>::please);
     this->add("mehd", create<MovieExtendsHeaderBox>::please);
     this->add("trex", create<TrackExtendsBox>::please);
+    this->add("mfhd", create<MovieFragmentHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

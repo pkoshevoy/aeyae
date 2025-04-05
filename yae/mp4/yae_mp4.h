@@ -812,6 +812,19 @@ namespace yae
       DefaulSampleFlags default_sample_flags_;
     };
 
+    //----------------------------------------------------------------
+    // MovieFragmentHeaderBox
+    //
+    struct YAE_API MovieFragmentHeaderBox : public FullBox
+    {
+      MovieFragmentHeaderBox(): sequence_number_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t sequence_number_;
+    };
+
   }
 
 }
