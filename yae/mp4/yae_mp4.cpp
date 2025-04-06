@@ -2291,7 +2291,7 @@ LevelAssignmentBox::Level::load(IBitstream & bin)
   if (assignment_type_ == 0 ||
       assignment_type_ == 1)
   {
-    grouping_type_ = bin.read<uint32_t>();
+    bin.read_bytes(grouping_type_.str_, 4);
   }
 
   if (assignment_type_ == 1)
@@ -2318,7 +2318,7 @@ LevelAssignmentBox::Level::to_json(Json::Value & out) const
   if (assignment_type_ == 0 ||
       assignment_type_ == 1)
   {
-    out["grouping_type"] = Json::UInt(grouping_type_);
+    out["grouping_type"] = grouping_type_.str_;
   }
 
   if (assignment_type_ == 1)
@@ -2471,6 +2471,164 @@ AlternativeStartupSequencePropertiesBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SampleToGroupBox>::please
+//
+template SampleToGroupBox *
+create<SampleToGroupBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleToGroupBox::load
+//
+void
+SampleToGroupBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  bin.read_bytes(grouping_type_.str_, 4);
+
+  if (FullBox::version_ == 1)
+  {
+    grouping_type_parameter_ = bin.read<uint32_t>();
+  }
+
+  sample_count_.clear();
+  group_description_index_.clear();
+
+  uint32_t num_entries = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < num_entries; ++i)
+  {
+    uint32_t sample_count = bin.read<uint32_t>();
+    uint32_t group_description_index = bin.read<uint32_t>();
+
+    sample_count_.push_back(sample_count);
+    group_description_index_.push_back(group_description_index);
+  }
+}
+
+//----------------------------------------------------------------
+// SampleToGroupBox::to_json
+//
+void
+SampleToGroupBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["grouping_type"] = grouping_type_.str_;
+
+  if (FullBox::version_ == 1)
+  {
+    out["grouping_type_parameter"] = grouping_type_parameter_;
+  }
+
+  yae::save(out["sample_count"], sample_count_);
+  yae::save(out["group_description_index"], group_description_index_);
+}
+
+
+//----------------------------------------------------------------
+// create<SampleGroupDescriptionBox>::please
+//
+template SampleGroupDescriptionBox *
+create<SampleGroupDescriptionBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleGroupDescriptionBox::load
+//
+void
+SampleGroupDescriptionBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t end_pos = box_pos + Box::size_ * 8;
+  bin.read_bytes(grouping_type_.str_, 4);
+
+  if (FullBox::version_ > 0)
+  {
+    default_length_ = bin.read<uint32_t>();
+  }
+
+  if (FullBox::version_ > 1)
+  {
+    default_sample_description_index_ = bin.read<uint32_t>();
+  }
+
+  entry_count_ = bin.read<uint32_t>();
+  description_length_.clear();
+  sample_group_entries_.clear();
+
+  if (FullBox::version_ == 0)
+  {
+    v0_sample_group_entries_ = bin.read_bytes_until(end_pos);
+  }
+  else
+  {
+    for (uint32_t i = 0; i < entry_count_; ++i)
+    {
+      uint32_t description_length =
+        default_length_ ? default_length_ : bin.read<uint32_t>();
+
+      Data entry = bin.read_bytes(description_length);
+
+      if (!default_length_)
+      {
+        description_length_.push_back(description_length);
+      }
+
+      sample_group_entries_.push_back(entry);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// SampleGroupDescriptionBox::to_json
+//
+void
+SampleGroupDescriptionBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["grouping_type"] = grouping_type_.str_;
+
+  if (FullBox::version_ > 0)
+  {
+    out["default_length"] = default_length_;
+  }
+
+  if (FullBox::version_ > 1)
+  {
+    out["default_sample_description_index"] = default_sample_description_index_;
+  }
+
+  out["entry_count"] = entry_count_;
+
+  if (FullBox::version_ == 0)
+  {
+    out["v0_sample_group_entries"] =
+      yae::to_hex(v0_sample_group_entries_.get(),
+                  v0_sample_group_entries_.size());
+  }
+  else
+  {
+    if (!description_length_.empty())
+    {
+      yae::save(out["description_length"], description_length_);
+    }
+
+    Json::Value & sample_group_entries = out["sample_group_entries"];
+    sample_group_entries = Json::arrayValue;
+
+    for (uint32_t i = 0, n = sample_group_entries_.size(); i < n; ++i)
+    {
+      const Data & entry = sample_group_entries_[i];
+      std::string v = yae::to_hex(entry.get(), entry.size());
+      sample_group_entries.append(v);
+    }
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2563,6 +2721,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("leva", create<LevelAssignmentBox>::please);
     this->add("trep", create<TrackExtensionPropertiesBox>::please);
     this->add("assp", create<AlternativeStartupSequencePropertiesBox>::please);
+    this->add("sbgp", create<SampleToGroupBox>::please);
+    this->add("sgpd", create<SampleGroupDescriptionBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

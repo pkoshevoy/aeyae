@@ -987,7 +987,7 @@ namespace yae
         uint8_t assignment_type_ : 7;
 
         // assignment type 0, 1:
-        uint32_t grouping_type_;
+        FourCC grouping_type_;
 
         // assignment type 1:
         uint32_t grouping_type_parameter_;
@@ -1030,6 +1030,55 @@ namespace yae
       // version 1:
       std::vector<uint32_t> grouping_type_parameters_;
       std::vector<int32_t> min_initial_alt_startup_offsets_;
+    };
+
+    //----------------------------------------------------------------
+    // SampleToGroupBox
+    //
+    struct YAE_API SampleToGroupBox : public FullBox
+    {
+      SampleToGroupBox(): grouping_type_parameter_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline std::size_t get_entry_count() const
+      { return sample_count_.size(); }
+
+      FourCC grouping_type_;
+      uint32_t grouping_type_parameter_; // version 1
+
+      std::vector<uint32_t> sample_count_;
+      std::vector<uint32_t> group_description_index_;
+    };
+
+    //----------------------------------------------------------------
+    // SampleGroupDescriptionBox
+    //
+    struct YAE_API SampleGroupDescriptionBox : public FullBox
+    {
+      SampleGroupDescriptionBox():
+        default_length_(0),
+        default_sample_description_index_(0),
+        entry_count_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC grouping_type_;
+      uint32_t default_length_; // version 1+
+      uint32_t default_sample_description_index_; // version 2+
+      uint32_t entry_count_;
+
+      // in version 0 of the entries the base classes for sample group
+      // description entries are neither boxes nor have a size that is
+      // signaled... there is no choice but consume it as opaque payload
+      Data v0_sample_group_entries_;
+
+      // version 1+
+      std::vector<uint32_t> description_length_;
+      std::vector<Data> sample_group_entries_;
     };
 
   }
