@@ -53,6 +53,9 @@ namespace yae
       str_[4] = 0;
     }
 
+    inline void load(IBitstream & bin)
+    { bin.read_bytes(str_, 4); }
+
     inline bool same_as(const char * fourcc) const
     { return strncmp(str_, fourcc, 4) == 0; }
 
@@ -61,6 +64,12 @@ namespace yae
 
     char str_[5];
   };
+
+  inline void save(Json::Value & json, const FourCC & v)
+  { json = v.str_; }
+
+  inline void load(const Json::Value & json, FourCC & v)
+  { v.set(json.asCString()); }
 
 
   // see ISO/IEC 14496-12:2015(E)
@@ -1106,7 +1115,7 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       int32_t switch_group_;
-      std::list<int32_t> attribute_list_;
+      std::list<FourCC> attribute_list_;
     };
 
   }

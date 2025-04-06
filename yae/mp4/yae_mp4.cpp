@@ -41,7 +41,7 @@ Box::load(Mp4Context & mp4, IBitstream & bin)
 {
   (void)mp4;
   uint32_t size32 = bin.read<uint32_t>();
-  bin.read_bytes(type_.str_, 4);
+  type_.load(bin);
 
   if (size32 == 1)
   {
@@ -229,13 +229,13 @@ FileTypeBox::load(Mp4Context & mp4, IBitstream & bin)
   Box::load(mp4, bin);
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
-  bin.read_bytes(major_.str_, 4);
+  major_.load(bin);
   minor_ = bin.read<uint32_t>();
 
   while (bin.position() < box_end)
   {
     FourCC fourcc;
-    bin.read_bytes(fourcc.str_, 4);
+    fourcc.load(bin);
     compatible_.push_back(fourcc);
   }
 }
@@ -742,7 +742,7 @@ HandlerBox::load(Mp4Context & mp4, IBitstream & bin)
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
   pre_defined_ = bin.read<uint32_t>();
-  bin.read_bytes(handler_type_.str_, 4);
+  handler_type_.load(bin);
   reserved_[0] = bin.read<uint32_t>();
   reserved_[1] = bin.read<uint32_t>();
   reserved_[2] = bin.read<uint32_t>();
@@ -2291,7 +2291,7 @@ LevelAssignmentBox::Level::load(IBitstream & bin)
   if (assignment_type_ == 0 ||
       assignment_type_ == 1)
   {
-    bin.read_bytes(grouping_type_.str_, 4);
+    grouping_type_.load(bin);
   }
 
   if (assignment_type_ == 1)
@@ -2484,7 +2484,7 @@ SampleToGroupBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   FullBox::load(mp4, bin);
 
-  bin.read_bytes(grouping_type_.str_, 4);
+  grouping_type_.load(bin);
 
   if (FullBox::version_ == 1)
   {
@@ -2541,7 +2541,7 @@ SampleGroupDescriptionBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
 
   const std::size_t end_pos = box_pos + Box::size_ * 8;
-  bin.read_bytes(grouping_type_.str_, 4);
+  grouping_type_.load(bin);
 
   if (FullBox::version_ > 0)
   {
@@ -2731,7 +2731,8 @@ TrackSelectionBox::load(Mp4Context & mp4, IBitstream & bin)
   attribute_list_.clear();
   while (bin.position() + 32 <= box_end)
   {
-    uint32_t attr = bin.read<uint32_t>();
+    FourCC attr;
+    attr.load(bin);
     attribute_list_.push_back(attr);
   }
 }
