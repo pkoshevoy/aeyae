@@ -1081,6 +1081,20 @@ namespace yae
       std::vector<Data> sample_group_entries_;
     };
 
+    //----------------------------------------------------------------
+    // CopyrightBox
+    //
+    struct YAE_API CopyrightBox : public FullBox
+    {
+      CopyrightBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      char language_[4]; // ISO-639-2/T language code
+      std::string notice_; // UTF-8, possibly converted from UTF-16
+    };
+
   }
 
 }

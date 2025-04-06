@@ -2629,6 +2629,73 @@ SampleGroupDescriptionBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<CopyrightBox>::please
+//
+template CopyrightBox *
+create<CopyrightBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CopyrightBox::CopyrightBox
+//
+CopyrightBox::CopyrightBox()
+{
+  language_[0] = 0;
+  language_[1] = 0;
+  language_[2] = 0;
+  language_[3] = 0;
+}
+
+//----------------------------------------------------------------
+// CopyrightBox::load
+//
+void
+CopyrightBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  bin.skip(1); // padding 0 bit
+  language_[0] = 0x60 + bin.read<char>(5);
+  language_[1] = 0x60 + bin.read<char>(5);
+  language_[2] = 0x60 + bin.read<char>(5);
+
+  notice_.clear();
+
+  if (bin.peek<uint16_t>(16) == 0xFEFF)
+  {
+    // big endian UTF-16:
+    while (bin.position() + 16 <= box_end)
+    {
+      Data wc = bin.read_bytes(2);
+      yae::utf16be_to_utf8(wc.get(), wc.end(), notice_);
+
+      // check for NULL terminator:
+      if (wc[0] == 0 && wc[1] == 0)
+      {
+        break;
+      }
+    }
+  }
+  else // UTF-8
+  {
+    bin.read_string_until_null(notice_, box_end);
+  }
+}
+
+//----------------------------------------------------------------
+// CopyrightBox::to_json
+//
+void
+CopyrightBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["language"] = language_;
+  out["notice"] = notice_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2723,6 +2790,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("assp", create<AlternativeStartupSequencePropertiesBox>::please);
     this->add("sbgp", create<SampleToGroupBox>::please);
     this->add("sgpd", create<SampleGroupDescriptionBox>::please);
+    this->add("cprt", create<CopyrightBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
