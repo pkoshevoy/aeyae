@@ -41,6 +41,12 @@ namespace yae
     FourCC(const char * fourcc = "")
     { this->set(fourcc); }
 
+    inline void clear()
+    { memset(str_, 0, sizeof(str_)); }
+
+    inline bool empty() const
+    { return memcmp(str_, "\0\0\0\0", 4) == 0; }
+
     inline uint32_t get() const
     { return yae::load_be32((const uint8_t *)str_); }
 
@@ -194,15 +200,32 @@ namespace yae
         TBase::load(mp4, bin);
 
         const std::size_t end_pos = box_pos + TBox::size_ * 8;
-        this->load_children(mp4, bin, end_pos);
+        this->load_children_until(mp4, bin, end_pos);
+      }
+
+      void load_children_until(Mp4Context & mp4,
+                               IBitstream & bin,
+                               std::size_t end_pos)
+      {
+        children_.clear();
+        while (bin.position() < end_pos)
+        {
+          TBoxPtr box = mp4.parse(bin, end_pos);
+          YAE_ASSERT(box);
+          if (box)
+          {
+            children_.push_back(box);
+          }
+        }
       }
 
       void load_children(Mp4Context & mp4,
                          IBitstream & bin,
-                         std::size_t end_pos)
+                         std::size_t end_pos,
+                         std::size_t num_children)
       {
         children_.clear();
-        while (bin.position() < end_pos)
+        for (std::size_t i = 0; i < num_children; ++i)
         {
           TBoxPtr box = mp4.parse(bin, end_pos);
           YAE_ASSERT(box);
@@ -250,22 +273,17 @@ namespace yae
     template <typename TBoxCount = uint32_t>
     struct YAE_API ContainerList : public BoxWithChildren<FullBox>
     {
+      typedef BoxWithChildren<FullBox> TBase;
+      typedef ContainerList<TBoxCount> TSelf;
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE
       {
         const std::size_t box_pos = bin.position();
         TBase::load(mp4, bin);
 
         const std::size_t end_pos = box_pos + Box::size_ * 8;
-        const TBoxCount entry_count = bin.read<TBoxCount>();
-        for (TBoxCount i = 0; i < entry_count; ++i)
-        {
-          TBoxPtr box = mp4.parse(bin, end_pos);
-          YAE_ASSERT(box);
-          if (box)
-          {
-            children_.push_back(box);
-          }
-        }
+        const TBoxCount num_children = bin.read<TBoxCount>();
+        TBase::load_children(mp4, bin, end_pos, num_children);
       }
 
       void to_json(Json::Value & out) const YAE_OVERRIDE
@@ -1247,6 +1265,64 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       uint32_t item_ID_;
+    };
+
+    //----------------------------------------------------------------
+    // ItemInfoEntryBox
+    //
+    struct YAE_API ItemInfoEntryBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t item_ID_;
+      uint16_t item_protection_index_;
+      FourCC item_type_; // version 2+
+      std::string item_name_;
+      std::string content_type_; // also item_uri_type
+      std::string content_encoding_; // optional
+
+      // version 1 only, optional:
+      struct YAE_API ItemInfoExtension
+      {
+        virtual ~ItemInfoExtension() {}
+        virtual void load(IBitstream & bin, std::size_t end_pos) = 0;
+        virtual void to_json(Json::Value & out) const = 0;
+      };
+
+      typedef boost::shared_ptr<ItemInfoExtension> TExtensionPtr;
+
+      struct YAE_API FDItemInfo : public ItemInfoExtension
+      {
+        void load(IBitstream & bin, std::size_t end_pos) YAE_OVERRIDE;
+        void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+        std::string content_location_;
+        std::string content_MD5_;
+        uint64_t content_length_;
+        uint64_t transfer_length_;
+        uint8_t entry_count_;
+        std::vector<uint32_t> group_ids_;
+      };
+
+      struct YAE_API Unknown : public ItemInfoExtension
+      {
+        void load(IBitstream & bin, std::size_t end_pos) YAE_OVERRIDE;
+        void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+        Data data_;
+      };
+
+      FourCC extension_type_;
+      TExtensionPtr extension_;
+    };
+
+    //----------------------------------------------------------------
+    // ItemInfoBox
+    //
+    struct YAE_API ItemInfoBox : public ContainerEx
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
     };
 
   }

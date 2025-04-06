@@ -2355,7 +2355,7 @@ TrackExtensionPropertiesBox::load(Mp4Context & mp4, IBitstream & bin)
   const std::size_t end_pos = box_pos + Box::size_ * 8;
   track_id_ = bin.read<uint32_t>();
 
-  ContainerEx::load_children(mp4, bin, end_pos);
+  ContainerEx::load_children_until(mp4, bin, end_pos);
 }
 
 //----------------------------------------------------------------
@@ -2920,6 +2920,177 @@ PrimaryItemBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ItemInfoEntryBox>::please
+//
+template ItemInfoEntryBox *
+create<ItemInfoEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::FDItemInfo::load
+//
+void
+ItemInfoEntryBox::FDItemInfo::load(IBitstream & bin, std::size_t end_pos)
+{
+  bin.read_string_until_null(content_location_, end_pos);
+  bin.read_string_until_null(content_MD5_, end_pos);
+  content_length_ = bin.read<uint64_t>();
+  transfer_length_ = bin.read<uint64_t>();
+
+  group_ids_.clear();
+  entry_count_ = bin.read<uint8_t>();
+  for (uint8_t i = 0; i < entry_count_; ++i)
+  {
+    uint32_t group_id = bin.read<uint32_t>();
+    group_ids_.push_back(group_id);
+  }
+}
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::FDItemInfo::to_json
+//
+void
+ItemInfoEntryBox::FDItemInfo::to_json(Json::Value & out) const
+{
+  out["content_location"] = content_location_;
+  out["content_MD5"] = content_MD5_;
+  out["content_length"] = Json::UInt64(content_length_);
+  out["transfer_length"] = Json::UInt64(transfer_length_);
+  out["entry_count"] = Json::UInt(entry_count_);
+  yae::save(out["group_ids"], group_ids_);
+}
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::Unknown::load
+//
+void
+ItemInfoEntryBox::Unknown::load(IBitstream & bin, std::size_t end_pos)
+{
+  data_ = bin.read_bytes_until(end_pos);
+}
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::Unknown::to_json
+//
+void
+ItemInfoEntryBox::Unknown::to_json(Json::Value & out) const
+{
+  out["data"] = yae::to_hex(data_.get(), data_.size());
+}
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::load
+//
+void
+ItemInfoEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  item_ID_ =
+    (FullBox::version_ < 3) ?
+    bin.read<uint16_t>() :
+    bin.read<uint32_t>();
+
+  item_protection_index_ = bin.read<uint16_t>();
+
+  if (FullBox::version_ > 1)
+  {
+    item_type_.load(bin);
+  }
+
+  bin.read_string_until_null(item_name_, box_end);
+  bin.read_string_until_null(content_type_, box_end);
+
+  // content_encoding is optional, check if it's there:
+  if (bin.position() < box_end)
+  {
+    bin.read_string_until_null(content_encoding_, box_end);
+  }
+
+  extension_type_.clear();
+  extension_.reset();
+
+  if (FullBox::version_ != 1 || box_end < bin.position() + 32)
+  {
+    // no extension:
+    return;
+  }
+
+  extension_type_.load(bin);
+  if (extension_type_.same_as("fdel"))
+  {
+    extension_.reset(new FDItemInfo());
+    extension_->load(bin, box_end);
+  }
+  else
+  {
+    extension_.reset(new Unknown());
+    extension_->load(bin, box_end);
+  }
+}
+
+//----------------------------------------------------------------
+// ItemInfoEntryBox::to_json
+//
+void
+ItemInfoEntryBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["item_ID"] = item_ID_;
+  out["item_protection_index"] = item_protection_index_;
+
+  if (FullBox::version_ > 1)
+  {
+    yae::save(out["item_type"], item_type_);
+  }
+
+  out["item_name"] = item_name_;
+  out["content_type"] = content_type_;
+
+  if (!content_encoding_.empty())
+  {
+    out["content_encoding"] = content_encoding_;
+  }
+
+  if (!extension_type_.empty())
+  {
+    yae::save(out["extension_type"], extension_type_);
+  }
+
+  if (extension_)
+  {
+    extension_->to_json(out["extension"]);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<ItemInfoBox>::please
+//
+template ItemInfoBox *
+create<ItemInfoBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ItemInfoBox::load
+//
+void
+ItemInfoBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  uint32_t num_children =
+    (FullBox::version_ == 0) ?
+    bin.read<uint16_t>() :
+    bin.read<uint32_t>();
+
+  ContainerEx::load_children(mp4, bin, box_end, num_children);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3022,6 +3193,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("iloc", create<ItemLocationBox>::please);
     this->add("pitm", create<PrimaryItemBox>::please);
     this->add("ipro", create<ContainerList16>::please);
+    this->add("infe", create<ItemInfoEntryBox>::please);
+    this->add("iinf", create<ItemInfoBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
