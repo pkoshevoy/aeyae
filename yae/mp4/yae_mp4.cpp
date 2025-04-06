@@ -3168,7 +3168,11 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
   { return this->get(FourCC(fourcc)); }
 
   inline void add(const char * fourcc, TBoxConstructor box_constructor)
-  { this->operator[](FourCC(fourcc)) = box_constructor; }
+  {
+    FourCC key(fourcc);
+    YAE_ASSERT(!yae::has(*this, key));
+    this->operator[](key) = box_constructor;
+  }
 
   template <typename TBox>
   inline void add(const char * fourcc, TBox *(*box_constructor)(const char *))
