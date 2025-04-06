@@ -2660,6 +2660,7 @@ CopyrightBox::load(Mp4Context & mp4, IBitstream & bin)
   language_[1] = 0x60 + bin.read<char>(5);
   language_[2] = 0x60 + bin.read<char>(5);
 
+  notice_.clear();
   load_as_utf8(notice_, bin, box_end);
 }
 
@@ -2767,6 +2768,7 @@ XMLBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
+  xml_.clear();
   load_as_utf8(xml_, bin, box_end);
 }
 
@@ -2808,6 +2810,118 @@ BinaryXMLBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
   out["data"] = yae::to_hex(data_.get(), data_.size());
+}
+
+
+//----------------------------------------------------------------
+// create<ItemLocationBox>::please
+//
+template ItemLocationBox *
+create<ItemLocationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ItemLocationBox::load
+//
+void
+ItemLocationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  offset_size_ = bin.read<uint16_t>(4);
+  length_size_ = bin.read<uint16_t>(4);
+  base_offset_size_ = bin.read<uint16_t>(4);
+  index_size_ = bin.read<uint16_t>(4);
+  bool load_extent_index =  (FullBox::version_ > 0 && index_size_ > 0);
+
+  item_count_ =
+    (FullBox::version_ < 2) ? bin.read<uint16_t>() : bin.read<uint32_t>();
+
+  items_.clear();
+  for (uint32_t i = 0; i < item_count_; ++i)
+  {
+    Item item;
+
+    item.item_ID_ =
+      (FullBox::version_ < 2) ? bin.read<uint16_t>() : bin.read<uint32_t>();
+
+    item.reserved_ =
+      (FullBox::version_ > 0) ? bin.read<uint16_t>(12) : 0;
+
+    item.construction_method_ =
+      (FullBox::version_ > 0) ? bin.read<uint16_t>(4) : 0;
+
+    item.data_reference_index_ = bin.read<uint16_t>();
+    item.base_offset_ = bin.read<uint64_t>(base_offset_size_ * 8);
+
+    item.extent_count_ = bin.read<uint16_t>();
+    for (uint16_t j = 0; j < item.extent_count_; ++j)
+    {
+      uint64_t extent_index =
+        load_extent_index ? bin.read<uint64_t>(index_size_ * 8) : 0;
+
+      uint64_t extent_offset = bin.read<uint64_t>(offset_size_ * 8);
+      uint64_t extent_length = bin.read<uint64_t>(length_size_ * 8);
+
+      if (load_extent_index)
+      {
+        item.extent_index_.push_back(extent_index);
+      }
+
+      item.extent_offset_.push_back(extent_offset);
+      item.extent_length_.push_back(extent_length);
+    }
+
+    items_.push_back(item);
+  }
+}
+
+//----------------------------------------------------------------
+// ItemLocationBox::Item::to_json
+//
+void
+ItemLocationBox::Item::to_json(Json::Value & out, uint32_t box_version) const
+{
+  out["item_ID"] = item_ID_;
+
+  if (box_version > 0)
+  {
+    out["construction_method"] = construction_method_;
+  }
+
+  out["data_reference_index"] = data_reference_index_;
+  out["base_offset"] = Json::UInt64(base_offset_);
+
+  out["extent_count"] = extent_count_;
+  if (!extent_index_.empty())
+  {
+    yae::save(out["extent_index"], extent_index_);
+  }
+
+  yae::save(out["extent_offset"], extent_offset_);
+  yae::save(out["extent_length"], extent_length_);
+}
+
+//----------------------------------------------------------------
+// ItemLocationBox::to_json
+//
+void
+ItemLocationBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["offset_size"] = Json::UInt(offset_size_);
+  out["length_size"] = Json::UInt(length_size_);
+  out["base_offset_size"] = Json::UInt(base_offset_size_);
+  out["index_size"] = Json::UInt(index_size_);
+  out["item_count"] = item_count_;
+
+  Json::Value & items = out["items"];
+  for (std::size_t i = 0, n = items_.size(); i < n; ++i)
+  {
+    const Item & item = items_[i];
+    Json::Value v;
+    item.to_json(v, FullBox::version_);
+    items.append(v);
+  }
 }
 
 
@@ -2911,6 +3025,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("kind", create<KindBox>::please);
     this->add("xml ", create<XMLBox>::please);
     this->add("bxml", create<BinaryXMLBox>::please);
+    this->add("iloc", create<ItemLocationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

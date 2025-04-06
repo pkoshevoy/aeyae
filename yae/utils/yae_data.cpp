@@ -577,8 +577,6 @@ namespace yae
   void
   load_as_utf8(std::string & output, IBitstream & bin, std::size_t end_pos)
   {
-    output.clear();
-
     if (bin.peek<uint16_t>(16) == 0xFEFF)
     {
       // big endian UTF-16:

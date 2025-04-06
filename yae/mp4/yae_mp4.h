@@ -1152,6 +1152,46 @@ namespace yae
       Data data_;
     };
 
+    //----------------------------------------------------------------
+    // ItemLocationBox
+    //
+    struct YAE_API ItemLocationBox : public FullBox
+    {
+      ItemLocationBox():
+        offset_size_(0),
+        length_size_(0),
+        base_offset_size_(0),
+        index_size_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t offset_size_ : 4;
+      uint16_t length_size_ : 4;
+      uint16_t base_offset_size_ : 4;
+      uint16_t index_size_ : 4;
+      uint32_t item_count_;
+
+      struct YAE_API Item
+      {
+        void to_json(Json::Value & out, uint32_t box_version) const;
+
+        uint32_t item_ID_;
+        uint16_t reserved_ : 12;
+        uint16_t construction_method_ : 4;
+        uint16_t data_reference_index_;
+        uint64_t base_offset_;
+
+        uint16_t extent_count_;
+        std::vector<uint64_t> extent_index_;
+        std::vector<uint64_t> extent_offset_;
+        std::vector<uint64_t> extent_length_;
+      };
+
+      std::vector<Item> items_;
+    };
+
   }
 
 }
