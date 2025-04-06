@@ -2750,6 +2750,43 @@ TrackSelectionBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<KindBox>::please
+//
+template KindBox *
+create<KindBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// KindBox::load
+//
+void
+KindBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  schemeURI_.clear();
+  value_.clear();
+  bin.read_string_until_null(schemeURI_, box_end);
+  bin.read_string_until_null(value_, box_end);
+}
+
+//----------------------------------------------------------------
+// KindBox::to_json
+//
+void
+KindBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["schemeURI"] = schemeURI_;
+  if (!value_.empty())
+  {
+    out["value"] = value_;
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -2846,6 +2883,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("sgpd", create<SampleGroupDescriptionBox>::please);
     this->add("cprt", create<CopyrightBox>::please);
     this->add("tsel", create<TrackSelectionBox>::please);
+    this->add("kind", create<KindBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

@@ -1118,6 +1118,18 @@ namespace yae
       std::list<FourCC> attribute_list_;
     };
 
+    //----------------------------------------------------------------
+    // KindBox
+    //
+    struct YAE_API KindBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string schemeURI_;
+      std::string value_;
+    };
+
   }
 
 }
