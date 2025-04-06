@@ -1095,6 +1095,20 @@ namespace yae
       std::string notice_; // UTF-8, possibly converted from UTF-16
     };
 
+    //----------------------------------------------------------------
+    // TrackSelectionBox
+    //
+    struct YAE_API TrackSelectionBox : public FullBox
+    {
+      TrackSelectionBox(): switch_group_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      int32_t switch_group_;
+      std::list<int32_t> attribute_list_;
+    };
+
   }
 
 }

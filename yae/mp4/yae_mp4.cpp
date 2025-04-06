@@ -2677,6 +2677,21 @@ CopyrightBox::load(Mp4Context & mp4, IBitstream & bin)
       }
     }
   }
+  else if (bin.peek<uint16_t>(16) == 0xFFFE)
+  {
+    // littel endian UTF-16:
+    while (bin.position() + 16 <= box_end)
+    {
+      Data wc = bin.read_bytes(2);
+      yae::utf16le_to_utf8(wc.get(), wc.end(), notice_);
+
+      // check for NULL terminator:
+      if (wc[0] == 0 && wc[1] == 0)
+      {
+        break;
+      }
+    }
+  }
   else // UTF-8
   {
     bin.read_string_until_null(notice_, box_end);
@@ -2692,6 +2707,44 @@ CopyrightBox::to_json(Json::Value & out) const
   FullBox::to_json(out);
   out["language"] = language_;
   out["notice"] = notice_;
+}
+
+
+//----------------------------------------------------------------
+// create<TrackSelectionBox>::please
+//
+template TrackSelectionBox *
+create<TrackSelectionBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackSelectionBox::load
+//
+void
+TrackSelectionBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  switch_group_ = bin.read<int32_t>();
+
+  attribute_list_.clear();
+  while (bin.position() + 32 <= box_end)
+  {
+    uint32_t attr = bin.read<uint32_t>();
+    attribute_list_.push_back(attr);
+  }
+}
+
+//----------------------------------------------------------------
+// TrackSelectionBox::to_json
+//
+void
+TrackSelectionBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["switch_group"] = switch_group_;
+  yae::save(out["attribute_list"], attribute_list_);
 }
 
 
@@ -2791,6 +2844,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("sbgp", create<SampleToGroupBox>::please);
     this->add("sgpd", create<SampleGroupDescriptionBox>::please);
     this->add("cprt", create<CopyrightBox>::please);
+    this->add("tsel", create<TrackSelectionBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
