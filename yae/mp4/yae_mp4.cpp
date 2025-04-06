@@ -3188,6 +3188,33 @@ ItemReferenceBox::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// create<OriginalFormatBox>::please
+//
+template OriginalFormatBox *
+create<OriginalFormatBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// OriginalFormatBox::load
+//
+void
+OriginalFormatBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  data_format_.load(bin);
+}
+
+//----------------------------------------------------------------
+// OriginalFormatBox::to_json
+//
+void
+OriginalFormatBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  yae::save(out["data_format"], data_format_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3300,6 +3327,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("mere", create<MetaboxRelationBox>::please);
     this->add("idat", create<ItemDataBox>::please);
     this->add("iref", create<ItemReferenceBox>::please);
+    this->add("frma", create<OriginalFormatBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

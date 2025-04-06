@@ -1390,6 +1390,17 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
     };
 
+    //----------------------------------------------------------------
+    // OriginalFormatBox
+    //
+    struct YAE_API OriginalFormatBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC data_format_;
+    };
+
   }
 
 }
