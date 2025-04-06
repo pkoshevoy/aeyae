@@ -247,11 +247,55 @@ namespace yae
     //----------------------------------------------------------------
     // ContainerList
     //
+    template <typename TBoxCount = uint32_t>
     struct YAE_API ContainerList : public BoxWithChildren<FullBox>
     {
-      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
-      void to_json(Json::Value & out) const YAE_OVERRIDE;
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE
+      {
+        const std::size_t box_pos = bin.position();
+        TBase::load(mp4, bin);
+
+        const std::size_t end_pos = box_pos + Box::size_ * 8;
+        const TBoxCount entry_count = bin.read<TBoxCount>();
+        for (TBoxCount i = 0; i < entry_count; ++i)
+        {
+          TBoxPtr box = mp4.parse(bin, end_pos);
+          YAE_ASSERT(box);
+          if (box)
+          {
+            children_.push_back(box);
+          }
+        }
+      }
+
+      void to_json(Json::Value & out) const YAE_OVERRIDE
+      {
+        TBase::to_json(out);
+
+        const uint64_t entry_count = children_.size();
+        out["entry_count"] = Json::UInt64(entry_count);
+
+        Json::Value & children = out["children"];
+        for (uint64_t i = 0; i < entry_count; ++i)
+        {
+          const Box & box = *(children_[i]);
+          Json::Value child;
+          box.to_json(child);
+          children.append(child);
+        }
+      }
     };
+
+    //----------------------------------------------------------------
+    // ContainerList16
+    //
+    struct YAE_API ContainerList16 : public ContainerList<uint16_t> {};
+
+    //----------------------------------------------------------------
+    // ContainerList32
+    //
+    struct YAE_API ContainerList32 : public ContainerList<uint32_t> {};
+
 
     //----------------------------------------------------------------
     // FileTypeBox

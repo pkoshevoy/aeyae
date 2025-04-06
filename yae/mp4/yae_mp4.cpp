@@ -164,53 +164,16 @@ template ContainerEx *
 create<ContainerEx>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// create<ContainerList>::please
+// create<ContainerList16>::please
 //
-template ContainerList *
-create<ContainerList>::please(const char * fourcc);
+template ContainerList16 *
+create<ContainerList16>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// ContainerList::load
+// create<ContainerList32>::please
 //
-void
-ContainerList::load(Mp4Context & mp4, IBitstream & bin)
-{
-  const std::size_t box_pos = bin.position();
-  TBase::load(mp4, bin);
-
-  const std::size_t end_pos = box_pos + Box::size_ * 8;
-  const uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
-  {
-    TBoxPtr box = mp4.parse(bin, end_pos);
-    YAE_ASSERT(box);
-    if (box)
-    {
-      children_.push_back(box);
-    }
-  }
-}
-
-//----------------------------------------------------------------
-// ContainerList::to_json
-//
-void
-ContainerList::to_json(Json::Value & out) const
-{
-  TBase::to_json(out);
-
-  const uint64_t entry_count = children_.size();
-  out["entry_count"] = Json::UInt64(entry_count);
-
-  Json::Value & children = out["children"];
-  for (uint64_t i = 0; i < entry_count; ++i)
-  {
-    const Box & box = *(children_[i]);
-    Json::Value child;
-    box.to_json(child);
-    children.append(child);
-  }
-}
+template ContainerList32 *
+create<ContainerList32>::please(const char * fourcc);
 
 
 //----------------------------------------------------------------
@@ -3003,8 +2966,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
 
     this->add("meta", create<ContainerEx>::please);
 
-    this->add("stsd", create<ContainerList>::please);
-    this->add("dref", create<ContainerList>::please);
+    this->add("stsd", create<ContainerList32>::please);
+    this->add("dref", create<ContainerList32>::please);
 
     this->add("ftyp", create<FileTypeBox>::please);
     this->add("free", create<FreeSpaceBox>::please);
@@ -3058,6 +3021,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("bxml", create<BinaryXMLBox>::please);
     this->add("iloc", create<ItemLocationBox>::please);
     this->add("pitm", create<PrimaryItemBox>::please);
+    this->add("ipro", create<ContainerList16>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
