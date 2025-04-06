@@ -2660,42 +2660,7 @@ CopyrightBox::load(Mp4Context & mp4, IBitstream & bin)
   language_[1] = 0x60 + bin.read<char>(5);
   language_[2] = 0x60 + bin.read<char>(5);
 
-  notice_.clear();
-
-  if (bin.peek<uint16_t>(16) == 0xFEFF)
-  {
-    // big endian UTF-16:
-    while (bin.position() + 16 <= box_end)
-    {
-      Data wc = bin.read_bytes(2);
-      yae::utf16be_to_utf8(wc.get(), wc.end(), notice_);
-
-      // check for NULL terminator:
-      if (wc[0] == 0 && wc[1] == 0)
-      {
-        break;
-      }
-    }
-  }
-  else if (bin.peek<uint16_t>(16) == 0xFFFE)
-  {
-    // littel endian UTF-16:
-    while (bin.position() + 16 <= box_end)
-    {
-      Data wc = bin.read_bytes(2);
-      yae::utf16le_to_utf8(wc.get(), wc.end(), notice_);
-
-      // check for NULL terminator:
-      if (wc[0] == 0 && wc[1] == 0)
-      {
-        break;
-      }
-    }
-  }
-  else // UTF-8
-  {
-    bin.read_string_until_null(notice_, box_end);
-  }
+  load_as_utf8(notice_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -2783,6 +2748,66 @@ KindBox::to_json(Json::Value & out) const
   {
     out["value"] = value_;
   }
+}
+
+
+//----------------------------------------------------------------
+// create<XMLBox>::please
+//
+template XMLBox *
+create<XMLBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// XMLBox::load
+//
+void
+XMLBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  load_as_utf8(xml_, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// XMLBox::to_json
+//
+void
+XMLBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["xml"] = xml_;
+}
+
+
+//----------------------------------------------------------------
+// create<BinaryXMLBox>::please
+//
+template BinaryXMLBox *
+create<BinaryXMLBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// BinaryXMLBox::load
+//
+void
+BinaryXMLBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// BinaryXMLBox::to_json
+//
+void
+BinaryXMLBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["data"] = yae::to_hex(data_.get(), data_.size());
 }
 
 
@@ -2884,6 +2909,8 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("cprt", create<CopyrightBox>::please);
     this->add("tsel", create<TrackSelectionBox>::please);
     this->add("kind", create<KindBox>::please);
+    this->add("xml ", create<XMLBox>::please);
+    this->add("bxml", create<BinaryXMLBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

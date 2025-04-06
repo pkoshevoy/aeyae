@@ -833,6 +833,12 @@ namespace yae
     uint64_t data_;
   };
 
+  //----------------------------------------------------------------
+  // load_as_utf8
+  //
+  void
+  load_as_utf8(std::string & output, IBitstream & bin, std::size_t end_pos);
+
 }
 
 

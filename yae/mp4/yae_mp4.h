@@ -1130,6 +1130,28 @@ namespace yae
       std::string value_;
     };
 
+    //----------------------------------------------------------------
+    // XMLBox
+    //
+    struct YAE_API XMLBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string xml_; // UTF-8, possibly converted from UTF-16
+    };
+
+    //----------------------------------------------------------------
+    // BinaryXMLBox
+    //
+    struct YAE_API BinaryXMLBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      Data data_;
+    };
+
   }
 
 }

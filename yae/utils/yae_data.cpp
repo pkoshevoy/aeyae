@@ -570,4 +570,49 @@ namespace yae
     return true;
   }
 
+
+  //----------------------------------------------------------------
+  // load_as_utf8
+  //
+  void
+  load_as_utf8(std::string & output, IBitstream & bin, std::size_t end_pos)
+  {
+    output.clear();
+
+    if (bin.peek<uint16_t>(16) == 0xFEFF)
+    {
+      // big endian UTF-16:
+      while (bin.position() + 16 <= end_pos)
+      {
+        Data wc = bin.read_bytes(2);
+        yae::utf16be_to_utf8(wc.get(), wc.end(), output);
+
+        // check for NULL terminator:
+        if (wc[0] == 0 && wc[1] == 0)
+        {
+          break;
+        }
+      }
+    }
+    else if (bin.peek<uint16_t>(16) == 0xFFFE)
+    {
+      // little endian UTF-16:
+      while (bin.position() + 16 <= end_pos)
+      {
+        Data wc = bin.read_bytes(2);
+        yae::utf16le_to_utf8(wc.get(), wc.end(), output);
+
+        // check for NULL terminator:
+        if (wc[0] == 0 && wc[1] == 0)
+        {
+          break;
+        }
+      }
+    }
+    else // UTF-8
+    {
+      bin.read_string_until_null(output, end_pos);
+    }
+  }
+
 }
