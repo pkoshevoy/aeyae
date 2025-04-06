@@ -1349,6 +1349,47 @@ namespace yae
       Data data_;
     };
 
+    //----------------------------------------------------------------
+    // ItemReferenceBox
+    //
+    struct YAE_API ItemReferenceBox : public ContainerEx
+    {
+      template <typename TSize>
+      struct SingleItemTypeReferenceBox : public Box
+      {
+        SingleItemTypeReferenceBox():
+          from_item_ID_(0),
+          reference_count_(0)
+        {}
+
+        void load(Mp4Context & mp4, IBitstream & bin)
+        {
+          Box::load(mp4, bin);
+          from_item_ID_ = bin.read<TSize>();
+          reference_count_ = bin.read<uint16_t>();
+          for (uint16_t i = 0; i < reference_count_; ++i)
+          {
+            TSize to_item_ID = bin.read<TSize>();
+            to_item_ID_.push_back(to_item_ID);
+          }
+        }
+
+        void to_json(Json::Value & out) const
+        {
+          Box::to_json(out);
+          out["from_item_ID"] = from_item_ID_;
+          out["reference_count"] = reference_count_;
+          yae::save(out["to_item_ID"], to_item_ID_);
+        }
+
+        TSize from_item_ID_;
+        uint16_t reference_count_;
+        std::vector<TSize> to_item_ID_;
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+    };
+
   }
 
 }

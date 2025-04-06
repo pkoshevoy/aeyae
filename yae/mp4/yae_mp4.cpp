@@ -3152,6 +3152,42 @@ ItemDataBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ItemReferenceBox>::please
+//
+template ItemReferenceBox *
+create<ItemReferenceBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ItemReferenceBox::load
+//
+void
+ItemReferenceBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  children_.clear();
+
+  while (bin.position() < box_end)
+  {
+    TBoxPtr box;
+    if (FullBox::version_ == 0)
+    {
+      box.reset(new SingleItemTypeReferenceBox<uint16_t>());
+    }
+    else
+    {
+      box.reset(new SingleItemTypeReferenceBox<uint32_t>());
+    }
+
+    box->load(mp4, bin);
+    children_.push_back(box);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3263,6 +3299,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("iinf", create<ItemInfoBox>::please);
     this->add("mere", create<MetaboxRelationBox>::please);
     this->add("idat", create<ItemDataBox>::please);
+    this->add("iref", create<ItemReferenceBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
