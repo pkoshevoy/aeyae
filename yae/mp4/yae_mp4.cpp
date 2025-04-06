@@ -3091,6 +3091,37 @@ ItemInfoBox::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// create<MetaboxRelationBox>::please
+//
+template MetaboxRelationBox *
+create<MetaboxRelationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MetaboxRelationBox::load
+//
+void
+MetaboxRelationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  first_metabox_handler_type_.load(bin);
+  second_metabox_handler_type_.load(bin);
+  metabox_relation_ = bin.read<uint8_t>();
+}
+
+//----------------------------------------------------------------
+// MetaboxRelationBox::to_json
+//
+void
+MetaboxRelationBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  yae::save(out["first_metabox_handler_type"], first_metabox_handler_type_);
+  yae::save(out["second_metabox_handler_type"], second_metabox_handler_type_);
+  out["metabox_relation"] = Json::UInt(metabox_relation_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3134,6 +3165,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("sinf", create_container);
     this->add("schi", create_container);
     this->add("udta", create_container);
+    this->add("meco", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -3195,6 +3227,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("ipro", create<ContainerList16>::please);
     this->add("infe", create<ItemInfoEntryBox>::please);
     this->add("iinf", create<ItemInfoBox>::please);
+    this->add("mere", create<MetaboxRelationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

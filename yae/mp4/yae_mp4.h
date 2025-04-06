@@ -1325,6 +1325,19 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
     };
 
+    //----------------------------------------------------------------
+    // MetaboxRelationBox
+    //
+    struct YAE_API MetaboxRelationBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC first_metabox_handler_type_;
+      FourCC second_metabox_handler_type_;
+      uint8_t metabox_relation_;
+    };
+
   }
 
 }
