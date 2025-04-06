@@ -2926,6 +2926,37 @@ ItemLocationBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<PrimaryItemBox>::please
+//
+template PrimaryItemBox *
+create<PrimaryItemBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// PrimaryItemBox::load
+//
+void
+PrimaryItemBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  item_ID_ =
+    (FullBox::version_ == 0) ?
+    bin.read<uint16_t>() :
+    bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// PrimaryItemBox::to_json
+//
+void
+PrimaryItemBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["item_ID"] = item_ID_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3026,6 +3057,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("xml ", create<XMLBox>::please);
     this->add("bxml", create<BinaryXMLBox>::please);
     this->add("iloc", create<ItemLocationBox>::please);
+    this->add("pitm", create<PrimaryItemBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

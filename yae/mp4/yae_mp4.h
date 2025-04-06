@@ -1192,6 +1192,19 @@ namespace yae
       std::vector<Item> items_;
     };
 
+    //----------------------------------------------------------------
+    // PrimaryItemBox
+    //
+    struct YAE_API PrimaryItemBox : public FullBox
+    {
+      PrimaryItemBox(): item_ID_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t item_ID_;
+    };
+
   }
 
 }
