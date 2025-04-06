@@ -3122,6 +3122,36 @@ MetaboxRelationBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ItemDataBox>::please
+//
+template ItemDataBox *
+create<ItemDataBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ItemDataBox::load
+//
+void
+ItemDataBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// ItemDataBox::to_json
+//
+void
+ItemDataBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["data"] = yae::to_hex(data_.get(), data_.size());
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3228,6 +3258,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("infe", create<ItemInfoEntryBox>::please);
     this->add("iinf", create<ItemInfoBox>::please);
     this->add("mere", create<MetaboxRelationBox>::please);
+    this->add("idat", create<ItemDataBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

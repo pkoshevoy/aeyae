@@ -1338,6 +1338,17 @@ namespace yae
       uint8_t metabox_relation_;
     };
 
+    //----------------------------------------------------------------
+    // ItemDataBox
+    //
+    struct YAE_API ItemDataBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      Data data_;
+    };
+
   }
 
 }
