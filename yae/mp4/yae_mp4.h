@@ -1433,6 +1433,40 @@ namespace yae
       uint16_t entry_count_;
     };
 
+    //----------------------------------------------------------------
+    // FilePartitionBox
+    //
+    struct YAE_API FilePartitionBox : public FullBox
+    {
+      FilePartitionBox():
+        item_ID_(0),
+        packet_payload_size_(0),
+        reserved_(0),
+        FEC_encoding_ID_(0),
+        FEC_instance_ID_(0),
+        max_source_block_length_(0),
+        encoding_symbol_length_(0),
+        max_number_of_encoding_symbols_(0),
+        entry_count_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t item_ID_;
+      uint16_t packet_payload_size_;
+      uint8_t reserved_;
+      uint8_t FEC_encoding_ID_;
+      uint16_t FEC_instance_ID_;
+      uint16_t max_source_block_length_;
+      uint16_t encoding_symbol_length_;
+      uint16_t max_number_of_encoding_symbols_;
+      std::string scheme_specific_info_;
+      uint32_t entry_count_;
+      std::vector<uint16_t> block_count_;
+      std::vector<uint32_t> block_size_;
+    };
+
   }
 
 }

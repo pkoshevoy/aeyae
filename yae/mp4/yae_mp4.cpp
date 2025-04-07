@@ -3280,11 +3280,78 @@ FDItemInformationBox::load(Mp4Context & mp4, IBitstream & bin)
   ContainerEx::load_children_until(mp4, bin, box_end);
 }
 
+//----------------------------------------------------------------
+// FDItemInformationBox::to_json
+//
 void
 FDItemInformationBox::to_json(Json::Value & out) const
 {
   ContainerEx::to_json(out);
   out["entry_count"] = entry_count_;
+}
+
+
+//----------------------------------------------------------------
+// create<FilePartitionBox>::please
+//
+template FilePartitionBox *
+create<FilePartitionBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// FilePartitionBox::load
+//
+void
+FilePartitionBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  item_ID_ =
+    (FullBox::version_ == 0) ? bin.read<uint16_t>() : bin.read<uint32_t>();
+
+  packet_payload_size_ = bin.read<uint16_t>();
+  reserved_ = bin.read<uint8_t>();
+  FEC_encoding_ID_ = bin.read<uint8_t>();
+  FEC_instance_ID_ = bin.read<uint16_t>();
+  max_source_block_length_ = bin.read<uint16_t>();
+  encoding_symbol_length_ = bin.read<uint16_t>();
+  max_number_of_encoding_symbols_ = bin.read<uint16_t>();
+  bin.read_string_until_null(scheme_specific_info_, box_end);
+
+  block_count_.clear();
+  block_size_.clear();
+
+  entry_count_ =
+    (FullBox::version_ == 0) ? bin.read<uint16_t>() : bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < entry_count_; ++i)
+  {
+    uint16_t block_count = bin.read<uint16_t>();
+    uint32_t block_size = bin.read<uint32_t>();
+    block_count_.push_back(block_count);
+    block_size_.push_back(block_size);
+  }
+}
+
+//----------------------------------------------------------------
+// FilePartitionBox::to_json
+//
+void
+FilePartitionBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["item_ID"] = item_ID_;
+  out["packet_payload_size"] = packet_payload_size_;
+  out["FEC_encoding_ID"] = Json::UInt(FEC_encoding_ID_);
+  out["FEC_instance_ID"] = FEC_instance_ID_;
+  out["max_source_block_length"] = max_source_block_length_;
+  out["encoding_symbol_length"] = encoding_symbol_length_;
+  out["max_number_of_encoding_symbols"] = max_number_of_encoding_symbols_;
+  out["scheme_specific_info"] = scheme_specific_info_;
+  out["entry_count"] = entry_count_;
+  yae::save(out["block_count"], block_count_);
+  yae::save(out["block_size"], block_size_);
 }
 
 
@@ -3405,6 +3472,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("frma", create<OriginalFormatBox>::please);
     this->add("schm", create<SchemeTypeBox>::please);
     this->add("fiin", create<FDItemInformationBox>::please);
+    this->add("fpar", create<FilePartitionBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
