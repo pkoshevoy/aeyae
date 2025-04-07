@@ -3645,6 +3645,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("fiin", create<FDItemInformationBox>::please);
     this->add("fpar", create<FilePartitionBox>::please);
     this->add("fecr", create<FECReservoirBox>::please);
+    this->add("fire", create<FECReservoirBox>::please);
     this->add("segr", create<FDSessionGroupBox>::please);
     this->add("gitn", create<GroupIdToNameBox>::please);
 
