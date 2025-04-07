@@ -1482,6 +1482,30 @@ namespace yae
       std::vector<uint32_t> symbol_count_;
     };
 
+    //----------------------------------------------------------------
+    // FDSessionGroupBox
+    //
+    struct YAE_API FDSessionGroupBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct YAE_API SessionGroup
+      {
+        void load(IBitstream & bin);
+        void to_json(Json::Value & out) const;
+
+        uint8_t entry_count_;
+        std::vector<uint32_t> group_ID_;
+
+        uint16_t num_channels_in_session_group_;
+        std::vector<uint32_t> hint_track_id_;
+      };
+
+      uint16_t num_session_groups_;
+      std::vector<SessionGroup> session_groups_;
+    };
+
   }
 
 }

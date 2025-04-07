@@ -3405,6 +3405,85 @@ FECReservoirBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FDSessionGroupBox>::please
+//
+template FDSessionGroupBox *
+create<FDSessionGroupBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// FDSessionGroupBox::SessionGroup::load
+//
+void
+FDSessionGroupBox::SessionGroup::load(IBitstream & bin)
+{
+  entry_count_ = bin.read<uint8_t>();
+  for (uint8_t i = 0; i < entry_count_; ++i)
+  {
+    uint32_t group_ID = bin.read<uint32_t>();
+    group_ID_.push_back(group_ID);
+  }
+
+  num_channels_in_session_group_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < num_channels_in_session_group_; ++i)
+  {
+    uint32_t hint_track_id = bin.read<uint32_t>();
+    hint_track_id_.push_back(hint_track_id);
+  }
+}
+
+//----------------------------------------------------------------
+// FDSessionGroupBox::SessionGroup::to_json
+//
+void
+FDSessionGroupBox::SessionGroup::to_json(Json::Value & out) const
+{
+  out["entry_count"] = entry_count_;
+  yae::save(out["group_ID"], group_ID_);
+
+  out["num_channels_in_session_group"] = num_channels_in_session_group_;
+  yae::save(out["hint_track_id"], hint_track_id_);
+}
+
+//----------------------------------------------------------------
+// FDSessionGroupBox::load
+//
+void
+FDSessionGroupBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  session_groups_.clear();
+  num_session_groups_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < num_session_groups_; ++i)
+  {
+    SessionGroup session_group;
+    session_group.load(bin);
+    session_groups_.push_back(session_group);
+  }
+}
+
+//----------------------------------------------------------------
+// FDSessionGroupBox::to_json
+//
+void
+FDSessionGroupBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["num_session_groups"] = num_session_groups_;
+
+  Json::Value & session_groups = out["session_groups"];
+  session_groups = Json::arrayValue;
+
+  for (std::size_t i = 0, n = session_groups_.size(); i < n; ++i)
+  {
+    const SessionGroup & session_group = session_groups_[i];
+    Json::Value v;
+    session_group.to_json(v);
+    session_groups.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3523,6 +3602,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("fiin", create<FDItemInformationBox>::please);
     this->add("fpar", create<FilePartitionBox>::please);
     this->add("fecr", create<FECReservoirBox>::please);
+    this->add("segr", create<FDSessionGroupBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
