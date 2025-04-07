@@ -1467,6 +1467,21 @@ namespace yae
       std::vector<uint32_t> block_size_;
     };
 
+    //----------------------------------------------------------------
+    // FECReservoirBox
+    //
+    struct YAE_API FECReservoirBox : public FullBox
+    {
+      FECReservoirBox(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t entry_count_;
+      std::vector<uint32_t> item_ID_;
+      std::vector<uint32_t> symbol_count_;
+    };
+
   }
 
 }

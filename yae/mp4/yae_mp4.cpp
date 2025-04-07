@@ -3356,6 +3356,55 @@ FilePartitionBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FECReservoirBox>::please
+//
+template FECReservoirBox *
+create<FECReservoirBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// FECReservoirBox::load
+//
+void
+FECReservoirBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  item_ID_.clear();
+
+  symbol_count_.clear();
+
+  entry_count_ =
+    (FullBox::version_ == 0) ?
+    bin.read<uint16_t>() :
+    bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < entry_count_; ++i)
+  {
+    uint32_t item_ID =
+      (FullBox::version_ == 0) ?
+      bin.read<uint16_t>() :
+      bin.read<uint32_t>();
+
+    uint32_t symbol_count = bin.read<uint32_t>();
+    item_ID_.push_back(item_ID);
+    symbol_count_.push_back(symbol_count);
+  }
+}
+
+//----------------------------------------------------------------
+// FECReservoirBox::to_json
+//
+void
+FECReservoirBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = entry_count_;
+  yae::save(out["item_ID"], item_ID_);
+  yae::save(out["symbol_count"], symbol_count_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3473,6 +3522,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("schm", create<SchemeTypeBox>::please);
     this->add("fiin", create<FDItemInformationBox>::please);
     this->add("fpar", create<FilePartitionBox>::please);
+    this->add("fecr", create<FECReservoirBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
