@@ -1420,6 +1420,19 @@ namespace yae
       std::string scheme_uri_;
     };
 
+    //----------------------------------------------------------------
+    // FDItemInformationBox
+    //
+    struct YAE_API FDItemInformationBox : public ContainerEx
+    {
+      FDItemInformationBox(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t entry_count_;
+    };
+
   }
 
 }

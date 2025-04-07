@@ -3259,6 +3259,36 @@ SchemeTypeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FDItemInformationBox>::please
+//
+template FDItemInformationBox *
+create<FDItemInformationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// FDItemInformationBox::load
+//
+void
+FDItemInformationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  children_.clear();
+
+  entry_count_ = bin.read<uint16_t>();
+  ContainerEx::load_children_until(mp4, bin, box_end);
+}
+
+void
+FDItemInformationBox::to_json(Json::Value & out) const
+{
+  ContainerEx::to_json(out);
+  out["entry_count"] = entry_count_;
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3307,6 +3337,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("schi", create_container);
     this->add("udta", create_container);
     this->add("meco", create_container);
+    this->add("paen", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -3373,6 +3404,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("iref", create<ItemReferenceBox>::please);
     this->add("frma", create<OriginalFormatBox>::please);
     this->add("schm", create<SchemeTypeBox>::please);
+    this->add("fiin", create<FDItemInformationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
