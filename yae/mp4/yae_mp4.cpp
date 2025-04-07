@@ -3484,6 +3484,49 @@ FDSessionGroupBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<GroupIdToNameBox>::please
+//
+template GroupIdToNameBox *
+create<GroupIdToNameBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// GroupIdToNameBox::load
+//
+void
+GroupIdToNameBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  group_ID_.clear();
+  group_name_.clear();
+
+  entry_count_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < entry_count_; ++i)
+  {
+    uint32_t group_ID = bin.read<uint32_t>();
+    std::string group_name;
+    bin.read_string_until_null(group_name, box_end);
+    group_ID_.push_back(group_ID);
+    group_name_.push_back(group_name);
+  }
+}
+
+//----------------------------------------------------------------
+// GroupIdToNameBox::to_json
+//
+void
+GroupIdToNameBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = entry_count_;
+  yae::save(out["group_ID"], group_ID_);
+  yae::save(out["group_name"], group_name_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3603,6 +3646,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("fpar", create<FilePartitionBox>::please);
     this->add("fecr", create<FECReservoirBox>::please);
     this->add("segr", create<FDSessionGroupBox>::please);
+    this->add("gitn", create<GroupIdToNameBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

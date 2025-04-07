@@ -1506,6 +1506,21 @@ namespace yae
       std::vector<SessionGroup> session_groups_;
     };
 
+    //----------------------------------------------------------------
+    // GroupIdToNameBox
+    //
+    struct YAE_API GroupIdToNameBox : public FullBox
+    {
+      GroupIdToNameBox(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t entry_count_;
+      std::vector<uint32_t> group_ID_;
+      std::vector<std::string> group_name_;
+    };
+
   }
 
 }
