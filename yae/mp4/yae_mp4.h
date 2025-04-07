@@ -1521,6 +1521,11 @@ namespace yae
       std::vector<std::string> group_name_;
     };
 
+    //----------------------------------------------------------------
+    // FileReservoirBox
+    //
+    struct YAE_API FileReservoirBox : public FECReservoirBox {};
+
   }
 
 }
