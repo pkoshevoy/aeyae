@@ -3215,6 +3215,50 @@ OriginalFormatBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SchemeTypeBox>::please
+//
+template SchemeTypeBox *
+create<SchemeTypeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SchemeTypeBox::load
+//
+void
+SchemeTypeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  scheme_type_.load(bin);
+  scheme_version_ = bin.read<uint32_t>();
+  scheme_uri_.clear();
+
+  if ((FullBox::flags_ & kSchemeUriPreset) != 0)
+  {
+    bin.read_string_until_null(scheme_uri_, box_end);
+  }
+}
+
+//----------------------------------------------------------------
+// SchemeTypeBox::to_json
+//
+void
+SchemeTypeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  yae::save(out["scheme_type"], scheme_type_);
+  out["scheme_version"] = scheme_version_;
+
+  if ((FullBox::flags_ & kSchemeUriPreset) != 0)
+  {
+    out["scheme_uri"] = scheme_uri_;
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3328,6 +3372,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("idat", create<ItemDataBox>::please);
     this->add("iref", create<ItemReferenceBox>::please);
     this->add("frma", create<OriginalFormatBox>::please);
+    this->add("schm", create<SchemeTypeBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

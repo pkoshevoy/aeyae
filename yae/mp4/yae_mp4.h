@@ -1401,6 +1401,25 @@ namespace yae
       FourCC data_format_;
     };
 
+    //----------------------------------------------------------------
+    // SchemeTypeBox
+    //
+    struct YAE_API SchemeTypeBox : public FullBox
+    {
+      SchemeTypeBox(): scheme_version_(0) {}
+
+      enum Flags {
+        kSchemeUriPreset = 0x000001,
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC scheme_type_;
+      uint32_t scheme_version_;
+      std::string scheme_uri_;
+    };
+
   }
 
 }
