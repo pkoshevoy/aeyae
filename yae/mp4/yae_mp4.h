@@ -1546,6 +1546,21 @@ namespace yae
       std::vector<FourCC> attribute_list_;
     };
 
+    //----------------------------------------------------------------
+    // SubTrackSampleGroupBox
+    //
+    struct YAE_API SubTrackSampleGroupBox : public FullBox
+    {
+      SubTrackSampleGroupBox(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC grouping_type_;
+      uint16_t entry_count_;
+      std::vector<uint32_t> group_description_index_;
+    };
+
   }
 
 }

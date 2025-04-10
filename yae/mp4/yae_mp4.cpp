@@ -3571,6 +3571,44 @@ SubTrackInformationBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SubTrackSampleGroupBox>::please
+//
+template SubTrackSampleGroupBox *
+create<SubTrackSampleGroupBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SubTrackSampleGroupBox::load
+//
+void
+SubTrackSampleGroupBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  grouping_type_.load(bin);
+  group_description_index_.clear();
+
+  entry_count_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < entry_count_; ++i)
+  {
+    uint32_t group_description_index = bin.read<uint32_t>();
+    group_description_index_.push_back(group_description_index);
+  }
+}
+
+//----------------------------------------------------------------
+// SubTrackSampleGroupBox::to_json
+//
+void
+SubTrackSampleGroupBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  yae::save(out["grouping_type"], grouping_type_);
+  out["entry_count"] = entry_count_;
+  yae::save(out["group_description_index"], group_description_index_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3621,6 +3659,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("meco", create_container);
     this->add("paen", create_container);
     this->add("strk", create_container);
+    this->add("strd", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -3694,6 +3733,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("gitn", create<GroupIdToNameBox>::please);
     this->add("fire", create<FileReservoirBox>::please);
     this->add("stri", create<SubTrackInformationBox>::please);
+    this->add("stsg", create<SubTrackSampleGroupBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
