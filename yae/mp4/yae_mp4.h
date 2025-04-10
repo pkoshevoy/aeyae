@@ -1526,6 +1526,26 @@ namespace yae
     //
     struct YAE_API FileReservoirBox : public FECReservoirBox {};
 
+    //----------------------------------------------------------------
+    // SubTrackInformationBox
+    //
+    struct YAE_API SubTrackInformationBox : public FullBox
+    {
+      SubTrackInformationBox():
+        switch_group_(0),
+        alternate_group_(0),
+        sub_track_ID_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t switch_group_;
+      uint16_t alternate_group_;
+      uint32_t sub_track_ID_;
+      std::vector<uint32_t> attribute_list_;
+    };
+
   }
 
 }

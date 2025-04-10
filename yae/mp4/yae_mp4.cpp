@@ -3527,6 +3527,49 @@ GroupIdToNameBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SubTrackInformationBox>::please
+//
+template SubTrackInformationBox *
+create<SubTrackInformationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SubTrackInformationBox::load
+//
+void
+SubTrackInformationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  attribute_list_.clear();
+
+  switch_group_ = bin.read<uint16_t>();
+  alternate_group_ = bin.read<uint16_t>();
+  sub_track_ID_ = bin.read<uint32_t>();
+
+  while (bin.position() + 32 <= box_end)
+  {
+    uint32_t attr = bin.read<uint32_t>();
+    attribute_list_.push_back(attr);
+  }
+}
+
+//----------------------------------------------------------------
+// SubTrackInformationBox::to_json
+//
+void
+SubTrackInformationBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["switch_group"] = switch_group_;
+  out["alternate_group"] = alternate_group_;
+  out["sub_track_ID"] = sub_track_ID_;
+  yae::save(out["attribute_list"], attribute_list_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3576,6 +3619,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("udta", create_container);
     this->add("meco", create_container);
     this->add("paen", create_container);
+    this->add("strk", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -3648,6 +3692,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("segr", create<FDSessionGroupBox>::please);
     this->add("gitn", create<GroupIdToNameBox>::please);
     this->add("fire", create<FileReservoirBox>::please);
+    this->add("stri", create<SubTrackInformationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
