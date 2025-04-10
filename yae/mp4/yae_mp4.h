@@ -1543,7 +1543,7 @@ namespace yae
       uint16_t switch_group_;
       uint16_t alternate_group_;
       uint32_t sub_track_ID_;
-      std::vector<uint32_t> attribute_list_;
+      std::vector<FourCC> attribute_list_;
     };
 
   }

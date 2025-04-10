@@ -3550,7 +3550,8 @@ SubTrackInformationBox::load(Mp4Context & mp4, IBitstream & bin)
 
   while (bin.position() + 32 <= box_end)
   {
-    uint32_t attr = bin.read<uint32_t>();
+    FourCC attr;
+    attr.load(bin);
     attribute_list_.push_back(attr);
   }
 }
