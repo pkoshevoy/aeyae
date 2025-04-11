@@ -2253,6 +2253,64 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AC3Descriptor::AC3Descriptor
+    //
+    AC3Descriptor::AC3Descriptor():
+      ac3_type_flag_(0),
+      bsid_flag_(0),
+      mainid_flag_(0),
+      asvc_flag_(0),
+      reserved_(0),
+      ac3_type_(0),
+      bsid_(0),
+      mainid_(0),
+      asvc_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // AC3Descriptor::load_body
+    //
+    void
+    AC3Descriptor::load_body(IBitstream & bin)
+    {
+      std::size_t start_pos = bin.position();
+
+      ac3_type_flag_ = bin.read(1);
+      bsid_flag_ = bin.read(1);
+      mainid_flag_ = bin.read(1);
+      asvc_flag_ = bin.read(1);
+      reserved_ = bin.read(4);
+
+      if (ac3_type_flag_)
+      {
+        ac3_type_ = bin.read(8);
+      }
+
+      if (bsid_flag_)
+      {
+        bsid_ = bin.read(8);
+      }
+
+      if (mainid_flag_)
+      {
+        mainid_ = bin.read(8);
+      }
+
+      if (asvc_flag_)
+      {
+        asvc_ = bin.read(8);
+      }
+
+      std::size_t end_pos = bin.position();
+      std::size_t consumed = end_pos - start_pos;
+      YAE_SILENT_THROW_IF((consumed & 0x7) != 0);
+
+      std::size_t consumed_bytes = consumed >> 3;
+      additional_info_ = bin.read_bytes(descriptor_length_ - consumed_bytes);
+    }
+
+
+    //----------------------------------------------------------------
     // AC3AudioDescriptor::AC3AudioDescriptor
     //
     AC3AudioDescriptor::AC3AudioDescriptor():
@@ -3078,6 +3136,10 @@ namespace yae
       {
         // stuffing descriptor:
         descriptor.reset(new Descriptor());
+      }
+      else if (descriptor_tag == 0x6A)
+      {
+        descriptor.reset(new AC3Descriptor());
       }
       else if (descriptor_tag == 0x81)
       {

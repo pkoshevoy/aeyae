@@ -1272,6 +1272,37 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AC3Descriptor
+    //
+    struct YAE_API AC3Descriptor : Descriptor
+    {
+      AC3Descriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t ac3_type_flag_ : 1;
+      uint8_t bsid_flag_ : 1;
+      uint8_t mainid_flag_ : 1;
+      uint8_t asvc_flag_ : 1;
+      uint8_t reserved_ : 4;
+
+      // if AC3_type_flag_ is set:
+      uint8_t ac3_type_;
+
+      // if bsid_flag_ is set:
+      uint8_t bsid_;
+
+      // if mainid_flag_ is set:
+      uint8_t mainid_;
+
+      // if asvc_flag_ is set:
+      uint8_t asvc_;
+
+      Data additional_info_;
+    };
+
+
+    //----------------------------------------------------------------
     // AC3AudioDescriptor
     //
     struct YAE_API AC3AudioDescriptor : Descriptor
