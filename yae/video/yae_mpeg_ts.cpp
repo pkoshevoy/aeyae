@@ -3132,17 +3132,19 @@ namespace yae
         descriptor.reset(new ExtensionDescriptor());
       }
       // [0x40 - 0xFF] User Private
+      else if (descriptor_tag == 0x6A)
+      {
+        // System B (DVB)
+        descriptor.reset(new AC3Descriptor());
+      }
       else if (descriptor_tag == 0x80)
       {
         // stuffing descriptor:
         descriptor.reset(new Descriptor());
       }
-      else if (descriptor_tag == 0x6A)
-      {
-        descriptor.reset(new AC3Descriptor());
-      }
       else if (descriptor_tag == 0x81)
       {
+        // System A (ATSC)
         descriptor.reset(new AC3AudioDescriptor());
       }
       else if (descriptor_tag == 0x86)
