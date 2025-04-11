@@ -28,6 +28,41 @@ namespace yae
     using yae::load;
     using yae::save;
 
+
+    //----------------------------------------------------------------
+    // to_str
+    //
+    static std::string
+    to_str(const Descriptor & desc)
+    {
+      return yae::strfmt("0x%02X %i %s",
+                         desc.descriptor_tag_,
+                         desc.descriptor_length_,
+                         // typeid(desc).name(),
+                         yae::type_name(desc).c_str());
+    }
+
+    //----------------------------------------------------------------
+    // to_str
+    //
+    static std::string
+    to_str(const std::vector<TDescriptorPtr> & descriptors)
+    {
+      std::ostringstream oss;
+      oss << "[ ";
+      const char * sep = "";
+      for (std::size_t i = 0, n = descriptors.size(); i < n; i++)
+      {
+        const Descriptor * desc = descriptors[i].get();
+        YAE_ASSERT(desc);
+        oss << sep << (desc ? to_str(*desc).c_str() : "NULL");
+        sep = ", ";
+      }
+      oss << " ]";
+      return oss.str();
+    }
+
+
     //----------------------------------------------------------------
     // AdaptationField::Extension::Extension
     //
@@ -1597,6 +1632,316 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AVCVideoDescriptor::AVCVideoDescriptor
+    //
+    AVCVideoDescriptor::AVCVideoDescriptor():
+      profile_idc_(0),
+      constraint_set0_flag_(0),
+      constraint_set1_flag_(0),
+      constraint_set2_flag_(0),
+      constraint_set3_flag_(0),
+      constraint_set4_flag_(0),
+      constraint_set5_flag_(0),
+      AVC_compatible_flag_(0),
+      level_idc_(0),
+      AVC_still_present_(0),
+      AVC_24_hour_picture_flag_(0),
+      frame_packing_SEI_not_present_flag_(0),
+      reserved_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // AVCVideoDescriptor::load_body
+    //
+    void
+    AVCVideoDescriptor::load_body(IBitstream & bin)
+    {
+      profile_idc_ = bin.read(8);
+
+      constraint_set0_flag_ = bin.read(1);
+      constraint_set1_flag_ = bin.read(1);
+      constraint_set2_flag_ = bin.read(1);
+      constraint_set3_flag_ = bin.read(1);
+      constraint_set4_flag_ = bin.read(1);
+      constraint_set5_flag_ = bin.read(1);
+      AVC_compatible_flag_ = bin.read(2);
+
+      level_idc_ = bin.read(8);
+
+      AVC_still_present_ = bin.read(1);
+      AVC_24_hour_picture_flag_ = bin.read(1);
+      frame_packing_SEI_not_present_flag_ = bin.read(1);
+      reserved_ = bin.read(5);
+    }
+
+
+    //----------------------------------------------------------------
+    // AVCTimingAndHRDDescriptor::AVCTimingAndHRDDescriptor
+    //
+    AVCTimingAndHRDDescriptor::AVCTimingAndHRDDescriptor():
+      hrd_management_valid_flag_(0),
+      reserved1_(0),
+      picture_and_timing_info_present_(0),
+      opt_90KHz_flag_(0),
+      opt_reserved_(0),
+      N_(0),
+      K_(0),
+      num_units_in_tick_(0),
+      fixed_frame_rate_flag_(0),
+      temporal_poc_flag_(0),
+      picture_to_display_conversion_flag_(0),
+      reserved2_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // AVCTimingAndHRDDescriptor::load_body
+    //
+    void
+    AVCTimingAndHRDDescriptor::load_body(IBitstream & bin)
+    {
+      hrd_management_valid_flag_ = bin.read(1);
+      reserved1_ = bin.read(6);
+      picture_and_timing_info_present_ = bin.read(1);
+
+      if (picture_and_timing_info_present_)
+      {
+        opt_90KHz_flag_ = bin.read(1);
+        opt_reserved_ = bin.read(7);
+
+        if (!opt_90KHz_flag_)
+        {
+          N_ = bin.read(32);
+          K_ = bin.read(32);
+        }
+
+        num_units_in_tick_ = bin.read(32);
+      }
+
+      fixed_frame_rate_flag_ = bin.read(1);
+      temporal_poc_flag_ = bin.read(1);
+      picture_to_display_conversion_flag_ = bin.read(1);
+      reserved2_ = bin.read(5);
+    }
+
+
+    //----------------------------------------------------------------
+    // Mpeg2AacAudioDescriptor::Mpeg2AacAudioDescriptor
+    //
+    Mpeg2AacAudioDescriptor::Mpeg2AacAudioDescriptor():
+      mpeg2_aac_profile_(0),
+      mpeg2_aac_channel_configuration_(0),
+      mpeg2_aac_additional_information_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // Mpeg2AacAudioDescriptor::load_body
+    //
+    void
+    Mpeg2AacAudioDescriptor::load_body(IBitstream & bin)
+    {
+      mpeg2_aac_profile_ = bin.read(8);
+      mpeg2_aac_channel_configuration_ = bin.read(8);
+      mpeg2_aac_additional_information_ = bin.read(8);
+    }
+
+
+    //----------------------------------------------------------------
+    // HEVCVideoDescriptor::HEVCVideoDescriptor
+    //
+    HEVCVideoDescriptor::HEVCVideoDescriptor():
+      profile_space_(0),
+      tier_flag_(0),
+      profile_idc_(0),
+      profile_compatibility_indication_(0),
+      progressive_source_flag_(0),
+      interlaced_source_flag_(0),
+      non_packed_constraint_flag_(0),
+      frame_only_constraint_flag_(0),
+      reserved_zero_44bits_(0),
+      level_idc_(0),
+      temporal_layer_subset_flag_(0),
+      HEVC_still_present_flag_(0),
+      HEVC_24hr_picture_present_flag_(0),
+      sub_pic_hrd_params_not_present_flag_(0),
+      reserved_(0),
+      HDR_WCG_idc_(0),
+      temporal_id_min_reserved_(0),
+      temporal_id_min_(0),
+      temporal_id_max_reserved_(0),
+      temporal_id_max_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // HEVCVideoDescriptor::load_body
+    //
+    void
+    HEVCVideoDescriptor::load_body(IBitstream & bin)
+    {
+      profile_space_ = bin.read(2);
+      tier_flag_ = bin.read(1);
+      profile_idc_ = bin.read(5);
+      profile_compatibility_indication_ = bin.read(32);
+      progressive_source_flag_ = bin.read(1);
+      interlaced_source_flag_ = bin.read(1);
+      non_packed_constraint_flag_ = bin.read(1);
+      frame_only_constraint_flag_ = bin.read(1);
+      reserved_zero_44bits_ = bin.read(44);
+      level_idc_ = bin.read(8);
+      temporal_layer_subset_flag_ = bin.read(1);
+      HEVC_still_present_flag_ = bin.read(1);
+      HEVC_24hr_picture_present_flag_ = bin.read(1);
+      sub_pic_hrd_params_not_present_flag_ = bin.read(1);
+      reserved_ = bin.read(2);
+      HDR_WCG_idc_ = bin.read(2);
+
+      if (temporal_layer_subset_flag_)
+      {
+        temporal_id_min_reserved_ = bin.read(5);
+        temporal_id_min_ = bin.read(3);
+        temporal_id_max_reserved_ = bin.read(5);
+        temporal_id_max_ = bin.read(3);
+      }
+    }
+
+
+    //----------------------------------------------------------------
+    // RawDesc::load
+    //
+    void
+    RawDesc::load(IBitstream & bin, std::size_t num_bytes)
+    {
+      data_ = bin.read_bytes(num_bytes);
+    }
+
+    //----------------------------------------------------------------
+    // RawDesc::dump
+    //
+    void
+    RawDesc::dump(std::ostream & oss) const
+    {
+      oss << yae::to_hex(data_.get(), data_.size());
+    }
+
+
+    //----------------------------------------------------------------
+    // HEVCTimingAndHRDDesc::HEVCTimingAndHRDDesc
+    //
+    HEVCTimingAndHRDDesc::HEVCTimingAndHRDDesc():
+      hrd_management_valid_flag_(0),
+      target_schedule_idx_not_present_flag_(0),
+      target_schedule_idx_(0),
+      picture_and_timing_info_present_flag_(0),
+      opt_90KHz_flag_(0),
+      opt_reserved_(0),
+      N_(0),
+      K_(0),
+      num_units_in_tick_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // HEVCTimingAndHRDDesc::load
+    //
+    void
+    HEVCTimingAndHRDDesc::load(IBitstream & bin, std::size_t num_bytes)
+    {
+      (void)num_bytes;
+
+      hrd_management_valid_flag_ = bin.read(1);
+      target_schedule_idx_not_present_flag_ = bin.read(1);
+      target_schedule_idx_ = bin.read(5);
+      picture_and_timing_info_present_flag_ = bin.read(1);
+
+      if (picture_and_timing_info_present_flag_)
+      {
+        opt_90KHz_flag_ = bin.read(1);
+        opt_reserved_ = bin.read(7);
+
+        if (!opt_90KHz_flag_)
+        {
+          N_ = bin.read(32);
+          K_ = bin.read(32);
+        }
+
+        num_units_in_tick_ = bin.read(32);
+      }
+    }
+
+    //----------------------------------------------------------------
+    // HEVCTimingAndHRDDesc::dump
+    //
+    void
+    HEVCTimingAndHRDDesc::dump(std::ostream & oss) const
+    {
+      oss << "hrd_management_valid: "
+          << uint32_t(hrd_management_valid_flag_)
+          << ", target_schedule_idx_not_present: "
+          << uint32_t(target_schedule_idx_not_present_flag_);
+
+      if (!target_schedule_idx_not_present_flag_)
+      {
+        oss << ", target_schedule_idx: "
+            << uint32_t(target_schedule_idx_);
+      }
+
+      oss << ", picture_and_timing_info_present: "
+          << uint32_t(picture_and_timing_info_present_flag_);
+
+      if (picture_and_timing_info_present_flag_)
+      {
+        oss << ", 90KHz: " << opt_90KHz_flag_;
+
+        if (!opt_90KHz_flag_)
+        {
+          oss << ", N: " << N_
+              << ", K: " << K_;
+        }
+
+        oss << ", num_units_in_tick: " << num_units_in_tick_;
+      }
+    }
+
+
+    //----------------------------------------------------------------
+    // ExtensionDescriptor::ExtensionDescriptor
+    //
+    ExtensionDescriptor::ExtensionDescriptor():
+      extension_descriptor_tag_(0)
+    {}
+
+    //----------------------------------------------------------------
+    // ExtensionDescriptor::load_body
+    //
+    void
+    ExtensionDescriptor::load_body(IBitstream & bin)
+    {
+      extension_descriptor_tag_ = bin.read(8);
+
+      if (extension_descriptor_tag_ == k_HEVC_timing_and_HRD_descriptor)
+      {
+        ext_.reset(new HEVCTimingAndHRDDesc());
+      }
+      else
+      {
+        ext_.reset(new RawDesc());
+      }
+
+      ext_->load(bin, descriptor_length_);
+    }
+
+    //----------------------------------------------------------------
+    // ExtensionDescriptor::dump
+    //
+    void
+    ExtensionDescriptor::dump(std::ostream & oss) const
+    {
+      Descriptor::dump(oss);
+      oss << ", ext tag: " << yae::to_hex(extension_descriptor_tag_)
+          << ", ext: ";
+      ext_->dump(oss);
+    }
+
+
+    //----------------------------------------------------------------
     // CopyrightDescriptor::CopyrightDescriptor
     //
     CopyrightDescriptor::CopyrightDescriptor():
@@ -2648,7 +2993,7 @@ namespace yae
       {
         descriptor.reset(new IBPDescriptor());
       }
-      // 0x13 - 0x1A defined in ISO/IEC 13818-6
+      // [0x13 - 0x1A] defined in ISO/IEC 13818-6
       else if (descriptor_tag == 0x1B)
       {
         descriptor.reset(new MPEG4VideoDescriptor());
@@ -2677,18 +3022,58 @@ namespace yae
       {
         descriptor.reset(new MuxcodeDescriptor());
       }
+      // 0x22 FmxBufferSize_descriptor
       else if (descriptor_tag == 0x23)
       {
         descriptor.reset(new MultiplexBufferDescriptor());
+      }
+      // 0x24 content_labeling_descriptor
+      // 0x25 metadata_pointer_descriptor
+      // 0x26 metadata_descriptor
+      // 0x27 metadata_STD_descriptor
+      else if (descriptor_tag == 0x28)
+      {
+        descriptor.reset(new AVCVideoDescriptor());
+      }
+      // 0x29 IPMP_descriptor (ISO/IEC 13818-11, MPEG-2 IPMP)
+      else if (descriptor_tag == 0x2A)
+      {
+        descriptor.reset(new AVCTimingAndHRDDescriptor());
+      }
+      else if (descriptor_tag == 0x2B)
+      {
+        descriptor.reset(new Mpeg2AacAudioDescriptor());
       }
       else if (descriptor_tag == 0x2C)
       {
         descriptor.reset(new FlexMuxTimingDescriptor());
       }
+      // 0x2D MPEG-4_text_descriptor
+      // 0x2E MPEG-4_audio_extension_descriptor
+      // 0x2F Auxiliary_video_stream_descriptor
+      // 0x30 SVC extension descriptor
+      // 0x31 MVC extension descriptor
+      // 0x32 J2K video descriptor
+      // 0x33 MVC operation point descriptor
       else if (descriptor_tag == 0x34)
       {
         descriptor.reset(new MPEG2StereoscopicVideoFormatDescriptor());
       }
+      // 0x35 Stereoscopic_program_info_descriptor
+      // 0x36 Stereoscopic_video_info_descriptor
+      // 0x37 Transport_profile_descriptor
+      else if (descriptor_tag == 0x38)
+      {
+        descriptor.reset(new HEVCVideoDescriptor());
+      }
+      // 0x39 VVC video descriptor
+      // 0x3A EVC video descriptor
+      // [0x3B - 0x3E] Reserved
+      else if (descriptor_tag == 0x3F)
+      {
+        descriptor.reset(new ExtensionDescriptor());
+      }
+      // [0x40 - 0xFF] User Private
       else if (descriptor_tag == 0x80)
       {
         // stuffing descriptor:
@@ -3008,6 +3393,16 @@ namespace yae
         es_.push_back(ElementaryStream());
         ElementaryStream & es = es_.back();
         es.load(bin);
+
+        yae_dlog("FIXME: pkoshevoy: PMT ver %i, prog %i, "
+                 "es %i (0x%x) type: %i info %i desc: %s",
+                 int(version_number_),
+                 int(program_number_),
+                 int(es.elementary_pid_),
+                 int(es.elementary_pid_),
+                 int(es.stream_type_),
+                 int(es.es_info_length_),
+                 to_str(es.descriptor_).c_str());
       }
       YAE_THROW_IF(bin.position() != body_end);
     }
@@ -4798,39 +5193,6 @@ namespace yae
         channel.dump(oss);
         oss << '\n';
       }
-    }
-
-    //----------------------------------------------------------------
-    // to_str
-    //
-    static std::string
-    to_str(const Descriptor & desc)
-    {
-      return yae::strfmt("0x%02X %i %s",
-                         desc.descriptor_tag_,
-                         desc.descriptor_length_,
-                         // typeid(desc).name(),
-                         yae::type_name(desc).c_str());
-    }
-
-    //----------------------------------------------------------------
-    // to_str
-    //
-    static std::string
-    to_str(const std::vector<TDescriptorPtr> & descriptors)
-    {
-      std::ostringstream oss;
-      oss << "[ ";
-      const char * sep = "";
-      for (std::size_t i = 0, n = descriptors.size(); i < n; i++)
-      {
-        const Descriptor * desc = descriptors[i].get();
-        YAE_ASSERT(desc);
-        oss << sep << (desc ? to_str(*desc).c_str() : "NULL");
-        sep = ", ";
-      }
-      oss << " ]";
-      return oss.str();
     }
 
     //----------------------------------------------------------------
