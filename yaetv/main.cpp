@@ -553,6 +553,10 @@ namespace yae
     yae::Application::setOrganizationName(yae::kOrganization);
     yae::Application::setOrganizationDomain("sourceforge.net");
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 7, 0))
+  yae::Application::setDesktopFileName("yaetv");
+#endif
+
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
     // setup opengl:
     {

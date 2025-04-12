@@ -213,6 +213,10 @@ mainMayThrowException(int argc, char ** argv)
   yae::Application::setOrganizationName("PavelKoshevoy");
   yae::Application::setOrganizationDomain("sourceforge.net");
 
+#if (QT_VERSION >= QT_VERSION_CHECK(5, 7, 0))
+  yae::Application::setDesktopFileName("apprenticevideo-classic");
+#endif
+
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
   // setup opengl:
   {
