@@ -1775,6 +1775,67 @@ namespace yae
       uint16_t program_info_length_ : 12;
       std::vector<TDescriptorPtr> descriptor_;
 
+      enum StreamType
+      {
+        kStreamTypeReserved = 0x00,
+        kStreamType_11172_2_video = 0x01, // MPEG-1
+        kStreamType_13818_2_video = 0x02, // MPEG-2
+        kStreamType_11172_3_audio = 0x03,
+        kStreamType_13818_3_audio = 0x04,
+        kStreamType_13818_1_private_sections = 0x05,
+        kStreamType_13818_1_private_pes = 0x06,
+        kStreamType_13552_MHEG = 0x07,
+        kStreamType_13818_1_AnnexA_DSM_CC = 0x08,
+        kStreamType_H222_1 = 0x09,
+        kStreamType_13818_6_type_A = 0x0A,
+        kStreamType_13818_6_type_B = 0x0B,
+        kStreamType_13818_6_type_C = 0x0C,
+        kStreamType_13818_6_type_D = 0x0D,
+        kStreamType_13818_1_auxiliary = 0x0E,
+        kStreamType_13818_7_audio_with_ADTS_syntax = 0x0F,
+        kStreamType_14496_2_visual = 0x10,
+        kStreamType_14496_3_audio_with_LATM_syntax = 0x11,
+        kStreamType_14496_1_in_pes_packets = 0x12,
+        kStreamType_14496_1_in_14496_sections = 0x13,
+        kStreamType_13818_6_sync_download_protocol = 0x14,
+        kStreamType_metadata_in_pes_packets = 0x15,
+        kStreamType_metadata_in_metadata_sections = 0x16,
+        kStreamType_metadata_in_13818_6_data_carousel = 0x17,
+        kStreamType_metadata_in_13818_6_object_carousel = 0x18,
+        kStreamType_metadata_in_13818_6_sync_download_protocol = 0x19,
+        kStreamType_13818_11_MPEG2_IPMP = 0x1A,
+        kStreamType_14496_10_video_H264 = 0x1B,
+        kStreamType_14496_3_audio = 0x1C,
+        kStreamType_14496_17_text = 0x1D,
+        kStreamType_23002_3_auxiliary_video_stream = 0x1E,
+        kStreamType_14496_10_svc_video_sub_bitstream = 0x1F,
+        kStreamType_14496_10_mvc_video_sub_bitstream = 0x20,
+        kStreamType_15444_1_video_stream = 0x21,
+        kStreamType_13818_2_H262_stereoscopic_3D = 0x22,
+        kStreamType_14496_10_H264_stereoscopic_3D = 0x23,
+        kStreamType_23008_2_video_or_HEVC_temporal_sub_bitstream = 0x24,
+        kStreamType_23008_2_HEVC_temporal_video_subset = 0x25,
+        kStreamType_14496_10_MVCD_video_sub_bitstream = 0x26,
+        kStreamType_timeline_and_external_media_information = 0x27,
+        kStreamType_23008_2_AnnexG_HEVC_enhancement_sub_partition = 0x28,
+        kStreamType_23008_2_AnnexG_HEVC_temporal_enhancement_sub_part = 0x29,
+        kStreamType_23008_2_AnnexH_HEVC_enhancement_sub_partition = 0x2A,
+        kStreamType_23008_2_AnnexH_HEVC_temporal_enhancement_sub_part = 0x2B,
+        kStreamType_green_access_units_in_MPEG2_sections = 0x2C,
+        kStreamType_23008_3_audio_MHAS_main_stream = 0x2D,
+        kStreamType_23008_3_audio_MHAS_auxiliary_stream = 0x2E,
+        kStreamType_quality_access_units_in_sections = 0x2F,
+        kStreamType_media_orchestration_access_units_in_sections = 0x30,
+        kStreamType_23008_2_video_substream = 0x31,
+        kStreamType_21122_2_JPEG_XS_video = 0x32,
+        kStreamType_23090_3_H266_AnnexA_VVC_video = 0x33,
+        kStreamType_23090_3_H266_AnnexA_VVC_temporal_video_subset = 0x34,
+        kStreamType_23094_1_EVC_video = 0x35,
+        // [0x36 -- 0x7E] ISO/IEC 138181-1 reserved
+        kStreamType_IPMP_stream = 0x7F,
+        // [0x80 -- 0xFF] user private
+      };
+
       struct YAE_API ElementaryStream
       {
         ElementaryStream();
