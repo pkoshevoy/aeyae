@@ -832,6 +832,214 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // AVCVideoDescriptor
+    //
+    struct YAE_API AVCVideoDescriptor : Descriptor
+    {
+      AVCVideoDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t profile_idc_;
+
+      uint8_t constraint_set0_flag_ : 1;
+      uint8_t constraint_set1_flag_ : 1;
+      uint8_t constraint_set2_flag_ : 1;
+      uint8_t constraint_set3_flag_ : 1;
+      uint8_t constraint_set4_flag_ : 1;
+      uint8_t constraint_set5_flag_ : 1;
+      uint8_t AVC_compatible_flag_ : 2;
+
+      uint8_t level_idc_;
+
+      uint8_t AVC_still_present_ : 1;
+      uint8_t AVC_24_hour_picture_flag_ : 1;
+      uint8_t frame_packing_SEI_not_present_flag_ : 1;
+      uint8_t reserved_ : 5;
+    };
+
+
+    //----------------------------------------------------------------
+    // AVCTimingAndHRDDescriptor
+    //
+    struct YAE_API AVCTimingAndHRDDescriptor : Descriptor
+    {
+      AVCTimingAndHRDDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t hrd_management_valid_flag_ : 1;
+      uint8_t reserved1_ : 6;
+      uint8_t picture_and_timing_info_present_ : 1;
+
+      // if picture_and_timing_info_present_ is set:
+      uint8_t opt_90KHz_flag_ : 1;
+      uint8_t opt_reserved_ : 7;
+
+      // if opt_90KHz_flag_ is set:
+      uint32_t N_;
+      uint32_t K_;
+
+      uint32_t num_units_in_tick_;
+
+      uint8_t fixed_frame_rate_flag_ : 1;
+      uint8_t temporal_poc_flag_ : 1;
+      uint8_t picture_to_display_conversion_flag_ : 1;
+      uint8_t reserved2_ : 5;
+    };
+
+    //----------------------------------------------------------------
+    // Mpeg2AacAudioDescriptor
+    //
+    struct YAE_API Mpeg2AacAudioDescriptor : Descriptor
+    {
+      Mpeg2AacAudioDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t mpeg2_aac_profile_;
+      uint8_t mpeg2_aac_channel_configuration_;
+      uint8_t mpeg2_aac_additional_information_;
+    };
+
+    //----------------------------------------------------------------
+    // HEVCVideoDescriptor
+    //
+    // see https://www.itu.int/rec/T-REC-H.222.0
+    // (ITU-T H.222.0 Amendment 3, aka ISO/IEC 13818-1:2013/Amd.3:2014 (E))
+    //
+    struct YAE_API HEVCVideoDescriptor : Descriptor
+    {
+      HEVCVideoDescriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t profile_space_ : 2;
+      uint8_t tier_flag_ : 1;
+      uint8_t profile_idc_ : 5;
+
+      uint32_t profile_compatibility_indication_;
+
+      uint64_t progressive_source_flag_ : 1;
+      uint64_t interlaced_source_flag_ : 1;
+      uint64_t non_packed_constraint_flag_ : 1;
+      uint64_t frame_only_constraint_flag_ : 1;
+      uint64_t reserved_zero_44bits_ : 44;
+      uint64_t level_idc_ : 8;
+      uint64_t temporal_layer_subset_flag_ : 1;
+      uint64_t HEVC_still_present_flag_ : 1;
+      uint64_t HEVC_24hr_picture_present_flag_ : 1;
+      uint64_t sub_pic_hrd_params_not_present_flag_ : 1;
+      uint64_t reserved_ : 2;
+      uint64_t HDR_WCG_idc_ : 2;
+
+      // if temporal_layer_subset_flag_ is set:
+      uint8_t temporal_id_min_reserved_ : 5;
+      uint8_t temporal_id_min_ : 3;
+
+      uint8_t temporal_id_max_reserved_ : 5;
+      uint8_t temporal_id_max_ : 3;
+    };
+
+
+    //----------------------------------------------------------------
+    // ExtDesc
+    //
+    struct YAE_API ExtDesc
+    {
+      virtual ~ExtDesc() {}
+      virtual void load(IBitstream & bin, std::size_t num_bytes) = 0;
+      virtual void dump(std::ostream & oss) const = 0;
+    };
+
+    //----------------------------------------------------------------
+    // TExtDescPtr
+    //
+    typedef yae::shared_ptr<ExtDesc> TExtDescPtr;
+
+    //----------------------------------------------------------------
+    // RawDesc
+    //
+    struct YAE_API RawDesc : ExtDesc
+    {
+      void load(IBitstream & bin, std::size_t num_bytes);
+      void dump(std::ostream & oss) const;
+
+      Data data_;
+    };
+
+    //----------------------------------------------------------------
+    // HEVCTimingAndHRDDesc
+    //
+    struct YAE_API HEVCTimingAndHRDDesc : ExtDesc
+    {
+      HEVCTimingAndHRDDesc();
+
+      void load(IBitstream & bin, std::size_t num_bytes);
+      void dump(std::ostream & oss) const;
+
+      uint8_t hrd_management_valid_flag_ : 1;
+      uint8_t target_schedule_idx_not_present_flag_ : 1;
+      uint8_t target_schedule_idx_ : 5;
+      uint8_t picture_and_timing_info_present_flag_ : 1;
+
+      // if picture_and_timing_info_present_ is set:
+      uint8_t opt_90KHz_flag_ : 1;
+      uint8_t opt_reserved_ : 7;
+
+      // if opt_90KHz_flag_ is set:
+      uint32_t N_;
+      uint32_t K_;
+
+      uint32_t num_units_in_tick_;
+    };
+
+    //----------------------------------------------------------------
+    // ExtensionDescriptor
+    //
+    // see https://www.itu.int/rec/T-REC-H.222.0
+    // (ITU-T H.222.0 Amendment 3, aka ISO/IEC 13818-1:2013/Amd.3:2014 (E))
+    //
+    struct YAE_API ExtensionDescriptor : Descriptor
+    {
+      ExtensionDescriptor();
+
+      void load_body(IBitstream & bin);
+      void dump(std::ostream & oss) const;
+
+      enum ExtensionDescriptorTag
+      {
+        k_Reserved = 0x00,
+        k_Forbidden = 0x01,
+        k_ODUpdate_descriptor = 0x02, // ObjectDescriptorUpdate
+        k_HEVC_timing_and_HRD_descriptor = 0x03,
+        k_af_extensions_descriptor = 0x04,
+        k_HEVC_operation_point_descriptor = 0x05,
+        k_HEVC_hierarchy_extension_descriptor = 0x06,
+        k_Green_extension_descriptor = 0x07,
+        k_MPEG_H_3dAudio_descriptor = 0x08,
+        k_MPEG_H_3dAudio_config_descriptor = 0x09,
+        k_MPEG_H_3dAudio_scene_descriptor = 0x0A,
+        k_MPEG_H_3dAudio_text_label_descriptor = 0x0B,
+        k_MPEG_H_3dAudio_multi_stream_descriptor = 0x0C,
+        k_MPEG_H_3dAudio_drc_loudness_descriptor = 0x0D,
+        k_MPEG_H_3dAudio_command_descriptor = 0x0E,
+        k_Quality_extension_descriptor = 0x0F,
+        k_Virtual_segmentation_descriptor = 0x10,
+        k_timed_metadata_extension_descriptor = 0x11,
+        k_HEVC_tile_substream_descriptor = 0x12,
+        k_HEVC_subregion_descriptor = 0x13,
+        k_JXS_video_descriptor = 0x14,
+        k_VVC_timing_and_HRD_descriptor = 0x15,
+        k_EVC_timing_and_HRD_descriptor = 0x16,
+      };
+
+      uint8_t extension_descriptor_tag_;
+      TExtDescPtr ext_;
+    };
+
+
+    //----------------------------------------------------------------
     // CopyrightDescriptor
     //
     struct YAE_API CopyrightDescriptor : Descriptor
@@ -1060,6 +1268,37 @@ namespace yae
 
       uint8_t stereoscopic_video_arrangement_type_present_ : 1;
       uint8_t stereoscopic_video_arrangement_type_ : 7;
+    };
+
+
+    //----------------------------------------------------------------
+    // AC3Descriptor
+    //
+    struct YAE_API AC3Descriptor : Descriptor
+    {
+      AC3Descriptor();
+
+      void load_body(IBitstream & bin);
+
+      uint8_t ac3_type_flag_ : 1;
+      uint8_t bsid_flag_ : 1;
+      uint8_t mainid_flag_ : 1;
+      uint8_t asvc_flag_ : 1;
+      uint8_t reserved_ : 4;
+
+      // if AC3_type_flag_ is set:
+      uint8_t ac3_type_;
+
+      // if bsid_flag_ is set:
+      uint8_t bsid_;
+
+      // if mainid_flag_ is set:
+      uint8_t mainid_;
+
+      // if asvc_flag_ is set:
+      uint8_t asvc_;
+
+      Data additional_info_;
     };
 
 
@@ -1535,6 +1774,67 @@ namespace yae
       uint16_t reserved2_ : 4;
       uint16_t program_info_length_ : 12;
       std::vector<TDescriptorPtr> descriptor_;
+
+      enum StreamType
+      {
+        kStreamTypeReserved = 0x00,
+        kStreamType_11172_2_video = 0x01, // MPEG-1
+        kStreamType_13818_2_video = 0x02, // MPEG-2
+        kStreamType_11172_3_audio = 0x03,
+        kStreamType_13818_3_audio = 0x04,
+        kStreamType_13818_1_private_sections = 0x05,
+        kStreamType_13818_1_private_pes = 0x06,
+        kStreamType_13552_MHEG = 0x07,
+        kStreamType_13818_1_AnnexA_DSM_CC = 0x08,
+        kStreamType_H222_1 = 0x09,
+        kStreamType_13818_6_type_A = 0x0A,
+        kStreamType_13818_6_type_B = 0x0B,
+        kStreamType_13818_6_type_C = 0x0C,
+        kStreamType_13818_6_type_D = 0x0D,
+        kStreamType_13818_1_auxiliary = 0x0E,
+        kStreamType_13818_7_audio_with_ADTS_syntax = 0x0F,
+        kStreamType_14496_2_visual = 0x10,
+        kStreamType_14496_3_audio_with_LATM_syntax = 0x11,
+        kStreamType_14496_1_in_pes_packets = 0x12,
+        kStreamType_14496_1_in_14496_sections = 0x13,
+        kStreamType_13818_6_sync_download_protocol = 0x14,
+        kStreamType_metadata_in_pes_packets = 0x15,
+        kStreamType_metadata_in_metadata_sections = 0x16,
+        kStreamType_metadata_in_13818_6_data_carousel = 0x17,
+        kStreamType_metadata_in_13818_6_object_carousel = 0x18,
+        kStreamType_metadata_in_13818_6_sync_download_protocol = 0x19,
+        kStreamType_13818_11_MPEG2_IPMP = 0x1A,
+        kStreamType_14496_10_video_H264 = 0x1B,
+        kStreamType_14496_3_audio = 0x1C,
+        kStreamType_14496_17_text = 0x1D,
+        kStreamType_23002_3_auxiliary_video_stream = 0x1E,
+        kStreamType_14496_10_svc_video_sub_bitstream = 0x1F,
+        kStreamType_14496_10_mvc_video_sub_bitstream = 0x20,
+        kStreamType_15444_1_video_stream = 0x21,
+        kStreamType_13818_2_H262_stereoscopic_3D = 0x22,
+        kStreamType_14496_10_H264_stereoscopic_3D = 0x23,
+        kStreamType_23008_2_video_or_HEVC_temporal_sub_bitstream = 0x24,
+        kStreamType_23008_2_HEVC_temporal_video_subset = 0x25,
+        kStreamType_14496_10_MVCD_video_sub_bitstream = 0x26,
+        kStreamType_timeline_and_external_media_information = 0x27,
+        kStreamType_23008_2_AnnexG_HEVC_enhancement_sub_partition = 0x28,
+        kStreamType_23008_2_AnnexG_HEVC_temporal_enhancement_sub_part = 0x29,
+        kStreamType_23008_2_AnnexH_HEVC_enhancement_sub_partition = 0x2A,
+        kStreamType_23008_2_AnnexH_HEVC_temporal_enhancement_sub_part = 0x2B,
+        kStreamType_green_access_units_in_MPEG2_sections = 0x2C,
+        kStreamType_23008_3_audio_MHAS_main_stream = 0x2D,
+        kStreamType_23008_3_audio_MHAS_auxiliary_stream = 0x2E,
+        kStreamType_quality_access_units_in_sections = 0x2F,
+        kStreamType_media_orchestration_access_units_in_sections = 0x30,
+        kStreamType_23008_2_video_substream = 0x31,
+        kStreamType_21122_2_JPEG_XS_video = 0x32,
+        kStreamType_23090_3_H266_AnnexA_VVC_video = 0x33,
+        kStreamType_23090_3_H266_AnnexA_VVC_temporal_video_subset = 0x34,
+        kStreamType_23094_1_EVC_video = 0x35,
+        // [0x36 -- 0x7E] ISO/IEC 138181-1 reserved
+        kStreamType_IPMP_stream = 0x7F,
+        // [0x80 -- 0xFF] user private
+      };
 
       struct YAE_API ElementaryStream
       {

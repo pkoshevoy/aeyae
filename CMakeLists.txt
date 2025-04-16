@@ -354,7 +354,7 @@ set_property(TARGET ${PROGNAME} PROPERTY
   )
 
 message("Boost_VERSION: ${Boost_VERSION}")
-if (Boost_VERSION VERSION_LESS "107000")
+if (Boost_VERSION VERSION_LESS "1.70.0")
   message("setting AEYAE_CXX_STANDARD 98")
   set(AEYAE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
 else()

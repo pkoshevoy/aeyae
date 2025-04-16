@@ -131,8 +131,12 @@ namespace yae
 
     if (QDBusConnection::sessionBus().isConnected())
     {
-      QDBusInterface screensaver("org.freedesktop.ScreenSaver",
-                                 "/ScreenSaver");
+      QDBusInterface screensaver(// service:
+                                 "org.freedesktop.ScreenSaver",
+                                 // path:
+                                 "/ScreenSaver",
+                                 // interface:
+                                 "org.freedesktop.ScreenSaver");
       if (screensaver.isValid())
       {
         // apparently SimulateUserActivity is not enough to keep Ubuntu
