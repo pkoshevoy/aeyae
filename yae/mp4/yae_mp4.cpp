@@ -550,15 +550,12 @@ create<TrackReferenceTypeBox>::please(const char * fourcc);
 void
 TrackReferenceTypeBox::load(Mp4Context & mp4, IBitstream & bin)
 {
-    const std::size_t box_pos = bin.position();
-    Box::load(mp4, bin);
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
 
-    const std::size_t box_end = box_pos + Box::size_ * 8;
-    while (bin.position() < box_end)
-    {
-      uint32_t track_ID = bin.read<uint32_t>();
-      track_IDs_.push_back(track_ID);
-    }
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  track_IDs_.clear();
+  yae::LoadVec<uint32_t>(track_IDs_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -856,12 +853,7 @@ DegradationPriorityBox::load(Mp4Context & mp4, IBitstream & bin)
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
   priority_.clear();
-
-  while (bin.position() + 16 <= box_end)
-  {
-    uint16_t priority = bin.read<uint16_t>();
-    priority_.push_back(priority);
-  }
+  yae::LoadVec<uint16_t>(priority_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -892,8 +884,8 @@ TimeToSampleBox::load(Mp4Context & mp4, IBitstream & bin)
   sample_count_.clear();
   sample_delta_.clear();
 
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint32_t sample_count = bin.read<uint32_t>();
     uint32_t sample_delta = bin.read<uint32_t>();
@@ -909,7 +901,7 @@ void
 TimeToSampleBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(sample_count_.size());
+  out["entry_count"] = entry_count_;
   yae::save(out["sample_count"], sample_count_);
   yae::save(out["sample_delta"], sample_delta_);
 }
@@ -932,8 +924,8 @@ CompositionOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
   sample_count_.clear();
   sample_offset_.clear();
 
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint32_t sample_count = bin.read<uint32_t>();
     int32_t sample_offset = bin.read<int32_t>();
@@ -949,7 +941,7 @@ void
 CompositionOffsetBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(sample_count_.size());
+  out["entry_count"] = entry_count_;
   yae::save(out["sample_count"], sample_count_);
   yae::save(out["sample_offset"], sample_offset_);
 }
@@ -1035,16 +1027,13 @@ create<SyncSampleBox>::please(const char * fourcc);
 void
 SyncSampleBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
+  entry_count_ = bin.read<uint32_t>();
   sample_number_.clear();
-
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
-  {
-    uint32_t sample_number = bin.read<uint32_t>();
-    sample_number_.push_back(sample_number);
-  }
+  yae::LoadVec<uint32_t>(entry_count_, sample_number_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -1054,7 +1043,7 @@ void
 SyncSampleBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(sample_number_.size());
+  out["entry_count"] = entry_count_;
   yae::save(out["sample_number"], sample_number_);
 }
 
@@ -1076,8 +1065,8 @@ ShadowSyncSampleBox::load(Mp4Context & mp4, IBitstream & bin)
   shadowed_sample_number_.clear();
   sync_sample_number_.clear();
 
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint32_t shadowed_sample_number = bin.read<uint32_t>();
     uint32_t sync_sample_number = bin.read<uint32_t>();
@@ -1093,7 +1082,7 @@ void
 ShadowSyncSampleBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(shadowed_sample_number_.size());
+  out["entry_count"] = entry_count_;
   yae::save(out["shadowed_sample_number"], shadowed_sample_number_);
   yae::save(out["sync_sample_number"], sync_sample_number_);
 }
@@ -1179,8 +1168,8 @@ EditListBox::load(Mp4Context & mp4, IBitstream & bin)
   media_rate_integer_.clear();
   media_rate_fraction_.clear();
 
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint64_t segment_duration =
       (FullBox::version_ == 1) ? bin.read<uint64_t>() : bin.read<uint32_t>();
@@ -1205,7 +1194,7 @@ void
 EditListBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(this->get_entry_count());
+  out["entry_count"] = entry_count_;
   yae::save(out["segment_duration"], segment_duration_);
   yae::save(out["media_time"], media_time_);
   yae::save(out["media_rate_integer"], media_rate_integer_);
@@ -1300,7 +1289,9 @@ SampleSizeBox::SampleSizeBox():
 void
 SampleSizeBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
   sample_size_ = bin.read<uint32_t>();
   sample_count_ = bin.read<uint32_t>();
@@ -1308,11 +1299,7 @@ SampleSizeBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if (sample_size_ == 0)
   {
-    for (uint32_t i = 0; i < sample_count_; ++i)
-    {
-      uint32_t entry_size = bin.read<uint32_t>();
-      entry_size_.push_back(entry_size);
-    }
+    yae::LoadVec<uint32_t>(sample_count_, entry_size_, bin, box_end);
   }
 }
 
@@ -1354,18 +1341,15 @@ CompactSampleSizeBox::CompactSampleSizeBox():
 void
 CompactSampleSizeBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
   reserved_ = bin.read<uint32_t>(24);
   field_size_ = bin.read<uint8_t>();
   sample_count_ = bin.read<uint32_t>();
   entry_size_.clear();
-
-  for (uint32_t i = 0; i < sample_count_; ++i)
-  {
-    uint16_t entry_size = bin.read<uint16_t>(field_size_);
-    entry_size_.push_back(entry_size);
-  }
+  yae::LoadVec<uint16_t>(sample_count_, entry_size_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -1399,8 +1383,8 @@ SampleToChunkBox::load(Mp4Context & mp4, IBitstream & bin)
   samples_per_chunk_.clear();
   sample_description_index_.clear();
 
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint32_t first_chunk = bin.read<uint32_t>();
     uint32_t samples_per_chunk = bin.read<uint32_t>();
@@ -1419,7 +1403,7 @@ void
 SampleToChunkBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(this->get_entry_count());
+  out["entry_count"] = entry_count_;
   yae::save(out["first_chunk"], first_chunk_);
   yae::save(out["samples_per_chunk"], samples_per_chunk_);
   yae::save(out["sample_description_index"], sample_description_index_);
@@ -1438,15 +1422,13 @@ create<ChunkOffsetBox>::please(const char * fourcc);
 void
 ChunkOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
+  entry_count_ = bin.read<uint32_t>();
   chunk_offset_.clear();
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
-  {
-    uint32_t chunk_offset = bin.read<uint32_t>();
-    chunk_offset_.push_back(chunk_offset);
-  }
+  yae::LoadVec<uint32_t>(entry_count_, chunk_offset_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -1456,7 +1438,7 @@ void
 ChunkOffsetBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(this->get_entry_count());
+  out["entry_count"] = entry_count_;
   yae::save(out["chunk_offset"], chunk_offset_);
 }
 
@@ -1473,15 +1455,13 @@ create<ChunkLargeOffsetBox>::please(const char * fourcc);
 void
 ChunkLargeOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
+  entry_count_ = bin.read<uint32_t>();
   chunk_offset_.clear();
-  uint32_t entry_count = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < entry_count; ++i)
-  {
-    uint32_t chunk_offset = bin.read<uint64_t>();
-    chunk_offset_.push_back(chunk_offset);
-  }
+  yae::LoadVec<uint64_t>(entry_count_, chunk_offset_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -1491,7 +1471,7 @@ void
 ChunkLargeOffsetBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["entry_count"] = Json::UInt(this->get_entry_count());
+  out["entry_count"] = entry_count_;
   yae::save(out["chunk_offset"], chunk_offset_);
 }
 
@@ -1563,10 +1543,10 @@ SubSampleInformationBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   FullBox::load(mp4, bin);
 
-  uint32_t entry_count = bin.read<uint32_t>();
+  entry_count_ = bin.read<uint32_t>();
   entries_.clear();
 
-  for (uint32_t i = 0; i < entry_count; ++i)
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     Entry entry;
     entry.sample_delta_ = bin.read<uint32_t>();
@@ -1615,7 +1595,7 @@ SubSampleInformationBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
 
-  out["entry_count"] = Json::UInt(entries_.size());
+  out["entry_count"] = entry_count_;
   Json::Value & entries = out["entries"];
   entries = Json::arrayValue;
 
@@ -1636,21 +1616,14 @@ template SampleAuxiliaryInformationSizesBox *
 create<SampleAuxiliaryInformationSizesBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox
-//
-SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox():
-  aux_info_type_(0),
-  aux_info_type_parameters_(0),
-  default_sample_info_size_(0)
-{}
-
-//----------------------------------------------------------------
 // SampleAuxiliaryInformationSizesBox::load
 //
 void
 SampleAuxiliaryInformationSizesBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
   if ((FullBox::flags_ & 1) == 1)
   {
@@ -1661,14 +1634,11 @@ SampleAuxiliaryInformationSizesBox::load(Mp4Context & mp4, IBitstream & bin)
   default_sample_info_size_ = bin.read<uint8_t>();
 
   sample_info_sizes_.clear();
-  uint32_t sample_count = bin.read<uint32_t>();
+  sample_count_ = bin.read<uint32_t>();
+
   if (default_sample_info_size_ == 0)
   {
-    for (uint32_t i = 0; i < sample_count; ++i)
-    {
-      uint32_t sample_info_size = bin.read<uint32_t>();
-      sample_info_sizes_.push_back(sample_info_size);
-    }
+    yae::LoadVec<uint32_t>(sample_count_, sample_info_sizes_, bin, box_end);
   }
 }
 
@@ -1687,7 +1657,7 @@ SampleAuxiliaryInformationSizesBox::to_json(Json::Value & out) const
   }
 
   out["default_sample_info_size"] = default_sample_info_size_;
-  out["sample_count"] = Json::UInt(sample_info_sizes_.size());
+  out["sample_count"] = sample_count_;
 
   if (default_sample_info_size_ == 0)
   {
@@ -1703,20 +1673,14 @@ template SampleAuxiliaryInformationOffsetsBox *
 create<SampleAuxiliaryInformationOffsetsBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// SampleAuxiliaryInformationOffsetsBox::SampleAuxiliaryInformationOffsetsBox
-//
-SampleAuxiliaryInformationOffsetsBox::SampleAuxiliaryInformationOffsetsBox():
-  aux_info_type_(0),
-  aux_info_type_parameters_(0)
-{}
-
-//----------------------------------------------------------------
 // SampleAuxiliaryInformationOffsetsBox::load
 //
 void
 SampleAuxiliaryInformationOffsetsBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
   if ((FullBox::flags_ & 1) == 1)
   {
@@ -1725,23 +1689,15 @@ SampleAuxiliaryInformationOffsetsBox::load(Mp4Context & mp4, IBitstream & bin)
   }
 
   offsets_.clear();
-  uint32_t sample_count = bin.read<uint32_t>();
+  entry_count_ = bin.read<uint32_t>();
 
   if (FullBox::version_ == 0)
   {
-    for (uint32_t i = 0; i < sample_count; ++i)
-    {
-      uint32_t offset = bin.read<uint32_t>();
-      offsets_.push_back(offset);
-    }
+    yae::LoadVec<uint32_t>(entry_count_, offsets_, bin, box_end);
   }
   else
   {
-    for (uint32_t i = 0; i < sample_count; ++i)
-    {
-      uint64_t offset = bin.read<uint64_t>();
-      offsets_.push_back(offset);
-    }
+    yae::LoadVec<uint64_t>(entry_count_, offsets_, bin, box_end);
   }
 }
 
@@ -2125,8 +2081,8 @@ TrackFragmentRandomAccessBox::load(Mp4Context & mp4, IBitstream & bin)
   trun_number_.clear();
   sample_number_.clear();
 
-  uint32_t num_entries = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < num_entries; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint64_t time =
       (FullBox::version_ == 1) ?
@@ -2161,6 +2117,7 @@ TrackFragmentRandomAccessBox::to_json(Json::Value & out) const
   out["length_size_of_traf_num"] = length_size_of_traf_num_;
   out["length_size_of_trun_num"] = length_size_of_trun_num_;
   out["length_size_of_sample_num"] = length_size_of_sample_num_;
+  out["entry_count"] = entry_count_;
 
   yae::save(out["time"], time_);
   yae::save(out["moof_offset"], moof_offset_);
@@ -2304,8 +2261,8 @@ LevelAssignmentBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
   levels_.clear();
 
-  uint32_t level_count = bin.read<uint8_t>();
-  for (uint32_t i = 0; i < level_count; ++i)
+  level_count_ = bin.read<uint8_t>();
+  for (uint32_t i = 0; i < level_count_; ++i)
   {
     Level level;
     level.load(bin);
@@ -2321,13 +2278,12 @@ LevelAssignmentBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
 
-  uint32_t num_levels = levels_.size();
-  out["level_count"] = num_levels;
+  out["level_count"] = level_count_;
 
   Json::Value & levels = out["levels"];
   levels = Json::arrayValue;
 
-  for (std::size_t i = 0; i < num_levels; ++i)
+  for (std::size_t i = 0, n = levels_.size(); i < n; ++i)
   {
     const Level & level = levels_[i];
     Json::Value v;
@@ -2396,8 +2352,8 @@ AlternativeStartupSequencePropertiesBox::load(Mp4Context & mp4,
   }
   else if (FullBox::version_ == 1)
   {
-    uint32_t num_entries = bin.read<uint32_t>();
-    for (uint32_t i = 0; i < num_entries; ++i)
+    num_entries_ = bin.read<uint32_t>();
+    for (uint32_t i = 0; i < num_entries_; ++i)
     {
       uint32_t grouping_type_parameter = bin.read<uint32_t>();
       int32_t min_initial_alt_startup_offset = bin.read<int32_t>();
@@ -2424,6 +2380,8 @@ AlternativeStartupSequencePropertiesBox::to_json(Json::Value & out) const
   }
   else if (FullBox::version_ == 1)
   {
+    out["num_entries"] = num_entries_;
+
     yae::save(out["grouping_type_parameters"],
               grouping_type_parameters_);
 
@@ -2457,8 +2415,8 @@ SampleToGroupBox::load(Mp4Context & mp4, IBitstream & bin)
   sample_count_.clear();
   group_description_index_.clear();
 
-  uint32_t num_entries = bin.read<uint32_t>();
-  for (uint32_t i = 0; i < num_entries; ++i)
+  entry_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < entry_count_; ++i)
   {
     uint32_t sample_count = bin.read<uint32_t>();
     uint32_t group_description_index = bin.read<uint32_t>();
@@ -2483,6 +2441,7 @@ SampleToGroupBox::to_json(Json::Value & out) const
     out["grouping_type_parameter"] = grouping_type_parameter_;
   }
 
+  out["entry_count"] = entry_count_;
   yae::save(out["sample_count"], sample_count_);
   yae::save(out["group_description_index"], group_description_index_);
 }
@@ -2938,11 +2897,7 @@ ItemInfoEntryBox::FDItemInfo::load(IBitstream & bin, std::size_t end_pos)
 
   group_ids_.clear();
   entry_count_ = bin.read<uint8_t>();
-  for (uint8_t i = 0; i < entry_count_; ++i)
-  {
-    uint32_t group_id = bin.read<uint32_t>();
-    group_ids_.push_back(group_id);
-  }
+  yae::LoadVec<uint32_t>(entry_count_, group_ids_, bin, end_pos);
 }
 
 //----------------------------------------------------------------
@@ -3081,12 +3036,12 @@ ItemInfoBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
   const std::size_t box_end = box_pos + Box::size_ * 8;
 
-  uint32_t num_children =
+  entry_count_ =
     (FullBox::version_ == 0) ?
     bin.read<uint16_t>() :
     bin.read<uint32_t>();
 
-  ContainerEx::load_children(mp4, bin, box_end, num_children);
+  ContainerEx::load_children(mp4, bin, box_end, entry_count_);
 }
 
 
@@ -3414,21 +3369,16 @@ create<FDSessionGroupBox>::please(const char * fourcc);
 // FDSessionGroupBox::SessionGroup::load
 //
 void
-FDSessionGroupBox::SessionGroup::load(IBitstream & bin)
+FDSessionGroupBox::SessionGroup::load(IBitstream & bin, std::size_t end_pos)
 {
   entry_count_ = bin.read<uint8_t>();
-  for (uint8_t i = 0; i < entry_count_; ++i)
-  {
-    uint32_t group_ID = bin.read<uint32_t>();
-    group_ID_.push_back(group_ID);
-  }
+  yae::LoadVec<uint32_t>(entry_count_, group_ID_, bin, end_pos);
 
   num_channels_in_session_group_ = bin.read<uint16_t>();
-  for (uint16_t i = 0; i < num_channels_in_session_group_; ++i)
-  {
-    uint32_t hint_track_id = bin.read<uint32_t>();
-    hint_track_id_.push_back(hint_track_id);
-  }
+  yae::LoadVec<uint32_t>(num_channels_in_session_group_,
+                         hint_track_id_,
+                         bin,
+                         end_pos);
 }
 
 //----------------------------------------------------------------
@@ -3450,13 +3400,16 @@ FDSessionGroupBox::SessionGroup::to_json(Json::Value & out) const
 void
 FDSessionGroupBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   Box::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
   session_groups_.clear();
   num_session_groups_ = bin.read<uint16_t>();
   for (uint16_t i = 0; i < num_session_groups_; ++i)
   {
     SessionGroup session_group;
-    session_group.load(bin);
+    session_group.load(bin, box_end);
     session_groups_.push_back(session_group);
   }
 }
@@ -3582,17 +3535,15 @@ create<SubTrackSampleGroupBox>::please(const char * fourcc);
 void
 SubTrackSampleGroupBox::load(Mp4Context & mp4, IBitstream & bin)
 {
+  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
 
   grouping_type_.load(bin);
   group_description_index_.clear();
 
   entry_count_ = bin.read<uint16_t>();
-  for (uint16_t i = 0; i < entry_count_; ++i)
-  {
-    uint32_t group_description_index = bin.read<uint32_t>();
-    group_description_index_.push_back(group_description_index);
-  }
+  yae::LoadVec<uint32_t>(entry_count_, group_description_index_, bin, box_end);
 }
 
 //----------------------------------------------------------------
@@ -3605,6 +3556,52 @@ SubTrackSampleGroupBox::to_json(Json::Value & out) const
   yae::save(out["grouping_type"], grouping_type_);
   out["entry_count"] = entry_count_;
   yae::save(out["group_description_index"], group_description_index_);
+}
+
+
+//----------------------------------------------------------------
+// create<StereoVideoBox>::please
+//
+template StereoVideoBox *
+create<StereoVideoBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// StereoVideoBox::load
+//
+void
+StereoVideoBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  reserved_ = bin.read<uint32_t>(30);
+  single_view_allowed_ = bin.read<uint32_t>(2);
+  stereo_scheme_ = bin.read<uint32_t>();
+  length_ = bin.read<uint32_t>();
+  stereo_indication_type_.clear();
+  yae::LoadVec<uint8_t>(length_, stereo_indication_type_, bin, box_end);
+
+  ContainerEx::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// StereoVideoBox::to_json
+//
+void
+StereoVideoBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["single_view_allowed"] = single_view_allowed_;
+  out["stereo_scheme"] = stereo_scheme_;
+  out["length"] = length_;
+  yae::save(out["stereo_indication_type"], stereo_indication_type_);
+
+  if (!ContainerEx::children_.empty())
+  {
+    Json::Value & children = out["children"];
+    ContainerEx::children_to_json(children);
+  }
 }
 
 
@@ -3660,6 +3657,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("paen", create_container);
     this->add("strk", create_container);
     this->add("strd", create_container);
+    this->add("rinf", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -3734,6 +3732,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("fire", create<FileReservoirBox>::please);
     this->add("stri", create<SubTrackInformationBox>::please);
     this->add("stsg", create<SubTrackSampleGroupBox>::please);
+    this->add("stvi", create<StereoVideoBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

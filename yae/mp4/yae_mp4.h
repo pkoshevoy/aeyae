@@ -120,6 +120,46 @@ namespace yae
   };
 
 
+  //----------------------------------------------------------------
+  // LoadVec
+  //
+  template <typename TData>
+  struct LoadVec
+  {
+    template <typename TContainer>
+    LoadVec(TContainer & data,
+            IBitstream & bin,
+            std::size_t end_pos)
+    {
+      std::size_t item_size = sizeof(TData) * 8;
+      while (bin.position() + item_size <= end_pos)
+      {
+        TData v = bin.read<TData>();
+        data.push_back(v);
+      }
+    }
+
+    template <typename TContainer>
+    LoadVec(std::size_t num_items,
+            TContainer & data,
+            IBitstream & bin,
+            std::size_t end_pos)
+    {
+      std::size_t item_size = sizeof(TData) * 8;
+      for (std::size_t i = 0; i < num_items; ++i)
+      {
+        if (end_pos < bin.position() + item_size < end_pos)
+        {
+          break;
+        }
+
+        TData v = bin.read<TData>();
+        data.push_back(v);
+      }
+    }
+  };
+
+
   namespace iso_14496_12
   {
     //----------------------------------------------------------------
@@ -276,25 +316,26 @@ namespace yae
       typedef BoxWithChildren<FullBox> TBase;
       typedef ContainerList<TBoxCount> TSelf;
 
+      ContainerList(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE
       {
         const std::size_t box_pos = bin.position();
         TBase::load(mp4, bin);
 
         const std::size_t end_pos = box_pos + Box::size_ * 8;
-        const TBoxCount num_children = bin.read<TBoxCount>();
-        TBase::load_children(mp4, bin, end_pos, num_children);
+        entry_count_ = bin.read<TBoxCount>();
+        TBase::load_children(mp4, bin, end_pos, entry_count_);
       }
 
       void to_json(Json::Value & out) const YAE_OVERRIDE
       {
         TBase::to_json(out);
 
-        const uint64_t entry_count = children_.size();
-        out["entry_count"] = Json::UInt64(entry_count);
+        out["entry_count"] = Json::UInt64(entry_count_);
 
         Json::Value & children = out["children"];
-        for (uint64_t i = 0; i < entry_count; ++i)
+        for (uint64_t i = 0, n = children_.size(); i < n; ++i)
         {
           const Box & box = *(children_[i]);
           Json::Value child;
@@ -302,6 +343,8 @@ namespace yae
           children.append(child);
         }
       }
+
+      TBoxCount entry_count_;
     };
 
     //----------------------------------------------------------------
@@ -556,12 +599,12 @@ namespace yae
     //
     struct YAE_API TimeToSampleBox : public FullBox
     {
+      TimeToSampleBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return sample_count_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint32_t> sample_count_;
       std::vector<uint32_t> sample_delta_;
     };
@@ -571,12 +614,12 @@ namespace yae
     //
     struct YAE_API CompositionOffsetBox : public FullBox
     {
+      CompositionOffsetBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return sample_count_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint32_t> sample_count_;
       std::vector<int32_t> sample_offset_;
     };
@@ -603,13 +646,13 @@ namespace yae
     //
     struct YAE_API SyncSampleBox : public FullBox
     {
+      SyncSampleBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return sample_number_.size(); }
-
       // keyframes:
+      uint32_t entry_count_;
       std::vector<uint32_t> sample_number_;
     };
 
@@ -618,12 +661,12 @@ namespace yae
     //
     struct YAE_API ShadowSyncSampleBox : public FullBox
     {
+      ShadowSyncSampleBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return shadowed_sample_number_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint32_t> shadowed_sample_number_;
       std::vector<uint32_t> sync_sample_number_;
     };
@@ -635,9 +678,6 @@ namespace yae
     {
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
-
-      inline std::size_t get_sample_count() const
-      { return samples_.size(); }
 
       struct YAE_API Sample
       {
@@ -655,12 +695,12 @@ namespace yae
     //
     struct YAE_API EditListBox : public FullBox
     {
+      EditListBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return segment_duration_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint64_t> segment_duration_;
       std::vector<int64_t> media_time_;
       std::vector<int16_t> media_rate_integer_;
@@ -728,12 +768,12 @@ namespace yae
     //
     struct YAE_API SampleToChunkBox : public FullBox
     {
+      SampleToChunkBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return first_chunk_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint32_t> first_chunk_;
       std::vector<uint32_t> samples_per_chunk_;
       std::vector<uint32_t> sample_description_index_;
@@ -744,12 +784,12 @@ namespace yae
     //
     struct YAE_API ChunkOffsetBox : public FullBox
     {
+      ChunkOffsetBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return chunk_offset_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint32_t> chunk_offset_;
     };
 
@@ -758,12 +798,12 @@ namespace yae
     //
     struct YAE_API ChunkLargeOffsetBox : public FullBox
     {
+      ChunkLargeOffsetBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      inline std::size_t get_entry_count() const
-      { return chunk_offset_.size(); }
-
+      uint32_t entry_count_;
       std::vector<uint64_t> chunk_offset_;
     };
 
@@ -794,6 +834,8 @@ namespace yae
     //
     struct YAE_API SubSampleInformationBox : public FullBox
     {
+      SubSampleInformationBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
@@ -806,6 +848,7 @@ namespace yae
         std::vector<uint32_t> codec_specific_parameters_;
       };
 
+      uint32_t entry_count_;
       std::vector<Entry> entries_;
     };
 
@@ -814,7 +857,12 @@ namespace yae
     //
     struct YAE_API SampleAuxiliaryInformationSizesBox : public FullBox
     {
-      SampleAuxiliaryInformationSizesBox();
+      SampleAuxiliaryInformationSizesBox():
+        aux_info_type_(0),
+        aux_info_type_parameters_(0),
+        default_sample_info_size_(0),
+        sample_count_(0)
+      {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
@@ -824,6 +872,7 @@ namespace yae
       uint32_t aux_info_type_parameters_;
 
       uint8_t default_sample_info_size_;
+      uint32_t sample_count_;
 
       // if default_sample_info_size == 0:
       std::vector<uint8_t> sample_info_sizes_;
@@ -834,7 +883,11 @@ namespace yae
     //
     struct YAE_API SampleAuxiliaryInformationOffsetsBox : public FullBox
     {
-      SampleAuxiliaryInformationOffsetsBox();
+      SampleAuxiliaryInformationOffsetsBox():
+        aux_info_type_(0),
+        aux_info_type_parameters_(0),
+        entry_count_(0)
+      {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
@@ -843,6 +896,7 @@ namespace yae
       uint32_t aux_info_type_;
       uint32_t aux_info_type_parameters_;
 
+      uint32_t entry_count_;
       std::vector<uint64_t> offsets_;
     };
 
@@ -991,7 +1045,8 @@ namespace yae
         reserved_(0),
         length_size_of_traf_num_(0),
         length_size_of_trun_num_(0),
-        length_size_of_sample_num_(0)
+        length_size_of_sample_num_(0),
+        entry_count_(0)
       {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
@@ -1002,6 +1057,7 @@ namespace yae
       uint32_t length_size_of_traf_num_ : 2;
       uint32_t length_size_of_trun_num_ : 2;
       uint32_t length_size_of_sample_num_ : 2;
+      uint32_t entry_count_;
 
       std::vector<uint64_t> time_;
       std::vector<uint64_t> moof_offset_;
@@ -1043,6 +1099,8 @@ namespace yae
     //
     struct YAE_API LevelAssignmentBox : public FullBox
     {
+      LevelAssignmentBox(): level_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
@@ -1067,6 +1125,7 @@ namespace yae
         uint32_t sub_track_id_;
       };
 
+      uint8_t level_count_;
       std::vector<Level> levels_;
     };
 
@@ -1089,7 +1148,8 @@ namespace yae
     struct YAE_API AlternativeStartupSequencePropertiesBox : public FullBox
     {
       AlternativeStartupSequencePropertiesBox():
-        min_initial_alt_startup_offset_(0)
+        min_initial_alt_startup_offset_(0),
+       num_entries_(0)
       {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
@@ -1099,6 +1159,7 @@ namespace yae
       int32_t min_initial_alt_startup_offset_;
 
       // version 1:
+      uint32_t num_entries_;
       std::vector<uint32_t> grouping_type_parameters_;
       std::vector<int32_t> min_initial_alt_startup_offsets_;
     };
@@ -1108,7 +1169,10 @@ namespace yae
     //
     struct YAE_API SampleToGroupBox : public FullBox
     {
-      SampleToGroupBox(): grouping_type_parameter_(0) {}
+      SampleToGroupBox():
+        grouping_type_parameter_(0),
+        entry_count_(0)
+      {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
@@ -1119,6 +1183,7 @@ namespace yae
       FourCC grouping_type_;
       uint32_t grouping_type_parameter_; // version 1
 
+      uint32_t entry_count_;
       std::vector<uint32_t> sample_count_;
       std::vector<uint32_t> group_description_index_;
     };
@@ -1322,7 +1387,11 @@ namespace yae
     //
     struct YAE_API ItemInfoBox : public ContainerEx
     {
+      ItemInfoBox(): entry_count_(0) {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+
+      uint32_t entry_count_;
     };
 
     //----------------------------------------------------------------
@@ -1492,7 +1561,7 @@ namespace yae
 
       struct YAE_API SessionGroup
       {
-        void load(IBitstream & bin);
+        void load(IBitstream & bin, std::size_t end_pos);
         void to_json(Json::Value & out) const;
 
         uint8_t entry_count_;
@@ -1559,6 +1628,28 @@ namespace yae
       FourCC grouping_type_;
       uint16_t entry_count_;
       std::vector<uint32_t> group_description_index_;
+    };
+
+    //----------------------------------------------------------------
+    // StereoVideoBox
+    //
+    struct YAE_API StereoVideoBox : public ContainerEx
+    {
+      StereoVideoBox():
+        reserved_(0),
+        single_view_allowed_(0),
+        stereo_scheme_(0),
+        length_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t reserved_ : 30;
+      uint32_t single_view_allowed_ : 2;
+      uint32_t stereo_scheme_;
+      uint32_t length_;
+      std::vector<uint8_t> stereo_indication_type_;
     };
 
   }
