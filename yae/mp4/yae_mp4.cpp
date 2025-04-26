@@ -3606,6 +3606,118 @@ StereoVideoBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<SegmentIndexBox>::please
+//
+template SegmentIndexBox *
+create<SegmentIndexBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SegmentIndexBox::Reference::Reference
+//
+SegmentIndexBox::Reference::Reference()
+{
+  memset(this, 0, sizeof(*this));
+}
+
+//----------------------------------------------------------------
+// SegmentIndexBox::Reference::load
+//
+void
+SegmentIndexBox::Reference::load(IBitstream & bin)
+{
+  reference_type_ = bin.read<uint32_t>(1);
+  referenced_size_ = bin.read<uint32_t>(31);
+  subsegment_duration_ = bin.read<uint32_t>();
+
+  starts_with_SAP_ = bin.read<uint32_t>(1);
+  SAP_type_ = bin.read<uint32_t>(3);
+  SAP_delta_time_ = bin.read<uint32_t>(28);
+}
+
+//----------------------------------------------------------------
+// SegmentIndexBox::Reference::to_json
+//
+void
+SegmentIndexBox::Reference::to_json(Json::Value & out) const
+{
+  out["reference_type"] = Json::UInt(reference_type_);
+  out["referenced_size"] = Json::UInt(referenced_size_);
+  out["subsegment_duration"] = Json::UInt(subsegment_duration_);
+
+  out["starts_with_SAP"] = Json::UInt(starts_with_SAP_);
+  out["SAP_type"] = Json::UInt(SAP_type_);
+  out["SAP_delta_time"] = Json::UInt(SAP_delta_time_);
+}
+
+//----------------------------------------------------------------
+// SegmentIndexBox::load
+//
+void
+SegmentIndexBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  references_.clear();
+  reference_ID_ = bin.read<uint32_t>();
+  timescale_ = bin.read<uint32_t>();
+
+  if (FullBox::version_ == 0)
+  {
+    earliest_presentation_time_ = bin.read<uint32_t>();
+    first_offset_ = bin.read<uint32_t>();
+  }
+  else
+  {
+    earliest_presentation_time_ = bin.read<uint64_t>();
+    first_offset_ = bin.read<uint64_t>();
+  }
+
+  reserved_ = bin.read<uint16_t>();
+  reference_count_ = bin.read<uint16_t>();
+
+  for (uint16_t i = 0; i < reference_count_; ++i)
+  {
+    if (box_end < bin.position() + 96)
+    {
+      break;
+    }
+
+    Reference reference;
+    reference.load(bin);
+    references_.push_back(reference);
+  }
+}
+
+//----------------------------------------------------------------
+// SegmentIndexBox::to_json
+//
+void
+SegmentIndexBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["reference_ID"] = reference_ID_;
+  out["timescale"] = timescale_;
+  out["earliest_presentation_time"] = Json::UInt64(earliest_presentation_time_);
+  out["first_offset"] = Json::UInt64(first_offset_);
+  out["reference_count"] = reference_count_;
+
+  Json::Value & references = out["references"];
+  references = Json::arrayValue;
+
+  for (std::size_t i = 0, n = references_.size(); i < n; ++i)
+  {
+    const Reference & reference = references_[i];
+    Json::Value v;
+    reference.to_json(v);
+    references.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3665,6 +3777,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("dref", create<ContainerList32>::please);
 
     this->add("ftyp", create<FileTypeBox>::please);
+    this->add("styp", create<FileTypeBox>::please);
     this->add("free", create<FreeSpaceBox>::please);
     this->add("skip", create<FreeSpaceBox>::please);
     this->add("mdat", create<MediaDataBox>::please);
@@ -3733,6 +3846,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stri", create<SubTrackInformationBox>::please);
     this->add("stsg", create<SubTrackSampleGroupBox>::please);
     this->add("stvi", create<StereoVideoBox>::please);
+    this->add("sidx", create<SegmentIndexBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

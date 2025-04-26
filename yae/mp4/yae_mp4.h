@@ -1652,7 +1652,47 @@ namespace yae
       std::vector<uint8_t> stereo_indication_type_;
     };
 
-  }
+    //----------------------------------------------------------------
+    // SegmentIndexBox
+    //
+    struct YAE_API SegmentIndexBox : public FullBox
+    {
+      SegmentIndexBox():
+        reference_ID_(0),
+        timescale_(0),
+        earliest_presentation_time_(0),
+        first_offset_(0),
+        reference_count_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct YAE_API Reference
+      {
+        Reference();
+
+        void load(IBitstream & bin);
+        void to_json(Json::Value & out) const;
+
+        uint32_t reference_type_ : 1;
+        uint32_t referenced_size_ : 31;
+        uint32_t subsegment_duration_;
+        uint32_t starts_with_SAP_ : 1;
+        uint32_t SAP_type_ : 3;
+        uint32_t SAP_delta_time_ : 28;
+      };
+
+      uint32_t reference_ID_;
+      uint32_t timescale_;
+      uint64_t earliest_presentation_time_;
+      uint64_t first_offset_;
+      uint16_t reserved_;
+      uint16_t reference_count_;
+      std::vector<Reference> references_;
+    };
+
+   }
 
 }
 

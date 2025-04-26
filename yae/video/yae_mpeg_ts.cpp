@@ -3458,9 +3458,10 @@ namespace yae
         ElementaryStream & es = es_.back();
         es.load(bin);
 #if 0 // ndef NDEBUG
-        yae_dlog("PMT ver %2i, prog %5i (0x%04x), "
+        yae_dlog("PMT ver %2i (%s), prog %5i (0x%04x), "
                  "es %5i (0x%04x) type: %3i (0x%02x) info %3i desc: %s",
                  int(version_number_),
+                 current_next_indicator_ ? "curr" : "next",
                  int(program_number_),
                  int(program_number_),
                  int(es.elementary_pid_),
