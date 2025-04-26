@@ -1672,7 +1672,7 @@ namespace yae
       {
         Reference();
 
-        void load(IBitstream & bin);
+        bool load(IBitstream & bin, std::size_t end_pos);
         void to_json(Json::Value & out) const;
 
         uint32_t reference_type_ : 1;
@@ -1692,7 +1692,33 @@ namespace yae
       std::vector<Reference> references_;
     };
 
-   }
+    //----------------------------------------------------------------
+    // SubsegmentIndexBox
+    //
+    struct YAE_API SubsegmentIndexBox : public FullBox
+    {
+      SubsegmentIndexBox(): subsegment_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      struct YAE_API Subsegment
+      {
+        Subsegment(): range_count_(0) {}
+
+        bool load(IBitstream & bin, std::size_t end_pos);
+        void to_json(Json::Value & out) const;
+
+        uint32_t range_count_;
+        std::vector<uint8_t> levels_;
+        std::vector<uint32_t> range_sizes_;
+      };
+
+      uint16_t subsegment_count_;
+      std::vector<Subsegment> subsegments_;
+    };
+
+  }
 
 }
 

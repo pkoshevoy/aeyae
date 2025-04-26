@@ -3622,9 +3622,14 @@ SegmentIndexBox::Reference::Reference()
 //----------------------------------------------------------------
 // SegmentIndexBox::Reference::load
 //
-void
-SegmentIndexBox::Reference::load(IBitstream & bin)
+bool
+SegmentIndexBox::Reference::load(IBitstream & bin, std::size_t end_pos)
 {
+  if (end_pos < bin.position() + 96)
+  {
+    return false;
+  }
+
   reference_type_ = bin.read<uint32_t>(1);
   referenced_size_ = bin.read<uint32_t>(31);
   subsegment_duration_ = bin.read<uint32_t>();
@@ -3632,6 +3637,7 @@ SegmentIndexBox::Reference::load(IBitstream & bin)
   starts_with_SAP_ = bin.read<uint32_t>(1);
   SAP_type_ = bin.read<uint32_t>(3);
   SAP_delta_time_ = bin.read<uint32_t>(28);
+  return true;
 }
 
 //----------------------------------------------------------------
@@ -3679,13 +3685,12 @@ SegmentIndexBox::load(Mp4Context & mp4, IBitstream & bin)
 
   for (uint16_t i = 0; i < reference_count_; ++i)
   {
-    if (box_end < bin.position() + 96)
+    Reference reference;
+    if (!reference.load(bin, box_end))
     {
       break;
     }
 
-    Reference reference;
-    reference.load(bin);
     references_.push_back(reference);
   }
 }
@@ -3713,6 +3718,93 @@ SegmentIndexBox::to_json(Json::Value & out) const
     Json::Value v;
     reference.to_json(v);
     references.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<SubsegmentIndexBox>::please
+//
+template SubsegmentIndexBox *
+create<SubsegmentIndexBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SubsegmentIndexBox::Subsegment::load
+//
+bool
+SubsegmentIndexBox::Subsegment::load(IBitstream & bin, std::size_t end_pos)
+{
+  range_count_ = bin.read<uint32_t>();
+  for (uint32_t i = 0; i < range_count_; ++i)
+  {
+    if (end_pos < bin.position() + 32)
+    {
+      return false;
+    }
+
+    uint8_t level = bin.read<uint8_t>();
+    uint32_t range_size = bin.read<uint32_t>(24);
+    levels_.push_back(level);
+    range_sizes_.push_back(range_size);
+  }
+
+  return true;
+}
+
+//----------------------------------------------------------------
+// SubsegmentIndexBox::Subsegment::to_json
+//
+void
+SubsegmentIndexBox::Subsegment::to_json(Json::Value & out) const
+{
+  out["range_count"] = range_count_;
+  yae::save(out["levels"], levels_);
+  yae::save(out["range_sizes"], range_sizes_);
+}
+
+//----------------------------------------------------------------
+// SubsegmentIndexBox::load
+//
+void
+SubsegmentIndexBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  subsegments_.clear();
+  subsegment_count_ = bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < subsegment_count_; ++i)
+  {
+    subsegments_.push_back(Subsegment());
+    Subsegment & subsegment = subsegments_.back();
+    if (!subsegment.load(bin, box_end))
+    {
+      break;
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// SubsegmentIndexBox::to_json
+//
+void
+SubsegmentIndexBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["subsegment_count"] = subsegment_count_;
+
+  Json::Value & subsegments = out["subsegments"];
+  subsegments = Json::arrayValue;
+
+  for (std::size_t i = 0, n = subsegments_.size(); i < n; ++i)
+  {
+    const Subsegment & subsegment = subsegments_[i];
+    Json::Value v;
+    subsegment.to_json(v);
+    subsegments.append(v);
   }
 }
 
@@ -3847,6 +3939,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stsg", create<SubTrackSampleGroupBox>::please);
     this->add("stvi", create<StereoVideoBox>::please);
     this->add("sidx", create<SegmentIndexBox>::please);
+    this->add("ssix", create<SubsegmentIndexBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
