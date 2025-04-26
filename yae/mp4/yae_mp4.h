@@ -1718,6 +1718,25 @@ namespace yae
       std::vector<Subsegment> subsegments_;
     };
 
+    //----------------------------------------------------------------
+    // ProducerReferenceTimeBox
+    //
+    struct YAE_API ProducerReferenceTimeBox : public FullBox
+    {
+      ProducerReferenceTimeBox():
+        reference_track_ID_(0),
+        ntp_timestamp_(0),
+        media_time_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t reference_track_ID_;
+      uint64_t ntp_timestamp_;
+      uint64_t media_time_;
+    };
+
   }
 
 }

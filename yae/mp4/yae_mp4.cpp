@@ -3810,6 +3810,46 @@ SubsegmentIndexBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ProducerReferenceTimeBox>::please
+//
+template ProducerReferenceTimeBox *
+create<ProducerReferenceTimeBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ProducerReferenceTimeBox::load
+//
+void
+ProducerReferenceTimeBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  reference_track_ID_ = bin.read<uint32_t>();
+  ntp_timestamp_ = bin.read<uint64_t>();
+
+  if (FullBox::version_ == 0)
+  {
+    media_time_ = bin.read<uint32_t>();
+  }
+  else
+  {
+    media_time_ = bin.read<uint64_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// ProducerReferenceTimeBox::to_json
+//
+void
+ProducerReferenceTimeBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["reference_track_ID"] = reference_track_ID_;
+  out["ntp_timestamp"] = Json::UInt64(ntp_timestamp_);
+  out["media_time"] = Json::UInt64(media_time_);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -3940,6 +3980,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("stvi", create<StereoVideoBox>::please);
     this->add("sidx", create<SegmentIndexBox>::please);
     this->add("ssix", create<SubsegmentIndexBox>::please);
+    this->add("prft", create<ProducerReferenceTimeBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
