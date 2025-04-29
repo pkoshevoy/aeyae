@@ -797,6 +797,215 @@ SampleEntryBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// VisualSampleEntryBox::VisualSampleEntryBox
+//
+VisualSampleEntryBox::VisualSampleEntryBox():
+  pre_defined1_(0),
+  reserved1_(0),
+  width_(0),
+  height_(0),
+  horizresolution_(0x00480000),
+  vertresolution_(0x00480000),
+  reserved2_(0),
+  frame_count_(1),
+  depth_(24),
+  pre_defined3_(-1)
+{
+  pre_defined2_[0] = 0;
+  pre_defined2_[1] = 0;
+  pre_defined2_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// VisualSampleEntryBox::load
+//
+void
+VisualSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  pre_defined1_ = bin.read<uint16_t>();
+  reserved1_ = bin.read<uint16_t>();
+  pre_defined2_[0] = bin.read<uint32_t>();
+  pre_defined2_[1] = bin.read<uint32_t>();
+  pre_defined2_[2] = bin.read<uint32_t>();
+  width_ = bin.read<uint16_t>();
+  height_ = bin.read<uint16_t>();
+  horizresolution_ = bin.read<uint32_t>();
+  vertresolution_ = bin.read<uint32_t>();
+  reserved2_ = bin.read<uint32_t>();
+  frame_count_ = bin.read<uint16_t>();
+
+  uint8_t n = bin.read<uint8_t>();
+  if (n <= 31)
+  {
+    bin.read_string(compressorname_, n);
+    bin.skip_bytes(31 - n);
+  }
+
+  depth_ = bin.read<uint16_t>();
+  pre_defined3_ = bin.read<int16_t>();
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// VisualSampleEntryBox::to_json
+//
+void
+VisualSampleEntryBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  out["width"] = width_;
+  out["height"] = height_;
+  out["horizresolution"] = double(horizresolution_) / double(0x00010000);
+  out["vertresolution"] = double(vertresolution_) / double(0x00010000);
+  out["frame_count"] = frame_count_;
+  out["compressorname"] = compressorname_;
+  out["depth"] = depth_;
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
+// create<CleanApertureBox>::please
+//
+template CleanApertureBox *
+create<CleanApertureBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CleanApertureBox::load
+//
+void
+CleanApertureBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+
+  cleanApertureWidthN_ = bin.read<uint32_t>();
+  cleanApertureWidthD_ = bin.read<uint32_t>();
+  cleanApertureHeightN_ = bin.read<uint32_t>();
+  cleanApertureHeightD_ = bin.read<uint32_t>();
+  horizOffN_ = bin.read<uint32_t>();
+  horizOffD_ = bin.read<uint32_t>();
+  vertOffN_ = bin.read<uint32_t>();
+  vertOffD_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// CleanApertureBox::to_json
+//
+void
+CleanApertureBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  out["cleanApertureWidthN"] = cleanApertureWidthN_;
+  out["cleanApertureWidthD"] = cleanApertureWidthD_;
+  out["cleanApertureHeightN"] = cleanApertureHeightN_;
+  out["cleanApertureHeightD"] = cleanApertureHeightD_;
+  out["horizOffN"] = horizOffN_;
+  out["horizOffD"] = horizOffD_;
+  out["vertOffN"] = vertOffN_;
+  out["vertOffD"] = vertOffD_;
+}
+
+
+//----------------------------------------------------------------
+// create<PixelAspectRatioBox>::please
+//
+template PixelAspectRatioBox *
+create<PixelAspectRatioBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// PixelAspectRatioBox::load
+//
+void
+PixelAspectRatioBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+
+  hSpacing_ = bin.read<uint32_t>();
+  vSpacing_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// PixelAspectRatioBox::to_json
+//
+void
+PixelAspectRatioBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  out["hSpacing"] = hSpacing_;
+  out["vSpacing"] = vSpacing_;
+}
+
+
+//----------------------------------------------------------------
+// create<ColourInformationBox>::please
+//
+template ColourInformationBox *
+create<ColourInformationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ColourInformationBox::load
+//
+void
+ColourInformationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  colour_type_.load(bin);
+
+  if (colour_type_.same_as("nclx"))
+  {
+    colour_primaries_ = bin.read<uint16_t>();
+    transfer_characteristics_ = bin.read<uint16_t>();
+    matrix_coefficients_ = bin.read<uint16_t>();
+    full_range_flag_ = bin.read<uint8_t>(1);
+    reserved_ = bin.read<uint8_t>(7);
+  }
+  else if (colour_type_.same_as("rICC") ||
+           colour_type_.same_as("prof"))
+  {
+    ICC_profile_ = bin.read_bytes_until(box_end);
+  }
+}
+
+//----------------------------------------------------------------
+// ColourInformationBox::to_json
+//
+void
+ColourInformationBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  out["colour_type"] = colour_type_.str_;
+
+  if (colour_type_.same_as("nclx"))
+  {
+    out["colour_primaries"] = colour_primaries_;
+    out["transfer_characteristics"] = transfer_characteristics_;
+    out["matrix_coefficients"] = matrix_coefficients_;
+    out["full_range_flag"] = Json::UInt(full_range_flag_);
+  }
+  else if (colour_type_.same_as("rICC") ||
+           colour_type_.same_as("prof"))
+  {
+    std::string v = yae::to_hex(ICC_profile_.get(), ICC_profile_.size());
+    out["ICC_profile"] = v;
+  }
+}
+
+
+//----------------------------------------------------------------
 // create<BitRateBox>::please
 //
 template BitRateBox *
@@ -3921,6 +4130,9 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("hdlr", create<HandlerBox>::please);
     this->add("nmhd", create<NullMediaHeaderBox>::please);
     this->add("elng", create<ExtendedLanguageBox>::please);
+    this->add("clap", create<CleanApertureBox>::please);
+    this->add("pasp", create<PixelAspectRatioBox>::please);
+    this->add("colr", create<ColourInformationBox>::please);
     this->add("btrt", create<BitRateBox>::please);
     this->add("stdp", create<DegradationPriorityBox>::please);
     this->add("stts", create<TimeToSampleBox>::please);

@@ -565,6 +565,107 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // VisualSampleEntryBox
+    //
+    struct YAE_API VisualSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      VisualSampleEntryBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t pre_defined1_; // 0
+      uint16_t reserved1_; // 0
+      uint32_t pre_defined2_[3]; // 0, 0, 0
+      uint16_t width_;
+      uint16_t height_;
+      uint32_t horizresolution_; // fixed point 16.16, 0x00480000 == 72 dpi
+      uint32_t vertresolution_; // fixed point 16.16, 0x00480000 == 72 dpi
+      uint32_t reserved2_; // 0
+      uint16_t frame_count_; // 1
+      std::string compressorname_;
+      uint16_t depth_; // 24
+      int16_t pre_defined3_; // -1;
+    };
+
+    //----------------------------------------------------------------
+    // CleanApertureBox
+    //
+    struct YAE_API CleanApertureBox : public Box
+    {
+      CleanApertureBox():
+        cleanApertureWidthN_(0),
+        cleanApertureWidthD_(0),
+        cleanApertureHeightN_(0),
+        cleanApertureHeightD_(0),
+        horizOffN_(0),
+        horizOffD_(0),
+        vertOffN_(0),
+        vertOffD_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t cleanApertureWidthN_;
+      uint32_t cleanApertureWidthD_;
+      uint32_t cleanApertureHeightN_;
+      uint32_t cleanApertureHeightD_;
+      uint32_t horizOffN_;
+      uint32_t horizOffD_;
+      uint32_t vertOffN_;
+      uint32_t vertOffD_;
+    };
+
+    //----------------------------------------------------------------
+    // PixelAspectRatioBox
+    //
+    struct YAE_API PixelAspectRatioBox : public Box
+    {
+      PixelAspectRatioBox():
+        hSpacing_(0),
+        vSpacing_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t hSpacing_;
+      uint32_t vSpacing_;
+    };
+
+    //----------------------------------------------------------------
+    // ColourInformationBox
+    //
+    struct YAE_API ColourInformationBox : public Box
+    {
+      ColourInformationBox():
+        colour_primaries_(0),
+        transfer_characteristics_(0),
+        matrix_coefficients_(0),
+        full_range_flag_(0),
+        reserved_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC colour_type_;
+
+      // colour_type == "nclx"
+      uint16_t colour_primaries_;
+      uint16_t transfer_characteristics_;
+      uint16_t matrix_coefficients_;
+      uint8_t full_range_flag_ : 1;
+      uint8_t reserved_ : 7;
+
+      // colour_type == "rICC": restricted ICC profile
+      // colour_type == "prof": unrestricted ICC profile
+      // ICC.1:2010
+      Data ICC_profile_;
+    };
+
+    //----------------------------------------------------------------
     // BitRateBox
     //
     struct YAE_API BitRateBox : public Box
