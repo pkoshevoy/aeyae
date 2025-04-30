@@ -509,6 +509,33 @@ namespace yae
     }
   }
 
+  // C array
+  template <typename TData>
+  void
+  save(Json::Value & json, const TData * v, Json::UInt n)
+  {
+    Json::Value array(Json::arrayValue);
+
+    for (Json::UInt i = 0; i < n; ++i)
+    {
+      Json::Value value;
+      save(value, v[i]);
+      array.append(value);
+    }
+
+    json = array;
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, TData * v, Json::UInt n)
+  {
+    for (Json::UInt i = 0; i < n; ++i)
+    {
+      load(json[i], v[i]);
+    }
+  }
+
   //----------------------------------------------------------------
   // to_str
   //

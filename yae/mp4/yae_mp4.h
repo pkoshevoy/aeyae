@@ -157,6 +157,24 @@ namespace yae
         data.push_back(v);
       }
     }
+
+    LoadVec(std::size_t num_items,
+            TData * data,
+            IBitstream & bin,
+            std::size_t end_pos)
+    {
+      memset(data, 0, sizeof(TData) * num_items);
+      std::size_t item_size = sizeof(TData) * 8;
+      for (std::size_t i = 0; i < num_items; ++i)
+      {
+        if (end_pos < bin.position() + item_size < end_pos)
+        {
+          break;
+        }
+
+        data[i] = bin.read<TData>();
+      }
+    }
   };
 
 
@@ -1836,6 +1854,79 @@ namespace yae
       uint32_t reference_track_ID_;
       uint64_t ntp_timestamp_;
       uint64_t media_time_;
+    };
+
+    //----------------------------------------------------------------
+    // RtpHintSampleEntryBox
+    //
+    struct YAE_API RtpHintSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      RtpHintSampleEntryBox():
+        hinttrackversion_(1),
+        highestcompatibleversion_(1),
+        maxpacketsize_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t hinttrackversion_;
+      uint16_t highestcompatibleversion_;
+      uint32_t maxpacketsize_;
+    };
+
+    //----------------------------------------------------------------
+    // TimescaleEntryBox
+    //
+    struct YAE_API TimescaleEntryBox : public Box
+    {
+      TimescaleEntryBox(): timescale_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t timescale_;
+    };
+
+    //----------------------------------------------------------------
+    // TimeOffsetBox
+    //
+    struct YAE_API TimeOffsetBox : public Box
+    {
+      TimeOffsetBox(): offset_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t offset_;
+    };
+
+    //----------------------------------------------------------------
+    // SRTPProcessBox
+    //
+    struct YAE_API SRTPProcessBox : public ContainerEx
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC encryption_algorithm_rtp_;
+      FourCC encryption_algorithm_rtcp_;
+      FourCC integrity_algorithm_rtp_;
+      FourCC integrity_algorithm_rtcp_;
+    };
+
+    //----------------------------------------------------------------
+    // VideoMediaHeaderBox
+    //
+    struct YAE_API VideoMediaHeaderBox : public FullBox
+    {
+      VideoMediaHeaderBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t graphicsmode_;
+      uint16_t opcolor_[3];
     };
 
   }

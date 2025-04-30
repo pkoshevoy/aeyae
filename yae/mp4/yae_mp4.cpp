@@ -4065,6 +4065,185 @@ ProducerReferenceTimeBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<RtpHintSampleEntryBox>::please
+//
+template RtpHintSampleEntryBox *
+create<RtpHintSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// RtpHintSampleEntryBox::load
+//
+void
+RtpHintSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  hinttrackversion_ = bin.read<uint16_t>();
+  highestcompatibleversion_ = bin.read<uint16_t>();
+  maxpacketsize_ = bin.read<uint32_t>();
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// RtpHintSampleEntryBox::to_json
+//
+void
+RtpHintSampleEntryBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+
+  out["hinttrackversion"] = hinttrackversion_;
+  out["highestcompatibleversion"] = highestcompatibleversion_;
+  out["maxpacketsize"] = maxpacketsize_;
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
+// create<TimescaleEntryBox>::please
+//
+template TimescaleEntryBox *
+create<TimescaleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TimescaleEntryBox::load
+//
+void
+TimescaleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  timescale_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// TimescaleEntryBox::to_json
+//
+void
+TimescaleEntryBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["timescale"] = timescale_;
+}
+
+
+//----------------------------------------------------------------
+// create<TimeOffsetBox>::please
+//
+template TimeOffsetBox *
+create<TimeOffsetBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TimeOffsetBox::load
+//
+void
+TimeOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  offset_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// TimeOffsetBox::to_json
+//
+void
+TimeOffsetBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["offset"] = offset_;
+}
+
+
+//----------------------------------------------------------------
+// create<SRTPProcessBox>::please
+//
+template SRTPProcessBox *
+create<SRTPProcessBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SRTPProcessBox::load
+//
+void
+SRTPProcessBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  encryption_algorithm_rtp_.load(bin);
+  encryption_algorithm_rtcp_.load(bin);
+  integrity_algorithm_rtp_.load(bin);
+  integrity_algorithm_rtcp_.load(bin);
+
+  ContainerEx::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// SRTPProcessBox::to_json
+//
+void
+SRTPProcessBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["encryption_algorithm_rtp"] = encryption_algorithm_rtp_.str_;
+  out["encryption_algorithm_rtcp"] = encryption_algorithm_rtcp_.str_;
+  out["integrity_algorithm_rtp"] = integrity_algorithm_rtp_.str_;
+  out["integrity_algorithm_rtcp"] = integrity_algorithm_rtcp_.str_;
+
+  Json::Value & children = out["children"];
+  ContainerEx::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
+// create<VideoMediaHeaderBox>::please
+//
+template VideoMediaHeaderBox *
+create<VideoMediaHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// VideoMediaHeaderBox::VideoMediaHeaderBox
+//
+VideoMediaHeaderBox::VideoMediaHeaderBox():
+  graphicsmode_(0)
+{
+  opcolor_[0] = 0;
+  opcolor_[1] = 0;
+  opcolor_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// VideoMediaHeaderBox::load
+//
+void
+VideoMediaHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  graphicsmode_ = bin.read<uint16_t>();
+  yae::LoadVec<uint16_t>(3, opcolor_, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// VideoMediaHeaderBox::to_json
+//
+void
+VideoMediaHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["graphicsmode"] = graphicsmode_;
+  yae::save(out["opcolor"], opcolor_, 3);
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -4201,6 +4380,13 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("ssix", create<SubsegmentIndexBox>::please);
     this->add("prft", create<ProducerReferenceTimeBox>::please);
     this->add("icpv", create<VisualSampleEntryBox>::please);
+    this->add("rtp ", create<RtpHintSampleEntryBox>::please);
+    this->add("srtp", create<RtpHintSampleEntryBox>::please);
+    this->add("tims", create<TimescaleEntryBox>::please);
+    this->add("tsro", create<TimeOffsetBox>::please);
+    this->add("snro", create<TimeOffsetBox>::please);
+    this->add("srpp", create<SRTPProcessBox>::please);
+    this->add("vmhd", create<VideoMediaHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
