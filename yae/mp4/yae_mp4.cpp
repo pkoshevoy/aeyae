@@ -797,6 +797,12 @@ SampleEntryBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<VisualSampleEntryBox>::please
+//
+template VisualSampleEntryBox *
+create<VisualSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
 // VisualSampleEntryBox::VisualSampleEntryBox
 //
 VisualSampleEntryBox::VisualSampleEntryBox():
@@ -4111,6 +4117,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("strk", create_container);
     this->add("strd", create_container);
     this->add("rinf", create_container);
+    this->add("cinf", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -4193,6 +4200,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("sidx", create<SegmentIndexBox>::please);
     this->add("ssix", create<SubsegmentIndexBox>::please);
     this->add("prft", create<ProducerReferenceTimeBox>::please);
+    this->add("icpv", create<VisualSampleEntryBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
