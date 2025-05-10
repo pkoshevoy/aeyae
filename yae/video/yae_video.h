@@ -197,6 +197,8 @@ namespace yae
 
     void setPixelFormat(TPixelFormatId fmt);
 
+    void setSomeTraits(const VideoTraits & vt);
+
     //! frame rate:
     double frameRate_;
 

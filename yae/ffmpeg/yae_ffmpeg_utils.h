@@ -168,6 +168,30 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AvCodecParameters
+  //
+  struct YAE_API AvCodecParameters
+  {
+    AvCodecParameters(const ::AVCodecParameters * codecpar = NULL);
+    AvCodecParameters(const AvCodecParameters & codecpar);
+    ~AvCodecParameters();
+
+    AvCodecParameters & operator = (const AvCodecParameters & codecpar);
+
+    inline const ::AVCodecParameters & get() const
+    { return *codecpar_; }
+
+    void reset(const ::AVCodecParameters * codecpar = NULL);
+
+    // compare these codec parameters to given codecpar:
+    bool same_codec(const ::AVCodecParameters * codecpar) const;
+
+  protected:
+    ::AVCodecParameters * codecpar_;
+  };
+
+
+  //----------------------------------------------------------------
   // same_avbuffer
   //
   inline bool

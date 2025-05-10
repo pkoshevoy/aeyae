@@ -1404,7 +1404,8 @@ namespace yae
       if (selectedVideoTrack_ < videoTracks_.size())
       {
         VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
-        return videoTrack->setDeinterlacing(enabled);
+        videoTrack->setDeinterlacing(enabled);
+        return true;
       }
     }
     catch (...)

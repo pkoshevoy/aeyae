@@ -367,6 +367,9 @@ namespace yae
     // deadlock avoidance mechanism:
     QueueWaitMgr terminator_;
 
+    // for detecting codec changes:
+    AvCodecParameters codecpar_;
+
     AVFormatContext * context_;
     AVStream * stream_;
     AvCodecContextPtr codecContext_;

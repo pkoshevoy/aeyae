@@ -1271,13 +1271,13 @@ namespace yae
   // LiveReader::setAudioTraitsOverride
   //
   bool
-  LiveReader::setAudioTraitsOverride(const AudioTraits & override)
+  LiveReader::setAudioTraitsOverride(const AudioTraits & traits)
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
       AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->setTraitsOverride(override);
+      return t->setTraitsOverride(traits);
     }
 
     return false;
@@ -1287,13 +1287,13 @@ namespace yae
   // LiveReader::setVideoTraitsOverride
   //
   bool
-  LiveReader::setVideoTraitsOverride(const VideoTraits & override)
+  LiveReader::setVideoTraitsOverride(const VideoTraits & traits)
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
     {
       VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->setTraitsOverride(override);
+      return t->setTraitsOverride(traits);
     }
 
     return false;
@@ -1303,13 +1303,13 @@ namespace yae
   // LiveReader::getAudioTraitsOverride
   //
   bool
-  LiveReader::getAudioTraitsOverride(AudioTraits & override) const
+  LiveReader::getAudioTraitsOverride(AudioTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
       AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->getTraitsOverride(override);
+      return t->getTraitsOverride(traits);
     }
 
     return false;
@@ -1319,13 +1319,13 @@ namespace yae
   // LiveReader::getVideoTraitsOverride
   //
   bool
-  LiveReader::getVideoTraitsOverride(VideoTraits & override) const
+  LiveReader::getVideoTraitsOverride(VideoTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
     {
       VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->getTraitsOverride(override);
+      return t->getTraitsOverride(traits);
     }
 
     return false;

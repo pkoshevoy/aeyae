@@ -144,13 +144,13 @@ namespace yae
   bool
   VideoTrack::initTraits()
   {
-    if (!getTraits(override_))
+    if (!getTraits(native_))
     {
       return false;
     }
 
-    native_ = override_;
-    output_ = override_;
+    output_ = native_;
+    override_ = VideoTraits();
 
     // do not override width/height/sar unintentionally:
     override_.visibleWidth_ = 0;
@@ -364,7 +364,7 @@ namespace yae
     getTraits(native_, decoded);
 
     // frame size may have changed, so update output traits accordingly:
-    output_ = override_;
+    output_.setSomeTraits(override_);
 
     if (native_.pixelFormat_ != kInvalidPixelFormat &&
         override_.pixelFormat_ == kInvalidPixelFormat)
@@ -1501,12 +1501,10 @@ namespace yae
   // VideoTrack::setTraitsOverride
   //
   bool
-  VideoTrack::setTraitsOverride(const VideoTraits & traits,
-                                bool deint,
-                                double sourcePixelAspectRatio)
+  VideoTrack::setTraitsOverride(const VideoTraits & traits)
   {
     bool sameTraits = compare<VideoTraits>(override_, traits) == 0;
-    if (sameTraits && deinterlace_ == deint)
+    if (sameTraits)
     {
       // nothing changed:
       return true;
@@ -1528,8 +1526,6 @@ namespace yae
     }
 
     override_ = traits;
-    deinterlace_ = deint;
-    overrideSourcePAR_ = sourcePixelAspectRatio;
 
     if (alreadyDecoding && !sameTraits)
     {
@@ -1661,10 +1657,19 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::setDeinterlacing
   //
-  bool
+  void
   VideoTrack::setDeinterlacing(bool deint)
   {
-    return setTraitsOverride(override_, deint);
+    deinterlace_ = deint;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::overridePixelAspectRatio
+  //
+  void
+  VideoTrack::overridePixelAspectRatio(double source_par)
+  {
+    overrideSourcePAR_ = source_par;
   }
 
   //----------------------------------------------------------------

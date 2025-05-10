@@ -993,6 +993,14 @@ namespace yae
       return;
     }
 
+    // handle codec changes:
+    if (!codecpar_.same_codec(stream_->codecpar))
+    {
+      this->flush();
+      codecpar_.reset(stream_->codecpar);
+      codecContext_.reset();
+    }
+
     AVCodecContext * ctx = this->open();
     if (!ctx)
     {

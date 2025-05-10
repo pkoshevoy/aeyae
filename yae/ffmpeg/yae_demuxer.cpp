@@ -4091,8 +4091,9 @@ namespace yae
       traits.vflip_ = false;
       traits.hflip_ = false;
 
-      bool deint = false;
-      decoder.setTraitsOverride(traits, deint, source_par);
+      decoder.setDeinterlacing(false);
+      decoder.overridePixelAspectRatio(source_par);
+      decoder.setTraitsOverride(traits);
 
       const pixelFormat::Traits * ptts = NULL;
       if (!decoder.getTraitsOverride(traits) ||
@@ -4460,8 +4461,9 @@ namespace yae
         traits.setPixelFormat(pixel_format);
       }
 
-      bool deint = false;
-      decoder.setTraitsOverride(traits, deint, source_par);
+      decoder.setDeinterlacing(false);
+      decoder.overridePixelAspectRatio(source_par);
+      decoder.setTraitsOverride(traits);
 
       const pixelFormat::Traits * ptts = NULL;
       if (traits.pixelFormat_ != kInvalidPixelFormat &&

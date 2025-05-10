@@ -441,6 +441,88 @@ namespace yae
   YAE_ENABLE_DEPRECATION_WARNINGS;
 
   //----------------------------------------------------------------
+  // AvCodecParameters::AvCodecParameters
+  //
+  AvCodecParameters::AvCodecParameters(const ::AVCodecParameters * codecpar):
+    codecpar_(avcodec_parameters_alloc())
+  {
+    if (codecpar)
+    {
+      avcodec_parameters_copy(codecpar_, codecpar);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AvCodecParameters::AvCodecParameters
+  //
+  AvCodecParameters::AvCodecParameters(const AvCodecParameters & codecpar):
+    codecpar_(avcodec_parameters_alloc())
+  {
+    avcodec_parameters_copy(codecpar_, codecpar.codecpar_);
+  }
+
+  //----------------------------------------------------------------
+  // AvCodecParameters::~AvCodecParameters
+  //
+  AvCodecParameters::~AvCodecParameters()
+  {
+    avcodec_parameters_free(&codecpar_);
+  }
+
+  //----------------------------------------------------------------
+  // AvCodecParameters::operator =
+  //
+  AvCodecParameters &
+  AvCodecParameters::operator = (const AvCodecParameters & codecpar)
+  {
+    this->reset(codecpar.codecpar_);
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // AvCodecParameters::reset
+  //
+  void AvCodecParameters::reset(const ::AVCodecParameters * codecpar)
+  {
+    if (codecpar_ == codecpar)
+    {
+      return;
+    }
+
+    if (codecpar)
+    {
+      avcodec_parameters_copy(codecpar_, codecpar);
+    }
+    else
+    {
+      avcodec_parameters_free(&codecpar_);
+      codecpar_ = avcodec_parameters_alloc();
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AvCodecParameters::same_codec
+  //
+  bool
+  AvCodecParameters::same_codec(const ::AVCodecParameters * codecpar) const
+  {
+    if (codecpar_ == codecpar)
+    {
+      return true;
+    }
+
+    if (!(codecpar_ && codecpar))
+    {
+      return false;
+    }
+
+    return (codecpar_->codec_id == codecpar->codec_id &&
+            codecpar_->codec_tag == codecpar->codec_tag &&
+            codecpar_->codec_type == codecpar->codec_type);
+  }
+
+
+  //----------------------------------------------------------------
   // AvFrm::AvFrm
   //
   AvFrm::AvFrm(const AVFrame * frame):

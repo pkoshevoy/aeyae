@@ -1005,7 +1005,8 @@ namespace yae
       VideoTrackPtr videoTrack = selectedVideoTrack();
       if (videoTrack)
       {
-        return videoTrack->setDeinterlacing(enabled);
+        videoTrack->setDeinterlacing(enabled);
+        return true;
       }
     }
     catch (...)

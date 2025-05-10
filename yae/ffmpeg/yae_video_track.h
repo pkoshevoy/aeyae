@@ -103,14 +103,9 @@ namespace yae
     bool getTraits(VideoTraits & traits, const AVFrame * decoded = NULL) const;
 
     // use this for video frame conversion (pixel format and size)
-    bool setTraitsOverride(const VideoTraits & traits,
-                           bool deint,
-                           double overrideSourcePAR = 0.0);
+    bool setTraitsOverride(const VideoTraits & traits);
 
     bool getTraitsOverride(VideoTraits & traits) const;
-
-    inline bool setTraitsOverride(const VideoTraits & traits)
-    { return setTraitsOverride(traits, deinterlace_); }
 
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator);
@@ -126,7 +121,10 @@ namespace yae
                           bool dropPendingFrames);
 
     // adjust frame duration:
-    bool setDeinterlacing(bool enabled);
+    void setDeinterlacing(bool enabled);
+
+    // override native pixel aspect ratio:
+    void overridePixelAspectRatio(double source_par);
 
     // 0 - disabled
     // 1 - CC1
@@ -135,7 +133,7 @@ namespace yae
     // 4 - CC4
     void enableClosedCaptions(unsigned int cc);
 
-    void setSubs(std::vector<SubttTrackPtr> * subs)
+    inline void setSubs(std::vector<SubttTrackPtr> * subs)
     { subs_ = subs; }
 
     // these are used to speed up video decoding:

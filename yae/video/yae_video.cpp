@@ -299,6 +299,36 @@ namespace yae
     av_fmt_ = yae_to_ffmpeg(fmt);
   }
 
+  //----------------------------------------------------------------
+  // VideoTraits::setSomeTraits
+  //
+  void
+  VideoTraits::setSomeTraits(const VideoTraits & vt)
+  {
+#define maybe_set(dst, src, default_value) \
+  if (src != default_value) dst = src
+
+    maybe_set(frameRate_, vt.frameRate_, 0.0);
+    maybe_set(av_fmt_, vt.av_fmt_, AV_PIX_FMT_NONE);
+    maybe_set(av_csp_, vt.av_csp_, AVCOL_SPC_UNSPECIFIED);
+    maybe_set(av_pri_, vt.av_pri_, AVCOL_PRI_UNSPECIFIED);
+    maybe_set(av_trc_, vt.av_trc_, AVCOL_TRC_UNSPECIFIED);
+    maybe_set(av_rng_, vt.av_rng_, AVCOL_RANGE_UNSPECIFIED);
+    maybe_set(colorspace_, vt.colorspace_, nullptr);
+    maybe_set(pixelFormat_, vt.pixelFormat_, kInvalidPixelFormat);
+    maybe_set(encodedWidth_, vt.encodedWidth_, 0);
+    maybe_set(encodedHeight_, vt.encodedHeight_, 0);
+    maybe_set(offsetTop_, vt.offsetTop_, 0);
+    maybe_set(offsetLeft_, vt.offsetLeft_, 0);
+    maybe_set(visibleWidth_, vt.visibleWidth_, 0);
+    maybe_set(visibleHeight_, vt.visibleHeight_, 0);
+    maybe_set(pixelAspectRatio_, vt.pixelAspectRatio_, 1.0);
+    maybe_set(cameraRotation_, vt.cameraRotation_, 0);
+    maybe_set(vflip_, vt.vflip_, false);
+    maybe_set(hflip_, vt.hflip_, false);
+
+#undef maybe_set
+  }
 
   //----------------------------------------------------------------
   // IPlanarBuffer::~IPlanarBuffer
