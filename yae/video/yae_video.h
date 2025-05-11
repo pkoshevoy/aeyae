@@ -466,8 +466,12 @@ namespace yae
     //! global track ID tag:
     std::string trackId_;
 
-    //! frame PTS:
+    //! frame PTS timeline:
     TTime time_;
+
+    //! file position timeline, may be used if the PTS timeline
+    //! is unreliable (contains gaps, jumps back in time, etc...)
+    TTime pos_;
 
     //! frame duration tempo scaling:
     double tempo_;

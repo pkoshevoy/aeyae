@@ -248,6 +248,15 @@ namespace yae
       TAudioFramePtr afPtr(new TAudioFrame());
       TAudioFrame & af = *afPtr;
 
+      if (!packet_pos_.empty())
+      {
+        af.pos_.base_ = 188;
+        af.pos_.time_ =
+          (packet_pos_.size() == 1) ?
+          packet_pos_.front() :
+          packet_pos_.pop();
+      }
+
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
       af.trackId_ = Track::id();

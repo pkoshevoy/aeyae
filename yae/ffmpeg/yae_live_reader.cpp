@@ -184,6 +184,10 @@ namespace yae
             double bytes_per_sec);
 
     // virtual:
+    double get() const;
+    void set(double pos);
+
+    // virtual:
     std::string to_str() const;
 
     // virtual:
@@ -222,6 +226,30 @@ namespace yae
     reader_(reader),
     bytes_per_sec_(bytes_per_sec)
   {}
+
+  //----------------------------------------------------------------
+  // BytePos::get
+  //
+  double
+  BytePos::get() const
+  {
+    YAE_ASSERT(false);
+    return sec_;
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::set
+  //
+  void
+  BytePos::set(double sec)
+  {
+    YAE_ASSERT(false);
+    double dt = sec - sec_;
+    int64_t dp = int64_t(bytes_per_sec_ * dt) / 188;
+    int64_t pos = int64_t(pos_) + dp * 188;
+    pos_ = (pos < 0) ? 0 : pos;
+    sec_ = sec;
+  }
 
   //----------------------------------------------------------------
   // BytePos::to_str

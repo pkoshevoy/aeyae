@@ -982,6 +982,15 @@ namespace yae
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
+        if (!packet_pos_.empty())
+        {
+          vf.pos_.base_ = 188;
+          vf.pos_.time_ =
+            (packet_pos_.size() == 1) ?
+            packet_pos_.front() :
+            packet_pos_.pop();
+        }
+
         vf.time_.base_ = filterGraphOutputTimeBase.den;
         vf.time_.time_ = filterGraphOutputTimeBase.num * output.pts;
         vf.trackId_ = Track::id();
@@ -1209,12 +1218,9 @@ namespace yae
         frameQueue_.setMaxSize((packetQueue_.getMaxSize() * 11) / 10);
 
         // put the output frame into frame queue:
+        if (!frameQueue_.push(vfPtr, &terminator_))
         {
-          // YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
-          if (!frameQueue_.push(vfPtr, &terminator_))
-          {
-            return;
-          }
+          return;
         }
 
         // yae_debug << "V: " << vf.time_.sec() << "\n";

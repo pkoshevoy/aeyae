@@ -38,6 +38,24 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // TimePos::get
+  //
+  double
+  TimePos::get() const
+  {
+    return sec_;
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::set
+  //
+  void
+  TimePos::set(double pos)
+  {
+    sec_ = pos;
+  }
+
+  //----------------------------------------------------------------
   // TimePos::to_str
   //
   std::string
@@ -111,12 +129,6 @@ namespace yae
 
     if (err < 0)
     {
-      if (!ts)
-      {
-        // must be trying to rewind a stream of undefined duration:
-        seekFlags |= AVSEEK_FLAG_BYTE;
-      }
-
       err = avformat_seek_file(context,
                                streamIndex,
                                kMinInt64,
@@ -125,6 +137,77 @@ namespace yae
                                seekFlags | AVSEEK_FLAG_ANY);
     }
 
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
+  // PacketPos::PacketPos
+  //
+  PacketPos::PacketPos(int64_t packet_pos, uint64_t packet_size):
+    pos_(packet_pos, packet_size)
+  {}
+
+  //----------------------------------------------------------------
+  // PacketPos::get
+  //
+  double
+  PacketPos::get() const
+  {
+    return pos_.sec();
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::set
+  //
+  void
+  PacketPos::set(double sec)
+  {
+    pos_.time_ = int64_t(pos_.base_ * sec);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::to_str
+  //
+  std::string
+  PacketPos::to_str() const
+  {
+    return pos_.sec_msec();
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::lt
+  //
+  bool
+  PacketPos::lt(const TFrameBase & f, double dur) const
+  {
+    return (pos_ < f.pos_);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::gt
+  //
+  bool
+  PacketPos::gt(const TFrameBase & f, double dur) const
+  {
+    return (f.pos_ < pos_);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::seek
+  //
+  int
+  PacketPos::seek(AVFormatContext * context, const AVStream * stream) const
+  {
+    (void)stream;
+
+    int seekFlags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
+    int err = avformat_seek_file(context,
+                                 -1,
+                                 pos_.time_ - pos_.base_,
+                                 pos_.time_,
+                                 pos_.time_ + pos_.base_,
+                                 seekFlags);
     return err;
   }
 
@@ -313,6 +396,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
+    packet_pos_(4), // fifo capacity
     discarded_(0)
   {
     if (context_ && stream_)
@@ -339,6 +423,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
+    packet_pos_(4), // fifo capacity
     discarded_(0)
   {
     std::swap(hwdec_, track->hwdec_);
@@ -932,6 +1017,11 @@ namespace yae
 
       const AVPacket & packet = pkt.get();
       {
+        if (packet.pos != -1)
+        {
+          packet_pos_.push(packet.pos);
+        }
+
         // YAE_BENCHMARK(benchmark, "avcodec_send_packet");
         errSend = avcodec_send_packet(ctx, &packet);
       }
@@ -1024,6 +1114,8 @@ namespace yae
       // flush out buffered frames with an empty packet:
       this->decode(ctx, AvPkt());
     }
+
+    packet_pos_.clear();
   }
 
   //----------------------------------------------------------------

@@ -60,6 +60,9 @@ namespace yae
     // current time:
     TTime t0_;
 
+    // corresponding packet position, approximate:
+    TTime packet_pos_;
+
     // this keeps track of "when" someone announced they will be late:
     boost::system_time waitForMe_;
 
@@ -133,6 +136,7 @@ namespace yae
 
     //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0,
+                        const TTime & packet_pos,
                         double latencyInSeconds = 0.0,
                         bool notifyObserver = true);
 
@@ -141,6 +145,7 @@ namespace yae
     //! owner is waiting for someone to catch up;
     //! returns true when clock is running:
     bool getCurrentTime(TTime & t0,
+                        TTime & packet_pos,
                         double & elapsedTime,
                         bool & withinRealtimeTolerance) const;
 
@@ -291,6 +296,7 @@ namespace yae
       boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
       timeSegment.origin_ = boost::get_system_time();
       timeSegment.t0_ = TTime(0, 0);
+      timeSegment.packet_pos_ = TTime(0, 0);
       timeSegment.waitForMe_ = boost::system_time();
       timeSegment.delayInSeconds_ = 0.0;
       return true;
@@ -313,6 +319,7 @@ namespace yae
   //
   bool
   SharedClock::Private::setCurrentTime(const TTime & t,
+                                       const TTime & packet_pos,
                                        double latency,
                                        bool notifyObserver)
   {
@@ -320,9 +327,10 @@ namespace yae
     TimeSegment & timeSegment = *keepAlive;
 
     TTime t0;
+    TTime pos;
     double elapsedTime = 0.0;
     bool masterClockIsAccurate = false;
-    bool hasTime = getCurrentTime(t0, elapsedTime, masterClockIsAccurate);
+    bool hasTime = getCurrentTime(t0, pos, elapsedTime, masterClockIsAccurate);
 
     if (!copied_)
     {
@@ -350,10 +358,11 @@ namespace yae
       // resync:
       timeSegment.origin_ = now;
       timeSegment.t0_ = t;
+      timeSegment.packet_pos_ = packet_pos;
 
       if (timeSegment.observer_ && notifyObserver)
       {
-        timeSegment.observer_->noteCurrentTimeChanged(clock_, t);
+        timeSegment.observer_->noteCurrentTimeChanged(clock_, t, packet_pos);
       }
 
       return true;
@@ -367,7 +376,7 @@ namespace yae
 #ifdef YAE_DEBUG_SHARED_CLOCK
         yae_debug << "MASTER CLOCK IS NOT ACCURATE\n";
 #endif
-        timeSegment.observer_->noteCurrentTimeChanged(clock_, t);
+        timeSegment.observer_->noteCurrentTimeChanged(clock_, t, packet_pos);
       }
     }
 
@@ -379,10 +388,11 @@ namespace yae
   //
   bool
   SharedClock::setCurrentTime(const TTime & t,
+                              const TTime & packet_pos,
                               double latency,
                               bool notifyObserver)
   {
-    return private_->setCurrentTime(t, latency, notifyObserver);
+    return private_->setCurrentTime(t, packet_pos, latency, notifyObserver);
   }
 
   //----------------------------------------------------------------
@@ -395,6 +405,7 @@ namespace yae
   //
   bool
   SharedClock::Private::getCurrentTime(TTime & t0,
+                                       TTime & packet_pos,
                                        double & elapsedTime,
                                        bool & masterClockIsAccurate) const
   {
@@ -403,6 +414,7 @@ namespace yae
     boost::lock_guard<boost::mutex> lock(timeSegment.mutex_);
 
     t0 = timeSegment.t0_;
+    packet_pos = timeSegment.packet_pos_;
 
     if (timeSegment.stopped_ || timeSegment.origin_.is_not_a_date_time())
     {
@@ -427,10 +439,14 @@ namespace yae
   //
   bool
   SharedClock::getCurrentTime(TTime & t0,
+                              TTime & packet_pos,
                               double & elapsedTime,
                               bool & masterClockIsAccurate) const
   {
-    return private_->getCurrentTime(t0, elapsedTime, masterClockIsAccurate);
+    return private_->getCurrentTime(t0,
+                                    packet_pos,
+                                    elapsedTime,
+                                    masterClockIsAccurate);
   }
 
   //----------------------------------------------------------------

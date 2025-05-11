@@ -63,8 +63,17 @@ namespace yae
     bool open(const char * resourcePath, bool hwdec);
     void close();
 
+    inline uint64_t get_file_size() const
+    { return file_size_; }
+
+    inline int64_t get_packet_pos() const
+    { return packet_pos_; }
+
     inline const char * getResourcePath() const
     { return resourcePath_.empty() ? NULL : resourcePath_.c_str(); }
+
+    inline const char * getFormatName() const
+    { return (context_ && context_->iformat) ? context_->iformat->name : ""; }
 
     inline const std::vector<TProgramInfo> & getPrograms() const
     { return programs_; }
@@ -199,10 +208,11 @@ namespace yae
     TAdjustTimestamps adjustTimestamps_;
     void * adjustTimestampsCtx_;
 
-    // demuxer current position (DTS, stream index, and byte position):
-    int dtsStreamIndex_;
-    int64_t dtsBytePos_;
-    int64_t dts_;
+    // file size:
+    uint64_t file_size_;
+
+    // last known AVPacket.pos:
+    int64_t packet_pos_;
 
     TSeekPosPtr posIn_;
     TSeekPosPtr posOut_;

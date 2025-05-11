@@ -81,6 +81,17 @@ namespace yae
     virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const;
     virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const;
 
+    // NOTE: for MPEG-TS files that may contain PTS timeline anomalies
+    // it may be preferable to reference file position (or packet index)
+    // as a timeline source instead.
+    //
+    // Here, for MPEG-TS typically start time is 0, base 188 (TS packet size)
+    // and duration time is file size in bytes, base 188 (TS packet size)
+    //
+    virtual RefTimeline getRefTimeline() const;
+    virtual bool setRefTimeline(RefTimeline timeline);
+    virtual bool getPacketsExtent(TTime & start, TTime & duration) const;
+
     virtual bool getVideoDuration(TTime & start, TTime & duration) const;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const;
 

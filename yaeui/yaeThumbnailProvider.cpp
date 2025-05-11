@@ -29,6 +29,7 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 #include <QUrl>
 
 // yaeui:
+#include "yaeTimelineModel.h"
 #include "yaeThumbnailProvider.h"
 #include "yaeUtilsQt.h"
 
@@ -107,12 +108,6 @@ namespace yae
     return frame;
   }
 #endif
-
-  //----------------------------------------------------------------
-  // get_duration
-  //
-  extern bool
-  get_duration(const IReader * reader, TTime & start, TTime & duration);
 
   //----------------------------------------------------------------
   // getThumbnail
@@ -196,16 +191,21 @@ namespace yae
     QueueWaitMgr waitMgr;
     TTime start;
     TTime duration;
-    if (reader->isSeekable() && get_duration(reader.get(), start, duration))
+    if (get_duration(reader.get(), start, duration))
     {
-      double offset = std::min<double>(duration.sec() * 8e-2, 288.0);
+      double offset = duration.sec() * 8e-2;
+      bool use_packet_pos = reader->refers_to_packet_pos_timeline();
+      if (!use_packet_pos)
+      {
+        offset = std::min<double>(offset, 288.0);
+      }
 
       // avoid seeking very short files (.jpg):
       if (offset >= 0.016 && reader->readVideo(frame, &waitMgr))
       {
         if (frame)
         {
-          start = frame->time_;
+          start = use_packet_pos ? frame->pos_ : frame->time_;
         }
 
         // FIXME: check for a bookmark, seek to the bookmarked position:

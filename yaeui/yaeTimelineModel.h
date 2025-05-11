@@ -39,6 +39,13 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // get_duration
+  //
+  bool
+  get_duration(const IReader * reader, TTime & start, TTime & duration);
+
+
+  //----------------------------------------------------------------
   // TimelineModel
   //
   class TimelineModel :
@@ -135,7 +142,8 @@ namespace yae
 
     // virtual: thread safe, asynchronous, non-blocking:
     void noteCurrentTimeChanged(const SharedClock & c,
-                                const TTime & currentTime);
+                                const TTime & currentTime,
+                                const TTime & packetPos);
     void noteTheClockHasStopped(const SharedClock & c);
 
     // helper used to block the "clock has stopped" events
@@ -233,25 +241,29 @@ namespace yae
       {
         TPayload(): dismissed_(true) {}
 
-        bool set(const TTime & currentTime)
+        bool set(const TTime & currentTime,
+                 const TTime & packetPos)
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
           bool postThePayload = dismissed_;
           currentTime_ = currentTime;
+          packetPos_ = packetPos;
           dismissed_ = false;
           return postThePayload;
         }
 
-        void get(TTime & currentTime)
+        void get(TTime & currentTime, TTime & packetPos)
         {
           boost::lock_guard<boost::mutex> lock(mutex_);
           currentTime = currentTime_;
+          packetPos = packetPos_;
           dismissed_ = true;
         }
 
       private:
         mutable boost::mutex mutex_;
         TTime currentTime_;
+        TTime packetPos_;
         bool dismissed_;
       };
 
@@ -309,6 +321,11 @@ namespace yae
     std::list<SharedClock> stoppedClock_;
     QTimer slideshowTimer_;
     yae::TTime slideshowTimerStart_;
+
+    // for using packet position and file size as a timeline reference:
+    TTime currentTime_;
+    TTime packetPos_;
+    bool use_packet_pos_;
   };
 
   //----------------------------------------------------------------

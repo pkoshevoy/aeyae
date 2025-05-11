@@ -9,6 +9,7 @@
 // aeyae:
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_movie.h"
+#include "yae/ffmpeg/yae_reader_ffmpeg.h"
 
 
 namespace yae
@@ -28,9 +29,8 @@ namespace yae
     enableClosedCaptions_(0),
     adjustTimestamps_(NULL),
     adjustTimestampsCtx_(NULL),
-    dtsStreamIndex_(-1),
-    dtsBytePos_(0),
-    dts_(AV_NOPTS_VALUE),
+    file_size_(0),
+    packet_pos_(-1),
     posIn_(new TimePos(TTime::min_flicks_as_sec())),
     posOut_(new TimePos(TTime::max_flicks_as_sec())),
     interruptDemuxer_(false),
@@ -167,6 +167,9 @@ namespace yae
       close();
       return false;
     }
+
+    // get the file size, so we can implement byte-position seeking:
+    file_size_ = avio_size(context_->pb);
 
     // get the programs:
     for (unsigned int i = 0; i < context_->nb_programs; i++)
@@ -509,6 +512,10 @@ namespace yae
 
     avformat_close_input(&context_);
     YAE_ASSERT(!context_);
+
+    // reset last known AVPacket.pos:
+    packet_pos_ = -1;
+    file_size_ = 0;
   }
 
   //----------------------------------------------------------------
@@ -705,6 +712,15 @@ namespace yae
         if (!err)
         {
           err_count = 0;
+
+          if (packet.pos != -1)
+          {
+            packet_pos_ = packet.pos;
+          }
+          else if (packet_pos_ != -1)
+          {
+            packet.pos = packet_pos_;
+          }
         }
         else
         {
@@ -843,14 +859,6 @@ namespace yae
           }
         }
 
-        if (packet.dts != AV_NOPTS_VALUE)
-        {
-          // keep track of current DTS, so that we would know which way to seek
-          // relative to the current position (back/forth)
-          dts_ = packet.dts;
-          dtsBytePos_ = packet.pos;
-          dtsStreamIndex_ = packet.stream_index;
-        }
 #if 0 // ndef NDEBUG
         for (int i = 0; i < packet.side_data_elems; i++)
         {
@@ -1129,6 +1137,9 @@ namespace yae
         stream = context_->streams[streamIndex];
       }
     }
+
+    // reset last known AVPacket.pos:
+    packet_pos_ = -1;
 
     int err = pos->seek(context_, stream);
     if (err < 0)

@@ -121,7 +121,8 @@ namespace yae
   //
   void
   AudioRendererInput::maybeReadOneFrame(IReader * reader,
-                                        TTime & framePosition)
+                                        TTime & framePosition,
+                                        TTime & packetPos)
   {
     while (!audioFrame_)
     {
@@ -160,10 +161,12 @@ namespace yae
                           audioFrame_->tempo_ +
                           0.5),
               audioFrame_->traits_.sample_rate_);
+      packetPos = audioFrame_->pos_;
     }
     else
     {
       framePosition = TTime();
+      packetPos = TTime();
     }
   }
 
@@ -187,6 +190,21 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AudioRendererInput::getPacketPos
+  //
+  TTime
+  AudioRendererInput::getPacketPos() const
+  {
+    TTime packetPos;
+    if (audioFrame_)
+    {
+      packetPos = audioFrame_->pos_;
+    }
+
+    return packetPos;
+  }
+
+  //----------------------------------------------------------------
   // AudioRendererInput::skipToTime
   //
   void
@@ -199,6 +217,7 @@ namespace yae
 #endif
 
     TTime framePosition;
+    TTime packetPos;
     do
     {
       if (audioFrame_)
@@ -247,7 +266,7 @@ namespace yae
         }
       }
 
-      maybeReadOneFrame(reader, framePosition);
+      maybeReadOneFrame(reader, framePosition, packetPos);
 
     } while (audioFrame_);
 
@@ -262,7 +281,7 @@ namespace yae
 #if YAE_DEBUG_AUDIO_RENDERER
         yae_debug << "AUDIO (s) SET CLOCK: " << framePosition;
 #endif
-        clock_.setCurrentTime(framePosition, -0.016);
+        clock_.setCurrentTime(framePosition, packetPos, -0.016);
       }
     }
   }
@@ -274,7 +293,8 @@ namespace yae
   AudioRendererInput::skipForward(const TTime & dt, IReader * reader)
   {
     TTime framePosition;
-    maybeReadOneFrame(reader, framePosition);
+    TTime packetPos;
+    maybeReadOneFrame(reader, framePosition, packetPos);
     if (audioFrame_)
     {
       framePosition += dt;
@@ -332,7 +352,9 @@ namespace yae
     std::size_t dstChunkSize = samplesToRead * dstStride;
 
     TTime framePosition;
-    maybeReadOneFrame(reader_, framePosition);
+    TTime packetPos;
+    maybeReadOneFrame(reader_, framePosition, packetPos);
+
     if (!audioFrame_)
     {
       fillWithSilence(dst,
@@ -353,7 +375,7 @@ namespace yae
 
     while (dstChunkSize)
     {
-      maybeReadOneFrame(reader_, framePosition);
+      maybeReadOneFrame(reader_, framePosition, packetPos);
       if (!audioFrame_)
       {
         fillWithSilence(dst,
@@ -471,7 +493,7 @@ namespace yae
 #if YAE_DEBUG_AUDIO_RENDERER
       yae_debug << "AUDIO (c) SET CLOCK: " << framePosition;
 #endif
-      clock_.setCurrentTime(framePosition, -0.016);
+      clock_.setCurrentTime(framePosition, packetPos, -0.016);
     }
 
     return;

@@ -13,6 +13,7 @@
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_fifo.h"
 #include "yae/utils/yae_time.h"
 #include "yae/video/yae_video.h"
 
@@ -36,6 +37,11 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 }
+
+//----------------------------------------------------------------
+// YAE_DEBUG_SEEKING_AND_FRAMESTEP
+//
+#define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
 
 
 namespace yae
@@ -83,6 +89,8 @@ namespace yae
   struct YAE_API ISeekPos
   {
     virtual ~ISeekPos() {}
+    virtual double get() const = 0;
+    virtual void set(double pos) = 0;
     virtual std::string to_str() const = 0;
     virtual bool lt(const TFrameBase & f, double dur = 0.0) const = 0;
     virtual bool gt(const TFrameBase & f, double dur = 0.0) const = 0;
@@ -90,7 +98,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TPosPtr
+  // TSeekPosPtr
   //
   typedef yae::shared_ptr<ISeekPos> TSeekPosPtr;
 
@@ -101,6 +109,10 @@ namespace yae
   struct YAE_API TimePos : ISeekPos
   {
     TimePos(double sec);
+
+    // virtual:
+    double get() const;
+    void set(double pos);
 
     // virtual:
     std::string to_str() const;
@@ -120,6 +132,36 @@ namespace yae
   // TTimePosPtr
   //
   typedef yae::shared_ptr<TimePos, ISeekPos> TTimePosPtr;
+
+
+  //----------------------------------------------------------------
+  // PacketPos
+  //
+  struct YAE_API PacketPos : ISeekPos
+  {
+    PacketPos(int64_t packet_pos, uint64_t packet_size = 188);
+
+    // virtual:
+    double get() const;
+    void set(double pos);
+
+    // virtual:
+    std::string to_str() const;
+
+    // virtual:
+    bool lt(const TFrameBase & f, double dur = 0.0) const;
+    bool gt(const TFrameBase & f, double dur = 0.0) const;
+
+    // virtual:
+    int seek(AVFormatContext * context, const AVStream * s) const;
+
+    TTime pos_;
+  };
+
+  //----------------------------------------------------------------
+  // TPacketPosPtr
+  //
+  typedef yae::shared_ptr<PacketPos, ISeekPos> TPacketPosPtr;
 
 
   //----------------------------------------------------------------
@@ -385,6 +427,9 @@ namespace yae
     // for adjusting frame duration (playback tempo scaling):
     mutable boost::mutex tempoMutex_;
     double tempo_;
+
+    // file positions of the most recent packets sent to the decoder:
+    yae::fifo<int64_t> packet_pos_;
 
   public:
     uint64_t discarded_;
