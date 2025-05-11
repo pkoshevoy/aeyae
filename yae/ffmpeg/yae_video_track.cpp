@@ -669,6 +669,13 @@ namespace yae
       AvFrm decodedFrameCopy(decodedFrame);
       decodedFrameCopy.hwdownload();
 
+      AVFrame & decoded = decodedFrameCopy.get();
+      framesDecoded_++;
+
+      // update native traits first:
+      this->getTraits(native_, &decoded);
+
+      // fill in any missing specs:
       add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_));
 
 #if 0
@@ -676,9 +683,6 @@ namespace yae
       static const FrameGen frameGen;
       decodedFrameCopy = frameGen.get(decodedFrameCopy);
 #endif
-
-      AVFrame & decoded = decodedFrameCopy.get();
-      framesDecoded_++;
 
 #if 0 // ndef NDEBUG
       {

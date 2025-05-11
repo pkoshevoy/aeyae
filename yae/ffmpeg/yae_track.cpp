@@ -1099,11 +1099,6 @@ namespace yae
       return;
     }
 
-    if (codec_changed)
-    {
-      this->initTraits();
-    }
-
     const AvPkt & pkt = *packetPtr;
     decode(ctx, pkt);
   }
