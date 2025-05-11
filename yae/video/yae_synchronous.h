@@ -83,7 +83,7 @@ namespace yae
     //! reset to initial state, do not notify the observer:
     bool resetCurrentTime();
 
-    //! set current time (only if this i<s the master clock):
+    //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0,
                         const TTime & packet_pos,
                         double latencyInSeconds = 0.0,

@@ -1084,7 +1084,8 @@ namespace yae
     }
 
     // handle codec changes:
-    if (!codecpar_.same_codec(stream_->codecpar))
+    bool codec_changed = !codecpar_.same_codec(stream_->codecpar);
+    if (codec_changed)
     {
       this->flush();
       codecpar_.reset(stream_->codecpar);
@@ -1096,6 +1097,11 @@ namespace yae
     {
       // codec is not supported
       return;
+    }
+
+    if (codec_changed)
+    {
+      this->initTraits();
     }
 
     const AvPkt & pkt = *packetPtr;
