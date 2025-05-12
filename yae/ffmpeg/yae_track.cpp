@@ -906,16 +906,17 @@ namespace yae
       // or we'll hoard an unlimited number of decoded frames
       // in memory when playback is paused:
       {
-        const uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
-        const uint64_t max_queue_size = packetQueue_.getMaxSize();
+        // avoid log span due to flip-flopping queue size:
+        static const uint64_t padding = 10;
+
+        uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
+        uint64_t max_queue_size = packetQueue_.getMaxSize();
+        uint64_t cur_queue_size = packetQueue_.getSize();
 
         const uint64_t diff =
           (new_queue_size < max_queue_size) ?
           max_queue_size - new_queue_size :
           new_queue_size - max_queue_size;
-
-        // avoid log span due to flip-flopping queue size:
-        static const uint64_t padding = 10;
 
         const uint64_t percent_padding =
           (new_queue_size < max_queue_size) ?
@@ -930,8 +931,8 @@ namespace yae
                    ", current occupancy: %" PRIu64
                    ", percent padding: %" PRIu64,
                    id_.c_str(),
-                   uint64_t(new_queue_size),
-                   uint64_t(packetQueue_.getSize()),
+                   new_queue_size,
+                   cur_queue_size,
                    percent_padding);
         }
       }
@@ -1097,6 +1098,12 @@ namespace yae
     {
       // codec is not supported
       return;
+    }
+
+    if (codec_changed)
+    {
+      bool dropPendingFrames = false;
+      this->resetTimeCounters(TSeekPosPtr(), dropPendingFrames);
     }
 
     const AvPkt & pkt = *packetPtr;

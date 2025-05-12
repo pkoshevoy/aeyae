@@ -85,37 +85,12 @@ namespace yae
   //
   struct YAE_API ChannelLayout : public AVChannelLayout
   {
-    ChannelLayout(int nb_channels = 0)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-    }
+    ChannelLayout(int nb_channels = 0);
+    ChannelLayout(const AVChannelLayout & other);
+    ChannelLayout(const ChannelLayout & other);
+    ~ChannelLayout();
 
-    ChannelLayout(const AVChannelLayout & other)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-      this->assign(other);
-    }
-
-    ChannelLayout(const ChannelLayout & other)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-      this->assign(other);
-    }
-
-    ~ChannelLayout()
-    {
-      av_channel_layout_uninit(this);
-    }
-
-    inline ChannelLayout & assign(const AVChannelLayout & other)
-    {
-      if (this != &other)
-      {
-        int err = av_channel_layout_copy(this, &other);
-        YAE_ASSERT(!err);
-      }
-      return *this;
-    }
+    ChannelLayout & assign(const AVChannelLayout & other);
 
     inline ChannelLayout & operator = (const AVChannelLayout & other)
     { return this->assign(other); }

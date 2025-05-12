@@ -416,7 +416,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       {
-        std::string ts = to_hhmmss_ms(afPtr);
+        std::string ts = to_hhmmss_ms(af);
         yae_debug << "push audio frame: " << ts << "\n";
       }
 #endif
@@ -668,11 +668,14 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
-    hasPrevPTS_ = false;
-    prevNumSamples_ = 0;
-    startTime_ = 0;
-    samplesDecoded_ = 0;
+    if (seekPos)
+    {
+      setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+      hasPrevPTS_ = false;
+      prevNumSamples_ = 0;
+      startTime_ = 0;
+      samplesDecoded_ = 0;
+    }
 
     return err;
   }

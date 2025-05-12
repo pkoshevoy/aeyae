@@ -60,6 +60,10 @@ namespace yae
     { frameQueue_.clear(); }
 
     // virtual:
+    bool frameQueueIsFull() const
+    { return frameQueue_.isFull(); }
+
+    // virtual:
     bool decoderStartup();
     bool decoderShutdown();
     void handle(const AvFrm & decodedFrame);

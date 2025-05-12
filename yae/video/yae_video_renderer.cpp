@@ -304,7 +304,7 @@ namespace yae
 
         if (df > 0.5)
         {
-#if YAE_DEBUG_VIDEO_RENDERER
+#ifndef NDEBUG // YAE_DEBUG_VIDEO_RENDERER
           yae_debug
             << "FRAME IS VALID FOR " << df << " sec\n"
             << "sleep: " << secondsToSleep << " sec"
@@ -312,6 +312,7 @@ namespace yae
             << "\tf1: " << TTime(f1)
             << "\tclock: " << TTime(clockPosition)
             << "\tplayhead: " << TTime(playheadPosition)
+            << "\tdf: " << df
             << "\n";
 #endif
         }

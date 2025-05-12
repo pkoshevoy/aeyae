@@ -81,6 +81,10 @@ namespace yae
     void frameQueueClear()
     { frameQueue_.clear(); }
 
+    // virtual:
+    bool frameQueueIsFull() const
+    { return frameQueue_.isFull(); }
+
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);
     void skipNonReferenceFrames(bool skip);

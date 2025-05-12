@@ -117,6 +117,55 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(int nb_channels)
+  {
+    av_channel_layout_default(this, nb_channels);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(const AVChannelLayout & other)
+  {
+    av_channel_layout_default(this, 0);
+    this->assign(other);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(const ChannelLayout & other)
+  {
+    av_channel_layout_default(this, 0);
+    this->assign(other);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::~ChannelLayout
+  //
+  ChannelLayout::~ChannelLayout()
+  {
+    av_channel_layout_uninit(this);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::assign
+  //
+  ChannelLayout &
+  ChannelLayout::assign(const AVChannelLayout & other)
+  {
+    if (this != &other)
+    {
+      int err = av_channel_layout_copy(this, &other);
+      YAE_ASSERT(!err);
+    }
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------
   // ChannelLayout::describe
   //
   std::string

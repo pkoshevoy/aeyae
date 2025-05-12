@@ -378,6 +378,13 @@ namespace yae
     virtual void frameQueueClear()
     {}
 
+    virtual bool frameQueueIsFull() const
+    { return false; }
+
+    virtual int resetTimeCounters(const TSeekPosPtr & seekPos,
+                                  bool dropPendingFrames)
+    { return 0; }
+
   private:
     // intentionally disabled:
     Track(const Track &);

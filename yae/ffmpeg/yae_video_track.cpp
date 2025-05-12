@@ -1135,7 +1135,7 @@ namespace yae
             const AVContentLightMetadata * metadata =
               (const AVContentLightMetadata *)(side_data->data);
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             yae_dlog("MaxFALL: %u cd/m2, MaxCLL: %u cd/m2",
                      metadata->MaxFALL,
                      metadata->MaxCLL);
@@ -1212,7 +1212,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         {
-          std::string ts = to_hhmmss_ms(vfPtr);
+          std::string ts = to_hhmmss_ms(vf);
           yae_debug << "push video frame: " << ts << "\n";
         }
 #endif
@@ -1652,14 +1652,17 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
-    startTime_ = 0;
-    hasPrevPTS_ = false;
-    framesDecoded_ = 0;
-    framesProduced_ = 0;
+    if (seekPos)
+    {
+      setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+      startTime_ = 0;
+      hasPrevPTS_ = false;
+      framesDecoded_ = 0;
+      framesProduced_ = 0;
 #ifndef NDEBUG
-    this->t0_ = boost::chrono::steady_clock::now();
+      this->t0_ = boost::chrono::steady_clock::now();
 #endif
+    }
 
     return err;
   }
