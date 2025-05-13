@@ -49,7 +49,7 @@ namespace yae
     bool initTraits();
 
     // virtual:
-    AVCodecContext * open();
+    AvCodecContextPtr open();
 
     // virtual:
     bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)

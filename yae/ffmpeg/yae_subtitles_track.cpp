@@ -566,18 +566,19 @@ namespace yae
   //----------------------------------------------------------------
   // SubtitlesTrack::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   SubtitlesTrack::open()
   {
-    if (codecContext_)
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
-    AVCodecContext * ctx = NULL;
     if (stream_)
     {
-      ctx = Track::open();
+      ctx_ptr = Track::open();
+      AVCodecContext * ctx = ctx_ptr.get();
 
       const AVCodecParameters & codecParams = *(stream_->codecpar);
       format_ = getSubsFormat(codecParams.codec_id);
@@ -677,7 +678,7 @@ namespace yae
     }
 
     queue_.open();
-    return ctx;
+    return ctx_ptr;
   }
 
   //----------------------------------------------------------------

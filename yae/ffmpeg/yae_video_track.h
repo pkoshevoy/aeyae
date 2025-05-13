@@ -71,7 +71,12 @@ namespace yae
     bool initTraits();
 
     // virtual:
-    AVCodecContext * open();
+    AvCodecContextPtr open();
+
+    // virtual:
+    void packetQueueOpen();
+    void packetQueueClose();
+    void packetQueueClear();
 
     // virtual:
     bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
@@ -140,6 +145,26 @@ namespace yae
     inline void setSubs(std::vector<SubttTrackPtr> * subs)
     { subs_ = subs; }
 
+  protected:
+    // virtual:
+    bool packet_queue_push(const TPacketPtr & packetPtr,
+                           QueueWaitMgr * waitMgr);
+
+    bool packet_queue_pop(TPacketPtr & packetPtr,
+                          QueueWaitMgr * waitMgr);
+
+    // if audio packets are late ... demuxer can become stuck
+    // trying to add a video packet to an already full queue,
+    // and never adding an packets to the audio packet queue
+    // and therefore not advancing the audio playhead position
+    // thus creating a deadlock...
+    //
+    // if the video frame queue is full and the packet queue is full
+    // then we'll push additional video packets into the syncBuffer queue
+    //
+    TPacketQueue syncBuffer_;
+
+  public:
     // these are used to speed up video decoding:
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;

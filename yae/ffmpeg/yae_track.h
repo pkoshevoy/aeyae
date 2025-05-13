@@ -191,6 +191,8 @@ namespace yae
     Demuxer * demuxer_;
     int program_;
     std::string trackId_;
+    TAvCodecParametersPtr codecpar_;
+    Rational timebase_;
   };
 
   //----------------------------------------------------------------
@@ -270,9 +272,9 @@ namespace yae
     virtual bool initTraits();
 
     // open the stream for decoding:
-    virtual AVCodecContext * open();
+    virtual AvCodecContextPtr open();
 
-    virtual AVCodecContext *
+    virtual AvCodecContextPtr
     maybe_open(const AVCodec * codec,
                const AVCodecParameters & params,
                AVDictionary * opts);
@@ -350,9 +352,9 @@ namespace yae
     inline bool packetQueueIsClosed() const
     { return packetQueue_.isClosed(); }
 
-    void packetQueueOpen();
-    void packetQueueClose();
-    void packetQueueClear();
+    virtual void packetQueueOpen();
+    virtual void packetQueueClose();
+    virtual void packetQueueClear();
 
     // estimate packet ingest rate
     // and adjust Queue max size for 1s latency,
@@ -360,6 +362,17 @@ namespace yae
     bool packetQueuePush(const TPacketPtr & packetPtr,
                          QueueWaitMgr * waitMgr = NULL);
 
+  protected:
+    // helper:
+    void update_packet_queue_size(const AVPacket & packet);
+
+    virtual bool packet_queue_push(const TPacketPtr & packetPtr,
+                                   QueueWaitMgr * waitMgr);
+
+    virtual bool packet_queue_pop(TPacketPtr & packetPtr,
+                                  QueueWaitMgr * waitMgr);
+
+  public:
     inline bool packetQueueProducerIsBlocked() const
     { return packetQueue_.producerIsBlocked(); }
 
@@ -417,7 +430,11 @@ namespace yae
     QueueWaitMgr terminator_;
 
     // for detecting codec changes:
-    AvCodecParameters codecpar_;
+    TAvCodecParametersPtr codecpar_curr_;
+    TAvCodecParametersPtr codecpar_next_;
+
+    // for detecting timeline anomalies:
+    TPacketPtr prev_packet_;
 
     AVFormatContext * context_;
     AVStream * stream_;

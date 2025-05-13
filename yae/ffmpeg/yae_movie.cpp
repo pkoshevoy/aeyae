@@ -294,7 +294,9 @@ namespace yae
       if (codecType == AVMEDIA_TYPE_VIDEO &&
           stream->codecpar->format == AV_PIX_FMT_NONE)
       {
-        AVCodecContext * codec_ctx = baseTrack->open();
+        // keep-alive:
+        AvCodecContextPtr codec_ctx_ptr = baseTrack->open();
+        AVCodecContext * codec_ctx = codec_ctx_ptr.get();
         if (codec_ctx)
         {
           YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,

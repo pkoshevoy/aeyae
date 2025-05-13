@@ -59,21 +59,23 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTrack::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   AudioTrack::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
-    AVCodecContext * ctx = Track::open();
-    if (ctx)
+    ctx_ptr = Track::open();
+    if (ctx_ptr)
     {
       samplesDecoded_ = 0;
     }
 
-    return ctx;
+    return ctx_ptr;
   }
 
   //----------------------------------------------------------------
@@ -122,7 +124,7 @@ namespace yae
   AudioTrack::decoderShutdown()
   {
     frameQueue_.close();
-    packetQueue_.close();
+    this->packetQueueClose();
     return true;
   }
 
@@ -628,7 +630,7 @@ namespace yae
   AudioTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
                                 bool dropPendingFrames)
   {
-    packetQueue_.clear();
+    this->packetQueueClear();
 
     if (dropPendingFrames)
     {
@@ -653,10 +655,12 @@ namespace yae
     // down the line (the renderer):
     startNewSequence(frameQueue_, dropPendingFrames);
 
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
     int err = 0;
-    if (stream_ && codecContext_)
+    if (stream_ && ctx)
     {
-      AVCodecContext * ctx = codecContext_.get();
       avcodec_flush_buffers(ctx);
 
 #if 0
@@ -671,11 +675,12 @@ namespace yae
     if (seekPos)
     {
       setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
-      hasPrevPTS_ = false;
-      prevNumSamples_ = 0;
-      startTime_ = 0;
-      samplesDecoded_ = 0;
     }
+
+    hasPrevPTS_ = false;
+    prevNumSamples_ = 0;
+    startTime_ = 0;
+    samplesDecoded_ = 0;
 
     return err;
   }

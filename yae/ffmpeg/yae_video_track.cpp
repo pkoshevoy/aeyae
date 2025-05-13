@@ -128,6 +128,8 @@ namespace yae
 
     frameRate_.num = 1;
     frameRate_.den = AV_TIME_BASE;
+
+    syncBuffer_.setMaxSize(50);
   }
 
   //----------------------------------------------------------------
@@ -275,27 +277,30 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   VideoTrack::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
     std::list<const AVCodec *> candidates;
     const AVCodecParameters & params = *(stream_->codecpar);
     if (!yae::find_decoders_for(candidates, params, true))
     {
-      return NULL;
+      return ctx_ptr;
     }
 
     for (std::list<const AVCodec *>::const_iterator i = candidates.begin();
          i != candidates.end(); ++i)
     {
       const AVCodec * codec = *i;
-      AVCodecContext * ctx = this->maybe_open(codec, params, NULL);
-      if (!ctx)
+      ctx_ptr = this->maybe_open(codec, params, NULL);
+      if (!ctx_ptr)
       {
         continue;
       }
@@ -304,10 +309,39 @@ namespace yae
       framesProduced_ = 0;
       skipLoopFilter(skipLoopFilter_);
       skipNonReferenceFrames(skipNonReferenceFrames_);
-      return ctx;
+      return ctx_ptr;
     }
 
-    return NULL;
+    return ctx_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueOpen
+  //
+  void VideoTrack::packetQueueOpen()
+  {
+    syncBuffer_.open();
+    Track::packetQueueOpen();
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueClose
+  //
+  void
+  VideoTrack::packetQueueClose()
+  {
+    syncBuffer_.close();
+    Track::packetQueueClose();
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueClear
+  //
+  void
+  VideoTrack::packetQueueClear()
+  {
+    syncBuffer_.clear();
+    Track::packetQueueClear();
   }
 
   //----------------------------------------------------------------
@@ -318,17 +352,21 @@ namespace yae
   {
     skipLoopFilter_ = skip;
 
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
+    if (ctx)
     {
       if (skipLoopFilter_)
       {
-        codecContext_->skip_loop_filter = AVDISCARD_ALL;
-        codecContext_->flags2 |= AV_CODEC_FLAG2_FAST;
+        ctx->skip_loop_filter = AVDISCARD_ALL;
+        ctx->flags2 |= AV_CODEC_FLAG2_FAST;
       }
       else
       {
-        codecContext_->skip_loop_filter = AVDISCARD_DEFAULT;
-        codecContext_->flags2 &= ~(AV_CODEC_FLAG2_FAST);
+        ctx->skip_loop_filter = AVDISCARD_DEFAULT;
+        ctx->flags2 &= ~(AV_CODEC_FLAG2_FAST);
       }
     }
   }
@@ -341,15 +379,19 @@ namespace yae
   {
     skipNonReferenceFrames_ = skip;
 
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
+    if (ctx)
     {
       if (skipNonReferenceFrames_)
       {
-        codecContext_->skip_frame = AVDISCARD_NONREF;
+        ctx->skip_frame = AVDISCARD_NONREF;
       }
       else
       {
-        codecContext_->skip_frame = AVDISCARD_DEFAULT;
+        ctx->skip_frame = AVDISCARD_DEFAULT;
       }
     }
   }
@@ -556,7 +598,7 @@ namespace yae
     filterGraph_.reset();
     hasPrevPTS_ = false;
     frameQueue_.close();
-    packetQueue_.close();
+    this->packetQueueClose();
     return true;
   }
 
@@ -696,7 +738,7 @@ namespace yae
         double fps = double(framesDecoded_) / (1e-6 * double(dt));
 
         yae_debug
-          << codecContext_->codec->name
+          << id_
           << ", frames decoded: " << framesDecoded_
           << ", elapsed time: " << dt << " usec, decoder fps: " << fps
           << "\n";
@@ -1293,7 +1335,8 @@ namespace yae
         // Sony_Whale_Tracks.ts?
         Track track(context_, stream_, hwdec_);
         VideoTrack video_track(&track);
-        AVCodecContext * ctx = video_track.open();
+        AvCodecContextPtr ctx_ptr = video_track.open();
+        AVCodecContext * ctx = ctx_ptr.get();
         if (ctx->pix_fmt != AV_PIX_FMT_NONE)
         {
           specs.width = ctx->width;
@@ -1611,7 +1654,7 @@ namespace yae
   VideoTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
                                 bool dropPendingFrames)
   {
-    packetQueue_.clear();
+    this->packetQueueClear();
 
     if (dropPendingFrames)
     {
@@ -1639,15 +1682,17 @@ namespace yae
     // down the line (the renderer):
     startNewSequence(frameQueue_, dropPendingFrames);
 
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
     int err = 0;
-    if (stream_ && codecContext_)
+    if (stream_ && ctx)
     {
-      AVCodecContext * ctx = codecContext_.get();
-
       avcodec_flush_buffers(ctx);
 #if 1
       Track::close();
-      ctx = Track::open();
+      ctx_ptr = Track::open();
+      ctx = ctx_ptr.get();
       YAE_ASSERT(ctx);
 #endif
     }
@@ -1655,14 +1700,15 @@ namespace yae
     if (seekPos)
     {
       setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
-      startTime_ = 0;
-      hasPrevPTS_ = false;
-      framesDecoded_ = 0;
-      framesProduced_ = 0;
-#ifndef NDEBUG
-      this->t0_ = boost::chrono::steady_clock::now();
-#endif
     }
+
+    startTime_ = 0;
+    hasPrevPTS_ = false;
+    framesDecoded_ = 0;
+    framesProduced_ = 0;
+#ifndef NDEBUG
+    this->t0_ = boost::chrono::steady_clock::now();
+#endif
 
     return err;
   }
@@ -1693,4 +1739,47 @@ namespace yae
   {
     cc_.enableClosedCaptions(cc);
   }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packet_queue_push
+  //
+  bool
+  VideoTrack::packet_queue_push(const TPacketPtr & packetPtr,
+                                QueueWaitMgr * waitMgr)
+  {
+    if (!syncBuffer_.push(packetPtr, waitMgr))
+    {
+      return false;
+    }
+
+    if (packetQueue_.isFull())
+    {
+      return true;
+    }
+
+    TPacketPtr next_pkt;
+    syncBuffer_.pop(next_pkt);
+    return packetQueue_.push(next_pkt, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packet_queue_pop
+  //
+  bool
+  VideoTrack::packet_queue_pop(TPacketPtr & packetPtr,
+                               QueueWaitMgr * waitMgr)
+  {
+    if (packetQueue_.isEmpty() && !syncBuffer_.isEmpty())
+    {
+      TPacketPtr next_pkt;
+      syncBuffer_.pop(next_pkt);
+      if (!packetQueue_.push(next_pkt, waitMgr))
+      {
+        return false;
+      }
+    }
+
+    return Track::packet_queue_pop(packetPtr, waitMgr);
+  }
+
 }

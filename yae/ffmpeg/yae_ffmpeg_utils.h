@@ -164,6 +164,19 @@ namespace yae
       AVRational::num = n;
       AVRational::den = d;
     }
+
+    Rational(const AVRational & other)
+    {
+      AVRational::num = other.num;
+      AVRational::den = other.den;
+    }
+
+    inline Rational & operator = (const AVRational & other)
+    {
+      AVRational::num = other.num;
+      AVRational::den = other.den;
+      return *this;
+    }
   };
 
 
@@ -186,9 +199,17 @@ namespace yae
     // compare these codec parameters to given codecpar:
     bool same_codec(const ::AVCodecParameters * codecpar) const;
 
+    inline bool same_codec(const AvCodecParameters & codecpar) const
+    { return this->same_codec(&codecpar.get()); }
+
   protected:
     ::AVCodecParameters * codecpar_;
   };
+
+  //----------------------------------------------------------------
+  // TAvCodecParametersPtr
+  //
+  typedef yae::shared_ptr<AvCodecParameters> TAvCodecParametersPtr;
 
 
   //----------------------------------------------------------------

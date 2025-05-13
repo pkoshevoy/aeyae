@@ -490,12 +490,15 @@ namespace yae
   //----------------------------------------------------------------
   // Track::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   Track::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
     if (!stream_)
@@ -511,7 +514,7 @@ namespace yae
   //----------------------------------------------------------------
   // Track::maybe_open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   Track::maybe_open(const AVCodec * codec,
                     const AVCodecParameters & params,
                     AVDictionary * opts)
@@ -519,7 +522,7 @@ namespace yae
     if (!codec && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
-      return NULL;
+      return AvCodecContextPtr();
     }
 
     int err = 0;
@@ -650,15 +653,15 @@ namespace yae
     if (err < 0)
     {
       yae_elog("avcodec_open2 failed: %s", yae::av_errstr(err).c_str());
-      return NULL;
+      return AvCodecContextPtr();
     }
 
     std::swap(hw_device_ctx_, hw_device_ctx);
-    std::swap(codecContext_, ctx_ptr);
+    codecContext_ = ctx_ptr;
     sent_ = 0;
     received_ = 0;
     errors_ = 0;
-    return ctx;
+    return ctx_ptr;
   }
 
   //----------------------------------------------------------------
@@ -669,11 +672,7 @@ namespace yae
   {
     hw_frames_ctx_.reset();
     hw_device_ctx_.reset();
-
-    if (stream_ && codecContext_)
-    {
-      codecContext_.reset();
-    }
+    codecContext_.reset();
   }
 
   //----------------------------------------------------------------
@@ -828,7 +827,7 @@ namespace yae
   Track::threadStart()
   {
     terminator_.stopWaiting(false);
-    packetQueue_.open();
+    this->packetQueueOpen();
     return thread_.run();
   }
 
@@ -871,74 +870,110 @@ namespace yae
   bool
   Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
   {
-    if (packetPtr)
+    if (!(codecpar_next_ && codecpar_next_->same_codec(stream_->codecpar)))
     {
-      const AvPkt & pkt = *packetPtr;
-      const AVPacket & packet = pkt.get();
-
-      double rate = 0.0;
-
-      // this can be called on the main thread, when seeking:
-      {
-        boost::lock_guard<boost::mutex> lock(packetRateMutex_);
-
-        if (packet.dts != AV_NOPTS_VALUE)
-        {
-          TTime dts(int64_t(stream_->time_base.num) * packet.dts,
-                    uint64_t(stream_->time_base.den));
-
-          if (!packetRateEstimator_.is_monotonically_increasing(dts))
-          {
-            packetRateEstimator_.clear();
-          }
-
-          packetRateEstimator_.push(dts);
-        }
-        else
-        {
-          packetRateEstimator_.push_same_as_last();
-        }
-
-        rate = packetRateEstimator_.window_avg();
-      }
-
-      // must not set packet queue size to 0
-      // or we'll hoard an unlimited number of decoded frames
-      // in memory when playback is paused:
-      {
-        // avoid log span due to flip-flopping queue size:
-        static const uint64_t padding = 10;
-
-        uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
-        uint64_t max_queue_size = packetQueue_.getMaxSize();
-        uint64_t cur_queue_size = packetQueue_.getSize();
-
-        const uint64_t diff =
-          (new_queue_size < max_queue_size) ?
-          max_queue_size - new_queue_size :
-          new_queue_size - max_queue_size;
-
-        const uint64_t percent_padding =
-          (new_queue_size < max_queue_size) ?
-          (100 * diff) / max_queue_size :
-          (100 * padding) / (new_queue_size + padding);
-
-        if ((new_queue_size > max_queue_size ||
-             (diff > padding && percent_padding > 15)) &&
-            packetQueue_.setMaxSize(new_queue_size + padding))
-        {
-          yae_dlog("%s: estimated packet queue max size: %" PRIu64
-                   ", current occupancy: %" PRIu64
-                   ", percent padding: %" PRIu64,
-                   id_.c_str(),
-                   new_queue_size,
-                   cur_queue_size,
-                   percent_padding);
-        }
-      }
+      codecpar_next_.reset(new yae::AvCodecParameters(stream_->codecpar));
     }
 
+    if (packetPtr)
+    {
+      packetPtr->codecpar_ = codecpar_next_;
+      packetPtr->timebase_ = stream_->time_base;
+
+      const AvPkt & pkt = *packetPtr;
+      const AVPacket & packet = pkt.get();
+      this->update_packet_queue_size(packet);
+    }
+
+    return this->packet_queue_push(packetPtr, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // Track::update_packet_queue_size
+  //
+  void
+  Track::update_packet_queue_size(const AVPacket & packet)
+  {
+    double rate = 0.0;
+
+    // this can be called on the main thread, when seeking:
+    {
+      boost::lock_guard<boost::mutex> lock(packetRateMutex_);
+
+      if (packet.dts != AV_NOPTS_VALUE)
+      {
+        TTime dts(int64_t(stream_->time_base.num) * packet.dts,
+                  uint64_t(stream_->time_base.den));
+
+        if (!packetRateEstimator_.is_monotonically_increasing(dts))
+        {
+          packetRateEstimator_.clear();
+        }
+
+        packetRateEstimator_.push(dts);
+      }
+      else
+      {
+        packetRateEstimator_.push_same_as_last();
+      }
+
+      rate = packetRateEstimator_.window_avg();
+    }
+
+    // must not set packet queue size to 0
+    // or we'll hoard an unlimited number of decoded frames
+    // in memory when playback is paused:
+    {
+      // avoid log span due to flip-flopping queue size:
+      static const uint64_t padding = 10;
+
+      uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
+      uint64_t max_queue_size = packetQueue_.getMaxSize();
+      uint64_t cur_queue_size = packetQueue_.getSize();
+
+      const uint64_t diff =
+        (new_queue_size < max_queue_size) ?
+        max_queue_size - new_queue_size :
+        new_queue_size - max_queue_size;
+
+      const uint64_t percent_padding =
+        (new_queue_size < max_queue_size) ?
+        (100 * diff) / max_queue_size :
+        (100 * padding) / (new_queue_size + padding);
+
+      if ((new_queue_size > max_queue_size ||
+           (diff > padding && percent_padding > 15)) &&
+          packetQueue_.setMaxSize(new_queue_size + padding))
+      {
+        yae_dlog("%s: estimated packet queue max size: %" PRIu64
+                 ", current occupancy: %" PRIu64
+                 ", percent padding: %" PRIu64,
+                 id_.c_str(),
+                 new_queue_size,
+                 cur_queue_size,
+                 percent_padding);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Track::packet_queue_push
+  //
+  bool
+  Track::packet_queue_push(const TPacketPtr & packetPtr,
+                           QueueWaitMgr * waitMgr)
+  {
     return packetQueue_.push(packetPtr, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // Track::packet_queue_pop
+  //
+  bool
+  Track::packet_queue_pop(TPacketPtr & packetPtr,
+                          QueueWaitMgr * waitMgr)
+  {
+    return packetQueue_.pop(packetPtr, waitMgr);
   }
 
   //----------------------------------------------------------------
@@ -1078,36 +1113,63 @@ namespace yae
   void
   Track::decode(const TPacketPtr & packetPtr)
   {
+    TPacketPtr prev = prev_packet_;
+    prev_packet_ = packetPtr;
+
     if (!packetPtr)
     {
       this->flush();
       return;
     }
 
+    // check for timeline anomalies:
+    bool timeline_anomaly = false;
+    if (prev)
+    {
+      const AVPacket & a = prev->get();
+      const AVPacket & b = packetPtr->get();
+
+      const AVRational & a_tb = prev->timebase_;
+      const AVRational & b_tb = packetPtr->timebase_;
+
+      if (a.dts != AV_NOPTS_VALUE &&
+          b.dts != AV_NOPTS_VALUE)
+      {
+        static const Rational msec(1, 1000);
+        int64_t a_dts = av_rescale_q(a.dts, a_tb, b_tb);
+        int64_t b_dts = b.dts;
+        int64_t dt_msec = av_rescale_q(b.dts - a_dts, b_tb, msec);
+        timeline_anomaly = (dt_msec < 0 || dt_msec > 5000);
+      }
+    }
+
     // handle codec changes:
-    bool codec_changed = !codecpar_.same_codec(stream_->codecpar);
+    bool codec_changed =
+      (codecpar_curr_ && !codecpar_curr_->same_codec(*(packetPtr->codecpar_)));
     if (codec_changed)
     {
       this->flush();
-      codecpar_.reset(stream_->codecpar);
       codecContext_.reset();
     }
 
-    AVCodecContext * ctx = this->open();
+    // save for future reference:
+    codecpar_curr_ = packetPtr->codecpar_;
+
+    AvCodecContextPtr ctx = this->open();
     if (!ctx)
     {
       // codec is not supported
       return;
     }
 
-    if (codec_changed)
+    if (codec_changed || timeline_anomaly)
     {
       bool dropPendingFrames = false;
       this->resetTimeCounters(TSeekPosPtr(), dropPendingFrames);
     }
 
     const AvPkt & pkt = *packetPtr;
-    decode(ctx, pkt);
+    decode(ctx.get(), pkt);
   }
 
   //----------------------------------------------------------------
@@ -1116,7 +1178,10 @@ namespace yae
   void
   Track::flush()
   {
-    AVCodecContext * ctx = codecContext_.get();
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
     if (ctx)
     {
       // flush out buffered frames with an empty packet:
@@ -1141,7 +1206,7 @@ namespace yae
         boost::this_thread::interruption_point();
 
         TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr, &terminator_))
+        if (!this->packet_queue_pop(packetPtr, &terminator_))
         {
           break;
         }
@@ -1164,7 +1229,7 @@ namespace yae
   Track::threadStop()
   {
     terminator_.stopWaiting(true);
-    packetQueue_.close();
+    this->packetQueueClose();
     thread_.interrupt();
     return thread_.wait();
   }
