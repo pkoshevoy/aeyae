@@ -503,12 +503,14 @@ namespace yae
 
     if (!stream_)
     {
-      return NULL;
+      return ctx_ptr;
     }
 
-    const AVCodecParameters & params = *(stream_->codecpar);
-    const AVCodec * codec = avcodec_find_decoder(params.codec_id);
-    return maybe_open(codec, params, NULL);
+    // keep-alive:
+    AvCodecParameters params(stream_->codecpar);
+    const AVCodecParameters & codecpar = params.get();
+    const AVCodec * codec = avcodec_find_decoder(codecpar.codec_id);
+    return maybe_open(codec, codecpar, NULL);
   }
 
   //----------------------------------------------------------------
