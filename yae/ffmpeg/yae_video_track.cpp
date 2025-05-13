@@ -1772,8 +1772,8 @@ namespace yae
     if (packetQueue_.isEmpty() && !syncBuffer_.isEmpty())
     {
       TPacketPtr next_pkt;
-      syncBuffer_.pop(next_pkt);
-      if (!packetQueue_.push(next_pkt, waitMgr))
+      if (!(syncBuffer_.pop(next_pkt, waitMgr) &&
+            packetQueue_.push(next_pkt, waitMgr)))
       {
         return false;
       }
