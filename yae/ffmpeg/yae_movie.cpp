@@ -1657,8 +1657,25 @@ namespace yae
   void
   Movie::setEventObserver(const TEventObserverPtr & eo)
   {
-    // FIXME: also update the tracks
     eo_ = eo;
+
+    for (std::size_t i = 0, n = videoTracks_.size(); i < n; ++i)
+    {
+      VideoTrack & track = *(videoTracks_[i]);
+      track.setEventObserver(eo);
+    }
+
+    for (std::size_t i = 0, n = audioTracks_.size(); i < n; ++i)
+    {
+      AudioTrack & track = *(audioTracks_[i]);
+      track.setEventObserver(eo);
+    }
+
+    for (std::size_t i = 0, n = subs_.size(); i < n; ++i)
+    {
+      SubtitlesTrack & track = *(subs_[i]);
+      track.setEventObserver(eo);
+    }
   }
 
 }

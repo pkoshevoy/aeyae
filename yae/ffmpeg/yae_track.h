@@ -342,6 +342,9 @@ namespace yae
     inline bool threadIsRunning() const
     { return thread_.isRunning(); }
 
+    inline void setEventObserver(const TEventObserverPtr & eo)
+    { eo_ = eo; }
+
     // adjust frame duration:
     virtual bool setTempo(double tempo);
 
@@ -428,6 +431,9 @@ namespace yae
 
     // deadlock avoidance mechanism:
     QueueWaitMgr terminator_;
+
+    // optional event observer:
+    TEventObserverPtr eo_;
 
     // for detecting codec changes:
     TAvCodecParametersPtr codecpar_curr_;

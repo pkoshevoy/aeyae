@@ -157,7 +157,8 @@ namespace yae
 
     void setSharedClock(const SharedClock & clock);
 
-    // optional:
+    // this is mostly so we can notify the observer about MPEG-TS
+    // program changes, ES codec changes, etc...
     void setEventObserver(const TEventObserverPtr & eo);
 
   private:

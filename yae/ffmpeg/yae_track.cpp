@@ -1172,6 +1172,19 @@ namespace yae
 
     const AvPkt & pkt = *packetPtr;
     decode(ctx.get(), pkt);
+
+    if (codec_changed)
+    {
+      // keep-alive:
+      TEventObserverPtr eo = eo_;
+      if (eo)
+      {
+        Json::Value event;
+        event["event_type"] = "codec_changed";
+        event["track_id"] = id_;
+        eo->note(event);
+      }
+    }
   }
 
   //----------------------------------------------------------------
