@@ -1195,6 +1195,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // DemuxerReader::setEventObserver
+  //
+  void
+  DemuxerReader::setEventObserver(const TEventObserverPtr & eo)
+  {
+    (void)eo;
+  }
+
+  //----------------------------------------------------------------
   // DemuxerReader::requestMutex
   //
   void

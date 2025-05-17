@@ -159,6 +159,11 @@ namespace yae
     // to synchronize their output:
     virtual void setSharedClock(const SharedClock & clock);
 
+    // optional, if set then reader may call eo->note(event)
+    // to notify observer of significant events, such as MPEG-TS
+    // program structure changes, ES codec changes, etc...
+    virtual void setEventObserver(const TEventObserverPtr & eo);
+
     // helpers:
     void requestMutex(boost::unique_lock<boost::timed_mutex> & lk);
 

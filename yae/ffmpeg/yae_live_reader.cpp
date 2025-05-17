@@ -1654,4 +1654,13 @@ namespace yae
   {
     private_->movie_.setSharedClock(clock);
   }
+
+  //----------------------------------------------------------------
+  // LiveReader::setEventObserver
+  //
+  void
+  LiveReader::setEventObserver(const TEventObserverPtr & eo)
+  {
+    private_->movie_.setEventObserver(eo);
+  }
 }

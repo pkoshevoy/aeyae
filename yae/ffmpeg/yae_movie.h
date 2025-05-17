@@ -157,6 +157,9 @@ namespace yae
 
     void setSharedClock(const SharedClock & clock);
 
+    // optional:
+    void setEventObserver(const TEventObserverPtr & eo);
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -225,6 +228,9 @@ namespace yae
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;
+
+    // optional event observer:
+    TEventObserverPtr eo_;
 
     // top-level settings group:
     yae::TSettingGroup settings_;

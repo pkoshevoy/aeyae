@@ -787,6 +787,15 @@ namespace yae
   {
     private_->movie_.setSharedClock(clock);
   }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setEventObserver
+  //
+  void
+  ReaderFFMPEG::setEventObserver(const TEventObserverPtr & eo)
+  {
+    private_->movie_.setEventObserver(eo);
+  }
 }
 
 #if 0

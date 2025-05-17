@@ -1651,4 +1651,14 @@ namespace yae
     clock_.setRealtime(playbackEnabled_);
   }
 
+  //----------------------------------------------------------------
+  // Movie::setEventObserver
+  //
+  void
+  Movie::setEventObserver(const TEventObserverPtr & eo)
+  {
+    // FIXME: also update the tracks
+    eo_ = eo;
+  }
+
 }

@@ -13,6 +13,7 @@
 #include "yae/api/yae_plugin_interface.h"
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_queue.h"
+#include "yae/utils/yae_utils.h"
 #include "yae/video/yae_synchronous.h"
 #include "yae/video/yae_video.h"
 
@@ -225,6 +226,11 @@ namespace yae
     // a reference to the clock that audio/video renderers use
     // to synchronize their output:
     virtual void setSharedClock(const SharedClock & clock) = 0;
+
+    // optional, if set then reader may call eo->note(event)
+    // to notify observer of significant events, such as MPEG-TS
+    // program structure changes, ES codec changes, etc...
+    virtual void setEventObserver(const TEventObserverPtr & eo) = 0;
 
     // helpers:
     inline bool refers_to_packet_pos_timeline() const
