@@ -280,7 +280,7 @@ namespace yae
     // extract attachments:
     attachments.push_back(TAttachment(codecpar.extradata,
                                       codecpar.extradata_size));
-    TAttachment & att = attachments_.back();
+    TAttachment & att = attachments.back();
 
     const AVDictionaryEntry * prev = NULL;
     while (true)
