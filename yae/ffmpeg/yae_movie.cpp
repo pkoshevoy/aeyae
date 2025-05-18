@@ -625,8 +625,8 @@ namespace yae
     stream_ix_to_subtt_ix_.swap(stream_ix_to_subtt_ix);
 
     // by default do not select any tracks:
-    selectedVideoTrack_ = video_tracks.size();
-    selectedAudioTrack_ = audio_tracks.size();
+    selectedVideoTrack_ = video_tracks_.size();
+    selectedAudioTrack_ = audio_tracks_.size();
 
     return true;
   }
@@ -781,6 +781,9 @@ namespace yae
     subtt_tracks_.swap(subtt_tracks);
     stream_ix_to_prog_ix_.swap(stream_ix_to_prog_ix);
     stream_ix_to_subtt_ix_.swap(stream_ix_to_subtt_ix);
+
+    this->selectVideoTrack(selectedVideoTrack_);
+    this->selectAudioTrack(selectedAudioTrack_);
   }
 
   //----------------------------------------------------------------
