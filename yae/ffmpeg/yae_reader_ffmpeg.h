@@ -66,6 +66,11 @@ namespace yae
     virtual void close();
 
     virtual const char * getResourcePath() const;
+
+    // in case reader emits an event indicating MPEG-TS program changes, or
+    // ES codec changes - use this to refresh cached program and track info:
+    virtual void refreshInfo();
+
     virtual std::size_t getNumberOfPrograms() const;
     virtual bool getProgramInfo(std::size_t i, TProgramInfo & info) const;
 

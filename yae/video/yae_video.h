@@ -624,7 +624,7 @@ namespace yae
     TDictionary metadata_;
     std::list<std::size_t> video_;
     std::list<std::size_t> audio_;
-    std::list<std::size_t> subs_;
+    std::list<std::size_t> subtt_;
   };
 
   //----------------------------------------------------------------
@@ -646,8 +646,11 @@ namespace yae
     const char * lang() const;
     const char * name() const;
 
-    void setLang(const char * lang);
-    void setName(const char * name);
+    inline void setLang(const std::string & lang)
+    { lang_ = lang; }
+
+    inline void setName(const std::string & name)
+    { name_ = name; }
 
     std::size_t nprograms_;
     std::size_t program_;

@@ -694,30 +694,58 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Track::getCodecName
+  // Track::set_track_id
   //
-  const char *
-  Track::getCodecName() const
+  void
+  Track::set_track_id(const std::string & track_id)
   {
-    return stream_ ? avcodec_get_name(stream_->codecpar->codec_id) : NULL;
+    Track::TInfoPtr info_ptr(new Track::Info());
+    Track::Info & info = *info_ptr;
+    info.track_id_ = track_id;
+    this->update(info);
+    info_ = info_ptr;
   }
 
   //----------------------------------------------------------------
-  // Track::getName
+  // Track::update
   //
-  const char *
-  Track::getName() const
+  void
+  Track::update(Track::Info & info) const
   {
-    return stream_ ? getTrackName(stream_->metadata) : NULL;
-  }
+    if (!stream_)
+    {
+      return;
+    }
 
-  //----------------------------------------------------------------
-  // Track::getLang
-  //
-  const char *
-  Track::getLang() const
-  {
-    return stream_ ? getTrackLang(stream_->metadata) : NULL;
+    const char * codec_name = avcodec_get_name(stream_->codecpar->codec_id);
+    if (codec_name)
+    {
+      info.codec_ = codec_name;
+    }
+    else
+    {
+      info.codec_.clear();
+    }
+
+    const char * track_name = getTrackName(stream_->metadata);
+    if (track_name)
+    {
+      info.name_ = track_name;
+    }
+    else
+    {
+      info.name_.clear();
+    }
+
+    const char * track_lang = getTrackLang(stream_->metadata);
+    if (track_lang)
+    {
+      info.lang_ = track_lang;
+    }
+    else
+    {
+      info.lang_.clear();
+    }
   }
 
   //----------------------------------------------------------------
@@ -947,10 +975,11 @@ namespace yae
            (diff > padding && percent_padding > 15)) &&
           packetQueue_.setMaxSize(new_queue_size + padding))
       {
+        std::string track_id = this->get_track_id();
         yae_dlog("%s: estimated packet queue max size: %" PRIu64
                  ", current occupancy: %" PRIu64
                  ", percent padding: %" PRIu64,
-                 id_.c_str(),
+                 track_id.c_str(),
                  new_queue_size,
                  cur_queue_size,
                  percent_padding);
@@ -1009,8 +1038,9 @@ namespace yae
 
       received_++;
 #if 0
+      std::string track_id = this->get_track_id();
       yae_wlog("%s decoded: %s",
-               id_.c_str(),
+               track_id.c_str(),
                TTime(decodedFrame.pts *
                      stream_->time_base.num,
                      stream_->time_base.den).
@@ -1023,7 +1053,7 @@ namespace yae
       {
         const AVFrameSideData & sd = *(decodedFrame.side_data[i]);
         yae_dlog("%s frame side data %i: %s, size %i, %s",
-                 id_.c_str(),
+                 track_id.c_str(),
                  i,
                  av_frame_side_data_name(sd.type),
                  sd.size,
@@ -1032,7 +1062,7 @@ namespace yae
       }
 #endif
 
-      handle(frm);
+      this->handle(frm);
     }
 
     return err;
@@ -1073,9 +1103,10 @@ namespace yae
       if (errSend < 0 && errSend != AVERROR(EAGAIN) && errSend != AVERROR_EOF)
       {
 #ifndef NDEBUG
+        std::string track_id = this->get_track_id();
         av_log(NULL, AV_LOG_WARNING,
                "[%s] Track::decode(%p), errSend: %i, %s\n",
-               id_.c_str(),
+               track_id.c_str(),
                packet.data,
                errSend,
                av_errstr(errSend).c_str());
@@ -1094,9 +1125,10 @@ namespace yae
 #ifndef NDEBUG
         if (errRecv != AVERROR(EAGAIN) && errRecv != AVERROR_EOF)
         {
+          std::string track_id = this->get_track_id();
           av_log(NULL, AV_LOG_WARNING,
                  "[%s] Track::decode(%p), errRecv: %i, %s\n",
-                 id_.c_str(),
+                 track_id.c_str(),
                  packet.data,
                  errRecv,
                  av_errstr(errRecv).c_str());
@@ -1179,9 +1211,10 @@ namespace yae
       TEventObserverPtr eo = eo_;
       if (eo)
       {
+        std::string track_id = this->get_track_id();
         Json::Value event;
         event["event_type"] = "codec_changed";
-        event["track_id"] = id_;
+        event["track_id"] = track_id;
         eo->note(event);
       }
     }

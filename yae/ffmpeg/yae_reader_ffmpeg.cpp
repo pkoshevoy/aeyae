@@ -198,6 +198,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderFFMPEG::refreshInfo
+  //
+  void
+  ReaderFFMPEG::refreshInfo()
+  {
+    private_->movie_.refresh();
+  }
+
+  //----------------------------------------------------------------
   // ReaderFFMPEG::getNumberOfPrograms
   //
   std::size_t

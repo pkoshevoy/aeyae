@@ -6,9 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt:
-#include <QApplication>
-#include <QProcess>
+// aeyae:
+#include "yae/utils/yae_json.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -17,6 +16,10 @@
 #include "yaePlayerStyle.h"
 #include "yaePlayerUxItem.h"
 #include "yaeUtilsQt.h"
+
+// Qt:
+#include <QApplication>
+#include <QProcess>
 
 
 namespace yae
@@ -1534,6 +1537,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // PlayerUxItem::handle_reader_event
+  //
+  void
+  PlayerUxItem::handle_reader_event(const IReaderPtr & reader,
+                                    const Json::Value & event)
+  {
+    if (reader != player_->reader())
+    {
+      return;
+    }
+
+    yae_dlog("PlayerUxItem::handle_reader_event: %s: %s",
+             Item::id_.c_str(),
+             yae::to_str(event).c_str());
+
+    reader->refreshInfo();
+    emit reader_properties_changed(reader);
+  }
+
+  //----------------------------------------------------------------
   // PlayerUxItem::set_shortcuts
   //
   void
@@ -1724,6 +1747,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEventHandler
+  //
+  struct ReaderEventHandler : IEventObserver
+  {
+    ReaderEventHandler(PlayerUxItem & ux, const IReaderPtr & reader):
+      ux_(ux),
+      reader_(reader)
+    {}
+
+    virtual void note(const Json::Value & event)
+    {
+      IReaderPtr reader = reader_.lock();
+      if (reader)
+      {
+        ux_.handle_reader_event(reader, event);
+      }
+    }
+
+    PlayerUxItem & ux_;
+    IReaderWPtr reader_;
+  };
+
+  //----------------------------------------------------------------
   // PlayerUxItem::playback
   //
   void
@@ -1763,6 +1809,8 @@ namespace yae
     if (reader_ptr)
     {
       IReader & reader = *reader_ptr;
+      TEventObserverPtr eo(new ReaderEventHandler(*this, reader_ptr));
+      reader.setEventObserver(eo);
 
       int ai = int(reader.getSelectedAudioTrackIndex());
       audioTrackGroup_->actions().at(ai)->setChecked(true);

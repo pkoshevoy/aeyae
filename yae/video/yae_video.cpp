@@ -844,38 +844,6 @@ namespace yae
     return hasName() ? name_.c_str() : NULL;
   }
 
-  //----------------------------------------------------------------
-  // TTrackInfo::setLang
-  //
-  void
-  TTrackInfo::setLang(const char * lang)
-  {
-    if (lang)
-    {
-      lang_ = lang;
-    }
-    else
-    {
-      lang_.clear();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TTrackInfo::setName
-  //
-  void
-  TTrackInfo::setName(const char * name)
-  {
-    if (name)
-    {
-      name_ = name;
-    }
-    else
-    {
-      name_.clear();
-    }
-  }
-
 
   //----------------------------------------------------------------
   // TChapter::TChapter

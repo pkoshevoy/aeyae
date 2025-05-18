@@ -134,6 +134,10 @@ namespace yae
   void
   AudioTrack::handle(const AvFrm & decodedFrame)
   {
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = Track::info_;
+    const Track::Info & track_info = *track_info_ptr;
+
     try
     {
       boost::this_thread::interruption_point();
@@ -261,7 +265,7 @@ namespace yae
 
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
-      af.trackId_ = Track::id();
+      af.trackId_ = track_info.track_id_;
 
       bool gotPTS = false;
 

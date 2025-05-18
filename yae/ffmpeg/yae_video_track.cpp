@@ -706,6 +706,10 @@ namespace yae
   {
     // YAE_BENCHMARK(benchmark, "VideoTrack::handle");
 
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = Track::info_;
+    const Track::Info & track_info = *track_info_ptr;
+
     try
     {
       AvFrm decodedFrameCopy(decodedFrame);
@@ -1039,7 +1043,7 @@ namespace yae
 
         vf.time_.base_ = filterGraphOutputTimeBase.den;
         vf.time_.time_ = filterGraphOutputTimeBase.num * output.pts;
-        vf.trackId_ = Track::id();
+        vf.trackId_ = track_info.track_id_;
 
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)

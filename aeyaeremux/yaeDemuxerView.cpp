@@ -3293,8 +3293,10 @@ namespace yae
     // shortcuts:
     const ItemViewStyle & style = *(view.style());
     TrackPtr track = yae::get(summary.decoders_, track_id);
-    const char * track_name = track ? track->getName() : NULL;
-    const char * track_lang = track ? track->getLang() : NULL;
+
+    Track::TInfoPtr track_info = track ? track->get_info() : Track::TInfoPtr();
+    const char * track_name = track_info ? track_info->name_.c_str() : NULL;
+    const char * track_lang = track_info ? track_info->lang_.c_str() : NULL;
 
     std::ostringstream oss;
     oss << track_id;
@@ -3310,13 +3312,14 @@ namespace yae
           int pid = track->getStreamId();
           if (pid != std::numeric_limits<int>::max())
           {
-            oss << ", PID 0x" << std::hex << pid << " (" << std::dec << pid << ")";
+            oss << ", PID 0x" << std::hex << pid
+                << " (" << std::dec << pid << ")";
           }
         }
       }
     }
 
-    const char * codec_name = track ? track->getCodecName() : NULL;
+    const char * codec_name = track_info ? track_info->codec_.c_str() : NULL;
     if (codec_name)
     {
       oss << ", " << codec_name;

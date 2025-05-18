@@ -809,8 +809,8 @@ namespace yae
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ?
-          reader->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader->subsCount() : program.subtt_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
@@ -890,8 +890,8 @@ namespace yae
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ?
-          reader->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader->subsCount() : program.subtt_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;

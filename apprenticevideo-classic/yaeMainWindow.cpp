@@ -2431,8 +2431,8 @@ namespace yae
 
       if (reader_->hasSelectedSubsTrack())
       {
-        std::size_t i = program.subs_.empty() ?
-          reader_->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader_->subsCount() : program.subtt_.front();
         selectSubsTrack(reader_, i);
         subsTrackGroup_->actions().at((int)i)->setChecked(true);
       }
@@ -2488,8 +2488,8 @@ namespace yae
 
       if (reader_->hasSelectedSubsTrack())
       {
-        std::size_t i = program.subs_.empty() ?
-          reader_->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader_->subsCount() : program.subtt_.front();
         selectSubsTrack(reader_, i);
         subsTrackGroup_->actions().at((int)i)->setChecked(true);
       }

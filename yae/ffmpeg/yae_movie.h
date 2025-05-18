@@ -46,6 +46,22 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // ProgramTracks
+  //
+  struct YAE_API ProgramTracks
+  {
+    std::map<int, std::list<VideoTrackPtr> > video_;
+    std::map<int, std::list<AudioTrackPtr> > audio_;
+    std::map<int, std::list<SubttTrackPtr> > subtt_;
+  };
+
+  //----------------------------------------------------------------
+  // TProgramTracksLut
+  //
+  typedef std::map<int, ProgramTracks> TProgramTracksLut;
+
+
+  //----------------------------------------------------------------
   // Movie
   //
   struct YAE_API Movie
@@ -60,7 +76,27 @@ namespace yae
 
     bool getUrlProtocols(std::list<std::string> & protocols) const;
 
+  protected:
+    VideoTrackPtr create_video_track(AVStream * stream);
+    AudioTrackPtr create_audio_track(AVStream * stream);
+    SubttTrackPtr create_subtt_track(AVStream * stream);
+
+    bool extract_attachment(const AVStream * stream,
+                            std::vector<TAttachment> & attachments);
+
+    void get_program_info(std::vector<TProgramInfo> & program_infos,
+                          std::map<int, int> & stream_ix_to_prog_ix);
+
+    void flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
+                                std::vector<TProgramInfo> & program_infos,
+                                std::vector<VideoTrackPtr> & video_tracks,
+                                std::vector<AudioTrackPtr> & audio_tracks,
+                                std::vector<SubttTrackPtr> & subtt_tracks,
+                                std::map<int, int> stream_ix_to_subtt_ix);
+
+  public:
     bool open(const char * resourcePath, bool hwdec);
+    void refresh();
     void close();
 
     inline uint64_t get_file_size() const
@@ -76,13 +112,13 @@ namespace yae
     { return (context_ && context_->iformat) ? context_->iformat->name : ""; }
 
     inline const std::vector<TProgramInfo> & getPrograms() const
-    { return programs_; }
+    { return program_infos_; }
 
     inline const std::vector<VideoTrackPtr> & getVideoTracks() const
-    { return videoTracks_; }
+    { return video_tracks_; }
 
     inline const std::vector<AudioTrackPtr> & getAudioTracks() const
-    { return audioTracks_; }
+    { return audio_tracks_; }
 
     inline std::size_t getSelectedVideoTrack() const
     { return selectedVideoTrack_; }
@@ -183,12 +219,12 @@ namespace yae
     AVFormatContext * context_;
 
     std::vector<TAttachment> attachments_;
-    std::vector<TProgramInfo> programs_;
-    std::vector<VideoTrackPtr> videoTracks_;
-    std::vector<AudioTrackPtr> audioTracks_;
-    std::vector<SubttTrackPtr> subs_;
-    std::map<unsigned int, std::size_t> subsIdx_;
-    std::map<int, int> streamIndexToProgramIndex_;
+    std::vector<TProgramInfo> program_infos_;
+    std::vector<VideoTrackPtr> video_tracks_;
+    std::vector<AudioTrackPtr> audio_tracks_;
+    std::vector<SubttTrackPtr> subtt_tracks_;
+    std::map<int, int> stream_ix_to_prog_ix_;
+    std::map<int, int> stream_ix_to_subtt_ix_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;

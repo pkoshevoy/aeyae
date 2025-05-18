@@ -259,6 +259,23 @@ namespace yae
   //
   struct YAE_API Track
   {
+
+    //----------------------------------------------------------------
+    // Info
+    //
+    struct YAE_API Info
+    {
+      std::string track_id_;
+      std::string codec_;
+      std::string name_;
+      std::string lang_;
+    };
+
+    //----------------------------------------------------------------
+    // TInfoPtr
+    //
+    typedef yae::shared_ptr<Info> TInfoPtr;
+
     // NOTE: constructor does not open the stream:
     Track(AVFormatContext * context, AVStream * stream, bool hwdec);
 
@@ -292,16 +309,21 @@ namespace yae
     //
     // examples: a:0, v:0, s:0, a:9, a:10, s:9, s:10
     //
-    inline void setId(const std::string & id)
-    { id_ = id; }
+    void set_track_id(const std::string & id);
 
-    inline const std::string & id() const
-    { return id_; }
+    inline std::string get_track_id() const
+    {
+      // keep-alive:
+      Track::TInfoPtr info_ptr = info_;
+      const Track::Info & info = *info_ptr;
+      return info.track_id_;
+    }
 
-    // get track name:
-    const char * getCodecName() const;
-    const char * getName() const;
-    const char * getLang() const;
+    // update info: codec name, track name, track language:
+    void update(Track::Info & info) const;
+
+    inline Track::TInfoPtr get_info() const
+    { return info_; }
 
     // NOTE: for MPEG-TS this corresponds to PID:
     inline int getStreamId() const
@@ -423,8 +445,8 @@ namespace yae
     yae::AvBufferRef hw_device_ctx_;
     yae::AvBufferRef hw_frames_ctx_;
 
-    // global track id:
-    std::string id_;
+    // track info:
+    Track::TInfoPtr info_;
 
     // worker thread:
     Thread<Track> thread_;

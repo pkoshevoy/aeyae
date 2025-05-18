@@ -85,6 +85,10 @@ namespace yae
     bool processWheelEvent(Canvas * canvas, QWheelEvent * event);
     bool processMouseTracking(const TVec2D & mousePt);
 
+    // IEventObserver handler:
+    void handle_reader_event(const IReaderPtr & reader,
+                             const Json::Value & event);
+
     // helpers:
     void set_shortcuts(const yae::shared_ptr<PlayerShortcuts> & sc);
 
@@ -98,6 +102,7 @@ namespace yae
                                       bool detectionFinished);
   signals:
     void reader_changed(IReaderPtr reader);
+    void reader_properties_changed(IReaderPtr reader);
     void visibility_changed(bool);
 
     void toggle_playlist();

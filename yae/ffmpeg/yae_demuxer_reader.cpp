@@ -401,12 +401,14 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       const VideoTrackPtr & track = video_[info.index_];
-      info.setLang(track->getLang());
-      info.setName(track->getName());
 
-      const std::string & track_id = track->id();
-      info.program_ = yae::get(prog_lut_, track_id);
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = track->get_info();
+      const Track::Info & track_info = *track_info_ptr;
 
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = yae::get(prog_lut_, track_info.track_id_);
       return true;
     }
 
@@ -429,12 +431,14 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       const AudioTrackPtr & track = audio_[info.index_];
-      info.setLang(track->getLang());
-      info.setName(track->getName());
 
-      const std::string & track_id = track->id();
-      info.program_ = yae::get(prog_lut_, track_id);
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = track->get_info();
+      const Track::Info & track_info = *track_info_ptr;
 
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = yae::get(prog_lut_, track_info.track_id_);
       return true;
     }
 
@@ -453,7 +457,10 @@ namespace yae
       return false;
     }
 
-    const std::string & track_id = track->id();
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = track->get_info();
+    const Track::Info & track_info = *track_info_ptr;
+    const std::string & track_id = track_info.track_id_;
     const DemuxerSummary & summary = demuxer_->summary();
     const Timeline::Track & tt = summary.get_track_timeline(track_id);
 
@@ -474,7 +481,10 @@ namespace yae
       return false;
     }
 
-    const std::string & track_id = track->id();
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = track->get_info();
+    const Track::Info & track_info = *track_info_ptr;
+    const std::string & track_id = track_info.track_id_;
     const DemuxerSummary & summary = demuxer_->summary();
     const Timeline::Track & tt = summary.get_track_timeline(track_id);
 
@@ -1072,11 +1082,14 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       const SubttTrackPtr & track = subtt_[i];
-      info.setLang(track->getLang());
-      info.setName(track->getName());
 
-      const std::string & track_id = track->id();
-      info.program_ = yae::get(prog_lut_, track_id);
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = track->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = yae::get(prog_lut_, track_info.track_id_);
 
       return track->format_;
     }
@@ -1229,8 +1242,8 @@ namespace yae
     VideoTrackPtr videoTrack = selectedVideoTrack();
 
     std::string track_id =
-      videoTrack ? videoTrack->id() :
-      audioTrack ? audioTrack->id() :
+      videoTrack ? videoTrack->get_track_id() :
+      audioTrack ? audioTrack->get_track_id() :
       std::string();
 
     const DemuxerSummary & summary = demuxer_->summary();

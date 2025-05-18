@@ -1137,7 +1137,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     if (subs)
     {
-      sf.trackId_ = subs->Track::id();
+      sf.trackId_ = subs->Track::get_track_id();
       subs->push(sf, &outputTerminator);
     }
   }

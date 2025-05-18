@@ -98,14 +98,358 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ProgramTracks
+  // Movie::create_video_track
   //
-  struct ProgramTracks
+  VideoTrackPtr
+  Movie::create_video_track(AVStream * stream)
   {
-    std::map<int, std::list<VideoTrackPtr> > video_;
-    std::map<int, std::list<AudioTrackPtr> > audio_;
-    std::map<int, std::list<SubttTrackPtr> > subtt_;
-  };
+    VideoTrackPtr video_track;
+
+    do
+    {
+      // shortcut:
+      AVCodecParameters & codecpar = *(stream->codecpar);
+      const AVMediaType codec_type = codecpar.codec_type;
+      YAE_ASSERT(codec_type ==  AVMEDIA_TYPE_VIDEO);
+
+      // assume codec is unsupported,
+      // discard all packets unless proven otherwise:
+      stream->discard = AVDISCARD_ALL;
+
+      // check whether we have a decoder for this codec:
+      const AVCodec * decoder = avcodec_find_decoder(codecpar.codec_id);
+      if (!decoder)
+      {
+        // unsupported codec, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+        break;
+      }
+
+      TrackPtr base_track(new Track(context_, stream, hwdec_));
+      if (codecpar.format == AV_PIX_FMT_NONE)
+      {
+        // keep-alive:
+        AvCodecContextPtr codec_ctx_ptr = base_track->open();
+        AVCodecContext * codec_ctx = codec_ctx_ptr.get();
+        if (codec_ctx)
+        {
+          YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,
+                                                     codec_ctx) >= 0);
+          base_track->close();
+        }
+      }
+
+      video_track.reset(new VideoTrack(base_track.get()));
+
+      VideoTraits traits;
+      if (video_track->getTraits(traits) &&
+          // avfilter does not support these pixel formats:
+          traits.pixelFormat_ != kPixelFormatUYYVYY411)
+      {
+        stream->discard = AVDISCARD_DEFAULT;
+      }
+      else
+      {
+        // unsupported codec, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+      }
+    }
+    while (false);
+    return video_track;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::create_audio_track
+  //
+  AudioTrackPtr
+  Movie::create_audio_track(AVStream * stream)
+  {
+    AudioTrackPtr audio_track;
+
+    do
+    {
+      // shortcut:
+      AVCodecParameters & codecpar = *(stream->codecpar);
+      const AVMediaType codec_type = codecpar.codec_type;
+      YAE_ASSERT(codec_type ==  AVMEDIA_TYPE_AUDIO);
+
+      // assume codec is unsupported,
+      // discard all packets unless proven otherwise:
+      stream->discard = AVDISCARD_ALL;
+
+      // check whether we have a decoder for this codec:
+      const AVCodec * decoder = avcodec_find_decoder(codecpar.codec_id);
+      if (!decoder)
+      {
+        // unsupported codec, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+        break;
+      }
+
+      TrackPtr base_track(new Track(context_, stream, hwdec_));
+      audio_track.reset(new AudioTrack(base_track.get()));
+
+      AudioTraits traits;
+      if (audio_track->getTraits(traits))
+      {
+        stream->discard = AVDISCARD_DEFAULT;
+      }
+      else
+      {
+        // unsupported codec, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+      }
+    }
+    while (false);
+    return audio_track;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::create_subtt_track
+  //
+  SubttTrackPtr
+  Movie::create_subtt_track(AVStream * stream)
+  {
+    SubttTrackPtr subtt_track;
+
+    do
+    {
+      // shortcut:
+      const AVCodecParameters & codecpar = *(stream->codecpar);
+      const AVMediaType codec_type = codecpar.codec_type;
+      YAE_ASSERT(codec_type ==  AVMEDIA_TYPE_SUBTITLE);
+
+      // don't discard closed captions packets, though they don't
+      // get to have their own stand-alone subtitles track;
+      stream->discard = AVDISCARD_DEFAULT;
+
+      // don't add CEA-608 as a single track...
+      // because it's actually 4 channels
+      // and it makes a poor user experience
+      if (codecpar.codec_id != AV_CODEC_ID_NONE &&
+          codecpar.codec_id != AV_CODEC_ID_EIA_608)
+      {
+        subtt_track.reset(new SubtitlesTrack(stream));
+
+        if (strcmp(context_->iformat->name, "matroska,webm") == 0)
+        {
+          // https://matroska.org/technical/subtitles.html
+          //
+          // matroska container does not store ASS/SSA Events
+          // as defined in the [Events] Format:, they remove
+          // timing info and store some fields in fixed order:
+          //   ReadOrder, Layer, Style, Name (or Actor),
+          //   MarginL, MarginR, MarginV, Effect, Text
+          //
+          // ffmpeg mkv demuxer does not account for the (potential)
+          // re-ordering of the [Events] Format: fields, it outputs
+          // events as-is, without timing info, and in all likelihood
+          // not matching the [Events] Format: defined in the
+          // AVCodecContext.subtitle_header.  This makes the decoded
+          // subtitles unusable with libass renderer.
+          //
+          // We will have to handle the re-ordering and adding the
+          // timing info ourselves, in order to be able to process
+          // these Events with libass
+
+          subtt_track->setInputEventFormat("ReadOrder, Layer, Style, "
+                                           "Name, MarginL, MarginR, "
+                                           "MarginV, Effect, Text");
+        }
+      }
+    }
+    while (false);
+    return subtt_track;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::extract_attachment
+  //
+  bool
+  Movie::extract_attachment(const AVStream * stream,
+                            std::vector<TAttachment> & attachments)
+  {
+    // shortcuts:
+    const AVCodecParameters & codecpar = *(stream->codecpar);
+    const AVMediaType codec_type = codecpar.codec_type;
+    if (codec_type != AVMEDIA_TYPE_ATTACHMENT)
+    {
+      return false;
+    }
+
+    // extract attachments:
+    attachments.push_back(TAttachment(codecpar.extradata,
+                                      codecpar.extradata_size));
+    TAttachment & att = attachments_.back();
+
+    const AVDictionaryEntry * prev = NULL;
+    while (true)
+    {
+      AVDictionaryEntry * found =
+        av_dict_get(stream->metadata, "", prev, AV_DICT_IGNORE_SUFFIX);
+
+      if (!found)
+      {
+        break;
+      }
+
+      att.metadata_[std::string(found->key)] = std::string(found->value);
+      prev = found;
+    }
+
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::get_program_info
+  //
+  void
+  Movie::get_program_info(std::vector<TProgramInfo> & program_infos,
+                          std::map<int, int> & stream_ix_to_prog_ix)
+  {
+    for (unsigned int i = 0; i < context_->nb_programs; i++)
+    {
+      const AVProgram * p = context_->programs[i];
+      program_infos.push_back(TProgramInfo());
+
+      TProgramInfo & info = program_infos.back();
+      info.id_ = p->id;
+      info.program_ = p->program_num;
+      info.pmt_pid_ = p->pmt_pid;
+      info.pcr_pid_ = p->pcr_pid;
+
+      const AVDictionaryEntry * start = NULL;
+      while (true)
+      {
+        AVDictionaryEntry * found =
+          av_dict_get(p->metadata, "", start, AV_DICT_IGNORE_SUFFIX);
+
+        if (!found)
+        {
+          break;
+        }
+
+        info.metadata_[std::string(found->key)] = std::string(found->value);
+        start = found;
+      }
+
+      for (unsigned int j = 0; j < p->nb_stream_indexes; j++)
+      {
+        unsigned int streamIndex = p->stream_index[j];
+        stream_ix_to_prog_ix[streamIndex] = i;
+      }
+    }
+
+    if (context_->nb_programs < 1)
+    {
+      // there must be at least 1 implied program:
+      program_infos.push_back(TProgramInfo());
+
+      for (unsigned int i = 0; i < context_->nb_streams; i++)
+      {
+        stream_ix_to_prog_ix[i] = 0;
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Movie::flatten_program_tracks_map
+  //
+  void
+  Movie::flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
+                                std::vector<TProgramInfo> & program_infos,
+                                std::vector<VideoTrackPtr> & video_tracks,
+                                std::vector<AudioTrackPtr> & audio_tracks,
+                                std::vector<SubttTrackPtr> & subtt_tracks,
+                                std::map<int, int> stream_ix_to_subtt_ix)
+  {
+    // flatten program tracks map:
+    for (TProgramTracksLut::const_iterator
+           i = program_tracks_lut.begin(); i != program_tracks_lut.end(); ++i)
+    {
+      const int program_id = i->first;
+      const ProgramTracks & program_tracks = i->second;
+
+      TProgramInfo * program_info = NULL;
+      for (std::size_t j = 0, n = program_infos.size(); j < n; j++)
+      {
+        if (program_infos[j].id_ == program_id)
+        {
+          program_info = &(program_infos[j]);
+          break;
+        }
+      }
+
+      if (!program_info)
+      {
+        continue;
+      }
+
+      // video:
+      typedef std::map<int, std::list<VideoTrackPtr> > TVideoTracks;
+      const TVideoTracks & video_track_map = program_tracks.video_;
+
+      for (TVideoTracks::const_iterator
+             j = video_track_map.begin(); j != video_track_map.end(); ++j)
+      {
+        // int pid = j->first;
+        const std::list<VideoTrackPtr> & tracks = j->second;
+
+        for (std::list<VideoTrackPtr>::const_iterator
+               k = tracks.begin(); k != tracks.end(); ++k)
+        {
+          const VideoTrackPtr & track = *k;
+          std::string track_id = make_track_id('v', video_tracks.size());
+          track->set_track_id(track_id);
+          program_info->video_.push_back(video_tracks.size());
+          video_tracks.push_back(track);
+        }
+      }
+
+      // audio:
+      typedef std::map<int, std::list<AudioTrackPtr> > TAudioTracks;
+      const TAudioTracks & audio_track_map = program_tracks.audio_;
+
+      for (TAudioTracks::const_iterator
+             j = audio_track_map.begin(); j != audio_track_map.end(); ++j)
+      {
+        // int pid = j->first;
+        const std::list<AudioTrackPtr> & tracks = j->second;
+
+        for (std::list<AudioTrackPtr>::const_iterator
+               k = tracks.begin(); k != tracks.end(); ++k)
+        {
+          const AudioTrackPtr & track = *k;
+          std::string track_id = make_track_id('a', audio_tracks.size());
+          track->set_track_id(track_id);
+          program_info->audio_.push_back(audio_tracks.size());
+          audio_tracks.push_back(track);
+        }
+      }
+
+      // subtt:
+      typedef std::map<int, std::list<SubttTrackPtr> > TSubttTracks;
+      const TSubttTracks & subtt_track_map = program_tracks.subtt_;
+
+      for (TSubttTracks::const_iterator
+             j = subtt_track_map.begin(); j != subtt_track_map.end(); ++j)
+      {
+        // int pid = j->first;
+        const std::list<SubttTrackPtr> & tracks = j->second;
+
+        for (std::list<SubttTrackPtr>::const_iterator
+               k = tracks.begin(); k != tracks.end(); ++k)
+        {
+          const SubttTrackPtr & track = *k;
+          std::string track_id = make_track_id('s', subtt_tracks.size());
+          track->set_track_id(track_id);
+          program_info->subtt_.push_back(subtt_tracks.size());
+          stream_ix_to_subtt_ix[track->streamIndex()] = subtt_tracks.size();
+          subtt_tracks.push_back(track);
+        }
+      }
+    }
+  }
 
   //----------------------------------------------------------------
   // Movie::open
@@ -172,116 +516,40 @@ namespace yae
     file_size_ = avio_size(context_->pb);
 
     // get the programs:
-    for (unsigned int i = 0; i < context_->nb_programs; i++)
-    {
-      const AVProgram * p = context_->programs[i];
-      programs_.push_back(TProgramInfo());
-      TProgramInfo & info = programs_.back();
-      info.id_ = p->id;
-      info.program_ = p->program_num;
-      info.pmt_pid_ = p->pmt_pid;
-      info.pcr_pid_ = p->pcr_pid;
-
-      const AVDictionaryEntry * start = NULL;
-      while (true)
-      {
-        AVDictionaryEntry * found =
-          av_dict_get(p->metadata, "", start, AV_DICT_IGNORE_SUFFIX);
-
-        if (!found)
-        {
-          break;
-        }
-
-        info.metadata_[std::string(found->key)] = std::string(found->value);
-        start = found;
-      }
-
-      for (unsigned int j = 0; j < p->nb_stream_indexes; j++)
-      {
-        unsigned int streamIndex = p->stream_index[j];
-        streamIndexToProgramIndex_[streamIndex] = i;
-      }
-    }
-
-    if (context_->nb_programs < 1)
-    {
-      // there must be at least 1 implied program:
-      programs_.push_back(TProgramInfo());
-
-      for (unsigned int i = 0; i < context_->nb_streams; i++)
-      {
-        streamIndexToProgramIndex_[i] = 0;
-      }
-    }
+    std::vector<TProgramInfo> program_infos;
+    std::map<int, int> stream_ix_to_prog_ix;
+    this->get_program_info(program_infos, stream_ix_to_prog_ix);
 
     // sort tracks by PID if applicable (AVStream.id):
-    typedef std::map<int, ProgramTracks> TPrograms;
-    TPrograms programs;
+    TProgramTracksLut program_tracks_lut;
+    std::vector<TAttachment> attachments;
+    std::vector<VideoTrackPtr> video_tracks;
+    std::vector<AudioTrackPtr> audio_tracks;
+    std::vector<SubttTrackPtr> subtt_tracks;
 
     for (unsigned int i = 0; i < context_->nb_streams; i++)
     {
+      // shortcuts:
       AVStream * stream = context_->streams[i];
+      const AVCodecParameters & codecpar = *(stream->codecpar);
+      const AVMediaType codec_type = codecpar.codec_type;
+
+      if (codecpar.codec_type == AVMEDIA_TYPE_ATTACHMENT)
+      {
+        this->extract_attachment(stream, attachments);
+        continue;
+      }
 
       // lookup which program this stream belongs to:
       TProgramInfo * program = NULL;
       {
         std::map<int, int>::const_iterator
-          found = streamIndexToProgramIndex_.find(i);
+          found = stream_ix_to_prog_ix.find(i);
 
-        if (found != streamIndexToProgramIndex_.end())
+        if (found != stream_ix_to_prog_ix.end())
         {
-          program = &programs_[found->second];
+          program = &program_infos[found->second];
         }
-      }
-
-      if (!program)
-      {
-        continue;
-      }
-
-      ProgramTracks & program_tracks = programs[program->id_];
-
-      // extract attachments:
-      if (stream->codecpar->codec_type == AVMEDIA_TYPE_ATTACHMENT)
-      {
-        attachments_.push_back(TAttachment(stream->codecpar->extradata,
-                                           stream->codecpar->extradata_size));
-        TAttachment & att = attachments_.back();
-
-        const AVDictionaryEntry * prev = NULL;
-        while (true)
-        {
-          AVDictionaryEntry * found =
-            av_dict_get(stream->metadata, "", prev, AV_DICT_IGNORE_SUFFIX);
-
-          if (!found)
-          {
-            break;
-          }
-
-          att.metadata_[std::string(found->key)] = std::string(found->value);
-          prev = found;
-        }
-
-        continue;
-      }
-
-      // shortcut:
-      const AVMediaType codecType = stream->codecpar->codec_type;
-
-      // assume codec is unsupported,
-      // discard all packets unless proven otherwise:
-      stream->discard = AVDISCARD_ALL;
-
-      // check whether we have a decoder for this codec:
-      const AVCodec * decoder =
-        avcodec_find_decoder(stream->codecpar->codec_id);
-      if (!decoder && codecType != AVMEDIA_TYPE_SUBTITLE)
-      {
-        // unsupported codec, ignore it:
-        stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
-        continue;
       }
 
       if (!program)
@@ -290,199 +558,229 @@ namespace yae
         continue;
       }
 
-      TrackPtr baseTrack(new Track(context_, stream, hwdec_));
-      if (codecType == AVMEDIA_TYPE_VIDEO &&
-          stream->codecpar->format == AV_PIX_FMT_NONE)
+      // group tracks by program:
+      ProgramTracks & program_tracks = program_tracks_lut[program->id_];
+
+      if (codec_type == AVMEDIA_TYPE_VIDEO)
       {
-        // keep-alive:
-        AvCodecContextPtr codec_ctx_ptr = baseTrack->open();
-        AVCodecContext * codec_ctx = codec_ctx_ptr.get();
-        if (codec_ctx)
+        VideoTrackPtr track = this->create_video_track(stream);
+        if (!track)
         {
-          YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,
-                                                     codec_ctx) >= 0);
-          baseTrack->close();
+          continue;
         }
+
+        program_tracks.video_[stream->id].push_back(track);
       }
-
-      if (codecType == AVMEDIA_TYPE_VIDEO)
+      else if (codec_type == AVMEDIA_TYPE_AUDIO)
       {
-        VideoTrackPtr track(new VideoTrack(baseTrack.get()));
-        VideoTraits traits;
-        if (track->getTraits(traits) &&
-            // avfilter does not support these pixel formats:
-            traits.pixelFormat_ != kPixelFormatUYYVYY411)
+        AudioTrackPtr track = this->create_audio_track(stream);
+        if (!track)
         {
-          stream->discard = AVDISCARD_DEFAULT;
-          program_tracks.video_[stream->id].push_back(track);
+          continue;
         }
-        else
-        {
-          // unsupported codec, ignore it:
-          stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
-        }
+
+        program_tracks.audio_[stream->id].push_back(track);
       }
-      else if (codecType == AVMEDIA_TYPE_AUDIO)
+      else if (codec_type == AVMEDIA_TYPE_SUBTITLE)
       {
-        AudioTrackPtr track(new AudioTrack(baseTrack.get()));
-        AudioTraits traits;
-        if (track->getTraits(traits))
+        SubttTrackPtr track = this->create_subtt_track(stream);
+        if (!track)
         {
-          stream->discard = AVDISCARD_DEFAULT;
-          program_tracks.audio_[stream->id].push_back(track);
+          continue;
         }
-        else
-        {
-          // unsupported codec, ignore it:
-          stream->codecpar->codec_type = AVMEDIA_TYPE_UNKNOWN;
-        }
+
+        program_tracks.subtt_[stream->id].push_back(track);
       }
-      else if (codecType == AVMEDIA_TYPE_SUBTITLE)
+      else
       {
-        // avoid codec instance sharing between a temporary Track object
-        // and SubtitlesTrack object:
-        baseTrack = TrackPtr();
-
-        // don't discard closed captions packets, though they don't
-        // get to have their own stand-alone subtitles track;
-        stream->discard = AVDISCARD_DEFAULT;
-
-        // don't add CEA-608 as a single track...
-        // because it's actually 4 channels
-        // and it makes a poor user experience
-        if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
-            stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
-        {
-          SubttTrackPtr subsTrk(new SubtitlesTrack(stream));
-
-          if (strcmp(context_->iformat->name, "matroska,webm") == 0)
-          {
-            // https://matroska.org/technical/subtitles.html
-            //
-            // matroska container does not store ASS/SSA Events
-            // as defined in the [Events] Format:, they remove
-            // timing info and store some fields in fixed order:
-            //   ReadOrder, Layer, Style, Name (or Actor),
-            //   MarginL, MarginR, MarginV, Effect, Text
-            //
-            // ffmpeg mkv demuxer does not account for the (potential)
-            // re-ordering of the [Events] Format: fields, it outputs
-            // events as-is, without timing info, and in all likelihood
-            // not matching the [Events] Format: defined in the
-            // AVCodecContext.subtitle_header.  This makes the decoded
-            // subtitles unusable with libass renderer.
-            //
-            // We will have to handle the re-ordering and adding the
-            // timing info ourselves, in order to be able to process
-            // these Events with libass
-
-            subsTrk->setInputEventFormat("ReadOrder, Layer, Style, "
-                                         "Name, MarginL, MarginR, "
-                                         "MarginV, Effect, Text");
-          }
-
-          program_tracks.subtt_[stream->id].push_back(subsTrk);
-        }
+        // assume codec is unsupported,
+        // discard all packets unless proven otherwise:
+        stream->discard = AVDISCARD_ALL;
       }
     }
 
-    // flatten program tracks map:
-    for (TPrograms::iterator
-           i = programs.begin(); i != programs.end(); ++i)
-    {
-      const int program_id = i->first;
-      const ProgramTracks & program_tracks = i->second;
+    std::map<int, int> stream_ix_to_subtt_ix;
+    this->flatten_program_tracks(program_tracks_lut,
+                                 program_infos,
+                                 video_tracks,
+                                 audio_tracks,
+                                 subtt_tracks,
+                                 stream_ix_to_subtt_ix);
 
-      TProgramInfo * program = NULL;
-      for (std::size_t j = 0, n = programs_.size(); j < n; j++)
-      {
-        if (programs_[j].id_ == program_id)
-        {
-          program = &(programs_[j]);
-          break;
-        }
-      }
-
-      if (!program)
-      {
-        continue;
-      }
-
-      // video:
-      typedef std::map<int, std::list<VideoTrackPtr> > TVideoTracks;
-      const TVideoTracks & video_track_map = program_tracks.video_;
-
-      for (TVideoTracks::const_iterator
-             j = video_track_map.begin(); j != video_track_map.end(); ++j)
-      {
-        // int pid = j->first;
-        const std::list<VideoTrackPtr> & video_tracks = j->second;
-
-        for (std::list<VideoTrackPtr>::const_iterator
-               k = video_tracks.begin(); k != video_tracks.end(); ++k)
-        {
-          const VideoTrackPtr & track = *k;
-          track->setId(make_track_id('v', videoTracks_.size()));
-          program->video_.push_back(videoTracks_.size());
-          videoTracks_.push_back(track);
-        }
-      }
-
-      // audio:
-      typedef std::map<int, std::list<AudioTrackPtr> > TAudioTracks;
-      const TAudioTracks & audio_track_map = program_tracks.audio_;
-
-      for (TAudioTracks::const_iterator
-             j = audio_track_map.begin(); j != audio_track_map.end(); ++j)
-      {
-        // int pid = j->first;
-        const std::list<AudioTrackPtr> & audio_tracks = j->second;
-
-        for (std::list<AudioTrackPtr>::const_iterator
-               k = audio_tracks.begin(); k != audio_tracks.end(); ++k)
-        {
-          const AudioTrackPtr & track = *k;
-          track->setId(make_track_id('a', audioTracks_.size()));
-          program->audio_.push_back(audioTracks_.size());
-          audioTracks_.push_back(track);
-        }
-      }
-
-      // subtt:
-      typedef std::map<int, std::list<SubttTrackPtr> > TSubttTracks;
-      const TSubttTracks & subtt_track_map = program_tracks.subtt_;
-
-      for (TSubttTracks::const_iterator
-             j = subtt_track_map.begin(); j != subtt_track_map.end(); ++j)
-      {
-        // int pid = j->first;
-        const std::list<SubttTrackPtr> & subtt_tracks = j->second;
-
-        for (std::list<SubttTrackPtr>::const_iterator
-               k = subtt_tracks.begin(); k != subtt_tracks.end(); ++k)
-        {
-          const SubttTrackPtr & track = *k;
-          track->setId(make_track_id('s', subs_.size()));
-          program->subs_.push_back(subs_.size());
-          subsIdx_[track->streamIndex()] = subs_.size();
-          subs_.push_back(track);
-        }
-      }
-    }
-
-    if (videoTracks_.empty() &&
-        audioTracks_.empty())
+    if (video_tracks.empty() &&
+        audio_tracks.empty())
     {
       // no decodable video/audio tracks present:
       close();
       return false;
     }
 
+    // FIXME: pkoshevoy: this needs a mutex?
+    attachments_.swap(attachments);
+    program_infos_.swap(program_infos);
+    video_tracks_.swap(video_tracks);
+    audio_tracks_.swap(audio_tracks);
+    subtt_tracks_.swap(subtt_tracks);
+    stream_ix_to_prog_ix_.swap(stream_ix_to_prog_ix);
+    stream_ix_to_subtt_ix_.swap(stream_ix_to_subtt_ix);
+
     // by default do not select any tracks:
-    selectedVideoTrack_ = videoTracks_.size();
-    selectedAudioTrack_ = audioTracks_.size();
+    selectedVideoTrack_ = video_tracks.size();
+    selectedAudioTrack_ = audio_tracks.size();
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // find
+  //
+  template <typename TTrack>
+  boost::shared_ptr<TTrack>
+  find(const std::vector<boost::shared_ptr<TTrack> > & tracks,
+       int stream_index)
+  {
+    for (std::size_t i = 0, n = tracks.size(); i < n; ++i)
+    {
+      const boost::shared_ptr<TTrack> & track_ptr = tracks[i];
+      const TTrack & track = *track_ptr;
+      const AVStream & stream = track.stream();
+      if (stream.index == stream_index)
+      {
+        return track_ptr;
+      }
+    }
+
+    // not found:
+    return boost::shared_ptr<TTrack>();
+  }
+
+  //----------------------------------------------------------------
+  // Movie::refresh
+  //
+  void
+  Movie::refresh()
+  {
+    // refresh the programs:
+    std::vector<TProgramInfo> program_infos;
+    std::map<int, int> stream_ix_to_prog_ix;
+    this->get_program_info(program_infos, stream_ix_to_prog_ix);
+
+    // sort tracks by PID if applicable (AVStream.id):
+    TProgramTracksLut program_tracks_lut;
+    std::vector<TAttachment> attachments;
+    std::vector<VideoTrackPtr> video_tracks;
+    std::vector<AudioTrackPtr> audio_tracks;
+    std::vector<SubttTrackPtr> subtt_tracks;
+
+    for (unsigned int i = 0; i < context_->nb_streams; i++)
+    {
+      // shortcuts:
+      AVStream * stream = context_->streams[i];
+      const AVCodecParameters & codecpar = *(stream->codecpar);
+      const AVMediaType codec_type = codecpar.codec_type;
+
+      if (codecpar.codec_type == AVMEDIA_TYPE_ATTACHMENT)
+      {
+        this->extract_attachment(stream, attachments);
+        continue;
+      }
+
+      // lookup which program this stream belongs to:
+      TProgramInfo * program = NULL;
+      {
+        std::map<int, int>::const_iterator
+          found = stream_ix_to_prog_ix.find(i);
+
+        if (found != stream_ix_to_prog_ix.end())
+        {
+          program = &program_infos[found->second];
+        }
+      }
+
+      if (!program)
+      {
+        YAE_ASSERT(false);
+        continue;
+      }
+
+      // group tracks by program:
+      ProgramTracks & program_tracks = program_tracks_lut[program->id_];
+
+      // check if we already have a Track for this AVStream:
+      if (codec_type == AVMEDIA_TYPE_VIDEO)
+      {
+        VideoTrackPtr track = yae::find(video_tracks_, stream->index);
+
+        if (!track)
+        {
+          track = create_video_track(stream);
+        }
+
+        if (!track)
+        {
+          continue;
+        }
+
+        program_tracks.video_[stream->id].push_back(track);
+      }
+      else if (codec_type == AVMEDIA_TYPE_AUDIO)
+      {
+        AudioTrackPtr track = yae::find(audio_tracks_, stream->index);
+
+        if (!track)
+        {
+          track = create_audio_track(stream);
+        }
+
+        if (!track)
+        {
+          continue;
+        }
+
+        program_tracks.audio_[stream->id].push_back(track);
+      }
+      else if (codec_type == AVMEDIA_TYPE_SUBTITLE)
+      {
+        SubttTrackPtr track = yae::find(subtt_tracks_, stream->index);
+
+        if (!track)
+        {
+          track = create_subtt_track(stream);
+        }
+
+        if (!track)
+        {
+          continue;
+        }
+
+        program_tracks.subtt_[stream->id].push_back(track);
+      }
+    }
+
+    std::map<int, int> stream_ix_to_subtt_ix;
+    this->flatten_program_tracks(program_tracks_lut,
+                                 program_infos,
+                                 video_tracks,
+                                 audio_tracks,
+                                 subtt_tracks,
+                                 stream_ix_to_subtt_ix);
+
+    if (video_tracks.empty() &&
+        audio_tracks.empty())
+    {
+      // no decodable video/audio tracks present:
+      close();
+      return;
+    }
+
+    // FIXME: pkoshevoy: this needs a mutex?
+    attachments_.swap(attachments);
+    program_infos_.swap(program_infos);
+    video_tracks_.swap(video_tracks);
+    audio_tracks_.swap(audio_tracks);
+    subtt_tracks_.swap(subtt_tracks);
+    stream_ix_to_prog_ix_.swap(stream_ix_to_prog_ix);
+    stream_ix_to_subtt_ix_.swap(stream_ix_to_subtt_ix);
   }
 
   //----------------------------------------------------------------
@@ -498,19 +796,19 @@ namespace yae
 
     threadStop();
 
-    const std::size_t numVideoTracks = videoTracks_.size();
+    const std::size_t numVideoTracks = video_tracks_.size();
     selectVideoTrack(numVideoTracks);
 
-    const std::size_t numAudioTracks = audioTracks_.size();
+    const std::size_t numAudioTracks = audio_tracks_.size();
     selectAudioTrack(numAudioTracks);
 
     attachments_.clear();
-    videoTracks_.clear();
-    audioTracks_.clear();
-    subs_.clear();
-    subsIdx_.clear();
-    programs_.clear();
-    streamIndexToProgramIndex_.clear();
+    video_tracks_.clear();
+    audio_tracks_.clear();
+    subtt_tracks_.clear();
+    stream_ix_to_subtt_ix_.clear();
+    program_infos_.clear();
+    stream_ix_to_prog_ix_.clear();
 
     avformat_close_input(&context_);
     YAE_ASSERT(!context_);
@@ -528,17 +826,22 @@ namespace yae
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ = info.nprograms_;
-    info.ntracks_ = videoTracks_.size();
+    info.ntracks_ = video_tracks_.size();
     info.index_ = i;
     info.lang_.clear();
     info.name_.clear();
 
     if (info.index_ < info.ntracks_)
     {
-      VideoTrackPtr t = videoTracks_[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      VideoTrackPtr t = video_tracks_[info.index_];
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = get(stream_ix_to_prog_ix_, t->streamIndex());
       return true;
     }
 
@@ -553,17 +856,22 @@ namespace yae
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ =  info.nprograms_;
-    info.ntracks_ = audioTracks_.size();
+    info.ntracks_ = audio_tracks_.size();
     info.index_ = i;
     info.lang_.clear();
     info.name_.clear();
 
     if (info.index_ < info.ntracks_)
     {
-      AudioTrackPtr t = audioTracks_[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      AudioTrackPtr t = audio_tracks_[info.index_];
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = get(stream_ix_to_prog_ix_, t->streamIndex());
       return true;
     }
 
@@ -576,11 +884,11 @@ namespace yae
   bool
   Movie::selectVideoTrack(std::size_t i)
   {
-    const std::size_t numVideoTracks = videoTracks_.size();
+    const std::size_t numVideoTracks = video_tracks_.size();
     if (selectedVideoTrack_ < numVideoTracks)
     {
       // close currently selected track:
-      VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
+      VideoTrackPtr track = video_tracks_[selectedVideoTrack_];
       track->close();
     }
 
@@ -590,12 +898,12 @@ namespace yae
       return false;
     }
 
-    VideoTrackPtr track = videoTracks_[selectedVideoTrack_];
+    VideoTrackPtr track = video_tracks_[selectedVideoTrack_];
     track->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
     track->skipLoopFilter(skipLoopFilter_);
     track->skipNonReferenceFrames(skipNonReferenceFrames_);
     track->enableClosedCaptions(enableClosedCaptions_);
-    track->setSubs(&subs_);
+    track->setSubs(&subtt_tracks_);
 
     return track->initTraits();
   }
@@ -606,11 +914,11 @@ namespace yae
   bool
   Movie::selectAudioTrack(std::size_t i)
   {
-    const std::size_t numAudioTracks = audioTracks_.size();
+    const std::size_t numAudioTracks = audio_tracks_.size();
     if (selectedAudioTrack_ < numAudioTracks)
     {
       // close currently selected track:
-      AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
+      AudioTrackPtr track = audio_tracks_[selectedAudioTrack_];
       track->close();
     }
 
@@ -620,7 +928,7 @@ namespace yae
       return false;
     }
 
-    AudioTrackPtr track = audioTracks_[selectedAudioTrack_];
+    AudioTrackPtr track = audio_tracks_[selectedAudioTrack_];
     track->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
 
     return track->initTraits();
@@ -633,15 +941,15 @@ namespace yae
   Movie::thread_loop()
   {
     VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      videoTrack = videoTracks_[selectedVideoTrack_];
+      videoTrack = video_tracks_[selectedVideoTrack_];
     }
 
     AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      audioTrack = audioTracks_[selectedAudioTrack_];
+      audioTrack = audio_tracks_[selectedAudioTrack_];
     }
 
     PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
@@ -844,11 +1152,11 @@ namespace yae
 
           int ref_prog_index =
             ref_stream_index != -1 ?
-            get(streamIndexToProgramIndex_, ref_stream_index) :
+            get(stream_ix_to_prog_ix_, ref_stream_index) :
             -1;
 
           int pkt_prog_index =
-            get(streamIndexToProgramIndex_, packet.stream_index);
+            get(stream_ix_to_prog_ix_, packet.stream_index);
 
           if (ref_prog_index == pkt_prog_index)
           {
@@ -938,16 +1246,16 @@ namespace yae
     catch (...)
     {}
 
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      VideoTrackPtr t = video_tracks_[selectedVideoTrack_];
       t->threadStart();
       t->packetQueueWaitForConsumerToBlock();
     }
 
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      AudioTrackPtr t = audio_tracks_[selectedAudioTrack_];
       t->threadStart();
       t->packetQueueWaitForConsumerToBlock();
     }
@@ -973,15 +1281,15 @@ namespace yae
     catch (...)
     {}
 
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      VideoTrackPtr t = video_tracks_[selectedVideoTrack_];
       t->threadStop();
     }
 
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      AudioTrackPtr t = audio_tracks_[selectedAudioTrack_];
       t->threadStop();
     }
 
@@ -1015,18 +1323,18 @@ namespace yae
     TTime start;
     TTime duration;
 
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      VideoTrackPtr t = videoTracks_[selectedVideoTrack_];
+      VideoTrackPtr t = video_tracks_[selectedVideoTrack_];
       if (t->getDuration(start, duration))
       {
         return true;
       }
     }
 
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      AudioTrackPtr t = audioTracks_[selectedAudioTrack_];
+      AudioTrackPtr t = audio_tracks_[selectedAudioTrack_];
       if (t->getDuration(start, duration))
       {
         return true;
@@ -1052,9 +1360,9 @@ namespace yae
       VideoTrackPtr videoTrack;
       AudioTrackPtr audioTrack;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        videoTrack = videoTracks_[selectedVideoTrack_];
+        videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->packetQueueClear();
         do { videoTrack->frameQueueClear(); }
         while (!videoTrack->packetQueueWaitForConsumerToBlock(1e-2));
@@ -1066,9 +1374,9 @@ namespace yae
 #endif
       }
 
-      if (selectedAudioTrack_ < audioTracks_.size())
+      if (selectedAudioTrack_ < audio_tracks_.size())
       {
-        audioTrack = audioTracks_[selectedAudioTrack_];
+        audioTrack = audio_tracks_[selectedAudioTrack_];
         audioTrack->packetQueueClear();
         do { audioTrack->frameQueueClear(); }
         while (!audioTrack->packetQueueWaitForConsumerToBlock(1e-2));
@@ -1116,15 +1424,15 @@ namespace yae
     }
 
     AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      audioTrack = audioTracks_[selectedAudioTrack_];
+      audioTrack = audio_tracks_[selectedAudioTrack_];
     }
 
     VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      videoTrack = videoTracks_[selectedVideoTrack_];
+      videoTrack = video_tracks_[selectedVideoTrack_];
     }
 
     const AVStream * stream = NULL;
@@ -1168,10 +1476,10 @@ namespace yae
     clock_.cancelWaitForOthers();
     clock_.resetCurrentTime();
 
-    const std::size_t nsubs = subs_.size();
+    const std::size_t nsubs = subtt_tracks_.size();
     for (std::size_t i = 0; i < nsubs; i++)
     {
-      SubtitlesTrack & subs = *(subs_[i]);
+      SubtitlesTrack & subs = *(subtt_tracks_[i]);
       subs.clear();
     }
 
@@ -1227,15 +1535,15 @@ namespace yae
 
       posIn_ = posIn;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
 
-      if (selectedAudioTrack_ < audioTracks_.size())
+      if (selectedAudioTrack_ < audio_tracks_.size())
       {
-        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        AudioTrackPtr audioTrack = audio_tracks_[selectedAudioTrack_];
         audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
     }
@@ -1256,15 +1564,15 @@ namespace yae
 
       posOut_ = posOut;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
 
-      if (selectedAudioTrack_ < audioTracks_.size())
+      if (selectedAudioTrack_ < audio_tracks_.size())
       {
-        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        AudioTrackPtr audioTrack = audio_tracks_[selectedAudioTrack_];
         audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
       }
     }
@@ -1289,15 +1597,15 @@ namespace yae
 
       if (playbackEnabled_ && looping_)
       {
-        if (selectedVideoTrack_ < videoTracks_.size())
+        if (selectedVideoTrack_ < video_tracks_.size())
         {
-          VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+          VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
           videoTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
         }
 
-        if (selectedAudioTrack_ < audioTracks_.size())
+        if (selectedAudioTrack_ < audio_tracks_.size())
         {
-          AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+          AudioTrackPtr audioTrack = audio_tracks_[selectedAudioTrack_];
           audioTrack->setPlaybackInterval(posIn_, posOut_, playbackEnabled_);
         }
       }
@@ -1336,9 +1644,9 @@ namespace yae
 
       skipLoopFilter_ = skip;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->skipLoopFilter(skipLoopFilter_);
       }
     }
@@ -1359,9 +1667,9 @@ namespace yae
 
       skipNonReferenceFrames_ = skip;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->skipNonReferenceFrames(skipNonReferenceFrames_);
       }
     }
@@ -1381,9 +1689,9 @@ namespace yae
       requestMutex(lock);
 
       // first set audio tempo -- this may fail:
-      if (selectedAudioTrack_ < audioTracks_.size())
+      if (selectedAudioTrack_ < audio_tracks_.size())
       {
-        AudioTrackPtr audioTrack = audioTracks_[selectedAudioTrack_];
+        AudioTrackPtr audioTrack = audio_tracks_[selectedAudioTrack_];
         if (!audioTrack->setTempo(tempo))
         {
           return false;
@@ -1391,9 +1699,9 @@ namespace yae
       }
 
       // then set video tempo -- this can't fail:
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         return videoTrack->setTempo(tempo);
       }
     }
@@ -1414,9 +1722,9 @@ namespace yae
       boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
       requestMutex(lock);
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->setDeinterlacing(enabled);
         return true;
       }
@@ -1440,9 +1748,9 @@ namespace yae
 
       enableClosedCaptions_ = cc;
 
-      if (selectedVideoTrack_ < videoTracks_.size())
+      if (selectedVideoTrack_ < video_tracks_.size())
       {
-        VideoTrackPtr videoTrack = videoTracks_[selectedVideoTrack_];
+        VideoTrackPtr videoTrack = video_tracks_[selectedVideoTrack_];
         videoTrack->enableClosedCaptions(cc);
       }
     }
@@ -1465,7 +1773,7 @@ namespace yae
   std::size_t
   Movie::subsCount() const
   {
-    return subs_.size();
+    return subtt_tracks_.size();
   }
 
   //----------------------------------------------------------------
@@ -1476,17 +1784,22 @@ namespace yae
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ = info.nprograms_;
-    info.ntracks_ = subs_.size();
+    info.ntracks_ = subtt_tracks_.size();
     info.index_ = i;
     info.lang_.clear();
     info.name_.clear();
 
     if (info.index_ < info.ntracks_)
     {
-      SubttTrackPtr t = subs_[i];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
-      info.program_ = get(streamIndexToProgramIndex_, t->streamIndex());
+      SubttTrackPtr t = subtt_tracks_[i];
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
+      info.program_ = get(stream_ix_to_prog_ix_, t->streamIndex());
       return t->format_;
     }
 
@@ -1499,10 +1812,10 @@ namespace yae
   void
   Movie::setSubsRender(std::size_t i, bool render)
   {
-    std::size_t nsubs = subs_.size();
+    std::size_t nsubs = subtt_tracks_.size();
     if (i < nsubs)
     {
-      SubtitlesTrack & subs = *(subs_[i]);
+      SubtitlesTrack & subs = *(subtt_tracks_[i]);
       subs.render_ = render;
     }
   }
@@ -1513,10 +1826,10 @@ namespace yae
   bool
   Movie::getSubsRender(std::size_t i) const
   {
-    std::size_t nsubs = subs_.size();
+    std::size_t nsubs = subtt_tracks_.size();
     if (i < nsubs)
     {
-      SubtitlesTrack & subs = *(subs_[i]);
+      SubtitlesTrack & subs = *(subtt_tracks_[i]);
       return subs.render_;
     }
 
@@ -1529,12 +1842,12 @@ namespace yae
   SubtitlesTrack *
   Movie::subsLookup(unsigned int streamIndex)
   {
-    std::map<unsigned int, std::size_t>::const_iterator
-      found = subsIdx_.find(streamIndex);
+    std::map<int, int>::const_iterator
+      found = stream_ix_to_subtt_ix_.find(int(streamIndex));
 
-    if (found != subsIdx_.end())
+    if (found != stream_ix_to_subtt_ix_.end())
     {
-      return subs_[found->second].get();
+      return subtt_tracks_[found->second].get();
     }
 
     return NULL;
@@ -1583,15 +1896,15 @@ namespace yae
   Movie::blockedOnVideo() const
   {
     VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      videoTrack = videoTracks_[selectedVideoTrack_];
+      videoTrack = video_tracks_[selectedVideoTrack_];
     }
 
     AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      audioTrack = audioTracks_[selectedAudioTrack_];
+      audioTrack = audio_tracks_[selectedAudioTrack_];
     }
 
     bool blocked = blockedOn(videoTrack.get(), audioTrack.get());
@@ -1613,15 +1926,15 @@ namespace yae
   Movie::blockedOnAudio() const
   {
     VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < videoTracks_.size())
+    if (selectedVideoTrack_ < video_tracks_.size())
     {
-      videoTrack = videoTracks_[selectedVideoTrack_];
+      videoTrack = video_tracks_[selectedVideoTrack_];
     }
 
     AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audioTracks_.size())
+    if (selectedAudioTrack_ < audio_tracks_.size())
     {
-      audioTrack = audioTracks_[selectedAudioTrack_];
+      audioTrack = audio_tracks_[selectedAudioTrack_];
     }
 
     bool blocked = blockedOn(audioTrack.get(), videoTrack.get());
@@ -1659,21 +1972,21 @@ namespace yae
   {
     eo_ = eo;
 
-    for (std::size_t i = 0, n = videoTracks_.size(); i < n; ++i)
+    for (std::size_t i = 0, n = video_tracks_.size(); i < n; ++i)
     {
-      VideoTrack & track = *(videoTracks_[i]);
+      VideoTrack & track = *(video_tracks_[i]);
       track.setEventObserver(eo);
     }
 
-    for (std::size_t i = 0, n = audioTracks_.size(); i < n; ++i)
+    for (std::size_t i = 0, n = audio_tracks_.size(); i < n; ++i)
     {
-      AudioTrack & track = *(audioTracks_[i]);
+      AudioTrack & track = *(audio_tracks_[i]);
       track.setEventObserver(eo);
     }
 
-    for (std::size_t i = 0, n = subs_.size(); i < n; ++i)
+    for (std::size_t i = 0, n = subtt_tracks_.size(); i < n; ++i)
     {
-      SubtitlesTrack & track = *(subs_[i]);
+      SubtitlesTrack & track = *(subtt_tracks_[i]);
       track.setEventObserver(eo);
     }
   }
