@@ -361,7 +361,7 @@ namespace yae
                                 std::vector<VideoTrackPtr> & video_tracks,
                                 std::vector<AudioTrackPtr> & audio_tracks,
                                 std::vector<SubttTrackPtr> & subtt_tracks,
-                                std::map<int, int> stream_ix_to_subtt_ix)
+                                std::map<int, int> & stream_ix_to_subtt_ix)
   {
     // flatten program tracks map:
     for (TProgramTracksLut::const_iterator
