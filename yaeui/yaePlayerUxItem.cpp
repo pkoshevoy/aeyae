@@ -1553,6 +1553,7 @@ namespace yae
              yae::to_str(event).c_str());
 
     reader->refreshInfo();
+    this->adjustMenuActions();
     emit reader_properties_changed(reader);
   }
 
