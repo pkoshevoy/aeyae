@@ -554,7 +554,6 @@ namespace yae
 
       if (!program)
       {
-        YAE_ASSERT(false);
         continue;
       }
 
@@ -699,7 +698,6 @@ namespace yae
 
       if (!program)
       {
-        YAE_ASSERT(false);
         continue;
       }
 
