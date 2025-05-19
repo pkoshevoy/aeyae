@@ -29,7 +29,7 @@
 //
 // #define YAE_DUMP_TMP_TRACK_ASS
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
 #define YAE_LIBASS_DEBUG
 #endif
 

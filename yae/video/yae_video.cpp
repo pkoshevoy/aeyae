@@ -203,8 +203,10 @@ namespace yae
   VideoTraits::VideoTraits()
   {
     // memset, so that we can memcmp later:
-    memset(this, 0, sizeof(*this));
+    memset(this, 0, sizeof(VideoTraits));
 
+    // restore default non-zero values that were wiped out by the memset:
+    dynamic_range_ = Colorspace::DynamicRange();
     av_fmt_ = AV_PIX_FMT_NONE;
     av_csp_ = AVCOL_SPC_UNSPECIFIED;
     av_pri_ = AVCOL_PRI_UNSPECIFIED;
@@ -348,7 +350,12 @@ namespace yae
   bool
   VideoTraits::same_as(const VideoTraits & other) const
   {
+#if 1
     return memcmp(this, &other, sizeof(VideoTraits)) == 0;
+#else
+    return (this->sameFrameSizeAndFormat(other) &&
+            this->sameColorSpaceAndRange(other));
+#endif
   }
 
   //----------------------------------------------------------------
