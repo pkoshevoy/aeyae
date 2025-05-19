@@ -409,6 +409,7 @@ namespace yae
       Track::TInfoPtr track_info_ptr = track->get_info();
       const Track::Info & track_info = *track_info_ptr;
 
+      info.codec_ = track_info.codec_;
       info.setLang(track_info.lang_);
       info.setName(track_info.name_);
       info.program_ = yae::get(prog_lut_, track_info.track_id_);
@@ -442,6 +443,7 @@ namespace yae
       Track::TInfoPtr track_info_ptr = track->get_info();
       const Track::Info & track_info = *track_info_ptr;
 
+      info.codec_ = track_info.codec_;
       info.setLang(track_info.lang_);
       info.setName(track_info.name_);
       info.program_ = yae::get(prog_lut_, track_info.track_id_);
@@ -1093,6 +1095,7 @@ namespace yae
       Track::TInfoPtr track_info_ptr = track->get_info();
       const Track::Info & track_info = *track_info_ptr;
 
+      info.codec_ = track_info.codec_;
       info.setLang(track_info.lang_);
       info.setName(track_info.name_);
       info.program_ = yae::get(prog_lut_, track_info.track_id_);

@@ -1837,38 +1837,6 @@ namespace yae
       TEventObserverPtr eo(new ReaderEventHandler(*this, reader_ptr));
       reader.setEventObserver(eo);
 
-      int ai = int(reader.getSelectedAudioTrackIndex());
-      audioTrackGroup_->actions().at(ai)->setChecked(true);
-
-
-      int vi = int(reader.getSelectedVideoTrackIndex());
-      videoTrackGroup_->actions().at(vi)->setChecked(true);
-
-      int nsubs = int(reader.subsCount());
-      unsigned int cc = reader.getRenderCaptions();
-
-      if (cc)
-      {
-        int index = (int)nsubs + cc - 1;
-        subsTrackGroup_->actions().at(index)->setChecked(true);
-      }
-      else
-      {
-        int si = 0;
-        for (; si < nsubs && !reader.getSubsRender(si); si++)
-        {}
-
-        if (si < nsubs)
-        {
-          subsTrackGroup_->actions().at(si)->setChecked(true);
-        }
-        else
-        {
-          int index = subsTrackGroup_->actions().size() - 1;
-          subsTrackGroup_->actions().at(index)->setChecked(true);
-        }
-      }
-
       TimelineItem & timeline = *timeline_;
       if (videoInfo.empty())
       {
@@ -3322,6 +3290,9 @@ namespace yae
     std::size_t numSubtitles =
       reader ? reader->subsCount() : 0;
 
+    std::size_t cc =
+      reader ? reader->getRenderCaptions() : 0;
+
     std::size_t numChapters =
       reader ? reader->countChapters() : 0;
 
@@ -3458,6 +3429,11 @@ namespace yae
         trackName += tr(", program %1").arg(info.program_);
       }
 
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuAudio_->addAction(trackAction);
 
@@ -3511,6 +3487,11 @@ namespace yae
       else if (info.nprograms_ > 1)
       {
         trackName += tr(", program %1").arg(info.program_);
+      }
+
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
       }
 
       QAction * trackAction = new QAction(trackName, this);
@@ -3648,6 +3629,39 @@ namespace yae
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
+
+    // check the check-boxes:
+    std::size_t ai =
+      reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
+    ai = std::min(ai, numAudioTracks);
+    audioTrackGroup_->actions().at(ai)->setChecked(true);
+
+    std::size_t vi =
+      reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
+    vi = std::min(vi, numVideoTracks);
+    videoTrackGroup_->actions().at(vi)->setChecked(true);
+
+    if (cc)
+    {
+      std::size_t si = numSubtitles + cc - 1;
+      subsTrackGroup_->actions().at(si)->setChecked(true);
+    }
+    else
+    {
+      std::size_t si = 0;
+      for (; si < numSubtitles && reader && !reader->getSubsRender(si); si++)
+      {}
+
+      if (si < numSubtitles)
+      {
+        subsTrackGroup_->actions().at(si)->setChecked(true);
+      }
+      else
+      {
+        int index = subsTrackGroup_->actions().size() - 1;
+        subsTrackGroup_->actions().at(index)->setChecked(true);
+      }
+    }
   }
 
   //----------------------------------------------------------------

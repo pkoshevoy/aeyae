@@ -646,7 +646,9 @@ namespace yae
     bool isValid() const;
     bool hasLang() const;
     bool hasName() const;
+    bool hasCodec() const;
 
+    const char * codec() const;
     const char * lang() const;
     const char * name() const;
 
@@ -660,6 +662,7 @@ namespace yae
     std::size_t program_;
     std::size_t ntracks_;
     std::size_t index_;
+    std::string codec_;
     std::string lang_;
     std::string name_;
   };

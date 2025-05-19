@@ -834,7 +834,7 @@ namespace yae
   bool
   TTrackInfo::hasLang() const
   {
-    return lang_.size() > 0 && lang_[0];
+    return !lang_.empty() && lang_[0];
   }
 
   //----------------------------------------------------------------
@@ -843,7 +843,25 @@ namespace yae
   bool
   TTrackInfo::hasName() const
   {
-    return name_.size() > 0 && name_[0] && name_ != "und";
+    return !name_.empty() && name_[0] && name_ != "und";
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::hasCodec
+  //
+  bool
+  TTrackInfo::hasCodec() const
+  {
+    return !codec_.empty() && codec_[0];
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::codec
+  //
+  const char *
+  TTrackInfo::codec() const
+  {
+    return hasCodec() ? codec_.c_str() : NULL;
   }
 
   //----------------------------------------------------------------
