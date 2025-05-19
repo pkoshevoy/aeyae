@@ -178,28 +178,41 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AudioTraits::AudioTraits
+  //
+  AudioTraits::AudioTraits():
+    sample_format_(AV_SAMPLE_FMT_NONE),
+    sample_rate_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // AudioTraits::same_as
+  //
+  bool
+  AudioTraits::same_as(const AudioTraits & other) const
+  {
+    return (sample_format_ == other.sample_format_ &&
+            sample_rate_ == other.sample_rate_ &&
+            ch_layout_ == other.ch_layout_);
+  }
+
+
+  //----------------------------------------------------------------
   // VideoTraits::VideoTraits
   //
-  VideoTraits::VideoTraits():
-    frameRate_(0.0),
-    av_fmt_(AV_PIX_FMT_NONE),
-    av_csp_(AVCOL_SPC_UNSPECIFIED),
-    av_pri_(AVCOL_PRI_UNSPECIFIED),
-    av_trc_(AVCOL_TRC_UNSPECIFIED),
-    av_rng_(AVCOL_RANGE_UNSPECIFIED),
-    colorspace_(NULL),
-    pixelFormat_(kInvalidPixelFormat),
-    encodedWidth_(0),
-    encodedHeight_(0),
-    offsetTop_(0),
-    offsetLeft_(0),
-    visibleWidth_(0),
-    visibleHeight_(0),
-    pixelAspectRatio_(1.0),
-    cameraRotation_(0),
-    vflip_(false),
-    hflip_(false)
-  {}
+  VideoTraits::VideoTraits()
+  {
+    // memset, so that we can memcmp later:
+    memset(this, 0, sizeof(*this));
+
+    av_fmt_ = AV_PIX_FMT_NONE;
+    av_csp_ = AVCOL_SPC_UNSPECIFIED;
+    av_pri_ = AVCOL_PRI_UNSPECIFIED;
+    av_trc_ = AVCOL_TRC_UNSPECIFIED;
+    av_rng_ = AVCOL_RANGE_UNSPECIFIED;
+    pixelFormat_ = kInvalidPixelFormat;
+    pixelAspectRatio_ = 1.0;
+  }
 
   //----------------------------------------------------------------
   // VideoTraits::txt_summary
@@ -330,12 +343,12 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTraits::operator
+  // VideoTraits::same_as
   //
   bool
-  VideoTraits::operator == (const VideoTraits & vt) const
+  VideoTraits::same_as(const VideoTraits & other) const
   {
-    return memcmp(this, &vt, sizeof(VideoTraits)) == 0;
+    return memcmp(this, &other, sizeof(VideoTraits)) == 0;
   }
 
   //----------------------------------------------------------------

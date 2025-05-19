@@ -218,6 +218,17 @@ namespace yae
           }
 
           noteNativeTraitsChanged();
+
+          // keep-alive:
+          TEventObserverPtr eo = eo_;
+          if (eo)
+          {
+            std::string track_id = this->get_track_id();
+            Json::Value event;
+            event["event_type"] = "traits_changed";
+            event["track_id"] = track_id;
+            eo->note(event);
+          }
         }
 
         if (!filterGraph_.push(&copied))
@@ -522,6 +533,12 @@ namespace yae
     if (!stream_)
     {
       return false;
+    }
+
+    if (native_.sample_format_ != AV_SAMPLE_FMT_NONE)
+    {
+      t = native_;
+      return true;
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);

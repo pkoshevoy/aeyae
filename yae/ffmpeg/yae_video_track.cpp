@@ -719,7 +719,23 @@ namespace yae
       framesDecoded_++;
 
       // update native traits first:
-      this->getTraits(native_, &decoded);
+      VideoTraits native_traits;
+      this->getTraits(native_traits, &decoded);
+      if (native_ != native_traits)
+      {
+        native_ = native_traits;
+
+        // keep-alive:
+        TEventObserverPtr eo = eo_;
+        if (eo)
+        {
+          std::string track_id = this->get_track_id();
+          Json::Value event;
+          event["event_type"] = "traits_changed";
+          event["track_id"] = track_id;
+          eo->note(event);
+        }
+      }
 
       // fill in any missing specs:
       add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_));
@@ -1320,6 +1336,11 @@ namespace yae
     if (decoded)
     {
       specs = AvFrmSpecs(*decoded);
+    }
+    else if (native_.av_fmt_ != AV_PIX_FMT_NONE)
+    {
+      t = native_;
+      return true;
     }
     else
     {

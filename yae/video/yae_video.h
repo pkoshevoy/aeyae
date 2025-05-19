@@ -115,17 +115,15 @@ namespace yae
   //
   struct YAE_API AudioTraits
   {
-    AudioTraits():
-      sample_format_(AV_SAMPLE_FMT_NONE),
-      sample_rate_(0)
-    {}
+    AudioTraits();
+
+    bool same_as(const AudioTraits & other) const;
 
     inline bool operator == (const AudioTraits & other) const
-    {
-      return (sample_format_ == other.sample_format_ &&
-              sample_rate_ == other.sample_rate_ &&
-              ch_layout_ == other.ch_layout_);
-    }
+    { return this->same_as(other); }
+
+    inline bool operator != (const AudioTraits & other) const
+    { return !(this->same_as(other)); }
 
     inline bool is_invalid_format() const
     { return sample_format_ <= AV_SAMPLE_FMT_NONE; }
@@ -168,7 +166,13 @@ namespace yae
     bool sameFrameSizeAndFormat(const VideoTraits & vt) const;
     bool sameColorSpaceAndRange(const VideoTraits & vt) const;
 
-    bool operator == (const VideoTraits & vt) const;
+    bool same_as(const VideoTraits & vt) const;
+
+    inline bool operator == (const VideoTraits & other) const
+    { return this->same_as(other); }
+
+    inline bool operator != (const VideoTraits & other) const
+    { return !(this->same_as(other)); }
 
     void setPixelFormat(TPixelFormatId fmt);
 
