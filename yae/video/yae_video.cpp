@@ -383,7 +383,7 @@ namespace yae
     maybe_set(av_pri_, vt.av_pri_, AVCOL_PRI_UNSPECIFIED);
     maybe_set(av_trc_, vt.av_trc_, AVCOL_TRC_UNSPECIFIED);
     maybe_set(av_rng_, vt.av_rng_, AVCOL_RANGE_UNSPECIFIED);
-    maybe_set(colorspace_, vt.colorspace_, nullptr);
+    maybe_set(colorspace_, vt.colorspace_, NULL);
     maybe_set(pixelFormat_, vt.pixelFormat_, kInvalidPixelFormat);
     maybe_set(encodedWidth_, vt.encodedWidth_, 0);
     maybe_set(encodedHeight_, vt.encodedHeight_, 0);
