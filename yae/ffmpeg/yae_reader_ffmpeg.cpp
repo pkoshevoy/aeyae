@@ -290,23 +290,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getSelectedVideoTrackName
+  // ReaderFFMPEG::getVideoTrackInfo
   //
   bool
-  ReaderFFMPEG::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  ReaderFFMPEG::getVideoTrackInfo(std::size_t track_index,
+                                  TTrackInfo & info,
+                                  VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    return private_->movie_.getVideoTrackInfo(i, info);
+    return private_->movie_.getVideoTrackInfo(track_index, info, traits);
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getSelectedAudioTrackInfo
+  // ReaderFFMPEG::getAudioTrackInfo
   //
   bool
-  ReaderFFMPEG::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  ReaderFFMPEG::getAudioTrackInfo(std::size_t track_index,
+                                  TTrackInfo & info,
+                                  AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    return private_->movie_.getAudioTrackInfo(i, info);
+    return private_->movie_.getAudioTrackInfo(track_index, info, traits);
   }
 
   //----------------------------------------------------------------
@@ -346,10 +348,10 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoDuration(TTime & start, TTime & duration) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    if (track)
     {
-      private_->movie_.getVideoTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -362,10 +364,10 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioDuration(TTime & start, TTime & duration) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    if (track)
     {
-      private_->movie_.getAudioTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -378,13 +380,8 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoTraits(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -393,13 +390,8 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioTraits(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -408,14 +400,8 @@ namespace yae
   bool
   ReaderFFMPEG::setAudioTraitsOverride(const AudioTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->setTraitsOverride(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -424,14 +410,8 @@ namespace yae
   bool
   ReaderFFMPEG::setVideoTraitsOverride(const VideoTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->setTraitsOverride(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -440,14 +420,8 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioTraitsOverride(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->getTraitsOverride(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -456,14 +430,8 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoTraitsOverride(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->getTraitsOverride(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------

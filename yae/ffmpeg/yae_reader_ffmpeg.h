@@ -83,8 +83,14 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i);
     virtual bool selectAudioTrack(std::size_t i);
 
-    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const;
-    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const;
+    // NOTE: returns false if there is no such track:
+    virtual bool getVideoTrackInfo(std::size_t video_track_index,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const;
+
+    virtual bool getAudioTrackInfo(std::size_t audio_track_index,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const;
 
     // NOTE: for MPEG-TS files that may contain PTS timeline anomalies
     // it may be preferable to reference file position (or packet index)

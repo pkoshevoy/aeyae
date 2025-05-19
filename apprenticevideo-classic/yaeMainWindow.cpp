@@ -1332,8 +1332,8 @@ namespace yae
 
     if (rememberSelectedVideoTrack)
     {
-      reader->getSelectedVideoTrackInfo(selVideo_);
-      reader->getVideoTraits(selVideoTraits_);
+      std::size_t i = reader->getSelectedVideoTrackIndex();
+      reader->getVideoTrackInfo(i, selVideo_, selVideoTraits_);
     }
 
     selectAudioTrack(reader, atrack);
@@ -1341,8 +1341,8 @@ namespace yae
 
     if (rememberSelectedAudioTrack)
     {
-      reader->getSelectedAudioTrackInfo(selAudio_);
-      reader->getAudioTraits(selAudioTraits_);
+      std::size_t i = reader->getSelectedAudioTrackIndex();
+      reader->getAudioTrackInfo(i, selAudio_, selAudioTraits_);
     }
 
     bool rememberSelectedSubtitlesTrack = false;
@@ -2406,15 +2406,20 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    VideoTraits video_traits;
+    AudioTraits audio_traits;
+
     // detect current program selection change:
     TTrackInfo prevSel = selAudio_;
     if (!reader_->hasSelectedAudioTrack())
     {
-      reader_->getSelectedVideoTrackInfo(prevSel);
+      std::size_t i = reader_->getSelectedVideoTrackIndex();
+      reader_->getVideoTrackInfo(i, prevSel, video_traits);
     }
 
     selectAudioTrack(reader_, index);
-    if (reader_->getSelectedAudioTrackInfo(selAudio_) &&
+
+    if (reader_->getAudioTrackInfo(index, selAudio_, audio_traits) &&
         selAudio_.program_ != prevSel.program_)
     {
       TProgramInfo program;
@@ -2462,16 +2467,20 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    VideoTraits video_traits;
+    AudioTraits audio_traits;
+
     // detect current program selection change:
     TTrackInfo prevSel = selVideo_;
     if (!reader_->hasSelectedVideoTrack())
     {
-      reader_->getSelectedAudioTrackInfo(prevSel);
+      std::size_t i = reader_->getSelectedAudioTrackIndex();
+      reader_->getAudioTrackInfo(i, prevSel, audio_traits);
     }
 
     selectVideoTrack(reader_, index);
 
-    if (reader_->getSelectedVideoTrackInfo(selVideo_) &&
+    if (reader_->getVideoTrackInfo(index, selVideo_, video_traits) &&
         selVideo_.program_ != prevSel.program_)
     {
       TProgramInfo program;
@@ -2519,11 +2528,15 @@ namespace yae
     reader_->threadStop();
     stopRenderers();
 
+    VideoTraits video_traits;
+    AudioTraits audio_traits;
+
     // detect current program selection change:
     TTrackInfo prevSel = selSubs_;
     if (!reader_->hasSelectedSubsTrack())
     {
-      reader_->getSelectedVideoTrackInfo(prevSel);
+      std::size_t i = reader_->getSelectedVideoTrackIndex();
+      reader_->getVideoTrackInfo(i, prevSel, video_traits);
     }
 
     selectSubsTrack(reader_, index);
@@ -4020,11 +4033,11 @@ namespace yae
 
     for (unsigned int i = 0; i < numAudioTracks; i++)
     {
-      reader->selectAudioTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = audioInfo[i];
-      reader->getSelectedAudioTrackInfo(info);
+      AudioTraits & traits = audioTraits[i];
+      reader->getAudioTrackInfo(i, info, traits);
 
       if (info.hasLang())
       {
@@ -4036,14 +4049,10 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      AudioTraits & traits = audioTraits[i];
-      if (reader->getAudioTraits(traits))
-      {
-        trackName +=
-          tr(", %1 Hz, %2 channels").
-          arg(traits.sample_rate_).
-          arg(traits.ch_layout_.nb_channels);
-      }
+      trackName +=
+        tr(", %1 Hz, %2 channels").
+        arg(traits.sample_rate_).
+        arg(traits.ch_layout_.nb_channels);
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
@@ -4086,23 +4095,19 @@ namespace yae
 
     for (unsigned int i = 0; i < numVideoTracks; i++)
     {
-      reader->selectVideoTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = videoInfo[i];
-      reader->getSelectedVideoTrackInfo(info);
+      VideoTraits & traits = videoTraits[i];
+      reader->getVideoTrackInfo(i, info, traits);
 
       if (info.hasName())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      VideoTraits & traits = videoTraits[i];
-      if (reader->getVideoTraits(traits))
-      {
-        std::string summary = traits.summary();
-        trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
-      }
+      std::string summary = traits.summary();
+      trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())

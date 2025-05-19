@@ -3403,11 +3403,11 @@ namespace yae
 
     for (unsigned int i = 0; i < numAudioTracks; i++)
     {
-      reader->selectAudioTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = audioInfo[i];
-      reader->getSelectedAudioTrackInfo(info);
+      AudioTraits & traits = audioTraits[i];
+      reader->getAudioTrackInfo(i, info, traits);
 
       if (info.hasLang())
       {
@@ -3419,14 +3419,10 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      AudioTraits & traits = audioTraits[i];
-      if (reader->getAudioTraits(traits))
-      {
-        trackName +=
-          tr(", %1 Hz, %2 channels").
-          arg(traits.sample_rate_).
-          arg(traits.ch_layout_.nb_channels);
-      }
+      trackName +=
+        tr(", %1 Hz, %2 channels").
+        arg(traits.sample_rate_).
+        arg(traits.ch_layout_.nb_channels);
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
@@ -3469,23 +3465,19 @@ namespace yae
 
     for (unsigned int i = 0; i < numVideoTracks; i++)
     {
-      reader->selectVideoTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = videoInfo[i];
-      reader->getSelectedVideoTrackInfo(info);
+      VideoTraits & traits = videoTraits[i];
+      reader->getVideoTrackInfo(i, info, traits);
 
       if (info.hasName())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      VideoTraits & traits = videoTraits[i];
-      if (reader->getVideoTraits(traits))
-      {
-        std::string summary = traits.summary();
-        trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
-      }
+      std::string summary = traits.summary();
+      trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())

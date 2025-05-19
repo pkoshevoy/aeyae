@@ -386,21 +386,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DemuxerReader::getSelectedVideoTrackInfo
+  // DemuxerReader::getVideoTrackInfo
   //
   bool
-  DemuxerReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  DemuxerReader::getVideoTrackInfo(std::size_t i,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const
   {
     info.nprograms_ = programs_.size();
     info.program_ = info.nprograms_;
     info.ntracks_ = video_.size();
-    info.index_ = selectedVideoTrack_;
+    info.index_ = i;
     info.lang_.clear();
     info.name_.clear();
 
     if (info.index_ < info.ntracks_)
     {
       const VideoTrackPtr & track = video_[info.index_];
+      track->getTraits(traits);
 
       // keep alive:
       Track::TInfoPtr track_info_ptr = track->get_info();
@@ -416,21 +419,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // DemuxerReader::getSelectedAudioTrackInfo
+  // DemuxerReader::getAudioTrackInfo
   //
   bool
-  DemuxerReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  DemuxerReader::getAudioTrackInfo(std::size_t i,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const
   {
     info.nprograms_ = programs_.size();
     info.program_ = info.nprograms_;
     info.ntracks_ = audio_.size();
-    info.index_ = selectedAudioTrack_;
+    info.index_ = i;
     info.lang_.clear();
     info.name_.clear();
 
     if (info.index_ < info.ntracks_)
     {
       const AudioTrackPtr & track = audio_[info.index_];
+      track->getTraits(traits);
 
       // keep alive:
       Track::TInfoPtr track_info_ptr = track->get_info();

@@ -902,14 +902,16 @@ namespace yae
     std::size_t n_vtracks = reader->getNumberOfVideoTracks();
     if (ix_vtrack < n_vtracks)
     {
-      reader->getSelectedVideoTrackInfo(vinfo);
+      VideoTraits traits;
+      reader->getVideoTrackInfo(ix_vtrack, vinfo, traits);
     }
 
     std::size_t ix_atrack = reader->getSelectedAudioTrackIndex();
     std::size_t n_atracks = reader->getNumberOfAudioTracks();
     if (ix_atrack < n_atracks)
     {
-      reader->getSelectedAudioTrackInfo(ainfo);
+      AudioTraits traits;
+      reader->getAudioTrackInfo(ix_atrack, ainfo, traits);
     }
 
     std::size_t n_subs = reader->subsCount();

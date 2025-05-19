@@ -1198,23 +1198,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // LiveReader::getSelectedVideoTrackName
+  // LiveReader::getVideoTrackInfo
   //
   bool
-  LiveReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  LiveReader::getVideoTrackInfo(std::size_t i,
+                                TTrackInfo & info,
+                                VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    return private_->movie_.getVideoTrackInfo(i, info);
+    return private_->movie_.getVideoTrackInfo(i, info, traits);
   }
 
   //----------------------------------------------------------------
-  // LiveReader::getSelectedAudioTrackInfo
+  // LiveReader::getAudioTrackInfo
   //
   bool
-  LiveReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  LiveReader::getAudioTrackInfo(std::size_t i,
+                                TTrackInfo & info,
+                                AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    return private_->movie_.getAudioTrackInfo(i, info);
+    return private_->movie_.getAudioTrackInfo(i, info, traits);
   }
 
   //----------------------------------------------------------------

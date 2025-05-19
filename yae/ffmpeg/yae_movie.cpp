@@ -452,6 +452,40 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::get_video_track
+  //
+  VideoTrackPtr
+  Movie::get_video_track(std::size_t i) const
+  {
+    VideoTrackPtr videoTrack;
+
+    std::size_t num_tracks = video_tracks_.size();
+    if (i < num_tracks)
+    {
+      videoTrack = video_tracks_[i];
+    }
+
+    return videoTrack;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::get_audio_track
+  //
+  AudioTrackPtr
+  Movie::get_audio_track(std::size_t i) const
+  {
+    AudioTrackPtr audioTrack;
+
+    std::size_t num_tracks = audio_tracks_.size();
+    if (i < audio_tracks_.size())
+    {
+      audioTrack = audio_tracks_[i];
+    }
+
+    return audioTrack;
+  }
+
+  //----------------------------------------------------------------
   // Movie::open
   //
   bool
@@ -631,6 +665,30 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // find_track_ix
+  //
+  template <typename TTrack>
+  std::size_t
+  find_track_ix(const std::vector<boost::shared_ptr<TTrack> > & tracks,
+                int stream_index)
+  {
+    std::size_t num_tracks = tracks.size();
+    for (std::size_t i = 0; i < num_tracks; ++i)
+    {
+      const boost::shared_ptr<TTrack> & track_ptr = tracks[i];
+      const TTrack & track = *track_ptr;
+      const AVStream & stream = track.stream();
+      if (stream.index == stream_index)
+      {
+        return i;
+      }
+    }
+
+    // not found:
+    return num_tracks;
+  }
+
+  //----------------------------------------------------------------
   // find
   //
   template <typename TTrack>
@@ -638,19 +696,17 @@ namespace yae
   find(const std::vector<boost::shared_ptr<TTrack> > & tracks,
        int stream_index)
   {
-    for (std::size_t i = 0, n = tracks.size(); i < n; ++i)
+    std::size_t num_tracks = tracks.size();
+    std::size_t track_index = find_track_ix(tracks, stream_index);
+
+    if (num_tracks <= track_index)
     {
-      const boost::shared_ptr<TTrack> & track_ptr = tracks[i];
-      const TTrack & track = *track_ptr;
-      const AVStream & stream = track.stream();
-      if (stream.index == stream_index)
-      {
-        return track_ptr;
-      }
+      // not found:
+      return boost::shared_ptr<TTrack>();
     }
 
-    // not found:
-    return boost::shared_ptr<TTrack>();
+    const boost::shared_ptr<TTrack> & track_ptr = tracks[track_index];
+    return track_ptr;
   }
 
   //----------------------------------------------------------------
@@ -659,6 +715,9 @@ namespace yae
   void
   Movie::refresh()
   {
+    VideoTrackPtr videoTrack = this->curr_video_track();
+    AudioTrackPtr audioTrack = this->curr_audio_track();
+
     // refresh the programs:
     std::vector<TProgramInfo> program_infos;
     std::map<int, int> stream_ix_to_prog_ix;
@@ -779,9 +838,30 @@ namespace yae
     subtt_tracks_.swap(subtt_tracks);
     stream_ix_to_prog_ix_.swap(stream_ix_to_prog_ix);
     stream_ix_to_subtt_ix_.swap(stream_ix_to_subtt_ix);
-
+#if 0
     this->selectVideoTrack(selectedVideoTrack_);
     this->selectAudioTrack(selectedAudioTrack_);
+#else
+    if (videoTrack)
+    {
+      std::size_t track_index =
+        yae::find_track_ix(video_tracks_, videoTrack->streamIndex());
+      if (track_index != selectedVideoTrack_)
+      {
+        this->selectVideoTrack(track_index);
+      }
+    }
+
+    if (audioTrack)
+    {
+      std::size_t track_index =
+        yae::find_track_ix(audio_tracks_, audioTrack->streamIndex());
+      if (track_index != selectedAudioTrack_)
+      {
+        this->selectAudioTrack(track_index);
+      }
+    }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -823,7 +903,9 @@ namespace yae
   // Movie::getVideoTrackInfo
   //
   bool
-  Movie::getVideoTrackInfo(std::size_t i, TTrackInfo & info) const
+  Movie::getVideoTrackInfo(std::size_t i,
+                           TTrackInfo & info,
+                           VideoTraits & traits) const
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ = info.nprograms_;
@@ -835,6 +917,7 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       VideoTrackPtr t = video_tracks_[info.index_];
+      t->getTraits(traits);
 
       // keep alive:
       Track::TInfoPtr track_info_ptr = t->get_info();
@@ -853,7 +936,9 @@ namespace yae
   // Movie::getAudioTrackInfo
   //
   bool
-  Movie::getAudioTrackInfo(std::size_t i, TTrackInfo & info) const
+  Movie::getAudioTrackInfo(std::size_t i,
+                           TTrackInfo & info,
+                           AudioTraits & traits) const
   {
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ =  info.nprograms_;
@@ -865,6 +950,7 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       AudioTrackPtr t = audio_tracks_[info.index_];
+      t->getTraits(traits);
 
       // keep alive:
       Track::TInfoPtr track_info_ptr = t->get_info();
@@ -941,17 +1027,8 @@ namespace yae
   void
   Movie::thread_loop()
   {
-    VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < video_tracks_.size())
-    {
-      videoTrack = video_tracks_[selectedVideoTrack_];
-    }
-
-    AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audio_tracks_.size())
-    {
-      audioTrack = audio_tracks_[selectedAudioTrack_];
-    }
+    VideoTrackPtr videoTrack = this->curr_video_track();
+    AudioTrackPtr audioTrack = this->curr_audio_track();
 
     PacketQueueCloseOnExit videoCloseOnExit(videoTrack);
     PacketQueueCloseOnExit audioCloseOnExit(audioTrack);
@@ -1424,17 +1501,8 @@ namespace yae
       return 0;
     }
 
-    AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audio_tracks_.size())
-    {
-      audioTrack = audio_tracks_[selectedAudioTrack_];
-    }
-
-    VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < video_tracks_.size())
-    {
-      videoTrack = video_tracks_[selectedVideoTrack_];
-    }
+    VideoTrackPtr videoTrack = this->curr_video_track();
+    AudioTrackPtr audioTrack = this->curr_audio_track();
 
     const AVStream * stream = NULL;
     if ((context_->iformat->flags & AVFMT_TS_DISCONT) &&
@@ -1896,17 +1964,8 @@ namespace yae
   bool
   Movie::blockedOnVideo() const
   {
-    VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < video_tracks_.size())
-    {
-      videoTrack = video_tracks_[selectedVideoTrack_];
-    }
-
-    AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audio_tracks_.size())
-    {
-      audioTrack = audio_tracks_[selectedAudioTrack_];
-    }
+    VideoTrackPtr videoTrack = this->curr_video_track();
+    AudioTrackPtr audioTrack = this->curr_audio_track();
 
     bool blocked = blockedOn(videoTrack.get(), audioTrack.get());
 
@@ -1926,17 +1985,8 @@ namespace yae
   bool
   Movie::blockedOnAudio() const
   {
-    VideoTrackPtr videoTrack;
-    if (selectedVideoTrack_ < video_tracks_.size())
-    {
-      videoTrack = video_tracks_[selectedVideoTrack_];
-    }
-
-    AudioTrackPtr audioTrack;
-    if (selectedAudioTrack_ < audio_tracks_.size())
-    {
-      audioTrack = audio_tracks_[selectedAudioTrack_];
-    }
+    VideoTrackPtr videoTrack = this->curr_video_track();
+    AudioTrackPtr audioTrack = this->curr_audio_track();
 
     bool blocked = blockedOn(audioTrack.get(), videoTrack.get());
 

@@ -95,6 +95,15 @@ namespace yae
                                 std::map<int, int> & stream_ix_to_subtt_ix);
 
   public:
+    VideoTrackPtr get_video_track(std::size_t i) const;
+    AudioTrackPtr get_audio_track(std::size_t i) const;
+
+    inline VideoTrackPtr curr_video_track() const
+    { return this->get_video_track(selectedVideoTrack_); }
+
+    inline AudioTrackPtr curr_audio_track() const
+    { return this->get_audio_track(selectedAudioTrack_); }
+
     bool open(const char * resourcePath, bool hwdec);
     void refresh();
     void close();
@@ -126,8 +135,13 @@ namespace yae
     inline std::size_t getSelectedAudioTrack() const
     { return selectedAudioTrack_; }
 
-    bool getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
-    bool getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
+    bool getVideoTrackInfo(std::size_t video_track_index,
+                           TTrackInfo & info,
+                           VideoTraits & traits) const;
+
+    bool getAudioTrackInfo(std::size_t audio_track_index,
+                           TTrackInfo & info,
+                           AudioTraits & traits) const;
 
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);

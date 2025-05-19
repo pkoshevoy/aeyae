@@ -78,8 +78,13 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i);
     virtual bool selectAudioTrack(std::size_t i);
 
-    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const;
-    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const;
+    virtual bool getVideoTrackInfo(std::size_t video_track_index,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const;
+
+    virtual bool getAudioTrackInfo(std::size_t audio_track_index,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const;
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const;

@@ -103,9 +103,14 @@ namespace yae
               Timespan());
     }
 
-    // NOTE: returns false if no track is currently selected:
-    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
-    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
+    // NOTE: returns false if there is no such track:
+    virtual bool getVideoTrackInfo(std::size_t video_track_index,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const = 0;
+
+    virtual bool getAudioTrackInfo(std::size_t audio_track_index,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const = 0;
 
     // NOTE: for MPEG-TS files that may contain PTS timeline anomalies
     // it may be preferable to reference file position (or packet index)
@@ -133,6 +138,7 @@ namespace yae
     virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
 
+    //! access currently selected audio/video track traits:
     virtual bool getAudioTraits(AudioTraits & traits) const = 0;
     virtual bool getVideoTraits(VideoTraits & traits) const = 0;
 

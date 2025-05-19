@@ -4565,8 +4565,10 @@ namespace yae
     }
 
     // capture playhead position:
+    std::size_t track_index = reader_->getSelectedVideoTrackIndex();
     TTrackInfo track_info;
-    reader_->getSelectedVideoTrackInfo(track_info);
+    VideoTraits video_traits;
+    reader_->getVideoTrackInfo(track_index, track_info, video_traits);
 
     TProgramInfo prog_info;
     reader_->getProgramInfo(track_info.program_, prog_info);
