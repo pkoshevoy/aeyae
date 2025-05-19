@@ -1373,6 +1373,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEvent
+  //
+  struct ReaderEvent : public QEvent
+  {
+    ReaderEvent(const IReaderPtr & reader,
+                const Json::Value & event):
+      QEvent(QEvent::User),
+      reader_(reader),
+      event_(event)
+    {}
+
+    IReaderPtr reader_;
+    Json::Value event_;
+  };
+
+  //----------------------------------------------------------------
   // PlayerUxItem::event
   //
   bool
@@ -1388,6 +1404,15 @@ namespace yae
         ac->accept();
         canvas()->cropFrame(ac->cropFrame_);
         adjustCanvasHeight();
+        return true;
+      }
+
+      yae::ReaderEvent * re = dynamic_cast<yae::ReaderEvent *>(e);
+      if (re)
+      {
+        re->accept();
+        this->adjustMenuActions();
+        emit reader_properties_changed(re->reader_);
         return true;
       }
     }
@@ -1553,8 +1578,7 @@ namespace yae
              yae::to_str(event).c_str());
 
     reader->refreshInfo();
-    this->adjustMenuActions();
-    emit reader_properties_changed(reader);
+    qApp->postEvent(this, new yae::ReaderEvent(reader, event));
   }
 
   //----------------------------------------------------------------
