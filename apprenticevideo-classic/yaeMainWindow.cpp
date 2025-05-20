@@ -4332,20 +4332,29 @@ namespace yae
     actionSetOutPoint_->setEnabled(isSeekable);
     lineEditPlayhead_->setReadOnly(!isSeekable);
 
-    // check the check-boxes:
-    std::size_t ai =
-      reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
-    ai = std::min(ai, numAudioTracks);
-    audioTrackGroup_->actions().at(ai)->setChecked(true);
+    // check the audio track check-boxes:
+    {
+      std::size_t ai =
+        reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
+      ai = std::min(ai, numAudioTracks);
+      SignalBlocker blockSignals(audioTrackGroup_);
+      audioTrackGroup_->actions().at(ai)->setChecked(true);
+    }
 
-    std::size_t vi =
-      reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
-    vi = std::min(vi, numVideoTracks);
-    videoTrackGroup_->actions().at(vi)->setChecked(true);
+    // check the video track check-boxes:
+    {
+      std::size_t vi =
+        reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
+      vi = std::min(vi, numVideoTracks);
+      SignalBlocker blockSignals(videoTrackGroup_);
+      videoTrackGroup_->actions().at(vi)->setChecked(true);
+    }
 
+    // check the captions/subtitles check-boxes:
     if (cc)
     {
       std::size_t si = numSubtitles + cc - 1;
+      SignalBlocker blockSignals(subsTrackGroup_);
       subsTrackGroup_->actions().at(si)->setChecked(true);
     }
     else
@@ -4354,6 +4363,7 @@ namespace yae
       for (; si < numSubtitles && reader && !reader->getSubsRender(si); si++)
       {}
 
+      SignalBlocker blockSignals(subsTrackGroup_);
       if (si < numSubtitles)
       {
         subsTrackGroup_->actions().at(si)->setChecked(true);
