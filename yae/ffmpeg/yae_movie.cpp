@@ -116,6 +116,13 @@ namespace yae
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
 
+      if (!codecpar.width || !codecpar.height)
+      {
+        // empty stream, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+        break;
+      }
+
       // check whether we have a decoder for this codec:
       const AVCodec * decoder = avcodec_find_decoder(codecpar.codec_id);
       if (!decoder)
@@ -176,6 +183,13 @@ namespace yae
       // assume codec is unsupported,
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
+
+      if (!codecpar.ch_layout.nb_channels)
+      {
+        // empty stream, ignore it:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+        break;
+      }
 
       // check whether we have a decoder for this codec:
       const AVCodec * decoder = avcodec_find_decoder(codecpar.codec_id);

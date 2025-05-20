@@ -493,14 +493,16 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
-                                                &subsample_hor_log2,
-                                                &subsample_ver_log2) == 0);
-    int subsample_hor = 1 << subsample_hor_log2;
-    int subsample_ver = 1 << subsample_ver_log2;
+    if (!av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
+                                          &subsample_hor_log2,
+                                          &subsample_ver_log2))
+    {
+      int subsample_hor = 1 << subsample_hor_log2;
+      int subsample_ver = 1 << subsample_ver_log2;
 
-    output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
-    output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
+      output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
+      output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
+    }
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)
