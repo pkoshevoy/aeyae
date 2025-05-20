@@ -890,6 +890,14 @@ namespace yae
                  this, SLOT(windowDoubleSize()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionDecreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionIncreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionDownmixToStereo, SIGNAL(triggered()),
                  this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
@@ -1227,6 +1235,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEventHandler
+  //
+  struct ReaderEventHandler : IEventObserver
+  {
+    ReaderEventHandler(MainWindow & main_window, const IReaderPtr & reader):
+      main_window_(main_window),
+      reader_(reader)
+    {}
+
+    virtual void note(const Json::Value & event)
+    {
+      IReaderPtr reader = reader_.lock();
+      if (reader)
+      {
+        main_window_.handle_reader_event(reader, event);
+      }
+    }
+
+    MainWindow & main_window_;
+    IReaderWPtr reader_;
+  };
+
+  //----------------------------------------------------------------
   // MainWindow::load
   //
   bool
@@ -1266,6 +1297,9 @@ namespace yae
     ++readerId_;
     IReader * reader = reader_ptr.get();
     reader->setReaderId(readerId_);
+
+    TEventObserverPtr eo(new ReaderEventHandler(*this, reader_ptr));
+    reader->setEventObserver(eo);
 
     // prevent Canvas from rendering any pending frames from previous reader:
     canvas_->acceptFramesWithReaderId(readerId_);
@@ -2731,6 +2765,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::windowDecreaseSize
+  //
+  void
+  MainWindow::windowDecreaseSize()
+  {
+    canvasSizeScaleBy(0.5);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowIncreaseSize
+  //
+  void
+  MainWindow::windowIncreaseSize()
+  {
+    canvasSizeScaleBy(2.0);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::helpAbout
   //
   void
@@ -3205,6 +3257,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEvent
+  //
+  struct ReaderEvent : public QEvent
+  {
+    ReaderEvent(const IReaderPtr & reader,
+                const Json::Value & event):
+      QEvent(QEvent::User),
+      reader_(reader),
+      event_(event)
+    {}
+
+    IReaderPtr reader_;
+    Json::Value event_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::handle_reader_event
+  //
+  void
+  MainWindow::handle_reader_event(const IReaderPtr & reader,
+                                  const Json::Value & event)
+  {
+    yae_dlog("MainWindow::handle_reader_event: %s",
+             yae::to_str(event).c_str());
+
+    reader->refreshInfo();
+    qApp->postEvent(this, new yae::ReaderEvent(reader, event));
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::event
   //
   bool
@@ -3218,6 +3300,18 @@ namespace yae
         ac->accept();
         canvas_->cropFrame(ac->cropFrame_);
         adjustCanvasHeight();
+        return true;
+      }
+
+      yae::ReaderEvent * re = dynamic_cast<yae::ReaderEvent *>(e);
+      if (re)
+      {
+        re->accept();
+        if (re->reader_ == reader_)
+        {
+          this->adjustMenuActions();
+          this->adjustMenus(reader_.get());
+        }
         return true;
       }
     }
@@ -3503,6 +3597,15 @@ namespace yae
 
       contextMenu_->popup(globalPt);
     }
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::canvasSizeScaleBy
+  //
+  void
+  MainWindow::canvasSizeScaleBy(double scale)
+  {
+    canvasSizeSet(xexpand_ * scale, yexpand_ * scale);
   }
 
   //----------------------------------------------------------------
@@ -3888,6 +3991,9 @@ namespace yae
     std::size_t numSubtitles =
       reader ? reader->subsCount() : 0;
 
+    std::size_t cc =
+      reader ? reader->getRenderCaptions() : 0;
+
     std::size_t numChapters =
       reader ? reader->countChapters() : 0;
 
@@ -4024,6 +4130,11 @@ namespace yae
         trackName += tr(", program %1").arg(info.program_);
       }
 
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuAudio_->addAction(trackAction);
 
@@ -4077,6 +4188,11 @@ namespace yae
       else if (info.nprograms_ > 1)
       {
         trackName += tr(", program %1").arg(info.program_);
+      }
+
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
       }
 
       QAction * trackAction = new QAction(trackName, this);
@@ -4215,6 +4331,39 @@ namespace yae
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
     lineEditPlayhead_->setReadOnly(!isSeekable);
+
+    // check the check-boxes:
+    std::size_t ai =
+      reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
+    ai = std::min(ai, numAudioTracks);
+    audioTrackGroup_->actions().at(ai)->setChecked(true);
+
+    std::size_t vi =
+      reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
+    vi = std::min(vi, numVideoTracks);
+    videoTrackGroup_->actions().at(vi)->setChecked(true);
+
+    if (cc)
+    {
+      std::size_t si = numSubtitles + cc - 1;
+      subsTrackGroup_->actions().at(si)->setChecked(true);
+    }
+    else
+    {
+      std::size_t si = 0;
+      for (; si < numSubtitles && reader && !reader->getSubsRender(si); si++)
+      {}
+
+      if (si < numSubtitles)
+      {
+        subsTrackGroup_->actions().at(si)->setChecked(true);
+      }
+      else
+      {
+        int index = subsTrackGroup_->actions().size() - 1;
+        subsTrackGroup_->actions().at(index)->setChecked(true);
+      }
+    }
   }
 
   //----------------------------------------------------------------

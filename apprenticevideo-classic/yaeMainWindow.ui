@@ -295,6 +295,9 @@
      <addaction name="actionHalfSize"/>
      <addaction name="actionFullSize"/>
      <addaction name="actionDoubleSize"/>
+     <addaction name="separator"/>
+     <addaction name="actionDecreaseSize"/>
+     <addaction name="actionIncreaseSize"/>
     </widget>
     <widget class="QMenu" name="menuCropFrame">
      <property name="title">
@@ -940,6 +943,28 @@ QLineEdit QToolButton#clear_:pressed {
    </property>
    <property name="shortcut">
     <string>Ctrl+2</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionDecreaseSize">
+   <property name="text">
+    <string>Decrease Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+-</string>
+   </property>
+   <property name="shortcutContext">
+    <enum>Qt::ApplicationShortcut</enum>
+   </property>
+  </action>
+  <action name="actionIncreaseSize">
+   <property name="text">
+    <string>Increase Size</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+=</string>
    </property>
    <property name="shortcutContext">
     <enum>Qt::ApplicationShortcut</enum>

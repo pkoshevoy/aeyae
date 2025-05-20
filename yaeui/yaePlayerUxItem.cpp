@@ -1411,8 +1411,11 @@ namespace yae
       if (re)
       {
         re->accept();
-        this->adjustMenuActions();
-        emit reader_properties_changed(re->reader_);
+        if (re->reader_ == player_->reader())
+        {
+          this->adjustMenuActions();
+          emit reader_properties_changed(re->reader_);
+        }
         return true;
       }
     }
@@ -1568,11 +1571,6 @@ namespace yae
   PlayerUxItem::handle_reader_event(const IReaderPtr & reader,
                                     const Json::Value & event)
   {
-    if (reader != player_->reader())
-    {
-      return;
-    }
-
     yae_dlog("PlayerUxItem::handle_reader_event: %s: %s",
              Item::id_.c_str(),
              yae::to_str(event).c_str());
