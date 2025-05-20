@@ -89,12 +89,6 @@
          <property name="contextMenuPolicy">
           <enum>Qt::NoContextMenu</enum>
          </property>
-         <property name="styleSheet">
-          <string notr="true">QToolButton	{
-	background-color: transparent;
-}
-</string>
-         </property>
          <property name="icon">
           <iconset resource="apprenticevideo-classic.qrc">
            <normaloff>:/images/toggle-fullscreen-on.png</normaloff>
@@ -112,12 +106,6 @@
          </property>
          <property name="contextMenuPolicy">
           <enum>Qt::NoContextMenu</enum>
-         </property>
-         <property name="styleSheet">
-          <string notr="true">QToolButton	{
-	background-color: transparent;
-}
-</string>
          </property>
          <property name="icon">
           <iconset resource="apprenticevideo-classic.qrc">

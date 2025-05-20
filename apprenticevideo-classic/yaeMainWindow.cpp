@@ -184,6 +184,11 @@ namespace yae
       "    background-color: #000000;\n"
       "}\n"
       "\n"
+      "QToolButton {\n"
+      "    background-color: #000000;\n"
+      "    border: -px solid #000000;\n"
+      "}\n"
+      "\n"
       "QLineEdit {\n"
       "    color: #e0e0e0;\n"
       "    border: 0px solid #404040;\n"
@@ -202,6 +207,11 @@ namespace yae
       "\n"
       "QWidget {\n"
       "    background-color: %2;\n"
+      "}\n"
+      "\n"
+      "QToolButton {\n"
+      "    background-color: %2;\n"
+      "    border: 0px solid %2;\n"
       "}\n"
       "\n"
       "QLineEdit {\n"
@@ -3774,95 +3784,72 @@ namespace yae
   // MainWindow::selectVideoTrack
   //
   void
-  MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
+  MainWindow::selectVideoTrack(IReader * reader, std::size_t video_track)
   {
-    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-    reader->selectVideoTrack(videoTrackIndex);
+    std::size_t num_video_tracks = reader->getNumberOfVideoTracks();
+    reader->selectVideoTrack(video_track);
 
     VideoTraits vtts;
     if (reader->getVideoTraits(vtts))
     {
-      // pixel format shortcut:
-      const pixelFormat::Traits * ptts =
-        pixelFormat::getTraits(vtts.pixelFormat_);
+      const bool luminance16_not_supported = !yae::get_supports_luminance16();
 
-#if 0
-      yae_debug << "yae: native format: "
-                << (ptts ? ptts->name_ : "unsupported");
-#endif
+      bool skip_color_converter = actionSkipColorConverter->isChecked();
+      canvas_->skipColorConverter(skip_color_converter);
 
-#if 1
-      bool unsupported = ptts == NULL;
-
-      if (!unsupported)
+      TPixelFormatId format = kInvalidPixelFormat;
+      if (canvas_->
+          canvasRenderer()->
+          adjustPixelFormatForOpenGL(skip_color_converter, vtts, format) ||
+          luminance16_not_supported)
       {
-        unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
-      }
+        const pixelFormat::Traits * ptts_native =
+          pixelFormat::getTraits(vtts.pixelFormat_);
 
-      if (!unsupported)
-      {
-        GLint internalFormatGL;
-        GLenum pixelFormatGL;
-        GLenum dataTypeGL;
-        GLint shouldSwapBytes;
-        unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                       internalFormatGL,
-                                                       pixelFormatGL,
-                                                       dataTypeGL,
-                                                       shouldSwapBytes);
+        const pixelFormat::Traits * ptts_output =
+          pixelFormat::getTraits(format);
 
-        bool skipColorConverter = actionSkipColorConverter->isChecked();
-        canvas_->skipColorConverter(skipColorConverter);
+        const bool adjusted_pixel_format = (format != vtts.pixelFormat_);
+        vtts.setPixelFormat(format);
 
-        const TFragmentShader * fragmentShader =
-          (supportedChannels != ptts->channels_) ?
-          canvas_->fragmentShaderFor(vtts) :
-          NULL;
+        const unsigned int native_w = vtts.encodedWidth_;
+        const unsigned int native_h = vtts.encodedHeight_;
 
-        if (!supportedChannels && !fragmentShader)
+        if (luminance16_not_supported)
         {
-          unsupported = true;
-        }
-        else if (supportedChannels != ptts->channels_ &&
-                 !skipColorConverter &&
-                 !fragmentShader)
-        {
-          unsupported = true;
-        }
-      }
-
-      if (unsupported)
-      {
-        vtts.setPixelFormat(kPixelFormatGRAY8);
-
-        if (ptts)
-        {
-          if ((ptts->flags_ & pixelFormat::kAlpha) &&
-              (ptts->flags_ & pixelFormat::kColor))
+          while (vtts.encodedWidth_ > 1280 ||
+                 vtts.encodedHeight_ > 720)
           {
-            vtts.setPixelFormat(kPixelFormatBGRA);
-          }
-          else if ((ptts->flags_ & pixelFormat::kColor) ||
-                   (ptts->flags_ & pixelFormat::kPaletted))
-          {
-            if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
-            {
-              vtts.setPixelFormat(kPixelFormatYUYV422);
-            }
-            else
-            {
-              vtts.setPixelFormat(kPixelFormatBGR24);
-            }
+            vtts.encodedWidth_ >>= 1;
+            vtts.encodedHeight_ >>= 1;
+            vtts.offsetTop_ >>= 1;
+            vtts.offsetLeft_ >>= 1;
+            vtts.visibleWidth_ >>= 1;
+            vtts.visibleHeight_ >>= 1;
           }
         }
+        else
+        {
+          // NOTE: overriding frame size implies scaling, so don't do it
+          // unless you really want to scale the images in the reader;
+          // In general, leave scaling to OpenGL:
+          vtts.encodedWidth_ = 0;
+          vtts.encodedHeight_ = 0;
+        }
+
+        // preserve pixel aspect ratio:
+        vtts.pixelAspectRatio_ = 0.0;
+
+        yae_dlog("native: %s %ux%u, output: %s %ux%u",
+                 ptts_native ? ptts_native->name_ : "none",
+                 native_w,
+                 native_h,
+                 ptts_output ? ptts_output->name_ : "none",
+                 vtts.encodedWidth_ ? vtts.encodedWidth_ : native_w,
+                 vtts.encodedHeight_ ? vtts.encodedHeight_ : native_h);
 
         reader->setVideoTraitsOverride(vtts);
       }
-#elif 0
-      vtts.setPixelFormat(kPixelFormatYUV420P9);
-      reader->setVideoTraitsOverride(vtts);
-      canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
-#endif
     }
 
     if (reader->getVideoTraitsOverride(vtts))
@@ -3870,41 +3857,14 @@ namespace yae
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-      if (ptts)
-      {
-#if 0
-        std::ostringstream oss;
-
-        oss << "yae: output format: " << ptts->name_
-            << ", par: " << vtts.pixelAspectRatio_
-            << ", " << vtts.visibleWidth_
-            << " x " << vtts.visibleHeight_;
-
-        if (vtts.pixelAspectRatio_ != 0.0)
-        {
-          oss << ", dar: "
-              << (double(vtts.visibleWidth_) *
-                  vtts.pixelAspectRatio_ /
-                  double(vtts.visibleHeight_))
-              << ", " << int(vtts.visibleWidth_ *
-                             vtts.pixelAspectRatio_ +
-                             0.5)
-              << " x " << vtts.visibleHeight_;
-        }
-
-        oss << ", fps: " << vtts.frameRate_;
-
-        yae_debug << oss.str().c_str();
-#endif
-      }
-      else
+      if (!ptts && vtts.pixelFormat_ != kInvalidPixelFormat)
       {
         // unsupported pixel format:
-        reader->selectVideoTrack(numVideoTracks);
+        reader->selectVideoTrack(num_video_tracks);
       }
     }
 
-    adjustMenus(reader);
+    this->adjustMenus(reader);
   }
 
   //----------------------------------------------------------------
