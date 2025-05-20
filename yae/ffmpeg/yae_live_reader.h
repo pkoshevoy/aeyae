@@ -78,8 +78,13 @@ namespace yae
     virtual bool selectVideoTrack(std::size_t i);
     virtual bool selectAudioTrack(std::size_t i);
 
-    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const;
-    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const;
+    virtual bool getVideoTrackInfo(std::size_t video_track_index,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const;
+
+    virtual bool getAudioTrackInfo(std::size_t audio_track_index,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const;
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const;
@@ -157,6 +162,11 @@ namespace yae
     // a reference to the clock that audio/video renderers use
     // to synchronize their output:
     virtual void setSharedClock(const SharedClock & clock);
+
+    // optional, if set then reader may call eo->note(event)
+    // to notify observer of significant events, such as MPEG-TS
+    // program structure changes, ES codec changes, etc...
+    virtual void setEventObserver(const TEventObserverPtr & eo);
   };
 
 }

@@ -38,6 +38,24 @@ namespace yae
   {}
 
   //----------------------------------------------------------------
+  // TimePos::get
+  //
+  double
+  TimePos::get() const
+  {
+    return sec_;
+  }
+
+  //----------------------------------------------------------------
+  // TimePos::set
+  //
+  void
+  TimePos::set(double pos)
+  {
+    sec_ = pos;
+  }
+
+  //----------------------------------------------------------------
   // TimePos::to_str
   //
   std::string
@@ -111,12 +129,6 @@ namespace yae
 
     if (err < 0)
     {
-      if (!ts)
-      {
-        // must be trying to rewind a stream of undefined duration:
-        seekFlags |= AVSEEK_FLAG_BYTE;
-      }
-
       err = avformat_seek_file(context,
                                streamIndex,
                                kMinInt64,
@@ -125,6 +137,77 @@ namespace yae
                                seekFlags | AVSEEK_FLAG_ANY);
     }
 
+    return err;
+  }
+
+
+  //----------------------------------------------------------------
+  // PacketPos::PacketPos
+  //
+  PacketPos::PacketPos(int64_t packet_pos, uint64_t packet_size):
+    pos_(packet_pos, packet_size)
+  {}
+
+  //----------------------------------------------------------------
+  // PacketPos::get
+  //
+  double
+  PacketPos::get() const
+  {
+    return pos_.sec();
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::set
+  //
+  void
+  PacketPos::set(double sec)
+  {
+    pos_.time_ = int64_t(pos_.base_ * sec);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::to_str
+  //
+  std::string
+  PacketPos::to_str() const
+  {
+    return pos_.sec_msec();
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::lt
+  //
+  bool
+  PacketPos::lt(const TFrameBase & f, double dur) const
+  {
+    return (pos_ < f.pos_);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::gt
+  //
+  bool
+  PacketPos::gt(const TFrameBase & f, double dur) const
+  {
+    return (f.pos_ < pos_);
+  }
+
+  //----------------------------------------------------------------
+  // PacketPos::seek
+  //
+  int
+  PacketPos::seek(AVFormatContext * context, const AVStream * stream) const
+  {
+    (void)stream;
+
+    int seekFlags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
+    int err = avformat_seek_file(context,
+                                 -1,
+                                 pos_.time_ - pos_.base_,
+                                 pos_.time_,
+                                 pos_.time_ + pos_.base_,
+                                 seekFlags);
     return err;
   }
 
@@ -313,6 +396,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
+    packet_pos_(4), // fifo capacity
     discarded_(0)
   {
     if (context_ && stream_)
@@ -339,6 +423,7 @@ namespace yae
     playbackEnabled_(false),
     startTime_(0),
     tempo_(1.0),
+    packet_pos_(4), // fifo capacity
     discarded_(0)
   {
     std::swap(hwdec_, track->hwdec_);
@@ -405,28 +490,33 @@ namespace yae
   //----------------------------------------------------------------
   // Track::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   Track::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
     if (!stream_)
     {
-      return NULL;
+      return ctx_ptr;
     }
 
-    const AVCodecParameters & params = *(stream_->codecpar);
-    const AVCodec * codec = avcodec_find_decoder(params.codec_id);
-    return maybe_open(codec, params, NULL);
+    // keep-alive:
+    AvCodecParameters params(stream_->codecpar);
+    const AVCodecParameters & codecpar = params.get();
+    const AVCodec * codec = avcodec_find_decoder(codecpar.codec_id);
+    return maybe_open(codec, codecpar, NULL);
   }
 
   //----------------------------------------------------------------
   // Track::maybe_open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   Track::maybe_open(const AVCodec * codec,
                     const AVCodecParameters & params,
                     AVDictionary * opts)
@@ -434,7 +524,7 @@ namespace yae
     if (!codec && stream_->codecpar->codec_id != AV_CODEC_ID_TEXT)
     {
       // unsupported codec:
-      return NULL;
+      return AvCodecContextPtr();
     }
 
     int err = 0;
@@ -565,15 +655,15 @@ namespace yae
     if (err < 0)
     {
       yae_elog("avcodec_open2 failed: %s", yae::av_errstr(err).c_str());
-      return NULL;
+      return AvCodecContextPtr();
     }
 
     std::swap(hw_device_ctx_, hw_device_ctx);
-    std::swap(codecContext_, ctx_ptr);
+    codecContext_ = ctx_ptr;
     sent_ = 0;
     received_ = 0;
     errors_ = 0;
-    return ctx;
+    return ctx_ptr;
   }
 
   //----------------------------------------------------------------
@@ -584,11 +674,7 @@ namespace yae
   {
     hw_frames_ctx_.reset();
     hw_device_ctx_.reset();
-
-    if (stream_ && codecContext_)
-    {
-      codecContext_.reset();
-    }
+    codecContext_.reset();
   }
 
   //----------------------------------------------------------------
@@ -608,30 +694,58 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Track::getCodecName
+  // Track::set_track_id
   //
-  const char *
-  Track::getCodecName() const
+  void
+  Track::set_track_id(const std::string & track_id)
   {
-    return stream_ ? avcodec_get_name(stream_->codecpar->codec_id) : NULL;
+    Track::TInfoPtr info_ptr(new Track::Info());
+    Track::Info & info = *info_ptr;
+    info.track_id_ = track_id;
+    this->update(info);
+    info_ = info_ptr;
   }
 
   //----------------------------------------------------------------
-  // Track::getName
+  // Track::update
   //
-  const char *
-  Track::getName() const
+  void
+  Track::update(Track::Info & info) const
   {
-    return stream_ ? getTrackName(stream_->metadata) : NULL;
-  }
+    if (!stream_)
+    {
+      return;
+    }
 
-  //----------------------------------------------------------------
-  // Track::getLang
-  //
-  const char *
-  Track::getLang() const
-  {
-    return stream_ ? getTrackLang(stream_->metadata) : NULL;
+    const char * codec_name = avcodec_get_name(stream_->codecpar->codec_id);
+    if (codec_name)
+    {
+      info.codec_ = codec_name;
+    }
+    else
+    {
+      info.codec_.clear();
+    }
+
+    const char * track_name = getTrackName(stream_->metadata);
+    if (track_name)
+    {
+      info.name_ = track_name;
+    }
+    else
+    {
+      info.name_.clear();
+    }
+
+    const char * track_lang = getTrackLang(stream_->metadata);
+    if (track_lang)
+    {
+      info.lang_ = track_lang;
+    }
+    else
+    {
+      info.lang_.clear();
+    }
   }
 
   //----------------------------------------------------------------
@@ -743,7 +857,7 @@ namespace yae
   Track::threadStart()
   {
     terminator_.stopWaiting(false);
-    packetQueue_.open();
+    this->packetQueueOpen();
     return thread_.run();
   }
 
@@ -786,73 +900,111 @@ namespace yae
   bool
   Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
   {
-    if (packetPtr)
+    if (!(codecpar_next_ && codecpar_next_->same_codec(stream_->codecpar)))
     {
-      const AvPkt & pkt = *packetPtr;
-      const AVPacket & packet = pkt.get();
-
-      double rate = 0.0;
-
-      // this can be called on the main thread, when seeking:
-      {
-        boost::lock_guard<boost::mutex> lock(packetRateMutex_);
-
-        if (packet.dts != AV_NOPTS_VALUE)
-        {
-          TTime dts(int64_t(stream_->time_base.num) * packet.dts,
-                    uint64_t(stream_->time_base.den));
-
-          if (!packetRateEstimator_.is_monotonically_increasing(dts))
-          {
-            packetRateEstimator_.clear();
-          }
-
-          packetRateEstimator_.push(dts);
-        }
-        else
-        {
-          packetRateEstimator_.push_same_as_last();
-        }
-
-        rate = packetRateEstimator_.window_avg();
-      }
-
-      // must not set packet queue size to 0
-      // or we'll hoard an unlimited number of decoded frames
-      // in memory when playback is paused:
-      {
-        const uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
-        const uint64_t max_queue_size = packetQueue_.getMaxSize();
-
-        const uint64_t diff =
-          (new_queue_size < max_queue_size) ?
-          max_queue_size - new_queue_size :
-          new_queue_size - max_queue_size;
-
-        // avoid log span due to flip-flopping queue size:
-        static const uint64_t padding = 10;
-
-        const uint64_t percent_padding =
-          (new_queue_size < max_queue_size) ?
-          (100 * diff) / max_queue_size :
-          (100 * padding) / (new_queue_size + padding);
-
-        if ((new_queue_size > max_queue_size ||
-             (diff > padding && percent_padding > 15)) &&
-            packetQueue_.setMaxSize(new_queue_size + padding))
-        {
-          yae_dlog("%s: estimated packet queue max size: %" PRIu64
-                   ", current occupancy: %" PRIu64
-                   ", percent padding: %" PRIu64,
-                   id_.c_str(),
-                   uint64_t(new_queue_size),
-                   uint64_t(packetQueue_.getSize()),
-                   percent_padding);
-        }
-      }
+      codecpar_next_.reset(new yae::AvCodecParameters(stream_->codecpar));
     }
 
+    if (packetPtr)
+    {
+      packetPtr->codecpar_ = codecpar_next_;
+      packetPtr->timebase_ = stream_->time_base;
+
+      const AvPkt & pkt = *packetPtr;
+      const AVPacket & packet = pkt.get();
+      this->update_packet_queue_size(packet);
+    }
+
+    return this->packet_queue_push(packetPtr, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // Track::update_packet_queue_size
+  //
+  void
+  Track::update_packet_queue_size(const AVPacket & packet)
+  {
+    double rate = 0.0;
+
+    // this can be called on the main thread, when seeking:
+    {
+      boost::lock_guard<boost::mutex> lock(packetRateMutex_);
+
+      if (packet.dts != AV_NOPTS_VALUE)
+      {
+        TTime dts(int64_t(stream_->time_base.num) * packet.dts,
+                  uint64_t(stream_->time_base.den));
+
+        if (!packetRateEstimator_.is_monotonically_increasing(dts))
+        {
+          packetRateEstimator_.clear();
+        }
+
+        packetRateEstimator_.push(dts);
+      }
+      else
+      {
+        packetRateEstimator_.push_same_as_last();
+      }
+
+      rate = packetRateEstimator_.window_avg();
+    }
+
+    // must not set packet queue size to 0
+    // or we'll hoard an unlimited number of decoded frames
+    // in memory when playback is paused:
+    {
+      // avoid log span due to flip-flopping queue size:
+      static const uint64_t padding = 10;
+
+      uint64_t new_queue_size = std::max<uint64_t>(24, rate + 0.5);
+      uint64_t max_queue_size = packetQueue_.getMaxSize();
+      uint64_t cur_queue_size = packetQueue_.getSize();
+
+      const uint64_t diff =
+        (new_queue_size < max_queue_size) ?
+        max_queue_size - new_queue_size :
+        new_queue_size - max_queue_size;
+
+      const uint64_t percent_padding =
+        (new_queue_size < max_queue_size) ?
+        (100 * diff) / max_queue_size :
+        (100 * padding) / (new_queue_size + padding);
+
+      if ((new_queue_size > max_queue_size ||
+           (diff > padding && percent_padding > 15)) &&
+          packetQueue_.setMaxSize(new_queue_size + padding))
+      {
+        std::string track_id = this->get_track_id();
+        yae_dlog("%s: estimated packet queue max size: %" PRIu64
+                 ", current occupancy: %" PRIu64
+                 ", percent padding: %" PRIu64,
+                 track_id.c_str(),
+                 new_queue_size,
+                 cur_queue_size,
+                 percent_padding);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Track::packet_queue_push
+  //
+  bool
+  Track::packet_queue_push(const TPacketPtr & packetPtr,
+                           QueueWaitMgr * waitMgr)
+  {
     return packetQueue_.push(packetPtr, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // Track::packet_queue_pop
+  //
+  bool
+  Track::packet_queue_pop(TPacketPtr & packetPtr,
+                          QueueWaitMgr * waitMgr)
+  {
+    return packetQueue_.pop(packetPtr, waitMgr);
   }
 
   //----------------------------------------------------------------
@@ -886,8 +1038,9 @@ namespace yae
 
       received_++;
 #if 0
+      std::string track_id = this->get_track_id();
       yae_wlog("%s decoded: %s",
-               id_.c_str(),
+               track_id.c_str(),
                TTime(decodedFrame.pts *
                      stream_->time_base.num,
                      stream_->time_base.den).
@@ -900,7 +1053,7 @@ namespace yae
       {
         const AVFrameSideData & sd = *(decodedFrame.side_data[i]);
         yae_dlog("%s frame side data %i: %s, size %i, %s",
-                 id_.c_str(),
+                 track_id.c_str(),
                  i,
                  av_frame_side_data_name(sd.type),
                  sd.size,
@@ -909,7 +1062,7 @@ namespace yae
       }
 #endif
 
-      handle(frm);
+      this->handle(frm);
     }
 
     return err;
@@ -932,6 +1085,11 @@ namespace yae
 
       const AVPacket & packet = pkt.get();
       {
+        if (packet.pos != -1)
+        {
+          packet_pos_.push(packet.pos);
+        }
+
         // YAE_BENCHMARK(benchmark, "avcodec_send_packet");
         errSend = avcodec_send_packet(ctx, &packet);
       }
@@ -945,9 +1103,10 @@ namespace yae
       if (errSend < 0 && errSend != AVERROR(EAGAIN) && errSend != AVERROR_EOF)
       {
 #ifndef NDEBUG
+        std::string track_id = this->get_track_id();
         av_log(NULL, AV_LOG_WARNING,
                "[%s] Track::decode(%p), errSend: %i, %s\n",
-               id_.c_str(),
+               track_id.c_str(),
                packet.data,
                errSend,
                av_errstr(errSend).c_str());
@@ -966,9 +1125,10 @@ namespace yae
 #ifndef NDEBUG
         if (errRecv != AVERROR(EAGAIN) && errRecv != AVERROR_EOF)
         {
+          std::string track_id = this->get_track_id();
           av_log(NULL, AV_LOG_WARNING,
                  "[%s] Track::decode(%p), errRecv: %i, %s\n",
-                 id_.c_str(),
+                 track_id.c_str(),
                  packet.data,
                  errRecv,
                  av_errstr(errRecv).c_str());
@@ -987,21 +1147,77 @@ namespace yae
   void
   Track::decode(const TPacketPtr & packetPtr)
   {
+    TPacketPtr prev = prev_packet_;
+    prev_packet_ = packetPtr;
+
     if (!packetPtr)
     {
       this->flush();
       return;
     }
 
-    AVCodecContext * ctx = this->open();
+    // check for timeline anomalies:
+    bool timeline_anomaly = false;
+    if (prev)
+    {
+      const AVPacket & a = prev->get();
+      const AVPacket & b = packetPtr->get();
+
+      const AVRational & a_tb = prev->timebase_;
+      const AVRational & b_tb = packetPtr->timebase_;
+
+      if (a.dts != AV_NOPTS_VALUE &&
+          b.dts != AV_NOPTS_VALUE)
+      {
+        static const Rational msec(1, 1000);
+        int64_t a_dts = av_rescale_q(a.dts, a_tb, b_tb);
+        int64_t b_dts = b.dts;
+        int64_t dt_msec = av_rescale_q(b.dts - a_dts, b_tb, msec);
+        timeline_anomaly = (dt_msec < 0 || dt_msec > 5000);
+      }
+    }
+
+    // handle codec changes:
+    bool codec_changed =
+      (codecpar_curr_ && !codecpar_curr_->same_codec(*(packetPtr->codecpar_)));
+    if (codec_changed)
+    {
+      this->flush();
+      codecContext_.reset();
+    }
+
+    // save for future reference:
+    codecpar_curr_ = packetPtr->codecpar_;
+
+    AvCodecContextPtr ctx = this->open();
     if (!ctx)
     {
       // codec is not supported
       return;
     }
 
+    if (codec_changed || timeline_anomaly)
+    {
+      bool dropPendingFrames = false;
+      this->resetTimeCounters(TSeekPosPtr(), dropPendingFrames);
+    }
+
     const AvPkt & pkt = *packetPtr;
-    decode(ctx, pkt);
+    decode(ctx.get(), pkt);
+
+    if (codec_changed)
+    {
+      // keep-alive:
+      TEventObserverPtr eo = eo_;
+      if (eo)
+      {
+        std::string track_id = this->get_track_id();
+        Json::Value event;
+        event["event_type"] = "codec_changed";
+        event["track_id"] = track_id;
+        eo->note(event);
+      }
+    }
   }
 
   //----------------------------------------------------------------
@@ -1010,12 +1226,17 @@ namespace yae
   void
   Track::flush()
   {
-    AVCodecContext * ctx = codecContext_.get();
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
     if (ctx)
     {
       // flush out buffered frames with an empty packet:
       this->decode(ctx, AvPkt());
     }
+
+    packet_pos_.clear();
   }
 
   //----------------------------------------------------------------
@@ -1033,7 +1254,7 @@ namespace yae
         boost::this_thread::interruption_point();
 
         TPacketPtr packetPtr;
-        if (!packetQueue_.pop(packetPtr, &terminator_))
+        if (!this->packet_queue_pop(packetPtr, &terminator_))
         {
           break;
         }
@@ -1056,7 +1277,7 @@ namespace yae
   Track::threadStop()
   {
     terminator_.stopWaiting(true);
-    packetQueue_.close();
+    this->packetQueueClose();
     thread_.interrupt();
     return thread_.wait();
   }

@@ -128,6 +128,8 @@ namespace yae
 
     frameRate_.num = 1;
     frameRate_.den = AV_TIME_BASE;
+
+    syncBuffer_.setMaxSize(50);
   }
 
   //----------------------------------------------------------------
@@ -144,13 +146,13 @@ namespace yae
   bool
   VideoTrack::initTraits()
   {
-    if (!getTraits(override_))
+    if (!getTraits(native_))
     {
       return false;
     }
 
-    native_ = override_;
-    output_ = override_;
+    output_ = native_;
+    override_ = VideoTraits();
 
     // do not override width/height/sar unintentionally:
     override_.visibleWidth_ = 0;
@@ -275,27 +277,30 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   VideoTrack::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
     std::list<const AVCodec *> candidates;
     const AVCodecParameters & params = *(stream_->codecpar);
     if (!yae::find_decoders_for(candidates, params, true))
     {
-      return NULL;
+      return ctx_ptr;
     }
 
     for (std::list<const AVCodec *>::const_iterator i = candidates.begin();
          i != candidates.end(); ++i)
     {
       const AVCodec * codec = *i;
-      AVCodecContext * ctx = this->maybe_open(codec, params, NULL);
-      if (!ctx)
+      ctx_ptr = this->maybe_open(codec, params, NULL);
+      if (!ctx_ptr)
       {
         continue;
       }
@@ -304,10 +309,39 @@ namespace yae
       framesProduced_ = 0;
       skipLoopFilter(skipLoopFilter_);
       skipNonReferenceFrames(skipNonReferenceFrames_);
-      return ctx;
+      return ctx_ptr;
     }
 
-    return NULL;
+    return ctx_ptr;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueOpen
+  //
+  void VideoTrack::packetQueueOpen()
+  {
+    syncBuffer_.open();
+    Track::packetQueueOpen();
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueClose
+  //
+  void
+  VideoTrack::packetQueueClose()
+  {
+    syncBuffer_.close();
+    Track::packetQueueClose();
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packetQueueClear
+  //
+  void
+  VideoTrack::packetQueueClear()
+  {
+    syncBuffer_.clear();
+    Track::packetQueueClear();
   }
 
   //----------------------------------------------------------------
@@ -318,17 +352,21 @@ namespace yae
   {
     skipLoopFilter_ = skip;
 
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
+    if (ctx)
     {
       if (skipLoopFilter_)
       {
-        codecContext_->skip_loop_filter = AVDISCARD_ALL;
-        codecContext_->flags2 |= AV_CODEC_FLAG2_FAST;
+        ctx->skip_loop_filter = AVDISCARD_ALL;
+        ctx->flags2 |= AV_CODEC_FLAG2_FAST;
       }
       else
       {
-        codecContext_->skip_loop_filter = AVDISCARD_DEFAULT;
-        codecContext_->flags2 &= ~(AV_CODEC_FLAG2_FAST);
+        ctx->skip_loop_filter = AVDISCARD_DEFAULT;
+        ctx->flags2 &= ~(AV_CODEC_FLAG2_FAST);
       }
     }
   }
@@ -341,15 +379,19 @@ namespace yae
   {
     skipNonReferenceFrames_ = skip;
 
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
+
+    if (ctx)
     {
       if (skipNonReferenceFrames_)
       {
-        codecContext_->skip_frame = AVDISCARD_NONREF;
+        ctx->skip_frame = AVDISCARD_NONREF;
       }
       else
       {
-        codecContext_->skip_frame = AVDISCARD_DEFAULT;
+        ctx->skip_frame = AVDISCARD_DEFAULT;
       }
     }
   }
@@ -364,7 +406,7 @@ namespace yae
     getTraits(native_, decoded);
 
     // frame size may have changed, so update output traits accordingly:
-    output_ = override_;
+    output_.setSomeTraits(override_);
 
     if (native_.pixelFormat_ != kInvalidPixelFormat &&
         override_.pixelFormat_ == kInvalidPixelFormat)
@@ -556,7 +598,7 @@ namespace yae
     filterGraph_.reset();
     hasPrevPTS_ = false;
     frameQueue_.close();
-    packetQueue_.close();
+    this->packetQueueClose();
     return true;
   }
 
@@ -664,11 +706,38 @@ namespace yae
   {
     // YAE_BENCHMARK(benchmark, "VideoTrack::handle");
 
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = Track::info_;
+    const Track::Info & track_info = *track_info_ptr;
+
     try
     {
       AvFrm decodedFrameCopy(decodedFrame);
       decodedFrameCopy.hwdownload();
 
+      AVFrame & decoded = decodedFrameCopy.get();
+      framesDecoded_++;
+
+      // update native traits first:
+      VideoTraits native_traits;
+      this->getTraits(native_traits, &decoded);
+      if (native_ != native_traits)
+      {
+        native_ = native_traits;
+
+        // keep-alive:
+        TEventObserverPtr eo = eo_;
+        if (eo)
+        {
+          std::string track_id = this->get_track_id();
+          Json::Value event;
+          event["event_type"] = "traits_changed";
+          event["track_id"] = track_id;
+          eo->note(event);
+        }
+      }
+
+      // fill in any missing specs:
       add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_));
 
 #if 0
@@ -676,9 +745,6 @@ namespace yae
       static const FrameGen frameGen;
       decodedFrameCopy = frameGen.get(decodedFrameCopy);
 #endif
-
-      AVFrame & decoded = decodedFrameCopy.get();
-      framesDecoded_++;
 
 #if 0 // ndef NDEBUG
       {
@@ -692,7 +758,7 @@ namespace yae
         double fps = double(framesDecoded_) / (1e-6 * double(dt));
 
         yae_debug
-          << codecContext_->codec->name
+          << id_
           << ", frames decoded: " << framesDecoded_
           << ", elapsed time: " << dt << " usec, decoder fps: " << fps
           << "\n";
@@ -982,9 +1048,18 @@ namespace yae
         TVideoFramePtr vfPtr(new TVideoFrame());
         TVideoFrame & vf = *vfPtr;
 
+        if (!packet_pos_.empty())
+        {
+          vf.pos_.base_ = 188;
+          vf.pos_.time_ =
+            (packet_pos_.size() == 1) ?
+            packet_pos_.front() :
+            packet_pos_.pop();
+        }
+
         vf.time_.base_ = filterGraphOutputTimeBase.den;
         vf.time_.time_ = filterGraphOutputTimeBase.num * output.pts;
-        vf.trackId_ = Track::id();
+        vf.trackId_ = track_info.track_id_;
 
         // make sure the frame is in the in/out interval:
         if (playbackEnabled_)
@@ -1122,7 +1197,7 @@ namespace yae
             const AVContentLightMetadata * metadata =
               (const AVContentLightMetadata *)(side_data->data);
 
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             yae_dlog("MaxFALL: %u cd/m2, MaxCLL: %u cd/m2",
                      metadata->MaxFALL,
                      metadata->MaxCLL);
@@ -1199,7 +1274,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
         {
-          std::string ts = to_hhmmss_ms(vfPtr);
+          std::string ts = to_hhmmss_ms(vf);
           yae_debug << "push video frame: " << ts << "\n";
         }
 #endif
@@ -1209,12 +1284,9 @@ namespace yae
         frameQueue_.setMaxSize((packetQueue_.getMaxSize() * 11) / 10);
 
         // put the output frame into frame queue:
+        if (!frameQueue_.push(vfPtr, &terminator_))
         {
-          // YAE_BENCHMARK(benchmark, "VideoTrack::handle push");
-          if (!frameQueue_.push(vfPtr, &terminator_))
-          {
-            return;
-          }
+          return;
         }
 
         // yae_debug << "V: " << vf.time_.sec() << "\n";
@@ -1265,6 +1337,11 @@ namespace yae
     {
       specs = AvFrmSpecs(*decoded);
     }
+    else if (native_.av_fmt_ != AV_PIX_FMT_NONE)
+    {
+      t = native_;
+      return true;
+    }
     else
     {
       specs.width = codecParams.width;
@@ -1283,7 +1360,8 @@ namespace yae
         // Sony_Whale_Tracks.ts?
         Track track(context_, stream_, hwdec_);
         VideoTrack video_track(&track);
-        AVCodecContext * ctx = video_track.open();
+        AvCodecContextPtr ctx_ptr = video_track.open();
+        AVCodecContext * ctx = ctx_ptr.get();
         if (ctx->pix_fmt != AV_PIX_FMT_NONE)
         {
           specs.width = ctx->width;
@@ -1501,12 +1579,10 @@ namespace yae
   // VideoTrack::setTraitsOverride
   //
   bool
-  VideoTrack::setTraitsOverride(const VideoTraits & traits,
-                                bool deint,
-                                double sourcePixelAspectRatio)
+  VideoTrack::setTraitsOverride(const VideoTraits & traits)
   {
     bool sameTraits = compare<VideoTraits>(override_, traits) == 0;
-    if (sameTraits && deinterlace_ == deint)
+    if (sameTraits)
     {
       // nothing changed:
       return true;
@@ -1528,8 +1604,6 @@ namespace yae
     }
 
     override_ = traits;
-    deinterlace_ = deint;
-    overrideSourcePAR_ = sourcePixelAspectRatio;
 
     if (alreadyDecoding && !sameTraits)
     {
@@ -1605,7 +1679,7 @@ namespace yae
   VideoTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
                                 bool dropPendingFrames)
   {
-    packetQueue_.clear();
+    this->packetQueueClear();
 
     if (dropPendingFrames)
     {
@@ -1633,20 +1707,26 @@ namespace yae
     // down the line (the renderer):
     startNewSequence(frameQueue_, dropPendingFrames);
 
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
     int err = 0;
-    if (stream_ && codecContext_)
+    if (stream_ && ctx)
     {
-      AVCodecContext * ctx = codecContext_.get();
-
       avcodec_flush_buffers(ctx);
 #if 1
       Track::close();
-      ctx = Track::open();
+      ctx_ptr = Track::open();
+      ctx = ctx_ptr.get();
       YAE_ASSERT(ctx);
 #endif
     }
 
-    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+    if (seekPos)
+    {
+      setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+    }
+
     startTime_ = 0;
     hasPrevPTS_ = false;
     framesDecoded_ = 0;
@@ -1661,10 +1741,19 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTrack::setDeinterlacing
   //
-  bool
+  void
   VideoTrack::setDeinterlacing(bool deint)
   {
-    return setTraitsOverride(override_, deint);
+    deinterlace_ = deint;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::overridePixelAspectRatio
+  //
+  void
+  VideoTrack::overridePixelAspectRatio(double source_par)
+  {
+    overrideSourcePAR_ = source_par;
   }
 
   //----------------------------------------------------------------
@@ -1675,4 +1764,47 @@ namespace yae
   {
     cc_.enableClosedCaptions(cc);
   }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packet_queue_push
+  //
+  bool
+  VideoTrack::packet_queue_push(const TPacketPtr & packetPtr,
+                                QueueWaitMgr * waitMgr)
+  {
+    if (!syncBuffer_.push(packetPtr, waitMgr))
+    {
+      return false;
+    }
+
+    if (packetQueue_.isFull())
+    {
+      return true;
+    }
+
+    TPacketPtr next_pkt;
+    syncBuffer_.pop(next_pkt);
+    return packetQueue_.push(next_pkt, waitMgr);
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::packet_queue_pop
+  //
+  bool
+  VideoTrack::packet_queue_pop(TPacketPtr & packetPtr,
+                               QueueWaitMgr * waitMgr)
+  {
+    if (packetQueue_.isEmpty() && !syncBuffer_.isEmpty())
+    {
+      TPacketPtr next_pkt;
+      if (!(syncBuffer_.pop(next_pkt, waitMgr) &&
+            packetQueue_.push(next_pkt, waitMgr)))
+      {
+        return false;
+      }
+    }
+
+    return Track::packet_queue_pop(packetPtr, waitMgr);
+  }
+
 }

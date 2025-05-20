@@ -304,15 +304,15 @@ namespace yae
 
     if (rememberSelectedVideoTrack)
     {
-      reader->getSelectedVideoTrackInfo(sel_video_);
-      reader->getVideoTraits(sel_video_traits_);
+      std::size_t i = reader->getSelectedVideoTrackIndex();
+      reader->getVideoTrackInfo(i, sel_video_, sel_video_traits_);
       sel_video_initialized_ = true;
     }
 
     if (rememberSelectedAudioTrack)
     {
-      reader->getSelectedAudioTrackInfo(sel_audio_);
-      reader->getAudioTraits(sel_audio_traits_);
+      std::size_t i = reader->getSelectedAudioTrackIndex();
+      reader->getAudioTrackInfo(i, sel_audio_, sel_audio_traits_);
       sel_audio_initialized_ = true;
     }
 
@@ -783,8 +783,7 @@ namespace yae
 
     select_audio_track(reader, index);
 
-    reader->getSelectedAudioTrackInfo(sel_audio_);
-    reader->getAudioTraits(sel_audio_traits_);
+    reader->getAudioTrackInfo(index, sel_audio_, sel_audio_traits_);
     sel_audio_initialized_ = true;
 
     // if the audio program is not the same as the video program
@@ -801,16 +800,15 @@ namespace yae
           reader->getNumberOfVideoTracks() : program.video_.front();
         select_video_track(reader, i);
 
-        reader->getSelectedVideoTrackInfo(sel_video_);
-        reader->getVideoTraits(sel_video_traits_);
+        reader->getVideoTrackInfo(i, sel_video_, sel_video_traits_);
         sel_video_initialized_ = true;
       }
 
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ?
-          reader->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader->subsCount() : program.subtt_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
@@ -864,8 +862,7 @@ namespace yae
 
     select_video_track(reader, index);
 
-    reader->getSelectedVideoTrackInfo(sel_video_);
-    reader->getVideoTraits(sel_video_traits_);
+    reader->getVideoTrackInfo(index, sel_video_, sel_video_traits_);
     sel_video_initialized_ = true;
 
     // if the video program is not the same as the audio program
@@ -882,16 +879,15 @@ namespace yae
           reader->getNumberOfAudioTracks() : program.audio_.front();
         select_audio_track(reader, i);
 
-        reader->getSelectedAudioTrackInfo(sel_audio_);
-        reader->getAudioTraits(sel_audio_traits_);
+        reader->getAudioTrackInfo(i, sel_audio_, sel_audio_traits_);
         sel_audio_initialized_ = true;
       }
 
       if (sinfo.isValid())
       {
         // select another subtitle track:
-        std::size_t i = program.subs_.empty() ?
-          reader->subsCount() : program.subs_.front();
+        std::size_t i = program.subtt_.empty() ?
+          reader->subsCount() : program.subtt_.front();
         select_subtt_track(reader, i);
         reader->subsInfo(i, sel_subtt_);
         sel_subtt_initialized_ = true;
@@ -962,8 +958,7 @@ namespace yae
           reader->getNumberOfVideoTracks() : program.video_.front();
         select_video_track(reader, i);
 
-        reader->getSelectedVideoTrackInfo(sel_video_);
-        reader->getVideoTraits(sel_video_traits_);
+        reader->getVideoTrackInfo(i, sel_video_, sel_video_traits_);
         sel_video_initialized_ = true;
       }
 
@@ -974,8 +969,7 @@ namespace yae
           reader->getNumberOfAudioTracks() : program.audio_.front();
         select_audio_track(reader, i);
 
-        reader->getSelectedAudioTrackInfo(sel_audio_);
-        reader->getAudioTraits(sel_audio_traits_);
+        reader->getAudioTrackInfo(i, sel_audio_, sel_audio_traits_);
         sel_audio_initialized_ = true;
       }
     }

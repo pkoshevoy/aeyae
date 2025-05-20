@@ -564,7 +564,7 @@ namespace yae
   // close it in the destructor:
   //
   template <typename TOpenable>
-  struct TOpenHere
+  struct YAE_API TOpenHere
   {
     TOpenHere(TOpenable & something):
       something_(something)
@@ -1486,6 +1486,21 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // EventObserver
+  //
+  struct YAE_API IEventObserver
+  {
+    virtual ~IEventObserver() {}
+    virtual void note(const Json::Value & event) = 0;
+  };
+
+  //----------------------------------------------------------------
+  // TEventObserverPtr
+  //
+  typedef boost::shared_ptr<IEventObserver> TEventObserverPtr;
+
+
+  //----------------------------------------------------------------
   // CallbackInterface
   //
   struct YAE_API CallbackInterface
@@ -1502,7 +1517,7 @@ namespace yae
   //----------------------------------------------------------------
   // SimpleCallback
   //
-  struct SimpleCallback
+  struct YAE_API SimpleCallback
   {
     SimpleCallback(const TCallbackInterfacePtr & cb = TCallbackInterfacePtr()):
       cb_(cb)
@@ -1525,7 +1540,7 @@ namespace yae
   // MemberCallback
   //
   template <typename TObject, typename TCallable>
-  struct MemberCallback : CallbackInterface
+  struct YAE_API MemberCallback : CallbackInterface
   {
     MemberCallback(TObject & object, TCallable TObject::* const method):
       object_(object),
@@ -1597,7 +1612,7 @@ namespace yae
   // ContextQuery
   //
   template <typename TData>
-  struct ContextQuery
+  struct YAE_API ContextQuery
   {
     typedef bool(*TFuncPtr)(void *, TData &);
 

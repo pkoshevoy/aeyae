@@ -184,6 +184,10 @@ namespace yae
             double bytes_per_sec);
 
     // virtual:
+    double get() const;
+    void set(double pos);
+
+    // virtual:
     std::string to_str() const;
 
     // virtual:
@@ -222,6 +226,30 @@ namespace yae
     reader_(reader),
     bytes_per_sec_(bytes_per_sec)
   {}
+
+  //----------------------------------------------------------------
+  // BytePos::get
+  //
+  double
+  BytePos::get() const
+  {
+    YAE_ASSERT(false);
+    return sec_;
+  }
+
+  //----------------------------------------------------------------
+  // BytePos::set
+  //
+  void
+  BytePos::set(double sec)
+  {
+    YAE_ASSERT(false);
+    double dt = sec - sec_;
+    int64_t dp = int64_t(bytes_per_sec_ * dt) / 188;
+    int64_t pos = int64_t(pos_) + dp * 188;
+    pos_ = (pos < 0) ? 0 : pos;
+    sec_ = sec;
+  }
 
   //----------------------------------------------------------------
   // BytePos::to_str
@@ -1170,23 +1198,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // LiveReader::getSelectedVideoTrackName
+  // LiveReader::getVideoTrackInfo
   //
   bool
-  LiveReader::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  LiveReader::getVideoTrackInfo(std::size_t i,
+                                TTrackInfo & info,
+                                VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    return private_->movie_.getVideoTrackInfo(i, info);
+    return private_->movie_.getVideoTrackInfo(i, info, traits);
   }
 
   //----------------------------------------------------------------
-  // LiveReader::getSelectedAudioTrackInfo
+  // LiveReader::getAudioTrackInfo
   //
   bool
-  LiveReader::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  LiveReader::getAudioTrackInfo(std::size_t i,
+                                TTrackInfo & info,
+                                AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    return private_->movie_.getAudioTrackInfo(i, info);
+    return private_->movie_.getAudioTrackInfo(i, info, traits);
   }
 
   //----------------------------------------------------------------
@@ -1271,13 +1301,13 @@ namespace yae
   // LiveReader::setAudioTraitsOverride
   //
   bool
-  LiveReader::setAudioTraitsOverride(const AudioTraits & override)
+  LiveReader::setAudioTraitsOverride(const AudioTraits & traits)
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
       AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->setTraitsOverride(override);
+      return t->setTraitsOverride(traits);
     }
 
     return false;
@@ -1287,13 +1317,13 @@ namespace yae
   // LiveReader::setVideoTraitsOverride
   //
   bool
-  LiveReader::setVideoTraitsOverride(const VideoTraits & override)
+  LiveReader::setVideoTraitsOverride(const VideoTraits & traits)
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
     {
       VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->setTraitsOverride(override);
+      return t->setTraitsOverride(traits);
     }
 
     return false;
@@ -1303,13 +1333,13 @@ namespace yae
   // LiveReader::getAudioTraitsOverride
   //
   bool
-  LiveReader::getAudioTraitsOverride(AudioTraits & override) const
+  LiveReader::getAudioTraitsOverride(AudioTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedAudioTrack();
     if (i < private_->movie_.getAudioTracks().size())
     {
       AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->getTraitsOverride(override);
+      return t->getTraitsOverride(traits);
     }
 
     return false;
@@ -1319,13 +1349,13 @@ namespace yae
   // LiveReader::getVideoTraitsOverride
   //
   bool
-  LiveReader::getVideoTraitsOverride(VideoTraits & override) const
+  LiveReader::getVideoTraitsOverride(VideoTraits & traits) const
   {
     std::size_t i = private_->movie_.getSelectedVideoTrack();
     if (i < private_->movie_.getVideoTracks().size())
     {
       VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->getTraitsOverride(override);
+      return t->getTraitsOverride(traits);
     }
 
     return false;
@@ -1625,5 +1655,14 @@ namespace yae
   LiveReader::setSharedClock(const SharedClock & clock)
   {
     private_->movie_.setSharedClock(clock);
+  }
+
+  //----------------------------------------------------------------
+  // LiveReader::setEventObserver
+  //
+  void
+  LiveReader::setEventObserver(const TEventObserverPtr & eo)
+  {
+    private_->movie_.setEventObserver(eo);
   }
 }

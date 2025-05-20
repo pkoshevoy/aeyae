@@ -6,9 +6,8 @@
 // Copyright    : Pavel Koshevoy
 // License      : MIT -- http://www.opensource.org/licenses/mit-license.php
 
-// Qt:
-#include <QApplication>
-#include <QProcess>
+// aeyae:
+#include "yae/utils/yae_json.h"
 
 // yaeui:
 #ifdef __APPLE__
@@ -17,6 +16,10 @@
 #include "yaePlayerStyle.h"
 #include "yaePlayerUxItem.h"
 #include "yaeUtilsQt.h"
+
+// Qt:
+#include <QApplication>
+#include <QProcess>
 
 
 namespace yae
@@ -1370,6 +1373,22 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEvent
+  //
+  struct ReaderEvent : public QEvent
+  {
+    ReaderEvent(const IReaderPtr & reader,
+                const Json::Value & event):
+      QEvent(QEvent::User),
+      reader_(reader),
+      event_(event)
+    {}
+
+    IReaderPtr reader_;
+    Json::Value event_;
+  };
+
+  //----------------------------------------------------------------
   // PlayerUxItem::event
   //
   bool
@@ -1385,6 +1404,15 @@ namespace yae
         ac->accept();
         canvas()->cropFrame(ac->cropFrame_);
         adjustCanvasHeight();
+        return true;
+      }
+
+      yae::ReaderEvent * re = dynamic_cast<yae::ReaderEvent *>(e);
+      if (re)
+      {
+        re->accept();
+        this->adjustMenuActions();
+        emit reader_properties_changed(re->reader_);
         return true;
       }
     }
@@ -1531,6 +1559,26 @@ namespace yae
     }
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::handle_reader_event
+  //
+  void
+  PlayerUxItem::handle_reader_event(const IReaderPtr & reader,
+                                    const Json::Value & event)
+  {
+    if (reader != player_->reader())
+    {
+      return;
+    }
+
+    yae_dlog("PlayerUxItem::handle_reader_event: %s: %s",
+             Item::id_.c_str(),
+             yae::to_str(event).c_str());
+
+    reader->refreshInfo();
+    qApp->postEvent(this, new yae::ReaderEvent(reader, event));
   }
 
   //----------------------------------------------------------------
@@ -1724,6 +1772,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEventHandler
+  //
+  struct ReaderEventHandler : IEventObserver
+  {
+    ReaderEventHandler(PlayerUxItem & ux, const IReaderPtr & reader):
+      ux_(ux),
+      reader_(reader)
+    {}
+
+    virtual void note(const Json::Value & event)
+    {
+      IReaderPtr reader = reader_.lock();
+      if (reader)
+      {
+        ux_.handle_reader_event(reader, event);
+      }
+    }
+
+    PlayerUxItem & ux_;
+    IReaderWPtr reader_;
+  };
+
+  //----------------------------------------------------------------
   // PlayerUxItem::playback
   //
   void
@@ -1763,38 +1834,8 @@ namespace yae
     if (reader_ptr)
     {
       IReader & reader = *reader_ptr;
-
-      int ai = int(reader.getSelectedAudioTrackIndex());
-      audioTrackGroup_->actions().at(ai)->setChecked(true);
-
-
-      int vi = int(reader.getSelectedVideoTrackIndex());
-      videoTrackGroup_->actions().at(vi)->setChecked(true);
-
-      int nsubs = int(reader.subsCount());
-      unsigned int cc = reader.getRenderCaptions();
-
-      if (cc)
-      {
-        int index = (int)nsubs + cc - 1;
-        subsTrackGroup_->actions().at(index)->setChecked(true);
-      }
-      else
-      {
-        int si = 0;
-        for (; si < nsubs && !reader.getSubsRender(si); si++)
-        {}
-
-        if (si < nsubs)
-        {
-          subsTrackGroup_->actions().at(si)->setChecked(true);
-        }
-        else
-        {
-          int index = subsTrackGroup_->actions().size() - 1;
-          subsTrackGroup_->actions().at(index)->setChecked(true);
-        }
-      }
+      TEventObserverPtr eo(new ReaderEventHandler(*this, reader_ptr));
+      reader.setEventObserver(eo);
 
       TimelineItem & timeline = *timeline_;
       if (videoInfo.empty())
@@ -3249,6 +3290,9 @@ namespace yae
     std::size_t numSubtitles =
       reader ? reader->subsCount() : 0;
 
+    std::size_t cc =
+      reader ? reader->getRenderCaptions() : 0;
+
     std::size_t numChapters =
       reader ? reader->countChapters() : 0;
 
@@ -3354,11 +3398,11 @@ namespace yae
 
     for (unsigned int i = 0; i < numAudioTracks; i++)
     {
-      reader->selectAudioTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = audioInfo[i];
-      reader->getSelectedAudioTrackInfo(info);
+      AudioTraits & traits = audioTraits[i];
+      reader->getAudioTrackInfo(i, info, traits);
 
       if (info.hasLang())
       {
@@ -3370,14 +3414,10 @@ namespace yae
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      AudioTraits & traits = audioTraits[i];
-      if (reader->getAudioTraits(traits))
-      {
-        trackName +=
-          tr(", %1 Hz, %2 channels").
-          arg(traits.sample_rate_).
-          arg(traits.ch_layout_.nb_channels);
-      }
+      trackName +=
+        tr(", %1 Hz, %2 channels").
+        arg(traits.sample_rate_).
+        arg(traits.ch_layout_.nb_channels);
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
@@ -3387,6 +3427,11 @@ namespace yae
       else if (info.nprograms_ > 1)
       {
         trackName += tr(", program %1").arg(info.program_);
+      }
+
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
       }
 
       QAction * trackAction = new QAction(trackName, this);
@@ -3420,23 +3465,19 @@ namespace yae
 
     for (unsigned int i = 0; i < numVideoTracks; i++)
     {
-      reader->selectVideoTrack(i);
       QString trackName = tr("Track %1").arg(i + 1);
 
       TTrackInfo & info = videoInfo[i];
-      reader->getSelectedVideoTrackInfo(info);
+      VideoTraits & traits = videoTraits[i];
+      reader->getVideoTrackInfo(i, info, traits);
 
       if (info.hasName())
       {
         trackName += tr(", %1").arg(QString::fromUtf8(info.name()));
       }
 
-      VideoTraits & traits = videoTraits[i];
-      if (reader->getVideoTraits(traits))
-      {
-        std::string summary = traits.summary();
-        trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
-      }
+      std::string summary = traits.summary();
+      trackName += tr(", %1").arg(QString::fromUtf8(summary.c_str()));
 
       std::string serviceName = yae::get_program_name(*reader, info.program_);
       if (serviceName.size())
@@ -3446,6 +3487,11 @@ namespace yae
       else if (info.nprograms_ > 1)
       {
         trackName += tr(", program %1").arg(info.program_);
+      }
+
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
       }
 
       QAction * trackAction = new QAction(trackName, this);
@@ -3583,6 +3629,39 @@ namespace yae
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
+
+    // check the check-boxes:
+    std::size_t ai =
+      reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
+    ai = std::min(ai, numAudioTracks);
+    audioTrackGroup_->actions().at(ai)->setChecked(true);
+
+    std::size_t vi =
+      reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
+    vi = std::min(vi, numVideoTracks);
+    videoTrackGroup_->actions().at(vi)->setChecked(true);
+
+    if (cc)
+    {
+      std::size_t si = numSubtitles + cc - 1;
+      subsTrackGroup_->actions().at(si)->setChecked(true);
+    }
+    else
+    {
+      std::size_t si = 0;
+      for (; si < numSubtitles && reader && !reader->getSubsRender(si); si++)
+      {}
+
+      if (si < numSubtitles)
+      {
+        subsTrackGroup_->actions().at(si)->setChecked(true);
+      }
+      else
+      {
+        int index = subsTrackGroup_->actions().size() - 1;
+        subsTrackGroup_->actions().at(index)->setChecked(true);
+      }
+    }
   }
 
   //----------------------------------------------------------------

@@ -33,7 +33,8 @@ namespace yae
   {
     virtual ~IClockObserver() {}
     virtual void noteCurrentTimeChanged(const SharedClock & c,
-                                        const TTime & t0) = 0;
+                                        const TTime & pts,
+                                        const TTime & pos) = 0;
     virtual void noteTheClockHasStopped(const SharedClock & c) = 0;
   };
 
@@ -84,6 +85,7 @@ namespace yae
 
     //! set current time (only if this is the master clock):
     bool setCurrentTime(const TTime & t0,
+                        const TTime & packet_pos,
                         double latencyInSeconds = 0.0,
                         bool notifyObserver = true);
 
@@ -92,6 +94,7 @@ namespace yae
     //! owner is waiting for someone to catch up;
     //! returns true when clock is running:
     bool getCurrentTime(TTime & t0,
+                        TTime & packet_pos,
                         double & elapsedTime,
                         bool & withinRealtimeTolerance) const;
 

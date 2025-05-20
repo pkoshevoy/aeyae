@@ -351,6 +351,10 @@ namespace yae
 
     bool ok = true;
 
+    ok = connect(pl_ux, SIGNAL(reader_properties_changed(IReaderPtr)),
+                 this, SIGNAL(adjust_menus(IReaderPtr)));
+    YAE_ASSERT(ok);
+
     ok = connect(pl_ux, SIGNAL(playback_finished(TTime)),
                  this, SLOT(playbackFinished(TTime)));
     YAE_ASSERT(ok);

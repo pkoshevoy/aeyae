@@ -265,7 +265,9 @@ namespace yae
       if (codecType == AVMEDIA_TYPE_VIDEO &&
           stream->codecpar->format == AV_PIX_FMT_NONE)
       {
-        AVCodecContext * codec_ctx = baseTrack->open();
+        // keep-alive:
+        AvCodecContextPtr codec_ctx_ptr = baseTrack->open();
+        AVCodecContext * codec_ctx = codec_ctx_ptr.get();
         if (codec_ctx)
         {
           YAE_ASSERT(avcodec_parameters_from_context(stream->codecpar,
@@ -285,9 +287,10 @@ namespace yae
           program->video_.push_back(videoTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
 
-          track->setId(make_track_id('v', to_ + videoTracks_.size()));
-          streamIndex_[track->id()] = stream->index;
-          trackId_[stream->index] = track->id();
+          std::string track_id = make_track_id('v', to_ + videoTracks_.size());
+          track->set_track_id(track_id);
+          streamIndex_[track_id] = stream->index;
+          trackId_[stream->index] = track_id;
 
           videoTracks_.push_back(track);
           tracks_[stream->index] = track;
@@ -307,9 +310,10 @@ namespace yae
           program->audio_.push_back(audioTracks_.size());
           stream->discard = AVDISCARD_DEFAULT;
 
-          track->setId(make_track_id('a', to_ + audioTracks_.size()));
-          streamIndex_[track->id()] = stream->index;
-          trackId_[stream->index] = track->id();
+          std::string track_id = make_track_id('a', to_ + audioTracks_.size());
+          track->set_track_id(track_id);
+          streamIndex_[track_id] = stream->index;
+          trackId_[stream->index] = track_id;
 
           audioTracks_.push_back(track);
           tracks_[stream->index] = track;
@@ -336,7 +340,7 @@ namespace yae
         if (stream->codecpar->codec_id != AV_CODEC_ID_NONE &&
             stream->codecpar->codec_id != AV_CODEC_ID_EIA_608)
         {
-          program->subs_.push_back(subttTracks_.size());
+          program->subtt_.push_back(subttTracks_.size());
 
           SubttTrackPtr track(new SubtitlesTrack(stream));
 
@@ -366,9 +370,10 @@ namespace yae
                                        "MarginV, Effect, Text");
           }
 
-          track->setId(make_track_id('s', to_ + subttTracks_.size()));
-          streamIndex_[track->id()] = stream->index;
-          trackId_[stream->index] = track->id();
+          std::string track_id = make_track_id('s', to_ + subttTracks_.size());
+          track->set_track_id(track_id);
+          streamIndex_[track_id] = stream->index;
+          trackId_[stream->index] = track_id;
 
           subttTracks_.push_back(track);
           tracks_[stream->index] = track;
@@ -467,8 +472,14 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       VideoTrackPtr t = videoTracks_[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.codec_ = track_info.codec_;
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
       info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
@@ -489,8 +500,13 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       AudioTrackPtr t = audioTracks_[info.index_];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
       info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
     }
   }
@@ -511,8 +527,14 @@ namespace yae
     if (info.index_ < info.ntracks_)
     {
       SubttTrackPtr t = subttTracks_[i];
-      info.setLang(t->getLang());
-      info.setName(t->getName());
+
+      // keep alive:
+      Track::TInfoPtr track_info_ptr = t->get_info();
+      const Track::Info & track_info = *track_info_ptr;
+
+      info.codec_ = track_info.codec_;
+      info.setLang(track_info.lang_);
+      info.setName(track_info.name_);
       info.program_ = yae::get(streamIndexToProgramIndex_, t->streamIndex());
       return t->format_;
     }
@@ -548,7 +570,7 @@ namespace yae
       TrackPtr track = yae::get(tracks_, packet.stream_index);
       if (track)
       {
-        pkt.trackId_ = track->id();
+        pkt.trackId_ = track->get_track_id();
       }
       else
       {
@@ -4091,8 +4113,9 @@ namespace yae
       traits.vflip_ = false;
       traits.hflip_ = false;
 
-      bool deint = false;
-      decoder.setTraitsOverride(traits, deint, source_par);
+      decoder.setDeinterlacing(false);
+      decoder.overridePixelAspectRatio(source_par);
+      decoder.setTraitsOverride(traits);
 
       const pixelFormat::Traits * ptts = NULL;
       if (!decoder.getTraitsOverride(traits) ||
@@ -4460,8 +4483,9 @@ namespace yae
         traits.setPixelFormat(pixel_format);
       }
 
-      bool deint = false;
-      decoder.setTraitsOverride(traits, deint, source_par);
+      decoder.setDeinterlacing(false);
+      decoder.overridePixelAspectRatio(source_par);
+      decoder.setTraitsOverride(traits);
 
       const pixelFormat::Traits * ptts = NULL;
       if (traits.pixelFormat_ != kInvalidPixelFormat &&

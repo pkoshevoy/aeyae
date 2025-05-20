@@ -71,7 +71,12 @@ namespace yae
     bool initTraits();
 
     // virtual:
-    AVCodecContext * open();
+    AvCodecContextPtr open();
+
+    // virtual:
+    void packetQueueOpen();
+    void packetQueueClose();
+    void packetQueueClear();
 
     // virtual:
     bool frameQueueWaitForConsumerToBlock(QueueWaitMgr * mgr = NULL)
@@ -80,6 +85,10 @@ namespace yae
     // virtual:
     void frameQueueClear()
     { frameQueue_.clear(); }
+
+    // virtual:
+    bool frameQueueIsFull() const
+    { return frameQueue_.isFull(); }
 
     // these are used to speed up video decoding:
     void skipLoopFilter(bool skip);
@@ -103,14 +112,9 @@ namespace yae
     bool getTraits(VideoTraits & traits, const AVFrame * decoded = NULL) const;
 
     // use this for video frame conversion (pixel format and size)
-    bool setTraitsOverride(const VideoTraits & traits,
-                           bool deint,
-                           double overrideSourcePAR = 0.0);
+    bool setTraitsOverride(const VideoTraits & traits);
 
     bool getTraitsOverride(VideoTraits & traits) const;
-
-    inline bool setTraitsOverride(const VideoTraits & traits)
-    { return setTraitsOverride(traits, deinterlace_); }
 
     // retrieve a decoded/converted frame from the queue:
     bool getNextFrame(TVideoFramePtr & frame, QueueWaitMgr * terminator);
@@ -126,7 +130,10 @@ namespace yae
                           bool dropPendingFrames);
 
     // adjust frame duration:
-    bool setDeinterlacing(bool enabled);
+    void setDeinterlacing(bool enabled);
+
+    // override native pixel aspect ratio:
+    void overridePixelAspectRatio(double source_par);
 
     // 0 - disabled
     // 1 - CC1
@@ -135,9 +142,29 @@ namespace yae
     // 4 - CC4
     void enableClosedCaptions(unsigned int cc);
 
-    void setSubs(std::vector<SubttTrackPtr> * subs)
+    inline void setSubs(std::vector<SubttTrackPtr> * subs)
     { subs_ = subs; }
 
+  protected:
+    // virtual:
+    bool packet_queue_push(const TPacketPtr & packetPtr,
+                           QueueWaitMgr * waitMgr);
+
+    bool packet_queue_pop(TPacketPtr & packetPtr,
+                          QueueWaitMgr * waitMgr);
+
+    // if audio packets are late ... demuxer can become stuck
+    // trying to add a video packet to an already full queue,
+    // and never adding an packets to the audio packet queue
+    // and therefore not advancing the audio playhead position
+    // thus creating a deadlock...
+    //
+    // if the video frame queue is full and the packet queue is full
+    // then we'll push additional video packets into the syncBuffer queue
+    //
+    TPacketQueue syncBuffer_;
+
+  public:
     // these are used to speed up video decoding:
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;

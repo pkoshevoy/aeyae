@@ -13,6 +13,7 @@
 #include "yae/api/yae_plugin_interface.h"
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_queue.h"
+#include "yae/utils/yae_utils.h"
 #include "yae/video/yae_synchronous.h"
 #include "yae/video/yae_video.h"
 
@@ -23,6 +24,16 @@
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // RefTimeline
+  //
+  enum RefTimeline
+  {
+    kRefTimelinePos = 0,
+    kRefTimelinePts = 1,
+  };
+
 
   //----------------------------------------------------------------
   // IReader
@@ -44,6 +55,11 @@ namespace yae
     virtual void close() = 0;
 
     virtual const char * getResourcePath() const = 0;
+
+    // in case reader emits an event indicating MPEG-TS program changes, or
+    // ES codec changes - use this to refresh cached program and track info:
+    virtual void refreshInfo() {}
+
     virtual std::size_t getNumberOfPrograms() const = 0;
     virtual bool getProgramInfo(std::size_t i, TProgramInfo & info) const = 0;
 
@@ -87,13 +103,42 @@ namespace yae
               Timespan());
     }
 
-    // NOTE: returns false if no track is currently selected:
-    virtual bool getSelectedVideoTrackInfo(TTrackInfo & info) const = 0;
-    virtual bool getSelectedAudioTrackInfo(TTrackInfo & info) const = 0;
+    // NOTE: returns false if there is no such track:
+    virtual bool getVideoTrackInfo(std::size_t video_track_index,
+                                   TTrackInfo & info,
+                                   VideoTraits & traits) const = 0;
+
+    virtual bool getAudioTrackInfo(std::size_t audio_track_index,
+                                   TTrackInfo & info,
+                                   AudioTraits & traits) const = 0;
+
+    // NOTE: for MPEG-TS files that may contain PTS timeline anomalies
+    // it may be preferable to reference file position (or packet index)
+    // as a timeline source instead.
+    //
+    // Here, for MPEG-TS typically start time is 0, base 188 (TS packet size)
+    // and duration time is file size in bytes, base 188 (TS packet size)
+    //
+    virtual RefTimeline getRefTimeline() const
+    { return kRefTimelinePts; }
+
+    virtual bool setRefTimeline(RefTimeline ref_timeline)
+    {
+      (void)ref_timeline;
+      return false;
+    }
+
+    virtual bool getPacketsExtent(TTime & start, TTime & duration) const
+    {
+      (void)start;
+      (void)duration;
+      return false;
+    }
 
     virtual bool getVideoDuration(TTime & start, TTime & duration) const = 0;
     virtual bool getAudioDuration(TTime & start, TTime & duration) const = 0;
 
+    //! access currently selected audio/video track traits:
     virtual bool getAudioTraits(AudioTraits & traits) const = 0;
     virtual bool getVideoTraits(VideoTraits & traits) const = 0;
 
@@ -192,12 +237,29 @@ namespace yae
     // a reference to the clock that audio/video renderers use
     // to synchronize their output:
     virtual void setSharedClock(const SharedClock & clock) = 0;
+
+    // optional, if set then reader may call eo->note(event)
+    // to notify observer of significant events, such as MPEG-TS
+    // program structure changes, ES codec changes, etc...
+    virtual void setEventObserver(const TEventObserverPtr & eo) = 0;
+
+    // helpers:
+    inline bool refers_to_packet_pos_timeline() const
+    { return this->getRefTimeline() == kRefTimelinePos; }
+
+    inline bool refers_to_frame_pts_timeline() const
+    { return this->getRefTimeline() == kRefTimelinePts; }
   };
 
   //----------------------------------------------------------------
   // IReaderPtr
   //
   typedef yae::shared_ptr<IReader, IPlugin, call_destroy> IReaderPtr;
+
+  //----------------------------------------------------------------
+  // IReaderWPtr
+  //
+  typedef yae::weak_ptr<IReader, IPlugin, call_destroy> IReaderWPtr;
 
 }
 

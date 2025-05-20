@@ -65,6 +65,15 @@ namespace yae
       return true;
     }
 
+    inline TData pop()
+    {
+      YAE_ASSERT(!data_.empty());
+      TData v = data_.front();
+      data_.pop_front();
+      size_--;
+      return v;
+    }
+
     inline bool empty() const
     { return data_.empty(); }
 

@@ -41,11 +41,16 @@ namespace yae
 
   protected:
     // helper:
-    void maybeReadOneFrame(IReader * reader, TTime & framePosition);
+    void maybeReadOneFrame(IReader * reader,
+                           TTime & framePosition,
+                           TTime & packetPos);
 
   public:
     //! return the time of current audio frame, if any:
     TTime getCurrentTime() const;
+
+    //! return the time of current audio frame, if any:
+    TTime getPacketPos() const;
 
     //! this is used for single-frame stepping while playback is paused:
     void skipToTime(const TTime & t, IReader * reader);

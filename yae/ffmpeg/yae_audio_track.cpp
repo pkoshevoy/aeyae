@@ -59,21 +59,23 @@ namespace yae
   //----------------------------------------------------------------
   // AudioTrack::open
   //
-  AVCodecContext *
+  AvCodecContextPtr
   AudioTrack::open()
   {
-    if (codecContext_)
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    if (ctx_ptr)
     {
-      return codecContext_.get();
+      return ctx_ptr;
     }
 
-    AVCodecContext * ctx = Track::open();
-    if (ctx)
+    ctx_ptr = Track::open();
+    if (ctx_ptr)
     {
       samplesDecoded_ = 0;
     }
 
-    return ctx;
+    return ctx_ptr;
   }
 
   //----------------------------------------------------------------
@@ -122,7 +124,7 @@ namespace yae
   AudioTrack::decoderShutdown()
   {
     frameQueue_.close();
-    packetQueue_.close();
+    this->packetQueueClose();
     return true;
   }
 
@@ -132,6 +134,10 @@ namespace yae
   void
   AudioTrack::handle(const AvFrm & decodedFrame)
   {
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = Track::info_;
+    const Track::Info & track_info = *track_info_ptr;
+
     try
     {
       boost::this_thread::interruption_point();
@@ -212,6 +218,17 @@ namespace yae
           }
 
           noteNativeTraitsChanged();
+
+          // keep-alive:
+          TEventObserverPtr eo = eo_;
+          if (eo)
+          {
+            std::string track_id = this->get_track_id();
+            Json::Value event;
+            event["event_type"] = "traits_changed";
+            event["track_id"] = track_id;
+            eo->note(event);
+          }
         }
 
         if (!filterGraph_.push(&copied))
@@ -248,9 +265,18 @@ namespace yae
       TAudioFramePtr afPtr(new TAudioFrame());
       TAudioFrame & af = *afPtr;
 
+      if (!packet_pos_.empty())
+      {
+        af.pos_.base_ = 188;
+        af.pos_.time_ =
+          (packet_pos_.size() == 1) ?
+          packet_pos_.front() :
+          packet_pos_.pop();
+      }
+
       af.traits_ = output_;
       af.time_.base_ = stream_->time_base.den;
-      af.trackId_ = Track::id();
+      af.trackId_ = track_info.track_id_;
 
       bool gotPTS = false;
 
@@ -407,7 +433,7 @@ namespace yae
 
 #if YAE_DEBUG_SEEKING_AND_FRAMESTEP
       {
-        std::string ts = to_hhmmss_ms(afPtr);
+        std::string ts = to_hhmmss_ms(af);
         yae_debug << "push audio frame: " << ts << "\n";
       }
 #endif
@@ -507,6 +533,12 @@ namespace yae
     if (!stream_)
     {
       return false;
+    }
+
+    if (native_.sample_format_ != AV_SAMPLE_FMT_NONE)
+    {
+      t = native_;
+      return true;
     }
 
     const AVCodecParameters & codecParams = *(stream_->codecpar);
@@ -619,7 +651,7 @@ namespace yae
   AudioTrack::resetTimeCounters(const TSeekPosPtr & seekPos,
                                 bool dropPendingFrames)
   {
-    packetQueue_.clear();
+    this->packetQueueClear();
 
     if (dropPendingFrames)
     {
@@ -644,10 +676,12 @@ namespace yae
     // down the line (the renderer):
     startNewSequence(frameQueue_, dropPendingFrames);
 
+    // keep-alive:
+    AvCodecContextPtr ctx_ptr = codecContext_;
+    AVCodecContext * ctx = ctx_ptr.get();
     int err = 0;
-    if (stream_ && codecContext_)
+    if (stream_ && ctx)
     {
-      AVCodecContext * ctx = codecContext_.get();
       avcodec_flush_buffers(ctx);
 
 #if 0
@@ -659,7 +693,11 @@ namespace yae
 #endif
     }
 
-    setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+    if (seekPos)
+    {
+      setPlaybackInterval(seekPos, posOut_, playbackEnabled_);
+    }
+
     hasPrevPTS_ = false;
     prevNumSamples_ = 0;
     startTime_ = 0;

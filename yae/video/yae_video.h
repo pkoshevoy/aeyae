@@ -85,37 +85,12 @@ namespace yae
   //
   struct YAE_API ChannelLayout : public AVChannelLayout
   {
-    ChannelLayout(int nb_channels = 0)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-    }
+    ChannelLayout(int nb_channels = 0);
+    ChannelLayout(const AVChannelLayout & other);
+    ChannelLayout(const ChannelLayout & other);
+    ~ChannelLayout();
 
-    ChannelLayout(const AVChannelLayout & other)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-      this->assign(other);
-    }
-
-    ChannelLayout(const ChannelLayout & other)
-    {
-      memset(this, 0, sizeof(AVChannelLayout));
-      this->assign(other);
-    }
-
-    ~ChannelLayout()
-    {
-      av_channel_layout_uninit(this);
-    }
-
-    inline ChannelLayout & assign(const AVChannelLayout & other)
-    {
-      if (this != &other)
-      {
-        int err = av_channel_layout_copy(this, &other);
-        YAE_ASSERT(!err);
-      }
-      return *this;
-    }
+    ChannelLayout & assign(const AVChannelLayout & other);
 
     inline ChannelLayout & operator = (const AVChannelLayout & other)
     { return this->assign(other); }
@@ -140,17 +115,15 @@ namespace yae
   //
   struct YAE_API AudioTraits
   {
-    AudioTraits():
-      sample_format_(AV_SAMPLE_FMT_NONE),
-      sample_rate_(0)
-    {}
+    AudioTraits();
+
+    bool same_as(const AudioTraits & other) const;
 
     inline bool operator == (const AudioTraits & other) const
-    {
-      return (sample_format_ == other.sample_format_ &&
-              sample_rate_ == other.sample_rate_ &&
-              ch_layout_ == other.ch_layout_);
-    }
+    { return this->same_as(other); }
+
+    inline bool operator != (const AudioTraits & other) const
+    { return !(this->same_as(other)); }
 
     inline bool is_invalid_format() const
     { return sample_format_ <= AV_SAMPLE_FMT_NONE; }
@@ -193,9 +166,17 @@ namespace yae
     bool sameFrameSizeAndFormat(const VideoTraits & vt) const;
     bool sameColorSpaceAndRange(const VideoTraits & vt) const;
 
-    bool operator == (const VideoTraits & vt) const;
+    bool same_as(const VideoTraits & vt) const;
+
+    inline bool operator == (const VideoTraits & other) const
+    { return this->same_as(other); }
+
+    inline bool operator != (const VideoTraits & other) const
+    { return !(this->same_as(other)); }
 
     void setPixelFormat(TPixelFormatId fmt);
+
+    void setSomeTraits(const VideoTraits & vt);
 
     //! frame rate:
     double frameRate_;
@@ -464,8 +445,12 @@ namespace yae
     //! global track ID tag:
     std::string trackId_;
 
-    //! frame PTS:
+    //! frame PTS timeline:
     TTime time_;
+
+    //! file position timeline, may be used if the PTS timeline
+    //! is unreliable (contains gaps, jumps back in time, etc...)
+    TTime pos_;
 
     //! frame duration tempo scaling:
     double tempo_;
@@ -643,7 +628,7 @@ namespace yae
     TDictionary metadata_;
     std::list<std::size_t> video_;
     std::list<std::size_t> audio_;
-    std::list<std::size_t> subs_;
+    std::list<std::size_t> subtt_;
   };
 
   //----------------------------------------------------------------
@@ -661,17 +646,23 @@ namespace yae
     bool isValid() const;
     bool hasLang() const;
     bool hasName() const;
+    bool hasCodec() const;
 
+    const char * codec() const;
     const char * lang() const;
     const char * name() const;
 
-    void setLang(const char * lang);
-    void setName(const char * name);
+    inline void setLang(const std::string & lang)
+    { lang_ = lang; }
+
+    inline void setName(const std::string & name)
+    { name_ = name; }
 
     std::size_t nprograms_;
     std::size_t program_;
     std::size_t ntracks_;
     std::size_t index_;
+    std::string codec_;
     std::string lang_;
     std::string name_;
   };

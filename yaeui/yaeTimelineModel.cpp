@@ -194,11 +194,12 @@ namespace yae
   //
   void
   TimelineModel::noteCurrentTimeChanged(const SharedClock & c,
-                                        const TTime & currentTime)
+                                        const TTime & currentTime,
+                                        const TTime & packetPos)
   {
     (void) c;
 
-    bool postThePayload = payload_.set(currentTime);
+    bool postThePayload = payload_.set(currentTime, packetPos);
     if (postThePayload)
     {
       // send an event:
@@ -262,15 +263,14 @@ namespace yae
   bool
   get_duration(const IReader * reader, TTime & start, TTime & duration)
   {
-    if (!reader)
+    if (!(reader && reader->isSeekable()))
     {
       start = TTime(0, 1);
       duration = TTime(0, 1);
-      return true;
+      return false;
     }
 
     YAE_BENCHMARK(probe, "yae::get_duration");
-
     TTime audioStart;
     TTime audioDuration;
     bool audioOk = reader->getAudioDuration(audioStart, audioDuration);
@@ -279,16 +279,29 @@ namespace yae
     TTime videoDuration;
     bool videoOk = reader->getVideoDuration(videoStart, videoDuration);
 
-    start = audioOk ? audioStart : videoStart;
-    duration = audioOk ? audioDuration : videoDuration;
+    TTime packetsStart;
+    TTime packetsDuration;
+    bool packetsOk =
+      reader->refers_to_packet_pos_timeline() &&
+      reader->getPacketsExtent(packetsStart, packetsDuration);
 
-    if (audioOk && videoOk && videoStart < audioStart)
+    start =
+      packetsOk ? packetsStart :
+      audioOk ? audioStart :
+      videoStart;
+
+    duration =
+      packetsOk ? packetsDuration :
+      audioOk ? audioDuration :
+      videoDuration;
+
+    if (!packetsOk && audioOk && videoOk && videoStart < audioStart)
     {
       start = videoStart;
       duration = videoDuration;
     }
 
-    return videoOk || audioOk;
+    return videoOk || audioOk || packetsOk;
   }
 
   //----------------------------------------------------------------
@@ -300,6 +313,7 @@ namespace yae
     TTime start;
     TTime duration;
     get_duration(reader, start, duration);
+    use_packet_pos_ = reader ? reader->refers_to_packet_pos_timeline() : false;
 
     frameRate_ = 100.0;
     frameNumberSeparator_ = kSeparatorForCentiSeconds;
@@ -346,7 +360,7 @@ namespace yae
   {
     reset(reader);
 
-    double T1 = (unknownDuration_ ?
+    double T1 = ((unknownDuration_ || use_packet_pos_) ?
                  std::numeric_limits<double>::max() :
                  (startFromZero_ ? timelineDuration_ :
                   timelineStart_ + timelineDuration_ - localtimeOffset_));
@@ -470,14 +484,20 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    QString ts_p = getTimeStamp(startFromZero_ ?
-                                t - timelineStart_ :
-                                t - localtimeOffset_);
+    QString ts_p =
+      use_packet_pos_ ?
+      getTimeStamp(currentTime_.sec()) :
+      getTimeStamp(startFromZero_ ?
+                   t - timelineStart_ :
+                   t - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(startFromZero_ ?
-                                timelineDuration_ :
-                                T1 - localtimeOffset_);
+    QString ts_d =
+      use_packet_pos_ ?
+      getTimeStamp(std::numeric_limits<double>::max()) :
+      getTimeStamp(startFromZero_ ?
+                   timelineDuration_ :
+                   T1 - localtimeOffset_);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
@@ -801,9 +821,10 @@ namespace yae
       {
         timeChangedEvent->accept();
 
-        TTime currentTime;
-        timeChangedEvent->payload_.get(currentTime);
-        timelinePosition_ = currentTime.sec();
+        timeChangedEvent->payload_.get(currentTime_, packetPos_);
+
+        timelinePosition_ =
+          use_packet_pos_ ? packetPos_.sec() : currentTime_.sec();
 
         double t = timelinePosition_ - timelineStart_;
         updateMarkerPlayhead(t / timelineDuration_);
@@ -946,7 +967,10 @@ namespace yae
       (markerPlayhead_ * timelineDuration_ +
        (startFromZero_ ? 0.0 : timelineStart_ - localtimeOffset_));
 
-    QString ts = getTimeStamp(seconds);
+    QString ts =
+      use_packet_pos_ ?
+      getTimeStamp(currentTime_.sec()) :
+      getTimeStamp(seconds);
     updateAuxPlayhead(ts);
 
     return true;

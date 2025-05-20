@@ -66,6 +66,7 @@ namespace yae
     bool stop_;
     bool pause_;
     TTime framePosition_;
+    TTime packetPos_;
 
     TVideoFramePtr frame_a_;
     TVideoFramePtr frame_b_;
@@ -127,6 +128,7 @@ namespace yae
     frame_a_ = TVideoFramePtr();
     frame_b_ = TVideoFramePtr();
     framePosition_ = TTime();
+    packetPos_ = TTime();
   }
 
   //----------------------------------------------------------------
@@ -195,6 +197,7 @@ namespace yae
   {
     // master clock reference:
     TTime t0(0, 0);
+    TTime packet_pos(0, 0);
 
     // local clock reference, in case master clock stops advancing:
     TTime t0_local(0, 0);
@@ -202,6 +205,7 @@ namespace yae
     frame_a_ = TVideoFramePtr();
     frame_b_ = TVideoFramePtr();
     framePosition_ = TTime();
+    packetPos_ = TTime();
 
     double frameDuration = 0.0;
     double tempo = 1.0;
@@ -228,7 +232,7 @@ namespace yae
       double elapsedTime = 0.0;
       bool clockIsAccurate = true;
       bool clockIsRunning =
-        clock_.getCurrentTime(t0, elapsedTime, clockIsAccurate);
+        clock_.getCurrentTime(t0, packet_pos, elapsedTime, clockIsAccurate);
 
       if (t0.invalid())
       {
@@ -300,7 +304,7 @@ namespace yae
 
         if (df > 0.5)
         {
-#if YAE_DEBUG_VIDEO_RENDERER
+#ifndef NDEBUG // YAE_DEBUG_VIDEO_RENDERER
           yae_debug
             << "FRAME IS VALID FOR " << df << " sec\n"
             << "sleep: " << secondsToSleep << " sec"
@@ -308,6 +312,7 @@ namespace yae
             << "\tf1: " << TTime(f1)
             << "\tclock: " << TTime(clockPosition)
             << "\tplayhead: " << TTime(playheadPosition)
+            << "\tdf: " << df
             << "\n";
 #endif
         }
@@ -380,6 +385,7 @@ namespace yae
 
         t0 = TTime();
         framePosition_ = TTime();
+        packetPos_ = TTime();
         frameDuration = 0.0;
         tempo = 1.0;
         drift = 0.0;
@@ -390,7 +396,7 @@ namespace yae
 #if YAE_DEBUG_VIDEO_RENDERER
         yae_debug << "VIDEO (p) SET CLOCK: " << framePosition_;
 #endif
-        clock_.setCurrentTime(framePosition_, 0.0, false);
+        clock_.setCurrentTime(framePosition_, packetPos_, 0.0, false);
       }
     }
   }
@@ -466,6 +472,7 @@ namespace yae
 
         frame_b_.reset();
         framePosition_ = frame_a_ ? frame_a_->time_ : TTime();
+        packetPos_ = frame_a_ ? frame_a_->pos_ : TTime();
         resetClockOnExit.enable(true);
         break;
       }
@@ -478,12 +485,14 @@ namespace yae
         frame_a_ = frame;
         frame_b_ = frame;
         framePosition_ = frame_a_->time_;
+        packetPos_ = frame_a_->pos_;
         break;
       }
 
       frame_a_ = frame_b_ ? frame_b_ : frame;
       frame_b_ = frame;
       framePosition_ = frame_a_->time_;
+      packetPos_ = frame_a_->pos_;
 
       double t = framePosition_.sec();
       if (t > f0 || frameDuration == 0.0)
@@ -518,7 +527,7 @@ namespace yae
       double dt = (tb - ta) / tempo;
       t += dt;
 
-      clock_.setCurrentTime(t, dt, true);
+      clock_.setCurrentTime(t, frame_a_->pos_, dt, true);
 
       if (clock_.allowsSettingTime())
       {
@@ -607,6 +616,16 @@ namespace yae
   {
     TVideoFramePtr frame = private_->frame_a_;
     return frame ? frame->time_ : TTime();
+  }
+
+  //----------------------------------------------------------------
+  // VideoRenderer::getPacketPos
+  //
+  TTime
+  VideoRenderer::getPacketPos() const
+  {
+    TVideoFramePtr frame = private_->frame_a_;
+    return frame ? frame->pos_ : TTime();
   }
 
   //----------------------------------------------------------------

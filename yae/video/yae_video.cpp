@@ -117,6 +117,55 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(int nb_channels)
+  {
+    av_channel_layout_default(this, nb_channels);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(const AVChannelLayout & other)
+  {
+    av_channel_layout_default(this, 0);
+    this->assign(other);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::ChannelLayout
+  //
+  ChannelLayout::ChannelLayout(const ChannelLayout & other)
+  {
+    av_channel_layout_default(this, 0);
+    this->assign(other);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::~ChannelLayout
+  //
+  ChannelLayout::~ChannelLayout()
+  {
+    av_channel_layout_uninit(this);
+  }
+
+  //----------------------------------------------------------------
+  // ChannelLayout::assign
+  //
+  ChannelLayout &
+  ChannelLayout::assign(const AVChannelLayout & other)
+  {
+    if (this != &other)
+    {
+      int err = av_channel_layout_copy(this, &other);
+      YAE_ASSERT(!err);
+    }
+
+    return *this;
+  }
+
+  //----------------------------------------------------------------
   // ChannelLayout::describe
   //
   std::string
@@ -129,28 +178,43 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AudioTraits::AudioTraits
+  //
+  AudioTraits::AudioTraits():
+    sample_format_(AV_SAMPLE_FMT_NONE),
+    sample_rate_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // AudioTraits::same_as
+  //
+  bool
+  AudioTraits::same_as(const AudioTraits & other) const
+  {
+    return (sample_format_ == other.sample_format_ &&
+            sample_rate_ == other.sample_rate_ &&
+            ch_layout_ == other.ch_layout_);
+  }
+
+
+  //----------------------------------------------------------------
   // VideoTraits::VideoTraits
   //
-  VideoTraits::VideoTraits():
-    frameRate_(0.0),
-    av_fmt_(AV_PIX_FMT_NONE),
-    av_csp_(AVCOL_SPC_UNSPECIFIED),
-    av_pri_(AVCOL_PRI_UNSPECIFIED),
-    av_trc_(AVCOL_TRC_UNSPECIFIED),
-    av_rng_(AVCOL_RANGE_UNSPECIFIED),
-    colorspace_(NULL),
-    pixelFormat_(kInvalidPixelFormat),
-    encodedWidth_(0),
-    encodedHeight_(0),
-    offsetTop_(0),
-    offsetLeft_(0),
-    visibleWidth_(0),
-    visibleHeight_(0),
-    pixelAspectRatio_(1.0),
-    cameraRotation_(0),
-    vflip_(false),
-    hflip_(false)
-  {}
+  VideoTraits::VideoTraits()
+  {
+    // memset, so that we can memcmp later:
+    memset(this, 0, sizeof(VideoTraits));
+
+    // restore default non-zero values that were wiped out by the memset:
+    dynamic_range_ = Colorspace::DynamicRange();
+    av_fmt_ = AV_PIX_FMT_NONE;
+    av_csp_ = AVCOL_SPC_UNSPECIFIED;
+    av_pri_ = AVCOL_PRI_UNSPECIFIED;
+    av_trc_ = AVCOL_TRC_UNSPECIFIED;
+    av_rng_ = AVCOL_RANGE_UNSPECIFIED;
+    pixelFormat_ = kInvalidPixelFormat;
+    pixelAspectRatio_ = 1.0;
+  }
 
   //----------------------------------------------------------------
   // VideoTraits::txt_summary
@@ -281,12 +345,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTraits::operator
+  // VideoTraits::same_as
   //
   bool
-  VideoTraits::operator == (const VideoTraits & vt) const
+  VideoTraits::same_as(const VideoTraits & other) const
   {
-    return memcmp(this, &vt, sizeof(VideoTraits)) == 0;
+#if 1
+    return memcmp(this, &other, sizeof(VideoTraits)) == 0;
+#else
+    return (this->sameFrameSizeAndFormat(other) &&
+            this->sameColorSpaceAndRange(other));
+#endif
   }
 
   //----------------------------------------------------------------
@@ -299,6 +368,36 @@ namespace yae
     av_fmt_ = yae_to_ffmpeg(fmt);
   }
 
+  //----------------------------------------------------------------
+  // VideoTraits::setSomeTraits
+  //
+  void
+  VideoTraits::setSomeTraits(const VideoTraits & vt)
+  {
+#define maybe_set(dst, src, default_value) \
+  if (src != default_value) dst = src
+
+    maybe_set(frameRate_, vt.frameRate_, 0.0);
+    maybe_set(av_fmt_, vt.av_fmt_, AV_PIX_FMT_NONE);
+    maybe_set(av_csp_, vt.av_csp_, AVCOL_SPC_UNSPECIFIED);
+    maybe_set(av_pri_, vt.av_pri_, AVCOL_PRI_UNSPECIFIED);
+    maybe_set(av_trc_, vt.av_trc_, AVCOL_TRC_UNSPECIFIED);
+    maybe_set(av_rng_, vt.av_rng_, AVCOL_RANGE_UNSPECIFIED);
+    maybe_set(colorspace_, vt.colorspace_, NULL);
+    maybe_set(pixelFormat_, vt.pixelFormat_, kInvalidPixelFormat);
+    maybe_set(encodedWidth_, vt.encodedWidth_, 0);
+    maybe_set(encodedHeight_, vt.encodedHeight_, 0);
+    maybe_set(offsetTop_, vt.offsetTop_, 0);
+    maybe_set(offsetLeft_, vt.offsetLeft_, 0);
+    maybe_set(visibleWidth_, vt.visibleWidth_, 0);
+    maybe_set(visibleHeight_, vt.visibleHeight_, 0);
+    maybe_set(pixelAspectRatio_, vt.pixelAspectRatio_, 1.0);
+    maybe_set(cameraRotation_, vt.cameraRotation_, 0);
+    maybe_set(vflip_, vt.vflip_, false);
+    maybe_set(hflip_, vt.hflip_, false);
+
+#undef maybe_set
+  }
 
   //----------------------------------------------------------------
   // IPlanarBuffer::~IPlanarBuffer
@@ -735,7 +834,7 @@ namespace yae
   bool
   TTrackInfo::hasLang() const
   {
-    return lang_.size() > 0 && lang_[0];
+    return !lang_.empty() && lang_[0];
   }
 
   //----------------------------------------------------------------
@@ -744,7 +843,25 @@ namespace yae
   bool
   TTrackInfo::hasName() const
   {
-    return name_.size() > 0 && name_[0] && name_ != "und";
+    return !name_.empty() && name_[0] && name_ != "und";
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::hasCodec
+  //
+  bool
+  TTrackInfo::hasCodec() const
+  {
+    return !codec_.empty() && codec_[0];
+  }
+
+  //----------------------------------------------------------------
+  // TTrackInfo::codec
+  //
+  const char *
+  TTrackInfo::codec() const
+  {
+    return hasCodec() ? codec_.c_str() : NULL;
   }
 
   //----------------------------------------------------------------
@@ -763,38 +880,6 @@ namespace yae
   TTrackInfo::name() const
   {
     return hasName() ? name_.c_str() : NULL;
-  }
-
-  //----------------------------------------------------------------
-  // TTrackInfo::setLang
-  //
-  void
-  TTrackInfo::setLang(const char * lang)
-  {
-    if (lang)
-    {
-      lang_ = lang;
-    }
-    else
-    {
-      lang_.clear();
-    }
-  }
-
-  //----------------------------------------------------------------
-  // TTrackInfo::setName
-  //
-  void
-  TTrackInfo::setName(const char * name)
-  {
-    if (name)
-    {
-      name_ = name;
-    }
-    else
-    {
-      name_.clear();
-    }
   }
 
 
@@ -855,14 +940,16 @@ namespace yae
     std::size_t n_vtracks = reader->getNumberOfVideoTracks();
     if (ix_vtrack < n_vtracks)
     {
-      reader->getSelectedVideoTrackInfo(vinfo);
+      VideoTraits traits;
+      reader->getVideoTrackInfo(ix_vtrack, vinfo, traits);
     }
 
     std::size_t ix_atrack = reader->getSelectedAudioTrackIndex();
     std::size_t n_atracks = reader->getNumberOfAudioTracks();
     if (ix_atrack < n_atracks)
     {
-      reader->getSelectedAudioTrackInfo(ainfo);
+      AudioTraits traits;
+      reader->getAudioTrackInfo(ix_atrack, ainfo, traits);
     }
 
     std::size_t n_subs = reader->subsCount();

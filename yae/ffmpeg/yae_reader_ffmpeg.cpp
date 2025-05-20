@@ -34,11 +34,6 @@
 //
 #define YAE_READER_FFMPEG_GUID "5299E7BE-11B9-49D3-967D-5A15184A0AE9"
 
-//----------------------------------------------------------------
-// YAE_DEBUG_SEEKING_AND_FRAMESTEP
-//
-#define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
-
 namespace yae
 {
 
@@ -55,14 +50,37 @@ namespace yae
   public:
     Private():
       readerId_((unsigned int)~0),
-      timeIn_(new TimePos(TTime::min_flicks_as_sec())),
-      timeOut_(new TimePos(TTime::max_flicks_as_sec()))
-    {}
+      ref_timeline_(kRefTimelinePts)
+    {
+      this->init_in_out();
+    }
+
+    void init_in_out()
+    {
+      if (ref_timeline_ == kRefTimelinePos)
+      {
+        timeIn_.reset(new PacketPos(0, 188));
+        timeOut_.reset(new PacketPos(kMaxInt64, 188));
+      }
+      else
+      {
+        timeIn_.reset(new TimePos(TTime::min_flicks_as_sec()));
+        timeOut_.reset(new TimePos(TTime::max_flicks_as_sec()));
+      }
+    }
+
+    void init_ref_timeline()
+    {
+      std::string src = movie_.getFormatName();
+      ref_timeline_ = (src == "mpegts") ? kRefTimelinePos : kRefTimelinePts;
+      this->init_in_out();
+    }
 
     Movie movie_;
     unsigned int readerId_;
-    TTimePosPtr timeIn_;
-    TTimePosPtr timeOut_;
+    RefTimeline ref_timeline_;
+    TSeekPosPtr timeIn_;
+    TSeekPosPtr timeOut_;
   };
 
   //----------------------------------------------------------------
@@ -156,7 +174,9 @@ namespace yae
   bool
   ReaderFFMPEG::open(const char * resourcePathUTF8, bool hwdec)
   {
-    return private_->movie_.open(resourcePathUTF8, hwdec);
+    bool ok = private_->movie_.open(resourcePathUTF8, hwdec);
+    private_->init_ref_timeline();
+    return ok;
   }
 
   //----------------------------------------------------------------
@@ -175,6 +195,15 @@ namespace yae
   ReaderFFMPEG::getResourcePath() const
   {
     return private_->movie_.getResourcePath();
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::refreshInfo
+  //
+  void
+  ReaderFFMPEG::refreshInfo()
+  {
+    private_->movie_.refresh();
   }
 
   //----------------------------------------------------------------
@@ -261,23 +290,56 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getSelectedVideoTrackName
+  // ReaderFFMPEG::getVideoTrackInfo
   //
   bool
-  ReaderFFMPEG::getSelectedVideoTrackInfo(TTrackInfo & info) const
+  ReaderFFMPEG::getVideoTrackInfo(std::size_t track_index,
+                                  TTrackInfo & info,
+                                  VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    return private_->movie_.getVideoTrackInfo(i, info);
+    return private_->movie_.getVideoTrackInfo(track_index, info, traits);
   }
 
   //----------------------------------------------------------------
-  // ReaderFFMPEG::getSelectedAudioTrackInfo
+  // ReaderFFMPEG::getAudioTrackInfo
   //
   bool
-  ReaderFFMPEG::getSelectedAudioTrackInfo(TTrackInfo & info) const
+  ReaderFFMPEG::getAudioTrackInfo(std::size_t track_index,
+                                  TTrackInfo & info,
+                                  AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    return private_->movie_.getAudioTrackInfo(i, info);
+    return private_->movie_.getAudioTrackInfo(track_index, info, traits);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getRefTimeline
+  //
+  RefTimeline
+  ReaderFFMPEG::getRefTimeline() const
+  {
+    return private_->ref_timeline_;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setRefTimeline
+  //
+  bool
+  ReaderFFMPEG::setRefTimeline(RefTimeline ref_timeline)
+  {
+    private_->ref_timeline_ = ref_timeline;
+    return true;
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::getPacketsExtent
+  //
+  bool
+  ReaderFFMPEG::getPacketsExtent(TTime & start, TTime & duration) const
+  {
+    uint64_t file_size = private_->movie_.get_file_size();
+    start.reset(0, 188);
+    duration.reset(file_size, 188);
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -286,10 +348,10 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoDuration(TTime & start, TTime & duration) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    if (track)
     {
-      private_->movie_.getVideoTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -302,10 +364,10 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioDuration(TTime & start, TTime & duration) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    if (track)
     {
-      private_->movie_.getAudioTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -318,13 +380,8 @@ namespace yae
   bool
   ReaderFFMPEG::getVideoTraits(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -333,77 +390,48 @@ namespace yae
   bool
   ReaderFFMPEG::getAudioTraits(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::setAudioTraitsOverride
   //
   bool
-  ReaderFFMPEG::setAudioTraitsOverride(const AudioTraits & override)
+  ReaderFFMPEG::setAudioTraitsOverride(const AudioTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->setTraitsOverride(override);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::setVideoTraitsOverride
   //
   bool
-  ReaderFFMPEG::setVideoTraitsOverride(const VideoTraits & override)
+  ReaderFFMPEG::setVideoTraitsOverride(const VideoTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->setTraitsOverride(override);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::getAudioTraitsOverride
   //
   bool
-  ReaderFFMPEG::getAudioTraitsOverride(AudioTraits & override) const
+  ReaderFFMPEG::getAudioTraitsOverride(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->getTraitsOverride(override);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::getVideoTraitsOverride
   //
   bool
-  ReaderFFMPEG::getVideoTraitsOverride(VideoTraits & override) const
+  ReaderFFMPEG::getVideoTraitsOverride(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->getTraitsOverride(override);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -421,6 +449,14 @@ namespace yae
   bool
   ReaderFFMPEG::seek(double seekTime)
   {
+    if (this->refers_to_packet_pos_timeline())
+    {
+      int64_t packet_pos = seekTime * 188;
+      packet_pos -= packet_pos % 188;
+      TPacketPosPtr pos(new PacketPos(packet_pos, 188));
+      return private_->movie_.requestSeek(pos);
+    }
+
     TTimePosPtr pos(new TimePos(seekTime));
     return private_->movie_.requestSeek(pos);
   }
@@ -511,17 +547,25 @@ namespace yae
   void
   ReaderFFMPEG::getPlaybackInterval(double & timeIn, double & timeOut) const
   {
-    timeIn = private_->timeIn_->sec_;
-    timeOut = private_->timeOut_->sec_;
+    timeIn = private_->timeIn_->get();
+    timeOut = private_->timeOut_->get();
   }
 
   //----------------------------------------------------------------
   // ReaderFFMPEG::setPlaybackIntervalStart
   //
   void
-  ReaderFFMPEG::setPlaybackIntervalStart(double timeIn)
+  ReaderFFMPEG::setPlaybackIntervalStart(double pos)
   {
-    private_->timeIn_.reset(new TimePos(timeIn));
+    if (this->refers_to_packet_pos_timeline())
+    {
+      private_->timeIn_.reset(new PacketPos(pos * 188, 188));
+    }
+    else
+    {
+      private_->timeIn_.reset(new TimePos(pos));
+    }
+
     private_->movie_.setPlaybackIntervalStart(private_->timeIn_);
   }
 
@@ -529,9 +573,17 @@ namespace yae
   // ReaderFFMPEG::setPlaybackIntervalEnd
   //
   void
-  ReaderFFMPEG::setPlaybackIntervalEnd(double timeOut)
+  ReaderFFMPEG::setPlaybackIntervalEnd(double pos)
   {
-    private_->timeOut_.reset(new TimePos(timeOut));
+    if (this->refers_to_packet_pos_timeline())
+    {
+      private_->timeOut_.reset(new PacketPos(pos * 188, 188));
+    }
+    else
+    {
+      private_->timeOut_.reset(new TimePos(pos));
+    }
+
     private_->movie_.setPlaybackIntervalEnd(private_->timeOut_);
   }
 
@@ -711,6 +763,15 @@ namespace yae
   ReaderFFMPEG::setSharedClock(const SharedClock & clock)
   {
     private_->movie_.setSharedClock(clock);
+  }
+
+  //----------------------------------------------------------------
+  // ReaderFFMPEG::setEventObserver
+  //
+  void
+  ReaderFFMPEG::setEventObserver(const TEventObserverPtr & eo)
+  {
+    private_->movie_.setEventObserver(eo);
   }
 }
 

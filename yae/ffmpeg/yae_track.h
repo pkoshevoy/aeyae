@@ -13,6 +13,7 @@
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/thread/yae_queue.h"
 #include "yae/thread/yae_threading.h"
+#include "yae/utils/yae_fifo.h"
 #include "yae/utils/yae_time.h"
 #include "yae/video/yae_video.h"
 
@@ -36,6 +37,11 @@ extern "C"
 #include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 }
+
+//----------------------------------------------------------------
+// YAE_DEBUG_SEEKING_AND_FRAMESTEP
+//
+#define YAE_DEBUG_SEEKING_AND_FRAMESTEP 0
 
 
 namespace yae
@@ -83,6 +89,8 @@ namespace yae
   struct YAE_API ISeekPos
   {
     virtual ~ISeekPos() {}
+    virtual double get() const = 0;
+    virtual void set(double pos) = 0;
     virtual std::string to_str() const = 0;
     virtual bool lt(const TFrameBase & f, double dur = 0.0) const = 0;
     virtual bool gt(const TFrameBase & f, double dur = 0.0) const = 0;
@@ -90,7 +98,7 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // TPosPtr
+  // TSeekPosPtr
   //
   typedef yae::shared_ptr<ISeekPos> TSeekPosPtr;
 
@@ -101,6 +109,10 @@ namespace yae
   struct YAE_API TimePos : ISeekPos
   {
     TimePos(double sec);
+
+    // virtual:
+    double get() const;
+    void set(double pos);
 
     // virtual:
     std::string to_str() const;
@@ -120,6 +132,36 @@ namespace yae
   // TTimePosPtr
   //
   typedef yae::shared_ptr<TimePos, ISeekPos> TTimePosPtr;
+
+
+  //----------------------------------------------------------------
+  // PacketPos
+  //
+  struct YAE_API PacketPos : ISeekPos
+  {
+    PacketPos(int64_t packet_pos, uint64_t packet_size = 188);
+
+    // virtual:
+    double get() const;
+    void set(double pos);
+
+    // virtual:
+    std::string to_str() const;
+
+    // virtual:
+    bool lt(const TFrameBase & f, double dur = 0.0) const;
+    bool gt(const TFrameBase & f, double dur = 0.0) const;
+
+    // virtual:
+    int seek(AVFormatContext * context, const AVStream * s) const;
+
+    TTime pos_;
+  };
+
+  //----------------------------------------------------------------
+  // TPacketPosPtr
+  //
+  typedef yae::shared_ptr<PacketPos, ISeekPos> TPacketPosPtr;
 
 
   //----------------------------------------------------------------
@@ -149,6 +191,8 @@ namespace yae
     Demuxer * demuxer_;
     int program_;
     std::string trackId_;
+    TAvCodecParametersPtr codecpar_;
+    Rational timebase_;
   };
 
   //----------------------------------------------------------------
@@ -215,6 +259,23 @@ namespace yae
   //
   struct YAE_API Track
   {
+
+    //----------------------------------------------------------------
+    // Info
+    //
+    struct YAE_API Info
+    {
+      std::string track_id_;
+      std::string codec_;
+      std::string name_;
+      std::string lang_;
+    };
+
+    //----------------------------------------------------------------
+    // TInfoPtr
+    //
+    typedef yae::shared_ptr<Info> TInfoPtr;
+
     // NOTE: constructor does not open the stream:
     Track(AVFormatContext * context, AVStream * stream, bool hwdec);
 
@@ -228,9 +289,9 @@ namespace yae
     virtual bool initTraits();
 
     // open the stream for decoding:
-    virtual AVCodecContext * open();
+    virtual AvCodecContextPtr open();
 
-    virtual AVCodecContext *
+    virtual AvCodecContextPtr
     maybe_open(const AVCodec * codec,
                const AVCodecParameters & params,
                AVDictionary * opts);
@@ -248,16 +309,21 @@ namespace yae
     //
     // examples: a:0, v:0, s:0, a:9, a:10, s:9, s:10
     //
-    inline void setId(const std::string & id)
-    { id_ = id; }
+    void set_track_id(const std::string & id);
 
-    inline const std::string & id() const
-    { return id_; }
+    inline std::string get_track_id() const
+    {
+      // keep-alive:
+      Track::TInfoPtr info_ptr = info_;
+      const Track::Info & info = *info_ptr;
+      return info.track_id_;
+    }
 
-    // get track name:
-    const char * getCodecName() const;
-    const char * getName() const;
-    const char * getLang() const;
+    // update info: codec name, track name, track language:
+    void update(Track::Info & info) const;
+
+    inline Track::TInfoPtr get_info() const
+    { return info_; }
 
     // NOTE: for MPEG-TS this corresponds to PID:
     inline int getStreamId() const
@@ -298,6 +364,9 @@ namespace yae
     inline bool threadIsRunning() const
     { return thread_.isRunning(); }
 
+    inline void setEventObserver(const TEventObserverPtr & eo)
+    { eo_ = eo; }
+
     // adjust frame duration:
     virtual bool setTempo(double tempo);
 
@@ -308,9 +377,9 @@ namespace yae
     inline bool packetQueueIsClosed() const
     { return packetQueue_.isClosed(); }
 
-    void packetQueueOpen();
-    void packetQueueClose();
-    void packetQueueClear();
+    virtual void packetQueueOpen();
+    virtual void packetQueueClose();
+    virtual void packetQueueClear();
 
     // estimate packet ingest rate
     // and adjust Queue max size for 1s latency,
@@ -318,6 +387,17 @@ namespace yae
     bool packetQueuePush(const TPacketPtr & packetPtr,
                          QueueWaitMgr * waitMgr = NULL);
 
+  protected:
+    // helper:
+    void update_packet_queue_size(const AVPacket & packet);
+
+    virtual bool packet_queue_push(const TPacketPtr & packetPtr,
+                                   QueueWaitMgr * waitMgr);
+
+    virtual bool packet_queue_pop(TPacketPtr & packetPtr,
+                                  QueueWaitMgr * waitMgr);
+
+  public:
     inline bool packetQueueProducerIsBlocked() const
     { return packetQueue_.producerIsBlocked(); }
 
@@ -335,6 +415,13 @@ namespace yae
 
     virtual void frameQueueClear()
     {}
+
+    virtual bool frameQueueIsFull() const
+    { return false; }
+
+    virtual int resetTimeCounters(const TSeekPosPtr & seekPos,
+                                  bool dropPendingFrames)
+    { return 0; }
 
   private:
     // intentionally disabled:
@@ -358,14 +445,24 @@ namespace yae
     yae::AvBufferRef hw_device_ctx_;
     yae::AvBufferRef hw_frames_ctx_;
 
-    // global track id:
-    std::string id_;
+    // track info:
+    Track::TInfoPtr info_;
 
     // worker thread:
     Thread<Track> thread_;
 
     // deadlock avoidance mechanism:
     QueueWaitMgr terminator_;
+
+    // optional event observer:
+    TEventObserverPtr eo_;
+
+    // for detecting codec changes:
+    TAvCodecParametersPtr codecpar_curr_;
+    TAvCodecParametersPtr codecpar_next_;
+
+    // for detecting timeline anomalies:
+    TPacketPtr prev_packet_;
 
     AVFormatContext * context_;
     AVStream * stream_;
@@ -382,6 +479,9 @@ namespace yae
     // for adjusting frame duration (playback tempo scaling):
     mutable boost::mutex tempoMutex_;
     double tempo_;
+
+    // file positions of the most recent packets sent to the decoder:
+    yae::fifo<int64_t> packet_pos_;
 
   public:
     uint64_t discarded_;

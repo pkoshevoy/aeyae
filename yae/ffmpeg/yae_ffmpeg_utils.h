@@ -164,7 +164,52 @@ namespace yae
       AVRational::num = n;
       AVRational::den = d;
     }
+
+    Rational(const AVRational & other)
+    {
+      AVRational::num = other.num;
+      AVRational::den = other.den;
+    }
+
+    inline Rational & operator = (const AVRational & other)
+    {
+      AVRational::num = other.num;
+      AVRational::den = other.den;
+      return *this;
+    }
   };
+
+
+  //----------------------------------------------------------------
+  // AvCodecParameters
+  //
+  struct YAE_API AvCodecParameters
+  {
+    AvCodecParameters(const ::AVCodecParameters * codecpar = NULL);
+    AvCodecParameters(const AvCodecParameters & codecpar);
+    ~AvCodecParameters();
+
+    AvCodecParameters & operator = (const AvCodecParameters & codecpar);
+
+    inline const ::AVCodecParameters & get() const
+    { return *codecpar_; }
+
+    void reset(const ::AVCodecParameters * codecpar = NULL);
+
+    // compare these codec parameters to given codecpar:
+    bool same_codec(const ::AVCodecParameters * codecpar) const;
+
+    inline bool same_codec(const AvCodecParameters & codecpar) const
+    { return this->same_codec(&codecpar.get()); }
+
+  protected:
+    ::AVCodecParameters * codecpar_;
+  };
+
+  //----------------------------------------------------------------
+  // TAvCodecParametersPtr
+  //
+  typedef yae::shared_ptr<AvCodecParameters> TAvCodecParametersPtr;
 
 
   //----------------------------------------------------------------

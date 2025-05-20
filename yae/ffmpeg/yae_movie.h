@@ -46,6 +46,22 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // ProgramTracks
+  //
+  struct YAE_API ProgramTracks
+  {
+    std::map<int, std::list<VideoTrackPtr> > video_;
+    std::map<int, std::list<AudioTrackPtr> > audio_;
+    std::map<int, std::list<SubttTrackPtr> > subtt_;
+  };
+
+  //----------------------------------------------------------------
+  // TProgramTracksLut
+  //
+  typedef std::map<int, ProgramTracks> TProgramTracksLut;
+
+
+  //----------------------------------------------------------------
   // Movie
   //
   struct YAE_API Movie
@@ -60,20 +76,58 @@ namespace yae
 
     bool getUrlProtocols(std::list<std::string> & protocols) const;
 
+  protected:
+    VideoTrackPtr create_video_track(AVStream * stream);
+    AudioTrackPtr create_audio_track(AVStream * stream);
+    SubttTrackPtr create_subtt_track(AVStream * stream);
+
+    bool extract_attachment(const AVStream * stream,
+                            std::vector<TAttachment> & attachments);
+
+    void get_program_info(std::vector<TProgramInfo> & program_infos,
+                          std::map<int, int> & stream_ix_to_prog_ix);
+
+    void flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
+                                std::vector<TProgramInfo> & program_infos,
+                                std::vector<VideoTrackPtr> & video_tracks,
+                                std::vector<AudioTrackPtr> & audio_tracks,
+                                std::vector<SubttTrackPtr> & subtt_tracks,
+                                std::map<int, int> & stream_ix_to_subtt_ix);
+
+  public:
+    VideoTrackPtr get_video_track(std::size_t i) const;
+    AudioTrackPtr get_audio_track(std::size_t i) const;
+
+    inline VideoTrackPtr curr_video_track() const
+    { return this->get_video_track(selectedVideoTrack_); }
+
+    inline AudioTrackPtr curr_audio_track() const
+    { return this->get_audio_track(selectedAudioTrack_); }
+
     bool open(const char * resourcePath, bool hwdec);
+    void refresh();
     void close();
+
+    inline uint64_t get_file_size() const
+    { return file_size_; }
+
+    inline int64_t get_packet_pos() const
+    { return packet_pos_; }
 
     inline const char * getResourcePath() const
     { return resourcePath_.empty() ? NULL : resourcePath_.c_str(); }
 
+    inline const char * getFormatName() const
+    { return (context_ && context_->iformat) ? context_->iformat->name : ""; }
+
     inline const std::vector<TProgramInfo> & getPrograms() const
-    { return programs_; }
+    { return program_infos_; }
 
     inline const std::vector<VideoTrackPtr> & getVideoTracks() const
-    { return videoTracks_; }
+    { return video_tracks_; }
 
     inline const std::vector<AudioTrackPtr> & getAudioTracks() const
-    { return audioTracks_; }
+    { return audio_tracks_; }
 
     inline std::size_t getSelectedVideoTrack() const
     { return selectedVideoTrack_; }
@@ -81,8 +135,13 @@ namespace yae
     inline std::size_t getSelectedAudioTrack() const
     { return selectedAudioTrack_; }
 
-    bool getVideoTrackInfo(std::size_t i, TTrackInfo & info) const;
-    bool getAudioTrackInfo(std::size_t i, TTrackInfo & info) const;
+    bool getVideoTrackInfo(std::size_t video_track_index,
+                           TTrackInfo & info,
+                           VideoTraits & traits) const;
+
+    bool getAudioTrackInfo(std::size_t audio_track_index,
+                           TTrackInfo & info,
+                           AudioTraits & traits) const;
 
     bool selectVideoTrack(std::size_t i);
     bool selectAudioTrack(std::size_t i);
@@ -148,6 +207,10 @@ namespace yae
 
     void setSharedClock(const SharedClock & clock);
 
+    // this is mostly so we can notify the observer about MPEG-TS
+    // program changes, ES codec changes, etc...
+    void setEventObserver(const TEventObserverPtr & eo);
+
   private:
     // intentionally disabled:
     Movie(const Movie &);
@@ -170,12 +233,12 @@ namespace yae
     AVFormatContext * context_;
 
     std::vector<TAttachment> attachments_;
-    std::vector<TProgramInfo> programs_;
-    std::vector<VideoTrackPtr> videoTracks_;
-    std::vector<AudioTrackPtr> audioTracks_;
-    std::vector<SubttTrackPtr> subs_;
-    std::map<unsigned int, std::size_t> subsIdx_;
-    std::map<int, int> streamIndexToProgramIndex_;
+    std::vector<TProgramInfo> program_infos_;
+    std::vector<VideoTrackPtr> video_tracks_;
+    std::vector<AudioTrackPtr> audio_tracks_;
+    std::vector<SubttTrackPtr> subtt_tracks_;
+    std::map<int, int> stream_ix_to_prog_ix_;
+    std::map<int, int> stream_ix_to_subtt_ix_;
 
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
@@ -199,10 +262,11 @@ namespace yae
     TAdjustTimestamps adjustTimestamps_;
     void * adjustTimestampsCtx_;
 
-    // demuxer current position (DTS, stream index, and byte position):
-    int dtsStreamIndex_;
-    int64_t dtsBytePos_;
-    int64_t dts_;
+    // file size:
+    uint64_t file_size_;
+
+    // last known AVPacket.pos:
+    int64_t packet_pos_;
 
     TSeekPosPtr posIn_;
     TSeekPosPtr posOut_;
@@ -215,6 +279,9 @@ namespace yae
 
     // shared clock used to synchronize the renderers:
     SharedClock clock_;
+
+    // optional event observer:
+    TEventObserverPtr eo_;
 
     // top-level settings group:
     yae::TSettingGroup settings_;

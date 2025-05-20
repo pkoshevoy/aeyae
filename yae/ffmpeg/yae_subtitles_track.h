@@ -148,7 +148,7 @@ namespace yae
     void clear();
 
     // virtual:
-    AVCodecContext * open();
+    AvCodecContextPtr open();
 
     void close();
 

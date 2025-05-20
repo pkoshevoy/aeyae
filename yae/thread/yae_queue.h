@@ -207,6 +207,12 @@ namespace yae
       return !size_;
     }
 
+    inline bool isFull() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return size_ >= maxSize_;
+    }
+
     // check whether the queue is closed:
     inline bool isClosed() const
     {
