@@ -129,7 +129,15 @@ namespace yae
     frameRate_.num = 1;
     frameRate_.den = AV_TIME_BASE;
 
-    syncBuffer_.setMaxSize(50);
+    // if audio packets are late ... demuxer can become stuck
+    // trying to add a video packet to an already full queue,
+    // and never adding an packets to the audio packet queue
+    // and therefore not advancing the audio playhead position
+    // thus creating a deadlock...
+    //
+    // add some extra padding to the queue size to help avoid this
+    //
+    packetQueue_.setPadding(50);
   }
 
   //----------------------------------------------------------------
@@ -313,35 +321,6 @@ namespace yae
     }
 
     return ctx_ptr;
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packetQueueOpen
-  //
-  void VideoTrack::packetQueueOpen()
-  {
-    syncBuffer_.open();
-    Track::packetQueueOpen();
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packetQueueClose
-  //
-  void
-  VideoTrack::packetQueueClose()
-  {
-    syncBuffer_.close();
-    Track::packetQueueClose();
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packetQueueClear
-  //
-  void
-  VideoTrack::packetQueueClear()
-  {
-    syncBuffer_.clear();
-    Track::packetQueueClear();
   }
 
   //----------------------------------------------------------------
@@ -1763,52 +1742,6 @@ namespace yae
   VideoTrack::enableClosedCaptions(unsigned int cc)
   {
     cc_.enableClosedCaptions(cc);
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packet_queue_push
-  //
-  bool
-  VideoTrack::packet_queue_push(const TPacketPtr & packetPtr,
-                                QueueWaitMgr * waitMgr)
-  {
-    if (!syncBuffer_.push(packetPtr, waitMgr))
-    {
-      return false;
-    }
-
-    if (packetQueue_.isFull())
-    {
-      return true;
-    }
-
-    TPacketPtr next_pkt;
-    if (!syncBuffer_.pop(next_pkt, waitMgr))
-    {
-      return false;
-    }
-
-    return packetQueue_.push(next_pkt, waitMgr);
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packet_queue_pop
-  //
-  bool
-  VideoTrack::packet_queue_pop(TPacketPtr & packetPtr,
-                               QueueWaitMgr * waitMgr)
-  {
-    if (packetQueue_.isEmpty() && !syncBuffer_.isEmpty())
-    {
-      TPacketPtr next_pkt;
-      if (!(syncBuffer_.pop(next_pkt, waitMgr) &&
-            packetQueue_.push(next_pkt, waitMgr)))
-      {
-        return false;
-      }
-    }
-
-    return Track::packet_queue_pop(packetPtr, waitMgr);
   }
 
 }
