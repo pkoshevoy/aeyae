@@ -564,7 +564,7 @@ namespace yae
   // close it in the destructor:
   //
   template <typename TOpenable>
-  struct YAE_API TOpenHere
+  struct TOpenHere
   {
     TOpenHere(TOpenable & something):
       something_(something)
@@ -1517,7 +1517,7 @@ namespace yae
   //----------------------------------------------------------------
   // SimpleCallback
   //
-  struct YAE_API SimpleCallback
+  struct SimpleCallback
   {
     SimpleCallback(const TCallbackInterfacePtr & cb = TCallbackInterfacePtr()):
       cb_(cb)
@@ -1540,7 +1540,7 @@ namespace yae
   // MemberCallback
   //
   template <typename TObject, typename TCallable>
-  struct YAE_API MemberCallback : CallbackInterface
+  struct MemberCallback : CallbackInterface
   {
     MemberCallback(TObject & object, TCallable TObject::* const method):
       object_(object),
@@ -1612,7 +1612,7 @@ namespace yae
   // ContextQuery
   //
   template <typename TData>
-  struct YAE_API ContextQuery
+  struct ContextQuery
   {
     typedef bool(*TFuncPtr)(void *, TData &);
 
