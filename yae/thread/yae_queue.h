@@ -146,6 +146,7 @@ namespace yae
       consumerIsBlocked_(false),
       size_(0),
       maxSize_(maxSize),
+      padding_(0),
       sortFunc_(0)
     {}
 
@@ -193,6 +194,24 @@ namespace yae
       return maxSize_;
     }
 
+    bool setPadding(std::size_t padding)
+    {
+      // change padding size:
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        if (padding_ == padding)
+        {
+          // nothing changed:
+          return false;
+        }
+
+        padding_ = padding;
+      }
+
+      cond_.notify_all();
+      return true;
+    }
+
     // check whether the Queue is empty:
     inline std::size_t getSize() const
     {
@@ -210,7 +229,7 @@ namespace yae
     inline bool isFull() const
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
-      return size_ >= maxSize_;
+      return this->is_full_no_lock();
     }
 
     // check whether the queue is closed:
@@ -297,7 +316,8 @@ namespace yae
         // add to queue:
         {
           boost::unique_lock<boost::mutex> lock(mutex_);
-          while (!closed_ && maxSize_ && size_ >= maxSize_ &&
+          while (!closed_ &&
+                 this->is_full_no_lock() &&
                  terminator.keepWaiting())
           {
 #if 0 // ndef NDEBUG
@@ -307,7 +327,7 @@ namespace yae
             cond_.wait(lock);
           }
 
-          if (maxSize_ && size_ >= maxSize_)
+          if (this->is_full_no_lock())
           {
             return false;
           }
@@ -542,6 +562,9 @@ namespace yae
 
   protected:
 
+    inline bool is_full_no_lock() const
+    { return maxSize_ && size_ >= (maxSize_ + padding_); }
+
     // push data into the queue:
     void insert(const TData & newData)
     {
@@ -577,6 +600,7 @@ namespace yae
     std::list<TSequence> sequences_;
     std::size_t size_;
     std::size_t maxSize_;
+    std::size_t padding_;
     TSortFunc sortFunc_;
 
   public:

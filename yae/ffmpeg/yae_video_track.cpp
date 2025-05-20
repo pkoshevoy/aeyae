@@ -129,7 +129,15 @@ namespace yae
     frameRate_.num = 1;
     frameRate_.den = AV_TIME_BASE;
 
-    syncBuffer_.setMaxSize(50);
+    // if audio packets are late ... demuxer can become stuck
+    // trying to add a video packet to an already full queue,
+    // and never adding an packets to the audio packet queue
+    // and therefore not advancing the audio playhead position
+    // thus creating a deadlock...
+    //
+    // add some extra padding to the queue size to help avoid this
+    //
+    packetQueue_.setPadding(50);
   }
 
   //----------------------------------------------------------------
@@ -316,35 +324,6 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // VideoTrack::packetQueueOpen
-  //
-  void VideoTrack::packetQueueOpen()
-  {
-    syncBuffer_.open();
-    Track::packetQueueOpen();
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packetQueueClose
-  //
-  void
-  VideoTrack::packetQueueClose()
-  {
-    syncBuffer_.close();
-    Track::packetQueueClose();
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packetQueueClear
-  //
-  void
-  VideoTrack::packetQueueClear()
-  {
-    syncBuffer_.clear();
-    Track::packetQueueClear();
-  }
-
-  //----------------------------------------------------------------
   // VideoTrack::skipLoopFilter
   //
   void
@@ -514,14 +493,16 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
-                                                &subsample_hor_log2,
-                                                &subsample_ver_log2) == 0);
-    int subsample_hor = 1 << subsample_hor_log2;
-    int subsample_ver = 1 << subsample_ver_log2;
+    if (!av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
+                                          &subsample_hor_log2,
+                                          &subsample_ver_log2))
+    {
+      int subsample_hor = 1 << subsample_hor_log2;
+      int subsample_ver = 1 << subsample_ver_log2;
 
-    output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
-    output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
+      output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
+      output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
+    }
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)
@@ -1763,52 +1744,6 @@ namespace yae
   VideoTrack::enableClosedCaptions(unsigned int cc)
   {
     cc_.enableClosedCaptions(cc);
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packet_queue_push
-  //
-  bool
-  VideoTrack::packet_queue_push(const TPacketPtr & packetPtr,
-                                QueueWaitMgr * waitMgr)
-  {
-    if (!syncBuffer_.push(packetPtr, waitMgr))
-    {
-      return false;
-    }
-
-    if (packetQueue_.isFull())
-    {
-      return true;
-    }
-
-    TPacketPtr next_pkt;
-    if (!syncBuffer_.pop(next_pkt, waitMgr))
-    {
-      return false;
-    }
-
-    return packetQueue_.push(next_pkt, waitMgr);
-  }
-
-  //----------------------------------------------------------------
-  // VideoTrack::packet_queue_pop
-  //
-  bool
-  VideoTrack::packet_queue_pop(TPacketPtr & packetPtr,
-                               QueueWaitMgr * waitMgr)
-  {
-    if (packetQueue_.isEmpty() && !syncBuffer_.isEmpty())
-    {
-      TPacketPtr next_pkt;
-      if (!(syncBuffer_.pop(next_pkt, waitMgr) &&
-            packetQueue_.push(next_pkt, waitMgr)))
-      {
-        return false;
-      }
-    }
-
-    return Track::packet_queue_pop(packetPtr, waitMgr);
   }
 
 }
