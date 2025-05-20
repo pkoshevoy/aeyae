@@ -19,6 +19,7 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_json.h"
 #include "yae/video/yae_audio_renderer.h"
 #include "yae/video/yae_reader_factory.h"
 #include "yae/video/yae_video_renderer.h"
@@ -199,6 +200,8 @@ namespace yae
     void windowHalfSize();
     void windowFullSize();
     void windowDoubleSize();
+    void windowDecreaseSize();
+    void windowIncreaseSize();
 
     // chapters menu:
     void updateChaptersMenu();
@@ -222,6 +225,7 @@ namespace yae
     void playlistVisibilityChanged(bool visible);
     void fixupNextPrev();
     void adjustCanvasHeight();
+    void canvasSizeScaleBy(double scale);
     void canvasSizeBackup();
     void canvasSizeRestore();
     void saveBookmark();
@@ -234,6 +238,10 @@ namespace yae
                       PlaylistBookmark & bookmark) const;
 
     bool isPlaybackPaused() const;
+
+    // IEventObserver handler:
+    void handle_reader_event(const IReaderPtr & reader,
+                             const Json::Value & event);
 
   protected:
     // virtual:

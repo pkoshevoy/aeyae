@@ -184,6 +184,11 @@ namespace yae
       "    background-color: #000000;\n"
       "}\n"
       "\n"
+      "QToolButton {\n"
+      "    background-color: #000000;\n"
+      "    border: -px solid #000000;\n"
+      "}\n"
+      "\n"
       "QLineEdit {\n"
       "    color: #e0e0e0;\n"
       "    border: 0px solid #404040;\n"
@@ -202,6 +207,11 @@ namespace yae
       "\n"
       "QWidget {\n"
       "    background-color: %2;\n"
+      "}\n"
+      "\n"
+      "QToolButton {\n"
+      "    background-color: %2;\n"
+      "    border: 0px solid %2;\n"
       "}\n"
       "\n"
       "QLineEdit {\n"
@@ -880,6 +890,14 @@ namespace yae
                  this, SLOT(windowDoubleSize()));
     YAE_ASSERT(ok);
 
+    ok = connect(actionDecreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowDecreaseSize()));
+    YAE_ASSERT(ok);
+
+    ok = connect(actionIncreaseSize, SIGNAL(triggered()),
+                 this, SLOT(windowIncreaseSize()));
+    YAE_ASSERT(ok);
+
     ok = connect(actionDownmixToStereo, SIGNAL(triggered()),
                  this, SLOT(audioDownmixToStereo()));
     YAE_ASSERT(ok);
@@ -1217,6 +1235,29 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEventHandler
+  //
+  struct ReaderEventHandler : IEventObserver
+  {
+    ReaderEventHandler(MainWindow & main_window, const IReaderPtr & reader):
+      main_window_(main_window),
+      reader_(reader)
+    {}
+
+    virtual void note(const Json::Value & event)
+    {
+      IReaderPtr reader = reader_.lock();
+      if (reader)
+      {
+        main_window_.handle_reader_event(reader, event);
+      }
+    }
+
+    MainWindow & main_window_;
+    IReaderWPtr reader_;
+  };
+
+  //----------------------------------------------------------------
   // MainWindow::load
   //
   bool
@@ -1256,6 +1297,9 @@ namespace yae
     ++readerId_;
     IReader * reader = reader_ptr.get();
     reader->setReaderId(readerId_);
+
+    TEventObserverPtr eo(new ReaderEventHandler(*this, reader_ptr));
+    reader->setEventObserver(eo);
 
     // prevent Canvas from rendering any pending frames from previous reader:
     canvas_->acceptFramesWithReaderId(readerId_);
@@ -2721,6 +2765,24 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::windowDecreaseSize
+  //
+  void
+  MainWindow::windowDecreaseSize()
+  {
+    canvasSizeScaleBy(0.5);
+  }
+
+  //----------------------------------------------------------------
+  // MainWindow::windowIncreaseSize
+  //
+  void
+  MainWindow::windowIncreaseSize()
+  {
+    canvasSizeScaleBy(2.0);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::helpAbout
   //
   void
@@ -3195,6 +3257,36 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // ReaderEvent
+  //
+  struct ReaderEvent : public QEvent
+  {
+    ReaderEvent(const IReaderPtr & reader,
+                const Json::Value & event):
+      QEvent(QEvent::User),
+      reader_(reader),
+      event_(event)
+    {}
+
+    IReaderPtr reader_;
+    Json::Value event_;
+  };
+
+  //----------------------------------------------------------------
+  // MainWindow::handle_reader_event
+  //
+  void
+  MainWindow::handle_reader_event(const IReaderPtr & reader,
+                                  const Json::Value & event)
+  {
+    yae_dlog("MainWindow::handle_reader_event: %s",
+             yae::to_str(event).c_str());
+
+    reader->refreshInfo();
+    qApp->postEvent(this, new yae::ReaderEvent(reader, event));
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::event
   //
   bool
@@ -3208,6 +3300,18 @@ namespace yae
         ac->accept();
         canvas_->cropFrame(ac->cropFrame_);
         adjustCanvasHeight();
+        return true;
+      }
+
+      yae::ReaderEvent * re = dynamic_cast<yae::ReaderEvent *>(e);
+      if (re)
+      {
+        re->accept();
+        if (re->reader_ == reader_)
+        {
+          this->adjustMenuActions();
+          this->adjustMenus(reader_.get());
+        }
         return true;
       }
     }
@@ -3496,6 +3600,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // MainWindow::canvasSizeScaleBy
+  //
+  void
+  MainWindow::canvasSizeScaleBy(double scale)
+  {
+    canvasSizeSet(xexpand_ * scale, yexpand_ * scale);
+  }
+
+  //----------------------------------------------------------------
   // MainWindow::canvasSizeBackup
   //
   void
@@ -3774,95 +3887,72 @@ namespace yae
   // MainWindow::selectVideoTrack
   //
   void
-  MainWindow::selectVideoTrack(IReader * reader, std::size_t videoTrackIndex)
+  MainWindow::selectVideoTrack(IReader * reader, std::size_t video_track)
   {
-    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
-    reader->selectVideoTrack(videoTrackIndex);
+    std::size_t num_video_tracks = reader->getNumberOfVideoTracks();
+    reader->selectVideoTrack(video_track);
 
     VideoTraits vtts;
     if (reader->getVideoTraits(vtts))
     {
-      // pixel format shortcut:
-      const pixelFormat::Traits * ptts =
-        pixelFormat::getTraits(vtts.pixelFormat_);
+      const bool luminance16_not_supported = !yae::get_supports_luminance16();
 
-#if 0
-      yae_debug << "yae: native format: "
-                << (ptts ? ptts->name_ : "unsupported");
-#endif
+      bool skip_color_converter = actionSkipColorConverter->isChecked();
+      canvas_->skipColorConverter(skip_color_converter);
 
-#if 1
-      bool unsupported = ptts == NULL;
-
-      if (!unsupported)
+      TPixelFormatId format = kInvalidPixelFormat;
+      if (canvas_->
+          canvasRenderer()->
+          adjustPixelFormatForOpenGL(skip_color_converter, vtts, format) ||
+          luminance16_not_supported)
       {
-        unsupported = (ptts->flags_ & pixelFormat::kPaletted) != 0;
-      }
+        const pixelFormat::Traits * ptts_native =
+          pixelFormat::getTraits(vtts.pixelFormat_);
 
-      if (!unsupported)
-      {
-        GLint internalFormatGL;
-        GLenum pixelFormatGL;
-        GLenum dataTypeGL;
-        GLint shouldSwapBytes;
-        unsigned int supportedChannels = yae_to_opengl(vtts.pixelFormat_,
-                                                       internalFormatGL,
-                                                       pixelFormatGL,
-                                                       dataTypeGL,
-                                                       shouldSwapBytes);
+        const pixelFormat::Traits * ptts_output =
+          pixelFormat::getTraits(format);
 
-        bool skipColorConverter = actionSkipColorConverter->isChecked();
-        canvas_->skipColorConverter(skipColorConverter);
+        const bool adjusted_pixel_format = (format != vtts.pixelFormat_);
+        vtts.setPixelFormat(format);
 
-        const TFragmentShader * fragmentShader =
-          (supportedChannels != ptts->channels_) ?
-          canvas_->fragmentShaderFor(vtts) :
-          NULL;
+        const unsigned int native_w = vtts.encodedWidth_;
+        const unsigned int native_h = vtts.encodedHeight_;
 
-        if (!supportedChannels && !fragmentShader)
+        if (luminance16_not_supported)
         {
-          unsupported = true;
-        }
-        else if (supportedChannels != ptts->channels_ &&
-                 !skipColorConverter &&
-                 !fragmentShader)
-        {
-          unsupported = true;
-        }
-      }
-
-      if (unsupported)
-      {
-        vtts.setPixelFormat(kPixelFormatGRAY8);
-
-        if (ptts)
-        {
-          if ((ptts->flags_ & pixelFormat::kAlpha) &&
-              (ptts->flags_ & pixelFormat::kColor))
+          while (vtts.encodedWidth_ > 1280 ||
+                 vtts.encodedHeight_ > 720)
           {
-            vtts.setPixelFormat(kPixelFormatBGRA);
-          }
-          else if ((ptts->flags_ & pixelFormat::kColor) ||
-                   (ptts->flags_ & pixelFormat::kPaletted))
-          {
-            if (glewIsExtensionSupported("GL_APPLE_ycbcr_422"))
-            {
-              vtts.setPixelFormat(kPixelFormatYUYV422);
-            }
-            else
-            {
-              vtts.setPixelFormat(kPixelFormatBGR24);
-            }
+            vtts.encodedWidth_ >>= 1;
+            vtts.encodedHeight_ >>= 1;
+            vtts.offsetTop_ >>= 1;
+            vtts.offsetLeft_ >>= 1;
+            vtts.visibleWidth_ >>= 1;
+            vtts.visibleHeight_ >>= 1;
           }
         }
+        else
+        {
+          // NOTE: overriding frame size implies scaling, so don't do it
+          // unless you really want to scale the images in the reader;
+          // In general, leave scaling to OpenGL:
+          vtts.encodedWidth_ = 0;
+          vtts.encodedHeight_ = 0;
+        }
+
+        // preserve pixel aspect ratio:
+        vtts.pixelAspectRatio_ = 0.0;
+
+        yae_dlog("native: %s %ux%u, output: %s %ux%u",
+                 ptts_native ? ptts_native->name_ : "none",
+                 native_w,
+                 native_h,
+                 ptts_output ? ptts_output->name_ : "none",
+                 vtts.encodedWidth_ ? vtts.encodedWidth_ : native_w,
+                 vtts.encodedHeight_ ? vtts.encodedHeight_ : native_h);
 
         reader->setVideoTraitsOverride(vtts);
       }
-#elif 0
-      vtts.setPixelFormat(kPixelFormatYUV420P9);
-      reader->setVideoTraitsOverride(vtts);
-      canvas_->cropAutoDetect(this, &(MainWindow::autoCropCallback));
-#endif
     }
 
     if (reader->getVideoTraitsOverride(vtts))
@@ -3870,41 +3960,14 @@ namespace yae
       const pixelFormat::Traits * ptts =
         pixelFormat::getTraits(vtts.pixelFormat_);
 
-      if (ptts)
-      {
-#if 0
-        std::ostringstream oss;
-
-        oss << "yae: output format: " << ptts->name_
-            << ", par: " << vtts.pixelAspectRatio_
-            << ", " << vtts.visibleWidth_
-            << " x " << vtts.visibleHeight_;
-
-        if (vtts.pixelAspectRatio_ != 0.0)
-        {
-          oss << ", dar: "
-              << (double(vtts.visibleWidth_) *
-                  vtts.pixelAspectRatio_ /
-                  double(vtts.visibleHeight_))
-              << ", " << int(vtts.visibleWidth_ *
-                             vtts.pixelAspectRatio_ +
-                             0.5)
-              << " x " << vtts.visibleHeight_;
-        }
-
-        oss << ", fps: " << vtts.frameRate_;
-
-        yae_debug << oss.str().c_str();
-#endif
-      }
-      else
+      if (!ptts && vtts.pixelFormat_ != kInvalidPixelFormat)
       {
         // unsupported pixel format:
-        reader->selectVideoTrack(numVideoTracks);
+        reader->selectVideoTrack(num_video_tracks);
       }
     }
 
-    adjustMenus(reader);
+    this->adjustMenus(reader);
   }
 
   //----------------------------------------------------------------
@@ -3927,6 +3990,9 @@ namespace yae
 
     std::size_t numSubtitles =
       reader ? reader->subsCount() : 0;
+
+    std::size_t cc =
+      reader ? reader->getRenderCaptions() : 0;
 
     std::size_t numChapters =
       reader ? reader->countChapters() : 0;
@@ -4064,6 +4130,11 @@ namespace yae
         trackName += tr(", program %1").arg(info.program_);
       }
 
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
+      }
+
       QAction * trackAction = new QAction(trackName, this);
       menuAudio_->addAction(trackAction);
 
@@ -4117,6 +4188,11 @@ namespace yae
       else if (info.nprograms_ > 1)
       {
         trackName += tr(", program %1").arg(info.program_);
+      }
+
+      if (info.hasCodec())
+      {
+        trackName += tr(", %1").arg(QString::fromUtf8(info.codec()));
       }
 
       QAction * trackAction = new QAction(trackName, this);
@@ -4255,6 +4331,39 @@ namespace yae
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
     lineEditPlayhead_->setReadOnly(!isSeekable);
+
+    // check the check-boxes:
+    std::size_t ai =
+      reader ? reader->getSelectedAudioTrackIndex() : numAudioTracks;
+    ai = std::min(ai, numAudioTracks);
+    audioTrackGroup_->actions().at(ai)->setChecked(true);
+
+    std::size_t vi =
+      reader ? reader->getSelectedVideoTrackIndex() : numVideoTracks;
+    vi = std::min(vi, numVideoTracks);
+    videoTrackGroup_->actions().at(vi)->setChecked(true);
+
+    if (cc)
+    {
+      std::size_t si = numSubtitles + cc - 1;
+      subsTrackGroup_->actions().at(si)->setChecked(true);
+    }
+    else
+    {
+      std::size_t si = 0;
+      for (; si < numSubtitles && reader && !reader->getSubsRender(si); si++)
+      {}
+
+      if (si < numSubtitles)
+      {
+        subsTrackGroup_->actions().at(si)->setChecked(true);
+      }
+      else
+      {
+        int index = subsTrackGroup_->actions().size() - 1;
+        subsTrackGroup_->actions().at(index)->setChecked(true);
+      }
+    }
   }
 
   //----------------------------------------------------------------
