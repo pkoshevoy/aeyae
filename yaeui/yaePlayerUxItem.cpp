@@ -3650,6 +3650,7 @@ namespace yae
     if (cc)
     {
       std::size_t si = numSubtitles + cc - 1;
+      SignalBlocker blockSignals(subsTrackGroup_);
       subsTrackGroup_->actions().at(si)->setChecked(true);
     }
     else
