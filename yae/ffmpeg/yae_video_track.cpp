@@ -1783,7 +1783,11 @@ namespace yae
     }
 
     TPacketPtr next_pkt;
-    syncBuffer_.pop(next_pkt);
+    if (!syncBuffer_.pop(next_pkt, waitMgr))
+    {
+      return false;
+    }
+
     return packetQueue_.push(next_pkt, waitMgr);
   }
 

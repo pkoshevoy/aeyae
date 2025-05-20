@@ -892,6 +892,7 @@ namespace yae
     }
 
     packetQueue_.clear();
+    prev_packet_.reset();
   }
 
   //----------------------------------------------------------------
