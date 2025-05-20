@@ -1329,6 +1329,10 @@ namespace yae
                       subsInfo,
                       subsFormat);
 
+    reader_->close();
+    videoRenderer_->close();
+    audioRenderer_->close();
+
     bool rememberSelectedVideoTrack = false;
     std::size_t program = find_matching_program(videoInfo, selVideo_);
     std::size_t vtrack = find_matching_track<VideoTraits>(videoInfo,
@@ -1427,10 +1431,6 @@ namespace yae
     }
 
     adjustMenus(reader);
-
-    reader_->close();
-    videoRenderer_->close();
-    audioRenderer_->close();
 
     // reset overlay plane to clean state, reset libass wrapper:
     canvas_->clearOverlay();
