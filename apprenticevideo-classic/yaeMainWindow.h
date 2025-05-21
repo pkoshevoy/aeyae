@@ -139,6 +139,7 @@ namespace yae
     void setPlaylist(const QString & filename);
 
     // file menu:
+    void fileNewWindow();
     void fileOpen();
     void fileOpenURL();
     void fileOpenFolder();
