@@ -377,6 +377,7 @@ namespace yae
     {
       ProgramTracks & program_tracks = i->second;
       std::map<int, std::list<VideoTrackPtr> > & pids = program_tracks.video_;
+      std::map<int, std::list<VideoTrackPtr> > remaining_pids;
 
       TTime max_duration(0, 1);
       for (std::map<int, std::list<VideoTrackPtr> >::iterator
@@ -404,8 +405,9 @@ namespace yae
 
       const double max_sec = max_duration.sec();
       for (std::map<int, std::list<VideoTrackPtr> >::iterator
-             j = pids.begin(); j != pids.end(); )
+             j = pids.begin(); j != pids.end(); ++j)
       {
+        int pid = j->first;
         std::list<VideoTrackPtr> & video_tracks = j->second;
         for (std::list<VideoTrackPtr>::iterator
                k = video_tracks.begin(); k != video_tracks.end(); )
@@ -433,13 +435,13 @@ namespace yae
 
         if (video_tracks.empty())
         {
-          j = pids.erase(j);
+          continue;
         }
-        else
-        {
-          ++j;
-        }
+
+        remaining_pids[pid].swap(video_tracks);
       }
+
+      pids.swap(remaining_pids);
     }
   }
 
