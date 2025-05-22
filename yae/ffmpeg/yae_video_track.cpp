@@ -131,7 +131,7 @@ namespace yae
 
     // if audio packets are late ... demuxer can become stuck
     // trying to add a video packet to an already full queue,
-    // and never adding an packets to the audio packet queue
+    // and never adding any packets to the audio packet queue
     // and therefore not advancing the audio playhead position
     // thus creating a deadlock...
     //
@@ -493,16 +493,14 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    if (!av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
-                                          &subsample_hor_log2,
-                                          &subsample_ver_log2))
-    {
-      int subsample_hor = 1 << subsample_hor_log2;
-      int subsample_ver = 1 << subsample_ver_log2;
+    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
+                                                &subsample_hor_log2,
+                                                &subsample_ver_log2) == 0);
+    int subsample_hor = 1 << subsample_hor_log2;
+    int subsample_ver = 1 << subsample_ver_log2;
 
-      output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
-      output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
-    }
+    output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
+    output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)

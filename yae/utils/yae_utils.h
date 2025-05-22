@@ -762,6 +762,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // is_size_one_or_less
+  //
+  template <typename TContainer>
+  inline bool
+  is_size_one_or_less(const TContainer & c)
+  {
+    typename TContainer::const_iterator i = c.begin();
+    typename TContainer::const_iterator e = c.end();
+    return (i == e) || (++i == e);
+  }
+
+  //----------------------------------------------------------------
   // is_size_two_or_more
   //
   template <typename TContainer>

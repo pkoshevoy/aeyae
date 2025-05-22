@@ -367,6 +367,87 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::prune_video_tracks
+  //
+  void
+  Movie::prune_video_tracks(TProgramTracksLut & program_tracks_lut)
+  {
+    for (TProgramTracksLut::iterator
+           i = program_tracks_lut.begin(); i != program_tracks_lut.end(); ++i)
+    {
+      ProgramTracks & program_tracks = i->second;
+      std::map<int, std::list<VideoTrackPtr> > & pids = program_tracks.video_;
+      if (yae::is_size_one_or_less(pids))
+      {
+        continue;
+      }
+
+      TTime max_duration(0, 1);
+      for (std::map<int, std::list<VideoTrackPtr> >::iterator
+             j = pids.begin(); j != pids.end(); ++j)
+      {
+        std::list<VideoTrackPtr> & video_tracks = j->second;
+        for (std::list<VideoTrackPtr>::const_iterator
+               k = video_tracks.begin(); k != video_tracks.end(); ++k)
+        {
+          const VideoTrack & track = *(k->get());
+          TTime start;
+          TTime duration;
+          if (track.getDuration(start, duration) &&
+              max_duration < duration)
+          {
+            max_duration = duration;
+          }
+        }
+      }
+
+      if (max_duration.time_ == 0)
+      {
+        continue;
+      }
+
+      const double max_sec = max_duration.sec();
+      for (std::map<int, std::list<VideoTrackPtr> >::iterator
+             j = pids.begin(); j != pids.end(); )
+      {
+        std::list<VideoTrackPtr> & video_tracks = j->second;
+        for (std::list<VideoTrackPtr>::iterator
+               k = video_tracks.begin(); k != video_tracks.end(); )
+        {
+          const VideoTrack & track = *(k->get());
+
+          double sec = 0.0;
+          TTime start;
+          TTime duration;
+          if (track.getDuration(start, duration))
+          {
+            sec = duration.sec();
+          }
+
+          double r = sec / max_sec;
+          if (r < 0.01)
+          {
+            k = video_tracks.erase(k);
+          }
+          else
+          {
+            ++k;
+          }
+        }
+
+        if (video_tracks.empty())
+        {
+          j = pids.erase(j);
+        }
+        else
+        {
+          ++j;
+        }
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
   // Movie::flatten_program_tracks_map
   //
   void
@@ -646,6 +727,9 @@ namespace yae
       }
     }
 
+    // prune poster image video tracks:
+    prune_video_tracks(program_tracks_lut);
+
     std::map<int, int> stream_ix_to_subtt_ix;
     this->flatten_program_tracks(program_tracks_lut,
                                  program_infos,
@@ -827,6 +911,9 @@ namespace yae
         program_tracks.subtt_[stream->id].push_back(track);
       }
     }
+
+    // prune poster image video tracks:
+    prune_video_tracks(program_tracks_lut);
 
     std::map<int, int> stream_ix_to_subtt_ix;
     this->flatten_program_tracks(program_tracks_lut,

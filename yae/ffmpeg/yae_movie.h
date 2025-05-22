@@ -87,6 +87,8 @@ namespace yae
     void get_program_info(std::vector<TProgramInfo> & program_infos,
                           std::map<int, int> & stream_ix_to_prog_ix);
 
+    void prune_video_tracks(TProgramTracksLut & program_tracks_lut);
+
     void flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
                                 std::vector<TProgramInfo> & program_infos,
                                 std::vector<VideoTrackPtr> & video_tracks,
