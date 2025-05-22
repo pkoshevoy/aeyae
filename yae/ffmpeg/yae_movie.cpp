@@ -377,10 +377,6 @@ namespace yae
     {
       ProgramTracks & program_tracks = i->second;
       std::map<int, std::list<VideoTrackPtr> > & pids = program_tracks.video_;
-      if (yae::is_size_one_or_less(pids))
-      {
-        continue;
-      }
 
       TTime max_duration(0, 1);
       for (std::map<int, std::list<VideoTrackPtr> >::iterator
