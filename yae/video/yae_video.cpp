@@ -213,7 +213,6 @@ namespace yae
     av_trc_ = AVCOL_TRC_UNSPECIFIED;
     av_rng_ = AVCOL_RANGE_UNSPECIFIED;
     pixelFormat_ = kInvalidPixelFormat;
-    pixelAspectRatio_ = 1.0;
   }
 
   //----------------------------------------------------------------
@@ -361,18 +360,60 @@ namespace yae
   //----------------------------------------------------------------
   // VideoTraits::setPixelFormat
   //
-  void
+  VideoTraits &
   VideoTraits::setPixelFormat(TPixelFormatId fmt)
   {
     pixelFormat_ = fmt;
     av_fmt_ = yae_to_ffmpeg(fmt);
+    return *this;
   }
 
   //----------------------------------------------------------------
-  // VideoTraits::setSomeTraits
+  // VideoTraits::set_pixel_format
   //
-  void
-  VideoTraits::setSomeTraits(const VideoTraits & vt)
+  VideoTraits &
+  VideoTraits::set_pixel_format(AVPixelFormat av_fmt)
+  {
+    pixelFormat_ = ffmpeg_to_yae(av_fmt);
+    YAE_ASSERT(av_fmt == AV_PIX_FMT_NONE ||
+               pixelFormat_ != kInvalidPixelFormat);
+    av_fmt_ = av_fmt;
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::set_color_specs
+  //
+  VideoTraits &
+  VideoTraits::set_color_specs(AVColorSpace av_csp,
+                               AVColorPrimaries av_pri,
+                               AVColorTransferCharacteristic av_trc)
+  {
+    av_csp_ = av_csp;
+    av_pri_ = av_pri;
+    av_trc_ = av_trc;
+    colorspace_ = Colorspace::get(av_csp, av_pri, av_trc);
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::set_bt709
+  //
+  VideoTraits &
+  VideoTraits::set_bt709()
+  {
+    this->set_color_specs(AVCOL_SPC_BT709,
+                          AVCOL_PRI_BT709,
+                          AVCOL_TRC_BT709);
+    dynamic_range_.set_sdr();
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // VideoTraits::set_overrides
+  //
+  VideoTraits &
+  VideoTraits::set_overrides(const VideoTraits & vt)
   {
 #define maybe_set(dst, src, default_value) \
   if (src != default_value) dst = src
@@ -391,12 +432,21 @@ namespace yae
     maybe_set(offsetLeft_, vt.offsetLeft_, 0);
     maybe_set(visibleWidth_, vt.visibleWidth_, 0);
     maybe_set(visibleHeight_, vt.visibleHeight_, 0);
-    maybe_set(pixelAspectRatio_, vt.pixelAspectRatio_, 1.0);
-    maybe_set(cameraRotation_, vt.cameraRotation_, 0);
-    maybe_set(vflip_, vt.vflip_, false);
-    maybe_set(hflip_, vt.hflip_, false);
+    maybe_set(pixelAspectRatio_, vt.pixelAspectRatio_, 0.0);
 
 #undef maybe_set
+
+    if (vt.dynamic_range_.is_defined())
+    {
+      dynamic_range_ = vt.dynamic_range_;
+    }
+
+    // some settings are set unconditionally:
+    cameraRotation_ = vt.cameraRotation_;
+    vflip_ = vt.vflip_;
+    hflip_ = vt.hflip_;
+
+    return *this;
   }
 
   //----------------------------------------------------------------

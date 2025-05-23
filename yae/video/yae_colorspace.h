@@ -370,6 +370,44 @@ namespace yae
                 max_cll_ == r.max_cll_);
       }
 
+      inline DynamicRange & set_sdr()
+      {
+        Lw_ = 100.0;
+        Lb_ = 1e-6;
+        gamma_ = yae::hlg::get_gamma(Lw_);
+        beta_ = yae::hlg::get_beta(Lw_, Lb_, gamma_);
+        max_fall_ = 33.0;
+        max_cll_ = 100.0;
+        return *this;
+      }
+
+      inline DynamicRange & set_zero()
+      {
+        Lw_ = 0.0;
+        Lb_ = 0.0;
+        gamma_ = 0.0;
+        beta_ = 0.0;
+        max_fall_ = 0.0;
+        max_cll_ = 0.0;
+        return *this;
+      }
+
+      inline bool is_zero() const
+      {
+        return (Lw_ == 0.0 &&
+                Lb_ == 0.0 &&
+                gamma_ == 0.0 &&
+                beta_ == 0.0 &&
+                max_fall_ == 0.0 &&
+                max_cll_ == 0.0);
+      }
+
+      inline bool is_undefined() const
+      { return this->is_zero(); }
+
+      inline bool is_defined() const
+      { return !this->is_zero(); }
+
       // nominal peak luminance of the scene/display in cd/m2:
       double Lw_;
 

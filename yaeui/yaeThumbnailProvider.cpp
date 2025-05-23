@@ -126,7 +126,7 @@ namespace yae
     reader->selectVideoTrack(0);
     reader->skipLoopFilter(true);
     reader->skipNonReferenceFrames(true);
-    reader->setDeinterlacing(false);
+    reader->setDeinterlacing(true);
 
     VideoTraits vtts;
     if (!reader->getVideoTraits(vtts))
@@ -156,6 +156,8 @@ namespace yae
     }
 
     // crop, deinterlace, flip, rotate, scale, color-convert:
+    traits.set_bt709();
+    traits.set_color_range_full();
     traits.offsetTop_ = 0;
     traits.offsetLeft_ = 0;
     traits.visibleWidth_ = envelope.width();
