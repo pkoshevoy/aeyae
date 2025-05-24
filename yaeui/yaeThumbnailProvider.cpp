@@ -146,7 +146,11 @@ namespace yae
       if ((ptts->flags_ & pixelFormat::kAlpha) &&
           (ptts->flags_ & pixelFormat::kColor))
       {
+#ifdef _BIG_ENDIAN
+        traits.setPixelFormat(kPixelFormatARGB);
+#else
         traits.setPixelFormat(kPixelFormatBGRA);
+#endif
       }
       else if ((ptts->flags_ & pixelFormat::kColor) ||
                (ptts->flags_ & pixelFormat::kPaletted))
@@ -156,8 +160,11 @@ namespace yae
     }
 
     // crop, deinterlace, flip, rotate, scale, color-convert:
-    traits.set_bt709();
-    traits.set_color_range_full();
+    if (traits.av_pri_ == AVCOL_PRI_BT2020)
+    {
+      traits.set_bt709();
+      traits.set_color_range_full();
+    }
     traits.offsetTop_ = 0;
     traits.offsetLeft_ = 0;
     traits.visibleWidth_ = envelope.width();
