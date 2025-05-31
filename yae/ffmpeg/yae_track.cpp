@@ -1174,7 +1174,7 @@ namespace yae
         int64_t a_dts = av_rescale_q(a.dts, a_tb, b_tb);
         int64_t b_dts = b.dts;
         int64_t dt_msec = av_rescale_q(b.dts - a_dts, b_tb, msec);
-        timeline_anomaly = (dt_msec < 0 || dt_msec > 5000);
+        timeline_anomaly = (dt_msec < -5000 || dt_msec > 5000);
       }
     }
 

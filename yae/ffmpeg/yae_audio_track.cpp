@@ -163,7 +163,7 @@ namespace yae
 
           if (nextPTS < prevPTS_)
           {
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             yae_debug
               << "\nNOTE: non-monotonically increasing "
               << "audio timestamps detected:"

@@ -174,9 +174,35 @@ namespace yae
     inline bool operator != (const VideoTraits & other) const
     { return !(this->same_as(other)); }
 
-    void setPixelFormat(TPixelFormatId fmt);
+    VideoTraits & setPixelFormat(TPixelFormatId fmt);
 
-    void setSomeTraits(const VideoTraits & vt);
+    VideoTraits & set_pixel_format(AVPixelFormat av_fmt);
+
+    inline VideoTraits & set_color_range(AVColorRange av_rng)
+    {
+      av_rng_ = av_rng;
+      return *this;
+    }
+
+    inline VideoTraits & set_color_range_narrow()
+    {
+      av_rng_ = AVCOL_RANGE_MPEG;
+      return *this;
+    }
+
+    inline VideoTraits & set_color_range_full()
+    {
+      av_rng_ = AVCOL_RANGE_JPEG;
+      return *this;
+    }
+
+    VideoTraits & set_color_specs(AVColorSpace av_csp,
+                                  AVColorPrimaries av_pri,
+                                  AVColorTransferCharacteristic av_trc);
+
+    VideoTraits & set_bt709();
+
+    VideoTraits & set_overrides(const VideoTraits & overrides);
 
     //! frame rate:
     double frameRate_;

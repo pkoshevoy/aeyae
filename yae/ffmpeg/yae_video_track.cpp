@@ -131,7 +131,7 @@ namespace yae
 
     // if audio packets are late ... demuxer can become stuck
     // trying to add a video packet to an already full queue,
-    // and never adding an packets to the audio packet queue
+    // and never adding any packets to the audio packet queue
     // and therefore not advancing the audio playhead position
     // thus creating a deadlock...
     //
@@ -162,7 +162,8 @@ namespace yae
     output_ = native_;
     override_ = VideoTraits();
 
-    // do not override width/height/sar unintentionally:
+    // do not unintentionally override width, height, sar, etc:
+    override_.dynamic_range_.set_zero();
     override_.visibleWidth_ = 0;
     override_.visibleHeight_ = 0;
     override_.pixelAspectRatio_ = 0.0;
@@ -385,7 +386,7 @@ namespace yae
     getTraits(native_, decoded);
 
     // frame size may have changed, so update output traits accordingly:
-    output_.setSomeTraits(override_);
+    output_.set_overrides(override_);
 
     if (native_.pixelFormat_ != kInvalidPixelFormat &&
         override_.pixelFormat_ == kInvalidPixelFormat)
@@ -410,7 +411,7 @@ namespace yae
     output_.pixelAspectRatio_ = sourcePixelAspectRatio;
 
     int transposeAngle =
-      (override_.cameraRotation_ - native_.cameraRotation_) % 180;
+      ((native_.cameraRotation_ - override_.cameraRotation_) - 180) % 180;
 
     if (override_.visibleWidth_ ||
         override_.visibleHeight_ ||
@@ -493,16 +494,14 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    if (!av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
-                                          &subsample_hor_log2,
-                                          &subsample_ver_log2))
-    {
-      int subsample_hor = 1 << subsample_hor_log2;
-      int subsample_ver = 1 << subsample_ver_log2;
+    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
+                                                &subsample_hor_log2,
+                                                &subsample_ver_log2) == 0);
+    int subsample_hor = 1 << subsample_hor_log2;
+    int subsample_ver = 1 << subsample_ver_log2;
 
-      output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
-      output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
-    }
+    output_.visibleWidth_ -= (output_.visibleWidth_ % subsample_hor);
+    output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
         native_.pixelFormat_ != kPixelFormatY400A)
@@ -759,10 +758,23 @@ namespace yae
       }
 
       AvFrmSpecs outSpecs = src_specs;
-      if (output_.pixelFormat_ != kInvalidPixelFormat)
+
+      // apply overrides:
+      if (override_.pixelFormat_ != kInvalidPixelFormat)
       {
-        // convert to the specified pixel format:
-        outSpecs.format = yae_to_ffmpeg(output_.pixelFormat_);
+        outSpecs.format = override_.av_fmt_;
+      }
+
+      if (override_.av_rng_ != AVCOL_RANGE_UNSPECIFIED)
+      {
+        outSpecs.color_range = override_.av_rng_;
+      }
+
+      if (override_.colorspace_)
+      {
+        outSpecs.colorspace = override_.av_csp_;
+        outSpecs.color_primaries = override_.av_pri_;
+        outSpecs.color_trc = override_.av_trc_;
       }
 
       // configure the filter chain:
@@ -821,7 +833,7 @@ namespace yae
 #endif
 
       int transposeAngle =
-        (output_.cameraRotation_ - native_.cameraRotation_) % 180;
+        ((native_.cameraRotation_ - output_.cameraRotation_) - 180) % 180;
 
       bool flipAngle =
         transposeAngle ? 0 :
@@ -854,7 +866,7 @@ namespace yae
         }
       }
 
-      if (outputNeedsScale)
+      if (outputNeedsScale || transposeAngle)
       {
         if (transposeAngle)
         {
@@ -1066,7 +1078,7 @@ namespace yae
         }
 
         vf.traits_ = output_;
-        vf.traits_.setPixelFormat(ffmpeg_to_yae(yae::pix_fmt(output)));
+        vf.traits_.set_pixel_format(yae::pix_fmt(output));
 
         // preserve output color specs:
         vf.traits_.av_rng_ = outSpecs.color_range;
@@ -1391,7 +1403,7 @@ namespace yae
     }
 
     //! pixel format:
-    t.setPixelFormat(ffmpeg_to_yae(t.av_fmt_));
+    t.set_pixel_format(t.av_fmt_);
 
     //! frame rate:
     const AVRational & r_frame_rate = stream_->r_frame_rate;
