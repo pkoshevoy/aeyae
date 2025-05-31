@@ -1812,7 +1812,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader_ptr,
+    adjustMenuActions(reader_ptr.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,
@@ -1828,6 +1828,8 @@ namespace yae
                       subsInfo,
                       subsFormat,
                       bookmark);
+
+    updateMenuSelections(reader_ptr.get());
 
     if (reader_ptr)
     {
@@ -3627,6 +3629,30 @@ namespace yae
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
     actionSetOutPoint_->setEnabled(isSeekable);
+
+    this->updateMenuSelections(reader);
+  }
+
+  //----------------------------------------------------------------
+  // PlayerUxItem::updateMenuSelections
+  //
+  void
+  PlayerUxItem::updateMenuSelections(IReader * reader)
+  {
+    std::size_t numVideoTracks =
+      reader ? reader->getNumberOfVideoTracks() : 0;
+
+    std::size_t numAudioTracks =
+      reader ? reader->getNumberOfAudioTracks() : 0;
+
+    std::size_t numSubtitles =
+      reader ? reader->subsCount() : 0;
+
+    std::size_t cc =
+      reader ? reader->getRenderCaptions() : 0;
+
+    std::size_t numChapters =
+      reader ? reader->countChapters() : 0;
 
     // check the audio track check-boxes:
     {
