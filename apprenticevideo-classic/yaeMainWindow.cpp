@@ -1001,7 +1001,7 @@ namespace yae
     YAE_ASSERT(ok);
 
     adjustMenuActions();
-    adjustMenus(reader_);
+    adjustMenus(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -1508,7 +1508,7 @@ namespace yae
     // too late if the reader already started the decoding loops;
     // renderers are started paused, so after the reader is started
     // the rendrers have to be resumed:
-    prepareReaderAndRenderers(reader, playbackPaused_);
+    prepareReaderAndRenderers(reader_ptr, playbackPaused_);
 
     // this opens the output frame queues for renderers
     // and starts the decoding loops:
@@ -2099,6 +2099,9 @@ namespace yae
   void
   MainWindow::playbackColorConverter()
   {
+    // shortcut:
+    IReader * reader = reader_.get();
+
     bool skipColorConverter = actionSkipColorConverter->isChecked();
     saveBooleanSetting(kSkipColorConverter, skipColorConverter);
 
@@ -2106,16 +2109,16 @@ namespace yae
     saveBooleanSetting(kDeinterlaceFrames, deint);
 
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    reader_->threadStop();
+    reader->threadStop();
     stopRenderers();
 
-    std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
-    selectVideoTrack(reader_, videoTrack);
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    selectVideoTrack(reader_.get(), videoTrack);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
+    reader->seek(t);
+    reader->threadStart();
 
     resumeRenderers(true);
   }
@@ -2242,8 +2245,11 @@ namespace yae
       return;
     }
 
-    std::size_t videoTrack = reader_->getSelectedVideoTrackIndex();
-    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
+    // shortcut:
+    IReader * reader = reader_.get();
+
+    std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
     if (videoTrack >= numVideoTracks)
     {
       return;
@@ -2441,16 +2447,19 @@ namespace yae
   {
     saveBooleanSetting(kDownmixToStereo, actionDownmixToStereo->isChecked());
 
+    // shortcut:
+    IReader * reader = reader_.get();
+
     // reset reader:
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    reader_->threadStop();
+    reader->threadStop();
 
     stopRenderers();
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
+    reader->seek(t);
+    reader->threadStart();
 
     resumeRenderers();
   }
@@ -2465,8 +2474,11 @@ namespace yae
     yae_debug << "audioSelectTrack: " << index;
 #endif
 
+    // shortcut:
+    IReader * reader = reader_.get();
+
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    reader_->threadStop();
+    reader->threadStop();
     stopRenderers();
 
     VideoTraits video_traits;
@@ -2474,44 +2486,44 @@ namespace yae
 
     // detect current program selection change:
     TTrackInfo prevSel = selAudio_;
-    if (!reader_->hasSelectedAudioTrack())
+    if (!reader->hasSelectedAudioTrack())
     {
-      std::size_t i = reader_->getSelectedVideoTrackIndex();
-      reader_->getVideoTrackInfo(i, prevSel, video_traits);
+      std::size_t i = reader->getSelectedVideoTrackIndex();
+      reader->getVideoTrackInfo(i, prevSel, video_traits);
     }
 
-    selectAudioTrack(reader_, index);
+    selectAudioTrack(reader, index);
 
-    if (reader_->getAudioTrackInfo(index, selAudio_, audio_traits) &&
+    if (reader->getAudioTrackInfo(index, selAudio_, audio_traits) &&
         selAudio_.program_ != prevSel.program_)
     {
       TProgramInfo program;
-      YAE_ASSERT(reader_->getProgramInfo(selAudio_.program_, program));
+      YAE_ASSERT(reader->getProgramInfo(selAudio_.program_, program));
 
       // must adjust other track selections to match the selected program:
-      if (reader_->hasSelectedVideoTrack())
+      if (reader->hasSelectedVideoTrack())
       {
         std::size_t i = program.video_.empty() ?
-          reader_->getNumberOfVideoTracks() : program.video_.front();
-        selectVideoTrack(reader_, i);
+          reader->getNumberOfVideoTracks() : program.video_.front();
+        selectVideoTrack(reader, i);
         videoTrackGroup_->actions().at((int)i)->setChecked(true);
       }
 
-      if (reader_->hasSelectedSubsTrack())
+      if (reader->hasSelectedSubsTrack())
       {
         std::size_t i = program.subtt_.empty() ?
-          reader_->subsCount() : program.subtt_.front();
-        selectSubsTrack(reader_, i);
+          reader->subsCount() : program.subtt_.front();
+        selectSubsTrack(reader, i);
         subsTrackGroup_->actions().at((int)i)->setChecked(true);
       }
     }
 
-    reader_->getAudioTraits(selAudioTraits_);
+    reader->getAudioTraits(selAudioTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
+    reader->seek(t);
+    reader->threadStart();
 
     resumeRenderers();
   }
@@ -2526,8 +2538,11 @@ namespace yae
     yae_debug << "videoSelectTrack: " << index;
 #endif
 
+    // shortcut:
+    IReader * reader = reader_.get();
+
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    reader_->threadStop();
+    reader->threadStop();
     stopRenderers();
 
     VideoTraits video_traits;
@@ -2535,44 +2550,44 @@ namespace yae
 
     // detect current program selection change:
     TTrackInfo prevSel = selVideo_;
-    if (!reader_->hasSelectedVideoTrack())
+    if (!reader->hasSelectedVideoTrack())
     {
-      std::size_t i = reader_->getSelectedAudioTrackIndex();
-      reader_->getAudioTrackInfo(i, prevSel, audio_traits);
+      std::size_t i = reader->getSelectedAudioTrackIndex();
+      reader->getAudioTrackInfo(i, prevSel, audio_traits);
     }
 
-    selectVideoTrack(reader_, index);
+    selectVideoTrack(reader, index);
 
-    if (reader_->getVideoTrackInfo(index, selVideo_, video_traits) &&
+    if (reader->getVideoTrackInfo(index, selVideo_, video_traits) &&
         selVideo_.program_ != prevSel.program_)
     {
       TProgramInfo program;
-      YAE_ASSERT(reader_->getProgramInfo(selVideo_.program_, program));
+      YAE_ASSERT(reader->getProgramInfo(selVideo_.program_, program));
 
       // must adjust other track selections to match the selected program:
-      if (reader_->hasSelectedAudioTrack())
+      if (reader->hasSelectedAudioTrack())
       {
         std::size_t i = program.audio_.empty() ?
-          reader_->getNumberOfAudioTracks()  : program.audio_.front();
-        selectAudioTrack(reader_, i);
+          reader->getNumberOfAudioTracks()  : program.audio_.front();
+        selectAudioTrack(reader, i);
         audioTrackGroup_->actions().at((int)i)->setChecked(true);
       }
 
-      if (reader_->hasSelectedSubsTrack())
+      if (reader->hasSelectedSubsTrack())
       {
         std::size_t i = program.subtt_.empty() ?
-          reader_->subsCount() : program.subtt_.front();
-        selectSubsTrack(reader_, i);
+          reader->subsCount() : program.subtt_.front();
+        selectSubsTrack(reader, i);
         subsTrackGroup_->actions().at((int)i)->setChecked(true);
       }
     }
 
-    reader_->getVideoTraits(selVideoTraits_);
+    reader->getVideoTraits(selVideoTraits_);
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
+    reader->seek(t);
+    reader->threadStart();
 
     resumeRenderers(true);
   }
@@ -2587,8 +2602,11 @@ namespace yae
     yae_debug << "subsSelectTrack: " << index;
 #endif
 
+    // shortcut:
+    IReader * reader = reader_.get();
+
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    reader_->threadStop();
+    reader->threadStop();
     stopRenderers();
 
     VideoTraits video_traits;
@@ -2596,35 +2614,35 @@ namespace yae
 
     // detect current program selection change:
     TTrackInfo prevSel = selSubs_;
-    if (!reader_->hasSelectedSubsTrack())
+    if (!reader->hasSelectedSubsTrack())
     {
-      std::size_t i = reader_->getSelectedVideoTrackIndex();
-      reader_->getVideoTrackInfo(i, prevSel, video_traits);
+      std::size_t i = reader->getSelectedVideoTrackIndex();
+      reader->getVideoTrackInfo(i, prevSel, video_traits);
     }
 
-    selectSubsTrack(reader_, index);
-    selSubsFormat_ = reader_->subsInfo(index, selSubs_);
+    selectSubsTrack(reader, index);
+    selSubsFormat_ = reader->subsInfo(index, selSubs_);
 
     if (selSubsFormat_ != kSubsNone &&
         selSubs_.program_ != prevSel.program_)
     {
       TProgramInfo program;
-      YAE_ASSERT(reader_->getProgramInfo(selVideo_.program_, program));
+      YAE_ASSERT(reader->getProgramInfo(selVideo_.program_, program));
 
       // must adjust other track selections to match the selected program:
-      if (reader_->hasSelectedVideoTrack())
+      if (reader->hasSelectedVideoTrack())
       {
         std::size_t i = program.video_.empty() ?
-          reader_->getNumberOfVideoTracks() : program.video_.front();
-        selectVideoTrack(reader_, i);
+          reader->getNumberOfVideoTracks() : program.video_.front();
+        selectVideoTrack(reader, i);
         videoTrackGroup_->actions().at((int)i)->setChecked(true);
       }
 
-      if (reader_->hasSelectedAudioTrack())
+      if (reader->hasSelectedAudioTrack())
       {
         std::size_t i = program.audio_.empty() ?
-          reader_->getNumberOfAudioTracks() : program.audio_.front();
-        selectAudioTrack(reader_, i);
+          reader->getNumberOfAudioTracks() : program.audio_.front();
+        selectAudioTrack(reader, i);
         audioTrackGroup_->actions().at((int)i)->setChecked(true);
       }
     }
@@ -2632,8 +2650,8 @@ namespace yae
     prepareReaderAndRenderers(reader_, playbackPaused_);
 
     double t = timelineControls_->model_.currentTime();
-    reader_->seek(t);
-    reader_->threadStart();
+    reader->seek(t);
+    reader->threadStart();
 
     resumeRenderers();
   }
@@ -2644,11 +2662,14 @@ namespace yae
   void
   MainWindow::updateChaptersMenu()
   {
+    // shortcut:
+    IReader * reader = reader_.get();
+
     const double playheadInSeconds = timelineControls_->model_.currentTime();
     QList<QAction *> actions = chaptersGroup_->actions();
 
     const std::size_t numActions = actions.size();
-    const std::size_t numChapters = reader_->countChapters();
+    const std::size_t numChapters = reader->countChapters();
 
     if (numChapters != numActions)
     {
@@ -2662,7 +2683,7 @@ namespace yae
     for (std::size_t i = 0; i < numChapters; i++)
     {
       TChapter ch;
-      if (reader_->getChapterInfo(i, ch))
+      if (reader->getChapterInfo(i, ch))
       {
         double chEnd = ch.t1_sec();
 
@@ -2693,13 +2714,16 @@ namespace yae
   void
   MainWindow::skipToNextChapter()
   {
+    // shortcut:
+    IReader * reader = reader_.get();
+
     const double playheadInSeconds = timelineControls_->model_.currentTime();
-    const std::size_t numChapters = reader_->countChapters();
+    const std::size_t numChapters = reader->countChapters();
 
     for (std::size_t i = 0; i < numChapters; i++)
     {
       TChapter ch;
-      if (reader_->getChapterInfo(i, ch))
+      if (reader->getChapterInfo(i, ch))
       {
         if (playheadInSeconds < ch.t0_sec())
         {
@@ -2864,8 +2888,11 @@ namespace yae
   void
   MainWindow::moveTimeIn(double seconds)
   {
-    reader_->setPlaybackLooping(true);
-    reader_->setPlaybackIntervalStart(seconds);
+    // shortcut:
+    IReader * reader = reader_.get();
+
+    reader->setPlaybackLooping(true);
+    reader->setPlaybackIntervalStart(seconds);
 
     SignalBlocker blockSignals(actionLoop);
     actionLoop->setChecked(true);
@@ -2877,8 +2904,11 @@ namespace yae
   void
   MainWindow::moveTimeOut(double seconds)
   {
-    reader_->setPlaybackLooping(true);
-    reader_->setPlaybackIntervalEnd(seconds);
+    // shortcut:
+    IReader * reader = reader_.get();
+
+    reader->setPlaybackLooping(true);
+    reader->setPlaybackIntervalEnd(seconds);
 
     SignalBlocker blockSignals(actionLoop);
     actionLoop->setChecked(true);
@@ -2909,7 +2939,7 @@ namespace yae
   void
   MainWindow::updateTimelineDuration()
   {
-    timelineControls_->model_.updateDuration(reader_);
+    timelineControls_->model_.updateDuration(reader_.get());
   }
 
   //----------------------------------------------------------------
@@ -2984,7 +3014,9 @@ namespace yae
   void
   MainWindow::playbackStop()
   {
-    IReaderPtr reader(ReaderFFMPEG::create());
+    IReaderPtr reader_ptr(ReaderFFMPEG::create());
+    IReader * reader = reader_ptr.get();
+
     timelineControls_->model_.observe(SharedClock());
     timelineControls_->model_.resetFor(reader);
 
@@ -2992,14 +3024,14 @@ namespace yae
     videoRenderer_->close();
     audioRenderer_->close();
 
-    reader_ = reader;
+    reader_ = reader_ptr;
 
     timelineControls_->update();
 
     this->setWindowTitle(tr("Apprentice Video Classic"));
 
     adjustMenuActions();
-    adjustMenus(reader_.get());
+    adjustMenus(reader);
   }
 
   //----------------------------------------------------------------
@@ -3189,7 +3221,10 @@ namespace yae
       return;
     }
 
-    if (!reader_->isSeekable())
+    // shortcut:
+    IReader * reader = reader_.get();
+
+    if (!reader->isSeekable())
     {
       return;
     }
@@ -3203,7 +3238,7 @@ namespace yae
       double positionInSeconds = timelineControls_->model_.currentTime();
       yae::saveBookmark(group->bookmarkHash_,
                         item->bookmarkHash_,
-                        reader_,
+                        reader,
                         positionInSeconds);
 
       // refresh the bookmarks list:
@@ -3490,33 +3525,35 @@ namespace yae
       return;
     }
 
-    std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
-    std::size_t videoTrackIndex = reader_->getSelectedVideoTrackIndex();
+    // shortcut:
+    IReader * reader = reader_.get();
+
+    std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+    std::size_t videoTrackIndex = reader->getSelectedVideoTrackIndex();
 
     if (videoTrackIndex >= numVideoTracks)
     {
       return;
     }
 
-    std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
-    std::size_t audioTrackIndex = reader_->getSelectedAudioTrackIndex();
+    std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+    std::size_t audioTrackIndex = reader->getSelectedAudioTrackIndex();
     bool hasAudio = audioTrackIndex < numAudioTracks;
 
     TIgnoreClockStop ignoreClockStop(timelineControls_->model_);
-    const IReader * reader = reader_;
 
     TTime startTime = TTime::now();
     bool done = false;
-    while (!done && reader && reader == reader_)
+    while (!done && reader && reader == reader_.get())
     {
-      if (hasAudio && reader_->blockedOnAudio())
+      if (hasAudio && reader->blockedOnAudio())
       {
         // VFR source (a slide show) may require the audio output
         // queues to be pulled in order to allow the demuxer
         // to push new packets into audio/video queues:
 
         TTime dt(1001, 60000);
-        audioRenderer_->skipForward(dt, reader_);
+        audioRenderer_->skipForward(dt, reader);
       }
 
       TTime t;
@@ -3537,7 +3574,7 @@ namespace yae
       if (hasAudio)
       {
         // attempt to nudge the audio reader to the same position:
-        audioRenderer_->skipToTime(t, reader_);
+        audioRenderer_->skipToTime(t, reader);
       }
     }
   }
@@ -3548,12 +3585,15 @@ namespace yae
   void
   MainWindow::mousePressEvent(QMouseEvent * e)
   {
+    // shortcut:
+    IReader * reader = reader_.get();
+
     if (e->button() == Qt::RightButton)
     {
-      std::size_t numVideoTracks = reader_->getNumberOfVideoTracks();
-      std::size_t numAudioTracks = reader_->getNumberOfAudioTracks();
-      std::size_t numSubtitles = reader_->subsCount();
-      std::size_t numChapters = reader_->countChapters();
+      std::size_t numVideoTracks = reader->getNumberOfVideoTracks();
+      std::size_t numAudioTracks = reader->getNumberOfAudioTracks();
+      std::size_t numSubtitles = reader->subsCount();
+      std::size_t numChapters = reader->countChapters();
 
       QPoint localPt = e->pos();
       QPoint globalPt = QWidget::mapToGlobal(localPt);
@@ -3806,10 +3846,14 @@ namespace yae
   // MainWindow::prepareReaderAndRenderers
   //
   void
-  MainWindow::prepareReaderAndRenderers(IReader * reader, bool frameStepping)
+  MainWindow::prepareReaderAndRenderers(const IReaderPtr & reader_ptr,
+                                        bool frameStepping)
   {
     videoRenderer_->pause();
     audioRenderer_->pause();
+
+    // shortcut:
+    IReader * reader = reader_ptr.get();
 
     std::size_t videoTrack = reader->getSelectedVideoTrackIndex();
     std::size_t audioTrack = reader->getSelectedAudioTrackIndex();
@@ -4408,7 +4452,7 @@ namespace yae
     std::vector<TTrackInfo>  subsInfo;
     std::vector<TSubsFormat> subsFormat;
 
-    adjustMenuActions(reader_,
+    adjustMenuActions(reader_.get(),
                       audioInfo,
                       audioTraits,
                       videoInfo,

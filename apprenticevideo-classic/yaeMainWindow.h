@@ -257,7 +257,8 @@ namespace yae
     // helpers:
     void canvasSizeSet(double xexpand, double yexpand);
     void stopRenderers();
-    void prepareReaderAndRenderers(IReader * reader, bool oneFrame = false);
+    void prepareReaderAndRenderers(const IReaderPtr & reader,
+                                   bool oneFrame = false);
     void resumeRenderers(bool loadNextFrameIfPaused = false);
     void renderOneFrame();
     void selectVideoTrack(IReader * reader, std::size_t videoTrackIndex);

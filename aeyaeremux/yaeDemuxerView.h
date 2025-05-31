@@ -262,7 +262,7 @@ namespace yae
 
     // virtual:
     RemuxViewStyle * style() const
-    { return style_; }
+    { return style_.get(); }
 
     // virtual:
     bool processKeyEvent(Canvas * canvas, QKeyEvent * event);
