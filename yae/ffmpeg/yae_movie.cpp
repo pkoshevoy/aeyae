@@ -116,6 +116,13 @@ namespace yae
       // discard all packets unless proven otherwise:
       stream->discard = AVDISCARD_ALL;
 
+      if ((stream->disposition & AV_DISPOSITION_ATTACHED_PIC) != 0)
+      {
+        // album art, or movie poster ... not a video track:
+        codecpar.codec_type = AVMEDIA_TYPE_UNKNOWN;
+        break;
+      }
+
       if (!codecpar.width || !codecpar.height)
       {
         // empty stream, ignore it:
