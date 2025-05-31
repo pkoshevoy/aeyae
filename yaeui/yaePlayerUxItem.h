@@ -270,6 +270,7 @@ namespace yae
                            std::vector<VideoTraits> & video_traits,
                            std::vector<TTrackInfo> & subs_info,
                            std::vector<TSubsFormat> & subs_sormat);
+    void updateMenuSelections(IReader * reader);
 
   public:
     ItemView & view_;
