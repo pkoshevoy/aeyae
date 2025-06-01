@@ -964,7 +964,6 @@ namespace yae
         audio_tracks.empty())
     {
       // no decodable video/audio tracks present:
-      this->close();
       return;
     }
 

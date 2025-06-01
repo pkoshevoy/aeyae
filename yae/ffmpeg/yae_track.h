@@ -214,19 +214,6 @@ namespace yae
   //
   YAE_API TPacketPtr clone(const TPacketPtr & packet_ptr);
 
-
-  //----------------------------------------------------------------
-  // AvCodecContextPtr
-  //
-  struct YAE_API AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
-  {
-    AvCodecContextPtr(AVCodecContext * ctx = NULL):
-      boost::shared_ptr<AVCodecContext>(ctx, &AvCodecContextPtr::destroy)
-    {}
-
-    static void destroy(AVCodecContext * ctx);
-  };
-
   //----------------------------------------------------------------
   // maybe_set_avopt
   //

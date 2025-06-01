@@ -1318,7 +1318,7 @@ namespace yae
   bool
   VideoTrack::getTraits(VideoTraits & t, const AVFrame * decoded) const
   {
-    if (!stream_)
+    if (!(stream_ && stream_->codecpar))
     {
       return false;
     }

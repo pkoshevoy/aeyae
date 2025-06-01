@@ -12,6 +12,7 @@
 // aeyae:
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/ffmpeg/yae_audio_track.h"
+#include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_subtitles_track.h"
 #include "yae/ffmpeg/yae_track.h"
 #include "yae/ffmpeg/yae_video_track.h"
@@ -44,34 +45,6 @@ extern "C"
 
 namespace yae
 {
-
-  //----------------------------------------------------------------
-  // AvInputContextPtr
-  //
-  struct YAE_API AvInputContextPtr : public boost::shared_ptr<AVFormatContext>
-  {
-    AvInputContextPtr(AVFormatContext * ctx = NULL);
-
-    inline void reset(AVFormatContext * ctx = NULL)
-    { *this = AvInputContextPtr(ctx); }
-
-    static void destroy(AVFormatContext * ctx);
-  };
-
-
-  //----------------------------------------------------------------
-  // AvOutputContextPtr
-  //
-  struct YAE_API AvOutputContextPtr : public boost::shared_ptr<AVFormatContext>
-  {
-    AvOutputContextPtr(AVFormatContext * ctx = NULL);
-
-    inline void reset(AVFormatContext * ctx = NULL)
-    { *this = AvOutputContextPtr(ctx); }
-
-    static void destroy(AVFormatContext * ctx);
-  };
-
 
   //----------------------------------------------------------------
   // Demuxer
