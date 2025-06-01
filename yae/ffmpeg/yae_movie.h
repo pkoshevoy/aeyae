@@ -107,6 +107,7 @@ namespace yae
     { return this->get_audio_track(selectedAudioTrack_); }
 
     bool open(const char * resourcePath, bool hwdec);
+    bool find_anomalies();
     void refresh();
     void close();
 
@@ -293,4 +294,3 @@ namespace yae
 
 
 #endif // YAE_MOVIE_H_
-

@@ -72,7 +72,10 @@ namespace yae
     void init_ref_timeline()
     {
       std::string src = movie_.getFormatName();
-      ref_timeline_ = (src == "mpegts") ? kRefTimelinePos : kRefTimelinePts;
+      // check the file for timeline anomalies and select kRefTimelinePos
+      // only if timeline anomalies are detected:
+      ref_timeline_ =
+        movie_.find_anomalies() ? kRefTimelinePos : kRefTimelinePts;
       this->init_in_out();
     }
 

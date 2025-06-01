@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
+#include "yae/ffmpeg/yae_analyzer.h"
 #include "yae/ffmpeg/yae_closed_captions.h"
 #include "yae/ffmpeg/yae_movie.h"
 #include "yae/ffmpeg/yae_reader_ffmpeg.h"
@@ -46,7 +47,7 @@ namespace yae
   //
   Movie::~Movie()
   {
-    close();
+    this->close();
   }
 
   //----------------------------------------------------------------
@@ -592,7 +593,7 @@ namespace yae
   Movie::open(const char * resourcePath, bool hwdec)
   {
     // FIXME: avoid closing/reopening the same resource:
-    close();
+    this->close();
 
     hwdec_ = hwdec;
 
@@ -629,7 +630,7 @@ namespace yae
 
     if (err != 0)
     {
-      close();
+      this->close();
       return false;
     }
 
@@ -642,7 +643,7 @@ namespace yae
     err = avformat_find_stream_info(context_, NULL);
     if (err < 0)
     {
-      close();
+      this->close();
       return false;
     }
 
@@ -747,7 +748,7 @@ namespace yae
         audio_tracks.empty())
     {
       // no decodable video/audio tracks present:
-      close();
+      this->close();
       return false;
     }
 
@@ -765,6 +766,37 @@ namespace yae
     selectedAudioTrack_ = audio_tracks_.size();
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::find_anomalies
+  //
+  bool
+  Movie::find_anomalies()
+  {
+    if (!context_)
+    {
+      return false;
+    }
+
+    std::string src = this->getFormatName();
+    if (src != "mpegts")
+    {
+      return false;
+    }
+
+    // shortcut:
+    AVFormatContext & ctx = *context_;
+
+    if ((ctx.ctx_flags & AVFMTCTX_UNSEEKABLE) == AVFMTCTX_UNSEEKABLE)
+    {
+      return false;
+    }
+
+    Analyzer analyzer;
+    bool asap = true;
+    bool detected_anomalies = analyzer.find_anomalies(&ctx, 188, asap);
+    return detected_anomalies;
   }
 
   //----------------------------------------------------------------
@@ -932,7 +964,7 @@ namespace yae
         audio_tracks.empty())
     {
       // no decodable video/audio tracks present:
-      close();
+      this->close();
       return;
     }
 
