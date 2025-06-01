@@ -174,7 +174,7 @@ namespace yae
   // PlayerItem::playback
   //
   void
-  PlayerItem::playback(const IReaderPtr & reader,
+  PlayerItem::playback(const IReaderPtr & reader_ptr,
                        const std::vector<TTrackInfo> & audioInfo,
                        const std::vector<AudioTraits> & audioTraits,
                        const std::vector<TTrackInfo> & videoInfo,
@@ -189,6 +189,9 @@ namespace yae
       Canvas & canvas = *personal_canvas_;
       canvas.clear();
     }
+
+    // shortcut:
+    const IReader * reader = reader_ptr.get();
 
     if (!reader)
     {
@@ -213,13 +216,36 @@ namespace yae
 
     bool rememberSelectedVideoTrack = !reader_;
 
-    std::size_t program = find_matching_program(videoInfo, sel_video_);
-    std::size_t vtrack = !sel_video_initialized_ ? 0 :
+    std::size_t num_programs = reader->getNumberOfPrograms();
+    std::size_t program_index = find_matching_program(videoInfo, sel_video_);
+
+    TProgramInfo program_info;
+    if (!sel_video_initialized_ &&
+        !sel_audio_initialized_)
+    {
+      // find any program that has both audio and video:
+      for (program_index = 0; program_index < num_programs; ++program_index)
+      {
+        if (!reader->getProgramInfo(program_index, program_info) ||
+            program_info.video_.empty() ||
+            program_info.audio_.empty())
+        {
+          program_info = TProgramInfo();
+          continue;
+        }
+
+        break;
+      }
+    }
+
+    std::size_t vtrack = sel_video_initialized_ ?
       find_matching_track<VideoTraits>(videoInfo,
                                        videoTraits,
                                        sel_video_,
                                        sel_video_traits_,
-                                       program);
+                                       program_index) :
+      program_info.video_.empty() ? 0 :
+      program_info.video_.front();
 
     if (bookmark && bookmark->vtrack_ <= numVideoTracks)
     {
@@ -229,16 +255,18 @@ namespace yae
 
     if (vtrack < numVideoTracks)
     {
-      program = videoInfo[vtrack].program_;
+      program_index = videoInfo[vtrack].program_;
     }
 
     bool rememberSelectedAudioTrack = !reader_;
-    std::size_t atrack = !sel_audio_initialized_ ? 0 :
+    std::size_t atrack = sel_audio_initialized_ ?
       find_matching_track<AudioTraits>(audioInfo,
                                        audioTraits,
                                        sel_audio_,
                                        sel_audio_traits_,
-                                       program);
+                                       program_index) :
+      program_info.audio_.empty() ? 0 :
+      program_info.audio_.front();
 
     if (bookmark && bookmark->atrack_ <= numAudioTracks)
     {
@@ -246,10 +274,9 @@ namespace yae
       rememberSelectedAudioTrack = numAudioTracks > 0;
     }
 
-    if (atrack < numAudioTracks)
+    if (atrack < numAudioTracks && program_index != audioInfo[atrack].program_)
     {
-      YAE_ASSERT(program == audioInfo[atrack].program_);
-      program = audioInfo[atrack].program_;
+      atrack = numAudioTracks;
     }
 
     if (vtrack >= numVideoTracks &&
@@ -274,7 +301,7 @@ namespace yae
                                        subsFormat,
                                        sel_subtt_,
                                        sel_subtt_format_,
-                                       program);
+                                       program_index);
     if (bookmark)
     {
       if (!bookmark->subs_.empty() && bookmark->subs_.front() < numSubttTracks)
@@ -300,7 +327,7 @@ namespace yae
       startHere = TTime(bookmark->positionInSeconds_);
     }
 
-    playback(reader, vtrack, atrack, strack, cc, startHere);
+    playback(reader_ptr, vtrack, atrack, strack, cc, startHere);
 
     if (rememberSelectedVideoTrack)
     {
