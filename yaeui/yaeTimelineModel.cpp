@@ -365,11 +365,17 @@ namespace yae
                  (startFromZero_ ? timelineDuration_ :
                   timelineStart_ + timelineDuration_ - localtimeOffset_));
 
-    QString ts_p = getTimeStamp(startFromZero_ ? 0.0 :
-                                timelineStart_ - localtimeOffset_);
+    QString ts_p =
+      use_packet_pos_ ?
+      getTimeStamp(0.0) :
+      getTimeStamp(startFromZero_ ? 0.0 :
+                   timelineStart_ - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(T1);
+    QString ts_d =
+      use_packet_pos_ ?
+      getTimeStamp(std::numeric_limits<double>::max()) :
+      getTimeStamp(T1);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(0.0);
@@ -401,14 +407,20 @@ namespace yae
     t1 = std::max<double>(T0, std::min<double>(T1, t1));
     t = std::max<double>(T0, std::min<double>(T1, t));
 
-    QString ts_p = getTimeStamp(startFromZero_ ?
-                                t - timelineStart_ :
-                                t - localtimeOffset_);
+    QString ts_p =
+      use_packet_pos_ ?
+      getTimeStamp(currentTime_.sec()) :
+      getTimeStamp(startFromZero_ ?
+                   t - timelineStart_ :
+                   t - localtimeOffset_);
     updateAuxPlayhead(ts_p);
 
-    QString ts_d = getTimeStamp(startFromZero_ ?
-                                timelineDuration_ :
-                                T1 - localtimeOffset_);
+    QString ts_d =
+      use_packet_pos_ ?
+      getTimeStamp(std::numeric_limits<double>::max()) :
+      getTimeStamp(startFromZero_ ?
+                   timelineDuration_ :
+                   T1 - localtimeOffset_);
     updateAuxDuration(ts_d);
 
     updateMarkerPlayhead(unknownDuration_ ? 0.0 : (t - T0) / dT);
@@ -653,7 +665,19 @@ namespace yae
   TimelineModel::seekFromCurrentTime(double secOffset)
   {
     double t0 = currentTime();
-    if (t0 > 1e-1)
+    if (use_packet_pos_)
+    {
+      double dt = timelineDuration_ / 200;
+      int64_t packet_ix = int64_t(t0 + dt * secOffset);
+      packet_ix = std::min<int64_t>(packet_ix, timelineDuration_);
+      packet_ix = std::max<int64_t>(packet_ix, 0);
+
+      if (packet_ix != int64_t(t0))
+      {
+        seekTo(packet_ix);
+      }
+    }
+    else if (t0 > 1e-1)
     {
       double seconds = std::max<double>(0.0, t0 + secOffset);
 #if 0

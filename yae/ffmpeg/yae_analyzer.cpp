@@ -171,13 +171,13 @@ namespace yae
   {
     this->clear();
 
-    int seekFlags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
+    int seek_flags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
     int err = avformat_seek_file(ctx,
                                  -1, // stream index
                                  byte_pos - pos_tolerance,
                                  byte_pos,
                                  byte_pos + pos_tolerance,
-                                 seekFlags);
+                                 seek_flags);
     if (err < 0)
     {
       return false;
@@ -402,6 +402,9 @@ namespace yae
       return false;
     }
 
+    // save current file position:
+    int64_t original_pos = ctx->pb->pos;
+
     // sample the file uniformly:
     int64_t num_samples = 33;
 
@@ -431,18 +434,27 @@ namespace yae
       }
     }
 
-    if (!yae::is_size_two_or_more(samples_))
+    if (yae::is_size_two_or_more(samples_))
     {
-      return false;
+      std::list<SourceInfo>::iterator prev = samples_.begin();
+      std::list<SourceInfo>::iterator curr = yae::next(prev);
+      for (; curr != samples_.end(); prev = curr, ++curr)
+      {
+        SourceInfo & src_a = *prev;
+        SourceInfo & src_b = *curr;
+        this->find_anomalies(ctx, src_a, src_b, packet_size, packet_step, asap);
+      }
     }
 
-    std::list<SourceInfo>::iterator prev = samples_.begin();
-    std::list<SourceInfo>::iterator curr = yae::next(prev);
-    for (; curr != samples_.end(); prev = curr, ++curr)
+    // restore original file position:
     {
-      SourceInfo & src_a = *prev;
-      SourceInfo & src_b = *curr;
-      this->find_anomalies(ctx, src_a, src_b, packet_size, packet_step, asap);
+      int seek_flags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
+      avformat_seek_file(ctx,
+                         -1, // stream index
+                         std::numeric_limits<int64_t>::min(),
+                         original_pos,
+                         std::numeric_limits<int64_t>::max(),
+                         seek_flags);
     }
 
     return !detected_.empty();
