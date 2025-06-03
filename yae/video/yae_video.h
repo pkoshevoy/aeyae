@@ -647,11 +647,13 @@ namespace yae
   {
     TProgramInfo();
 
-    int id_;
-    int program_;
+    int id_; // PID
+    int program_; // PID
     int pmt_pid_;
     int pcr_pid_;
     TDictionary metadata_;
+
+    // IReader track numbers associated with this program:
     std::list<std::size_t> video_;
     std::list<std::size_t> audio_;
     std::list<std::size_t> subtt_;

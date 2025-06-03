@@ -406,9 +406,6 @@ namespace yae
     inline TData * get() const YAE_NOEXCEPT
     { return static_cast<TData *>(ref_counter_->ptr_); }
 
-    inline operator TData * () const YAE_NOEXCEPT
-    { return get(); }
-
     inline operator unsigned char * () const YAE_NOEXCEPT
     { return reinterpret_cast<unsigned char *>(get()); }
 

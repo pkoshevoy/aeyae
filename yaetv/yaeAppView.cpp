@@ -2656,7 +2656,7 @@ namespace yae
       Scrollview & vsv = epg_view.get<Scrollview>("vsv");
       Item & vsv_content = *(vsv.content_);
       Scrollview & hsv = vsv_content.get<Scrollview>("hsv");
-      requestUncache(hsv.content_);
+      requestUncache(hsv.content_.get());
     }
 
     return true;

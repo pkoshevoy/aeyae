@@ -223,6 +223,8 @@ set(LIBAEYAE_SOURCES
   yae/api/yae_shared_ptr.h
   yae/api/yae_version.cpp
 
+  yae/ffmpeg/yae_analyzer.cpp
+  yae/ffmpeg/yae_analyzer.h
   yae/ffmpeg/yae_audio_fragment.h
   yae/ffmpeg/yae_audio_tempo_filter.h
   yae/ffmpeg/yae_audio_track.cpp

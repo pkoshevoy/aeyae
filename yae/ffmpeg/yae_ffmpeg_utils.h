@@ -26,6 +26,7 @@ extern "C"
 #include <libavfilter/avfilter.h>
 #include <libavfilter/buffersink.h>
 #include <libavfilter/buffersrc.h>
+#include <libavformat/avformat.h>
 #include <libavutil/frame.h>
 #include <libavutil/imgutils.h>
 #include <libavutil/opt.h>
@@ -177,6 +178,47 @@ namespace yae
       AVRational::den = other.den;
       return *this;
     }
+  };
+
+
+  //----------------------------------------------------------------
+  // AvInputContextPtr
+  //
+  struct YAE_API AvInputContextPtr : public boost::shared_ptr<AVFormatContext>
+  {
+    AvInputContextPtr(AVFormatContext * ctx = NULL);
+
+    inline void reset(AVFormatContext * ctx = NULL)
+    { *this = AvInputContextPtr(ctx); }
+
+    static void destroy(AVFormatContext * ctx);
+  };
+
+
+  //----------------------------------------------------------------
+  // AvOutputContextPtr
+  //
+  struct YAE_API AvOutputContextPtr : public boost::shared_ptr<AVFormatContext>
+  {
+    AvOutputContextPtr(AVFormatContext * ctx = NULL);
+
+    inline void reset(AVFormatContext * ctx = NULL)
+    { *this = AvOutputContextPtr(ctx); }
+
+    static void destroy(AVFormatContext * ctx);
+  };
+
+
+  //----------------------------------------------------------------
+  // AvCodecContextPtr
+  //
+  struct YAE_API AvCodecContextPtr : public boost::shared_ptr<AVCodecContext>
+  {
+    AvCodecContextPtr(AVCodecContext * ctx = NULL):
+      boost::shared_ptr<AVCodecContext>(ctx, &AvCodecContextPtr::destroy)
+    {}
+
+    static void destroy(AVCodecContext * ctx);
   };
 
 

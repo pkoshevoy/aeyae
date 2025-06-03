@@ -73,7 +73,7 @@ namespace yae
 
     // virtual:
     AppStyle * style() const
-    { return style_; }
+    { return style_.get(); }
 
     // virtual:
     bool resizeTo(const Canvas * canvas);
