@@ -101,7 +101,7 @@ Use the package management mechanism provided by your Linux distribution (apt, y
 Use of the latest FFmpeg pulled from git is recommended.
 I normally build and test on openSuSE, and occasioanlly on Kubuntu.
 
-The provided .AppImage linux builds are produced on an Kubuntu 14.04 LTS VM with Qt 5.6.3 and ffmpeg release/6.1 branch, and should work on pretty much any current linux distro.
+The provided .AppImage linux builds are produced on a Kubuntu 14.04 LTS VM with Qt 5.6.3 and ffmpeg release/6.1 branch, and should work on pretty much any current linux distribution.
 
 ##### Optional (any platform):
 If you would like to enable MOD file playback (MOD, XM, S3M, IT, etc...), install libmodplug or libopenmpt and enable modplug/openmpt support when configuring ffmpeg.
