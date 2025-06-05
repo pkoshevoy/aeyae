@@ -1413,8 +1413,16 @@ namespace yae
         re->accept();
         if (re->reader_ == player_->reader())
         {
-          this->adjustMenuActions();
-          emit reader_properties_changed(re->reader_);
+          std::string event_type = re->event_["event_type"].asString();
+          if (event_type == "traits_changed")
+          {
+            re->reader_->refreshInfo();
+          }
+          else if (event_type == "info_refreshed")
+          {
+            this->adjustMenuActions();
+            emit reader_properties_changed(re->reader_);
+          }
         }
         return true;
       }
@@ -1575,7 +1583,6 @@ namespace yae
              Item::id_.c_str(),
              yae::to_str(event).c_str());
 
-    reader->refreshInfo();
     qApp->postEvent(this, new yae::ReaderEvent(reader, event));
   }
 
@@ -3042,17 +3049,7 @@ namespace yae
   void
   PlayerUxItem::scrollWheelTimerExpired()
   {
-    double seconds = scrollStart_ + scrollOffset_;
-
-    bool isLooping = actionLoop_->isChecked();
-    if (isLooping)
-    {
-      double t0 = timeline_model().timelineStart();
-      double dt = timeline_model().timelineDuration();
-      seconds = t0 + fmod(seconds - t0, dt);
-    }
-
-    timeline_model().seekTo(seconds);
+    timeline_model().seekFromCurrentTime(scrollOffset_);
     timeline_->maybeAnimateOpacity();
   }
 

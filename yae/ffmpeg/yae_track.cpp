@@ -204,9 +204,9 @@ namespace yae
     int seekFlags = (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_ANY);
     int err = avformat_seek_file(context,
                                  -1,
-                                 pos_.time_ - pos_.base_,
+                                 pos_.time_ - pos_.base_ * 2000,
                                  pos_.time_,
-                                 pos_.time_ + pos_.base_,
+                                 pos_.time_ + pos_.base_ * 2000,
                                  seekFlags);
     return err;
   }
@@ -703,7 +703,7 @@ namespace yae
     Track::Info & info = *info_ptr;
     info.track_id_ = track_id;
     this->update(info);
-    info_ = info_ptr;
+    info_.swap(info_ptr);
   }
 
   //----------------------------------------------------------------
@@ -901,6 +901,13 @@ namespace yae
   bool
   Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
   {
+    Track::TInfoPtr track_info_ptr = Track::info_;
+    YAE_ASSERT(track_info_ptr);
+    if (!track_info_ptr)
+    {
+      return false;
+    }
+
     if (!(codecpar_next_ && codecpar_next_->same_codec(stream_->codecpar)))
     {
       codecpar_next_.reset(new yae::AvCodecParameters(stream_->codecpar));

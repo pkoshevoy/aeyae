@@ -108,7 +108,11 @@ namespace yae
 
     bool open(const char * resourcePath, bool hwdec);
     bool find_anomalies();
+
+  protected:
     void refresh();
+
+  public:
     void close();
 
     inline uint64_t get_file_size() const
@@ -157,6 +161,7 @@ namespace yae
     bool isSeekable() const;
     bool hasDuration() const;
     bool requestSeek(const TSeekPosPtr & pos);
+    bool requestInfoRefresh();
 
     // for adjusting DTS/PTS timestamps:
     typedef void(*TAdjustTimestamps)(void *, AVFormatContext *, AVPacket *);
@@ -246,6 +251,9 @@ namespace yae
     // index of the selected video/audio track:
     std::size_t selectedVideoTrack_;
     std::size_t selectedAudioTrack_;
+
+    // for thread-safe refresh()
+    bool need_info_refresh_;
 
     // hw accelerated decoding is optional:
     bool hwdec_;

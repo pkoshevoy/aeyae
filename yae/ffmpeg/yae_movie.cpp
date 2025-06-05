@@ -24,6 +24,7 @@ namespace yae
     context_(NULL),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
+    need_info_refresh_(false),
     hwdec_(false),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
@@ -454,7 +455,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::flatten_program_tracks_map
+  // Movie::flatten_program_tracks
   //
   void
   Movie::flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
@@ -1213,6 +1214,7 @@ namespace yae
         TPacketPtr packetPtr(new AvPkt());
         AVPacket & packet = packetPtr->get();
         bool demuxerInterrupted = false;
+        bool need_info_refresh = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
 
@@ -1237,6 +1239,24 @@ namespace yae
               demuxerInterrupted = true;
               interruptDemuxer_ = false;
             }
+          }
+
+          if (need_info_refresh_ && !err)
+          {
+            need_info_refresh_ = false;
+            need_info_refresh = true;
+          }
+        }
+
+        if (need_info_refresh)
+        {
+          this->refresh();
+
+          if (eo_)
+          {
+            Json::Value event;
+            event["event_type"] = "info_refreshed";
+            eo_->note(event);
           }
         }
 
@@ -1566,7 +1586,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::requestSeekTime
+  // Movie::requestSeek
   //
   bool
   Movie::requestSeek(const TSeekPosPtr & seekPos)
@@ -1609,6 +1629,25 @@ namespace yae
 #endif
       }
 
+      return true;
+    }
+    catch (...)
+    {}
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::requestInfoRefresh
+  //
+  bool
+  Movie::requestInfoRefresh()
+  {
+    try
+    {
+      boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
+      requestMutex(lock);
+      need_info_refresh_ = true;
       return true;
     }
     catch (...)

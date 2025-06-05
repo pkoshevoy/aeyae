@@ -137,7 +137,7 @@ namespace yae
     //
     // add some extra padding to the queue size to help avoid this
     //
-    packetQueue_.setPadding(50);
+    packetQueue_.setPadding(78);
   }
 
   //----------------------------------------------------------------
