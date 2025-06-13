@@ -31,7 +31,7 @@ Download YaeTV Mac/Windows/Linux binaries: [https://sourceforge.net/projects/yae
 
 *CMake* is used to configure the build (to generate projects, or makefiles).
 
-###### Qt 4.7+, Qt 5.6+, Qt 6.6+
+###### Qt 4.7+, Qt 5.6+, Qt 6.5 or 6.6
 [https://www.qt.io/download-qt-installer-oss](https://www.qt.io/download-qt-installer-oss)
 
 *Qt* is the cross platform C++ UI toolkit.
@@ -93,15 +93,15 @@ but recently I simply use the pre-compiled ming64 packages provided by msys2 or 
 ##### MacOS:
 You can build prerequisite libraries from source yourself, but [https://www.macports.org/](https://www.macports.org/) can easily do it for you -- it's what I use.
 
-The OS X 10.4, 10.5, 10.6 builds are produced with Qt 4.8 and release/6.1 branch of ffmpeg.
-The macOS 10.13+ builds are produced with Qt 5 provided by macports, and either release/6.1 or master branch of ffmpeg.
+The OS X 10.4, 10.5, 10.6 builds are produced with Qt 4.8 and master branch of ffmpeg.
+The macOS 10.13+ builds are produced with Qt 5 provided by macports, and master branch of ffmpeg.
 
 ##### Linux:
 Use the package management mechanism provided by your Linux distribution (apt, yast, yum, etc...) to install required tools and development libraries (git, cmake, Qt 4/5/6, boost, glew, portaudio, yasm/nasm).
 Use of the latest FFmpeg pulled from git is recommended.
 I normally build and test on openSuSE, and occasioanlly on Kubuntu.
 
-The provided .AppImage linux builds are produced on a Kubuntu 14.04 LTS VM with Qt 5.6.3 and ffmpeg release/6.1 branch, and should work on pretty much any current linux distribution.
+The provided .AppImage linux builds are produced on a Kubuntu 14.04 LTS VM with Qt 5.6.3 and ffmpeg master branch, and should work on pretty much any current linux distribution.
 
 ##### Optional (any platform):
 If you would like to enable MOD file playback (MOD, XM, S3M, IT, etc...), install libmodplug or libopenmpt and enable modplug/openmpt support when configuring ffmpeg.
