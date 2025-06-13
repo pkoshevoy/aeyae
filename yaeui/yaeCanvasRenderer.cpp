@@ -1120,7 +1120,7 @@ namespace yaegl
   QFunctionPointer
   get_addr(QOpenGLContext * opengl, const char * name)
   {
-    QFunctionPointer func = opengl->getProcAddress(name);
+    QFunctionPointer func = opengl ? opengl->getProcAddress(name) : NULL;
     if (!func)
     {
       yae_elog("OpenGL function not found: %s", name);
@@ -1139,6 +1139,10 @@ namespace yaegl
 
     // QOpenGLFunctions::initializeOpenGLFunctions();
     QOpenGLContext * ctx = QOpenGLContext::currentContext();
+    if (!ctx)
+    {
+      YAE_THROW("OpenGL context is NULL");
+    }
 
     this->glDebugMessageCallback = (TDebugMessageCallback)
       get_addr(ctx, "glDebugMessageCallback");
