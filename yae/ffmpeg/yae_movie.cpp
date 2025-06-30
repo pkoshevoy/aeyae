@@ -600,6 +600,7 @@ namespace yae
 
     YAE_ASSERT(!context_);
     context_ = avformat_alloc_context();
+    YAE_THROW_IF(!context_);
 
     YAE_ASSERT(!interruptDemuxer_);
     context_->interrupt_callback.callback = &Movie::demuxerInterruptCallback;
@@ -621,6 +622,13 @@ namespace yae
 
     // copied from ffprobe.c -- scan and combine all PMTs:
     //  av_dict_set(&options, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
+
+#ifdef AVFMT_FLAG_ALLOW_CODEC_CHANGES
+    // Allow AVStream.codecpar codec_type and codec_id to change
+    // when MPEG-TS PMT ES stream_type changes at runtime:
+    // av_dict_set(&options, "allow_codec_changes", "1", 0);
+    context_->flags |= AVFMT_FLAG_ALLOW_CODEC_CHANGES;
+#endif
 
     resourcePath_ = resourcePath ? resourcePath : "";
     int err = avformat_open_input(&context_,

@@ -132,6 +132,9 @@ namespace yae
     YAE_ASSERT(!context_);
     YAE_ASSERT(!interruptDemuxer_);
 
+    AVFormatContext * ctx = avformat_alloc_context();
+    YAE_THROW_IF(!ctx);
+
     hwdec_ = hwdec;
 
     AVDictionary * options = NULL;
@@ -148,7 +151,13 @@ namespace yae
     // set AVFMT_FLAG_DISCARD_CORRUPT:
     av_dict_set(&options, "fflags", "+discardcorrupt", AV_DICT_APPEND);
 
-    AVFormatContext * ctx = NULL;
+#ifdef AVFMT_FLAG_ALLOW_CODEC_CHANGES
+    // Allow AVStream.codecpar codec_type and codec_id to change
+    // when MPEG-TS PMT ES stream_type changes at runtime:
+    // av_dict_set(&options, "allow_codec_changes", "1", 0);
+    ctx->flags |= AVFMT_FLAG_ALLOW_CODEC_CHANGES;
+#endif
+
     int err = avformat_open_input(&ctx,
                                   resourcePath,
                                   NULL, // AVInputFormat to force
