@@ -1944,6 +1944,20 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // ObjectDescriptorBox
+    //
+    // this is defined in ISO/IEC 14496-14:2020(E)
+    //
+    struct YAE_API ObjectDescriptorBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // see ISO/IEC 14496-1:2010(E), 7.2.6.3  ObjectDescriptor
+      Data data_;
+    };
+
+    //----------------------------------------------------------------
     // VideoMediaHeaderBox
     //
     struct YAE_API VideoMediaHeaderBox : public FullBox
@@ -1958,17 +1972,20 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // ObjectDescriptorBox
+    // SoundMediaHeaderBox
     //
-    // this is defined in ISO/IEC 14496-14:2020(E)
-    //
-    struct YAE_API ObjectDescriptorBox : public FullBox
+    struct YAE_API SoundMediaHeaderBox : public FullBox
     {
+      SoundMediaHeaderBox():
+        balance_(0),
+        reserved_(0)
+      {}
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      // see ISO/IEC 14496-1:2010(E), 7.2.6.3  ObjectDescriptor
-      Data data_;
+      uint16_t balance_;
+      uint16_t reserved_;
     };
 
   }
