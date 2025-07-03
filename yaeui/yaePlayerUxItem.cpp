@@ -1358,11 +1358,26 @@ namespace yae
       timelineTimer_.start();
     }
 
+    IReader * reader = get_reader();
+
+    std::size_t numVideoTracks =
+      reader ? reader->getNumberOfVideoTracks() : 0;
+
+    std::size_t numAudioTracks =
+      reader ? reader->getNumberOfAudioTracks() : 0;
+
+    std::size_t numSubtitles =
+      reader ? reader->subsCount() : 0;
+
+    std::size_t numChapters =
+      reader ? reader->countChapters() : 0;
+
     menuPlayback_->menuAction()->setEnabled(enable);
-    menuAudio_->menuAction()->setEnabled(enable);
-    menuVideo_->menuAction()->setEnabled(enable);
-    menuSubs_->menuAction()->setEnabled(enable);
-    menuChapters_->menuAction()->setEnabled(enable);
+    menuAudio_->menuAction()->setEnabled(enable && !!numAudioTracks);
+    menuVideo_->menuAction()->setEnabled(enable && !!numVideoTracks);
+    menuSubs_->menuAction()->setEnabled(enable && !!(numSubtitles +
+                                                     numVideoTracks));
+    menuChapters_->menuAction()->setEnabled(enable && !!numChapters);
 
     Item::setVisible(enable);
 
@@ -3622,6 +3637,11 @@ namespace yae
       YAE_ASSERT(ok);
       chapterMapper_->setMapping(chapterAction, (int)i);
     }
+
+    menuAudio_->menuAction()->setEnabled(!!numAudioTracks);
+    menuVideo_->menuAction()->setEnabled(!!numVideoTracks);
+    menuSubs_->menuAction()->setEnabled(!!(numSubtitles + numVideoTracks));
+    menuChapters_->menuAction()->setEnabled(!!numChapters);
 
     bool isSeekable = reader ? reader->isSeekable() : false;
     actionSetInPoint_->setEnabled(isSeekable);
