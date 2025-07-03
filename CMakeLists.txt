@@ -259,9 +259,6 @@ set(LIBAEYAE_SOURCES
   yae/ffmpeg/yae_video_track.cpp
   yae/ffmpeg/yae_video_track.h
 
-  yae/mp4/yae_mp4.cpp
-  yae/mp4/yae_mp4.h
-
   yae/thread/yae_queue.h
   yae/thread/yae_ring_buffer.cpp
   yae/thread/yae_ring_buffer.h
@@ -305,6 +302,8 @@ set(LIBAEYAE_SOURCES
   yae/video/yae_color_transform.cpp
   yae/video/yae_color_transform.h
   yae/video/yae_istream.h
+  yae/video/yae_mp4.cpp
+  yae/video/yae_mp4.h
   yae/video/yae_mpeg_ts.cpp
   yae/video/yae_mpeg_ts.h
   yae/video/yae_pixel_format_traits.cpp
