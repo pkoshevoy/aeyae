@@ -117,15 +117,33 @@ namespace yae
     Mp4Context():
       load_mdat_data_(false),
       parse_mdat_data_(false),
-      senc_iv_size_(0)
+      senc_iv_size_(0),
+      file_position_(0)
     {}
 
     // NOTE: end_pos is expressed in bits, not bytes:
     iso_14496_12::TBoxPtr parse(IBitstream & bin, std::size_t end_pos);
 
+    //----------------------------------------------------------------
+    // ParserCallbackInterface
+    //
+    struct YAE_API ParserCallbackInterface
+    {
+      virtual ~ParserCallbackInterface() {}
+
+      // callback must return true to continue parsing,
+      // callback may return false to stop the parser:
+      virtual bool observe(const Mp4Context & mp4,
+                           const iso_14496_12::TBoxPtr & box) = 0;
+    };
+
+    bool parse_file(const std::string & src_path,
+                    ParserCallbackInterface * cb);
+
     bool load_mdat_data_;
     bool parse_mdat_data_;
     uint32_t senc_iv_size_;
+    uint64_t file_position_;
   };
 
 

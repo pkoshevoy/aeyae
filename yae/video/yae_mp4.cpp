@@ -4493,9 +4493,11 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
 
   if (bin.position() != box_end)
   {
-    yae_wlog("possibly %s box type: '%4s', size: %" PRIu64 "",
+    yae_wlog("possibly %s box type: '%4s', "
+             "file pos: %" PRIu64 ", size: %" PRIu64 "",
              box_constructor ? "mis-parsed" : "unsupported",
              box->type_.str_,
+             file_position_ + box_pos / 8,
              box->size_);
   }
 
@@ -4503,4 +4505,83 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
   bin.seek(box_end);
 
   return box;
+}
+
+//----------------------------------------------------------------
+// Mp4Context::parse_file
+//
+bool
+Mp4Context::parse_file(const std::string & src_path,
+                       ParserCallbackInterface * cb)
+{
+  yae::TOpenFile src(src_path, "rb");
+  if (!src.is_open())
+  {
+    yae_elog("failed to open file %s", src_path.c_str());
+    return false;
+  }
+
+  while (!src.is_eof())
+  {
+    uint64_t box_start = src.ftell64();
+    file_position_ = box_start;
+
+    uint64_t box_size;
+    if (!yae::read_mp4_box_size(src.file_, box_size))
+    {
+      if (box_start == src.get_filesize())
+      {
+        break;
+      }
+
+      yae_elog("failed to read mp4 box size "
+               "from %s at file position %" PRIu64 "",
+               src_path.c_str(),
+               box_start);
+      return false;
+    }
+
+    // where the next box will start:
+    uint64_t box_end = box_start + box_size;
+
+    // FIXME: implement FileBitstream so that we don't have to load
+    // the entire box in memory at once:
+
+    yae::Data data(box_size);
+    if (src.load(data) != box_size)
+    {
+      yae_elog("failed to load %" PRIu64 " bytes "
+               "from %s at file position %" PRIu64 "",
+               box_size,
+               src_path.c_str(),
+               box_start);
+      return false;
+    }
+
+    yae::Bitstream bin(data);
+    yae::iso_14496_12::TBoxPtr box = this->parse(bin, box_size * 8);
+    YAE_ASSERT(box);
+    if (!box)
+    {
+      yae_elog("failed to parse %s at file position %" PRIu64 "",
+               src_path.c_str(),
+               box_start);
+      return false;
+    }
+
+    if (cb && !cb->observe(*this, box))
+    {
+      break;
+    }
+
+    if (src.fseek64(box_end, SEEK_SET) != 0)
+    {
+      yae_elog("failed to seek %s to file position %" PRIu64 "",
+               src_path.c_str(),
+               box_end);
+      return false;
+    }
+  }
+
+  return true;
 }

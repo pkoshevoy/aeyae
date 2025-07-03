@@ -1579,6 +1579,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TOpenFile::get_filesize
+  //
+  uint64_t
+  TOpenFile::get_filesize()
+  {
+    YAE_ASSERT(this->is_open());
+
+    uint64_t curr_pos = this->ftell64();
+    YAE_ASSERT(this->fseek64(0, SEEK_END) == 0);
+
+    uint64_t file_size = this->ftell64();
+    YAE_ASSERT(this->fseek64(curr_pos, SEEK_SET) == 0);
+
+    return file_size;
+  }
+
+  //----------------------------------------------------------------
   // uuid_generator_t
   //
   struct uuid_generator_t

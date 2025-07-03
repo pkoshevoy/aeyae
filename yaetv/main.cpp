@@ -167,57 +167,49 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // Mp4ParserCallback
+  //
+  struct Mp4ParserCallback : yae::Mp4Context::ParserCallbackInterface
+  {
+    Mp4ParserCallback(Json::Value & out):
+      out_(out)
+    {}
+
+    // virtual:
+    bool observe(const yae::Mp4Context & mp4,
+                 const yae::iso_14496_12::TBoxPtr & box)
+    {
+      Json::Value v;
+      box->to_json(v);
+      out_.append(v);
+
+      // keep parsing:
+      return true;
+    }
+
+    Json::Value & out_;
+  };
+
+  //----------------------------------------------------------------
   // parse_mp4
   //
   static void
   parse_mp4(const char * src_path, const char * dst_path)
   {
     yae::Mp4Context mp4;
+    mp4.load_mdat_data_ = false;
+    mp4.parse_mdat_data_ = false;
+
     Json::Value out;
+    Mp4ParserCallback cb(out);
 
-    yae::TOpenFile src(src_path, "rb");
-    YAE_THROW_IF(!src.is_open());
-
-    while (!src.is_eof())
-    {
-      uint64_t box_start = src.ftell64();
-      uint64_t box_size;
-      if (!yae::read_mp4_box_size(src.file_, box_size))
-      {
-        break;
-      }
-
-      uint64_t box_end = box_start + box_size;
-
-      // FIXME: implement FileBitstream so that we don't have to load
-      // the entire box in memory at once:
-
-      yae::Data data(box_size);
-      if (src.load(data) != box_size)
-      {
-        break;
-      }
-
-      yae::Bitstream bin(data);
-      yae::iso_14496_12::TBoxPtr box = mp4.parse(bin, box_size * 8);
-      YAE_ASSERT(box);
-      if (!box)
-      {
-        break;
-      }
-
-      Json::Value v;
-      box->to_json(v);
-      out.append(v);
-
-      if (src.fseek64(box_end, SEEK_SET) != 0)
-      {
-        break;
-      }
-    }
+    bool parsed_without_errors = mp4.parse_file(src_path, &cb);
+    yae_ilog("finished parsing %s %s errors",
+             src_path,
+             parsed_without_errors ? "without" : "with");
 
     yae_ilog("saving %s as JSON to %s", src_path, dst_path);
-    YAE_THROW_IF(!yae::TOpenFile(dst_path, "wb").save(out));
+    YAE_THROW_IF(!yae::TOpenFile(dst_path, "wb").save(out, "  "));
   }
 
   //----------------------------------------------------------------

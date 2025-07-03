@@ -462,6 +462,14 @@ namespace yae
     bool open(const std::string & filename_utf8, const char * mode);
     void close();
 
+    // NOTE: this only works if the file is open
+    //
+    // seek to file end to get file size,
+    // seek back to original position,
+    // then return the file size...
+    //
+    uint64_t get_filesize();
+
     inline bool is_open() const
     { return file_ != NULL; }
 
