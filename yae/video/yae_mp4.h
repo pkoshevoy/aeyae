@@ -1960,6 +1960,8 @@ namespace yae
     //----------------------------------------------------------------
     // ObjectDescriptorBox
     //
+    // this is defined in ISO/IEC 14496-14:2020(E)
+    //
     struct YAE_API ObjectDescriptorBox : public FullBox
     {
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
