@@ -157,7 +157,7 @@ namespace yae
       std::size_t item_size = sizeof(TData) * 8;
       for (std::size_t i = 0; i < num_items; ++i)
       {
-        if (end_pos < bin.position() + item_size < end_pos)
+        if (end_pos < (bin.position() + item_size))
         {
           break;
         }
@@ -176,7 +176,7 @@ namespace yae
       std::size_t item_size = sizeof(TData) * 8;
       for (std::size_t i = 0; i < num_items; ++i)
       {
-        if (end_pos < bin.position() + item_size < end_pos)
+        if (end_pos < (bin.position() + item_size))
         {
           break;
         }
@@ -357,18 +357,12 @@ namespace yae
 
       void to_json(Json::Value & out) const YAE_OVERRIDE
       {
-        TBase::to_json(out);
+        FullBox::to_json(out);
 
         out["entry_count"] = Json::UInt64(entry_count_);
 
         Json::Value & children = out["children"];
-        for (uint64_t i = 0, n = children_.size(); i < n; ++i)
-        {
-          const Box & box = *(children_[i]);
-          Json::Value child;
-          box.to_json(child);
-          children.append(child);
-        }
+        TBase::children_to_json(children);
       }
 
       TBoxCount entry_count_;

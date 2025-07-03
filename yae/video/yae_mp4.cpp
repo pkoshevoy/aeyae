@@ -4493,7 +4493,8 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
 
   if (bin.position() != box_end)
   {
-    yae_wlog("possibly mis-parsed box type: '%4s', size: %" PRIu64 "",
+    yae_wlog("possibly %s box type: '%4s', size: %" PRIu64 "",
+             box_constructor ? "mis-parsed" : "unsupported",
              box->type_.str_,
              box->size_);
   }
