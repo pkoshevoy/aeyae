@@ -34,14 +34,6 @@ namespace yae
   struct Mp4Context;
 
   //----------------------------------------------------------------
-  // read_mp4_box_size
-  //
-  // NOTE: this will preserve the current file position.
-  //
-  YAE_API bool
-  read_mp4_box_size(FILE * file, uint64_t & box_size);
-
-  //----------------------------------------------------------------
   // FourCC
   //
   struct YAE_API FourCC
@@ -84,6 +76,15 @@ namespace yae
 
   inline void load(const Json::Value & json, FourCC & v)
   { v.set(json.asCString()); }
+
+
+  //----------------------------------------------------------------
+  // read_mp4_box_size
+  //
+  // NOTE: this will preserve the current file position.
+  //
+  YAE_API bool
+  read_mp4_box_size(FILE * file, uint64_t & box_size, FourCC & box_type);
 
 
   // see ISO/IEC 14496-12:2015(E)

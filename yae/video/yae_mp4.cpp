@@ -20,41 +20,53 @@ using namespace yae::iso_14496_12;
 // yae::read_mp4_box_size
 //
 bool
-yae::read_mp4_box_size(FILE * file, uint64_t & box_size)
+yae::read_mp4_box_size(FILE * file,
+                       uint64_t & box_size,
+                       FourCC & box_type)
 {
   uint64_t box_start = yae::ftell64(file);
   uint8_t buffer[8];
   bool success = false;
 
-  if (yae::read(file, buffer, 4) == 4)
-  {
+  do {
+    // load 32-bit box size:
+    if (yae::read(file, buffer, 4) != 4)
+    {
+      break;
+    }
+
     box_size = yae::load_be32(buffer);
+
+    // load box type fourcc code:
+    if (yae::read(file, box_type.str_, 4) != 4)
+    {
+      break;
+    }
 
     if (box_size == 1)
     {
       // load largesize:
-      if (yae::read(file, buffer, 8) == 8)
+      if (yae::read(file, buffer, 8) != 8)
       {
-        box_size = yae::load_be64(buffer);
-        success = true;
+        break;
       }
+
+      box_size = yae::load_be64(buffer);
     }
     else if (box_size == 0)
     {
       // box extends to the end of file:
-      if (yae::fseek64(file, 0, SEEK_END) == 0)
+      if (yae::fseek64(file, 0, SEEK_END) != 0)
       {
-        uint64_t file_size = yae::ftell64(file);
-        box_size = file_size - box_start;
-        success = true;
+        break;
       }
+
+      uint64_t file_size = yae::ftell64(file);
+      box_size = file_size - box_start;
     }
-    else
-    {
-      // normal 32-bit size:
-      success = true;
-    }
-  }
+
+    success = true;
+  } while (false);
 
   // restore file position:
   if (yae::fseek64(file, box_start, SEEK_SET) != 0)
@@ -4527,7 +4539,8 @@ Mp4Context::parse_file(const std::string & src_path,
     file_position_ = box_start;
 
     uint64_t box_size;
-    if (!yae::read_mp4_box_size(src.file_, box_size))
+    FourCC box_type;
+    if (!yae::read_mp4_box_size(src.file_, box_size, box_type))
     {
       if (box_start == src.get_filesize())
       {
@@ -4544,23 +4557,35 @@ Mp4Context::parse_file(const std::string & src_path,
     // where the next box will start:
     uint64_t box_end = box_start + box_size;
 
-    // FIXME: implement FileBitstream so that we don't have to load
-    // the entire box in memory at once:
-
-    yae::Data data(box_size);
-    if (src.load(data) != box_size)
+    yae::iso_14496_12::TBoxPtr box;
+    if (box_type.same_as("mdat") && !load_mdat_data_)
     {
-      yae_elog("failed to load %" PRIu64 " bytes "
-               "from %s at file position %" PRIu64 "",
-               box_size,
-               src_path.c_str(),
-               box_start);
-      return false;
+      // skip it:
+      box.reset(new iso_14496_12::Box());
+      box->size_ = box_size;
+      box->type_ = box_type;
+    }
+    else
+    {
+      // FIXME: implement FileBitstream so that we don't have to load
+      // the entire box in memory at once:
+
+      yae::Data data(box_size);
+      if (src.load(data) != box_size)
+      {
+        yae_elog("failed to load %" PRIu64 " bytes "
+                 "from %s at file position %" PRIu64 "",
+                 box_size,
+                 src_path.c_str(),
+                 box_start);
+        return false;
+      }
+
+      yae::Bitstream bin(data);
+      box = this->parse(bin, box_size * 8);
+      YAE_ASSERT(box);
     }
 
-    yae::Bitstream bin(data);
-    yae::iso_14496_12::TBoxPtr box = this->parse(bin, box_size * 8);
-    YAE_ASSERT(box);
     if (!box)
     {
       yae_elog("failed to parse %s at file position %" PRIu64 "",
