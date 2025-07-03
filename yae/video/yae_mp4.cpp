@@ -79,6 +79,28 @@ yae::read_mp4_box_size(FILE * file,
 
 
 //----------------------------------------------------------------
+// yae::iso_14496_1::load_expandable_size
+//
+// see ISO/IEC 14496-1:2010(E), 8.3.3
+//
+uint32_t
+yae::iso_14496_1::load_expandable_size(IBitstream & bin)
+{
+  uint8_t nextByte = bin.read<uint8_t>(1);
+  uint32_t sizeOfInstance = bin.read<uint8_t>(7);
+
+  while (nextByte)
+  {
+    nextByte = bin.read<uint8_t>(1);
+    uint8_t sizeByte = bin.read<uint8_t>(7);
+    sizeOfInstance = (sizeOfInstance << 7) | sizeByte;
+  }
+
+  return sizeOfInstance;
+}
+
+
+//----------------------------------------------------------------
 // create
 //
 template <typename TBox>
@@ -4306,6 +4328,36 @@ VideoMediaHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ObjectDescriptorBox>::please
+//
+template ObjectDescriptorBox *
+create<ObjectDescriptorBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ObjectDescriptorBox::load
+//
+void
+ObjectDescriptorBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// ObjectDescriptorBox::to_json
+//
+void
+ObjectDescriptorBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["object_descriptor"] = yae::to_hex(data_.get(), data_.size());
+}
+
+
+//----------------------------------------------------------------
 // BoxFactory
 //
 struct BoxFactory : public std::map<FourCC, TBoxConstructor>
@@ -4449,6 +4501,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("snro", create<TimeOffsetBox>::please);
     this->add("srpp", create<SRTPProcessBox>::please);
     this->add("vmhd", create<VideoMediaHeaderBox>::please);
+    this->add("iods", create<ObjectDescriptorBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

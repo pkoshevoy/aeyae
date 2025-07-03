@@ -86,6 +86,12 @@ namespace yae
   YAE_API bool
   read_mp4_box_size(FILE * file, uint64_t & box_size, FourCC & box_type);
 
+  // see ISO/IEC 14496-1:2010(E)
+  namespace iso_14496_1
+  {
+    // see  ISO/IEC 14496-1:2010(E), 8.3.3
+    uint32_t load_expandable_size(IBitstream & bin);
+  }
 
   // see ISO/IEC 14496-12:2015(E)
   namespace iso_14496_12
@@ -1949,6 +1955,18 @@ namespace yae
 
       uint16_t graphicsmode_;
       uint16_t opcolor_[3];
+    };
+
+    //----------------------------------------------------------------
+    // ObjectDescriptorBox
+    //
+    struct YAE_API ObjectDescriptorBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // see ISO/IEC 14496-1:2010(E), 7.2.6.3  ObjectDescriptor
+      Data data_;
     };
 
   }
