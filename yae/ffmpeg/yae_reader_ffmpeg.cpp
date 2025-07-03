@@ -206,7 +206,7 @@ namespace yae
   void
   ReaderFFMPEG::refreshInfo()
   {
-    private_->movie_.refresh();
+    private_->movie_.requestInfoRefresh();
   }
 
   //----------------------------------------------------------------

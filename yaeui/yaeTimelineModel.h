@@ -156,6 +156,7 @@ namespace yae
     inline const QString & auxDuration() const
     { return auxDuration_; }
 
+    // NOTE: marker positions are normalized values in the [0, 1] range:
     inline double markerTimeIn() const
     { return markerTimeIn_; }
 

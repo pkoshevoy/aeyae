@@ -131,6 +131,7 @@ namespace yae
       " (season finale)",
       " (series premiere)",
       " (series finale)",
+      " (summer premiere)",
       " (time period ftc)",
       " (time period ltc)",
       " christmas special",

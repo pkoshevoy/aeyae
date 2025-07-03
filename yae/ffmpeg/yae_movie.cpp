@@ -24,6 +24,7 @@ namespace yae
     context_(NULL),
     selectedVideoTrack_(0),
     selectedAudioTrack_(0),
+    need_info_refresh_(false),
     hwdec_(false),
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
@@ -454,7 +455,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::flatten_program_tracks_map
+  // Movie::flatten_program_tracks
   //
   void
   Movie::flatten_program_tracks(const TProgramTracksLut & program_tracks_lut,
@@ -599,6 +600,7 @@ namespace yae
 
     YAE_ASSERT(!context_);
     context_ = avformat_alloc_context();
+    YAE_THROW_IF(!context_);
 
     YAE_ASSERT(!interruptDemuxer_);
     context_->interrupt_callback.callback = &Movie::demuxerInterruptCallback;
@@ -620,6 +622,13 @@ namespace yae
 
     // copied from ffprobe.c -- scan and combine all PMTs:
     //  av_dict_set(&options, "scan_all_pmts", "1", AV_DICT_DONT_OVERWRITE);
+
+#ifdef AVFMT_FLAG_ALLOW_CODEC_CHANGES
+    // Allow AVStream.codecpar codec_type and codec_id to change
+    // when MPEG-TS PMT ES stream_type changes at runtime:
+    // av_dict_set(&options, "allow_codec_changes", "1", 0);
+    context_->flags |= AVFMT_FLAG_ALLOW_CODEC_CHANGES;
+#endif
 
     resourcePath_ = resourcePath ? resourcePath : "";
     int err = avformat_open_input(&context_,
@@ -1213,6 +1222,7 @@ namespace yae
         TPacketPtr packetPtr(new AvPkt());
         AVPacket & packet = packetPtr->get();
         bool demuxerInterrupted = false;
+        bool need_info_refresh = false;
         {
           boost::lock_guard<boost::timed_mutex> lock(mutex_);
 
@@ -1237,6 +1247,24 @@ namespace yae
               demuxerInterrupted = true;
               interruptDemuxer_ = false;
             }
+          }
+
+          if (need_info_refresh_ && !err)
+          {
+            need_info_refresh_ = false;
+            need_info_refresh = true;
+          }
+        }
+
+        if (need_info_refresh)
+        {
+          this->refresh();
+
+          if (eo_)
+          {
+            Json::Value event;
+            event["event_type"] = "info_refreshed";
+            eo_->note(event);
           }
         }
 
@@ -1566,7 +1594,7 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // Movie::requestSeekTime
+  // Movie::requestSeek
   //
   bool
   Movie::requestSeek(const TSeekPosPtr & seekPos)
@@ -1609,6 +1637,25 @@ namespace yae
 #endif
       }
 
+      return true;
+    }
+    catch (...)
+    {}
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::requestInfoRefresh
+  //
+  bool
+  Movie::requestInfoRefresh()
+  {
+    try
+    {
+      boost::unique_lock<boost::timed_mutex> lock(mutex_, boost::defer_lock);
+      requestMutex(lock);
+      need_info_refresh_ = true;
       return true;
     }
     catch (...)

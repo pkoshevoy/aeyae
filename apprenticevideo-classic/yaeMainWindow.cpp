@@ -3183,17 +3183,7 @@ namespace yae
   void
   MainWindow::scrollWheelTimerExpired()
   {
-    double seconds = scrollStart_ + scrollOffset_;
-
-    bool isLooping = actionLoop->isChecked();
-    if (isLooping)
-    {
-      double t0 = timelineControls_->model_.timelineStart();
-      double dt = timelineControls_->model_.timelineDuration();
-      seconds = t0 + fmod(seconds - t0, dt);
-    }
-
-    timelineControls_->model_.seekTo(seconds);
+    timelineControls_->model_.seekFromCurrentTime(scrollOffset_);
   }
 
   //----------------------------------------------------------------
@@ -3336,7 +3326,6 @@ namespace yae
     yae_dlog("MainWindow::handle_reader_event: %s",
              yae::to_str(event).c_str());
 
-    reader->refreshInfo();
     qApp->postEvent(this, new yae::ReaderEvent(reader, event));
   }
 
@@ -3363,8 +3352,16 @@ namespace yae
         re->accept();
         if (re->reader_ == reader_)
         {
-          this->adjustMenuActions();
-          this->adjustMenus(reader_.get());
+          std::string event_type = re->event_["event_type"].asString();
+          if (event_type == "traits_changed")
+          {
+            re->reader_->refreshInfo();
+          }
+          else if (event_type == "info_refreshed")
+          {
+            this->adjustMenuActions();
+            this->adjustMenus(reader_.get());
+          }
         }
         return true;
       }

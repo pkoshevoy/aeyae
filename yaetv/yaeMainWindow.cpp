@@ -459,7 +459,7 @@ namespace yae
     shortcutExit_(NULL),
     preferencesDialog_(NULL),
     playerWidget_(NULL),
-    playerWindow_(this),
+    playerWindow_(NULL),
     readerFactory_(new LiveReaderFactory),
     canvas_(NULL),
     dvr_(yaetv_dir, recordings_dir),

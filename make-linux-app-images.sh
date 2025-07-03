@@ -63,7 +63,7 @@ deploy_appdir()
     appimagetool-x86_64.AppImage -s "AppDir.${APP}"
 
     mkdir -p .dist
-    FN_OUT="${APP}-${PROJ_WC_REVISION}-x86_64.AppImage"
+    FN_OUT="${APP}-${PROJ_WC_REVISION}-linux-x86_64.AppImage"
     rm -f .dist/"${FN_OUT}"
     mv *.AppImage .dist/"${FN_OUT}"
 }
