@@ -8,6 +8,8 @@
 
 // aeyae:
 #include "yae/api/yae_version.h"
+#include "yae/video/yae_mp4.h"
+#include "yae/video/yae_mpeg_ts.h"
 
 // system:
 #ifdef _WIN32
@@ -163,6 +165,60 @@ namespace yae
       }
     }
   };
+
+  //----------------------------------------------------------------
+  // parse_mp4
+  //
+  static void
+  parse_mp4(const char * src_path, const char * dst_path)
+  {
+    yae::Mp4Context mp4;
+    Json::Value out;
+
+    yae::TOpenFile src(src_path, "rb");
+    YAE_THROW_IF(!src.is_open());
+
+    while (!src.is_eof())
+    {
+      uint64_t box_start = src.ftell64();
+      uint64_t box_size;
+      if (!yae::read_mp4_box_size(src.file_, box_size))
+      {
+        break;
+      }
+
+      uint64_t box_end = box_start + box_size;
+
+      // FIXME: implement FileBitstream so that we don't have to load
+      // the entire box in memory at once:
+
+      yae::Data data(box_size);
+      if (src.load(data) != box_size)
+      {
+        break;
+      }
+
+      yae::Bitstream bin(data);
+      yae::iso_14496_12::TBoxPtr box = mp4.parse(bin, box_size * 8);
+      YAE_ASSERT(box);
+      if (!box)
+      {
+        break;
+      }
+
+      Json::Value v;
+      box->to_json(v);
+      out.append(v);
+
+      if (src.fseek64(box_end, SEEK_SET) != 0)
+      {
+        break;
+      }
+    }
+
+    yae_ilog("saving %s as JSON to %s", src_path, dst_path);
+    YAE_THROW_IF(!yae::TOpenFile(dst_path, "wb").save(out));
+  }
 
   //----------------------------------------------------------------
   // parse_mpeg_ts
@@ -489,7 +545,31 @@ namespace yae
           return i;
         }
 
-        parse_mpeg_ts(argv[i + 1], argv[i + 2], pkt_size);
+        const char * src = argv[i + 1];
+        const char * dst = argv[i + 2];
+
+        std::string basedir;
+        std::string basename;
+        yae::parse_file_path(src, basedir, basename);
+
+        std::string src_name;
+        std::string src_ext;
+        yae::parse_file_name(basename, src_name, src_ext);
+
+        if ((src_ext == "mp4") ||
+            (src_ext == "m4f") ||
+            (src_ext == "m4s") ||
+            (src_ext == "m4a") ||
+            (src_ext == "m4v") ||
+            (src_ext == "mov") ||
+            (src_ext == "qt"))
+        {
+          parse_mp4(src, dst);
+        }
+        else
+        {
+          parse_mpeg_ts(src, dst, pkt_size);
+        }
         return 0;
       }
 #ifdef __APPLE__

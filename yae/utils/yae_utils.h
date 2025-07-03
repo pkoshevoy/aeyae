@@ -477,6 +477,9 @@ namespace yae
     inline std::string read()
     { return yae::read(this->file_); }
 
+    inline std::size_t load(yae::Data & buffer)
+    { return yae::read(this->file_, buffer.get(), buffer.size()); }
+
     inline std::size_t load(std::vector<unsigned char> & out)
     { return yae::load(this->file_, out); }
 
@@ -502,18 +505,21 @@ namespace yae
       return this->load(document) > 0 && Json::Reader().parse(document, v);
     }
 
-    inline bool save(const Json::Value & v)
+    inline bool save(const Json::Value & v, const std::string & indent = "  ")
     {
       std::ostringstream oss;
-      Json::StyledStreamWriter().write(oss, v);
+      Json::StyledStreamWriter(indent).write(oss, v);
       return this->write(oss.str());
     }
 
     inline void flush()
     { if (file_) fflush(file_); }
 
-    inline int seek(int64 offset, int whence)
+    inline int fseek64(int64 offset, int whence)
     { return file_ ? yae::fseek64(file_, offset, whence) : -1; }
+
+    inline uint64_t ftell64() const
+    { return yae::ftell64(file_); }
 
     // the file handle:
     FILE * file_;

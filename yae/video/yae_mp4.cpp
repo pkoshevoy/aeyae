@@ -17,6 +17,56 @@ using namespace yae::iso_14496_12;
 
 
 //----------------------------------------------------------------
+// yae::read_mp4_box_size
+//
+bool
+yae::read_mp4_box_size(FILE * file, uint64_t & box_size)
+{
+  uint64_t box_start = yae::ftell64(file);
+  uint8_t buffer[8];
+  bool success = false;
+
+  if (yae::read(file, buffer, 4) == 4)
+  {
+    box_size = yae::load_be32(buffer);
+
+    if (box_size == 1)
+    {
+      // load largesize:
+      if (yae::read(file, buffer, 8) == 8)
+      {
+        box_size = yae::load_be64(buffer);
+        success = true;
+      }
+    }
+    else if (box_size == 0)
+    {
+      // box extends to the end of file:
+      if (yae::fseek64(file, 0, SEEK_END) == 0)
+      {
+        uint64_t file_size = yae::ftell64(file);
+        box_size = file_size - box_start;
+        success = true;
+      }
+    }
+    else
+    {
+      // normal 32-bit size:
+      success = true;
+    }
+  }
+
+  // restore file position:
+  if (yae::fseek64(file, box_start, SEEK_SET) != 0)
+  {
+    success = false;
+  }
+
+  return success;
+}
+
+
+//----------------------------------------------------------------
 // create
 //
 template <typename TBox>
@@ -4418,6 +4468,8 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
   TBoxPtr box(new Box());
   box->load(*this, bin);
 
+  // YAE_BREAKPOINT_IF(box->type_.same_as("dref"));
+
   const std::size_t box_end = box_pos + box->size_ * 8;
   YAE_ASSERT(!end_pos || box_end <= end_pos);
 
@@ -4439,8 +4491,14 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
     box->load(*this, bin);
   }
 
-  // sanity check:
-  YAE_ASSERT(bin.position() == box_end);
+  if (bin.position() != box_end)
+  {
+    yae_wlog("possibly mis-parsed box type: '%4s', size: %" PRIu64 "",
+             box->type_.str_,
+             box->size_);
+  }
+
+  // skip to the next box:
   bin.seek(box_end);
 
   return box;

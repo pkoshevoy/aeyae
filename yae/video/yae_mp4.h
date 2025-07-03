@@ -34,6 +34,14 @@ namespace yae
   struct Mp4Context;
 
   //----------------------------------------------------------------
+  // read_mp4_box_size
+  //
+  // NOTE: this will preserve the current file position.
+  //
+  YAE_API bool
+  read_mp4_box_size(FILE * file, uint64_t & box_size);
+
+  //----------------------------------------------------------------
   // FourCC
   //
   struct YAE_API FourCC
@@ -112,6 +120,7 @@ namespace yae
       senc_iv_size_(0)
     {}
 
+    // NOTE: end_pos is expressed in bits, not bytes:
     iso_14496_12::TBoxPtr parse(IBitstream & bin, std::size_t end_pos);
 
     bool load_mdat_data_;
@@ -339,7 +348,7 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE
       {
         const std::size_t box_pos = bin.position();
-        TBase::load(mp4, bin);
+        FullBox::load(mp4, bin);
 
         const std::size_t end_pos = box_pos + Box::size_ * 8;
         entry_count_ = bin.read<TBoxCount>();
