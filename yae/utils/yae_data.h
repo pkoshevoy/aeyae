@@ -27,6 +27,44 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // load_be16
+  //
+  inline uint16_t load_be16(const uint8_t * data)
+  {
+    return (uint16_t(data[1]) << 8 |
+            uint16_t(data[1]));
+  }
+
+  //----------------------------------------------------------------
+  // save_be16
+  //
+  inline void save_be16(uint8_t * data, uint16_t v)
+  {
+    data[0] = uint8_t((v >> 8) & 0xFF);
+    data[1] = uint8_t(v & 0xFF);
+  }
+
+  //----------------------------------------------------------------
+  // load_be24
+  //
+  inline uint32_t load_be24(const uint8_t * data)
+  {
+    return (uint32_t(data[0]) << 16 |
+            uint32_t(data[1]) << 8 |
+            uint32_t(data[2]));
+  }
+
+  //----------------------------------------------------------------
+  // save_be24
+  //
+  inline void save_be24(uint8_t * data, uint32_t v)
+  {
+    data[0] = uint8_t((v >> 16) & 0xFF);
+    data[1] = uint8_t((v >> 8) & 0xFF);
+    data[2] = uint8_t(v & 0xFF);
+  }
+
+  //----------------------------------------------------------------
   // load_be32
   //
   inline uint32_t load_be32(const uint8_t * data)

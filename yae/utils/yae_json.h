@@ -266,6 +266,13 @@ namespace yae
   inline void load(const Json::Value & json, std::string & v)
   { v = json.asString(); }
 
+  // undefined generics:
+  template <typename TData>
+  void save(Json::Value & json, const TData & data);
+
+  template <typename TData>
+  void load(const Json::Value & json, TData & data);
+
   // std::pair
   template <typename TKey, typename TValue>
   void

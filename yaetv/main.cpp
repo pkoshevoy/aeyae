@@ -177,7 +177,7 @@ namespace yae
 
     // virtual:
     bool observe(const yae::Mp4Context & mp4,
-                 const yae::iso_14496_12::TBoxPtr & box)
+                 const yae::mp4::TBoxPtr & box)
     {
       Json::Value v;
       box->to_json(v);

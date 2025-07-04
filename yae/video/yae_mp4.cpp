@@ -7,13 +7,13 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
-#include "yae/utils/yae_json.h"
 #include "yae/video/yae_mp4.h"
+#include "yae/utils/yae_json.h"
 
 
 // namespace access:
 using namespace yae;
-using namespace yae::iso_14496_12;
+using namespace yae::mp4;
 
 
 //----------------------------------------------------------------
@@ -101,6 +101,51 @@ yae::iso_14496_1::load_expandable_size(IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// yae::iso_639_2t::PackedLang::set
+//
+void
+yae::iso_639_2t::PackedLang::set(uint16_t code)
+{
+  char str[4];
+  str[0] = 0x60 + ((code >> 10) & 0x1F);
+  str[1] = 0x60 + ((code >> 5) & 0x1F);
+  str[2] = 0x60 + (code & 0x1F);
+  str[3] = 0;
+  str_ = str;
+}
+
+//----------------------------------------------------------------
+// yae::iso_639_2t::PackedLang::load
+//
+void
+yae::iso_639_2t::PackedLang::load(IBitstream & bin)
+{
+  char str[4];
+  bin.skip(1); // padding 0 bit
+  str[0] = 0x60 + bin.read<uint8_t>(5);
+  str[1] = 0x60 + bin.read<uint8_t>(5);
+  str[2] = 0x60 + bin.read<uint8_t>(5);
+  str[3] = 0;
+  str_ = str;
+}
+
+//----------------------------------------------------------------
+// yae::iso_639_2t::PackedLang::save
+//
+void
+yae::iso_639_2t::PackedLang::save(IBitstream & bin) const
+{
+  bin.write_bits(1, 0); // padding 0 bit
+  for (size_t i = 0, n = str_.size(); i < 3; ++i)
+  {
+    uint8_t c = (i < n) ? str_[i] : 0x60;
+    YAE_ASSERT(c >= 0x60);
+    bin.write_bits(5, c - 0x60);
+  }
+}
+
+
+//----------------------------------------------------------------
 // create
 //
 template <typename TBox>
@@ -116,6 +161,17 @@ struct create
   }
 };
 
+
+//----------------------------------------------------------------
+// Box::peek_box_type
+//
+void
+Box::peek_box_type(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+  bin.seek(box_pos);
+}
 
 //----------------------------------------------------------------
 // Box::load
@@ -705,12 +761,7 @@ MediaHeaderBox::MediaHeaderBox():
   timescale_(0),
   duration_(0),
   pre_defined_(0)
-{
-  language_[0] = 0;
-  language_[1] = 0;
-  language_[2] = 0;
-  language_[3] = 0;
-}
+{}
 
 //----------------------------------------------------------------
 // MediaHeaderBox::load
@@ -735,10 +786,7 @@ MediaHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
     duration_ = bin.read<uint32_t>();
   }
 
-  bin.skip(1); // padding 0 bit
-  language_[0] = 0x60 + bin.read<char>(5);
-  language_[1] = 0x60 + bin.read<char>(5);
-  language_[2] = 0x60 + bin.read<char>(5);
+  language_.load(bin);
   pre_defined_ = bin.read<uint16_t>();
 }
 
@@ -754,7 +802,7 @@ MediaHeaderBox::to_json(Json::Value & out) const
   out["modification_time"] = Json::UInt64(modification_time_);
   out["timescale"] = timescale_;
   out["duration"] = Json::UInt64(duration_);
-  out["language"] = language_;
+  yae::save(out["language"], language_);
 }
 
 
@@ -2856,17 +2904,6 @@ template CopyrightBox *
 create<CopyrightBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// CopyrightBox::CopyrightBox
-//
-CopyrightBox::CopyrightBox()
-{
-  language_[0] = 0;
-  language_[1] = 0;
-  language_[2] = 0;
-  language_[3] = 0;
-}
-
-//----------------------------------------------------------------
 // CopyrightBox::load
 //
 void
@@ -2876,11 +2913,7 @@ CopyrightBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
-  bin.skip(1); // padding 0 bit
-  language_[0] = 0x60 + bin.read<char>(5);
-  language_[1] = 0x60 + bin.read<char>(5);
-  language_[2] = 0x60 + bin.read<char>(5);
-
+  language_.load(bin);
   notice_.clear();
   load_as_utf8(notice_, bin, box_end);
 }
@@ -2892,8 +2925,8 @@ void
 CopyrightBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["language"] = language_;
-  out["notice"] = notice_;
+  yae::save(out["language"], language_);
+  yae::save(out["notice"], notice_);
 }
 
 
@@ -4369,7 +4402,6 @@ create<SoundMediaHeaderBox>::please(const char * fourcc);
 void
 SoundMediaHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
 {
-  const std::size_t box_pos = bin.position();
   FullBox::load(mp4, bin);
   balance_ = bin.read<uint16_t>();
   reserved_ = bin.read<uint16_t>();
@@ -4388,34 +4420,74 @@ SoundMediaHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// BoxFactory
+// create<TextBox>::please
 //
-struct BoxFactory : public std::map<FourCC, TBoxConstructor>
+template TextBox *
+create<TextBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TextBox::load
+//
+void
+TextBox::load(Mp4Context & mp4, IBitstream & bin)
 {
-  // helpers:
-  inline TBoxConstructor get(const FourCC & fourcc) const
-  {
-    std::map<FourCC, TBoxConstructor>::const_iterator found =
-      this->find(fourcc);
-    return (found != this->end()) ? found->second : NULL;
-  }
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
 
-  inline TBoxConstructor get(const char * fourcc) const
-  { return this->get(FourCC(fourcc)); }
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_.clear();
+  load_as_utf8(data_, bin, box_end);
+}
 
-  inline void add(const char * fourcc, TBoxConstructor box_constructor)
-  {
-    FourCC key(fourcc);
-    YAE_ASSERT(!yae::has(*this, key));
-    this->operator[](key) = box_constructor;
-  }
+//----------------------------------------------------------------
+// TextBox::to_json
+//
+void
+TextBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["data"] = data_;
+}
 
-  template <typename TBox>
-  inline void add(const char * fourcc, TBox *(*box_constructor)(const char *))
-  { this->add(fourcc, (TBoxConstructor)box_constructor); }
 
+//----------------------------------------------------------------
+// create<TextFullBox>::please
+//
+template TextFullBox *
+create<TextFullBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TextFullBox::load
+//
+void
+TextFullBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_.clear();
+  load_as_utf8(data_, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// TextFullBox::to_json
+//
+void
+TextFullBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["data"] = data_;
+}
+
+
+//----------------------------------------------------------------
+// Mp4BoxFactory
+//
+struct Mp4BoxFactory : public BoxFactory
+{
   // populate the LUT in the constructor:
-  BoxFactory()
+  Mp4BoxFactory()
   {
     TBoxConstructor create_container =
       (TBoxConstructor)(create<Container>::please);
@@ -4441,6 +4513,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("strd", create_container);
     this->add("rinf", create_container);
     this->add("cinf", create_container);
+    this->add("\xa9too", create_container);
 
     this->add("meta", create<ContainerEx>::please);
 
@@ -4533,6 +4606,7 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
     this->add("iods", create<ObjectDescriptorBox>::please);
     this->add("vmhd", create<VideoMediaHeaderBox>::please);
     this->add("smhd", create<SoundMediaHeaderBox>::please);
+    this->add("name", create<TextBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
@@ -4546,9 +4620,319 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
   }
 
   // helper:
-  static const BoxFactory & singleton()
+  static const Mp4BoxFactory & singleton()
   {
-    static const BoxFactory singleton_;
+    static const Mp4BoxFactory singleton_;
+    return singleton_;
+  }
+};
+
+
+//----------------------------------------------------------------
+// yae::qtff::CountryList::load
+//
+void
+yae::qtff::CountryList::load(IBitstream & bin)
+{
+  count_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < count_; ++i)
+  {
+    countries_.push_back(TwoCC());
+    TwoCC & cc = countries_.back();
+    cc.load(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// create<yae::qtff::CountryListAtom>::please
+//
+template yae::qtff::CountryListAtom *
+create<yae::qtff::CountryListAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::CountryListAtom::load
+//
+void
+yae::qtff::CountryListAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  entry_count_ = bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < entry_count_ && bin.position() < box_end; ++i)
+  {
+    entries_.push_back(yae::qtff::CountryList());
+    yae::qtff::CountryList & entry = entries_.back();
+    entry.load(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// yae::qtff::CountryListAtom::to_json
+//
+void
+yae::qtff::CountryListAtom::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = entry_count_;
+  yae::save(out["entries"], entries_);
+}
+
+
+//----------------------------------------------------------------
+// yae::qtff::LanguageList::load
+//
+void
+yae::qtff::LanguageList::load(IBitstream & bin)
+{
+  count_ = bin.read<uint16_t>();
+  for (uint16_t i = 0; i < count_; ++i)
+  {
+    languages_.push_back(iso_639_2t::PackedLang());
+    iso_639_2t::PackedLang & language = languages_.back();
+    language.load(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// create<yae::qtff::LanguageListAtom>::please
+//
+template yae::qtff::LanguageListAtom *
+create<yae::qtff::LanguageListAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::LanguageListAtom::load
+//
+void
+yae::qtff::LanguageListAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  entry_count_ = bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < entry_count_ && bin.position() < box_end; ++i)
+  {
+    entries_.push_back(LanguageList());
+    LanguageList & entry = entries_.back();
+    entry.load(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// yae::qtff::LanguageListAtom::to_json
+//
+void
+yae::qtff::LanguageListAtom::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["entry_count"] = entry_count_;
+  yae::save(out["entries"], entries_);
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::MetadataItemKeysAtom>::please
+//
+template yae::qtff::MetadataItemKeysAtom *
+create<yae::qtff::MetadataItemKeysAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::MetadataItemKeysAtom::load
+//
+void
+yae::qtff::MetadataItemKeysAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  children_.clear();
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  entry_count_ = bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < entry_count_ && bin.position() < box_end; ++i)
+  {
+    TBoxPtr box(new yae::qtff::MetadataItemKeyAtom());
+    box->load(mp4, bin);
+    YAE_ASSERT(!box->type_.same_as("uuid"));
+    children_.push_back(box);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::ItemInfoAtom>::please
+//
+template yae::qtff::ItemInfoAtom *
+create<yae::qtff::ItemInfoAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::ItemInfoAtom::load
+//
+void
+yae::qtff::ItemInfoAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  item_id_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// yae::qtff::ItemInfoAtom::to_json
+//
+void
+yae::qtff::ItemInfoAtom::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["item_id"] = item_id_;
+}
+
+
+//----------------------------------------------------------------
+// yae::qtff::TypeIndicator::load
+//
+void
+yae::qtff::TypeIndicator::load(IBitstream & bin)
+{
+  indicator_byte_ = bin.read<uint32_t>(8);
+  YAE_ASSERT(indicator_byte_ == 0);
+  well_known_type_ = bin.read<uint32_t>(24);
+}
+
+
+//----------------------------------------------------------------
+// yae::qtff::LocaleIndicator::load
+//
+void
+yae::qtff::LocaleIndicator::load(IBitstream & bin)
+{
+  country_ = bin.read<uint16_t>();
+  language_ = bin.read<uint16_t>();
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::MetadataValueAtom>::please
+//
+template yae::qtff::MetadataValueAtom *
+create<yae::qtff::MetadataValueAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::MetadataValueAtom::load
+//
+void
+yae::qtff::MetadataValueAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  type_indicator_.load(bin);
+  locale_indicator_.load(bin);
+  value_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::MetadataValueAtom::to_json
+//
+void
+yae::qtff::MetadataValueAtom::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  yae::save(out["type_indicator"], type_indicator_);
+  yae::save(out["locale_indicator"], locale_indicator_);
+  out["value"] = yae::to_hex(value_.get(), value_.size());
+}
+
+
+//----------------------------------------------------------------
+// yae::qtff::MetadataItemAtom::load
+//
+void
+yae::qtff::MetadataItemAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+
+  children_.clear();
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  while (bin.position() < box_end)
+  {
+    Box next;
+    next.peek_box_type(mp4, bin);
+
+    TBoxPtr box;
+    if (next.type_.same_as("itif"))
+    {
+      box.reset(new ItemInfoAtom());
+    }
+    else if (next.type_.same_as("name"))
+    {
+      box.reset(new NameAtom());
+    }
+    else
+    {
+      box.reset(new MetadataValueAtom());
+    }
+
+    box->load(mp4, bin);
+    children_.push_back(box);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::MetadataItemListAtom>::please
+//
+template yae::qtff::MetadataItemListAtom *
+create<yae::qtff::MetadataItemListAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::MetadataItemListAtom::load
+//
+void
+yae::qtff::MetadataItemListAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+
+  children_.clear();
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  while (bin.position() < box_end)
+  {
+    TBoxPtr box(new MetadataItemAtom());
+    box->load(mp4, bin);
+    children_.push_back(box);
+  }
+}
+
+
+//----------------------------------------------------------------
+// QuickTimeAtomFactory
+//
+struct QuickTimeAtomFactory : public BoxFactory
+{
+  // populate the LUT in the constructor:
+  QuickTimeAtomFactory()
+  {
+    this->add("ctry", create<yae::qtff::CountryListAtom>::please);
+    this->add("lang", create<yae::qtff::LanguageListAtom>::please);
+    this->add("keys", create<yae::qtff::MetadataItemKeysAtom>::please);
+    this->add("data", create<yae::qtff::MetadataValueAtom>::please);
+    this->add("name", create<yae::qtff::NameAtom>::please);
+    this->add("itif", create<yae::qtff::ItemInfoAtom>::please);
+    this->add("ilst", create<yae::qtff::MetadataItemListAtom>::please);
+  }
+
+  // helper:
+  static const QuickTimeAtomFactory & singleton()
+  {
+    static const QuickTimeAtomFactory singleton_;
     return singleton_;
   }
 };
@@ -4558,7 +4942,9 @@ struct BoxFactory : public std::map<FourCC, TBoxConstructor>
 // Mp4Context::parse
 //
 TBoxPtr
-Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
+Mp4Context::parse(IBitstream & bin,
+                  std::size_t end_pos,
+                  BoxFactory * box_factory)
 {
   const std::size_t box_pos = bin.position();
   TBoxPtr box(new Box());
@@ -4575,9 +4961,18 @@ Mp4Context::parse(IBitstream & bin, std::size_t end_pos)
   {
     box_constructor = (TBoxConstructor)(create<Container>::please);
   }
+  else if (box_factory)
+  {
+    box_constructor = box_factory->get(box->type_);
+  }
   else
   {
-    box_constructor = BoxFactory::singleton().get(box->type_);
+    box_constructor = Mp4BoxFactory::singleton().get(box->type_);
+
+    if (!box_constructor)
+    {
+      box_constructor = QuickTimeAtomFactory::singleton().get(box->type_);
+    }
   }
 
   if (box_constructor)
@@ -4641,11 +5036,11 @@ Mp4Context::parse_file(const std::string & src_path,
     // where the next box will start:
     uint64_t box_end = box_start + box_size;
 
-    yae::iso_14496_12::TBoxPtr box;
+    yae::mp4::TBoxPtr box;
     if (box_type.same_as("mdat") && !load_mdat_data_)
     {
       // skip it:
-      box.reset(new iso_14496_12::Box());
+      box.reset(new mp4::Box());
       box->size_ = box_size;
       box->type_ = box_type;
     }

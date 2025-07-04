@@ -34,41 +34,85 @@ namespace yae
   struct Mp4Context;
 
   //----------------------------------------------------------------
-  // FourCC
+  // CharCode
   //
-  struct YAE_API FourCC
+  template <int NumChars>
+  struct CharCode
   {
-    FourCC(const char * fourcc = "")
-    { this->set(fourcc); }
+    enum { kNumChars = NumChars };
+
+    CharCode(const char * code = "")
+    { this->set(code); }
 
     inline void clear()
     { memset(str_, 0, sizeof(str_)); }
 
     inline bool empty() const
-    { return memcmp(str_, "\0\0\0\0", 4) == 0; }
+    { return memcmp(str_, "\0\0\0\0", NumChars) == 0; }
+
+    inline void set(const char * code)
+    {
+      strncpy(str_, code, NumChars);
+      str_[NumChars] = 0;
+    }
+
+    inline void load(IBitstream & bin)
+    { bin.read_bytes(str_, NumChars); }
+
+    inline bool same_as(const char * code) const
+    { return strncmp(str_, code, NumChars) == 0; }
+
+    inline bool operator < (const CharCode & other) const
+    { return strncmp(str_, other.str_, NumChars) < 0; }
+
+    char str_[NumChars + 1];
+  };
+
+
+  //----------------------------------------------------------------
+  // TwoCC
+  //
+  struct YAE_API TwoCC : public CharCode<2>
+  {
+    typedef CharCode<2> TBase;
+
+    TwoCC(const char * fourcc = ""):
+      TBase(fourcc)
+    {}
+
+    using TBase::set;
+
+    inline uint16_t get() const
+    { return yae::load_be16((const uint8_t *)str_); }
+
+    inline void set(uint16_t cc)
+    { yae::save_be16((uint8_t *)str_, cc); }
+  };
+
+  inline void save(Json::Value & json, const TwoCC & v)
+  { json = v.str_; }
+
+  inline void load(const Json::Value & json, TwoCC & v)
+  { v.set(json.asCString()); }
+
+  //----------------------------------------------------------------
+  // FourCC
+  //
+  struct YAE_API FourCC : public CharCode<4>
+  {
+    typedef CharCode<4> TBase;
+
+    FourCC(const char * fourcc = ""):
+      TBase(fourcc)
+    {}
+
+    using TBase::set;
 
     inline uint32_t get() const
     { return yae::load_be32((const uint8_t *)str_); }
 
     inline void set(uint32_t fourcc)
     { yae::save_be32((uint8_t *)str_, fourcc); }
-
-    inline void set(const char * fourcc)
-    {
-      strncpy(str_, fourcc, 4);
-      str_[4] = 0;
-    }
-
-    inline void load(IBitstream & bin)
-    { bin.read_bytes(str_, 4); }
-
-    inline bool same_as(const char * fourcc) const
-    { return strncmp(str_, fourcc, 4) == 0; }
-
-    inline bool operator < (const FourCC & other) const
-    { return strncmp(str_, other.str_, 4) < 0; }
-
-    char str_[5];
   };
 
   inline void save(Json::Value & json, const FourCC & v)
@@ -86,6 +130,7 @@ namespace yae
   YAE_API bool
   read_mp4_box_size(FILE * file, uint64_t & box_size, FourCC & box_type);
 
+
   // see ISO/IEC 14496-1:2010(E)
   namespace iso_14496_1
   {
@@ -93,8 +138,42 @@ namespace yae
     uint32_t load_expandable_size(IBitstream & bin);
   }
 
+
+  //----------------------------------------------------------------
+  // iso_639_2t::PackedLang
+  //
+  // ISO-639-2/T language code:
+  // unsigned int(5)[3] language;
+  //
+  // See ISO 639-2/T for the set of three character codes.
+  // Each character is packed as the difference between its ASCII value
+  // and 0x60. The code is confined to being three lower-case letters,
+  // so these values are strictly positive.
+  //
+  namespace iso_639_2t
+  {
+    struct YAE_API PackedLang
+    {
+      void set(uint16_t packed_code);
+
+      void load(IBitstream & bin);
+      void save(IBitstream & bin) const;
+
+      std::string str_;
+    };
+  }
+
+  template<>
+  inline void save(Json::Value & json, const yae::iso_639_2t::PackedLang & v)
+  { json = v.str_; }
+
+  template<>
+  inline void load(const Json::Value & json, yae::iso_639_2t::PackedLang & v)
+  { v.str_ = json.asString(); }
+
+
   // see ISO/IEC 14496-12:2015(E)
-  namespace iso_14496_12
+  namespace mp4
   {
     // forward declarations:
     struct Box;
@@ -113,6 +192,34 @@ namespace yae
     // TBoxPtrVec
     //
     typedef std::vector<TBoxPtr> TBoxPtrVec;
+
+    //----------------------------------------------------------------
+    // BoxFactory
+    //
+    struct YAE_API BoxFactory : public std::map<FourCC, TBoxConstructor>
+    {
+      // helpers:
+      inline TBoxConstructor get(const FourCC & fourcc) const
+      {
+        std::map<FourCC, TBoxConstructor>::const_iterator found =
+          this->find(fourcc);
+        return (found != this->end()) ? found->second : NULL;
+      }
+
+      inline TBoxConstructor get(const char * fourcc) const
+      { return this->get(FourCC(fourcc)); }
+
+      inline void add(const char * fourcc, TBoxConstructor box_constructor)
+      {
+        FourCC key(fourcc);
+        YAE_ASSERT(!yae::has(*this, key));
+        this->operator[](key) = box_constructor;
+      }
+
+      template <typename TBox>
+      inline void add(const char * fourcc, TBox *(*box_ctor)(const char *))
+      { this->add(fourcc, (TBoxConstructor)box_ctor); }
+    };
   }
 
 
@@ -129,7 +236,9 @@ namespace yae
     {}
 
     // NOTE: end_pos is expressed in bits, not bytes:
-    iso_14496_12::TBoxPtr parse(IBitstream & bin, std::size_t end_pos);
+    mp4::TBoxPtr parse(IBitstream & bin,
+                       std::size_t end_pos,
+                       mp4::BoxFactory * box_factory = NULL);
 
     //----------------------------------------------------------------
     // ParserCallbackInterface
@@ -141,7 +250,7 @@ namespace yae
       // callback must return true to continue parsing,
       // callback may return false to stop the parser:
       virtual bool observe(const Mp4Context & mp4,
-                           const iso_14496_12::TBoxPtr & box) = 0;
+                           const mp4::TBoxPtr & box) = 0;
     };
 
     bool parse_file(const std::string & src_path,
@@ -212,7 +321,7 @@ namespace yae
   };
 
 
-  namespace iso_14496_12
+  namespace mp4
   {
     //----------------------------------------------------------------
     // Box
@@ -223,6 +332,9 @@ namespace yae
       virtual ~Box() {}
 
       virtual void load(Mp4Context & mp4, IBitstream & bin);
+
+      // NOTE: this preserves the current bitstream position:
+      void peek_box_type(Mp4Context & mp4, IBitstream & bin);
 
       // helper:
       virtual void to_json(Json::Value & out) const;
@@ -558,7 +670,7 @@ namespace yae
       uint32_t timescale_;
       uint64_t duration_;
 
-      char language_[4]; // ISO-639-2/T language code
+      iso_639_2t::PackedLang language_;
       uint16_t pre_defined_; // zero
     };
 
@@ -1369,12 +1481,10 @@ namespace yae
     //
     struct YAE_API CopyrightBox : public FullBox
     {
-      CopyrightBox();
-
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      char language_[4]; // ISO-639-2/T language code
+      iso_639_2t::PackedLang language_;
       std::string notice_; // UTF-8, possibly converted from UTF-16
     };
 
@@ -1988,6 +2098,293 @@ namespace yae
       uint16_t reserved_;
     };
 
+    //----------------------------------------------------------------
+    // TextBox
+    //
+    struct YAE_API TextBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string data_;
+    };
+
+    //----------------------------------------------------------------
+    // TextBox
+    //
+    struct YAE_API TextFullBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string data_;
+    };
+
+  }
+
+  // some mp4 files contain quicktime atoms:
+  namespace qtff
+  {
+
+    //----------------------------------------------------------------
+    // WellKnownTypes
+    //
+    enum WellKnownTypes
+    {
+      Reserved = 0,
+      UTF_8 = 1,
+      UTF_16 = 2,
+      S_JIS = 3,
+      UTF_8_sort = 4,
+      UTF_16_sort = 5,
+      JPEG = 13,
+      PNG = 14,
+      BE_Signed_Int = 21, // 1, 2, 3, or 4 bytes
+      BE_Unsigned_Int = 22, // 1, 2, 3, or 4 bytes
+      BE_Float32 = 23, // IEEE754
+      BE_Float64 = 24, // IEEE754
+      BMP = 27, // Windows bitmap format graphics
+      QuickTimeMetadataAtom = 28
+    };
+
+    //----------------------------------------------------------------
+    // CountryList
+    //
+    struct YAE_API CountryList
+    {
+      CountryList(): count_(0) {}
+
+      void load(IBitstream & bin);
+
+      uint16_t count_;
+      std::vector<TwoCC> countries_; // ISO 3166 country codes
+    };
+
+    //----------------------------------------------------------------
+    // CountryListAtom
+    //
+    struct YAE_API CountryListAtom : public yae::mp4::FullBox
+    {
+      CountryListAtom(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t entry_count_;
+      std::vector<CountryList> entries_;
+    };
+
+    //----------------------------------------------------------------
+    // LanguageList
+    //
+    struct YAE_API LanguageList
+    {
+      LanguageList(): count_(0) {}
+
+      void load(IBitstream & bin);
+
+      uint16_t count_;
+      std::vector<iso_639_2t::PackedLang> languages_;
+    };
+
+    //----------------------------------------------------------------
+    // LanguageListAtom
+    //
+    struct YAE_API LanguageListAtom : public yae::mp4::FullBox
+    {
+      LanguageListAtom(): entry_count_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t entry_count_;
+      std::vector<LanguageList> entries_;
+    };
+
+    //----------------------------------------------------------------
+    // MetadataItemKeyAtom
+    //
+    struct YAE_API MetadataItemKeyAtom : public yae::mp4::TextBox {};
+
+    //----------------------------------------------------------------
+    // MetadataItemKeysAtom
+    //
+    struct YAE_API MetadataItemKeysAtom : public yae::mp4::ContainerList32
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+    };
+
+    //----------------------------------------------------------------
+    // NameAtom
+    //
+    struct YAE_API NameAtom : public yae::mp4::TextFullBox {};
+
+    //----------------------------------------------------------------
+    // ItemInfoAtom
+    //
+    struct YAE_API ItemInfoAtom : public yae::mp4::FullBox
+    {
+      ItemInfoAtom(): item_id_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t item_id_;
+    };
+
+    //----------------------------------------------------------------
+    // TypeIndicator
+    //
+    // The type indicator is formed of four bytes split between two fields.
+    // The first byte indicates the set of types from which the type is drawn.
+    // The second through fourth byte forms the second field
+    // and its interpretation depends upon the value in the first field.
+    //
+    struct YAE_API TypeIndicator
+    {
+      TypeIndicator():
+        indicator_byte_(0),
+        well_known_type_(0)
+      {}
+
+      void load(IBitstream & bin);
+
+      // The indicator byte must have a value of 0,
+      // meaning the type is drawn from the well-known set of types.
+      // All other values are reserved.
+      uint32_t indicator_byte_ : 8;
+
+      // If the type indicator byte is 0,
+      // the following 24 bits hold the well-known type.
+      // Please refer to the list of Well-Known Types...
+      uint32_t well_known_type_ : 24;
+    };
+
+    //----------------------------------------------------------------
+    // LocaleIndicator
+    //
+    // The locale indicator is formatted as a four-byte value.
+    //
+    // It is formed from two two-byte values: a country indicator,
+    // and a language indicator. In each case, the two-byte field
+    // has the possible values shown in Table 3-3.
+    //
+    // Table 3-3, Country and language indicators:
+    //
+    //   0:
+    //     This atom provides the default value of this datum
+    //     for any locale not explicitly listed.
+    //
+    //   1 to 255:
+    //     The value is an index into the country or language list
+    //     (the upper byte is 0).
+    //
+    //   otherwise:
+    //     The value is an ISO 3166 code (for the country code)
+    //     or a packed ISO 639-2/T code (for the language).
+    //
+    struct YAE_API LocaleIndicator
+    {
+      LocaleIndicator():
+        country_(0),
+        language_(0)
+      {}
+
+      void load(IBitstream & bin);
+
+      uint16_t country_;
+      uint16_t language_;
+    };
+
+    //----------------------------------------------------------------
+    // MetadataValueAtom
+    //
+    struct YAE_API MetadataValueAtom : public yae::mp4::Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      TypeIndicator type_indicator_;
+      LocaleIndicator locale_indicator_;
+      Data value_;
+    };
+
+    //----------------------------------------------------------------
+    // MetadataItemAtom
+    //
+    struct YAE_API MetadataItemAtom : public yae::mp4::Container
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+    };
+
+    //----------------------------------------------------------------
+    // MetadataItemListAtom
+    //
+    struct YAE_API MetadataItemListAtom : public yae::mp4::Container
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+    };
+
+  }
+
+  template <>
+  inline void save(Json::Value & json, const yae::qtff::CountryList & v)
+  {
+    yae::save(json["count"], v.count_);
+    yae::save(json["countries"], v.countries_);
+  }
+
+  template <>
+  inline void load(const Json::Value & json, yae::qtff::CountryList & v)
+  {
+    yae::load(json["count"], v.count_);
+    yae::load(json["countries"], v.countries_);
+  }
+
+  template <>
+  inline void save(Json::Value & json, const yae::qtff::LanguageList & v)
+  {
+    yae::save(json["count"], v.count_);
+    yae::save(json["languages"], v.languages_);
+  }
+
+  template <>
+  inline void load(const Json::Value & json, yae::qtff::LanguageList & v)
+  {
+    yae::load(json["count"], v.count_);
+    yae::load(json["languages"], v.languages_);
+  }
+
+  template <>
+  inline void save(Json::Value & json, const yae::qtff::TypeIndicator & v)
+  {
+    yae::save(json["indicator_byte"], uint32_t(v.indicator_byte_));
+    yae::save(json["well_known_type"], uint32_t(v.well_known_type_));
+  }
+
+  template <>
+  inline void load(const Json::Value & json, yae::qtff::TypeIndicator & v)
+  {
+    uint32_t temp = 0;
+    yae::load(json["indicator_byte"], temp);
+    v.indicator_byte_ = temp;
+
+    yae::load(json["well_known_type"], temp);
+    v.well_known_type_ = temp;
+  }
+
+  template <>
+  inline void save(Json::Value & json, const yae::qtff::LocaleIndicator & v)
+  {
+    yae::save(json["country"], v.country_);
+    yae::save(json["language"], v.language_);
+  }
+
+  template <>
+  inline void load(const Json::Value & json, yae::qtff::LocaleIndicator & v)
+  {
+    yae::load(json["country"], v.country_);
+    yae::load(json["language"], v.language_);
   }
 
 }
