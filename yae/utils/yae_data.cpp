@@ -184,13 +184,13 @@ namespace yae
     while (position_ < end_pos)
     {
       char c = this->read<char>(8);
-      str.push_back(c);
-      n += 1;
-
       if (!c)
       {
         break;
       }
+
+      str.push_back(c);
+      n += 1;
     }
 
     return n;

@@ -816,12 +816,10 @@ create<HandlerBox>::please(const char * fourcc);
 // HandlerBox::HandlerBox
 //
 HandlerBox::HandlerBox():
-  pre_defined_(0)
-{
-  reserved_[0] = 0;
-  reserved_[1] = 0;
-  reserved_[2] = 0;
-}
+  reserved_manufacturer_(0),
+  reserved_flags_(0),
+  reserved_flags_mask_(0)
+{}
 
 //----------------------------------------------------------------
 // HandlerBox::load
@@ -833,11 +831,11 @@ HandlerBox::load(Mp4Context & mp4, IBitstream & bin)
   FullBox::load(mp4, bin);
 
   const std::size_t box_end = box_pos + Box::size_ * 8;
-  pre_defined_ = bin.read<uint32_t>();
+  pre_defined_.load(bin);
   handler_type_.load(bin);
-  reserved_[0] = bin.read<uint32_t>();
-  reserved_[1] = bin.read<uint32_t>();
-  reserved_[2] = bin.read<uint32_t>();
+  reserved_manufacturer_ = bin.read<uint32_t>();
+  reserved_flags_ = bin.read<uint32_t>();
+  reserved_flags_mask_ = bin.read<uint32_t>();
 
   name_.clear();
   bin.read_string_until_null(name_, box_end);
@@ -851,8 +849,12 @@ void
 HandlerBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
-  out["handler_type"] = handler_type_.str_;
-  out["name"] = name_;
+  yae::save(out["pre_defined"], pre_defined_);
+  yae::save(out["handler_type"], handler_type_);
+  yae::save(out["reserved_manufacturer"], reserved_manufacturer_);
+  yae::save(out["reserved_flags"], reserved_flags_);
+  yae::save(out["reserved_flags_mask"], reserved_flags_mask_);
+  yae::save(out["name"], name_);
 }
 
 

@@ -684,9 +684,14 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      uint32_t pre_defined_; // zero
-      FourCC handler_type_;
-      uint32_t reserved_[3]; // zero
+      FourCC pre_defined_; // aka component type
+      FourCC handler_type_; // aka component subtype
+
+      // reserved, set to 0:
+      uint32_t reserved_manufacturer_;
+      uint32_t reserved_flags_;
+      uint32_t reserved_flags_mask_;
+
       std::string name_; // null-terminated UTF-8
     };
 
