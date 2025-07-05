@@ -3116,11 +3116,8 @@ namespace yae
           hhmm.background_ = hhmm.
             addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
 
-          int hour =
-            (program.tm_.tm_hour > 12) ? program.tm_.tm_hour % 12 :
-            (program.tm_.tm_hour > 00) ? program.tm_.tm_hour : 12;
-
-          std::string hhmm_txt = strfmt("%i:%02i", hour, program.tm_.tm_min);
+          std::string hhmm_txt =
+            strfmt("%i:%02i", program.tm_.tm_hour, program.tm_.tm_min);
           hhmm.text_ = TVarRef::constant(TVar(hhmm_txt.c_str()));
 
           hhmm.visible_ = hhmm.addExpr
