@@ -633,6 +633,9 @@ namespace yae
       std::vector<TTime> pts_;
       std::vector<TTime> dur_;
 
+      // PTS, re-ordered per-GOP:
+      std::vector<TTime> gop_pts_;
+
       // sample indices of keyframes:
       std::set<std::size_t> keyframes_;
     };

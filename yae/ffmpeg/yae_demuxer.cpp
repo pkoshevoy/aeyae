@@ -1134,13 +1134,27 @@ namespace yae
     AvPkt & pkt = *packet_ptr;
     AVPacket & packet = pkt.get();
 
-    TTime delay;
-    if (stream->avg_frame_rate.num &&
-        stream->avg_frame_rate.den &&
-        stream->codecpar->video_delay)
+    TTime delay(0, 1);
+    if (stream->codecpar->video_delay)
     {
-      delay.reset(stream->avg_frame_rate.den * stream->codecpar->video_delay,
-                  stream->avg_frame_rate.num);
+      if (stream->r_frame_rate.num &&
+          stream->r_frame_rate.den)
+      {
+        delay =
+          TTime(stream->codecpar->video_delay *
+                stream->r_frame_rate.den,
+                stream->r_frame_rate.num).
+          rebased(stream->time_base.den);
+      }
+      else if (stream->avg_frame_rate.num &&
+               stream->avg_frame_rate.den)
+      {
+        delay =
+          TTime(stream->codecpar->video_delay *
+                stream->avg_frame_rate.den,
+                stream->avg_frame_rate.num).
+          rebased(stream->time_base.den);
+      }
     }
 
     TTime pts;

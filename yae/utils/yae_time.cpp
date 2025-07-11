@@ -1942,6 +1942,27 @@ namespace yae
       track.keyframes_.insert(track.dts_.size());
     }
 
+    track.gop_pts_.push_back(pts);
+    if (!track.keyframes_.empty())
+    {
+      std::size_t gop_i0 = *(track.keyframes_.rbegin());
+      std::size_t gop_i1 = track.gop_pts_.size();
+      for (std::size_t i = 1, n = gop_i1 - gop_i0; i < n; ++i)
+      {
+        std::size_t j1 = gop_i1 - i;
+        std::size_t j0 = j1 - 1;
+        TTime & pts_0 = track.gop_pts_[j0];
+        TTime & pts_1 = track.gop_pts_[j1];
+        if (pts_0 <= pts_1)
+        {
+          break;
+        }
+
+        // re-order PTS:
+        std::swap(pts_0, pts_1);
+      }
+    }
+
     track.size_.push_back(size);
     track.dts_.push_back(dts);
     track.pts_.push_back(pts);
@@ -2011,6 +2032,7 @@ namespace yae
       translate(track.pts_span_, offset);
       translate(track.dts_, offset);
       translate(track.pts_, offset);
+      translate(track.gop_pts_, offset);
     }
 
     bbox_dts_ += offset;
@@ -2093,6 +2115,7 @@ namespace yae
       // must offset additional pts, dts:
       yae::extend(dst.dts_, src.dts_, offset);
       yae::extend(dst.pts_, src.pts_, offset);
+      yae::extend(dst.gop_pts_, src.gop_pts_, offset);
 
       // simply append additional packet durations:
       dst.dur_.insert(dst.dur_.end(), src.dur_.begin(), src.dur_.end());

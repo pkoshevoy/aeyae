@@ -2955,6 +2955,27 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // GopPtsDataSource
+  //
+  // f(i) = gop_pts(i+1) - gop_pts(i), use only for video tracks
+  //
+  struct GopPtsDataSource : public TrackDataSource
+  {
+    GopPtsDataSource(const Timeline::Track & track)
+    {
+      data_.resize(track.gop_pts_.size() - 1);
+      for (std::size_t i = 0, end = data_.size(); i < end; i++)
+      {
+        double v = (track.gop_pts_[i + 1] - track.gop_pts_[i]).sec();
+        min_ = std::min(min_, v);
+        max_ = std::max(max_, v);
+        data_[i] = v;
+      }
+    }
+  };
+
+
+  //----------------------------------------------------------------
   // PtsDtsDataSource
   //
   // f(i) = pts(i) - dts(i), must be non-negative, reveals b-frames
@@ -3267,6 +3288,29 @@ namespace yae
                                     dts_dts,
                                     "dts(i+1) - dts(i), " + track_id,
                                     prev_plot_tag);
+      plot_index++;
+
+      PlotItem & gop_pts = sv_content.
+        addNew<PlotItem>((track_id + ".gop_pts").c_str());
+      gop_pts.set_data(data_x, TDataSourcePtr(new GopPtsDataSource(track)));
+      gop_pts.anchors_.fill(sv_content);
+      gop_pts.anchors_.right_.reset();
+      gop_pts.width_ = plot_item_width;
+      gop_pts.color_ = pick_color(gradient, plot_index);
+      gop_pts.line_width_ = line_width;
+
+      gop_pts.set_domain(timeline_domain);
+      timeline_domain->expand(gop_pts.data_x()->range());
+
+      gop_pts.set_range(view.time_range_);
+      view.time_range_->expand(gop_pts.data_y()->range());
+
+      prev_plot_tag =
+        &add_plot_tag(view,
+                      tags,
+                      gop_pts,
+                      "sorted (per GOP) pts(k+1) - pts(k), " + track_id,
+                      prev_plot_tag);
       plot_index++;
     }
   }
