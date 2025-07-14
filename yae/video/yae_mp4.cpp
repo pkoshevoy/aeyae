@@ -2340,11 +2340,16 @@ TrackRunBox::load(Mp4Context & mp4, IBitstream & bin)
 
     if ((FullBox::flags_ & kSampleCompositionTimeOffsetsPresent) != 0)
     {
-      int64_t v =
-        (FullBox::version_ == 0) ?
-        bin.read<uint32_t>() :
-        bin.read<int32_t>();
-      sample_composition_time_offset_.push_back(v);
+      if (FullBox::version_ == 1)
+      {
+        int32_t v = bin.read<int32_t>();
+        sample_composition_time_offset_.push_back(v);
+      }
+      else
+      {
+        uint32_t v = bin.read<uint32_t>();
+        sample_composition_time_offset_.push_back(v);
+      }
     }
   }
 }
