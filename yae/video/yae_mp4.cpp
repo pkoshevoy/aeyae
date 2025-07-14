@@ -1523,7 +1523,7 @@ EditListBox::load(Mp4Context & mp4, IBitstream & bin)
     uint64_t segment_duration =
       (FullBox::version_ == 1) ? bin.read<uint64_t>() : bin.read<uint32_t>();
 
-    uint64_t media_time =
+    int64_t media_time =
       (FullBox::version_ == 1) ? bin.read<int64_t>() : bin.read<int32_t>();
 
     int16_t media_rate_integer = bin.read<int16_t>();
