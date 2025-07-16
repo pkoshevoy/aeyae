@@ -14,6 +14,7 @@
 #include "yae/api/yae_shared_ptr.h"
 #include "yae/utils/yae_data.h"
 #include "yae/utils/yae_json.h"
+#include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 
 // boost:
@@ -354,15 +355,15 @@ namespace yae
       const TBox *
       find(const char * fourcc) const
       {
-        const TBox * found = NULL;
         const Box * box =
           type_.same_as(fourcc) ? this : this->find_child(fourcc);
-        if (box)
+        if (!box)
         {
-          found = dynamic_cast<const TBox *>(box);
-          YAE_ASSERT(found);
           return NULL;
         }
+
+        const TBox * found = dynamic_cast<const TBox *>(box);
+        YAE_ASSERT(found);
         return found;
       }
 
@@ -1259,6 +1260,27 @@ namespace yae
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      inline bool base_data_offset_is_present() const
+      { return (FullBox::flags_ & kBaseDataOffsetPresent) != 0; }
+
+      inline bool sample_description_index_is_present() const
+      { return (FullBox::flags_ & kSampleDescriptionIndexPresent) != 0; }
+
+      inline bool default_sample_duration_is_present() const
+      { return (FullBox::flags_ & kDefaultSampleDurationPresent) != 0; }
+
+      inline bool default_sample_size_is_present() const
+      { return (FullBox::flags_ & kDefaultSampleSizePresent) != 0; }
+
+      inline bool default_sample_flags_are_present() const
+      { return (FullBox::flags_ & kDefaultSampleFlagsPresent) != 0; }
+
+      inline bool duration_is_empty() const
+      { return (FullBox::flags_ & kDurationIsEmpty) != 0; }
+
+      inline bool default_base_is_moof() const
+      { return (FullBox::flags_ & kDefaultBaseIsMoof) != 0; }
 
       uint32_t track_ID_;
       uint32_t base_data_offset_;
@@ -2391,6 +2413,13 @@ namespace yae
     yae::load(json["country"], v.country_);
     yae::load(json["language"], v.language_);
   }
+
+  //----------------------------------------------------------------
+  // get_timeline
+  //
+  YAE_API void
+  get_timeline(const mp4::TBoxPtrVec & top_level_boxes,
+               yae::Timeline & timeline);
 
 }
 

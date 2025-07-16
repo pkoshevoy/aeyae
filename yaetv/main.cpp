@@ -171,7 +171,9 @@ namespace yae
   //
   struct Mp4ParserCallback : yae::Mp4Context::ParserCallbackInterface
   {
-    Mp4ParserCallback(Json::Value & out):
+    Mp4ParserCallback(yae::mp4::TBoxPtrVec & boxes,
+                      Json::Value & out):
+      boxes_(boxes),
       out_(out)
     {}
 
@@ -179,6 +181,8 @@ namespace yae
     bool observe(const yae::Mp4Context & mp4,
                  const yae::mp4::TBoxPtr & box)
     {
+      boxes_.push_back(box);
+
       Json::Value v;
       box->to_json(v);
       out_.append(v);
@@ -187,6 +191,7 @@ namespace yae
       return true;
     }
 
+    yae::mp4::TBoxPtrVec & boxes_;
     Json::Value & out_;
   };
 
@@ -200,8 +205,9 @@ namespace yae
     mp4.load_mdat_data_ = false;
     mp4.parse_mdat_data_ = false;
 
+    yae::mp4::TBoxPtrVec top_level_boxes;
     Json::Value out;
-    Mp4ParserCallback cb(out);
+    Mp4ParserCallback cb(top_level_boxes, out);
 
     bool parsed_without_errors = mp4.parse_file(src_path, &cb);
     yae_ilog("finished parsing %s %s errors",
@@ -210,6 +216,35 @@ namespace yae
 
     yae_ilog("saving %s as JSON to %s", src_path, dst_path);
     YAE_THROW_IF(!yae::TOpenFile(dst_path, "wb").save(out, "  "));
+
+    yae::Timeline timeline;
+    yae::get_timeline(top_level_boxes, timeline);
+    yae_info << timeline;
+
+    for (yae::Timeline::TTracks::const_iterator
+           i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
+    {
+      const std::string & track_id = i->first;
+      const yae::Timeline::Track & track = i->second;
+
+      std::ostringstream oss;
+      for (std::size_t k = 1, n = track.dts_.size(); k < n; ++k)
+      {
+        std::size_t j = k - 1;
+        const TTime & pts_j = track.pts_[j];
+        const TTime & dts_j = track.dts_[j];
+        const TTime & dts_k = track.dts_[k];
+        double dur_j = (dts_k - dts_j).sec();
+        oss << "pts[" << j << "] = " << pts_j.to_hhmmss_ms()
+            << ", dts[" << j << "] = " << dts_j.to_hhmmss_ms()
+            << ", actual dur = " << dur_j << "\n";
+      }
+
+      yae_info
+        << "\ntrack: " << track_id
+        << "\n" << oss.str()
+        << "\n";
+    }
   }
 
   //----------------------------------------------------------------

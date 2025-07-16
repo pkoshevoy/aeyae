@@ -622,6 +622,15 @@ namespace yae
     return err < tolerance;
   }
 
+  template <typename TValue>
+  inline static TValue
+  get(const std::vector<TValue> & v,
+      std::size_t i,
+      const TValue & default_value = TValue())
+  {
+    return (i < v.size()) ? v[i] : default_value;
+  }
+
   //----------------------------------------------------------------
   // at
   //

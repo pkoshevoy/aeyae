@@ -5096,3 +5096,269 @@ Mp4Context::parse_file(const std::string & src_path,
 
   return true;
 }
+
+//----------------------------------------------------------------
+// TrackInfo
+//
+struct TrackInfo
+{
+  TrackInfo():
+    trex_(NULL),
+    tkhd_(NULL),
+    mdhd_(NULL),
+    hdlr_(NULL),
+    stsd_(NULL),
+    stsz_(NULL),
+    stsc_(NULL),
+    stts_(NULL),
+    stco_(NULL)
+  {}
+
+  const TrackExtendsBox * trex_;
+  const TrackHeaderBox * tkhd_;
+  const MediaHeaderBox * mdhd_;
+  const HandlerBox * hdlr_;
+  const ContainerList32 * stsd_;
+  const SampleSizeBox * stsz_;
+  const SampleToChunkBox * stsc_;
+  const TimeToSampleBox * stts_;
+  const ChunkOffsetBox * stco_;
+};
+
+//----------------------------------------------------------------
+// yae::get_timeline
+//
+void
+yae::get_timeline(const TBoxPtrVec & boxes, yae::Timeline & timeline)
+{
+  std::map<int, TrackInfo> tracks;
+
+  const Container * moov = NULL;
+  const Container * moof = NULL;
+  const MovieHeaderBox * mvhd = NULL;
+
+  const std::size_t num_boxes = boxes.size();
+  for (std::size_t i = 0; i < num_boxes; ++i)
+  {
+    const Box * top_level_box = boxes[i].get();
+    if (top_level_box->type_.same_as("moov"))
+    {
+      YAE_ASSERT(!moov);
+      moov = dynamic_cast<const Container *>(top_level_box);
+      YAE_ASSERT(moov);
+
+      const TBoxPtrVec & children = moov->children_;
+      for (std::size_t j = 0, n = children.size(); j < n; ++j)
+      {
+        const Box * child = children[j].get();
+        if (child->type_.same_as("mvhd"))
+        {
+          mvhd = dynamic_cast<const MovieHeaderBox *>(child);
+        }
+        else if (child->type_.same_as("mvex"))
+        {
+          const TrackExtendsBox * trex =
+            child->find<TrackExtendsBox>("trex");
+          if (!trex)
+          {
+            continue;
+          }
+
+          TrackInfo & track = tracks[trex->track_ID_];
+          track.trex_ = trex;
+        }
+        else if (child->type_.same_as("trak"))
+        {
+          const TrackHeaderBox * tkhd =
+            child->find<TrackHeaderBox>("tkhd");
+          if (!tkhd)
+          {
+            continue;
+          }
+
+          TrackInfo & track = tracks[tkhd->track_ID_];
+          track.tkhd_ = tkhd;
+
+          const Container * mdia = child->find<Container>("mdia");
+          if (!mdia)
+          {
+            continue;
+          }
+
+          track.mdhd_ = mdia->find<MediaHeaderBox>("mdhd");
+          track.hdlr_ = mdia->find<HandlerBox>("hdlr");
+
+          const Container * minf = mdia->find<Container>("minf");
+          if (!minf)
+          {
+            continue;
+          }
+
+          const Container * stbl = minf->find<Container>("stbl");
+          if (!stbl)
+          {
+            continue;
+          }
+
+          track.stsd_ = stbl->find<ContainerList32>("stsd");
+          track.stsz_ = stbl->find<SampleSizeBox>("stsz");
+          track.stsc_ = stbl->find<SampleToChunkBox>("stsc");
+          track.stts_ = stbl->find<TimeToSampleBox>("stts");
+          track.stco_ = stbl->find<ChunkOffsetBox>("stco");
+        }
+      }
+    }
+    else if (top_level_box->type_.same_as("moof"))
+    {
+      moof = dynamic_cast<const Container *>(top_level_box);
+      YAE_ASSERT(moof);
+
+      const TBoxPtrVec & children = moof->children_;
+      for (std::size_t j = 0, n = children.size(); j < n; ++j)
+      {
+        const Box * child = children[j].get();
+
+        if (child->type_.same_as("traf"))
+        {
+          const Container * traf = dynamic_cast<const Container *>(child);
+          YAE_ASSERT(traf);
+          if (!traf)
+          {
+            continue;
+          }
+
+          const TrackFragmentHeaderBox * tfhd =
+            traf->find<TrackFragmentHeaderBox>("tfhd");
+          YAE_ASSERT(tfhd);
+          if (!tfhd)
+          {
+            continue;
+          }
+
+          const TrackInfo & track = tracks[tfhd->track_ID_];
+          YAE_ASSERT(track.hdlr_);
+          if (!track.hdlr_)
+          {
+            continue;
+          }
+
+          // shortcuts:
+          const std::string track_id =
+            yae::strfmt("%s_%02i",
+                        track.hdlr_->handler_type_.str_,
+                        tfhd->track_ID_);
+
+          const TrackFragmentBaseMediaDecodeTimeBox * tfdt =
+            traf->find<TrackFragmentBaseMediaDecodeTimeBox>("tfdt");
+          YAE_ASSERT(tfdt);
+          if (!tfdt)
+          {
+            continue;
+          }
+
+          const TrackRunBox * trun = traf->find<TrackRunBox>("trun");
+          YAE_ASSERT(trun);
+          if (!trun)
+          {
+            continue;
+          }
+
+          // shortcuts:
+          const std::vector<uint32_t> & trun_sdur = trun->sample_duration_;
+          const std::vector<int64_t> & trun_comp = trun->sample_composition_time_offset_;
+          const std::vector<uint32_t> & trun_size = trun->sample_size_;
+
+          std::size_t num_samples = trun->sample_count_;
+          if (!trun_sdur.empty())
+          {
+            YAE_ASSERT(num_samples == trun_sdur.size());
+            num_samples = std::min(num_samples, trun_sdur.size());
+          }
+
+          if (!trun_comp.empty())
+          {
+            YAE_ASSERT(num_samples == trun_comp.size());
+            num_samples = std::min(num_samples, trun_comp.size());
+          }
+
+          if (!trun_size.empty())
+          {
+            YAE_ASSERT(num_samples == trun_size.size());
+            num_samples = std::min(num_samples, trun_size.size());
+          }
+
+          // shortcuts:
+          int64_t pts_0 = tfdt->baseMediaDecodeTime_;
+          int64_t timebase = track.mdhd_->timescale_;
+          int64_t default_ctts = 0;
+
+          uint32_t default_dur = 0;
+          if (tfhd->default_sample_duration_is_present())
+          {
+            default_dur = tfhd->default_sample_duration_;
+          }
+          else if (track.trex_)
+          {
+            default_dur = track.trex_->default_sample_duration_;
+          }
+
+          uint32_t default_size = 0;
+          if (tfhd->default_sample_size_is_present())
+          {
+            default_size = tfhd->default_sample_size_;
+          }
+          else if (track.trex_)
+          {
+            default_size = track.trex_->default_sample_size_;
+          }
+
+          // calculate DTS offset:
+          uint64_t dts_offset = 0;
+          {
+            uint64_t sum_dur = 0;
+            for (std::size_t k = 0; k < num_samples; ++k)
+            {
+              uint32_t dur = yae::get(trun_sdur, k, default_dur);
+
+              // NOTE: ctts[k] = (pts[k] - dts[k]) - (pts[0] - dts[0])
+              int64_t ctts = yae::get(trun_comp, k, default_ctts);
+
+              int64_t pts = pts_0 + sum_dur + ctts;
+              sum_dur += dur;
+
+              int64_t dts = (pts - ctts) - dts_offset;
+              if (pts < dts)
+              {
+                dts_offset += (dts - pts);
+              }
+            }
+          }
+
+          // reconstruct timeline:
+          {
+            uint64_t sum_dur = 0;
+            for (std::size_t k = 0; k < num_samples; ++k)
+            {
+              uint32_t sample_size = yae::get(trun_size, k, default_size);
+              uint32_t dur = yae::get(trun_sdur, k, default_dur);
+
+              // NOTE: ctts[k] = (pts[k] - dts[k]) - (pts[0] - dts[0])
+              int64_t ctts = yae::get(trun_comp, k, default_ctts);
+              int64_t pts = pts_0 + sum_dur + ctts;
+              sum_dur += dur;
+
+              int64_t dts = (pts - ctts) - dts_offset;
+              timeline.add_packet(track_id,
+                                  k == 0, // keyframe ... use sample_flags
+                                  sample_size,
+                                  TTime(dts, timebase),
+                                  TTime(pts, timebase),
+                                  TTime(dur, timebase),
+                                  TTime(dur, timebase).sec() + 1e-6);
+            }
+          }
+        }
+      }
+    }
+  }
+}

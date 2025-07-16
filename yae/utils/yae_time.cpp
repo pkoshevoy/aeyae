@@ -1939,7 +1939,50 @@ namespace yae
 
     if (keyframe)
     {
+      if (!(track.dts_.empty() ||
+            track.dts_.back() < dts))
+      {
+        std::size_t i0 = track.dts_.size();
+        const TTime & dts_0 = track.dts_.back();
+        const TTime & pts_0 = track.pts_.back();
+        const TTime & dur_0 = track.dur_.back();
+
+        yae_elog("detected %s DTS: %s, "
+                 "dts[%zu] = %s, pts[%zu] = %s (dur %f) vs. "
+                 "dts[%zu] = %s, pts[%zu] = %s (dur %f)",
+                 (dts_0 == dts) ? "duplicate" :
+                 "non monotonically increasing",
+                 track_id.c_str(),
+                 i0,
+                 dts_0.to_hhmmss_ms().c_str(),
+                 i0,
+                 pts_0.to_hhmmss_ms().c_str(),
+                 dur_0.sec(),
+                 i0 + 1,
+                 dts.to_hhmmss_ms().c_str(),
+                 i0 + 1,
+                 pts.to_hhmmss_ms().c_str(),
+                 dur.sec());
+      }
+
       track.keyframes_.insert(track.dts_.size());
+    }
+
+    if (keyframe && !track.gop_pts_.empty())
+    {
+      std::size_t i1 = track.gop_pts_.size();
+      std::size_t i0 = i1 - 1;
+
+      const TTime & pts_0 = track.gop_pts_.back();
+      if (pts <= pts_0)
+      {
+        yae_elog("detected %s PTS: %s, "
+                 "pts[%zu] = %s, pts[%zu] = %s",
+                 (pts_0 == pts) ? "duplicate" : "out of order",
+                 track_id.c_str(),
+                 i0, pts_0.to_hhmmss_ms().c_str(),
+                 i1, pts.to_hhmmss_ms().c_str());
+      }
     }
 
     track.gop_pts_.push_back(pts);
@@ -1953,8 +1996,18 @@ namespace yae
         std::size_t j0 = j1 - 1;
         TTime & pts_0 = track.gop_pts_[j0];
         TTime & pts_1 = track.gop_pts_[j1];
+
         if (pts_0 <= pts_1)
         {
+          if (pts_1 == pts_0)
+          {
+            yae_elog("detected duplicate PTS: %s, "
+                     "pts[%zu] = %s, pts[%zu] = %s",
+                     track_id.c_str(),
+                     j0, pts_0.to_hhmmss_ms().c_str(),
+                     j1, pts_1.to_hhmmss_ms().c_str());
+          }
+
           break;
         }
 
