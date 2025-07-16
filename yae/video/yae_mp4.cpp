@@ -5264,9 +5264,14 @@ yae::get_timeline(const TBoxPtrVec & boxes, yae::Timeline & timeline)
           }
 
           // shortcuts:
-          const std::vector<uint32_t> & trun_sdur = trun->sample_duration_;
-          const std::vector<int64_t> & trun_comp = trun->sample_composition_time_offset_;
-          const std::vector<uint32_t> & trun_size = trun->sample_size_;
+          const std::vector<uint32_t> & trun_sdur =
+            trun->sample_duration_;
+
+          const std::vector<int64_t> & trun_comp =
+            trun->sample_composition_time_offset_;
+
+          const std::vector<uint32_t> & trun_size =
+            trun->sample_size_;
 
           std::size_t num_samples = trun->sample_count_;
           if (!trun_sdur.empty())
