@@ -31,6 +31,46 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // get_project_dir
+  //
+  static std::string get_project_dir()
+  {
+    std::string filepath(__FILE__);
+    std::string dirname;
+    std::string basename;
+    for (int i = 0; i < 3; ++i)
+    {
+      if (!parse_file_path(filepath, dirname, basename))
+      {
+        break;
+      }
+
+      filepath = dirname;
+    }
+
+    return dirname;
+  }
+
+
+  //----------------------------------------------------------------
+  // redact_project_dir
+  //
+  static const char * redact_project_dir(const char * source)
+  {
+    static const std::string project_dir = get_project_dir();
+
+    if (!project_dir.empty() &&
+        al::starts_with(source, project_dir))
+    {
+      const char * redacted = source + project_dir.size() + 1;
+      return redacted;
+    }
+
+    return source;
+  }
+
+
+  //----------------------------------------------------------------
   // TLog::Private
   //
   struct TLog::Private
@@ -221,6 +261,9 @@ namespace yae
                          const char * message)
   {
     boost::lock_guard<boost::mutex> lock(mutex_);
+
+    // trim the source path:
+    source = redact_project_dir(source);
 
     Message new_message(messagePriority, source, message);
     if (last_message_ == new_message)
