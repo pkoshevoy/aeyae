@@ -227,7 +227,7 @@ namespace yae
       const std::string & track_id = i->first;
       const yae::Timeline::Track & track = i->second;
 
-      std::ostringstream oss;
+      yae_info << "track: " << track_id;
       for (std::size_t k = 1, n = track.dts_.size(); k < n; ++k)
       {
         std::size_t j = k - 1;
@@ -235,15 +235,10 @@ namespace yae
         const TTime & dts_j = track.dts_[j];
         const TTime & dts_k = track.dts_[k];
         double dur_j = (dts_k - dts_j).sec();
-        oss << "pts[" << j << "] = " << pts_j.to_hhmmss_ms()
-            << ", dts[" << j << "] = " << dts_j.to_hhmmss_ms()
-            << ", actual dur = " << dur_j << "\n";
+        yae_info << "pts[" << j << "] = " << pts_j.to_hhmmss_ms()
+                 << ", dts[" << j << "] = " << dts_j.to_hhmmss_ms()
+                 << ", actual dur = " << dur_j;
       }
-
-      yae_info
-        << "\ntrack: " << track_id
-        << "\n" << oss.str()
-        << "\n";
     }
   }
 
