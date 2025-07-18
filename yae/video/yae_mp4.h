@@ -2147,6 +2147,36 @@ namespace yae
       std::string data_;
     };
 
+    //----------------------------------------------------------------
+    // DASHEventMessageBox
+    //
+    // see ISO/IEC 23009-1:2019(E), 5.10.3.3.2
+    //
+    struct YAE_API DASHEventMessageBox : public FullBox
+    {
+      DASHEventMessageBox():
+        timescale_(0),
+        presentation_(0),
+        event_duration_(0),
+        id_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string scheme_id_uri_;
+      std::string value_;
+      uint32_t timescale_;
+
+      // version 0: 32-bit presentation_time_delta
+      // version 1: 64-bit presentation_time
+      uint64_t presentation_;
+
+      uint32_t event_duration_;
+      uint32_t id_;
+      Data message_data_;
+    };
+
   }
 
   // some mp4 files contain quicktime atoms:

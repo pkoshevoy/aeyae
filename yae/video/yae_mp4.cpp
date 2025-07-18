@@ -4489,6 +4489,74 @@ TextFullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<DASHEventMessageBox>::please
+//
+template DASHEventMessageBox *
+create<DASHEventMessageBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DASHEventMessageBox::load
+//
+void
+DASHEventMessageBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  message_data_.clear();
+
+  if (FullBox::version_ == 0)
+  {
+    bin.read_string_until_null(scheme_id_uri_, box_end);
+    bin.read_string_until_null(value_, box_end);
+    timescale_ = bin.read<uint32_t>();
+    presentation_ = bin.read<uint32_t>(); // presentation_time_delta
+    event_duration_ = bin.read<uint32_t>();
+    id_ = bin.read<uint32_t>();
+  }
+  else
+  {
+    timescale_ = bin.read<uint32_t>();
+    presentation_ = bin.read<uint64_t>(); // presentation_time
+    event_duration_ = bin.read<uint32_t>();
+    id_ = bin.read<uint32_t>();
+    bin.read_string_until_null(scheme_id_uri_, box_end);
+    bin.read_string_until_null(value_, box_end);
+  }
+
+  message_data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// DASHEventMessageBox::to_json
+//
+void
+DASHEventMessageBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["scheme_id_uri"] = scheme_id_uri_;
+  out["value"] = value_;
+
+  out["timescale"] = timescale_;
+
+  if (FullBox::version_ == 0)
+  {
+    out["presentation_time_delta"] = Json::UInt64(presentation_);
+  }
+  else
+  {
+    out["presentation_time"] = Json::UInt64(presentation_);
+  }
+
+  out["event_duration"] = event_duration_;
+  out["id"] = id_;
+
+  out["message_data"] = yae::to_hex(message_data_.get(), message_data_.size());
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -4614,6 +4682,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("vmhd", create<VideoMediaHeaderBox>::please);
     this->add("smhd", create<SoundMediaHeaderBox>::please);
     this->add("name", create<TextBox>::please);
+    this->add("emsg", create<DASHEventMessageBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
