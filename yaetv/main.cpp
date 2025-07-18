@@ -219,7 +219,7 @@ namespace yae
 
     yae::Timeline timeline;
     yae::get_timeline(top_level_boxes, timeline);
-    yae_info << timeline;
+    std::cout << timeline << std::endl;
 
     for (yae::Timeline::TTracks::const_iterator
            i = timeline.tracks_.begin(); i != timeline.tracks_.end(); ++i)
@@ -227,7 +227,7 @@ namespace yae
       const std::string & track_id = i->first;
       const yae::Timeline::Track & track = i->second;
 
-      yae_info << "track: " << track_id;
+      std::cout << "track: " << track_id << std::endl;
       for (std::size_t k = 1, n = track.dts_.size(); k < n; ++k)
       {
         std::size_t j = k - 1;
@@ -235,10 +235,12 @@ namespace yae
         const TTime & dts_j = track.dts_[j];
         const TTime & dts_k = track.dts_[k];
         double dur_j = (dts_k - dts_j).sec();
-        yae_info << "pts[" << j << "] = " << pts_j.to_hhmmss_ms()
-                 << ", dts[" << j << "] = " << dts_j.to_hhmmss_ms()
-                 << ", actual dur = " << dur_j;
+        std::cout
+          << "pts[" << j << "] = " << pts_j.to_hhmmss_ms()
+          << ", dts[" << j << "] = " << dts_j.to_hhmmss_ms()
+          << ", actual dur = " << dur_j << "\n";
       }
+      std::cout << std::endl;
     }
   }
 
