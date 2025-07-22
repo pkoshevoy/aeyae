@@ -570,7 +570,8 @@ namespace yae
       num.data_ = container.size();
       num.save(bin);
 
-      save_array<TPayload>(bin, container.data(), container.size());
+      const TPayload * data = container.empty() ? NULL : &container[0];
+      save_array<TPayload>(bin, data, num.data_);
     }
 
     //----------------------------------------------------------------
@@ -589,7 +590,8 @@ namespace yae
       }
 
       container.resize(num.data_);
-      return load_array<TPayload>(bin, container.data(), container.size());
+      TPayload * data = container.empty() ? NULL : &container[0];
+      return load_array<TPayload>(bin, data, num.data_);
     }
 
     //----------------------------------------------------------------
@@ -739,6 +741,23 @@ namespace yae
     };
 
   }
+
+
+  //----------------------------------------------------------------
+  // save
+  //
+  template <>
+  inline void
+  save(Json::Value & json, const iso14496::NALU & v)
+  { yae::save(json["nalu"], v.nalu); }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  template <>
+  inline void
+  load(const Json::Value & json, iso14496::NALU & v)
+  { yae::load(json["nalu"], v.nalu); }
 
 }
 

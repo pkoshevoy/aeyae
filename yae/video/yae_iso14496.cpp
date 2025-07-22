@@ -816,17 +816,6 @@ AVCDecoderConfigurationRecord::save(IBitstream & bin) const
 }
 
 
-template <>
-inline void
-yae::save(Json::Value & json, const NALU & v)
-{ yae::save(json["nalu"], v.nalu); }
-
-template <>
-inline void
-yae::load(const Json::Value & json, NALU & v)
-{ yae::load(json["nalu"], v.nalu); }
-
-
 //----------------------------------------------------------------
 // AVCDecoderConfigurationRecord::save
 //
