@@ -18,6 +18,33 @@ namespace yae
   // save
   //
   void
+  save(Json::Value & json, const yae::Data & v)
+  {
+    json = v.to_hex();
+  }
+
+  //----------------------------------------------------------------
+  // load
+  //
+  void
+  load(const Json::Value & json, yae::Data & v)
+  {
+    std::string hex_str = json.asString();
+    if (hex_str.empty())
+    {
+      v.clear();
+    }
+    else
+    {
+      v.load_hex(hex_str);
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // save
+  //
+  void
   save(Json::Value & json, const struct tm & tm)
   {
     uint64_t ts = yae::localtime_to_unix_epoch_time(tm);

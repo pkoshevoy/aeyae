@@ -16,6 +16,7 @@
 #include "yae/utils/yae_json.h"
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
+#include "yae/video/yae_iso14496.h"
 
 // boost:
 #ifndef Q_MOC_RUN
@@ -130,14 +131,6 @@ namespace yae
   //
   YAE_API bool
   read_mp4_box_size(FILE * file, uint64_t & box_size, FourCC & box_type);
-
-
-  // see ISO/IEC 14496-1:2010(E)
-  namespace iso_14496_1
-  {
-    // see  ISO/IEC 14496-1:2010(E), 8.3.3
-    uint32_t load_expandable_size(IBitstream & bin);
-  }
 
 
   //----------------------------------------------------------------
@@ -724,7 +717,7 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      uint8_t reserved_[2]; // zero
+      uint8_t reserved_[6]; // zero
       uint16_t data_reference_index_;
     };
 
@@ -2175,6 +2168,23 @@ namespace yae
       uint32_t event_duration_;
       uint32_t id_;
       Data message_data_;
+    };
+
+    //----------------------------------------------------------------
+    // AVCSampleEntryBox
+    //
+    struct YAE_API AVCSampleEntryBox : VisualSampleEntryBox
+    {};
+
+    //----------------------------------------------------------------
+    // AVCConfigurationBox
+    //
+    struct YAE_API AVCConfigurationBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      yae::iso14496::AVCDecoderConfigurationRecord cfg_;
     };
 
   }

@@ -302,6 +302,8 @@ set(LIBAEYAE_SOURCES
   yae/video/yae_color_transform.cpp
   yae/video/yae_color_transform.h
   yae/video/yae_istream.h
+  yae/video/yae_iso14496.cpp
+  yae/video/yae_iso14496.h
   yae/video/yae_mp4.cpp
   yae/video/yae_mp4.h
   yae/video/yae_mpeg_ts.cpp

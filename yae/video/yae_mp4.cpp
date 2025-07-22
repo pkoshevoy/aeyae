@@ -79,28 +79,6 @@ yae::read_mp4_box_size(FILE * file,
 
 
 //----------------------------------------------------------------
-// yae::iso_14496_1::load_expandable_size
-//
-// see ISO/IEC 14496-1:2010(E), 8.3.3
-//
-uint32_t
-yae::iso_14496_1::load_expandable_size(IBitstream & bin)
-{
-  uint8_t nextByte = bin.read<uint8_t>(1);
-  uint32_t sizeOfInstance = bin.read<uint8_t>(7);
-
-  while (nextByte)
-  {
-    nextByte = bin.read<uint8_t>(1);
-    uint8_t sizeByte = bin.read<uint8_t>(7);
-    sizeOfInstance = (sizeOfInstance << 7) | sizeByte;
-  }
-
-  return sizeOfInstance;
-}
-
-
-//----------------------------------------------------------------
 // yae::iso_639_2t::PackedLang::set
 //
 void
@@ -905,6 +883,10 @@ SampleEntryBox::SampleEntryBox():
 {
   reserved_[0] = 0;
   reserved_[1] = 0;
+  reserved_[2] = 0;
+  reserved_[3] = 0;
+  reserved_[4] = 0;
+  reserved_[5] = 0;
 }
 
 //----------------------------------------------------------------
@@ -914,8 +896,7 @@ void
 SampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   Box::load(mp4, bin);
-  reserved_[0] = bin.read<uint8_t>();
-  reserved_[1] = bin.read<uint8_t>();
+  bin.read_bytes(reserved_, 6);
   data_reference_index_ = bin.read<uint16_t>();
 }
 
@@ -963,7 +944,7 @@ void
 VisualSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   const std::size_t box_pos = bin.position();
-  Box::load(mp4, bin);
+  SampleEntryBox::load(mp4, bin);
   const std::size_t box_end = box_pos + Box::size_ * 8;
 
   pre_defined1_ = bin.read<uint16_t>();
@@ -997,7 +978,7 @@ VisualSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
 void
 VisualSampleEntryBox::to_json(Json::Value & out) const
 {
-  Box::to_json(out);
+  SampleEntryBox::to_json(out);
 
   out["width"] = width_;
   out["height"] = height_;
@@ -4201,7 +4182,7 @@ void
 RtpHintSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   const std::size_t box_pos = bin.position();
-  Box::load(mp4, bin);
+  SampleEntryBox::load(mp4, bin);
   const std::size_t box_end = box_pos + Box::size_ * 8;
 
   hinttrackversion_ = bin.read<uint16_t>();
@@ -4217,7 +4198,7 @@ RtpHintSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
 void
 RtpHintSampleEntryBox::to_json(Json::Value & out) const
 {
-  Box::to_json(out);
+  SampleEntryBox::to_json(out);
 
   out["hinttrackversion"] = hinttrackversion_;
   out["highestcompatibleversion"] = highestcompatibleversion_;
@@ -4557,6 +4538,41 @@ DASHEventMessageBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<AVCSampleEntryBox>::please
+//
+template AVCSampleEntryBox *
+create<AVCSampleEntryBox>::please(const char * fourcc);
+
+
+//----------------------------------------------------------------
+// create<AVCConfigurationBox>::please
+//
+template AVCConfigurationBox *
+create<AVCConfigurationBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// AVCConfigurationBox::load
+//
+void
+AVCConfigurationBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+  cfg_.load(bin);
+}
+
+//----------------------------------------------------------------
+// AVCConfigurationBox::to_json
+//
+void
+AVCConfigurationBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  cfg_.save(out["cfg"]);
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -4683,6 +4699,11 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("smhd", create<SoundMediaHeaderBox>::please);
     this->add("name", create<TextBox>::please);
     this->add("emsg", create<DASHEventMessageBox>::please);
+    this->add("avc1", create<AVCSampleEntryBox>::please);
+    this->add("avc2", create<AVCSampleEntryBox>::please);
+    this->add("avc3", create<AVCSampleEntryBox>::please);
+    this->add("avc4", create<AVCSampleEntryBox>::please);
+    this->add("avcC", create<AVCConfigurationBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
@@ -5031,38 +5052,64 @@ Mp4Context::parse(IBitstream & bin,
   const std::size_t box_end = box_pos + box->size_ * 8;
   YAE_ASSERT(!end_pos || box_end <= end_pos);
 
-  // instantiate appropriate box type:
-  TBoxConstructor box_constructor = NULL;
-  if (parse_mdat_data_ && box->type_.same_as("mdat"))
+  try
   {
-    box_constructor = (TBoxConstructor)(create<Container>::please);
-  }
-  else if (box_factory)
-  {
-    box_constructor = box_factory->get(box->type_);
-  }
-  else
-  {
-    box_constructor = Mp4BoxFactory::singleton().get(box->type_);
+    // temporarily override bitstream end position:
+    yae::SetEnd override_bin_end(bin, box_end);
 
-    if (!box_constructor)
+    // instantiate appropriate box type:
+    TBoxConstructor box_constructor = NULL;
+    if (parse_mdat_data_ && box->type_.same_as("mdat"))
     {
-      box_constructor = QuickTimeAtomFactory::singleton().get(box->type_);
+      box_constructor = (TBoxConstructor)(create<Container>::please);
+    }
+    else if (box_factory)
+    {
+      box_constructor = box_factory->get(box->type_);
+    }
+    else
+    {
+      box_constructor = Mp4BoxFactory::singleton().get(box->type_);
+
+      if (!box_constructor)
+      {
+        box_constructor = QuickTimeAtomFactory::singleton().get(box->type_);
+      }
+    }
+
+    if (box_constructor)
+    {
+      box.reset(box_constructor(box->type_.str_));
+      bin.seek(box_pos);
+
+      // temporarily override bitstream end position:
+      yae::SetEnd override_bitstream_end_position(bin, box_end);
+      box->load(*this, bin);
+    }
+
+    if (bin.position() != box_end)
+    {
+      yae_wlog("possibly %s box type: '%4s', "
+               "file pos: %" PRIu64 ", size: %" PRIu64 "",
+               box_constructor ? "mis-parsed" : "unsupported",
+               box->type_.str_,
+               file_position_ + box_pos / 8,
+               box->size_);
     }
   }
-
-  if (box_constructor)
+  catch (const std::exception & e)
   {
-    box.reset(box_constructor(box->type_.str_));
-    bin.seek(box_pos);
-    box->load(*this, bin);
+    yae_elog("error loading box type: '%4s', "
+             "file pos: %" PRIu64 ", size: %" PRIu64 ", exception: %s",
+             box->type_.str_,
+             file_position_ + box_pos / 8,
+             box->size_,
+             e.what());
   }
-
-  if (bin.position() != box_end)
+  catch (...)
   {
-    yae_wlog("possibly %s box type: '%4s', "
-             "file pos: %" PRIu64 ", size: %" PRIu64 "",
-             box_constructor ? "mis-parsed" : "unsupported",
+    yae_elog("error loading box type: '%4s', "
+             "file pos: %" PRIu64 ", size: %" PRIu64 ", unexpected exception",
              box->type_.str_,
              file_position_ + box_pos / 8,
              box->size_);

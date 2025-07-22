@@ -1076,10 +1076,38 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // load_from_hex
+  // load_hex
+  //
+  // NOTE: this assumes BigEndian bytes, therefore
+  //       if the hex_len is odd then the 1st nibble is assumed to be 0
   //
   YAE_API void
-  from_hex(unsigned char * dst, std::size_t dst_size, const char * hex_str);
+  load_hex(uint8_t * dst,
+           std::size_t dst_size,
+           const char * hex_str,
+           std::size_t hex_len = 0);
+
+  //----------------------------------------------------------------
+  // load_hex
+  //
+  inline yae::Data
+  load_hex(const char * hex_str, std::size_t hex_len = 0)
+  {
+    yae::Data data;
+    data.load_hex(hex_str, hex_len);
+    return data;
+  }
+
+  //----------------------------------------------------------------
+  // load_hex
+  //
+  inline yae::Data
+  load_hex(const std::string & hex_str)
+  {
+    yae::Data data;
+    data.load_hex(hex_str);
+    return data;
+  }
 
   //----------------------------------------------------------------
   // unhex
@@ -1106,28 +1134,6 @@ namespace yae
   inline unsigned char hex_to_byte(const char * h)
   {
     return ((unhex(h[0]) << 4) | unhex(h[1]));
-  }
-
-  //----------------------------------------------------------------
-  // unhex
-  //
-  inline std::vector<unsigned char> unhex(const char * h)
-  {
-    std::size_t l = strlen(h);
-    YAE_ASSERT(l % 2 == 0);
-
-    const char * src = h;
-    const char * end = src + l;
-
-    std::vector<unsigned char> b(l / 2);
-    unsigned char * dst = b.empty() ? NULL : &(b[0]);
-
-    for (; src < end; src += 2, dst += 1)
-    {
-      *dst = hex_to_byte(src);
-    }
-
-    return b;
   }
 
   //----------------------------------------------------------------

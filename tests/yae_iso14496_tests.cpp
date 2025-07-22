@@ -1,0 +1,376 @@
+// -*- Mode: c++; tab-width: 8; c-basic-offset: 2; indent-tabs-mode: nil -*-
+// NOTE: the first line of this file sets up source code indentation rules
+// for Emacs; it is also a hint to anyone modifying this file.
+
+// Created   : Mon Jul 21 08:26:33 PM MDT 2025
+// Copyright : Pavel Koshevoy
+// License   : MIT -- http://www.opensource.org/licenses/mit-license.php
+
+// aeyae:
+#include "yae/utils/yae_utils.h"
+#include "yae/video/yae_iso14496.h"
+
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/test/unit_test.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+
+//----------------------------------------------------------------
+// yae_insert_emulation_prevention_0x03_all_zeros
+//
+BOOST_AUTO_TEST_CASE(yae_insert_emulation_prevention_0x03_all_zeros)
+{
+  const char * src_rbsp_hex =
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000"
+    "000000";
+
+  const char * src_0x03_hex =
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003"
+    "000003";
+
+  yae::Data src_rbsp = yae::load_hex(src_rbsp_hex);
+  yae::Data src_0x03 = yae::load_hex(src_0x03_hex);
+
+  yae::Data out_rbsp =
+    yae::remove_emulation_prevention_0x03(src_0x03.get(), src_0x03.size());
+
+  std::string out_rbsp_hex =
+    yae::to_hex(out_rbsp.get(), out_rbsp.size());
+
+  BOOST_CHECK(out_rbsp_hex == src_rbsp_hex);
+
+  yae::Data out_0x03 =
+    yae::insert_emulation_prevention_0x03(src_rbsp.get(), src_rbsp.size());
+
+  std::string out_0x03_hex =
+    yae::to_hex(out_0x03.get(), out_0x03.size());
+
+  BOOST_CHECK(out_0x03_hex == src_0x03_hex);
+}
+
+//----------------------------------------------------------------
+// yae_insert_emulation_prevention_0x03_all_start_codes
+//
+BOOST_AUTO_TEST_CASE(yae_insert_emulation_prevention_0x03_all_start_codes)
+{
+  const char * src_rbsp_hex =
+    "000000"
+    "000001"
+    "000002"
+    "000003"
+    "000000"
+    "000001"
+    "000002"
+    "000003"
+    "000000"
+    "000001"
+    "000002"
+    "000003"
+    "000000"
+    "000001"
+    "000002"
+    "000003";
+
+  const char * src_0x03_hex =
+    "00000300"
+    "00030001"
+    "00000302"
+    "00000303"
+    "00000300"
+    "00030001"
+    "00000302"
+    "00000303"
+    "00000300"
+    "00030001"
+    "00000302"
+    "00000303"
+    "00000300"
+    "00030001"
+    "00000302"
+    "00000303";
+
+  yae::Data src_rbsp =
+    yae::load_hex(src_rbsp_hex);
+
+  yae::Data out_0x03 =
+    yae::insert_emulation_prevention_0x03(src_rbsp.get(), src_rbsp.size());
+
+  std::string out_0x03_hex =
+    yae::to_hex(out_0x03.get(), out_0x03.size());
+
+  BOOST_CHECK(out_0x03_hex == src_0x03_hex);
+}
+
+
+//----------------------------------------------------------------
+// TwoStrs
+//
+struct TwoStrs
+{
+  const char * nal_0x03_;
+  const char * nal_rbsp_;
+};
+
+//----------------------------------------------------------------
+// nals
+//
+static const TwoStrs nals[] =
+{
+  {
+    "40010c01ffff0140000003000003000003000003005dac09",
+    "40010c01ffff01400000000000000000005dac09"
+  },
+  {
+    "4201010140000003000003000003000003005da00280802e1f1396bb9096"
+    "4b8c05a80808082000007d20000bb80c00bbca20001499700005265c20",
+    "42010101400000000000000000005da00280802e1f1396bb90964b8c05a8"
+    "0808082000007d20000bb80c00bbca20001499700005265c20"
+  },
+  {
+    "4e0101030000030280",
+    "4e01010300000280"
+  },
+  {
+    "4e0101030000030280",
+    "4e01010300000280"
+  },
+  {
+    "0201d15f23f0793e551243533fca19eef66d8fca372f00013d853563f892"
+    "a42fc96cae64f096ce2e2479c8f10903f71387e7d80f2dbf8dbbab14c76b"
+    "f16e07acde119fc7a49d8ce45ef4fd2064c5b807e2bf817d18a73d17b029"
+    "395dfb86babc74d2dbb13f6d70c67438e484745e3ed8b72e6c17ea2333fd"
+    "950e41b83bfb9278ec013f6b1c40807f0000030000030000030332b4d751"
+    "4eb96efe5e1018",
+    "0201d15f23f0793e551243533fca19eef66d8fca372f00013d853563f892"
+    "a42fc96cae64f096ce2e2479c8f10903f71387e7d80f2dbf8dbbab14c76b"
+    "f16e07acde119fc7a49d8ce45ef4fd2064c5b807e2bf817d18a73d17b029"
+    "395dfb86babc74d2dbb13f6d70c67438e484745e3ed8b72e6c17ea2333fd"
+    "950e41b83bfb9278ec013f6b1c40807f0000000000000332b4d7514eb96e"
+    "fe5e1018"
+  },
+  {
+    "0201d16723f0793e551243533fca19eef66d8fca372f00000ada1298a1ab"
+    "e7ad688332430163a97011b4f16f577084478ec3aba780000003000006ca"
+    "529f80d65bc548133860",
+    "0201d16723f0793e551243533fca19eef66d8fca372f00000ada1298a1ab"
+    "e7ad688332430163a97011b4f16f577084478ec3aba7800000000006ca52"
+    "9f80d65bc548133860"
+  },
+  {
+    "0201d177211caf60421b34f3ee42555130a61d378b4b0000b559fd59841d"
+    "7ce06d11a49de039cba2acd643a3bf36441c3f787d83f35166aab5e1a55c"
+    "bd91dc7aea4e185e022937d458a83f3be4116c5957a2607ca9ed1c236201"
+    "e6ce387458264cd8ab0eca7f084541b80b3c8a06bf6971b634337a79af59"
+    "429df40796d868c59ff34ef9c39b656c3f3733b8698a6fda8be057896f2f"
+    "d502bb9b48000003000003000003000492447d4d2e7dbf2c",
+    "0201d177211caf60421b34f3ee42555130a61d378b4b0000b559fd59841d"
+    "7ce06d11a49de039cba2acd643a3bf36441c3f787d83f35166aab5e1a55c"
+    "bd91dc7aea4e185e022937d458a83f3be4116c5957a2607ca9ed1c236201"
+    "e6ce387458264cd8ab0eca7f084541b80b3c8a06bf6971b634337a79af59"
+    "429df40796d868c59ff34ef9c39b656c3f3733b8698a6fda8be057896f2f"
+    "d502bb9b48000000000000000492447d4d2e7dbf2c"
+  },
+  {
+    "0201d17f211caf60421b34f3ee42555130a61d378b4b00003373e5a96d8c"
+    "34374836d64004bf3f88a33d63f54c2982a04d6422eea4a1eeb9fcc83f71"
+    "d2e070d2898f99a5e704b00fd2099ab72ddb2f75bb3148002c862c422900"
+    "000300000300052ac36175081e2e88",
+    "0201d17f211caf60421b34f3ee42555130a61d378b4b00003373e5a96d8c"
+    "34374836d64004bf3f88a33d63f54c2982a04d6422eea4a1eeb9fcc83f71"
+    "d2e070d2898f99a5e704b00fd2099ab72ddb2f75bb3148002c862c422900"
+    "00000000052ac36175081e2e88"
+  },
+  {
+    "0201d19f213ceb355819f11f4016dfecd0d11cce00ec00000f2a347c13dd"
+    "c9b0f38875c6bda3db98819154d77994cd00000300000300002bb84afe",
+    "0201d19f213ceb355819f11f4016dfecd0d11cce00ec00000f2a347c13dd"
+    "c9b0f38875c6bda3db98819154d77994cd0000000000002bb84afe"
+  },
+  {
+    "0201d1a7213ceb355819f11f4016dfecd0d11cce00ec0000030000030000"
+    "030000030004924894a0",
+    "0201d1a7213ceb355819f11f4016dfecd0d11cce00ec0000000000000000"
+    "0004924894a0"
+  },
+  {
+    "0201d1af213ceb355819f11f4016dfecd0d11cce00ec0000030000030000"
+    "030000030004924894a0",
+    "0201d1af213ceb355819f11f4016dfecd0d11cce00ec0000000000000000"
+    "0004924894a0"
+  },
+  {
+    "0201d1b7213ceb355819f11f4016dfecd0d11cce00ec0000030000030000"
+    "030000030004924894a0",
+    "0201d1b7213ceb355819f11f4016dfecd0d11cce00ec0000000000000000"
+    "0004924894a0"
+  },
+  {
+    "0201d1bf213ceb355819f11f4016dfecd0d11cce00ec0000030000030000"
+    "030000030004924894a0",
+    "0201d1bf213ceb355819f11f4016dfecd0d11cce00ec0000000000000000"
+    "0004924894a0"
+  },
+  {
+    "0201d1c7215c75d40d34c15c133c5119369711128e9500000c77b6f81468"
+    "ba4cd154fd9e3d78613bb777e244259b0362b6d27db9800b0b9d3fb31814"
+    "cd3fa9b829b9da965db500cebb39e441eef5882375b142e06b794a8330b1"
+    "e68760b9df600000030000030000285529a484421e235a591dec6f70",
+    "0201d1c7215c75d40d34c15c133c5119369711128e9500000c77b6f81468"
+    "ba4cd154fd9e3d78613bb777e244259b0362b6d27db9800b0b9d3fb31814"
+    "cd3fa9b829b9da965db500cebb39e441eef5882375b142e06b794a8330b1"
+    "e68760b9df60000000000000285529a484421e235a591dec6f70"
+  },
+  {
+    "0201d1cf215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de117d1e8630678f6ea37bbd5d78019b1d828d0000003000003000a9a"
+    "919779b20a608d4b57f462c9e0",
+    "0201d1cf215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de117d1e8630678f6ea37bbd5d78019b1d828d000000000000a9a9197"
+    "79b20a608d4b57f462c9e0"
+  },
+  {
+    "0201d1d7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de117d1ec373a72d2bf22247a8f0000030000030021b5ced644b1a642"
+    "9da458cd18d268",
+    "0201d1d7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de117d1ec373a72d2bf22247a8f000000000021b5ced644b1a6429da4"
+    "58cd18d268"
+  },
+  {
+    "0201d1df215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d1df215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d1e7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d1e7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d1ef215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d1ef215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d1f7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d1f7215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d1ff215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d1ff215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d207215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d207215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d20f215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d20f215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "0201d217215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe68000000300000300aec0685af5904f0a77d74134634c60",
+    "0201d217215c75d40d34c15c133c5119369711128e9500000bccaf3081b4"
+    "7a7de019dbe6800000000000aec0685af5904f0a77d74134634c60"
+  },
+  {
+    "40010c01ffff0140000003000003000003000003005dac09",
+    "40010c01ffff01400000000000000000005dac09"
+  },
+  {
+    "4201010140000003000003000003000003005da00280802e1f1396bb9096"
+    "4b8c05a80808082000007d20000bb80c00bbca20001499700005265c20",
+    "42010101400000000000000000005da00280802e1f1396bb90964b8c05a8"
+    "0808082000007d20000bb80c00bbca20001499700005265c20"
+  },
+  {
+    "40010c01ffff0140000003000003000003000003005dac09",
+    "40010c01ffff01400000000000000000005dac09"
+  },
+  {
+    "4201010140000003000003000003000003005da00280802e1f1396bb9096"
+    "4b8c05a80808082000007d20000bb80c00bbca20001499700005265c20",
+    "42010101400000000000000000005da00280802e1f1396bb90964b8c05a8"
+    "0808082000007d20000bb80c00bbca20001499700005265c20"
+  },
+};
+
+//----------------------------------------------------------------
+// yae_insert_remove_emulation_prevention_0x03
+//
+BOOST_AUTO_TEST_CASE(yae_insert_remove_emulation_prevention_0x03)
+{
+  for (std::size_t i = 0, n = sizeof(nals) / sizeof(nals[0]); i < n; i++)
+  {
+    const TwoStrs & x = nals[i];
+
+    yae::Data src_0x03 = yae::load_hex(x.nal_0x03_);
+    yae::Data src_rbsp = yae::load_hex(x.nal_rbsp_);
+
+    yae::Data out_0x03 =
+      yae::insert_emulation_prevention_0x03(src_rbsp.get(), src_rbsp.size());
+    BOOST_CHECK(out_0x03.same_as(src_0x03));
+
+    yae::Data new_rbsp =
+      yae::remove_emulation_prevention_0x03(out_0x03.get(), out_0x03.size());
+    BOOST_CHECK(new_rbsp.same_as(src_rbsp));
+
+    yae::Data out_rbsp =
+      yae::remove_emulation_prevention_0x03(src_0x03.get(), src_0x03.size());
+    BOOST_CHECK(out_rbsp.same_as(src_rbsp));
+
+    yae::Data new_0x03 =
+      yae::insert_emulation_prevention_0x03(out_rbsp.get(), out_rbsp.size());
+    BOOST_CHECK(new_0x03.same_as(src_0x03));
+  }
+}

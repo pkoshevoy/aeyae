@@ -135,6 +135,44 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // Data::load_hex
+  //
+  Data &
+  Data::load_hex(const char * hex_str, std::size_t hex_len)
+  {
+    if (!hex_len)
+    {
+      hex_len = strlen(hex_str);
+    }
+
+    std::size_t num_bytes = (hex_len + 1) / 2;
+    this->resize(num_bytes);
+    yae::load_hex(this->get(), this->size(), hex_str, hex_len);
+    return *this;
+  }
+
+  //----------------------------------------------------------------
+  // Data::load_hex
+  //
+  Data &
+  Data::load_hex(const std::string & hex_str)
+  {
+    std::size_t len = hex_str.size();
+    const char * src = len ? &hex_str[0] : "";
+    return this->load_hex(src, len);
+  }
+
+  //----------------------------------------------------------------
+  // Data::to_hex
+  //
+  std::string
+  Data::to_hex() const
+  {
+    return yae::to_hex(this->get(), this->size());
+  }
+
+
+  //----------------------------------------------------------------
   // IBitstream::read_string
   //
   std::size_t
@@ -260,6 +298,27 @@ namespace yae
   {
     uint64_t u = (v > 0) ? (uint64_t(v << 1) - 1) : (uint64_t(-v) << 1);
     write_bits_ue(u);
+  }
+
+
+  //----------------------------------------------------------------
+  // SetEnd::SetEnd
+  //
+  SetEnd::SetEnd(IBitstream & bin, std::size_t new_end):
+    bin_(bin),
+    end_(bin.end())
+  {
+    YAE_THROW_IF(end_ < new_end);
+    bin_.set_end(new_end);
+  }
+
+  //----------------------------------------------------------------
+  // SetEnd::~SetEnd
+  //
+  SetEnd::~SetEnd()
+  {
+    // restore previous end position:
+    bin_.set_end(end_);
   }
 
 
@@ -415,6 +474,7 @@ namespace yae
       return data;
     }
 
+    YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 

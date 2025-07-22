@@ -1935,14 +1935,32 @@ namespace yae
   }
 
   //----------------------------------------------------------------
-  // from_hex
+  // load_hex
   //
   void
-  from_hex(unsigned char * dst, std::size_t dst_size, const char * hex_str)
+  load_hex(unsigned char * dst,
+           std::size_t dst_size,
+           const char * hex_str,
+           std::size_t hex_len)
   {
+    if (!hex_len)
+    {
+      hex_len = strlen(hex_str);
+    }
+
     const char * src = hex_str;
-    for (std::size_t i = 0, n = std::min(dst_size, strlen(hex_str) / 2);
-         i < n; i++, src += 2)
+    std::size_t n = std::min(dst_size, (hex_len + 1) / 2);
+    std::size_t i = 0;
+
+    if ((i < n) && (hex_len % 2) == 1)
+    {
+      // assume the 1st nibble is 0:
+      dst[i] = unhex(src[0]);
+      src += 1;
+      ++i;
+    }
+
+    for (; i < n; ++i, src += 2)
     {
       dst[i] = (unhex(src[0]) << 4) | unhex(src[1]);
     }

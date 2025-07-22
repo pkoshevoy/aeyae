@@ -11,9 +11,11 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/api/yae_assert.h"
 #include "yae/api/yae_shared_ptr.h"
-#include "yae/utils/yae_utils.h"
+#include "yae/utils/yae_data.h"
 #include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
 
 // standard:
 #include <bitset>
@@ -71,6 +73,10 @@ namespace yae
 
   template <typename TData>
   void load(const Json::Value & json, std::vector<TData> & v);
+
+  // yae::Data:
+  YAE_API void save(Json::Value & json, const yae::Data & v);
+  YAE_API void load(const Json::Value & json, yae::Data & v);
 
   // struct tm:
   YAE_API void save(Json::Value & json, const struct tm & tm);

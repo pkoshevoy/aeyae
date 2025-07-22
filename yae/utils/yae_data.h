@@ -351,6 +351,12 @@ namespace yae
       data_ = buf;
     }
 
+    inline void deep_copy(const Data & data)
+    { this->assign(data.get(), data.size()); }
+
+    inline Data deep_copy() const
+    { return Data(this->get(), this->size()); }
+
     template <typename TData>
     inline TData * assign(const std::vector<TData> & data)
     { return assign<TData>(data.empty() ? NULL : &data[0], data.size()); }
@@ -488,6 +494,11 @@ namespace yae
         (data_ && other.data_) ? data_->same_as(*other.data_) :
         (this->empty() && other.empty());
     }
+
+    // hex helpers:
+    Data & load_hex(const char * hex_str, std::size_t hex_len = 0);
+    Data & load_hex(const std::string & hex_str);
+    std::string to_hex() const;
 
   protected:
     TBufferPtr data_;
@@ -668,6 +679,9 @@ namespace yae
     virtual void write_bits(std::size_t num_bits, uint64_t bits) = 0;
     virtual void write_bytes(const void * data, std::size_t num_bytes) = 0;
 
+    inline void write(const Data & data)
+    { this->write_bytes(data.get(), data.size()); }
+
     template <typename TData>
     inline void write(std::size_t num_bits, TData data)
     { this->write_bits(num_bits, uint64_t(data)); }
@@ -713,6 +727,9 @@ namespace yae
     inline std::size_t end() const
     { return end_; }
 
+    inline void set_end(std::size_t end)
+    { end_ = end; }
+
     inline TBufferPtr read_remaining_bytes()
     {
       std::size_t remaining_bits = end_ - position_;
@@ -729,6 +746,25 @@ namespace yae
 
   protected:
     std::size_t position_;
+    std::size_t end_;
+  };
+
+
+  //----------------------------------------------------------------
+  // SetEnd
+  //
+  struct YAE_API SetEnd
+  {
+    SetEnd(IBitstream & bin, std::size_t new_end);
+    ~SetEnd();
+
+  private:
+    // intentionally disabled:
+    SetEnd(const SetEnd & other);
+    SetEnd & operator = (const SetEnd & other);
+
+  protected:
+    IBitstream & bin_;
     std::size_t end_;
   };
 
@@ -847,7 +883,7 @@ namespace yae
   //
   struct YAE_API NBit : bitstream::IPayload
   {
-    NBit(std::size_t nbits, uint64_t data = 0):
+    NBit(std::size_t nbits = 0, uint64_t data = 0):
       nbits_(nbits),
       data_(data)
     {}
