@@ -12,6 +12,7 @@
 
 // namespace access:
 using namespace yae::iso14496;
+using yae::IBitstream;
 
 
 //----------------------------------------------------------------
