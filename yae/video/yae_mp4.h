@@ -31,6 +31,10 @@
 
 namespace yae
 {
+  // namespace access:
+  using yae::bitstream::IPayload;
+  using yae::Bit;
+  using yae::NBit;
 
   // forward declarations:
   struct Mp4Context;
@@ -2225,6 +2229,77 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       yae::iso14496::ES_Descriptor es_;
+    };
+
+    //----------------------------------------------------------------
+    // AC3SpecificBox
+    //
+    // ETSI TS 102 366 V1.3.1 (2014-08), F.4.1
+    //
+    struct YAE_API AC3SpecificBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      Bit<2> fscod_;
+      Bit<5> bsid_;
+      Bit<3> bsmod_;
+      Bit<3> acmod_;
+      Bit<1> lfeon_;
+      Bit<5> bit_rate_code_;
+      Bit<5, 0> reserved_;
+    };
+
+    //----------------------------------------------------------------
+    // EC3IndependentSubstream
+    //
+    // ETSI TS 102 366 V1.3.1 (2014-08), F.6.1
+    //
+    struct YAE_API EC3IndependentSubstream : public IPayload
+    {
+      Bit<2> fscod_;
+      Bit<5> bsid_;
+      Bit<1, 0> reserved1_;
+      Bit<1> asvc_;
+      Bit<3> bsmod_;
+      Bit<3> acmod_;
+      Bit<1> lfeon_;
+      Bit<3, 0> reserved2_;
+      Bit<4> num_dep_sub_;
+
+      Bit<9> chan_loc_; // if (num_dep_sub > 0)
+      Bit<1, 0> reserved_; // if (!num_dep_sub)
+
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      void save(Json::Value & json) const;
+    };
+
+    //----------------------------------------------------------------
+    // EC3SpecificBox
+    //
+    // ETSI TS 102 366 V1.3.1 (2014-08), F.6.1
+    //
+    struct YAE_API EC3SpecificBox : public Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // the data rate of the Enhanced AC-3 bit stream in kbit/s.
+      // If the Enhanced AC-3 bit stream has a variable bit rate,
+      // then this field shall indicate the maximum data rate
+      // of the bit stream measured over the complete duration
+      // of the bit stream.
+      Bit<13> data_rate_;
+
+      // the number of independent substreams that are present
+      // in the Enhanced AC-3 bit stream. The value of this field
+      // shall be equal to the substreamID value of the last
+      // independent substream of the bit stream.
+      Bit<3> num_ind_sub_;
+
+      std::vector<EC3IndependentSubstream> ind_sub_;
     };
 
   }

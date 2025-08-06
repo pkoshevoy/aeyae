@@ -698,61 +698,6 @@ ES_Descriptor::ES_Descriptor():
 
 
 //----------------------------------------------------------------
-// EC3IndependentSubstream::save
-//
-void
-EC3IndependentSubstream::save(IBitstream & bin) const
-{
-  fscod_.save(bin);
-  bsid_.save(bin);
-  reserved1_.save(bin);
-  asvc_.save(bin);
-  bsmod_.save(bin);
-  acmod_.save(bin);
-  lfeon_.save(bin);
-  reserved2_.save(bin);
-  num_dep_sub_.save(bin);
-
-  if (num_dep_sub_.data_ > 0)
-  {
-    chan_loc_.save(bin);
-  }
-  else
-  {
-    reserved_.save(bin);
-  }
-}
-
-//----------------------------------------------------------------
-// EC3IndependentSubstream::load
-//
-bool
-EC3IndependentSubstream::load(IBitstream & bin)
-{
-  if (!(fscod_.load(bin) &&
-        bsid_.load(bin) &&
-        reserved1_.load(bin) &&
-        asvc_.load(bin) &&
-        bsmod_.load(bin) &&
-        acmod_.load(bin) &&
-        lfeon_.load(bin) &&
-        reserved2_.load(bin) &&
-        num_dep_sub_.load(bin)))
-  {
-    return false;
-  }
-
-  if (num_dep_sub_.data_ > 0)
-  {
-    return chan_loc_.load(bin);
-  }
-
-  bin.skip(1); // reserved '0' bit
-  return true;
-}
-
-
-//----------------------------------------------------------------
 // NALU::save
 //
 void

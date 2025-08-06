@@ -4678,6 +4678,169 @@ ESDSBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<AC3SpecificBox>::please
+//
+template AC3SpecificBox *
+create<AC3SpecificBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// AC3SpecificBox::load
+//
+void
+AC3SpecificBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  fscod_.load(bin);
+  bsid_.load(bin);
+  bsmod_.load(bin);
+  acmod_.load(bin);
+  lfeon_.load(bin);
+  bit_rate_code_.load(bin);
+  reserved_.load(bin);
+}
+
+//----------------------------------------------------------------
+// AC3SpecificBox::to_json
+//
+void
+AC3SpecificBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  yae::save(out["fscod"], fscod_.data_);
+  yae::save(out["bsid"], bsid_.data_);
+  yae::save(out["bsmod"], bsmod_.data_);
+  yae::save(out["acmod"], acmod_.data_);
+  yae::save(out["lfeon"], lfeon_.data_);
+  yae::save(out["bit_rate_code"], bit_rate_code_.data_);
+}
+
+
+//----------------------------------------------------------------
+// EC3IndependentSubstream::save
+//
+void
+EC3IndependentSubstream::save(IBitstream & bin) const
+{
+  fscod_.save(bin);
+  bsid_.save(bin);
+  reserved1_.save(bin);
+  asvc_.save(bin);
+  bsmod_.save(bin);
+  acmod_.save(bin);
+  lfeon_.save(bin);
+  reserved2_.save(bin);
+  num_dep_sub_.save(bin);
+
+  if (num_dep_sub_.data_ > 0)
+  {
+    chan_loc_.save(bin);
+  }
+  else
+  {
+    reserved_.save(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// EC3IndependentSubstream::load
+//
+bool
+EC3IndependentSubstream::load(IBitstream & bin)
+{
+  if (!(fscod_.load(bin) &&
+        bsid_.load(bin) &&
+        reserved1_.load(bin) &&
+        asvc_.load(bin) &&
+        bsmod_.load(bin) &&
+        acmod_.load(bin) &&
+        lfeon_.load(bin) &&
+        reserved2_.load(bin) &&
+        num_dep_sub_.load(bin)))
+  {
+    return false;
+  }
+
+  if (num_dep_sub_.data_ > 0)
+  {
+    return chan_loc_.load(bin);
+  }
+
+  bin.skip(1); // reserved '0' bit
+  return true;
+}
+
+//----------------------------------------------------------------
+// EC3IndependentSubstream::save
+//
+void
+EC3IndependentSubstream::save(Json::Value & json) const
+{
+  yae::save(json["fscod"], fscod_.data_);
+  yae::save(json["bsid"], bsid_.data_);
+  yae::save(json["asvc"], asvc_.data_);
+  yae::save(json["bsmod"], bsmod_.data_);
+  yae::save(json["acmod"], acmod_.data_);
+  yae::save(json["lfeon"], lfeon_.data_);
+  yae::save(json["num_dep_sub"], num_dep_sub_.data_);
+
+  if (num_dep_sub_.data_ > 0)
+  {
+    yae::save(json["chan_loc"], chan_loc_.data_);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<EC3SpecificBox>::please
+//
+template EC3SpecificBox *
+create<EC3SpecificBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// EC3SpecificBox::load
+//
+void
+EC3SpecificBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  data_rate_.load(bin);
+  num_ind_sub_.load(bin);
+
+  for (uint64_t i = 0; i < num_ind_sub_.data_; ++i)
+  {
+    ind_sub_.push_back(EC3IndependentSubstream());
+    EC3IndependentSubstream & ind_sub = ind_sub_.back();
+    if (!ind_sub.load(bin))
+    {
+      break;
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// EC3SpecificBox::to_json
+//
+void
+EC3SpecificBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  yae::save(out["data_rate"], data_rate_.data_);
+  yae::save(out["num_ind_sub"], num_ind_sub_.data_);
+
+  Json::Value & ind_subs = out["ind_sub"];
+  ind_subs = Json::arrayValue;
+
+  for (std::size_t i = 0, n = ind_sub_.size(); i < n; ++i)
+  {
+    const EC3IndependentSubstream & ind_sub = ind_sub_[i];
+    Json::Value v;
+    ind_sub.save(v);
+    ind_subs.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -4813,11 +4976,15 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("mp4a", create<AudioSampleEntryBox>::please);
     this->add("enca", create<AudioSampleEntryBox>::please);
     this->add("soun", create<AudioSampleEntryBox>::please);
+    this->add("ac-3", create<AudioSampleEntryBox>::please);
+    this->add("ec-3", create<AudioSampleEntryBox>::please);
     this->add("mp4v", create<VisualSampleEntryBox>::please);
     this->add("encv", create<VisualSampleEntryBox>::please);
     this->add("vide", create<VisualSampleEntryBox>::please);
     this->add("mp4s", create<SampleEntryBox>::please);
     this->add("esds", create<ESDSBox>::please);
+    this->add("dac3", create<AC3SpecificBox>::please);
+    this->add("dec3", create<EC3SpecificBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

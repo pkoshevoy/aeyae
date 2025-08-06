@@ -486,31 +486,6 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // EC3IndependentSubstream
-    //
-    struct YAE_API EC3IndependentSubstream : public IPayload
-    {
-      Bit<2> fscod_;
-      Bit<5> bsid_;
-      Bit<1, 0> reserved1_;
-      Bit<1> asvc_;
-      Bit<3> bsmod_;
-      Bit<3> acmod_;
-      Bit<1> lfeon_;
-      Bit<3, 0> reserved2_;
-      Bit<4> num_dep_sub_;
-
-      // NOTE: these are mutually exclusive
-      // and conditional on (num_dep_sub > 0):
-      Bit<9> chan_loc_;
-      Bit<1, 0> reserved_;
-
-      virtual void save(IBitstream & bin) const;
-      virtual bool load(IBitstream & bin);
-    };
-
-
-    //----------------------------------------------------------------
     // NALU
     //
     // unsigned int(16) nalUnitLength;
