@@ -2214,6 +2214,19 @@ namespace yae
       yae::iso14496::AVCDecoderConfigurationRecord cfg_;
     };
 
+    //----------------------------------------------------------------
+    // ESDSBox
+    //
+    // ISO/IEC 14496-14:2018(E), 6.7.2
+    //
+    struct YAE_API ESDSBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      yae::iso14496::ES_Descriptor es_;
+    };
+
   }
 
   // some mp4 files contain quicktime atoms:

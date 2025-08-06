@@ -1150,13 +1150,20 @@ ColourInformationBox::load(Mp4Context & mp4, IBitstream & bin)
 
   colour_type_.load(bin);
 
-  if (colour_type_.same_as("nclx"))
+  bool is_nclc = colour_type_.same_as("nclc");
+  bool is_nclx = colour_type_.same_as("nclx");
+
+  if (is_nclc || is_nclx)
   {
     colour_primaries_ = bin.read<uint16_t>();
     transfer_characteristics_ = bin.read<uint16_t>();
     matrix_coefficients_ = bin.read<uint16_t>();
-    full_range_flag_ = bin.read<uint8_t>(1);
-    reserved_ = bin.read<uint8_t>(7);
+
+    if (is_nclx)
+    {
+      full_range_flag_ = bin.read<uint8_t>(1);
+      reserved_ = bin.read<uint8_t>(7);
+    }
   }
   else if (colour_type_.same_as("rICC") ||
            colour_type_.same_as("prof"))
@@ -1175,12 +1182,19 @@ ColourInformationBox::to_json(Json::Value & out) const
 
   out["colour_type"] = colour_type_.str_;
 
-  if (colour_type_.same_as("nclx"))
+  bool is_nclc = colour_type_.same_as("nclc");
+  bool is_nclx = colour_type_.same_as("nclx");
+
+  if (is_nclc || is_nclx)
   {
     out["colour_primaries"] = colour_primaries_;
     out["transfer_characteristics"] = transfer_characteristics_;
     out["matrix_coefficients"] = matrix_coefficients_;
-    out["full_range_flag"] = Json::UInt(full_range_flag_);
+
+    if (is_nclx)
+    {
+      out["full_range_flag"] = Json::UInt(full_range_flag_);
+    }
   }
   else if (colour_type_.same_as("rICC") ||
            colour_type_.same_as("prof"))
@@ -4621,7 +4635,6 @@ create<AVCConfigurationBox>::please(const char * fourcc);
 void
 AVCConfigurationBox::load(Mp4Context & mp4, IBitstream & bin)
 {
-  const std::size_t box_pos = bin.position();
   Box::load(mp4, bin);
   cfg_.load(bin);
 }
@@ -4634,6 +4647,33 @@ AVCConfigurationBox::to_json(Json::Value & out) const
 {
   Box::to_json(out);
   cfg_.save(out["cfg"]);
+}
+
+
+//----------------------------------------------------------------
+// create<ESDSBox>::please
+//
+template ESDSBox *
+create<ESDSBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ESDSBox::load
+//
+void
+ESDSBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  es_.load(bin);
+}
+
+//----------------------------------------------------------------
+// ESDSBox::to_json
+//
+void
+ESDSBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  // es_.save(out["ES_Descriptor"]);
 }
 
 
@@ -4769,9 +4809,15 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("avc3", create<AVCSampleEntryBox>::please);
     this->add("avc4", create<AVCSampleEntryBox>::please);
     this->add("avcC", create<AVCConfigurationBox>::please);
+    this->add("m4ae", create<AudioSampleEntryBox>::please);
     this->add("mp4a", create<AudioSampleEntryBox>::please);
     this->add("enca", create<AudioSampleEntryBox>::please);
+    this->add("soun", create<AudioSampleEntryBox>::please);
+    this->add("mp4v", create<VisualSampleEntryBox>::please);
     this->add("encv", create<VisualSampleEntryBox>::please);
+    this->add("vide", create<VisualSampleEntryBox>::please);
+    this->add("mp4s", create<SampleEntryBox>::please);
+    this->add("esds", create<ESDSBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

@@ -204,6 +204,11 @@ namespace yae
         return false;
       }
 
+      // temporarily override bitstream end position:
+      uint64_t payload_end =
+        bin.position_plus_nbytes(payload_bytes.payload_size_);
+      yae::SetEnd override_bin_end(bin, payload_end);
+
       desc.payload_.reset(new TPayload());
       if (!desc.payload_->load(bin))
       {
