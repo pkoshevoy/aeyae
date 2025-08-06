@@ -722,6 +722,33 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // AudioSampleEntryBox
+    //
+    // ISO/IEC 14496-12:2015(E), 12.2.3.2
+    //
+    struct YAE_API AudioSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      AudioSampleEntryBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // version 0: AudioSampleEntry
+      // version 1: AudioSampleEntryV1
+      uint16_t entry_version_;
+
+      uint16_t reserved1_[3]; // 0
+      uint16_t channel_count_; // 2
+      uint16_t sample_size_; // 16
+      uint16_t pre_defined_; // 0
+      uint16_t reserved2_; // 0
+
+      // version 0: media_default_sample_rate << 16
+      // version 1: 1 << 16
+      uint32_t sample_rate_;
+    };
+
+    //----------------------------------------------------------------
     // VisualSampleEntryBox
     //
     struct YAE_API VisualSampleEntryBox : BoxWithChildren<SampleEntryBox>

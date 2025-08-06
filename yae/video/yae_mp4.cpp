@@ -912,6 +912,71 @@ SampleEntryBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<AudioSampleEntryBox>::please
+//
+template AudioSampleEntryBox *
+create<AudioSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// AudioSampleEntryBox::AudioSampleEntryBox
+//
+AudioSampleEntryBox::AudioSampleEntryBox():
+  entry_version_(0),
+  channel_count_(2),
+  sample_size_(16),
+  pre_defined_(0),
+  reserved2_(0),
+  sample_rate_(0)
+{
+  reserved1_[0] = 0;
+  reserved1_[1] = 0;
+  reserved1_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// AudioSampleEntryBox::load
+//
+void
+AudioSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  SampleEntryBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  entry_version_ = bin.read<uint16_t>();
+
+  reserved1_[0] = bin.read<uint16_t>();
+  reserved1_[1] = bin.read<uint16_t>();
+  reserved1_[2] = bin.read<uint16_t>();
+
+  channel_count_ = bin.read<uint16_t>();
+  sample_size_ = bin.read<uint16_t>();
+  pre_defined_ = bin.read<int16_t>();
+  reserved2_ = bin.read<uint16_t>();
+  sample_rate_ = bin.read<uint32_t>();
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// AudioSampleEntryBox::to_json
+//
+void
+AudioSampleEntryBox::to_json(Json::Value & out) const
+{
+  SampleEntryBox::to_json(out);
+
+  out["entry_version"] = entry_version_;
+  out["channel_count"] = channel_count_;
+  out["sample_size"] = sample_size_;
+  out["sample_rate"] = double(sample_rate_) / double(0x00010000);
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
 // create<VisualSampleEntryBox>::please
 //
 template VisualSampleEntryBox *
@@ -4704,6 +4769,9 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("avc3", create<AVCSampleEntryBox>::please);
     this->add("avc4", create<AVCSampleEntryBox>::please);
     this->add("avcC", create<AVCConfigurationBox>::please);
+    this->add("mp4a", create<AudioSampleEntryBox>::please);
+    this->add("enca", create<AudioSampleEntryBox>::please);
+    this->add("encv", create<VisualSampleEntryBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
