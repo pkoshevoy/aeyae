@@ -52,6 +52,7 @@ namespace yae
   {
 
     // namespace access:
+    using yae::bitstream::ByteAlignment;
     using yae::bitstream::IPayload;
     using yae::Bit;
     using yae::NBit;
@@ -216,8 +217,69 @@ namespace yae
       }
 
       bin.skip_until_byte_aligned();
+
+#ifndef NDEBUG
+      if (bin.position() < payload_end)
+      {
+        yae::Data unparsed = bin.read_bytes_until(payload_end);
+        yae_wlog("unparsed descriptor data: %s", unparsed.to_hex().c_str());
+      }
+#else
+      bin.seek(payload_end);
+#endif
+
       return true;
     }
+
+    //----------------------------------------------------------------
+    // AudioObjectType
+    //
+    // GetAudioObjectType()
+    // {
+    //   audioObjectType = 5 bits, uimsbf
+    //   if (audioObjectType == 31) {
+    //     audioObjectTypeExt = 6 bits, uimsbf
+    //     audioObjectType = 32 + audioObjectTypeExt
+    //   }
+    //   return audioObjectType;
+    // }
+    //
+    struct YAE_API AudioObjectType : public IPayload
+    {
+      AudioObjectType(uint8_t audio_object_type = 0);
+
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      inline uint8_t get() const
+      { return (aot_.data_ == 31) ? (32 + ext_.data_) : aot_.data_; }
+
+      inline void set(uint8_t audio_object_type)
+      {
+        aot_.data_ = (audio_object_type < 31) ? audio_object_type : 31;
+        ext_.data_ = (audio_object_type < 31) ? 0 : (audio_object_type - 32);
+      }
+
+      Bit<5> aot_;
+      Bit<6> ext_;
+    };
+
+    //----------------------------------------------------------------
+    // SamplingFrequency
+    //
+    struct YAE_API SamplingFrequency : public IPayload
+    {
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      uint32_t get() const;
+      void set(uint32_t sampling_frequency);
+
+      Bit<4> index_;
+
+      // if index == 0xF:
+      Bit<24> value_;
+    };
 
     //----------------------------------------------------------------
     // SyncExtensionType0x2b7
@@ -229,34 +291,159 @@ namespace yae
       virtual void save(IBitstream & bin) const;
       virtual bool load(IBitstream & bin);
 
-      Bit<5> audioObjectType; // 5, AAC-SBR
-      Bit<1, 1> sbrPresentFlag;
-      Bit<4> extSamplingFrequencyIndex;
+      AudioObjectType extensionAudioObjectType_;
 
-      // the rest of conditional data members
-      // are omitted because we don't need them
+      // if extensionAudioObjectType == 5:
+      Bit<1, 1> sbrPresentFlag;
+
+      // if sbrPresentFlag:
+      SamplingFrequency extensionSamplingFrequency_;
+
+      // if bin.has_enough_bits(12):
+      Bit<11> syncExtensionType;
+
+      // if syncExtensionType == 0x548:
+      Bit<1> psPresentFlag;
+
+      // if extensionAudioObjectType == 22:
+      Bit<4> extensionChannelConfiguration;
     };
 
     //----------------------------------------------------------------
-    // AudioSpecificConfig_AAC_LC
+    // ProgramConfigElement
     //
-    struct YAE_API AudioSpecificConfig_AAC_LC : public IPayload
+    struct YAE_API ProgramConfigElement : public IPayload
     {
-      AudioSpecificConfig_AAC_LC():
-        audioObjectType(2)
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      Bit<4> element_instance_tag;
+      Bit<2> object_type;
+      Bit<4> sampling_frequency_index;
+      Bit<4> num_front_channel_elements;
+      Bit<4> num_side_channel_elements;
+      Bit<4> num_back_channel_elements;
+      Bit<2> num_lfe_channel_elements;
+      Bit<3> num_assoc_data_elements;
+      Bit<4> num_valid_cc_elements;
+
+      Bit<1> mono_mixdown_present;
+      // if mono_mixdown_present:
+      Bit<4> mono_mixdown_element_number;
+
+      Bit<1> stereo_mixdown_present;
+      // if stereo_mixdown_present:
+      Bit<4> stereo_mixdown_element_number;
+
+      Bit<1> matrix_mixdown_idx_present;
+      // if matrix_mixdown_idx_present:
+      Bit<2> matrix_mixdown_idx;
+      Bit<1> pseudo_surround_enable;
+
+      struct YAE_API ChannelElement : public IPayload
+      {
+        virtual void save(IBitstream & bin) const;
+        virtual bool load(IBitstream & bin);
+
+        Bit<1> is_cpe;
+        Bit<4> tag_select;
+      };
+
+      std::vector<ChannelElement> front_element_;
+      std::vector<ChannelElement> side_element_;
+      std::vector<ChannelElement> back_element_;
+
+      struct YAE_API TagSelect : public Bit<4> {};
+
+      std::vector<TagSelect> lfe_element_;
+      std::vector<TagSelect> assoc_data_element_;
+
+      struct YAE_API CCElement : public IPayload
+      {
+        virtual void save(IBitstream & bin) const;
+        virtual bool load(IBitstream & bin);
+
+        Bit<1> is_ind_sw;
+        Bit<4> tag_select;
+      };
+
+      std::vector<CCElement> cc_element_;
+
+      ByteAlignment byte_alignment_;
+
+      Bit<8> comment_field_bytes_;
+      yae::Data comment_field_data_;
+    };
+
+    //----------------------------------------------------------------
+    // GASpecificConfig
+    //
+    struct YAE_API GASpecificConfig : public IPayload
+    {
+      GASpecificConfig(uint8_t samplingFrequencyIndex,
+                       uint8_t channelConfiguration,
+                       uint8_t audioObjectType);
+
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      Bit<1> frameLengthFlag;
+      Bit<1> dependsOnCoreCoder;
+
+      // if dependsOnCoreCoder:
+      Bit<14> codeCoderDelay;
+
+      Bit<1> extensionFlag;
+
+      // if !channelConfiguration:
+      boost::shared_ptr<ProgramConfigElement> program_config_element;
+
+      // if audioObjectType is 6 or 20:
+      Bit<3> layerNr;
+
+      // if extensionFlag && audioObjectType is 22:
+      Bit<5> numOfSubFrame;
+      Bit<11> layer_length;
+
+      // if extensionFlag && audioObjectType is 17, 19, 20, or 23:
+      Bit<1> aacSectionDataResilienceFlag;
+      Bit<1> aacScalefactorDataResilienceFlag;
+      Bit<1> aacSpectralDataResilienceFlag;
+
+      // if extensionFlag:
+      Bit<1> extensionFlag3;
+
+    protected:
+      uint8_t samplingFrequencyIndex_;
+      uint8_t channelConfiguration_;
+      uint8_t audioObjectType_;
+    };
+
+    //----------------------------------------------------------------
+    // AudioSpecificConfig
+    //
+    // ISO/IEC 14496-3:2009(E), 1.6.2.1
+    //
+    struct YAE_API AudioSpecificConfig : public IPayload
+    {
+      AudioSpecificConfig():
+        audioObjectType_(2)
       {}
 
       virtual void save(IBitstream & bin) const;
       virtual bool load(IBitstream & bin);
 
-      Bit<5> audioObjectType;
-      Bit<4> samplingFrequencyIndex;
+      AudioObjectType audioObjectType_;
+      SamplingFrequency samplingFrequency_;
       Bit<4> channelConfiguration;
 
-      // GASpecificConfig
-      Bit<1> frameLengthFlag;
-      Bit<1> dependsOnCoreCoder;
-      Bit<1> extensionFlag;
+      SamplingFrequency extensionSamplingFrequency_;
+      AudioObjectType extensionAudioObjectType_;
+      // if extensionAudioObjectType == 22:
+      Bit<4> extensionChannelConfiguration;
+
+      // GASpecificConfig, etc...
+      boost::shared_ptr<IPayload> specific_config_;
 
       Bit<11, 0x2b7> syncExtensionType;
       SyncExtensionType0x2b7 syncExtensionType0x2b7;
@@ -304,7 +491,7 @@ namespace yae
         // when DecoderConfigDescriptor.objectTypeIndication
         // refers to streams complying with ISO/IEC 14496-3.
         // In this case the existence of AudioSpecificConfig() is mandatory.
-        DecoderSpecificInfo<AudioSpecificConfig_AAC_LC> decSpecificInfo;
+        DecoderSpecificInfo<AudioSpecificConfig> decSpecificInfo;
 
         // profileLevelIndicationIndexDescriptor [0...255]
       };

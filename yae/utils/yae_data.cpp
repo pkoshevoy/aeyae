@@ -594,6 +594,38 @@ namespace yae
       save(null_bitstream);
       return null_bitstream.position();
     }
+
+
+    //----------------------------------------------------------------
+    // ByteAlignment::save
+    //
+    void
+    ByteAlignment::save(IBitstream & bin) const
+    {
+      bin.pad_until_byte_aligned();
+    }
+
+    //----------------------------------------------------------------
+    // ByteAlignment::load
+    //
+    bool
+    ByteAlignment::load(IBitstream & bin)
+    {
+      std::size_t misaligned = bin.position() & 0x7;
+      if (!misaligned)
+      {
+        return true;
+      }
+
+      std::size_t padding = 8 - misaligned;
+      if (!bin.has_enough_bits(padding))
+      {
+        return false;
+      }
+
+      bin.skip_until_byte_aligned();
+      return true;
+    }
   }
 
 

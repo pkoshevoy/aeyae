@@ -835,6 +835,17 @@ namespace yae
       virtual void save(IBitstream & bs) const = 0;
       virtual bool load(IBitstream & bs) = 0;
     };
+
+    //----------------------------------------------------------------
+    // ByteAlignment
+    //
+    // increment bitstream position until it is byte aligned
+    //
+    struct YAE_API ByteAlignment : public IPayload
+    {
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+    };
   }
 
 

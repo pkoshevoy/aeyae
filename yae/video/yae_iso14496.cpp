@@ -229,41 +229,38 @@ BaseDescriptor::save(IBitstream & bin) const
 
 
 //----------------------------------------------------------------
-// SyncExtensionType0x2b7::SyncExtensionType0x2b7
+// AudioObjectType::AudioObjectType
 //
-SyncExtensionType0x2b7::SyncExtensionType0x2b7():
-  audioObjectType(5)
-{}
+AudioObjectType::AudioObjectType(uint8_t audio_object_type)
+{
+  AudioObjectType::set(audio_object_type);
+}
 
 //----------------------------------------------------------------
-// SyncExtensionType0x2b7::save
+// AudioObjectType::save
 //
 void
-SyncExtensionType0x2b7::save(IBitstream & bin) const
+AudioObjectType::save(IBitstream & bin) const
 {
-  audioObjectType.save(bin);
-  sbrPresentFlag.save(bin);
-
-  if (sbrPresentFlag.data_)
+  aot_.save(bin);
+  if (aot_.data_ == 31)
   {
-    extSamplingFrequencyIndex.save(bin);
+    ext_.save(bin);
   }
 }
 
 //----------------------------------------------------------------
-// SyncExtensionType0x2b7::load
+// AudioObjectType::load
 //
 bool
-SyncExtensionType0x2b7::load(IBitstream & bin)
+AudioObjectType::load(IBitstream & bin)
 {
-  if (!(audioObjectType.load(bin) &&
-        sbrPresentFlag.load(bin)))
+  if (!aot_.load(bin))
   {
     return false;
   }
 
-  if (sbrPresentFlag.data_ &&
-      !extSamplingFrequencyIndex.load(bin))
+  if (aot_.data_ == 31 && !ext_.load(bin))
   {
     return false;
   }
@@ -273,46 +270,834 @@ SyncExtensionType0x2b7::load(IBitstream & bin)
 
 
 //----------------------------------------------------------------
-// AudioSpecificConfig_AAC_LC::save
+// SamplingFrequency::save
 //
 void
-AudioSpecificConfig_AAC_LC::save(IBitstream & bin) const
+SamplingFrequency::save(IBitstream & bin) const
 {
-  audioObjectType.save(bin);
-  samplingFrequencyIndex.save(bin);
-  channelConfiguration.save(bin);
-
-  // GASpecificConfig
-  frameLengthFlag.save(bin);
-  dependsOnCoreCoder.save(bin);
-  extensionFlag.save(bin);
-
-  if (syncExtensionType.data_ == 0x2b7)
+  index_.save(bin);
+  if (index_.data_ == 0xF)
   {
-    syncExtensionType.save(bin);
-    syncExtensionType0x2b7.save(bin);
+    value_.save(bin);
   }
 }
 
 //----------------------------------------------------------------
-// AudioSpecificConfig_AAC_LC::load
+// SamplingFrequency::load
 //
 bool
-AudioSpecificConfig_AAC_LC::load(IBitstream & bin)
+SamplingFrequency::load(IBitstream & bin)
 {
-  if (!(audioObjectType.load(bin) &&
-        samplingFrequencyIndex.load(bin) &&
-        channelConfiguration.load(bin) &&
-
-        // GASpecificConfig
-        frameLengthFlag.load(bin) &&
-        dependsOnCoreCoder.load(bin) &&
-        extensionFlag.load(bin)))
+  if (!index_.load(bin))
   {
     return false;
   }
 
-  if (bin.has_enough_bits(11))
+  if (index_.data_ == 0xF && !value_.load(bin))
+  {
+    return false;
+  }
+
+  return true;
+}
+
+//----------------------------------------------------------------
+// sample_frequency_table
+//
+static const uint32_t
+sample_frequency_table[16] = {
+  96000,
+  88200,
+  64000,
+  48000,
+  44100,
+  32000,
+  24000,
+  22050,
+  16000,
+  12000,
+  11025,
+  8000,
+  7350,
+  0, // 0xD reserved
+  0, // 0xE reserved
+  0, // 0xF escape value
+};
+
+//----------------------------------------------------------------
+// SamplingFrequency::get
+//
+uint32_t
+SamplingFrequency::get() const
+{
+  if (index_.data_ == 0xF)
+  {
+    return value_.data_;
+  }
+
+  uint32_t frequency = sample_frequency_table[index_.data_ & 0xF];
+  YAE_ASSERT(frequency);
+  return frequency;
+}
+
+//----------------------------------------------------------------
+// SamplingFrequency::set
+//
+void
+SamplingFrequency::set(uint32_t frequency)
+{
+  for (uint8_t index = 0; index < 0xD; ++index)
+  {
+    if (sample_frequency_table[index] == frequency)
+    {
+      index_.data_ = index;
+      return;
+    }
+  }
+
+  index_.data_ = 0xF;
+  value_.data_ = frequency;
+}
+
+
+
+
+//----------------------------------------------------------------
+// ProgramConfigElement::ChannelElement::save
+//
+void
+ProgramConfigElement::ChannelElement::save(IBitstream & bin) const
+{
+  is_cpe.save(bin);
+  tag_select.save(bin);
+}
+
+//----------------------------------------------------------------
+// ProgramConfigElement::ChannelElement::load
+//
+bool
+ProgramConfigElement::ChannelElement::load(IBitstream & bin)
+{
+  return is_cpe.load(bin) && tag_select.load(bin);
+}
+
+
+//----------------------------------------------------------------
+// ProgramConfigElement::CCElement::save
+//
+void
+ProgramConfigElement::CCElement::save(IBitstream & bin) const
+{
+  is_ind_sw.save(bin);
+  tag_select.save(bin);
+}
+
+//----------------------------------------------------------------
+// ProgramConfigElement::CCElement::load
+//
+bool
+ProgramConfigElement::CCElement::load(IBitstream & bin)
+{
+  return is_ind_sw.load(bin) && tag_select.load(bin);
+}
+
+
+//----------------------------------------------------------------
+// ProgramConfigElement::save
+//
+void
+ProgramConfigElement::save(IBitstream & bin) const
+{
+  element_instance_tag.save(bin);
+  object_type.save(bin);
+  sampling_frequency_index.save(bin);
+  num_front_channel_elements.save(bin);
+  num_side_channel_elements.save(bin);
+  num_back_channel_elements.save(bin);
+  num_lfe_channel_elements.save(bin);
+  num_assoc_data_elements.save(bin);
+  num_valid_cc_elements.save(bin);
+
+  mono_mixdown_present.save(bin);
+  if (mono_mixdown_present.data_)
+  {
+    mono_mixdown_element_number.save(bin);
+  }
+
+  stereo_mixdown_present.save(bin);
+  if (stereo_mixdown_present.data_)
+  {
+    stereo_mixdown_element_number.save(bin);
+  }
+
+  matrix_mixdown_idx_present.save(bin);
+  if (matrix_mixdown_idx_present.data_)
+  {
+    matrix_mixdown_idx.save(bin);
+    pseudo_surround_enable.save(bin);
+  }
+
+  YAE_THROW_IF(front_element_.size() != num_front_channel_elements.data_);
+  for (std::size_t i = 0, n = front_element_.size(); i < n; ++i)
+  {
+    const ChannelElement & element = front_element_[i];
+    element.save(bin);
+  }
+
+  YAE_THROW_IF(side_element_.size() != num_side_channel_elements.data_);
+  for (std::size_t i = 0, n = side_element_.size(); i < n; ++i)
+  {
+    const ChannelElement & element = side_element_[i];
+    element.save(bin);
+  }
+
+  YAE_THROW_IF(back_element_.size() != num_back_channel_elements.data_);
+  for (std::size_t i = 0, n = back_element_.size(); i < n; ++i)
+  {
+    const ChannelElement & element = back_element_[i];
+    element.save(bin);
+  }
+
+  YAE_THROW_IF(lfe_element_.size() != num_lfe_channel_elements.data_);
+  for (std::size_t i = 0, n = lfe_element_.size(); i < n; ++i)
+  {
+    const TagSelect & tag_select = lfe_element_[i];
+    tag_select.save(bin);
+  }
+
+  YAE_THROW_IF(assoc_data_element_.size() != num_assoc_data_elements.data_);
+  for (std::size_t i = 0, n = assoc_data_element_.size(); i < n; ++i)
+  {
+    const TagSelect & tag_select = assoc_data_element_[i];
+    tag_select.save(bin);
+  }
+
+  YAE_THROW_IF(cc_element_.size() != num_valid_cc_elements.data_);
+  for (std::size_t i = 0, n = cc_element_.size(); i < n; ++i)
+  {
+    const CCElement & element = cc_element_[i];
+    element.save(bin);
+  }
+
+  byte_alignment_.save(bin);
+
+  YAE_THROW_IF(comment_field_bytes_.data_ != comment_field_data_.size());
+  comment_field_bytes_.save(bin);
+  bin.write_bytes(comment_field_data_.get(),
+                  comment_field_data_.size());
+}
+
+//----------------------------------------------------------------
+// ProgramConfigElement::load
+//
+bool
+ProgramConfigElement::load(IBitstream & bin)
+{
+  if (!(element_instance_tag.load(bin) &&
+        object_type.load(bin) &&
+        sampling_frequency_index.load(bin) &&
+        num_front_channel_elements.load(bin) &&
+        num_side_channel_elements.load(bin) &&
+        num_back_channel_elements.load(bin) &&
+        num_lfe_channel_elements.load(bin) &&
+        num_assoc_data_elements.load(bin) &&
+        num_valid_cc_elements.load(bin)))
+  {
+    return false;
+  }
+
+  if (!mono_mixdown_present.load(bin))
+  {
+    return false;
+  }
+
+  if (mono_mixdown_present.data_ &&
+      !mono_mixdown_element_number.load(bin))
+  {
+    return false;
+  }
+
+  if (!stereo_mixdown_present.load(bin))
+  {
+    return false;
+  }
+
+  if (stereo_mixdown_present.data_ &&
+      !stereo_mixdown_element_number.load(bin))
+  {
+    return false;
+  }
+
+  if (!matrix_mixdown_idx_present.load(bin))
+  {
+    return false;
+  }
+
+  if (matrix_mixdown_idx_present.data_ &&
+      !(matrix_mixdown_idx.load(bin) &&
+        pseudo_surround_enable.load(bin)))
+  {
+    return false;
+  }
+
+  front_element_.resize(num_front_channel_elements.data_);
+  for (std::size_t i = 0, n = front_element_.size(); i < n; ++i)
+  {
+    ChannelElement & element = front_element_[i];
+    if (!element.load(bin))
+    {
+      return false;
+    }
+  }
+
+  side_element_.resize(num_side_channel_elements.data_);
+  for (std::size_t i = 0, n = side_element_.size(); i < n; ++i)
+  {
+    ChannelElement & element = side_element_[i];
+    if (!element.load(bin))
+    {
+      return false;
+    }
+  }
+
+  back_element_.resize(num_back_channel_elements.size());
+  for (std::size_t i = 0, n = back_element_.size(); i < n; ++i)
+  {
+    ChannelElement & element = back_element_[i];
+    if (!element.load(bin))
+    {
+      return false;
+    }
+  }
+
+  lfe_element_.resize(num_lfe_channel_elements.data_);
+  for (std::size_t i = 0, n = lfe_element_.size(); i < n; ++i)
+  {
+    TagSelect & tag_select = lfe_element_[i];
+    if (!tag_select.load(bin))
+    {
+      return false;
+    }
+  }
+
+  assoc_data_element_.resize(num_assoc_data_elements.data_);
+  for (std::size_t i = 0, n = assoc_data_element_.size(); i < n; ++i)
+  {
+    TagSelect & tag_select = assoc_data_element_[i];
+    if (!tag_select.load(bin))
+    {
+      return false;
+    }
+  }
+
+  cc_element_.resize(num_valid_cc_elements.data_);
+  for (std::size_t i = 0, n = cc_element_.size(); i < n; ++i)
+  {
+    CCElement & element = cc_element_[i];
+    if (!element.load(bin))
+    {
+      return false;
+    }
+  }
+
+  if (!byte_alignment_.load(bin))
+  {
+    return false;
+  }
+
+  if (!comment_field_bytes_.load(bin))
+  {
+    return false;
+  }
+
+  if (!bin.has_enough_bytes(comment_field_bytes_.data_))
+  {
+    return false;
+  }
+
+  comment_field_data_.resize(comment_field_bytes_.data_);
+  bin.read_bytes(comment_field_data_.get(),
+                 comment_field_data_.size());
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// GASpecificConfig::GASpecificConfig
+//
+GASpecificConfig::GASpecificConfig(uint8_t samplingFrequencyIndex,
+                                   uint8_t channelConfiguration,
+                                   uint8_t audioObjectType):
+  samplingFrequencyIndex_(samplingFrequencyIndex),
+  channelConfiguration_(channelConfiguration),
+  audioObjectType_(audioObjectType)
+{}
+
+//----------------------------------------------------------------
+// GASpecificConfig::save
+//
+void
+GASpecificConfig::save(IBitstream & bin) const
+{
+  frameLengthFlag.save(bin);
+  dependsOnCoreCoder.save(bin);
+
+  if (dependsOnCoreCoder.data_)
+  {
+    codeCoderDelay.save(bin);
+  }
+
+  extensionFlag.save(bin);
+
+  if (!channelConfiguration_)
+  {
+    YAE_THROW_IF(!program_config_element);
+    program_config_element->save(bin);
+  }
+
+  if (audioObjectType_ == 6 ||
+      audioObjectType_ == 20)
+  {
+    layerNr.save(bin);
+  }
+
+  if (extensionFlag.data_)
+  {
+    if (audioObjectType_ == 22)
+    {
+      numOfSubFrame.save(bin);
+      layer_length.save(bin);
+    }
+
+    if (audioObjectType_ == 17 ||
+        audioObjectType_ == 19 ||
+        audioObjectType_ == 20 ||
+        audioObjectType_ == 23)
+    {
+      aacSectionDataResilienceFlag.save(bin);
+      aacScalefactorDataResilienceFlag.save(bin);
+      aacSpectralDataResilienceFlag.save(bin);
+    }
+
+    extensionFlag3.save(bin);
+  }
+}
+
+//----------------------------------------------------------------
+// GASpecificConfig::load
+//
+bool
+GASpecificConfig::load(IBitstream & bin)
+{
+  if (!(frameLengthFlag.load(bin) &&
+        dependsOnCoreCoder.load(bin)))
+  {
+    return false;
+  }
+
+   if (dependsOnCoreCoder.data_ &&
+      !codeCoderDelay.load(bin))
+  {
+    return false;
+  }
+
+  if (!extensionFlag.load(bin))
+  {
+    return false;
+  }
+
+  if (!channelConfiguration_)
+  {
+    program_config_element.reset(new ProgramConfigElement());
+    if (!program_config_element->load(bin))
+    {
+      return false;
+    }
+  }
+
+  if ((audioObjectType_ == 6 ||
+       audioObjectType_ == 20) &&
+      !layerNr.load(bin))
+  {
+    return false;
+  }
+
+  if (extensionFlag.data_)
+  {
+    if (audioObjectType_ == 22 &&
+        !(numOfSubFrame.load(bin) &&
+          layer_length.load(bin)))
+    {
+      return false;
+    }
+
+    if ((audioObjectType_ == 17 ||
+         audioObjectType_ == 19 ||
+         audioObjectType_ == 20 ||
+         audioObjectType_ == 23) &&
+        !(aacSectionDataResilienceFlag.load(bin) &&
+          aacScalefactorDataResilienceFlag.load(bin) &&
+          aacSpectralDataResilienceFlag.load(bin)))
+    {
+      return false;
+    }
+
+    if (!extensionFlag3.load(bin))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// SyncExtensionType0x2b7::SyncExtensionType0x2b7
+//
+SyncExtensionType0x2b7::SyncExtensionType0x2b7():
+  extensionAudioObjectType_(5)
+{}
+
+//----------------------------------------------------------------
+// SyncExtensionType0x2b7::save
+//
+void
+SyncExtensionType0x2b7::save(IBitstream & bin) const
+{
+  extensionAudioObjectType_.save(bin);
+
+  uint8_t extensionAudioObjectType = extensionAudioObjectType_.get();
+  if (extensionAudioObjectType == 5 ||
+      extensionAudioObjectType == 22)
+  {
+    sbrPresentFlag.save(bin);
+
+    if (sbrPresentFlag.data_)
+    {
+      extensionSamplingFrequency_.save(bin);
+
+      if (extensionAudioObjectType == 5)
+      {
+        syncExtensionType.save(bin);
+
+        if (syncExtensionType.data_ == 0x548)
+        {
+          psPresentFlag.save(bin);
+        }
+      }
+    }
+
+    if (extensionAudioObjectType == 22)
+    {
+      extensionChannelConfiguration.save(bin);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// SyncExtensionType0x2b7::load
+//
+bool
+SyncExtensionType0x2b7::load(IBitstream & bin)
+{
+  if (!extensionAudioObjectType_.load(bin))
+  {
+    return false;
+  }
+
+  uint8_t extensionAudioObjectType = extensionAudioObjectType_.get();
+  if (extensionAudioObjectType == 5 ||
+      extensionAudioObjectType == 22)
+  {
+    if (!sbrPresentFlag.load(bin))
+    {
+      return false;
+    }
+
+    if (sbrPresentFlag.data_)
+    {
+      if (!extensionSamplingFrequency_.load(bin))
+      {
+        return false;
+      }
+
+      if (extensionAudioObjectType == 5 &&
+          bin.has_enough_bits(12))
+      {
+        if (!syncExtensionType.load(bin))
+        {
+          return false;
+        }
+
+        if (syncExtensionType.data_ == 0x548 &&
+            !psPresentFlag.load(bin))
+        {
+          return false;
+        }
+      }
+    }
+
+    if (extensionAudioObjectType == 22 &&
+        !extensionChannelConfiguration.load(bin))
+    {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+
+//----------------------------------------------------------------
+// AudioSpecificConfig::save
+//
+void
+AudioSpecificConfig::save(IBitstream & bin) const
+{
+  audioObjectType_.save(bin);
+  samplingFrequency_.save(bin);
+  channelConfiguration.save(bin);
+
+  YAE_ASSERT(specific_config_);
+  if (specific_config_)
+  {
+    specific_config_->save(bin);
+  }
+
+  int audioObjectType = audioObjectType_.get();
+  int extensionAudioObjectType = 0;
+
+  if (audioObjectType == 5 ||
+      audioObjectType == 29)
+  {
+    extensionAudioObjectType = 5;
+    audioObjectType = extensionAudioObjectType_.get();
+  }
+
+  switch (audioObjectType)
+  {
+    case 17:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+    case 39:
+      // not implemented:
+      YAE_THROW_IF(true);
+      break;
+
+    default:
+      break;
+  }
+
+  if (extensionAudioObjectType != 5)
+  {
+    syncExtensionType.save(bin);
+
+    if (syncExtensionType.data_ == 0x2b7)
+    {
+      syncExtensionType0x2b7.save(bin);
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// AudioSpecificConfig::load
+//
+bool
+AudioSpecificConfig::load(IBitstream & bin)
+{
+  if (!(audioObjectType_.load(bin) &&
+        samplingFrequency_.load(bin) &&
+        channelConfiguration.load(bin)))
+  {
+    return false;
+  }
+
+  // write-only variables:
+  int sbrPresentFlag = -1;
+  int psPresentFlag = -1;
+
+  int audioObjectType = audioObjectType_.get();
+  int extensionAudioObjectType = 0;
+
+  if (audioObjectType == 5 ||
+      audioObjectType == 29)
+  {
+    extensionAudioObjectType = 5;
+
+    // write-only variable:
+    sbrPresentFlag = 1;
+
+    if (audioObjectType == 29)
+    {
+      // write-only variable:
+      psPresentFlag = 1;
+    }
+
+    if (!extensionSamplingFrequency_.load(bin))
+    {
+      return false;
+    }
+
+    if (!extensionAudioObjectType_.load(bin))
+    {
+      return false;
+    }
+
+    audioObjectType = extensionAudioObjectType_.get();
+
+    if (audioObjectType == 22 &&
+        !extensionChannelConfiguration.load(bin));
+    {
+      return false;
+    }
+  }
+
+  switch (audioObjectType)
+  {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 6:
+    case 7:
+    case 17:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+      specific_config_.
+        reset(new GASpecificConfig(samplingFrequency_.index_.data_,
+                                   channelConfiguration.data_,
+                                   audioObjectType));
+      break;
+
+#if 0
+    case 8:
+      CelpSpecificConfig();
+      break;
+
+    case 9:
+      HvxcSpecificConfig();
+      break:
+
+    case 12:
+        TTSSpecificConfig();
+      break;
+
+    case 13:
+    case 14:
+    case 15:
+    case 16:
+      StructuredAudioSpecificConfig();
+      break;
+
+    case 24:
+      ErrorResilientCelpSpecificConfig();
+      break;
+
+    case 25:
+      ErrorResilientHvxcSpecificConfig();
+      break;
+
+    case 26:
+    case 27:
+      ParametricSpecificConfig();
+      break;
+
+    case 28:
+      SSCSpecificConfig();
+      break;
+
+    case 30:
+      sacPayloadEmbedding;
+      SpatialSpecificConfig();
+      break;
+
+    case 32:
+    case 33:
+    case 34:
+      MPEG_1_2_SpecificConfig();
+      break;
+
+    case 35:
+      DSTSpecificConfig();
+      break;
+
+    case 36:
+      bin.skip(5); // padding bits
+      ALSSpecificConfig();
+      break;
+
+    case 37:
+    case 38:
+      SLSSpecificConfig();
+      break;
+
+    case 39:
+      ELDSpecificConfig(channelConfiguration);
+      break:
+
+    case 40:
+    case 41:
+        SymbolicMusicSpecificConfig();
+      break;
+#endif
+
+    default:
+      // reserved, or not implemented:
+      return false;
+  }
+
+  if (!(specific_config_ && specific_config_->load(bin)))
+  {
+    return false;
+  }
+
+  switch (audioObjectType)
+  {
+    case 17:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+    case 24:
+    case 25:
+    case 26:
+    case 27:
+    case 39:
+#if 0
+      epConfig; // 2 bits
+      if (epConfig == 2 || epConfig == 3)
+      {
+        ErrorProtectionSpecificConfig();
+      }
+      if (epConfig == 3)
+      {
+        directMapping; // 1 bit
+        if ( ! directMapping )
+        {
+          /* tbd */
+        }
+      }
+#endif
+      // not implemented:
+      return false;
+
+    default:
+      break;
+  }
+
+  if (extensionAudioObjectType != 5 && bin.has_enough_bits(16))
   {
     if (!syncExtensionType.load(bin))
     {
