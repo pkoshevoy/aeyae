@@ -218,15 +218,15 @@ namespace yae
 
       bin.skip_until_byte_aligned();
 
-#ifndef NDEBUG
       if (bin.position() < payload_end)
       {
+#ifndef NDEBUG
         yae::Data unparsed = bin.read_bytes_until(payload_end);
         yae_wlog("unparsed descriptor data: %s", unparsed.to_hex().c_str());
-      }
 #else
-      bin.seek(payload_end);
+        bin.seek(payload_end);
 #endif
+      }
 
       return true;
     }

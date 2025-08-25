@@ -243,6 +243,7 @@ void
 AudioObjectType::save(IBitstream & bin) const
 {
   aot_.save(bin);
+
   if (aot_.data_ == 31)
   {
     ext_.save(bin);
@@ -276,6 +277,7 @@ void
 SamplingFrequency::save(IBitstream & bin) const
 {
   index_.save(bin);
+
   if (index_.data_ == 0xF)
   {
     value_.save(bin);
@@ -302,10 +304,10 @@ SamplingFrequency::load(IBitstream & bin)
 }
 
 //----------------------------------------------------------------
-// sample_frequency_table
+// sampling_frequency_table
 //
 static const uint32_t
-sample_frequency_table[16] = {
+sampling_frequency_table[16] = {
   96000,
   88200,
   64000,
@@ -335,7 +337,7 @@ SamplingFrequency::get() const
     return value_.data_;
   }
 
-  uint32_t frequency = sample_frequency_table[index_.data_ & 0xF];
+  uint32_t frequency = sampling_frequency_table[index_.data_ & 0xF];
   YAE_ASSERT(frequency);
   return frequency;
 }
@@ -348,7 +350,7 @@ SamplingFrequency::set(uint32_t frequency)
 {
   for (uint8_t index = 0; index < 0xD; ++index)
   {
-    if (sample_frequency_table[index] == frequency)
+    if (sampling_frequency_table[index] == frequency)
     {
       index_.data_ = index;
       return;
