@@ -199,6 +199,18 @@ namespace yae
     inline bool invalid() const
     { return !valid(); }
 
+    inline bool is_nopts_value() const
+    { return time_ == std::numeric_limits<int64_t>::min(); }
+
+    inline bool is_extreme_min() const
+    { return time_ == std::numeric_limits<int64_t>::min(); }
+
+    inline bool is_extreme_max() const
+    { return time_ == std::numeric_limits<int64_t>::max(); }
+
+    inline bool is_extreme_value() const
+    { return this->is_extreme_min() || this->is_extreme_max(); }
+
     // return time expressed in a given time base:
     TTime rebased(uint64_t base) const;
 
