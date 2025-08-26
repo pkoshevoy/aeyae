@@ -777,6 +777,12 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // MpegSampleEntryBox
+    //
+    struct YAE_API MpegSampleEntryBox : BoxWithChildren<SampleEntryBox> {};
+
+
+    //----------------------------------------------------------------
     // CleanApertureBox
     //
     struct YAE_API CleanApertureBox : public Box

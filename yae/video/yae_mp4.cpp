@@ -1057,6 +1057,11 @@ VisualSampleEntryBox::to_json(Json::Value & out) const
   TSelf::children_to_json(children);
 }
 
+//----------------------------------------------------------------
+// create<MpegSampleEntryBox>::please
+//
+template MpegSampleEntryBox *
+create<MpegSampleEntryBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
 // create<CleanApertureBox>::please
@@ -4981,7 +4986,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("mp4v", create<VisualSampleEntryBox>::please);
     this->add("encv", create<VisualSampleEntryBox>::please);
     this->add("vide", create<VisualSampleEntryBox>::please);
-    this->add("mp4s", create<SampleEntryBox>::please);
+    this->add("mp4s", create<MpegSampleEntryBox>::please);
     this->add("esds", create<ESDSBox>::please);
     this->add("dac3", create<AC3SpecificBox>::please);
     this->add("dec3", create<EC3SpecificBox>::please);

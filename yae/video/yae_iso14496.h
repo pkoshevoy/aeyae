@@ -449,6 +449,19 @@ namespace yae
       SyncExtensionType0x2b7 syncExtensionType0x2b7;
     };
 
+
+    //----------------------------------------------------------------
+    // OpaqueConfig
+    //
+    struct YAE_API OpaqueConfig : public IPayload
+    {
+      virtual void save(IBitstream & bin) const;
+      virtual bool load(IBitstream & bin);
+
+      yae::Data data_;
+    };
+
+
     //----------------------------------------------------------------
     // DecoderSpecificInfo
     //
@@ -491,7 +504,7 @@ namespace yae
         // when DecoderConfigDescriptor.objectTypeIndication
         // refers to streams complying with ISO/IEC 14496-3.
         // In this case the existence of AudioSpecificConfig() is mandatory.
-        DecoderSpecificInfo<AudioSpecificConfig> decSpecificInfo;
+        boost::shared_ptr<BaseDescriptor> decSpecificInfo;
 
         // profileLevelIndicationIndexDescriptor [0...255]
       };

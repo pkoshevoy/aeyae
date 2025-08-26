@@ -1121,6 +1121,26 @@ AudioSpecificConfig::load(IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// OpaqueConfig::save
+//
+void
+OpaqueConfig::save(IBitstream & bin) const
+{
+  bin.write(data_);
+}
+
+//----------------------------------------------------------------
+// OpaqueConfig::load
+//
+bool
+OpaqueConfig::load(IBitstream & bin)
+{
+  data_ = bin.read_bytes_until_end();
+  return true;
+}
+
+
+//----------------------------------------------------------------
 // DecoderConfigDescriptor::Payload::save
 //
 void
@@ -1133,7 +1153,11 @@ DecoderConfigDescriptor::Payload::save(IBitstream & bin) const
   bufferSizeDB.save(bin);
   maxBitrate.save(bin);
   avgBitrate.save(bin);
-  decSpecificInfo.save(bin);
+
+  if (decSpecificInfo)
+  {
+    decSpecificInfo->save(bin);
+  }
 }
 
 //----------------------------------------------------------------
@@ -1158,8 +1182,21 @@ DecoderConfigDescriptor::Payload::load(IBitstream & bin)
     return false;
   }
 
-  if (objectTypeIndication.data_ == 0x40 &&
-      !decSpecificInfo.load(bin))
+  if (objectTypeIndication.data_ == 0x40)
+  {
+    decSpecificInfo.reset(new DecoderSpecificInfo<AudioSpecificConfig>());
+  }
+  else if (!bin.exhausted())
+  {
+    // don't care about BIFSv2Config, etc ... just load it as opaque data:
+    decSpecificInfo.reset(new DecoderSpecificInfo<OpaqueConfig>());
+  }
+  else
+  {
+    decSpecificInfo.reset();
+  }
+
+  if (decSpecificInfo && !decSpecificInfo->load(bin))
   {
     return false;
   }

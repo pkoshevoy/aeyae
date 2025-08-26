@@ -627,6 +627,9 @@ namespace yae
       return this->read_bytes(n_bytes);
     }
 
+    inline TBufferPtr read_bytes_until_end()
+    { return this->read_bytes_until(end_); }
+
     inline void read_bytes(void * dst, std::size_t dst_size)
     {
       TBufferPtr src = this->read_bytes(dst_size);
