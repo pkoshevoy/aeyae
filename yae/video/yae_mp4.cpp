@@ -4998,6 +4998,10 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("vdep", create<TrackReferenceTypeBox>::please);
     this->add("vplx", create<TrackReferenceTypeBox>::please);
     this->add("subt", create<TrackReferenceTypeBox>::please);
+    this->add("dpnd", create<TrackReferenceTypeBox>::please);
+    this->add("ipir", create<TrackReferenceTypeBox>::please);
+    this->add("mpod", create<TrackReferenceTypeBox>::please);
+    this->add("sync", create<TrackReferenceTypeBox>::please);
 
     this->add("msrc", create<TrackGroupTypeBox>::please);
   }
