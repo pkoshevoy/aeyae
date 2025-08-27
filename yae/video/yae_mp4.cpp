@@ -1023,13 +1023,7 @@ VisualSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
   vertresolution_ = bin.read<uint32_t>();
   reserved2_ = bin.read<uint32_t>();
   frame_count_ = bin.read<uint16_t>();
-
-  uint8_t n = bin.read<uint8_t>();
-  if (n <= 31)
-  {
-    bin.read_string(compressorname_, n);
-    bin.skip_bytes(31 - n);
-  }
+  bin.read_string(compressorname_, 32);
 
   depth_ = bin.read<uint16_t>();
   pre_defined3_ = bin.read<int16_t>();
@@ -1050,7 +1044,20 @@ VisualSampleEntryBox::to_json(Json::Value & out) const
   out["horizresolution"] = double(horizresolution_) / double(0x00010000);
   out["vertresolution"] = double(vertresolution_) / double(0x00010000);
   out["frame_count"] = frame_count_;
-  out["compressorname"] = compressorname_;
+
+  // compressorname is supposed to be a Pascal string,
+  // with string size stored in the 1st byte...
+  // however, sometimes that is not the case:
+  int n = compressorname_[0];
+  if (n < 32)
+  {
+    out["compressorname"] = compressorname_.substr(1, n).c_str();
+  }
+  else
+  {
+    out["compressorname"] = compressorname_.c_str();
+  }
+
   out["depth"] = depth_;
 
   Json::Value & children = out["children"];
