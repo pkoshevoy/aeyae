@@ -1586,8 +1586,7 @@ EditListBox::load(Mp4Context & mp4, IBitstream & bin)
 
   segment_duration_.clear();
   media_time_.clear();
-  media_rate_integer_.clear();
-  media_rate_fraction_.clear();
+  media_rate_.clear();
 
   entry_count_ = bin.read<uint32_t>();
   for (uint32_t i = 0; i < entry_count_; ++i)
@@ -1598,14 +1597,32 @@ EditListBox::load(Mp4Context & mp4, IBitstream & bin)
     int64_t media_time =
       (FullBox::version_ == 1) ? bin.read<int64_t>() : bin.read<int32_t>();
 
-    int16_t media_rate_integer = bin.read<int16_t>();
-    int16_t media_rate_fraction = bin.read<int16_t>();
+    int32_t media_rate = bin.read<uint32_t>();
 
     segment_duration_.push_back(segment_duration);
     media_time_.push_back(media_time);
-    media_rate_integer_.push_back(media_rate_integer);
-    media_rate_fraction_.push_back(media_rate_fraction);
+    media_rate_.push_back(media_rate);
   }
+}
+
+//----------------------------------------------------------------
+// save_fixedpoint
+//
+template <typename TData, uint8_t frac_bits>
+static void
+save_fixedpoint(Json::Value & out, const std::vector<TData> & v)
+{
+  typedef std::vector<TData> TContainer;
+  const double scale = double(1ull << frac_bits);
+
+  Json::Value array(Json::arrayValue);
+  for (typename TContainer::const_iterator i = v.begin(); i != v.end(); ++i)
+  {
+    double t = double(*i) / scale;
+    array.append(t);
+  }
+
+  out = array;
 }
 
 //----------------------------------------------------------------
@@ -1618,8 +1635,7 @@ EditListBox::to_json(Json::Value & out) const
   out["entry_count"] = entry_count_;
   yae::save(out["segment_duration"], segment_duration_);
   yae::save(out["media_time"], media_time_);
-  yae::save(out["media_rate_integer"], media_rate_integer_);
-  yae::save(out["media_rate_fraction"], media_rate_fraction_);
+  save_fixedpoint<uint32_t, 16>(out["media_rate"], media_rate_);
 }
 
 
@@ -5419,12 +5435,27 @@ Mp4Context::parse(IBitstream & bin,
 
     if (bin.position() != box_end)
     {
+      yae::Data unparsed;
+      bin.skip_until_byte_aligned();
+      std::size_t unparsed_bytes = (box_end - bin.position()) / 8;
+      if (unparsed_bytes)
+      {
+        std::size_t bytes_to_load =
+          (unparsed_bytes <= 16) ? unparsed_bytes : 13;
+        unparsed = bin.read_bytes(bytes_to_load);
+      }
+
       yae_wlog("possibly %s box type: '%4s', "
-               "file pos: %" PRIu64 ", size: %" PRIu64 "",
+               "file pos: %" PRIu64 ", size: %" PRIu64 "%s",
                box_constructor ? "mis-parsed" : "unsupported",
                box->type_.str_,
                file_position_ + box_pos / 8,
-               box->size_);
+               box->size_,
+               unparsed.empty() ? "" :
+               yae::strfmt(", unparsed: %s%s",
+                           unparsed.to_hex().c_str(),
+                           unparsed_bytes == unparsed.size() ?
+                           "" : "...").c_str());
     }
   }
   catch (const std::exception & e)

@@ -998,8 +998,7 @@ namespace yae
       uint32_t entry_count_;
       std::vector<uint64_t> segment_duration_;
       std::vector<int64_t> media_time_;
-      std::vector<int16_t> media_rate_integer_;
-      std::vector<int16_t> media_rate_fraction_;
+      std::vector<uint32_t> media_rate_; // fixed point 16.16
     };
 
     //----------------------------------------------------------------
@@ -2526,7 +2525,7 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      // fixed-point aperture in pixels:
+      // fixed point 16.16 aperture in pixels:
       uint32_t width_;
       uint32_t height_;
     };
