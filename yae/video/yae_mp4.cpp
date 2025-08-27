@@ -5300,6 +5300,35 @@ yae::qtff::MetadataItemListAtom::load(Mp4Context & mp4, IBitstream & bin)
 
 
 //----------------------------------------------------------------
+// create<yae::qtff::ApertureDimensionsAtom>::please
+//
+template yae::qtff::ApertureDimensionsAtom *
+create<yae::qtff::ApertureDimensionsAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::ApertureDimensionsAtom::load
+//
+void
+yae::qtff::ApertureDimensionsAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+  width_ = bin.read<uint32_t>();
+  height_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// yae::qtff::ApertureDimensionsAtom::to_json
+//
+void
+yae::qtff::ApertureDimensionsAtom::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["width"] = double(width_) / double(0x00010000);
+  out["height"] = double(height_) / double(0x00010000);
+}
+
+
+//----------------------------------------------------------------
 // QuickTimeAtomFactory
 //
 struct QuickTimeAtomFactory : public BoxFactory
@@ -5314,6 +5343,10 @@ struct QuickTimeAtomFactory : public BoxFactory
     this->add("name", create<yae::qtff::NameAtom>::please);
     this->add("itif", create<yae::qtff::ItemInfoAtom>::please);
     this->add("ilst", create<yae::qtff::MetadataItemListAtom>::please);
+    this->add("tapt", create<yae::mp4::Container>::please);
+    this->add("clef", create<yae::qtff::ApertureDimensionsAtom>::please);
+    this->add("prof", create<yae::qtff::ApertureDimensionsAtom>::please);
+    this->add("enof", create<yae::qtff::ApertureDimensionsAtom>::please);
   }
 
   // helper:

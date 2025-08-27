@@ -2513,6 +2513,24 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
     };
 
+    //----------------------------------------------------------------
+    // ApertureDimensionsAtom
+    //
+    struct YAE_API ApertureDimensionsAtom : public yae::mp4::FullBox
+    {
+      ApertureDimensionsAtom():
+        width_(0),
+        height_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // fixed-point aperture in pixels:
+      uint32_t width_;
+      uint32_t height_;
+    };
+
   }
 
   template <>
