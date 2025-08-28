@@ -1382,11 +1382,11 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // MovieFragmentRandomAccessOffsetBoxBox
+    // MovieFragmentRandomAccessOffsetBox
     //
-    struct YAE_API MovieFragmentRandomAccessOffsetBoxBox : public FullBox
+    struct YAE_API MovieFragmentRandomAccessOffsetBox : public FullBox
     {
-      MovieFragmentRandomAccessOffsetBoxBox(): size_(0) {}
+      MovieFragmentRandomAccessOffsetBox(): size_(0) {}
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
@@ -2305,6 +2305,125 @@ namespace yae
       Bit<3> num_ind_sub_;
 
       std::vector<EC3IndependentSubstream> ind_sub_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ChannelLayoutBox
+    //
+    // ISO/IEC 14496-12:2015(E), 12.2.4.1
+    //
+    struct YAE_API ChannelLayoutBox : public FullBox
+    {
+      ChannelLayoutBox();
+
+      struct YAE_API Layout
+      {
+        Layout();
+
+        bool load(IBitstream & bin, std::size_t end_pos);
+        void to_json(Json::Value & out) const;
+
+        uint8_t speaker_position_;
+
+        // if speaker_position == 126) // explicit position
+        int16_t azimuth_;
+        int8_t elevation_;
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      enum Structure
+      {
+        channelStructured = 1,
+        objectStructured = 2
+      };
+
+      uint8_t stream_structure_;
+
+      // if (stream_structure & channelStructured)
+      uint8_t definedLayout_;
+
+      // if definedLayout == 0:
+      // (channelCount comes from the sample entry ...
+      //  or we can just read until the end of the box)
+      std::vector<Layout> layout_;
+
+      // if definedLayout != 0:
+      uint64_t omittedChannelsMap_;
+
+      // if (stream_structure & objectStructured)
+      uint8_t object_count_;
+    };
+
+
+    //----------------------------------------------------------------
+    // DownMixInstructionsBox
+    //
+    // ISO/IEC 14496-12:2015(E), 12.2.5
+    //
+    struct YAE_API DownMixInstructionsBox : public FullBox
+    {
+      DownMixInstructionsBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint8_t targetLayout_;
+
+      uint8_t reserved_ : 1;
+      uint8_t targetChannelCount_ : 7;
+
+      uint8_t in_stream_ : 1;
+      uint8_t downmix_ID_ : 7;
+
+      // for (i = 1; i <= targetChannelCount; i++)
+      //   for (j = 1; j <= baseChannelCount; j++)
+      //     bit(4) bs_downmix_coefficient;
+      //
+      // If targetChannelCount*baseChannelCount is odd,
+      // the box is padded with 4 bits set to 0xF
+      //
+      std::vector<uint8_t> bs_downmix_coefficient_;
+    };
+
+
+    //----------------------------------------------------------------
+    // LoudnessBaseBox
+    //
+    // ISO/IEC 14496-12:2015(E), 12.2.7.2
+    //
+    struct YAE_API LoudnessBaseBox : public FullBox
+    {
+      LoudnessBaseBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t reserved_ : 3;
+      uint16_t downmix_ID_ : 7; // matching downmix
+      uint16_t DRC_set_ID_ : 6; // to match a DRC box
+
+      int16_t bs_sample_peak_level_ : 12;
+      int16_t bs_true_peak_level_ : 12;
+
+      uint8_t measurement_system_for_TP_ : 4;
+      uint8_t reliability_for_TP_ : 4;
+      uint8_t measurement_count_;
+
+      struct YAE_API Measurement
+      {
+        bool load(IBitstream & bin, std::size_t end_pos);
+        void to_json(Json::Value & out) const;
+
+        uint8_t method_definition_;
+        uint8_t method_value_;
+        uint8_t measurement_system_ : 4;
+        uint8_t reliability_ : 4;
+      };
+
+      std::vector<Measurement> measurement_;
     };
 
   }

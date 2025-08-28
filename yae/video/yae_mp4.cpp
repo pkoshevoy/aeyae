@@ -2570,26 +2570,26 @@ TrackFragmentRandomAccessBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
-// create<MovieFragmentRandomAccessOffsetBoxBox>::please
+// create<MovieFragmentRandomAccessOffsetBox>::please
 //
-template MovieFragmentRandomAccessOffsetBoxBox *
-create<MovieFragmentRandomAccessOffsetBoxBox>::please(const char * fourcc);
+template MovieFragmentRandomAccessOffsetBox *
+create<MovieFragmentRandomAccessOffsetBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
-// MovieFragmentRandomAccessOffsetBoxBox::load
+// MovieFragmentRandomAccessOffsetBox::load
 //
 void
-MovieFragmentRandomAccessOffsetBoxBox::load(Mp4Context & mp4, IBitstream & bin)
+MovieFragmentRandomAccessOffsetBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   FullBox::load(mp4, bin);
   size_ = bin.read<uint32_t>();
 }
 
 //----------------------------------------------------------------
-// MovieFragmentRandomAccessOffsetBoxBox::to_json
+// MovieFragmentRandomAccessOffsetBox::to_json
 //
 void
-MovieFragmentRandomAccessOffsetBoxBox::to_json(Json::Value & out) const
+MovieFragmentRandomAccessOffsetBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
   out["size"] = size_;
@@ -4869,6 +4869,354 @@ EC3SpecificBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ChannelLayoutBox>::please
+//
+template ChannelLayoutBox *
+create<ChannelLayoutBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::ChannelLayoutBox
+//
+ChannelLayoutBox::ChannelLayoutBox():
+  stream_structure_(0),
+  definedLayout_(0),
+  omittedChannelsMap_(0),
+  object_count_(0)
+{}
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::Layout::Layout
+//
+ChannelLayoutBox::Layout::Layout():
+  speaker_position_(0),
+  azimuth_(0),
+  elevation_(0)
+{}
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::Layout::load
+//
+bool
+ChannelLayoutBox::Layout::load(IBitstream & bin, std::size_t end_pos)
+{
+  azimuth_ = 0;
+  elevation_ = 0;
+  speaker_position_ = 0;
+
+  std::size_t start_pos = bin.position();
+  if (end_pos < start_pos + 8)
+  {
+    return false;
+  }
+
+  speaker_position_ = bin.read<uint8_t>();
+  if (speaker_position_ != 126)
+  {
+    return true;
+  }
+
+  if (end_pos < start_pos + 32)
+  {
+    bin.seek(start_pos);
+    return false;
+  }
+
+  azimuth_ = bin.read<int16_t>();
+  elevation_ = bin.read<int8_t>();
+  return true;
+}
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::Layout::to_json
+//
+void
+ChannelLayoutBox::Layout::to_json(Json::Value & out) const
+{
+  out["speaker_position"] = Json::UInt(speaker_position_);
+
+  if (speaker_position_ == 126)
+  {
+    out["azimuth"] = Json::Int(azimuth_);
+    out["elevation"] = Json::Int(elevation_);
+  }
+}
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::load
+//
+void
+ChannelLayoutBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  layout_.clear();
+
+  stream_structure_ = bin.read<uint8_t>();
+
+  bool channel_structured = !!(stream_structure_ & channelStructured);
+  bool object_structured = !!(stream_structure_ & objectStructured);
+
+  if (channel_structured)
+  {
+    definedLayout_ = bin.read<uint8_t>();
+
+    if (definedLayout_ == 0)
+    {
+      std::size_t layout_end = box_end - (object_structured ? 8 : 0);
+      while (true)
+      {
+        Layout layout;
+        if (!layout.load(bin, layout_end))
+        {
+          break;
+        }
+
+        layout_.push_back(layout);
+      }
+    }
+    else
+    {
+      omittedChannelsMap_ = bin.read<uint64_t>();
+    }
+  }
+
+  if (object_structured)
+  {
+    object_count_ = bin.read<uint8_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// ChannelLayoutBox::to_json
+//
+void
+ChannelLayoutBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["stream_structure"] = Json::UInt(stream_structure_);
+
+  bool channel_structured = !!(stream_structure_ & channelStructured);
+  bool object_structured = !!(stream_structure_ & objectStructured);
+
+  if (channel_structured)
+  {
+    out["definedLayout"] = Json::UInt(definedLayout_);
+
+    if (definedLayout_ == 0)
+    {
+      Json::Value & layouts = out["layouts"];
+      layouts = Json::arrayValue;
+
+      for (std::size_t i = 0, n = layout_.size(); i < n; ++i)
+      {
+        const Layout & layout = layout_[i];
+        Json::Value v;
+        layout.to_json(v);
+        layouts.append(v);
+      }
+    }
+    else
+    {
+      out["omittedChannelsMap"] = Json::UInt64(omittedChannelsMap_);
+    }
+  }
+
+  if (object_structured)
+  {
+    out["object_count"] = Json::UInt(object_count_);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<DownMixInstructionsBox>::please
+//
+template DownMixInstructionsBox *
+create<DownMixInstructionsBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DownMixInstructionsBox::DownMixInstructionsBox
+//
+DownMixInstructionsBox::DownMixInstructionsBox():
+  targetLayout_(0),
+  reserved_(0),
+  targetChannelCount_(0),
+  in_stream_(0),
+  downmix_ID_(0)
+{}
+
+//----------------------------------------------------------------
+// DownMixInstructionsBox::load
+//
+void
+DownMixInstructionsBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  bs_downmix_coefficient_.clear();
+
+  targetLayout_ = bin.read<uint8_t>();
+  reserved_ = bin.read<uint8_t>(1);
+  targetChannelCount_ = bin.read<uint8_t>(7);
+  in_stream_ = bin.read<uint8_t>(1);
+  downmix_ID_ = bin.read<uint8_t>(7);
+
+  if (!in_stream_ && targetChannelCount_ > 0)
+  {
+    std::size_t num_coefficients = bin.bits_left() / 4;
+    std::size_t baseChannelCount = num_coefficients / targetChannelCount_;
+    for (std::size_t i = 0; i < targetChannelCount_; ++i)
+    {
+      for (std::size_t j = 0; j < baseChannelCount; ++j)
+      {
+        uint8_t bs_downmix_coefficient = bin.read<uint8_t>(4);
+        bs_downmix_coefficient_.push_back(bs_downmix_coefficient);
+      }
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// DownMixInstructionsBox::to_json
+//
+void
+DownMixInstructionsBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["targetLayout"] = Json::UInt(targetLayout_);
+  out["reserved"] = Json::UInt(reserved_);
+  out["targetChannelCount"] = Json::UInt(targetChannelCount_);
+  out["in_stream"] = Json::UInt(in_stream_);
+  out["downmix_ID"] = Json::UInt(downmix_ID_);
+
+  yae::save(out["bs_downmix_coefficient"], bs_downmix_coefficient_);
+}
+
+
+//----------------------------------------------------------------
+// create<LoudnessBaseBox>::please
+//
+template LoudnessBaseBox *
+create<LoudnessBaseBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// LoudnessBaseBox::LoudnessBaseBox
+//
+LoudnessBaseBox::LoudnessBaseBox():
+  reserved_(0),
+  downmix_ID_(0),
+  DRC_set_ID_(0),
+  bs_sample_peak_level_(0),
+  bs_true_peak_level_(0),
+  measurement_system_for_TP_(0),
+  reliability_for_TP_(0),
+  measurement_count_(0)
+{}
+
+//----------------------------------------------------------------
+// LoudnessBaseBox::Measurement::load
+//
+bool
+LoudnessBaseBox::Measurement::load(IBitstream & bin, std::size_t end_pos)
+{
+  if (end_pos < bin.position() + 24)
+  {
+    return false;
+  }
+
+  method_definition_ = bin.read<uint8_t>();
+  method_value_ = bin.read<uint8_t>();
+  measurement_system_ = bin.read<uint8_t>(4);
+  reliability_ = bin.read<uint8_t>(4);
+  return true;
+}
+
+//----------------------------------------------------------------
+// LoudnessBaseBox::Measurement::to_json
+//
+void
+LoudnessBaseBox::Measurement::to_json(Json::Value & out) const
+{
+  out["method_definition"] = Json::UInt(method_definition_);
+  out["method_value"] = Json::UInt(method_value_);
+  out["measurement_system"] = Json::UInt(measurement_system_);
+  out["reliability"] = Json::UInt(reliability_);
+}
+
+//----------------------------------------------------------------
+// LoudnessBaseBox::load
+//
+void
+LoudnessBaseBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  measurement_.clear();
+
+  reserved_ = bin.read<uint8_t>(3);
+  downmix_ID_ = bin.read<uint8_t>(7);
+  DRC_set_ID_ = bin.read<uint8_t>(6);
+
+  bs_sample_peak_level_ = bin.read<int16_t>(12);
+  bs_true_peak_level_ = bin.read<int16_t>(12);
+
+  measurement_system_for_TP_ = bin.read<uint8_t>(4);
+  reliability_for_TP_ = bin.read<uint8_t>(4);
+  measurement_count_ = bin.read<uint8_t>();
+
+  for (uint8_t i = 0; i < measurement_count_; ++i)
+  {
+    Measurement measurement;
+    if (!measurement.load(bin, box_end))
+    {
+      break;
+    }
+
+    measurement_.push_back(measurement);
+  }
+}
+
+//----------------------------------------------------------------
+// LoudnessBaseBox::to_json
+//
+void
+LoudnessBaseBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["reserved"] = Json::UInt(reserved_);
+  out["downmix_ID"] = Json::UInt(downmix_ID_);
+  out["DRC_set_ID"] = Json::UInt(DRC_set_ID_);
+
+  out["bs_sample_peak_level"] = Json::Int(bs_sample_peak_level_);
+  out["bs_true_peak_level"] = Json::Int(bs_true_peak_level_);
+
+  out["measurement_system_for_TP"] = Json::UInt(measurement_system_for_TP_);
+  out["reliability_for_TP"] = Json::UInt(reliability_for_TP_);
+  out["measurement_count"] = Json::UInt(measurement_count_);
+
+  Json::Value & measurements = out["measurements"];
+  measurements = Json::arrayValue;
+
+  for (std::size_t i = 0, n = measurement_.size(); i < n; ++i)
+  {
+    const Measurement & measurement = measurement_[i];
+    Json::Value v;
+    measurement.to_json(v);
+    measurements.append(v);
+  }
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -4894,6 +5242,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("sinf", create_container);
     this->add("schi", create_container);
     this->add("udta", create_container);
+    this->add("ludt", create_container);
     this->add("meco", create_container);
     this->add("paen", create_container);
     this->add("strk", create_container);
@@ -4949,7 +5298,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("tfhd", create<TrackFragmentHeaderBox>::please);
     this->add("trun", create<TrackRunBox>::please);
     this->add("tfra", create<TrackFragmentRandomAccessBox>::please);
-    this->add("mfro", create<MovieFragmentRandomAccessOffsetBoxBox>::please);
+    this->add("mfro", create<MovieFragmentRandomAccessOffsetBox>::please);
     this->add("tfdt", create<TrackFragmentBaseMediaDecodeTimeBox>::please);
     this->add("leva", create<LevelAssignmentBox>::please);
     this->add("trep", create<TrackExtensionPropertiesBox>::please);
@@ -5013,6 +5362,10 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("esds", create<ESDSBox>::please);
     this->add("dac3", create<AC3SpecificBox>::please);
     this->add("dec3", create<EC3SpecificBox>::please);
+    this->add("chnl", create<ChannelLayoutBox>::please);
+    this->add("dmix", create<DownMixInstructionsBox>::please);
+    this->add("tlou", create<LoudnessBaseBox>::please);
+    this->add("alou", create<LoudnessBaseBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
@@ -5025,6 +5378,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("ipir", create<TrackReferenceTypeBox>::please);
     this->add("mpod", create<TrackReferenceTypeBox>::please);
     this->add("sync", create<TrackReferenceTypeBox>::please);
+    this->add("tmcd", create<TrackReferenceTypeBox>::please);
 
     this->add("msrc", create<TrackGroupTypeBox>::please);
   }
