@@ -2725,6 +2725,22 @@ namespace yae
       uint32_t height_;
     };
 
+    //----------------------------------------------------------------
+    // BaseMediaInfoAtom
+    //
+    struct YAE_API BaseMediaInfoAtom : public yae::mp4::FullBox
+    {
+      BaseMediaInfoAtom();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t graphicsmode_;
+      uint16_t opcolor_[3];
+      uint16_t balance_;
+      uint16_t reserved_;
+    };
+
   }
 
   template <>

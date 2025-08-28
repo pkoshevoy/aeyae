@@ -5936,6 +5936,55 @@ yae::qtff::ApertureDimensionsAtom::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<yae::qtff::BaseMediaInfoAtom>::please
+//
+template yae::qtff::BaseMediaInfoAtom *
+create<yae::qtff::BaseMediaInfoAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::BaseMediaInfoAtom::BaseMediaInfoAtom
+//
+yae::qtff::BaseMediaInfoAtom::BaseMediaInfoAtom():
+  graphicsmode_(0),
+  balance_(0),
+  reserved_(0)
+{
+  opcolor_[0] = 0;
+  opcolor_[1] = 0;
+  opcolor_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// yae::qtff::BaseMediaInfoAtom::load
+//
+void
+yae::qtff::BaseMediaInfoAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  graphicsmode_ = bin.read<uint16_t>();
+  yae::LoadVec<uint16_t>(3, opcolor_, bin, box_end);
+  balance_ = bin.read<uint16_t>();
+  reserved_ = bin.read<uint16_t>();
+}
+
+//----------------------------------------------------------------
+// yae::qtff::BaseMediaInfoAtom::to_json
+//
+void
+yae::qtff::BaseMediaInfoAtom::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["graphicsmode"] = graphicsmode_;
+  yae::save(out["opcolor"], opcolor_, 3);
+  out["balance"] = balance_;
+  out["reserved"] = reserved_;
+}
+
+
+//----------------------------------------------------------------
 // QuickTimeAtomFactory
 //
 struct QuickTimeAtomFactory : public BoxFactory
@@ -5954,6 +6003,7 @@ struct QuickTimeAtomFactory : public BoxFactory
     this->add("clef", create<yae::qtff::ApertureDimensionsAtom>::please);
     this->add("prof", create<yae::qtff::ApertureDimensionsAtom>::please);
     this->add("enof", create<yae::qtff::ApertureDimensionsAtom>::please);
+    this->add("gmin", create<yae::qtff::BaseMediaInfoAtom>::please);
   }
 
   // helper:
