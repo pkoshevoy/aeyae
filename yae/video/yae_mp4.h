@@ -2166,7 +2166,7 @@ namespace yae
     };
 
     //----------------------------------------------------------------
-    // TextBox
+    // TextFullBox
     //
     struct YAE_API TextFullBox : public FullBox
     {
@@ -2174,6 +2174,17 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       std::string data_;
+    };
+
+    //----------------------------------------------------------------
+    // DataFullBox
+    //
+    struct YAE_API DataFullBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      Data data_;
     };
 
     //----------------------------------------------------------------
@@ -2425,6 +2436,39 @@ namespace yae
 
       std::vector<Measurement> measurement_;
     };
+
+
+    //----------------------------------------------------------------
+    // XMLMetaDataSampleEntryBox
+    //
+    struct YAE_API XMLMetaDataSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string content_encoding_;
+      std::string namespace_;
+      std::string schema_location_;
+    };
+
+
+    //----------------------------------------------------------------
+    // TextMetaDataSampleEntryBox
+    //
+    struct YAE_API TextMetaDataSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string content_encoding_;
+      std::string mime_format_;
+    };
+
+
+    //----------------------------------------------------------------
+    // URIMetaSampleEntryBox
+    //
+    struct YAE_API URIMetaSampleEntryBox : BoxWithChildren<SampleEntryBox> {};
 
   }
 

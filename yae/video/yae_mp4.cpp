@@ -4577,6 +4577,36 @@ TextFullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<DataFullBox>::please
+//
+template DataFullBox *
+create<DataFullBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// DataFullBox::load
+//
+void
+DataFullBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// DataFullBox::to_json
+//
+void
+DataFullBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  out["data"] = data_.to_hex();
+}
+
+
+//----------------------------------------------------------------
 // create<DASHEventMessageBox>::please
 //
 template DASHEventMessageBox *
@@ -5215,6 +5245,100 @@ LoudnessBaseBox::to_json(Json::Value & out) const
   }
 }
 
+//----------------------------------------------------------------
+// create<XMLMetaDataSampleEntryBox>::please
+//
+template XMLMetaDataSampleEntryBox *
+create<XMLMetaDataSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// XMLMetaDataSampleEntryBox::load
+//
+void
+XMLMetaDataSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  SampleEntryBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  content_encoding_.clear();
+  bin.read_string_until_null(content_encoding_, box_end);
+
+  namespace_.clear();
+  bin.read_string_until_null(namespace_, box_end);
+
+  schema_location_.clear();
+  bin.read_string_until_null(schema_location_, box_end);
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// XMLMetaDataSampleEntryBox::to_json
+//
+void
+XMLMetaDataSampleEntryBox::to_json(Json::Value & out) const
+{
+  SampleEntryBox::to_json(out);
+
+  out["content_encoding"] = content_encoding_;
+  out["namespace"] = namespace_;
+  out["schema_location"] = schema_location_;
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
+// create<TextMetaDataSampleEntryBox>::please
+//
+template TextMetaDataSampleEntryBox *
+create<TextMetaDataSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TextMetaDataSampleEntryBox::load
+//
+void
+TextMetaDataSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  SampleEntryBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  content_encoding_.clear();
+  bin.read_string_until_null(content_encoding_, box_end);
+
+  mime_format_.clear();
+  bin.read_string_until_null(mime_format_, box_end);
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// TextMetaDataSampleEntryBox::to_json
+//
+void
+TextMetaDataSampleEntryBox::to_json(Json::Value & out) const
+{
+  SampleEntryBox::to_json(out);
+
+  out["content_encoding"] = content_encoding_;
+  out["mime_format"] = mime_format_;
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
+// create<URIMetaSampleEntryBox>::please
+//
+template URIMetaSampleEntryBox *
+create<URIMetaSampleEntryBox>::please(const char * fourcc);
+
 
 //----------------------------------------------------------------
 // Mp4BoxFactory
@@ -5366,6 +5490,12 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("dmix", create<DownMixInstructionsBox>::please);
     this->add("tlou", create<LoudnessBaseBox>::please);
     this->add("alou", create<LoudnessBaseBox>::please);
+    this->add("metx", create<XMLMetaDataSampleEntryBox>::please);
+    this->add("mett", create<TextMetaDataSampleEntryBox>::please);
+    this->add("txtC", create<TextFullBox>::please);
+    this->add("uri ", create<TextFullBox>::please);
+    this->add("uriI", create<DataFullBox>::please);
+    this->add("urim", create<URIMetaSampleEntryBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);
