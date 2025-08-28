@@ -5541,6 +5541,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("alou", create<LoudnessBaseBox>::please);
     this->add("metx", create<XMLMetaDataSampleEntryBox>::please);
     this->add("mett", create<TextMetaDataSampleEntryBox>::please);
+    this->add("stxt", create<TextMetaDataSampleEntryBox>::please);
     this->add("txtC", create<TextFullBox>::please);
     this->add("uri ", create<TextFullBox>::please);
     this->add("uriI", create<DataFullBox>::please);
