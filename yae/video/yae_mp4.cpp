@@ -5561,6 +5561,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("iods", create<ObjectDescriptorBox>::please);
     this->add("vmhd", create<VideoMediaHeaderBox>::please);
     this->add("smhd", create<SoundMediaHeaderBox>::please);
+    this->add("gmhd", create_container);
     this->add("name", create<TextBox>::please);
     this->add("emsg", create<DASHEventMessageBox>::please);
     this->add("avc1", create<AVCSampleEntryBox>::please);
