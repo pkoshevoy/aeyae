@@ -5341,6 +5341,55 @@ create<URIMetaSampleEntryBox>::please(const char * fourcc);
 
 
 //----------------------------------------------------------------
+// create<HintMediaHeaderBox>::please
+//
+template HintMediaHeaderBox *
+create<HintMediaHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// HintMediaHeaderBox::HintMediaHeaderBox
+//
+HintMediaHeaderBox::HintMediaHeaderBox():
+  maxPDUsize_(0),
+  avgPDUsize_(0),
+  maxbitrate_(0),
+  avgbitrate_(0),
+  reserved_(0)
+{}
+
+//----------------------------------------------------------------
+// HintMediaHeaderBox::load
+//
+void
+HintMediaHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  maxPDUsize_ = bin.read<uint16_t>();
+  avgPDUsize_ = bin.read<uint16_t>();
+  maxbitrate_ = bin.read<uint32_t>();
+  avgbitrate_ = bin.read<uint32_t>();
+  reserved_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// HintMediaHeaderBox::to_json
+//
+void
+HintMediaHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["maxPDUsize"] = maxPDUsize_;
+  out["avgPDUsize"] = avgPDUsize_;
+  out["maxbitrate"] = maxbitrate_;
+  out["avgbitrate"] = avgbitrate_;
+  out["reserved"] = reserved_;
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -5496,6 +5545,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("uri ", create<TextFullBox>::please);
     this->add("uriI", create<DataFullBox>::please);
     this->add("urim", create<URIMetaSampleEntryBox>::please);
+    this->add("hmhd", create<HintMediaHeaderBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

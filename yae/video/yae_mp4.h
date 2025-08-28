@@ -2470,6 +2470,24 @@ namespace yae
     //
     struct YAE_API URIMetaSampleEntryBox : BoxWithChildren<SampleEntryBox> {};
 
+
+    //----------------------------------------------------------------
+    // HintMediaHeaderBox
+    //
+    struct YAE_API HintMediaHeaderBox : public FullBox
+    {
+      HintMediaHeaderBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint16_t maxPDUsize_;
+      uint16_t avgPDUsize_;
+      uint32_t maxbitrate_;
+      uint32_t avgbitrate_;
+      uint32_t reserved_;
+    };
+
   }
 
   // some mp4 files contain quicktime atoms:
