@@ -5390,6 +5390,52 @@ HintMediaHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<XMLSubtitleSampleEntryBox>::please
+//
+template XMLSubtitleSampleEntryBox *
+create<XMLSubtitleSampleEntryBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// XMLSubtitleSampleEntryBox::load
+//
+void
+XMLSubtitleSampleEntryBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  SampleEntryBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  namespace_.clear();
+  bin.read_string_until_null(namespace_, box_end);
+
+  schema_location_.clear();
+  bin.read_string_until_null(schema_location_, box_end);
+
+  auxiliary_mime_types_.clear();
+  bin.read_string_until_null(auxiliary_mime_types_, box_end);
+
+  TSelf::load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// XMLSubtitleSampleEntryBox::to_json
+//
+void
+XMLSubtitleSampleEntryBox::to_json(Json::Value & out) const
+{
+  SampleEntryBox::to_json(out);
+
+  out["namespace"] = namespace_;
+  out["schema_location"] = schema_location_;
+  out["auxiliary_mime_types"] = auxiliary_mime_types_;
+
+  Json::Value & children = out["children"];
+  TSelf::children_to_json(children);
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -5542,11 +5588,13 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("metx", create<XMLMetaDataSampleEntryBox>::please);
     this->add("mett", create<TextMetaDataSampleEntryBox>::please);
     this->add("stxt", create<TextMetaDataSampleEntryBox>::please);
+    this->add("sbtt", create<TextMetaDataSampleEntryBox>::please);
     this->add("txtC", create<TextFullBox>::please);
     this->add("uri ", create<TextFullBox>::please);
     this->add("uriI", create<DataFullBox>::please);
     this->add("urim", create<URIMetaSampleEntryBox>::please);
     this->add("hmhd", create<HintMediaHeaderBox>::please);
+    this->add("stpp", create<XMLSubtitleSampleEntryBox>::please);
 
     this->add("hint", create<TrackReferenceTypeBox>::please);
     this->add("cdsc", create<TrackReferenceTypeBox>::please);

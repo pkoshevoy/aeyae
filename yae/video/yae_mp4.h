@@ -2488,6 +2488,20 @@ namespace yae
       uint32_t reserved_;
     };
 
+    //----------------------------------------------------------------
+    // XMLSubtitleSampleEntryBox
+    //
+    struct YAE_API XMLSubtitleSampleEntryBox : BoxWithChildren<SampleEntryBox>
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string namespace_;
+      std::string schema_location_;
+      std::string auxiliary_mime_types_;
+    };
+
+
   }
 
   // some mp4 files contain quicktime atoms:
