@@ -637,6 +637,9 @@ namespace yae
     }
 
     // returns number of bytes consumed:
+    std::size_t read_pascal_string(std::string & s);
+
+    // returns number of bytes consumed:
     std::size_t read_string(std::string & s, std::size_t num_bytes);
 
     // returns number of bytes consumed:

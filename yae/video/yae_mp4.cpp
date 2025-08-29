@@ -5448,7 +5448,10 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("moov", create_container);
     this->add("mvex", create_container);
     this->add("trak", create_container);
+
+    // contains only TrackReferenceTypeBox(es)...
     this->add("tref", create_container);
+
     this->add("trgr", create_container);
     this->add("moof", create_container);
     this->add("traf", create_container);
@@ -5596,20 +5599,6 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("urim", create<URIMetaSampleEntryBox>::please);
     this->add("hmhd", create<HintMediaHeaderBox>::please);
     this->add("stpp", create<XMLSubtitleSampleEntryBox>::please);
-
-    this->add("hint", create<TrackReferenceTypeBox>::please);
-    this->add("cdsc", create<TrackReferenceTypeBox>::please);
-    this->add("font", create<TrackReferenceTypeBox>::please);
-    this->add("hind", create<TrackReferenceTypeBox>::please);
-    this->add("vdep", create<TrackReferenceTypeBox>::please);
-    this->add("vplx", create<TrackReferenceTypeBox>::please);
-    this->add("subt", create<TrackReferenceTypeBox>::please);
-    this->add("dpnd", create<TrackReferenceTypeBox>::please);
-    this->add("ipir", create<TrackReferenceTypeBox>::please);
-    this->add("mpod", create<TrackReferenceTypeBox>::please);
-    this->add("sync", create<TrackReferenceTypeBox>::please);
-    this->add("tmcd", create<TrackReferenceTypeBox>::please);
-
     this->add("msrc", create<TrackGroupTypeBox>::please);
   }
 
@@ -5985,6 +5974,187 @@ yae::qtff::BaseMediaInfoAtom::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<yae::qtff::SampleDescriptionAtom>::please
+//
+template yae::qtff::SampleDescriptionAtom *
+create<yae::qtff::SampleDescriptionAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::SampleDescriptionAtom::SampleDescriptionAtom
+//
+yae::qtff::SampleDescriptionAtom::SampleDescriptionAtom():
+  data_reference_index_(0)
+{
+  reserved_[0] = 0;
+  reserved_[1] = 0;
+  reserved_[2] = 0;
+  reserved_[3] = 0;
+  reserved_[4] = 0;
+  reserved_[5] = 0;
+}
+
+//----------------------------------------------------------------
+// yae::qtff::SampleDescriptionAtom::load
+//
+std::size_t
+yae::qtff::SampleDescriptionAtom::load_base(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  Box::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  yae::LoadVec<uint8_t>(6, reserved_, bin, box_end);
+  data_reference_index_ = bin.read<uint16_t>();
+
+  return box_pos;
+}
+
+//----------------------------------------------------------------
+// yae::qtff::SampleDescriptionAtom::load
+//
+void
+yae::qtff::SampleDescriptionAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = this->load_base(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  this->load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::SampleDescriptionAtom::to_json
+//
+void
+yae::qtff::SampleDescriptionAtom::to_json(Json::Value & out) const
+{
+  yae::mp4::Container::to_json(out);
+  yae::save(out["reserved"], reserved_, 6);
+  out["data_reference_index"] = data_reference_index_;
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::TimecodeSampleDescAtom>::please
+//
+template yae::qtff::TimecodeSampleDescAtom *
+create<yae::qtff::TimecodeSampleDescAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeSampleDescAtom::TimecodeSampleDescAtom
+//
+yae::qtff::TimecodeSampleDescAtom::TimecodeSampleDescAtom():
+  reserved1_(0),
+  flags_(0),
+  timescale_(0),
+  frame_duration_(0),
+  frames_per_second_(0),
+  reserved2_(0)
+{}
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeSampleDescAtom::load
+//
+void
+yae::qtff::TimecodeSampleDescAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = this->load_base(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  reserved1_ = bin.read<uint32_t>();
+  flags_ = bin.read<uint32_t>();
+  timescale_ = bin.read<uint32_t>();
+  frame_duration_ = bin.read<uint32_t>();
+  frames_per_second_ = bin.read<uint8_t>();
+
+  std::size_t zero_bits = std::min<std::size_t>(24, bin.bits_left());
+  reserved2_ = bin.read<uint32_t>(zero_bits);
+
+  this->load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeSampleDescAtom::to_json
+//
+void
+yae::qtff::TimecodeSampleDescAtom::to_json(Json::Value & out) const
+{
+  SampleDescriptionAtom::to_json(out);
+
+  out["reserved1"] = reserved1_;
+  out["flags"] = flags_;
+  out["timescale"] = timescale_;
+  out["frame_duration"] = frame_duration_;
+  out["frames_per_second"] = Json::UInt(frames_per_second_);
+  out["reserved2"] = Json::UInt(reserved2_);
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::TimecodeMediaInfoAtom>::please
+//
+template yae::qtff::TimecodeMediaInfoAtom *
+create<yae::qtff::TimecodeMediaInfoAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeMediaInfoAtom::TimecodeMediaInfoAtom
+//
+yae::qtff::TimecodeMediaInfoAtom::TimecodeMediaInfoAtom():
+  text_font_(0),
+  text_face_(0),
+  text_size_(0),
+  reserved_(0)
+{
+  text_color_[0] = 0;
+  text_color_[1] = 0;
+  text_color_[2] = 0;
+
+  background_color_[0] = 0;
+  background_color_[1] = 0;
+  background_color_[2] = 0;
+}
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeMediaInfoAtom::load
+//
+void
+yae::qtff::TimecodeMediaInfoAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  yae::mp4::FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  text_font_ = bin.read<uint16_t>();
+  text_face_ = bin.read<uint16_t>();
+  text_size_ = bin.read<uint16_t>();
+  reserved_ = bin.read<uint16_t>();
+
+  yae::LoadVec<uint16_t>(3, text_color_, bin, box_end);
+  yae::LoadVec<uint16_t>(3, background_color_, bin, box_end);
+
+  font_name_.clear();
+  bin.read_pascal_string(font_name_);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::TimecodeMediaInfoAtom::to_json
+//
+void
+yae::qtff::TimecodeMediaInfoAtom::to_json(Json::Value & out) const
+{
+  yae::mp4::FullBox::to_json(out);
+
+  out["text_font"] = text_font_;
+  out["text_face"] = text_face_;
+  out["text_size"] = text_size_;
+  out["reserved"] = reserved_;
+
+  yae::save(out["text_color"], text_color_, 3);
+  yae::save(out["background_color"], background_color_, 3);
+
+  out["font_name"] = font_name_;
+}
+
+
+//----------------------------------------------------------------
 // QuickTimeAtomFactory
 //
 struct QuickTimeAtomFactory : public BoxFactory
@@ -6004,6 +6174,8 @@ struct QuickTimeAtomFactory : public BoxFactory
     this->add("prof", create<yae::qtff::ApertureDimensionsAtom>::please);
     this->add("enof", create<yae::qtff::ApertureDimensionsAtom>::please);
     this->add("gmin", create<yae::qtff::BaseMediaInfoAtom>::please);
+    this->add("c608", create<yae::qtff::SampleDescriptionAtom>::please);
+    this->add("tcmi", create<yae::qtff::TimecodeMediaInfoAtom>::please);
   }
 
   // helper:
@@ -6014,6 +6186,52 @@ struct QuickTimeAtomFactory : public BoxFactory
   }
 };
 
+
+//----------------------------------------------------------------
+// Mp4Context::SetAncestor::SetAncestor
+//
+Mp4Context::SetAncestor::SetAncestor(Mp4Context & mp4, const mp4::Box * box):
+  mp4_(mp4)
+{
+  mp4_.ancestors_.push_back(box);
+}
+
+//----------------------------------------------------------------
+// Mp4Context::SetAncestor::~SetAncestor
+//
+Mp4Context::SetAncestor::~SetAncestor()
+{
+  mp4_.ancestors_.pop_back();
+}
+
+//----------------------------------------------------------------
+// Mp4Context::is_ancestor_type
+//
+bool
+Mp4Context::is_ancestor_type(const char * fourcc) const
+{
+  return (ancestors_.empty() ? false :
+          ancestors_.back()->type_.same_as(fourcc));
+}
+
+//----------------------------------------------------------------
+// Mp4Context::find_ancestor
+//
+const Box *
+Mp4Context::find_ancestor(const char * fourcc) const
+{
+  for (std::list<const Box *>::const_reverse_iterator
+         i = ancestors_.rbegin(); i != ancestors_.rend(); ++i)
+  {
+    const Box * box = *i;
+    if (box->type_.same_as(fourcc))
+    {
+      return box;
+    }
+  }
+
+  return NULL;
+}
 
 //----------------------------------------------------------------
 // Mp4Context::parse
@@ -6043,13 +6261,35 @@ Mp4Context::parse(IBitstream & bin,
     {
       box_constructor = (TBoxConstructor)(create<Container>::please);
     }
+    else if (this->is_ancestor_type("tref"))
+    {
+      // children of tref are always TrackReferenceTypeBox:
+      box_constructor =
+        (TBoxConstructor)(create<TrackReferenceTypeBox>::please);
+    }
     else if (box_factory)
     {
       box_constructor = box_factory->get(box->type_);
     }
     else
     {
-      box_constructor = Mp4BoxFactory::singleton().get(box->type_);
+      if (box->type_.same_as("tmcd"))
+      {
+        if (this->is_ancestor_type("gmhd"))
+        {
+          box_constructor = (TBoxConstructor)(create<Container>::please);
+        }
+        else if (this->is_ancestor_type("stsd"))
+        {
+          box_constructor = (TBoxConstructor)
+            (create<yae::qtff::TimecodeSampleDescAtom>::please);
+        }
+      }
+
+      if (!box_constructor)
+      {
+        box_constructor = Mp4BoxFactory::singleton().get(box->type_);
+      }
 
       if (!box_constructor)
       {

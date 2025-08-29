@@ -82,8 +82,8 @@ namespace yae
   {
     typedef CharCode<2> TBase;
 
-    TwoCC(const char * fourcc = ""):
-      TBase(fourcc)
+    TwoCC(const char * two_cc = ""):
+      TBase(two_cc)
     {}
 
     using TBase::set;
@@ -254,10 +254,31 @@ namespace yae
     bool parse_file(const std::string & src_path,
                     ParserCallbackInterface * cb);
 
+    // MOTE: these helpers work only while parsing:
+    bool is_ancestor_type(const char * fourcc) const;
+    const mp4::Box * find_ancestor(const char * fourcc) const;
+
     bool load_mdat_data_;
     bool parse_mdat_data_;
     uint32_t senc_iv_size_;
     uint64_t file_position_;
+
+    // sometimes we need to know the parent box info
+    // in order to parse the current box:
+    std::list<const mp4::Box *> ancestors_;
+
+    // push/pop boxes on the ancestor stack:
+    struct YAE_API SetAncestor
+    {
+      Mp4Context & mp4_;
+
+      SetAncestor(Mp4Context & mp4, const mp4::Box * box);
+      ~SetAncestor();
+
+    private:
+      SetAncestor();
+      SetAncestor & operator = (const SetAncestor &);
+    };
   };
 
 
@@ -409,6 +430,8 @@ namespace yae
                                IBitstream & bin,
                                std::size_t end_pos)
       {
+        Mp4Context::SetAncestor set_ancestor(mp4, this);
+
         children_.clear();
         while (bin.position() < end_pos)
         {
@@ -426,6 +449,8 @@ namespace yae
                          std::size_t end_pos,
                          std::size_t num_children)
       {
+        Mp4Context::SetAncestor set_ancestor(mp4, this);
+
         children_.clear();
         for (std::size_t i = 0; i < num_children; ++i)
         {
@@ -2741,6 +2766,79 @@ namespace yae
       uint16_t reserved_;
     };
 
+    //----------------------------------------------------------------
+    // SampleDescriptionAtom
+    //
+    struct YAE_API SampleDescriptionAtom : public yae::mp4::Container
+    {
+      SampleDescriptionAtom();
+
+      // helper, returns box start position:
+      std::size_t load_base(Mp4Context & mp4, IBitstream & bin);
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint8_t reserved_[6];
+      uint16_t data_reference_index_;
+    };
+
+    //----------------------------------------------------------------
+    // TimecodeSampleDescAtom
+    //
+    struct YAE_API TimecodeSampleDescAtom : SampleDescriptionAtom
+    {
+      TimecodeSampleDescAtom();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      enum Flags {
+        kDropFrame = 0x0001,
+        k24HourMax = 0x0002,
+        kNegativeTimesOK = 0x0004,
+        kCounter = 0x0008,
+      };
+
+      uint32_t reserved1_;
+      uint32_t flags_;
+      uint32_t timescale_;
+      uint32_t frame_duration_;
+      uint32_t frames_per_second_ : 8;
+      uint32_t reserved2_ : 24;
+    };
+
+    //----------------------------------------------------------------
+    // TimecodeMediaInfoAtom
+    //
+    struct YAE_API TimecodeMediaInfoAtom : public yae::mp4::FullBox
+    {
+      TimecodeMediaInfoAtom();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      enum TextFace {
+        kBold = 0x0001,
+        kItalic = 0x0002,
+        kUnderline = 0x0004,
+        kOutline = 0x0008,
+        kShadow = 0x0010,
+        kCondense = 0x0020,
+        kExtend = 0x0040,
+      };
+
+      uint16_t text_font_;
+      uint16_t text_face_;
+      uint16_t text_size_;
+      uint16_t reserved_;
+
+      // RGB:
+      uint16_t text_color_[3];
+      uint16_t background_color_[3];
+
+      std::string font_name_;
+    };
   }
 
   template <>

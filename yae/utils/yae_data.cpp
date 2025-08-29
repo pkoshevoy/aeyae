@@ -171,6 +171,17 @@ namespace yae
     return yae::to_hex(this->get(), this->size());
   }
 
+  //----------------------------------------------------------------
+  // IBitstream::read_pascal_string
+  //
+  std::size_t
+  IBitstream::read_pascal_string(std::string & str)
+  {
+    YAE_ASSERT((position_ % 8) == 0);
+    uint8_t num_bytes = this->read<uint8_t>();
+    std::size_t num_read = this->read_string(str, num_bytes);
+    return num_read + 1;
+  }
 
   //----------------------------------------------------------------
   // IBitstream::read_string
