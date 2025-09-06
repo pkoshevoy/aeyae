@@ -6033,6 +6033,173 @@ yae::qtff::SampleDescriptionAtom::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<yae::qtff::SoundSampleDescription>::please
+//
+template yae::qtff::SoundSampleDescription *
+create<yae::qtff::SoundSampleDescription>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SoundSampleDescription::SoundSampleDescription
+//
+yae::qtff::SoundSampleDescription::SoundSampleDescription():
+  version_(0),
+  revision_level_(0),
+  vendor_(0),
+  num_channels_(0),
+  sample_size_(0),
+  compression_id_(0),
+  packet_size_(0),
+  sample_rate_(0),
+  samples_per_packet_(0),
+  bytes_per_packet_(0),
+  bytes_per_frame_(0),
+  bytes_per_sample_(0)
+{}
+
+//----------------------------------------------------------------
+// yae::qtff::SoundSampleDescription::load
+//
+void
+yae::qtff::SoundSampleDescription::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = this->load_base(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  version_ = bin.read<uint16_t>();
+  revision_level_ = bin.read<uint16_t>();
+  vendor_ = bin.read<uint32_t>();
+  num_channels_ = bin.read<uint16_t>();
+  sample_size_ = bin.read<uint16_t>();
+  compression_id_ = bin.read<int16_t>();
+  packet_size_ = bin.read<uint16_t>();
+  sample_rate_ = bin.read<uint32_t>();
+
+  if (version_ == 1)
+  {
+    samples_per_packet_ = bin.read<uint32_t>();
+    bytes_per_packet_ = bin.read<uint32_t>();
+    bytes_per_frame_ = bin.read<uint32_t>();
+    bytes_per_sample_ = bin.read<uint32_t>();
+  }
+}
+
+//----------------------------------------------------------------
+// yae::qtff::SoundSampleDescription::to_json
+//
+void
+yae::qtff::SoundSampleDescription::to_json(Json::Value & out) const
+{
+  SampleDescriptionAtom::to_json(out);
+
+  out["version"] = version_;
+  out["revision_level"] = revision_level_;
+  out["vendor"] = vendor_;
+  out["num_channels"] = num_channels_;
+  out["sample_size"] = sample_size_;
+  out["compression_id"] = compression_id_;
+  out["packet_size"] = packet_size_;
+  out["sample_rate"] = sample_rate_;
+
+  if (version_ == 1)
+  {
+    out["samples_per_packet"] = samples_per_packet_;
+    out["bytes_per_packet"] = bytes_per_packet_;
+    out["bytes_per_frame"] = bytes_per_frame_;
+    out["bytes_per_sample"] = bytes_per_sample_;
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::SoundSampleDescriptionV2>::please
+//
+template yae::qtff::SoundSampleDescriptionV2 *
+create<yae::qtff::SoundSampleDescriptionV2>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SoundSampleDescriptionV2::SoundSampleDescriptionV2
+//
+yae::qtff::SoundSampleDescriptionV2::SoundSampleDescriptionV2():
+  version_(0),
+  revision_level_(0),
+  vendor_(0),
+  always3_(0),
+  always16_(0),
+  alwaysNegative2_(0),
+  always0_(0),
+  always65536_(0),
+  sizeOfStructOnly_(0),
+  audioSampleRate_(0),
+  numAudioChannels_(0),
+  always7F000000_(0),
+  constBitsPerChannel_(0),
+  formatSpecificFlags_(0),
+  constBytesPerAudioPacket_(0),
+  constLPCMFramesPerAudioPacket_(0)
+{}
+
+//----------------------------------------------------------------
+// yae::qtff::SoundSampleDescriptionV2::load
+//
+void
+yae::qtff::SoundSampleDescriptionV2::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = this->load_base(mp4, bin);
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  version_ = bin.read<uint16_t>();
+  revision_level_ = bin.read<uint16_t>();
+  vendor_ = bin.read<uint32_t>();
+
+  always3_ = bin.read<uint16_t>();
+  always16_ = bin.read<uint16_t>();
+  alwaysNegative2_ = bin.read<int16_t>();
+  always0_ = bin.read<uint16_t>();
+  always65536_ = bin.read<uint32_t>();
+
+  sizeOfStructOnly_ = bin.read<uint32_t>();
+  audioSampleRate_ = bin.read<double>();
+  numAudioChannels_ = bin.read<uint32_t>();
+  always7F000000_ = bin.read<uint32_t>();
+
+  constBitsPerChannel_ = bin.read<uint32_t>();
+  formatSpecificFlags_ = bin.read<uint32_t>();
+  constBytesPerAudioPacket_ = bin.read<uint32_t>();
+  constLPCMFramesPerAudioPacket_ = bin.read<uint32_t>();
+
+  this->load_children_until(mp4, bin, box_end);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::SoundSampleDescriptionV2::to_json
+//
+void
+yae::qtff::SoundSampleDescriptionV2::to_json(Json::Value & out) const
+{
+  SampleDescriptionAtom::to_json(out);
+
+  out["version"] = version_;
+  out["revision_level"] = revision_level_;
+  out["vendor"] = vendor_;
+  out["always3"] = always3_;
+  out["always16"] = always16_;
+  out["alwaysNegative2"] = alwaysNegative2_;
+  out["always0"] = always0_;
+  out["always65536"] = always65536_;
+
+  out["sizeOfStructOnly"] = sizeOfStructOnly_;
+  out["audioSampleRate"] = audioSampleRate_;
+  out["numAudioChannels"] = numAudioChannels_;
+  out["always7F000000"] = always7F000000_;
+
+  out["constBitsPerChannel"] = constBitsPerChannel_;
+  out["formatSpecificFlags"] = formatSpecificFlags_;
+  out["constBytesPerAudioPacket"] = constBytesPerAudioPacket_;
+  out["constLPCMFramesPerAudioPacket"] = constLPCMFramesPerAudioPacket_;
+}
+
+
+//----------------------------------------------------------------
 // create<yae::qtff::TimecodeSampleDescAtom>::please
 //
 template yae::qtff::TimecodeSampleDescAtom *
@@ -6205,6 +6372,15 @@ Mp4Context::SetAncestor::~SetAncestor()
 }
 
 //----------------------------------------------------------------
+// Mp4Context::is_quicktime
+//
+bool
+Mp4Context::is_quicktime() const
+{
+  return ftyp_ ? ftyp_->major_.same_as("qt  ") : false;
+}
+
+//----------------------------------------------------------------
 // Mp4Context::is_ancestor_type
 //
 bool
@@ -6283,6 +6459,25 @@ Mp4Context::parse(IBitstream & bin,
         {
           box_constructor = (TBoxConstructor)
             (create<yae::qtff::TimecodeSampleDescAtom>::please);
+        }
+      }
+      else if (this->is_ancestor_type("stsd") &&
+               this->is_quicktime())
+      {
+        // load sample description atom
+        if (box->type_.same_as("raw ") ||
+            box->type_.same_as("twos") ||
+            box->type_.same_as("NONE") ||
+            box->type_.same_as(uint32_t(0x00000000)))
+        {
+          box_constructor = (TBoxConstructor)
+            (create<yae::qtff::SoundSampleDescription>::please);
+        }
+        else if (box->type_.same_as("lpcm") ||
+                 box->type_.same_as("mp4a"))
+        {
+          box_constructor = (TBoxConstructor)
+            (create<yae::qtff::SoundSampleDescriptionV2>::please);
         }
       }
 

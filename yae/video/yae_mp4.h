@@ -68,6 +68,14 @@ namespace yae
     inline bool same_as(const char * code) const
     { return strncmp(str_, code, NumChars) == 0; }
 
+    inline bool same_as(uint32_t fourcc) const
+    {
+      return ((uint8_t(str_[0]) == (0xFF & (fourcc >> 24))) &&
+              (uint8_t(str_[1]) == (0xFF & (fourcc >> 16))) &&
+              (uint8_t(str_[2]) == (0xFF & (fourcc >> 8))) &&
+              (uint8_t(str_[3]) == (0xFF & (fourcc >> 0))));
+    }
+
     inline bool operator < (const CharCode & other) const
     { return strncmp(str_, other.str_, NumChars) < 0; }
 
@@ -259,6 +267,8 @@ namespace yae
 
     bool parse_file(const std::string & src_path,
                     ParserCallbackInterface * cb);
+
+    bool is_quicktime() const;
 
     // MOTE: these helpers work only while parsing:
     bool is_ancestor_type(const char * fourcc) const;
@@ -2791,6 +2801,87 @@ namespace yae
 
       uint8_t reserved_[6];
       uint16_t data_reference_index_;
+    };
+
+    //----------------------------------------------------------------
+    // SoundSampleDescription
+    //
+    // version 0, and version 1:
+    //
+    struct YAE_API SoundSampleDescription : SampleDescriptionAtom
+    {
+      SoundSampleDescription();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // version 0:
+      uint16_t version_;
+      uint16_t revision_level_;
+      uint32_t vendor_;
+      uint16_t num_channels_;
+      uint16_t sample_size_; // bits
+      int16_t compression_id_;
+      uint16_t packet_size_;
+      uint32_t sample_rate_; // 16.16 fixed point
+
+      // version 1:
+      uint32_t samples_per_packet_;
+      uint32_t bytes_per_packet_;
+      uint32_t bytes_per_frame_;
+      uint32_t bytes_per_sample_;
+    };
+
+    //----------------------------------------------------------------
+    // SoundSampleDescriptionV2
+    //
+    struct YAE_API SoundSampleDescriptionV2 : SampleDescriptionAtom
+    {
+      SoundSampleDescriptionV2();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      enum FormatSpecificFlags {
+        kAudioFormatFlagIsFloat = (1 << 0),
+        kAudioFormatFlagIsBigEndian = (1 << 1),
+        kAudioFormatFlagIsSignedInteger = (1 << 2),
+        kAudioFormatFlagIsPacked = (1 << 3),
+        kAudioFormatFlagIsAlignedHigh = (1 << 4),
+        kAudioFormatFlagIsNonInterleaved = (1 << 5),
+        kAudioFormatFlagIsNonMixable = (1 << 6),
+        kAudioFormatFlagsAreAllClear = (1 << 31),
+
+        kLinearPCMFormatFlagsSampleFractionShift = 7,
+        kLinearPCMFormatFlagsSampleFractionMask = (0x3F << 7),
+
+        kAppleLosslessFormatFlag_16BitSourceData = 1,
+        kAppleLosslessFormatFlag_20BitSourceData = 2,
+        kAppleLosslessFormatFlag_24BitSourceData = 3,
+        kAppleLosslessFormatFlag_32BitSourceData = 4
+      };
+
+      // version 0:
+      uint16_t version_;
+      uint16_t revision_level_;
+      uint32_t vendor_;
+      uint16_t always3_; // former num channels
+      uint16_t always16_; // former sample size in bits
+      int16_t alwaysNegative2_; // former compression id
+      uint16_t always0_; // former packet size
+      uint32_t always65536_; // former sample rate
+
+      // version 1:
+      uint32_t sizeOfStructOnly_; // former samples per packet
+      double audioSampleRate_; // bytes per packet
+      uint32_t numAudioChannels_; // former bytes per frame
+      uint32_t always7F000000_; // former bytes per sample
+
+      // version 2:
+      uint32_t constBitsPerChannel_;
+      uint32_t formatSpecificFlags_; // LPCM flag values
+      uint32_t constBytesPerAudioPacket_;
+      uint32_t constLPCMFramesPerAudioPacket_;
     };
 
     //----------------------------------------------------------------

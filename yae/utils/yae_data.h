@@ -757,6 +757,29 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // IBitstream::read<float>
+  //
+  template <>
+  inline float IBitstream::read<float>()
+  {
+    uint32_t v = this->read<uint32_t>();
+    float * d = (float *)(&v);
+    return *d;
+  }
+
+  //----------------------------------------------------------------
+  // Bits::read<double>
+  //
+  template <>
+  inline double IBitstream::read<double>()
+  {
+    uint64_t v = this->read<uint64_t>();
+    double * d = (double *)(&v);
+    return *d;
+  }
+
+
+  //----------------------------------------------------------------
   // SetEnd
   //
   struct YAE_API SetEnd
