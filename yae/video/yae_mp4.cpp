@@ -971,8 +971,11 @@ AudioSampleEntryBox::to_json(Json::Value & out) const
   out["sample_size"] = sample_size_;
   out["sample_rate"] = double(sample_rate_) / double(0x00010000);
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 
@@ -1060,8 +1063,11 @@ VisualSampleEntryBox::to_json(Json::Value & out) const
 
   out["depth"] = depth_;
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 //----------------------------------------------------------------
@@ -2765,8 +2771,11 @@ TrackExtensionPropertiesBox::to_json(Json::Value & out) const
   FullBox::to_json(out);
   out["track_id"] = track_id_;
 
-  Json::Value & children = out["children"];
-  ContainerEx::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    ContainerEx::children_to_json(children);
+  }
 }
 
 
@@ -3529,7 +3538,10 @@ void
 ItemDataBox::to_json(Json::Value & out) const
 {
   Box::to_json(out);
-  out["data"] = yae::to_hex(data_.get(), data_.size());
+  if (!data_.empty())
+  {
+    out["data"] = yae::to_hex(data_.get(), data_.size());
+  }
 }
 
 
@@ -4024,7 +4036,7 @@ StereoVideoBox::to_json(Json::Value & out) const
   out["length"] = length_;
   yae::save(out["stereo_indication_type"], stereo_indication_type_);
 
-  if (!ContainerEx::children_.empty())
+  if (this->num_children())
   {
     Json::Value & children = out["children"];
     ContainerEx::children_to_json(children);
@@ -4311,8 +4323,11 @@ RtpHintSampleEntryBox::to_json(Json::Value & out) const
   out["highestcompatibleversion"] = highestcompatibleversion_;
   out["maxpacketsize"] = maxpacketsize_;
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 
@@ -4407,8 +4422,11 @@ SRTPProcessBox::to_json(Json::Value & out) const
   out["integrity_algorithm_rtp"] = integrity_algorithm_rtp_.str_;
   out["integrity_algorithm_rtcp"] = integrity_algorithm_rtcp_.str_;
 
-  Json::Value & children = out["children"];
-  ContainerEx::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    ContainerEx::children_to_json(children);
+  }
 }
 
 
@@ -5286,8 +5304,11 @@ XMLMetaDataSampleEntryBox::to_json(Json::Value & out) const
   out["namespace"] = namespace_;
   out["schema_location"] = schema_location_;
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 
@@ -5328,8 +5349,11 @@ TextMetaDataSampleEntryBox::to_json(Json::Value & out) const
   out["content_encoding"] = content_encoding_;
   out["mime_format"] = mime_format_;
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 
@@ -5430,8 +5454,11 @@ XMLSubtitleSampleEntryBox::to_json(Json::Value & out) const
   out["schema_location"] = schema_location_;
   out["auxiliary_mime_types"] = auxiliary_mime_types_;
 
-  Json::Value & children = out["children"];
-  TSelf::children_to_json(children);
+  if (this->num_children())
+  {
+    Json::Value & children = out["children"];
+    TSelf::children_to_json(children);
+  }
 }
 
 
@@ -6322,6 +6349,96 @@ yae::qtff::TimecodeMediaInfoAtom::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<yae::qtff::FormatAtom>::please
+//
+template yae::qtff::FormatAtom *
+create<yae::qtff::FormatAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// FormatAtom::load
+//
+void
+yae::qtff::FormatAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  yae::mp4::Box::load(mp4, bin);
+  data_format_.load(bin);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::FormatAtom::to_json
+//
+void
+yae::qtff::FormatAtom::to_json(Json::Value & out) const
+{
+  yae::mp4::Box::to_json(out);
+  out["data_format"] = data_format_.str_;
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::ESDSAtom>::please
+//
+template yae::qtff::ESDSAtom *
+create<yae::qtff::ESDSAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::ESDSAtom::load
+//
+void
+yae::qtff::ESDSAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  yae::mp4::Box::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  version_ = bin.read<uint32_t>();
+  es_.load(bin);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::ESDSAtom::to_json
+//
+void
+yae::qtff::ESDSAtom::to_json(Json::Value & out) const
+{
+  yae::mp4::Box::to_json(out);
+  out["version"] = version_;
+  // es_.save(out["ES_Descriptor"]);
+}
+
+
+//----------------------------------------------------------------
+// create<yae::qtff::AudioChannelLayoutAtom>::please
+//
+template yae::qtff::AudioChannelLayoutAtom *
+create<yae::qtff::AudioChannelLayoutAtom>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// yae::qtff::AudioChannelLayoutAtom::load
+//
+void
+yae::qtff::AudioChannelLayoutAtom::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  yae::mp4::FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// yae::qtff::AudioChannelLayoutAtom::to_json
+//
+void
+yae::qtff::AudioChannelLayoutAtom::to_json(Json::Value & out) const
+{
+  yae::mp4::FullBox::to_json(out);
+  out["data"] = yae::to_hex(data_.get(), data_.size());
+}
+
+
+//----------------------------------------------------------------
 // QuickTimeAtomFactory
 //
 struct QuickTimeAtomFactory : public BoxFactory
@@ -6343,6 +6460,10 @@ struct QuickTimeAtomFactory : public BoxFactory
     this->add("gmin", create<yae::qtff::BaseMediaInfoAtom>::please);
     this->add("c608", create<yae::qtff::SampleDescriptionAtom>::please);
     this->add("tcmi", create<yae::qtff::TimecodeMediaInfoAtom>::please);
+    this->add("wave", create<yae::qtff::siDecompressionParamAtom>::please);
+    this->add("frma", create<yae::qtff::FormatAtom>::please);
+    this->add("esds", create<yae::qtff::ESDSAtom>::please);
+    this->add("chan", create<yae::qtff::AudioChannelLayoutAtom>::please);
   }
 
   // helper:
@@ -6449,46 +6570,66 @@ Mp4Context::parse(IBitstream & bin,
     }
     else
     {
-      if (box->type_.same_as("tmcd"))
+      if (this->is_quicktime())
       {
         if (this->is_ancestor_type("gmhd"))
         {
-          box_constructor = (TBoxConstructor)(create<Container>::please);
+          if (box->type_.same_as("tmcd"))
+          {
+            box_constructor = (TBoxConstructor)(create<Container>::please);
+          }
         }
         else if (this->is_ancestor_type("stsd"))
         {
-          box_constructor = (TBoxConstructor)
-            (create<yae::qtff::TimecodeSampleDescAtom>::please);
+          // load sample description atoms:
+          if (box->type_.same_as("tmcd"))
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::qtff::TimecodeSampleDescAtom>::please);
+          }
+          else if (box->type_.same_as("raw ") ||
+                   box->type_.same_as("twos") ||
+                   box->type_.same_as("NONE") ||
+                   box->type_.same_as(uint32_t(0x00000000)))
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::qtff::SoundSampleDescription>::please);
+          }
+          else if (box->type_.same_as("lpcm") ||
+                   box->type_.same_as("mp4a"))
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::qtff::SoundSampleDescriptionV2>::please);
+          }
         }
-      }
-      else if (this->is_ancestor_type("stsd") &&
-               this->is_quicktime())
-      {
-        // load sample description atom
-        if (box->type_.same_as("raw ") ||
-            box->type_.same_as("twos") ||
-            box->type_.same_as("NONE") ||
-            box->type_.same_as(uint32_t(0x00000000)))
+        else if (this->is_ancestor_type("wave"))
         {
-          box_constructor = (TBoxConstructor)
-            (create<yae::qtff::SoundSampleDescription>::please);
+          if (box->type_.same_as("frma"))
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::qtff::FormatAtom>::please);
+          }
+          else if (box->type_.same_as("esds"))
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::qtff::ESDSAtom>::please);
+          }
+          else
+          {
+            box_constructor = (TBoxConstructor)
+              (create<yae::mp4::ItemDataBox>::please);
+          }
         }
-        else if (box->type_.same_as("lpcm") ||
-                 box->type_.same_as("mp4a"))
+
+        if (!box_constructor)
         {
-          box_constructor = (TBoxConstructor)
-            (create<yae::qtff::SoundSampleDescriptionV2>::please);
+          box_constructor = QuickTimeAtomFactory::singleton().get(box->type_);
         }
       }
 
       if (!box_constructor)
       {
         box_constructor = Mp4BoxFactory::singleton().get(box->type_);
-      }
-
-      if (!box_constructor)
-      {
-        box_constructor = QuickTimeAtomFactory::singleton().get(box->type_);
       }
     }
 

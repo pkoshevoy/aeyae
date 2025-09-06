@@ -382,6 +382,13 @@ namespace yae
       virtual const TBoxPtrVec * has_children() const
       { return NULL; }
 
+      // helper:
+      inline std::size_t num_children() const
+      {
+        const TBoxPtrVec * children = this->has_children();
+        return children ? children->size() : 0;
+      }
+
       // breadth-first search through given boxes:
       static const Box * find(const TBoxPtrVec & boxes, const char * fourcc);
 
@@ -420,8 +427,8 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
-      uint8_t version_;
-      uint32_t flags_;
+      uint32_t version_ : 8;
+      uint32_t flags_ : 24;
     };
 
 
@@ -486,8 +493,12 @@ namespace yae
       void to_json(Json::Value & out) const YAE_OVERRIDE
       {
         TBase::to_json(out);
-        Json::Value & children = out["children"];
-        this->children_to_json(children);
+
+        if (this->num_children())
+        {
+          Json::Value & children = out["children"];
+          this->children_to_json(children);
+        }
       }
 
       void children_to_json(Json::Value & children) const
@@ -541,8 +552,11 @@ namespace yae
 
         out["entry_count"] = Json::UInt64(entry_count_);
 
-        Json::Value & children = out["children"];
-        TBase::children_to_json(children);
+        if (this->num_children())
+        {
+          Json::Value & children = out["children"];
+          TBase::children_to_json(children);
+        }
       }
 
       TBoxCount entry_count_;
@@ -2939,6 +2953,52 @@ namespace yae
       uint16_t background_color_[3];
 
       std::string font_name_;
+    };
+
+    //----------------------------------------------------------------
+    // siDecompressionParamAtom
+    //
+    struct YAE_API siDecompressionParamAtom :
+      public yae::mp4::BoxWithChildren<yae::mp4::Box>
+    {};
+
+    //----------------------------------------------------------------
+    // FormatAtom
+    //
+    struct YAE_API FormatAtom : public yae::mp4::Box
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      FourCC data_format_;
+    };
+
+    //----------------------------------------------------------------
+    // ESDSAtom
+    //
+    struct YAE_API ESDSAtom : public yae::mp4::Box
+    {
+      ESDSAtom():
+        version_(0)
+      {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t version_;
+      yae::iso14496::ES_Descriptor es_;
+    };
+
+    //----------------------------------------------------------------
+    // AudioChannelLayoutAtom
+    //
+    struct YAE_API AudioChannelLayoutAtom : public yae::mp4::FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      // AudioChannelLayout as defined in CoreAudioTypes.h
+      Data data_;
     };
   }
 
