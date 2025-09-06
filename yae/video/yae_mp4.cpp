@@ -6350,6 +6350,16 @@ Mp4Context::parse(IBitstream & bin,
              box->size_);
   }
 
+  // keep track of the file type being parsed:
+  if (box->type_.same_as("ftyp"))
+  {
+    ftyp_ = boost::dynamic_pointer_cast<FileTypeBox>(box);
+  }
+  else if (box->type_.same_as("styp"))
+  {
+    styp_ = boost::dynamic_pointer_cast<FileTypeBox>(box);
+  }
+
   // skip to the next box:
   bin.seek(box_end);
 

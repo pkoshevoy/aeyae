@@ -175,6 +175,7 @@ namespace yae
   {
     // forward declarations:
     struct Box;
+    struct FileTypeBox;
 
     //----------------------------------------------------------------
     // TBoxConstructor
@@ -190,6 +191,11 @@ namespace yae
     // TBoxPtrVec
     //
     typedef std::vector<TBoxPtr> TBoxPtrVec;
+
+    //----------------------------------------------------------------
+    // TFileTypeBoxPtr
+    //
+    typedef boost::shared_ptr<FileTypeBox> TFileTypeBoxPtr;
 
     //----------------------------------------------------------------
     // BoxFactory
@@ -262,6 +268,10 @@ namespace yae
     bool parse_mdat_data_;
     uint32_t senc_iv_size_;
     uint64_t file_position_;
+
+    // these are set when discovered during parsing:
+    mp4::TFileTypeBoxPtr ftyp_;
+    mp4::TFileTypeBoxPtr styp_;
 
     // sometimes we need to know the parent box info
     // in order to parse the current box:
