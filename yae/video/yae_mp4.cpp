@@ -1582,6 +1582,38 @@ SampleDependencyTypeBox::to_json(Json::Value & out) const
 template EditListBox *
 create<EditListBox>::please(const char * fourcc);
 
+EditListBox::Entry::Entry():
+  segment_duration_(0),
+  media_time_(0),
+  media_rate_(0)
+{}
+
+//----------------------------------------------------------------
+// EditListBox::Entry::load
+//
+void
+EditListBox::Entry::load(IBitstream & bin, uint32_t box_version)
+{
+  segment_duration_ =
+    (box_version == 1) ? bin.read<uint64_t>() : bin.read<uint32_t>();
+
+  media_time_ =
+    (box_version == 1) ? bin.read<int64_t>() : bin.read<int32_t>();
+
+  media_rate_ = bin.read<uint32_t>();
+}
+
+//----------------------------------------------------------------
+// EditListBox::Entry::to_json
+//
+void
+EditListBox::Entry::to_json(Json::Value & out) const
+{
+  out["segment_duration"] = Json::UInt64(segment_duration_);
+  out["media_time"] = Json::Int64(media_time_);
+  out["media_rate"] = double(media_rate_) / double(1 << 16);
+}
+
 //----------------------------------------------------------------
 // EditListBox::load
 //
@@ -1590,45 +1622,15 @@ EditListBox::load(Mp4Context & mp4, IBitstream & bin)
 {
   FullBox::load(mp4, bin);
 
-  segment_duration_.clear();
-  media_time_.clear();
-  media_rate_.clear();
+  entries_.clear();
 
   entry_count_ = bin.read<uint32_t>();
   for (uint32_t i = 0; i < entry_count_; ++i)
   {
-    uint64_t segment_duration =
-      (FullBox::version_ == 1) ? bin.read<uint64_t>() : bin.read<uint32_t>();
-
-    int64_t media_time =
-      (FullBox::version_ == 1) ? bin.read<int64_t>() : bin.read<int32_t>();
-
-    int32_t media_rate = bin.read<uint32_t>();
-
-    segment_duration_.push_back(segment_duration);
-    media_time_.push_back(media_time);
-    media_rate_.push_back(media_rate);
+    Entry entry;
+    entry.load(bin, FullBox::version_);
+    entries_.push_back(entry);
   }
-}
-
-//----------------------------------------------------------------
-// save_fixedpoint
-//
-template <typename TData, uint8_t frac_bits>
-static void
-save_fixedpoint(Json::Value & out, const std::vector<TData> & v)
-{
-  typedef std::vector<TData> TContainer;
-  const double scale = double(1ull << frac_bits);
-
-  Json::Value array(Json::arrayValue);
-  for (typename TContainer::const_iterator i = v.begin(); i != v.end(); ++i)
-  {
-    double t = double(*i) / scale;
-    array.append(t);
-  }
-
-  out = array;
 }
 
 //----------------------------------------------------------------
@@ -1639,9 +1641,17 @@ EditListBox::to_json(Json::Value & out) const
 {
   FullBox::to_json(out);
   out["entry_count"] = entry_count_;
-  yae::save(out["segment_duration"], segment_duration_);
-  yae::save(out["media_time"], media_time_);
-  save_fixedpoint<uint32_t, 16>(out["media_rate"], media_rate_);
+
+  Json::Value & entries = out["entries"];
+  entries = Json::arrayValue;
+
+  for (std::size_t i = 0, n = entries_.size(); i < n; ++i)
+  {
+    const Entry & entry = entries_[i];
+    Json::Value v;
+    entry.to_json(v);
+    entries.append(v);
+  }
 }
 
 

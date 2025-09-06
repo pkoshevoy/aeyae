@@ -1054,10 +1054,20 @@ namespace yae
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
+      struct YAE_API Entry
+      {
+        Entry();
+
+        void load(IBitstream & bin, uint32_t box_version);
+        void to_json(Json::Value & out) const;
+
+        uint64_t segment_duration_;
+        int64_t media_time_;
+        uint32_t media_rate_; // fixed point 16.16
+      };
+
       uint32_t entry_count_;
-      std::vector<uint64_t> segment_duration_;
-      std::vector<int64_t> media_time_;
-      std::vector<uint32_t> media_rate_; // fixed point 16.16
+      std::vector<Entry> entries_;
     };
 
     //----------------------------------------------------------------
