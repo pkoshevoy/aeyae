@@ -701,6 +701,17 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // has
+  //
+  template <typename TValue>
+  inline static bool
+  has(const std::map<std::string, TValue> & lut, const std::string & k)
+  {
+    typename std::map<std::string, TValue>::const_iterator found = lut.find(k);
+    return found != lut.end();
+  }
+
+  //----------------------------------------------------------------
   // get
   //
   template <typename TKey, typename TValue>

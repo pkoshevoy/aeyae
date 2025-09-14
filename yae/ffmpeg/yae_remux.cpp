@@ -429,15 +429,14 @@ namespace yae
       const TDemuxerInterfacePtr & demuxer =
         yae::at(source_demuxers, trim.source_);
 
-      std::string track_id =
-        trim.track_.empty() ? std::string("v:000") : trim.track_;
-
-      if (!al::starts_with(track_id, "v:"))
-      {
-        // not a video track:
-        continue;
-      }
       const DemuxerSummary & summary = demuxer->summary();
+
+      std::string track_id =
+        yae::has(summary.decoders_, trim.track_) ? trim.track_ :
+        yae::has(summary.decoders_, "v:000") ? std::string("v:000") :
+        yae::has(summary.decoders_, "a:000") ? std::string("a:000") :
+        !summary.decoders_.empty() ? summary.decoders_.begin()->first :
+        std::string();
 
       if (!yae::has(summary.decoders_, track_id))
       {
@@ -449,8 +448,12 @@ namespace yae
       Timespan keep(track.pts_span_.front().t0_,
                     track.pts_span_.back().t1_);
 
-      const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
-      double fps = fe.best_guess();
+      double fps = 1000.0;
+      if (yae::has(summary.fps_, track_id))
+      {
+        const FramerateEstimator & fe = yae::at(summary.fps_, track_id);
+        fps = fe.best_guess();
+      }
 
       if (!trim.t0_.empty() &&
           !parse_time(keep.t0_, trim.t0_.c_str(), NULL, NULL, fps))
