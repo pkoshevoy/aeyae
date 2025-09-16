@@ -6815,10 +6815,14 @@ struct TrackInfo
     mdhd_(NULL),
     hdlr_(NULL),
     stsd_(NULL),
+    stss_(NULL),
     stsz_(NULL),
     stsc_(NULL),
     stts_(NULL),
-    stco_(NULL)
+    ctts_(NULL),
+    stco_(NULL),
+    co64_(NULL),
+    cslg_(NULL)
   {}
 
   const TrackExtendsBox * trex_;
@@ -6826,11 +6830,176 @@ struct TrackInfo
   const MediaHeaderBox * mdhd_;
   const HandlerBox * hdlr_;
   const ContainerList32 * stsd_;
+  const SyncSampleBox * stss_;
   const SampleSizeBox * stsz_;
   const SampleToChunkBox * stsc_;
   const TimeToSampleBox * stts_;
+  const CompositionOffsetBox * ctts_;
   const ChunkOffsetBox * stco_;
+  const ChunkLargeOffsetBox * co64_;
+  const CompositionToDecodeBox * cslg_;
 };
+
+//----------------------------------------------------------------
+// RunLengthReader
+//
+template <typename TCount, typename TValue>
+struct RunLengthReader
+{
+  RunLengthReader(const std::vector<TCount> & count,
+                  const std::vector<TValue> & value):
+    count_(count),
+    value_(value),
+    entry_(0),
+    prior_(0),
+    index_(0)
+  {}
+
+  void reset()
+  {
+    entry_ = 0;
+    prior_ = 0;
+    index_ = 0;
+  }
+
+  bool next(TValue & value)
+  {
+    const std::size_t num_entries = count_.size();
+    if (num_entries <= entry_)
+    {
+      return false;
+    }
+
+    value = value_[entry_];
+    index_ += 1;
+
+    while ((index_ - prior_) == count_[entry_])
+    {
+      prior_ = index_;
+      entry_ += 1;
+
+      if (num_entries <= entry_)
+      {
+        break;
+      }
+    }
+
+    return true;
+  }
+
+  static const std::vector<TCount> empty_count_;
+  static const std::vector<TValue> empty_value_;
+
+  const std::vector<TCount> & count_;
+  const std::vector<TValue> & value_;
+  std::size_t entry_;
+  std::size_t prior_;
+  std::size_t index_;
+};
+
+//----------------------------------------------------------------
+// RunLengthReader::empty_count_
+//
+template <typename TCount, typename TValue>
+const std::vector<TCount>
+RunLengthReader<TCount, TValue>::empty_count_;
+
+//----------------------------------------------------------------
+// RunLengthReader::empty_value_
+//
+template <typename TCount, typename TValue>
+const std::vector<TValue>
+RunLengthReader<TCount, TValue>::empty_value_;
+
+//----------------------------------------------------------------
+// OrderedSelectionReader
+//
+template <typename TValue, int INDEX_ORIGIN>
+struct OrderedSelectionReader
+{
+  OrderedSelectionReader(const std::vector<TValue> & selection):
+    selection_(selection),
+    entry_(0),
+    index_(0)
+  {}
+
+  inline bool next()
+  {
+    const std::size_t num_entries = selection_.size();
+    if (num_entries <= entry_)
+    {
+      return false;
+    }
+
+    TValue index = INDEX_ORIGIN + index_;
+    bool selected = selection_[entry_] == index;
+    while (entry_ < num_entries && selection_[entry_] == index)
+    {
+      entry_ += 1;
+    }
+
+    index_ += 1;
+    return selected;
+  }
+
+  static const std::vector<TValue> empty_selection_;
+  const std::vector<TValue> & selection_;
+  std::size_t entry_;
+  std::size_t index_;
+};
+
+//----------------------------------------------------------------
+// OrderedSelectionReader::empty_selection_
+//
+template <typename TValue, int INDEX_ORIGIN>
+const std::vector<TValue>
+OrderedSelectionReader<TValue, INDEX_ORIGIN>::empty_selection_;
+
+
+//----------------------------------------------------------------
+// ValueSequenceReader
+//
+template <typename TValue>
+struct ValueSequenceReader
+{
+  ValueSequenceReader(const std::vector<TValue> & value_sequence,
+                      const TValue & default_value):
+    value_sequence_(value_sequence),
+    default_value_(default_value),
+    index_(0)
+  {}
+
+  inline bool next(TValue & value)
+  {
+    const std::size_t num_values = value_sequence_.size();
+    if (!num_values)
+    {
+      value = default_value_;
+      return true;
+    }
+    else if (num_values <= index_)
+    {
+      return false;
+    }
+
+    value = value_sequence_[index_];
+    index_ += 1;
+    return true;
+  }
+
+  static const std::vector<TValue> empty_sequence_;
+  const std::vector<TValue> & value_sequence_;
+  TValue default_value_;
+  std::size_t index_;
+};
+
+//----------------------------------------------------------------
+// ValueSequenceReader::empty_sequence_
+//
+template <typename TValue>
+const std::vector<TValue>
+ValueSequenceReader<TValue>::empty_sequence_;
+
 
 //----------------------------------------------------------------
 // yae::get_timeline
@@ -6908,10 +7077,115 @@ yae::get_timeline(const TBoxPtrVec & boxes, yae::Timeline & timeline)
           }
 
           track.stsd_ = stbl->find<ContainerList32>("stsd");
+          track.stss_ = stbl->find<SyncSampleBox>("stss");
           track.stsz_ = stbl->find<SampleSizeBox>("stsz");
           track.stsc_ = stbl->find<SampleToChunkBox>("stsc");
           track.stts_ = stbl->find<TimeToSampleBox>("stts");
+          track.ctts_ = stbl->find<CompositionOffsetBox>("ctts");
           track.stco_ = stbl->find<ChunkOffsetBox>("stco");
+          track.co64_ = stbl->find<ChunkLargeOffsetBox>("co64");
+          track.cslg_ = stbl->find<CompositionToDecodeBox>("cslg");
+
+          if (!track.stts_ || track.stts_->sample_count_.empty())
+          {
+            continue;
+          }
+
+          // shortcuts:
+          const std::string track_id =
+            yae::strfmt("%02i_%s",
+                        tkhd->track_ID_,
+                        track.hdlr_->handler_type_.str_);
+
+          // FIXME: edts.elst, cslg?
+          typedef RunLengthReader<uint32_t, uint32_t> STTSReader;
+          typedef RunLengthReader<uint32_t, int32_t> CTTSReader;
+          typedef OrderedSelectionReader<uint32_t, 1> STSSReader;
+          typedef ValueSequenceReader<uint32_t> STSZReader;
+
+          STTSReader stts_reader(track.stts_ ?
+                                 track.stts_->sample_count_ :
+                                 STTSReader::empty_count_,
+
+                                 track.stts_ ?
+                                 track.stts_->sample_delta_ :
+                                 STTSReader::empty_value_);
+
+          CTTSReader ctts_reader(track.ctts_ ?
+                                 track.ctts_->sample_count_ :
+                                 CTTSReader::empty_count_,
+
+                                 track.ctts_ ?
+                                 track.ctts_->sample_offset_ :
+                                 CTTSReader::empty_value_);
+
+          STSSReader stss_reader(track.stss_ ?
+                                 track.stss_->sample_number_ :
+                                 STSSReader::empty_selection_);
+
+          STSZReader stsz_reader(track.stsz_ ?
+                                 track.stsz_->entry_size_ :
+                                 STSZReader::empty_sequence_,
+
+                                 track.stsz_ ?
+                                 track.stsz_->sample_size_ :
+                                 0);
+          // calculate DTS offset:
+          uint64_t dts_offset = 0;
+          if (track.ctts_)
+          {
+            uint64_t sum_dur = 0;
+            uint32_t dur = 0;
+            int32_t ctts = 0;
+            while (stts_reader.next(dur) && ctts_reader.next(ctts))
+            {
+              // NOTE: ctts[k] = (pts[k] - dts[k]) - (pts[0] - dts[0])
+              int64_t pts = sum_dur + ctts;
+              sum_dur += dur;
+
+              int64_t dts = (pts - ctts) - dts_offset;
+              if (pts < dts)
+              {
+                dts_offset += (dts - pts);
+              }
+            }
+
+            stts_reader.reset();
+            ctts_reader.reset();
+          }
+
+          uint64_t timebase = track.mdhd_->timescale_;
+          uint64_t sum_dur = 0;
+
+          while (true)
+          {
+            uint32_t dur = 0;
+            if (!stts_reader.next(dur))
+            {
+              break;
+
+            }
+            bool keyframe = track.stss_ ? stss_reader.next() : false;
+
+            uint32_t sample_size = 0;
+            YAE_ASSERT(stsz_reader.next(sample_size));
+
+            int32_t ctts = 0;
+            YAE_ASSERT(!track.ctts_ || ctts_reader.next(ctts));
+
+            // NOTE: ctts[k] = (pts[k] - dts[k]) - (pts[0] - dts[0])
+            int64_t pts = sum_dur + ctts;
+            sum_dur += dur;
+
+            int64_t dts = (pts - ctts) - dts_offset;
+            timeline.add_packet(track_id,
+                                keyframe,
+                                sample_size,
+                                TTime(dts, timebase), // dts
+                                TTime(pts, timebase), // pts
+                                TTime(dur, timebase), // duration
+                                TTime(dur, timebase).sec() + 1e-6);
+          }
         }
       }
     }
@@ -6951,9 +7225,9 @@ yae::get_timeline(const TBoxPtrVec & boxes, yae::Timeline & timeline)
 
           // shortcuts:
           const std::string track_id =
-            yae::strfmt("%s_%02i",
-                        track.hdlr_->handler_type_.str_,
-                        tfhd->track_ID_);
+            yae::strfmt("%02i_%s",
+                        tfhd->track_ID_,
+                        track.hdlr_->handler_type_.str_);
 
           const TrackFragmentBaseMediaDecodeTimeBox * tfdt =
             traf->find<TrackFragmentBaseMediaDecodeTimeBox>("tfdt");
