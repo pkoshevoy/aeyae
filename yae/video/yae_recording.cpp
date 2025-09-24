@@ -129,6 +129,7 @@ namespace yae
     static const char * tokens[] = {
       " (season premiere)",
       " (season finale)",
+      " (1-hour season finale)",
       " (series premiere)",
       " (series finale)",
       " (summer premiere)",
