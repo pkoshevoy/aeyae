@@ -956,7 +956,7 @@ AudioSpecificConfig::load(IBitstream & bin)
     audioObjectType = extensionAudioObjectType_.get();
 
     if (audioObjectType == 22 &&
-        !extensionChannelConfiguration.load(bin));
+        !extensionChannelConfiguration.load(bin))
     {
       return false;
     }
