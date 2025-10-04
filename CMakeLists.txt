@@ -12,7 +12,6 @@ project(aeyae)
 
 include("${PROJECT_SOURCE_DIR}/aeyae_get_git_revision.cmake")
 include("${PROJECT_SOURCE_DIR}/add_ffmpeg.cmake")
-include("${PROJECT_SOURCE_DIR}/add_glew.cmake")
 include("${PROJECT_SOURCE_DIR}/add_libass.cmake")
 include("${PROJECT_SOURCE_DIR}/add_freetype.cmake")
 include("${PROJECT_SOURCE_DIR}/add_fontconfig.cmake")

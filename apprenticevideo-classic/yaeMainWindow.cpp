@@ -19,9 +19,6 @@
 #include <list>
 #include <math.h>
 
-// GLEW:
-#include <GL/glew.h>
-
 YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
