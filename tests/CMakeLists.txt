@@ -38,9 +38,6 @@ add_executable(aeyae-tests
   # yae_log_tests.cpp
   )
 
-set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 98)
-# set_property(TARGET aeyae-tests PROPERTY CXX_STANDARD 11)
-
 target_compile_definitions(aeyae-tests PRIVATE
   -DJSON_DLL
   -DBOOST_TEST_DYN_LINK)
