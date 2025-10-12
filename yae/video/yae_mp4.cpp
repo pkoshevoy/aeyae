@@ -3072,9 +3072,7 @@ CencSampleEncryptionInformationGroupEntry():
   skip_byte_block_(0),
   is_protected_(0),
   per_sample_iv_size_(0)
-{
-  memset(kid_, 0, sizeof(kid_));
-}
+{}
 
 //----------------------------------------------------------------
 // CencSampleEncryptionInformationGroupEntry::load
@@ -3088,7 +3086,7 @@ CencSampleEncryptionInformationGroupEntry::load(Mp4Context & mp4,
   skip_byte_block_ = bin.read<uint32_t>(4);
   is_protected_ = bin.read<uint32_t>(8);
   per_sample_iv_size_ = bin.read<uint32_t>(8);
-  bin.read_bytes(kid_, 16);
+  KID_.load(bin);
 
   constant_iv_.clear();
   if (is_protected_ == 1 && per_sample_iv_size_ == 0)
@@ -3113,7 +3111,7 @@ CencSampleEncryptionInformationGroupEntry::to_json(Json::Value & out) const
   out["skip_byte_block"] = Json::UInt(skip_byte_block_);
   out["is_protected"] = Json::UInt(is_protected_);
   out["per_sample_iv_size"] = Json::UInt(per_sample_iv_size_);
-  out["kid"] = yae::to_hex(kid_, 16);
+  yae::save(out["KID"], KID_);
 
   if (is_protected_ == 1 && per_sample_iv_size_ == 0)
   {
@@ -3132,18 +3130,21 @@ CencSampleAuxiliaryDataFormat::load(uint8_t per_sample_iv_size,
                                     IBitstream & bin)
 {
   iv_ = bin.read_bytes(per_sample_iv_size);
+
+  subsample_count_ = 0;
   subsample_.clear();
 
   if (sample_info_size > per_sample_iv_size)
   {
-    uint16_t subsample_count = bin.read<uint16_t>();
-    subsample_.resize(subsample_count);
+    subsample_count_ = bin.read<uint16_t>();
+    subsample_.resize(subsample_count_);
 
-    for (uint16_t i = 0; i < subsample_count; ++i)
+    for (uint16_t i = 0; i < subsample_count_; ++i)
     {
-      SubSample & subsample = subsample_[i];
+      SubSample subsample;
       subsample.bytes_clear_ = bin.read<uint16_t>();
       subsample.bytes_protected_ = bin.read<uint32_t>();
+      subsample_.push_back(subsample);
     }
   }
 }
@@ -3156,15 +3157,14 @@ CencSampleAuxiliaryDataFormat::to_json(Json::Value & out) const
 {
   out["iv"] = iv_.to_hex();
 
-  uint16_t subsample_count = uint16_t(subsample_.size());
-  if (subsample_count > 0)
+  if (subsample_count_ > 0)
   {
-    out["subsample_count"] = subsample_count;
+    out["subsample_count"] = subsample_count_;
 
     Json::Value & subsamples = out["subsamples"];
     subsamples = Json::arrayValue;
 
-    for (uint16_t i = 0; i < subsample_count; ++i)
+    for (std::size_t i = 0, n = subsample_.size(); i < n; ++i)
     {
       const SubSample & subsample = subsample_[i];
       Json::Value v;
@@ -3173,6 +3173,211 @@ CencSampleAuxiliaryDataFormat::to_json(Json::Value & out) const
       subsamples.append(v);
     }
   }
+}
+
+
+//----------------------------------------------------------------
+// create<SampleEncryptionBox>::please
+//
+template SampleEncryptionBox *
+create<SampleEncryptionBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// SampleEncryptionBox::load
+//
+void
+SampleEncryptionBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  sample_count_ = bin.read<uint32_t>();
+
+  for (uint32_t i = 0; i < sample_count_; ++i)
+  {
+    Sample sample;
+
+    uint8_t per_sample_iv_size = mp4.get_per_sample_iv_size(i);
+    YAE_ASSERT(per_sample_iv_size);
+    sample.iv_ = bin.read_bytes(per_sample_iv_size);
+
+    if ((FullBox::flags_ & kUseSubSampleEncryption) == kUseSubSampleEncryption)
+    {
+      sample.subsample_count_ = bin.read<uint16_t>();
+      for (uint16_t j = 0; j < sample.subsample_count_; ++j)
+      {
+        SubSample subsample;
+        subsample.bytes_clear_ = bin.read<uint16_t>();
+        subsample.bytes_protected_ = bin.read<uint32_t>();
+        sample.subsample_.push_back(subsample);
+      }
+    }
+
+    sample_.push_back(sample);
+  }
+}
+
+//----------------------------------------------------------------
+// SampleEncryptionBox::to_json
+//
+void
+SampleEncryptionBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["sample_count"] = sample_count_;
+
+  Json::Value & samples = out["samples"];
+  samples = Json::arrayValue;
+
+  for (std::size_t i = 0, n = sample_.size(); i < n; ++i)
+  {
+    const Sample & sample = sample_[i];
+    Json::Value sv;
+    sv["iv"] = sample.iv_.to_hex();
+
+    if ((FullBox::flags_ & kUseSubSampleEncryption) == kUseSubSampleEncryption)
+    {
+      sv["subsample_count"] = sample.subsample_count_;
+      Json::Value & ssv = sv["subsample"];
+      ssv = Json::arrayValue;
+
+      for (std::size_t j = 0, m = sample.subsample_.size(); j < m; ++j)
+      {
+        const SubSample & subsample = sample.subsample_[j];
+        Json::Value v;
+        v["bytes_clear"] = subsample.bytes_clear_;
+        v["bytes_protected"] = subsample.bytes_protected_;
+        ssv.append(v);
+      }
+    }
+    samples.append(sv);
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<TrackEncryptionBox>::please
+//
+template TrackEncryptionBox *
+create<TrackEncryptionBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// TrackEncryptionBox::TrackEncryptionBox
+//
+TrackEncryptionBox::TrackEncryptionBox():
+  reserved_(0),
+  default_crypt_byte_block_(0),
+  default_skip_byte_block_(0),
+  default_is_protected_(0),
+  default_per_sample_iv_size_(0),
+  default_constant_iv_size_(0)
+{}
+
+//----------------------------------------------------------------
+// TrackEncryptionBox::load
+//
+void
+TrackEncryptionBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  FullBox::load(mp4, bin);
+
+  reserved_ = bin.read<uint32_t>(8);
+  default_crypt_byte_block_ = bin.read<uint32_t>(4);
+  default_skip_byte_block_ = bin.read<uint32_t>(4);
+  default_is_protected_ = bin.read<uint32_t>(8);
+
+  default_per_sample_iv_size_ = bin.read<uint32_t>(8);
+  mp4.set_per_sample_iv_size(default_per_sample_iv_size_);
+
+  default_KID_.load(bin);
+
+  if (default_is_protected_ == 1 && default_per_sample_iv_size_ == 0)
+  {
+    default_constant_iv_size_ = bin.read<uint8_t>();
+    default_constant_iv_ = bin.read_bytes(default_constant_iv_size_);
+  }
+}
+
+//----------------------------------------------------------------
+// TrackEncryptionBox::to_json
+//
+void
+TrackEncryptionBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["reserved"] = Json::UInt(reserved_);
+  out["default_crypt_byte_block"] = Json::UInt(default_crypt_byte_block_);
+  out["default_skip_byte_block"] = Json::UInt(default_skip_byte_block_);
+  out["default_is_protected"] = Json::UInt(default_is_protected_);
+  out["default_per_sample_iv_size"] = Json::UInt(default_per_sample_iv_size_);
+
+  yae::save(out["default_KID"], default_KID_);
+
+  if (default_is_protected_ == 1 && default_per_sample_iv_size_ == 0)
+  {
+    out["default_constant_iv_size"] = Json::UInt(default_constant_iv_size_);
+    out["default_constant_iv"] = default_constant_iv_.to_hex();
+  }
+}
+
+
+//----------------------------------------------------------------
+// create<ProtectionSystemSpecificHeaderBox>::please
+//
+template ProtectionSystemSpecificHeaderBox *
+create<ProtectionSystemSpecificHeaderBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ProtectionSystemSpecificHeaderBox::load
+//
+void
+ProtectionSystemSpecificHeaderBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  SystemID_.load(bin);
+
+  KID_.clear();
+
+  if (FullBox::version_ > 0)
+  {
+    KID_count_ = bin.read<uint32_t>();
+
+    for (uint32_t i = 0; i < KID_count_; ++i)
+    {
+      ByteCode16 KID;
+      KID.load(bin);
+      KID_.push_back(KID);
+    }
+  }
+
+  data_size_ = bin.read<uint32_t>();
+  data_ = bin.read_bytes(data_size_);
+}
+
+//----------------------------------------------------------------
+// ProtectionSystemSpecificHeaderBox::to_json
+//
+void
+ProtectionSystemSpecificHeaderBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  yae::save(out["SystemID"], SystemID_);
+
+  if (FullBox::version_ > 0)
+  {
+    out["KID_count"] = KID_count_;
+    yae::save(out["KID"], KID_);
+  }
+
+  out["data_size"] = data_size_;
+  out["data"] = data_.to_hex();
 }
 
 
@@ -5729,6 +5934,9 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("assp", create<AlternativeStartupSequencePropertiesBox>::please);
     this->add("sbgp", create<SampleToGroupBox>::please);
     this->add("sgpd", create<SampleGroupDescriptionBox>::please);
+    this->add("senc", create<SampleEncryptionBox>::please);
+    this->add("tenc", create<TrackEncryptionBox>::please);
+    this->add("pssh", create<ProtectionSystemSpecificHeaderBox>::please);
     this->add("cprt", create<CopyrightBox>::please);
     this->add("tsel", create<TrackSelectionBox>::please);
     this->add("kind", create<KindBox>::please);
@@ -6703,6 +6911,28 @@ Mp4Context::find_ancestor(const char * fourcc) const
   }
 
   return NULL;
+}
+
+//----------------------------------------------------------------
+// Mp4Context::get_per_sample_iv_size
+//
+uint8_t
+Mp4Context::get_per_sample_iv_size(uint32_t sample_index) const
+{
+  // FIXME: sample_index would be relevant for "sbgp", "sbpd"
+  // but I don't currently have any samples to test this with:
+  (void)sample_index;
+
+  return per_sample_iv_size_;
+}
+
+//----------------------------------------------------------------
+// Mp4Context::set_per_sample_iv_size
+//
+void
+Mp4Context::set_per_sample_iv_size(uint8_t per_sample_iv_size)
+{
+  per_sample_iv_size_ = per_sample_iv_size;
 }
 
 //----------------------------------------------------------------

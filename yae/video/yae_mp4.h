@@ -39,6 +39,39 @@ namespace yae
   // forward declarations:
   struct Mp4Context;
 
+
+  //----------------------------------------------------------------
+  // ByteCode
+  //
+  template <int Size>
+  struct ByteCode
+  {
+    enum { kSize = Size };
+
+    ByteCode()
+    { memset(data_, 0, sizeof(data_)); }
+
+    inline void load(IBitstream & bin)
+    { bin.read_bytes(data_, Size); }
+
+    inline bool operator < (const ByteCode & other) const
+    { return memcmp(data_, other.data_, Size) < 0; }
+
+    uint8_t data_[Size];
+  };
+
+  //----------------------------------------------------------------
+  // ByteCode16
+  //
+  struct YAE_API ByteCode16 : ByteCode<16> {};
+
+  inline void save(Json::Value & json, const ByteCode16 & v)
+  { json = yae::to_hex(v.data_, sizeof(v.data_)); }
+
+  inline void load(const Json::Value & json, ByteCode16 & v)
+  { yae::load_hex(v.data_, sizeof(v.data_), json.asCString()); }
+
+
   //----------------------------------------------------------------
   // CharCode
   //
@@ -243,7 +276,7 @@ namespace yae
     Mp4Context():
       load_mdat_data_(false),
       parse_mdat_data_(false),
-      senc_iv_size_(0),
+      per_sample_iv_size_(0),
       file_position_(0)
     {}
 
@@ -274,9 +307,18 @@ namespace yae
     bool is_ancestor_type(const char * fourcc) const;
     const mp4::Box * find_ancestor(const char * fourcc) const;
 
+    // in order to be able to load the "senc" box we need to know
+    // per_sample_iv_size, which may be specified by any of:
+    // - TrackEncryptionBox (see "tenc")
+    // - CencSampleAuxiliaryDataFormat (see "saiz", "saio")
+    // - CencSampleEncryptionInformationGroupEntry (see "sbgp", "sbpd", "seig")
+    // - externally specified Initialization Vector
+    uint8_t get_per_sample_iv_size(uint32_t sample_index) const;
+    void set_per_sample_iv_size(uint8_t n);
+
     bool load_mdat_data_;
     bool parse_mdat_data_;
-    uint32_t senc_iv_size_;
+    uint32_t per_sample_iv_size_;
     uint64_t file_position_;
 
     // these are set when discovered during parsing:
@@ -1642,7 +1684,7 @@ namespace yae
       uint32_t skip_byte_block_ : 4;
       uint32_t is_protected_ : 8;
       uint32_t per_sample_iv_size_ : 8;
-      uint8_t kid_[16];
+      ByteCode16 KID_;
 
       // if (isProtected == 1 && Per_Sample_IV_Size == 0):
       // uint8_t constant_iv_size_
@@ -1657,6 +1699,8 @@ namespace yae
     //
     struct YAE_API CencSampleAuxiliaryDataFormat
     {
+      CencSampleAuxiliaryDataFormat(): subsample_count_(0) {}
+
       void load(uint8_t per_sample_iv_size,
                 uint8_t sample_info_size,
                 IBitstream & bin);
@@ -1675,8 +1719,93 @@ namespace yae
       Data iv_;
 
       // if (sample_info_size > Per_Sample_IV_Size)
+      uint16_t subsample_count_;
       std::vector<SubSample> subsample_;
     };
+
+    //----------------------------------------------------------------
+    // SampleEncryptionBox
+    //
+    struct YAE_API SampleEncryptionBox : FullBox
+    {
+      SampleEncryptionBox(): sample_count_(0) {}
+
+      enum { kUseSubSampleEncryption = 0x2 };
+
+      //----------------------------------------------------------------
+      // SubSample
+      //
+      struct YAE_API SubSample
+      {
+        SubSample(): bytes_clear_(0), bytes_protected_(0) {}
+        uint16_t bytes_clear_;
+        uint32_t bytes_protected_;
+      };
+
+      //----------------------------------------------------------------
+      // Sample
+      //
+      struct YAE_API Sample
+      {
+        Sample(): subsample_count_(0) {}
+        Data iv_;
+
+        // if flags & 0x000002
+        uint16_t subsample_count_;
+        std::vector<SubSample> subsample_;
+      };
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t sample_count_;
+      std::vector<Sample> sample_;
+    };
+
+
+    //----------------------------------------------------------------
+    // TrackEncryptionBox
+    //
+    struct YAE_API TrackEncryptionBox : FullBox
+    {
+      TrackEncryptionBox();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t reserved_ : 8;
+      uint32_t default_crypt_byte_block_ : 4;
+      uint32_t default_skip_byte_block_ : 4;
+      uint32_t default_is_protected_ : 8;
+      uint32_t default_per_sample_iv_size_ : 8;
+      ByteCode16 default_KID_;
+
+      // if (default_isProtected == 1 && default_Per_Sample_IV_Size == 0)
+      uint8_t default_constant_iv_size_;
+      Data default_constant_iv_;
+    };
+
+
+    //----------------------------------------------------------------
+    // ProtectionSystemSpecificHeaderBox
+    //
+    struct YAE_API ProtectionSystemSpecificHeaderBox : FullBox
+    {
+      ProtectionSystemSpecificHeaderBox(): KID_count_(0), data_size_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      ByteCode16 SystemID_;
+
+      // if version > 0:
+      uint32_t KID_count_;
+      std::vector<ByteCode16> KID_;
+
+      uint32_t data_size_;
+      Data data_;
+    };
+
 
     //----------------------------------------------------------------
     // CopyrightBox
