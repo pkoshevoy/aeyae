@@ -1220,19 +1220,14 @@ namespace yae
     //
     struct YAE_API SampleAuxiliaryInformationSizesBox : public FullBox
     {
-      SampleAuxiliaryInformationSizesBox():
-        aux_info_type_(0),
-        aux_info_type_parameters_(0),
-        default_sample_info_size_(0),
-        sample_count_(0)
-      {}
+      SampleAuxiliaryInformationSizesBox();
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       // if ((flags & 1) == 1):
-      uint32_t aux_info_type_;
-      uint32_t aux_info_type_parameters_;
+      FourCC aux_info_type_;
+      uint32_t aux_info_type_parameter_;
 
       uint8_t default_sample_info_size_;
       uint32_t sample_count_;
@@ -1246,18 +1241,14 @@ namespace yae
     //
     struct YAE_API SampleAuxiliaryInformationOffsetsBox : public FullBox
     {
-      SampleAuxiliaryInformationOffsetsBox():
-        aux_info_type_(0),
-        aux_info_type_parameters_(0),
-        entry_count_(0)
-      {}
+      SampleAuxiliaryInformationOffsetsBox();
 
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
       // if ((flags & 1) == 1):
-      uint32_t aux_info_type_;
-      uint32_t aux_info_type_parameters_;
+      FourCC aux_info_type_;
+      uint32_t aux_info_type_parameter_;
 
       uint32_t entry_count_;
       std::vector<uint64_t> offsets_;
@@ -1588,7 +1579,7 @@ namespace yae
       //
       struct YAE_API Entry
       {
-        virtual ~Entry()  {}
+        virtual ~Entry() {}
         virtual void load(Mp4Context & mp4, IBitstream & bin) = 0;
         virtual void to_json(Json::Value & out) const = 0;
       };
@@ -1657,6 +1648,34 @@ namespace yae
       // uint8_t constant_iv_size_
       // uint8_t constant_iv_[constant_iv_size_]
       Data constant_iv_;
+    };
+
+    //----------------------------------------------------------------
+    // CencSampleAuxiliaryDataFormat
+    //
+    // ISO/IEC 23001-7:2016(E), 7.1
+    //
+    struct YAE_API CencSampleAuxiliaryDataFormat
+    {
+      void load(uint8_t per_sample_iv_size,
+                uint8_t sample_info_size,
+                IBitstream & bin);
+
+      void to_json(Json::Value & out) const;
+
+      struct YAE_API SubSample
+      {
+        SubSample(): bytes_clear_(0), bytes_protected_(0) {}
+        uint16_t bytes_clear_;
+        uint32_t bytes_protected_;
+      };
+
+      // Initialization Vector for the sample, unless a constant_IV
+      // is present in the Track Encryption Box (‘tenc’)
+      Data iv_;
+
+      // if (sample_info_size > Per_Sample_IV_Size)
+      std::vector<SubSample> subsample_;
     };
 
     //----------------------------------------------------------------

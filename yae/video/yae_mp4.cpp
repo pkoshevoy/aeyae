@@ -2069,6 +2069,15 @@ template SampleAuxiliaryInformationSizesBox *
 create<SampleAuxiliaryInformationSizesBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
+// SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox
+//
+SampleAuxiliaryInformationSizesBox::SampleAuxiliaryInformationSizesBox():
+  aux_info_type_parameter_(0),
+  default_sample_info_size_(0),
+  sample_count_(0)
+{}
+
+//----------------------------------------------------------------
 // SampleAuxiliaryInformationSizesBox::load
 //
 void
@@ -2080,8 +2089,8 @@ SampleAuxiliaryInformationSizesBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if ((FullBox::flags_ & 1) == 1)
   {
-    aux_info_type_ = bin.read<uint32_t>();
-    aux_info_type_parameters_ = bin.read<uint32_t>();
+    aux_info_type_.load(bin);
+    aux_info_type_parameter_ = bin.read<uint32_t>();
   }
 
   default_sample_info_size_ = bin.read<uint8_t>();
@@ -2105,8 +2114,8 @@ SampleAuxiliaryInformationSizesBox::to_json(Json::Value & out) const
 
   if ((FullBox::flags_ & 1) == 1)
   {
-    out["aux_info_type"] = aux_info_type_;
-    out["aux_info_type_parameters"] = aux_info_type_parameters_;
+    yae::save(out["aux_info_type"], aux_info_type_);
+    out["aux_info_type_parameter"] = aux_info_type_parameter_;
   }
 
   out["default_sample_info_size"] = default_sample_info_size_;
@@ -2126,6 +2135,14 @@ template SampleAuxiliaryInformationOffsetsBox *
 create<SampleAuxiliaryInformationOffsetsBox>::please(const char * fourcc);
 
 //----------------------------------------------------------------
+// SampleAuxiliaryInformationOffsetsBox::SampleAuxiliaryInformationOffsetsBox
+//
+SampleAuxiliaryInformationOffsetsBox::SampleAuxiliaryInformationOffsetsBox():
+  aux_info_type_parameter_(0),
+  entry_count_(0)
+{}
+
+//----------------------------------------------------------------
 // SampleAuxiliaryInformationOffsetsBox::load
 //
 void
@@ -2137,8 +2154,8 @@ SampleAuxiliaryInformationOffsetsBox::load(Mp4Context & mp4, IBitstream & bin)
 
   if ((FullBox::flags_ & 1) == 1)
   {
-    aux_info_type_ = bin.read<uint32_t>();
-    aux_info_type_parameters_ = bin.read<uint32_t>();
+    aux_info_type_.load(bin);
+    aux_info_type_parameter_ = bin.read<uint32_t>();
   }
 
   offsets_.clear();
@@ -2164,8 +2181,8 @@ SampleAuxiliaryInformationOffsetsBox::to_json(Json::Value & out) const
 
   if ((FullBox::flags_ & 1) == 1)
   {
-    out["aux_info_type"] = aux_info_type_;
-    out["aux_info_type_parameters"] = aux_info_type_parameters_;
+    yae::save(out["aux_info_type"], aux_info_type_);
+    out["aux_info_type_parameter"] = aux_info_type_parameter_;
   }
 
   out["entry_count"] = Json::UInt(offsets_.size());
@@ -3102,6 +3119,59 @@ CencSampleEncryptionInformationGroupEntry::to_json(Json::Value & out) const
   {
     out["constant_iv_size"] = Json::UInt(constant_iv_.size());
     out["constant_iv"] = constant_iv_.to_hex();
+  }
+}
+
+
+//----------------------------------------------------------------
+// CencSampleAuxiliaryDataFormat::load
+//
+void
+CencSampleAuxiliaryDataFormat::load(uint8_t per_sample_iv_size,
+                                    uint8_t sample_info_size,
+                                    IBitstream & bin)
+{
+  iv_ = bin.read_bytes(per_sample_iv_size);
+  subsample_.clear();
+
+  if (sample_info_size > per_sample_iv_size)
+  {
+    uint16_t subsample_count = bin.read<uint16_t>();
+    subsample_.resize(subsample_count);
+
+    for (uint16_t i = 0; i < subsample_count; ++i)
+    {
+      SubSample & subsample = subsample_[i];
+      subsample.bytes_clear_ = bin.read<uint16_t>();
+      subsample.bytes_protected_ = bin.read<uint32_t>();
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// CencSampleAuxiliaryDataFormat::to_json
+//
+void
+CencSampleAuxiliaryDataFormat::to_json(Json::Value & out) const
+{
+  out["iv"] = iv_.to_hex();
+
+  uint16_t subsample_count = uint16_t(subsample_.size());
+  if (subsample_count > 0)
+  {
+    out["subsample_count"] = subsample_count;
+
+    Json::Value & subsamples = out["subsamples"];
+    subsamples = Json::arrayValue;
+
+    for (uint16_t i = 0; i < subsample_count; ++i)
+    {
+      const SubSample & subsample = subsample_[i];
+      Json::Value v;
+      v["bytes_clear"] = subsample.bytes_clear_;
+      v["bytes_protected"] = subsample.bytes_protected_;
+      subsamples.append(v);
+    }
   }
 }
 
