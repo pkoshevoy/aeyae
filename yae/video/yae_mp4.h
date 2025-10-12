@@ -1583,6 +1583,21 @@ namespace yae
         entry_count_(0)
       {}
 
+      //----------------------------------------------------------------
+      // Entry
+      //
+      struct YAE_API Entry
+      {
+        virtual ~Entry()  {}
+        virtual void load(Mp4Context & mp4, IBitstream & bin) = 0;
+        virtual void to_json(Json::Value & out) const = 0;
+      };
+
+      //----------------------------------------------------------------
+      // EntryPtr
+      //
+      typedef boost::shared_ptr<Entry> EntryPtr;
+
       void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
       void to_json(Json::Value & out) const YAE_OVERRIDE;
 
@@ -1598,7 +1613,50 @@ namespace yae
 
       // version 1+
       std::vector<uint32_t> description_length_;
-      std::vector<Data> sample_group_entries_;
+      std::vector<EntryPtr> sample_group_entries_;
+    };
+
+    //----------------------------------------------------------------
+    // SampleGroupDescriptionEntry
+    //
+    typedef SampleGroupDescriptionBox::Entry SampleGroupDescriptionEntry;
+
+    //----------------------------------------------------------------
+    // DataSampleGroupDescriptionEntry
+    //
+    struct YAE_API DataSampleGroupDescriptionEntry :
+      public SampleGroupDescriptionEntry
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      Data data_;
+    };
+
+    //----------------------------------------------------------------
+    // CencSampleEncryptionInformationGroupEntry
+    //
+    // grouping_type: "seig"
+    //
+    struct YAE_API CencSampleEncryptionInformationGroupEntry :
+      public SampleGroupDescriptionEntry
+    {
+      CencSampleEncryptionInformationGroupEntry();
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      uint32_t reserved_ : 8;
+      uint32_t crypt_byte_block_ : 4;
+      uint32_t skip_byte_block_ : 4;
+      uint32_t is_protected_ : 8;
+      uint32_t per_sample_iv_size_ : 8;
+      uint8_t kid_[16];
+
+      // if (isProtected == 1 && Per_Sample_IV_Size == 0):
+      // uint8_t constant_iv_size_
+      // uint8_t constant_iv_[constant_iv_size_]
+      Data constant_iv_;
     };
 
     //----------------------------------------------------------------

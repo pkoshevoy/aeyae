@@ -2951,7 +2951,20 @@ SampleGroupDescriptionBox::load(Mp4Context & mp4, IBitstream & bin)
       uint32_t description_length =
         default_length_ ? default_length_ : bin.read<uint32_t>();
 
-      Data entry = bin.read_bytes(description_length);
+      SampleGroupDescriptionBox::EntryPtr entry;
+      if (grouping_type_.same_as("seig"))
+      {
+        entry.reset(new CencSampleEncryptionInformationGroupEntry());
+      }
+      else
+      {
+        entry.reset(new DataSampleGroupDescriptionEntry());
+      }
+
+      const std::size_t entry_pos = bin.position();
+      const std::size_t entry_end = entry_pos + description_length * 8;
+      yae::SetEnd override_bitstream_end_position(bin, entry_end);
+      entry->load(mp4, bin);
 
       if (!default_length_)
       {
@@ -3003,10 +3016,92 @@ SampleGroupDescriptionBox::to_json(Json::Value & out) const
 
     for (uint32_t i = 0, n = sample_group_entries_.size(); i < n; ++i)
     {
-      const Data & entry = sample_group_entries_[i];
-      std::string v = yae::to_hex(entry.get(), entry.size());
+      const EntryPtr & entry = sample_group_entries_[i];
+      Json::Value v;
+      entry->to_json(v);
       sample_group_entries.append(v);
     }
+  }
+}
+
+
+//----------------------------------------------------------------
+// DataSampleGroupDescriptionEntry::load
+//
+void
+DataSampleGroupDescriptionEntry::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t end_pos = bin.end();
+  data_ = bin.read_bytes_until(end_pos);
+}
+
+//----------------------------------------------------------------
+// DataSampleGroupDescriptionEntry::to_json
+//
+void
+DataSampleGroupDescriptionEntry::to_json(Json::Value & out) const
+{
+  out = data_.to_hex();
+}
+
+
+//----------------------------------------------------------------
+// CencSampleEncryptionInformationGroupEntry
+//
+CencSampleEncryptionInformationGroupEntry::
+CencSampleEncryptionInformationGroupEntry():
+  reserved_(0),
+  crypt_byte_block_(0),
+  skip_byte_block_(0),
+  is_protected_(0),
+  per_sample_iv_size_(0)
+{
+  memset(kid_, 0, sizeof(kid_));
+}
+
+//----------------------------------------------------------------
+// CencSampleEncryptionInformationGroupEntry::load
+//
+void
+CencSampleEncryptionInformationGroupEntry::load(Mp4Context & mp4,
+                                                IBitstream & bin)
+{
+  reserved_ = bin.read<uint32_t>(8);
+  crypt_byte_block_ = bin.read<uint32_t>(4);
+  skip_byte_block_ = bin.read<uint32_t>(4);
+  is_protected_ = bin.read<uint32_t>(8);
+  per_sample_iv_size_ = bin.read<uint32_t>(8);
+  bin.read_bytes(kid_, 16);
+
+  constant_iv_.clear();
+  if (is_protected_ == 1 && per_sample_iv_size_ == 0)
+  {
+    uint8_t constant_iv_size = bin.read<uint8_t>();
+    if (constant_iv_size)
+    {
+      constant_iv_.allocz(constant_iv_size);
+      bin.read_bytes(constant_iv_.get(), constant_iv_.size());
+    }
+  }
+}
+
+//----------------------------------------------------------------
+// CencSampleEncryptionInformationGroupEntry::to_json
+//
+void
+CencSampleEncryptionInformationGroupEntry::to_json(Json::Value & out) const
+{
+  out["reserved"] = Json::UInt(reserved_);
+  out["crypt_byte_block"] = Json::UInt(crypt_byte_block_);
+  out["skip_byte_block"] = Json::UInt(skip_byte_block_);
+  out["is_protected"] = Json::UInt(is_protected_);
+  out["per_sample_iv_size"] = Json::UInt(per_sample_iv_size_);
+  out["kid"] = yae::to_hex(kid_, 16);
+
+  if (is_protected_ == 1 && per_sample_iv_size_ == 0)
+  {
+    out["constant_iv_size"] = Json::UInt(constant_iv_.size());
+    out["constant_iv"] = constant_iv_.to_hex();
   }
 }
 
