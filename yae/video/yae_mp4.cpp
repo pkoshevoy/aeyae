@@ -3382,6 +3382,38 @@ ProtectionSystemSpecificHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<ID3v2Box>::please
+//
+template ID3v2Box *
+create<ID3v2Box>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// ID3v2Box::load
+//
+void
+ID3v2Box::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+  language_.load(bin);
+  data_ = bin.read_bytes_until(box_end);
+}
+
+//----------------------------------------------------------------
+// ID3v2Box::to_json
+//
+void
+ID3v2Box::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+  yae::save(out["language"], language_);
+  out["data"] = data_.to_hex();
+}
+
+
+//----------------------------------------------------------------
 // create<CopyrightBox>::please
 //
 template CopyrightBox *
@@ -5937,6 +5969,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("senc", create<SampleEncryptionBox>::please);
     this->add("tenc", create<TrackEncryptionBox>::please);
     this->add("pssh", create<ProtectionSystemSpecificHeaderBox>::please);
+    this->add("ID32", create<ID3v2Box>::please);
     this->add("cprt", create<CopyrightBox>::please);
     this->add("tsel", create<TrackSelectionBox>::please);
     this->add("kind", create<KindBox>::please);

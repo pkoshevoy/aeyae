@@ -1808,6 +1808,19 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // ID3v2Box
+    //
+    struct YAE_API ID3v2Box : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      iso_639_2t::PackedLang language_;
+      Data data_;
+    };
+
+
+    //----------------------------------------------------------------
     // CopyrightBox
     //
     struct YAE_API CopyrightBox : public FullBox
