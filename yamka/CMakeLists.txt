@@ -74,8 +74,13 @@ add_executable(yamkaTest
   examples/yamkaTest.cpp
   )
 
-target_link_libraries(yamkaTest
+set(YAMKA_LIBS
   yamka
+  ${EXTRA_LIBS}
+  )
+
+target_link_libraries(yamkaTest
+  ${YAMKA_LIBS}
   )
 
 add_executable(yamkaRemux
@@ -83,7 +88,7 @@ add_executable(yamkaRemux
   )
 
 target_link_libraries(yamkaRemux
-  yamka
+  ${YAMKA_LIBS}
   )
 
 add_executable(yamkaSimplify
@@ -91,7 +96,7 @@ add_executable(yamkaSimplify
   )
 
 target_link_libraries(yamkaSimplify
-  yamka
+  ${YAMKA_LIBS}
   )
 
 add_executable(yamkaFileInfo
@@ -99,8 +104,7 @@ add_executable(yamkaFileInfo
   )
 
 target_link_libraries(yamkaFileInfo
-  yamka
-  ${EXTRA_LIBS}
+  ${YAMKA_LIBS}
   )
 
 install(TARGETS
