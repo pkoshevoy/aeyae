@@ -8,7 +8,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 set(PROGNAME "aeyae")
-project(aeyae)
+project(aeyae C CXX)
 
 include("${PROJECT_SOURCE_DIR}/aeyae_get_git_revision.cmake")
 include("${PROJECT_SOURCE_DIR}/add_ffmpeg.cmake")
@@ -367,8 +367,9 @@ else()
 endif()
 
 set(CMAKE_CXX_STANDARD ${AEYAE_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD ${AEYAE_CXX_STANDARD})
-set_property(GLOBAL PROPERTY CXX_STANDARD ${AEYAE_CXX_STANDARD})
+#set_property(GLOBAL PROPERTY CXX_STANDARD ${AEYAE_CXX_STANDARD})
 
 target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS

@@ -16,7 +16,7 @@ deploy_appdir()
 
     for i in "AppDir.${APP}"/usr/bin/*; do
 	Z=`echo "${i}" | grep "${APP}"\$`
-	
+
 	if [ -z "${Z}" ]; then
 	    rm -f "${i}"
 	fi

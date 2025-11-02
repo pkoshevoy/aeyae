@@ -1,0 +1,110 @@
+FROM ubuntu:latest
+
+RUN apt update && \
+    DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y \
+    build-essential \
+    ca-certificates \
+    cmake \
+    curl \
+    git \
+    libass-dev \
+    libboost-atomic-dev \
+    libboost-chrono-dev \
+    libboost-date-time-dev \
+    libboost-filesystem-dev \
+    libboost-locale-dev \
+    libboost-random-dev \
+    libboost-regex-dev \
+    libboost-system-dev \
+    libboost-test-dev \
+    libboost-thread-dev \
+    libglew-dev \
+    libjpeg-dev \
+    libmodplug-dev \
+    libzimg-dev \
+    patchelf \
+    portaudio19-dev \
+    nasm \
+    yasm \
+    qtbase5-dev \
+    libqt5opengl5-dev
+
+RUN mkdir -p /opt/local/src
+
+RUN (cd /opt/local/bin && \
+    curl -LO https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage && \
+    chmod a+rx appimagetool-x86_64.AppImage)
+
+RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy.git /opt/local/src/linuxdeploy &&
+    cd /opt/local/src/linuxdeploy && \
+    git submodule update --init --recursive --depth 1)
+RUN (mkdir -p /opt/local/build/linuxdeploy && \
+    cd /opt/local/build/linuxdeploy && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
+    cmake \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=/opt/local \
+    -DUSE_CCACHE=OFF \
+    /opt/local/src/linuxdeploy && \
+    cmake --build . && \
+    cmake --install .)
+
+RUN git clone --depth 1 -b sdk/11.0 https://github.com/FFmpeg/nv-codec-headers.git /opt/local/src/ffnvcodec
+RUN (cd /opt/local/src/ffnvcodec && make install PREFIX=/opt/local)
+
+RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /opt/local/src/ffmpeg
+RUN (mkdir -p /opt/local/build/ffmpeg && \
+    cd /opt/local/build/ffmpeg && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
+    /opt/local/src/ffmpeg/configure \
+    --prefix=/opt/local \
+    --disable-debug \
+    --disable-shared \
+    --enable-static \
+    --enable-pic \
+    --enable-runtime-cpudetect \
+    --enable-libzimg \
+    --enable-libass \
+    --enable-libmodplug \
+    --enable-pthreads \
+    --enable-gpl \
+    --enable-version3 \
+    --enable-libfontconfig \
+    --enable-libfreetype \
+    --enable-libfribidi \
+    --enable-ffnvcodec && \
+    make -j2 && \
+    make install)
+
+RUN git clone --depth 1 -b add-cmake https://github.com/pkoshevoy/libhdhomerun.git /opt/local/src/libhdhomerun
+RUN (mkdir -p /opt/local/build/libhdhomerun && \
+    cd /opt/local/build/libhdhomerun && \
+    cmake \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_INSTALL_PREFIX=/opt/local \
+    /opt/local/src/libhdhomerun && \
+    cmake --build . && \
+    cmake --install .)
+
+RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae &&
+    cd /opt/local/src/aeyae && \
+    git submodule update --init --recursive --depth 1)
+RUN (mkdir -p /opt/local/build/aeyae && \
+    cd /opt/local/build/aeyae && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
+    cmake \
+    -DAEYAE_CXX_STANDARD=17 \
+    -DBUILD_STATIC_LIBAEYAE=YES \
+    -DCMAKE_C_COMPILER=gcc-13 \
+    -DCMAKE_CXX_COMPILER=gcc-13 \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DCMAKE_VERBOSE_MAKEFILE=NO \
+    -DEXTRA_LIBS="-lstdc++ -lm" \
+    -DHDHOMERUN_INSTALL_PREFIX=/opt/local \
+    -DYAE_USE_QOPENGL_WIDGET=NO \
+    /opt/local/src/aeyae && \
+    cmake --build .)
+
+RUN (cd /opt/local/build/aeyae && \
+    PATH=/opt/local/bin:"${PATH}" \
+    /opt/local/src/aeyae/make-linux-app-images.sh)
