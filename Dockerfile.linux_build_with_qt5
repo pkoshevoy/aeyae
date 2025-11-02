@@ -6,6 +6,7 @@ RUN apt update && \
     ca-certificates \
     cmake \
     curl \
+    wget \
     git \
     libass-dev \
     libboost-atomic-dev \
@@ -24,30 +25,22 @@ RUN apt update && \
     libzimg-dev \
     patchelf \
     portaudio19-dev \
+    tree \
     nasm \
     yasm \
     qtbase5-dev \
     libqt5opengl5-dev
 
 RUN mkdir -p /opt/local/src
+RUN mkdir -p /opt/local/bin
 
 RUN (cd /opt/local/bin && \
     curl -LO https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage && \
     chmod a+rx appimagetool-x86_64.AppImage)
 
-RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy.git /opt/local/src/linuxdeploy &&
-    cd /opt/local/src/linuxdeploy && \
-    git submodule update --init --recursive --depth 1)
-RUN (mkdir -p /opt/local/build/linuxdeploy && \
-    cd /opt/local/build/linuxdeploy && \
-    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
-    cmake \
-    -DBUILD_TESTING=OFF \
-    -DCMAKE_INSTALL_PREFIX=/opt/local \
-    -DUSE_CCACHE=OFF \
-    /opt/local/src/linuxdeploy && \
-    cmake --build . && \
-    cmake --install .)
+RUN (cd /opt/local/bin && \
+    curl -LO https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20250213-2/linuxdeploy-x86_64.AppImage && \
+    chmod a+rx linuxdeploy-x86_64.AppImage)
 
 RUN git clone --depth 1 -b sdk/11.0 https://github.com/FFmpeg/nv-codec-headers.git /opt/local/src/ffnvcodec
 RUN (cd /opt/local/src/ffnvcodec && make install PREFIX=/opt/local)
@@ -55,7 +48,7 @@ RUN (cd /opt/local/src/ffnvcodec && make install PREFIX=/opt/local)
 RUN git clone --depth 1 https://git.ffmpeg.org/ffmpeg.git /opt/local/src/ffmpeg
 RUN (mkdir -p /opt/local/build/ffmpeg && \
     cd /opt/local/build/ffmpeg && \
-    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     /opt/local/src/ffmpeg/configure \
     --prefix=/opt/local \
     --disable-debug \
@@ -86,21 +79,20 @@ RUN (mkdir -p /opt/local/build/libhdhomerun && \
     cmake --build . && \
     cmake --install .)
 
-RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae &&
+RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae && \
     cd /opt/local/src/aeyae && \
     git submodule update --init --recursive --depth 1)
 RUN (mkdir -p /opt/local/build/aeyae && \
     cd /opt/local/build/aeyae && \
-    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:/opt/local/lib64/pkgconfig \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
     -DAEYAE_CXX_STANDARD=17 \
     -DBUILD_STATIC_LIBAEYAE=YES \
-    -DCMAKE_C_COMPILER=gcc-13 \
-    -DCMAKE_CXX_COMPILER=gcc-13 \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_VERBOSE_MAKEFILE=NO \
     -DEXTRA_LIBS="-lstdc++ -lm" \
     -DHDHOMERUN_INSTALL_PREFIX=/opt/local \
+    -DINSTALL_LIB_PKGCONFIG_DIR=/opt/local/lib/pkgconfig \
     -DYAE_USE_QOPENGL_WIDGET=NO \
     /opt/local/src/aeyae && \
     cmake --build .)

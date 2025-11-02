@@ -7,6 +7,8 @@ rm -f AppDir.tar.bz2
 tar cfj AppDir.tar.bz2 AppDir
 rm -rf AppDir
 
+set -xe
+
 deploy_appdir()
 {
     APP="${1}"
