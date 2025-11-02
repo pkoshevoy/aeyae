@@ -32,7 +32,6 @@ add_custom_command(OUTPUT
   -DPROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}"
   -DPROJECT_BINARY_DIR="${PROJECT_BINARY_DIR}"
   -DPROGNAME="${PROGNAME}"
-  -DSubversion_SVN_EXECUTABLE="${Subversion_SVN_EXECUTABLE}"
   -P "${PROJECT_SOURCE_DIR}/updateRevision.cmake")
 
 add_library(yamka STATIC
@@ -101,6 +100,7 @@ add_executable(yamkaFileInfo
 
 target_link_libraries(yamkaFileInfo
   yamka
+  ${EXTRA_LIBS}
   )
 
 install(TARGETS
