@@ -6,6 +6,7 @@ RUN apt update && \
     ca-certificates \
     cmake \
     curl \
+    emacs-nox \
     wget \
     git \
     libass-dev \
@@ -38,9 +39,37 @@ RUN (cd /opt/local/bin && \
     curl -LO https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage && \
     chmod a+rx appimagetool-x86_64.AppImage)
 
-RUN (cd /opt/local/bin && \
-    curl -LO https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20250213-2/linuxdeploy-x86_64.AppImage && \
-    chmod a+rx linuxdeploy-x86_64.AppImage)
+RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy.git /opt/local/src/linuxdeploy && \
+    cd /opt/local/src/linuxdeploy && \
+    git submodule update --init --recursive --depth 1)
+RUN (mkdir -p /opt/local/build/linuxdeploy && \
+    cd /opt/local/build/linuxdeploy && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
+    cmake \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=/opt/local \
+    -DUSE_CCACHE=OFF \
+    /opt/local/src/linuxdeploy && \
+    cmake --build . && \
+    cmake --install . && \
+    cd /opt/local/bin && \
+    ln -s linuxdeploy linuxdeploy-x86_64.AppImage)
+
+RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy-plugin-qt.git /opt/local/src/linuxdeploy-plugin-qt && \
+    cd /opt/local/src/linuxdeploy-plugin-qt && \
+    git submodule update --init --recursive --depth 1)
+RUN (mkdir -p /opt/local/build/linuxdeploy-plugin-qt && \
+    cd /opt/local/build/linuxdeploy-plugin-qt && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
+    cmake \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=/opt/local \
+    -DUSE_CCACHE=OFF \
+    /opt/local/src/linuxdeploy-plugin-qt && \
+    cmake --build . && \
+    cmake --install . && \
+    cd /opt/local/bin && \
+    ln -s linuxdeploy-plugin-qt linuxdeploy-plugin-qt-x86_64.AppImage)
 
 RUN git clone --depth 1 -b sdk/11.0 https://github.com/FFmpeg/nv-codec-headers.git /opt/local/src/ffnvcodec
 RUN (cd /opt/local/src/ffnvcodec && make install PREFIX=/opt/local)
@@ -99,4 +128,5 @@ RUN (mkdir -p /opt/local/build/aeyae && \
 
 RUN (cd /opt/local/build/aeyae && \
     PATH=/opt/local/bin:"${PATH}" \
+    LD_LIBRARY_PATH=/opt/local/bin:"${LD_LIBRARY_PATH}" \
     /opt/local/src/aeyae/make-linux-app-images.sh)
