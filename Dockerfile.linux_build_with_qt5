@@ -29,7 +29,6 @@ RUN apt update && \
     libjpeg-dev \
     libmodplug-dev \
     libzimg-dev \
-    ninja-build \
     patchelf \
     portaudio19-dev \
     squashfs-tools \
@@ -49,12 +48,11 @@ RUN (mkdir -p /opt/local/build/appimagetool && \
     cd /opt/local/build/appimagetool && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
-    -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     -DUSE_CCACHE=OFF \
     /opt/local/src/appimagetool && \
-    cmake --build . && \
+    cmake --build . -j $(nproc) && \
     cmake --install . && \
     cd /opt/local/bin)
 
@@ -65,12 +63,11 @@ RUN (mkdir -p /opt/local/build/linuxdeploy && \
     cd /opt/local/build/linuxdeploy && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
-    -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     -DUSE_CCACHE=OFF \
     /opt/local/src/linuxdeploy && \
-    cmake --build . && \
+    cmake --build . -j $(nproc) && \
     cmake --install . && \
     cd /opt/local/bin)
 
@@ -81,15 +78,12 @@ RUN (mkdir -p /opt/local/build/linuxdeploy-plugin-qt && \
     cd /opt/local/build/linuxdeploy-plugin-qt && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
-    -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     -DUSE_CCACHE=OFF \
     /opt/local/src/linuxdeploy-plugin-qt && \
-    cmake --build . && \
-    cmake --install . && \
-    cd /opt/local/bin && \
-    ln -s linuxdeploy-plugin-qt linuxdeploy-plugin-qt-x86_64.AppImage)
+    cmake --build . -j $(nproc) && \
+    cmake --install .)
 
 RUN git clone --depth 1 -b sdk/11.0 https://github.com/FFmpeg/nv-codec-headers.git /opt/local/src/ffnvcodec
 RUN (cd /opt/local/src/ffnvcodec && make install PREFIX=/opt/local)
@@ -122,11 +116,10 @@ RUN git clone --depth 1 -b add-cmake https://github.com/pkoshevoy/libhdhomerun.g
 RUN (mkdir -p /opt/local/build/libhdhomerun && \
     cd /opt/local/build/libhdhomerun && \
     cmake \
-    -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     /opt/local/src/libhdhomerun && \
-    cmake --build . && \
+    cmake --build . -j $(nproc) && \
     cmake --install .)
 
 RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae && \
@@ -136,7 +129,6 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     cd /opt/local/build/aeyae && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
-    -G Ninja \
     -DAEYAE_CXX_STANDARD=17 \
     -DBUILD_STATIC_LIBAEYAE=YES \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -146,7 +138,7 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     -DINSTALL_LIB_PKGCONFIG_DIR=/opt/local/lib/pkgconfig \
     -DYAE_USE_QOPENGL_WIDGET=NO \
     /opt/local/src/aeyae && \
-    cmake --build .)
+    cmake --build . -j $(nproc))
 
 #RUN (cd /opt/local/build/aeyae && \
 #   PATH=/opt/local/bin:"${PATH}" \
