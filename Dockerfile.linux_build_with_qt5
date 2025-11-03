@@ -6,6 +6,8 @@ RUN apt update && \
     ca-certificates \
     cmake \
     curl \
+    desktop-file-utils \
+    file \
     emacs-nox \
     wget \
     git \
@@ -20,24 +22,41 @@ RUN apt update && \
     libboost-system-dev \
     libboost-test-dev \
     libboost-thread-dev \
+    libcurl4-gnutls-dev \
     libglew-dev \
+    libgcrypt20-dev \
+    libgpgme-dev \
     libjpeg-dev \
     libmodplug-dev \
     libzimg-dev \
+    ninja-build \
     patchelf \
     portaudio19-dev \
+    squashfs-tools \
     tree \
     nasm \
     yasm \
     qtbase5-dev \
     libqt5opengl5-dev
 
+RUN mkdir -p /artifacts
+RUN mkdir -p /root/.gnupg
 RUN mkdir -p /opt/local/src
 RUN mkdir -p /opt/local/bin
 
-RUN (cd /opt/local/bin && \
-    curl -LO https://github.com/AppImage/appimagetool/releases/download/1.9.0/appimagetool-x86_64.AppImage && \
-    chmod a+rx appimagetool-x86_64.AppImage)
+RUN git clone --depth 1 https://github.com/AppImage/appimagetool.git /opt/local/src/appimagetool
+RUN (mkdir -p /opt/local/build/appimagetool && \
+    cd /opt/local/build/appimagetool && \
+    PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
+    cmake \
+    -G Ninja \
+    -DBUILD_TESTING=OFF \
+    -DCMAKE_INSTALL_PREFIX=/opt/local \
+    -DUSE_CCACHE=OFF \
+    /opt/local/src/appimagetool && \
+    cmake --build . && \
+    cmake --install . && \
+    cd /opt/local/bin)
 
 RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy.git /opt/local/src/linuxdeploy && \
     cd /opt/local/src/linuxdeploy && \
@@ -46,14 +65,14 @@ RUN (mkdir -p /opt/local/build/linuxdeploy && \
     cd /opt/local/build/linuxdeploy && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
+    -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     -DUSE_CCACHE=OFF \
     /opt/local/src/linuxdeploy && \
     cmake --build . && \
     cmake --install . && \
-    cd /opt/local/bin && \
-    ln -s linuxdeploy linuxdeploy-x86_64.AppImage)
+    cd /opt/local/bin)
 
 RUN (git clone --depth 1 https://github.com/linuxdeploy/linuxdeploy-plugin-qt.git /opt/local/src/linuxdeploy-plugin-qt && \
     cd /opt/local/src/linuxdeploy-plugin-qt && \
@@ -62,6 +81,7 @@ RUN (mkdir -p /opt/local/build/linuxdeploy-plugin-qt && \
     cd /opt/local/build/linuxdeploy-plugin-qt && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
+    -G Ninja \
     -DBUILD_TESTING=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     -DUSE_CCACHE=OFF \
@@ -102,6 +122,7 @@ RUN git clone --depth 1 -b add-cmake https://github.com/pkoshevoy/libhdhomerun.g
 RUN (mkdir -p /opt/local/build/libhdhomerun && \
     cd /opt/local/build/libhdhomerun && \
     cmake \
+    -G Ninja \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/opt/local \
     /opt/local/src/libhdhomerun && \
@@ -115,6 +136,7 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     cd /opt/local/build/aeyae && \
     PKG_CONFIG_PATH=/opt/local/lib/pkgconfig \
     cmake \
+    -G Ninja \
     -DAEYAE_CXX_STANDARD=17 \
     -DBUILD_STATIC_LIBAEYAE=YES \
     -DCMAKE_INSTALL_PREFIX=/usr \
@@ -126,7 +148,7 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     /opt/local/src/aeyae && \
     cmake --build .)
 
-RUN (cd /opt/local/build/aeyae && \
-    PATH=/opt/local/bin:"${PATH}" \
-    LD_LIBRARY_PATH=/opt/local/bin:"${LD_LIBRARY_PATH}" \
-    /opt/local/src/aeyae/make-linux-app-images.sh)
+#RUN (cd /opt/local/build/aeyae && \
+#   PATH=/opt/local/bin:"${PATH}" \
+#    LD_LIBRARY_PATH=/opt/local/lib:"${LD_LIBRARY_PATH}" \
+#    /opt/local/src/aeyae/make-linux-app-images.sh)

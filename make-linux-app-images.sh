@@ -55,14 +55,16 @@ deploy_appdir()
     # "${HOME}"/x86_64/build/linuxdeploy/bin/linuxdeploy
 
     LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:${HOME}"/x86_64/lib \
-	linuxdeploy-x86_64.AppImage \
+	linuxdeploy \
 	--appdir "AppDir.${APP}" \
 	--icon-file /tmp/"${APP}".png \
 	--plugin qt || exit 1
 
     tree "AppDir.${APP}"/usr/lib
 
-    appimagetool-x86_64.AppImage -s "AppDir.${APP}"
+    if [ -n "${SIGN_APP_IMAGE}" ]; then
+        appimagetool -s "AppDir.${APP}"
+    fi
 
     mkdir -p .dist
     FN_OUT="${APP}-${PROJ_WC_REVISION}-linux-x86_64.AppImage"
