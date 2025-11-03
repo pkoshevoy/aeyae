@@ -6,7 +6,7 @@ docker build \
 
 docker run --rm \
        --env SIGN_APP_IMAGE="${SIGN_APP_IMAGE}" \
-       --volume=$HOME/.gnupg:/root/.gnupg \
-       --volume=$PWD:/artifacts \
+       --volume="${HOME}"/.gnupg:/root/.gnupg \
+       --volume="${PWD}":/artifacts \
        --entrypoint /opt/local/src/aeyae/make-linux-app-images-in-docker.sh \
        ubuntu-latest-qt5
