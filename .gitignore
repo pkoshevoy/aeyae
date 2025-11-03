@@ -1,4 +1,6 @@
 # emacs backup files
 *~
+*.AppImage
+*.log
 .DS_Store
 CMakeLists.txt.user*
