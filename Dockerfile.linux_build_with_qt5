@@ -124,6 +124,7 @@ RUN (mkdir -p /opt/local/build/libhdhomerun && \
 
 RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae && \
     cd /opt/local/src/aeyae && \
+    git pull && \
     git submodule update --init --recursive --depth 1)
 RUN (mkdir -p /opt/local/build/aeyae && \
     cd /opt/local/build/aeyae && \
