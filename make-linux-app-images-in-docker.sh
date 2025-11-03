@@ -16,7 +16,8 @@ export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:"${PKG_CONFIG_PATH}"
 (cd /opt/local/src/aeyae && \
      git pull && \
      git submodule update --init --recursive --depth 1 && \
-     find . -type f -iname '*.in' -exec touch {} \;)
+     find . -type f -iname '*.in' -print -exec touch {} \;
+)
 
 (cd /opt/local/build/aeyae && \
     cmake \
@@ -29,7 +30,8 @@ export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:"${PKG_CONFIG_PATH}"
     -DINSTALL_LIB_PKGCONFIG_DIR=/opt/local/lib/pkgconfig \
     -DYAE_USE_QOPENGL_WIDGET=NO \
     /opt/local/src/aeyae && \
-    cmake --build . -j $(nproc))
+    cmake --build . -j $(nproc)
+)
 
 /opt/local/src/aeyae/make-linux-app-images.sh
 

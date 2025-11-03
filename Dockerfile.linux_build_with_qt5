@@ -109,7 +109,7 @@ RUN (mkdir -p /opt/local/build/ffmpeg && \
     --enable-libfreetype \
     --enable-libfribidi \
     --enable-ffnvcodec && \
-    make -j2 && \
+    make -j $(nproc) && \
     make install)
 
 RUN git clone --depth 1 -b add-cmake https://github.com/pkoshevoy/libhdhomerun.git /opt/local/src/libhdhomerun
