@@ -5,6 +5,7 @@ docker build \
        -f Dockerfile.linux_build_with_qt5 .
 
 docker run --rm \
+       --env AEYAE_GIT_BRANCH="${AEYAE_GIT_BRANCH}" \
        --env SIGN_APP_IMAGE="${SIGN_APP_IMAGE}" \
        --volume="${HOME}"/.gnupg:/root/.gnupg \
        --volume="${PWD}":/artifacts \

@@ -124,7 +124,6 @@ RUN (mkdir -p /opt/local/build/libhdhomerun && \
 
 RUN (git clone --depth 1 -b replay https://github.com/pkoshevoy/aeyae.git /opt/local/src/aeyae && \
     cd /opt/local/src/aeyae && \
-    git pull && \
     git submodule update --init --recursive --depth 1)
 RUN (mkdir -p /opt/local/build/aeyae && \
     cd /opt/local/build/aeyae && \
@@ -140,8 +139,3 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     -DYAE_USE_QOPENGL_WIDGET=NO \
     /opt/local/src/aeyae && \
     cmake --build . -j $(nproc))
-
-#RUN (cd /opt/local/build/aeyae && \
-#   PATH=/opt/local/bin:"${PATH}" \
-#    LD_LIBRARY_PATH=/opt/local/lib:"${LD_LIBRARY_PATH}" \
-#    /opt/local/src/aeyae/make-linux-app-images.sh)
