@@ -64,6 +64,8 @@ deploy_appdir()
 
     if [ -n "${SIGN_APP_IMAGE}" ]; then
         appimagetool -s "AppDir.${APP}"
+    else
+        appimagetool "AppDir.${APP}"
     fi
 
     mkdir -p .dist

@@ -1,5 +1,6 @@
-FROM ubuntu:latest
+FROM ubuntu:24.04
 
+ENV LANG C.UTF-8
 RUN apt update && \
     DEBIAN_FRONTEND=noninteractive apt install --no-install-recommends -y \
     build-essential \
