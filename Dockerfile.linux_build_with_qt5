@@ -133,6 +133,7 @@ RUN (mkdir -p /opt/local/build/aeyae && \
     -DCMAKE_CXX_STANDARD=17 \
     -DCMAKE_CXX_STANDARD_REQUIRED=YES \
     -DBUILD_STATIC_LIBAEYAE=YES \
+    -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_VERBOSE_MAKEFILE=NO \
     -DEXTRA_LIBS="-lstdc++ -lm" \
