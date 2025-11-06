@@ -21,7 +21,8 @@ export PKG_CONFIG_PATH=/opt/local/lib/pkgconfig:"${PKG_CONFIG_PATH}"
 
 (cd /opt/local/build/aeyae && \
     cmake \
-    -DAEYAE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD=17 \
+    -DCMAKE_CXX_STANDARD_REQUIRED=YES \
     -DBUILD_STATIC_LIBAEYAE=YES \
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_VERBOSE_MAKEFILE=NO \

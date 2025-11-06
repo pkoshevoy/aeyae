@@ -299,9 +299,6 @@ if (QT4_FOUND)
   endif ()
 endif ()
 
-#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 17)
-
 target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
 
 if (Qt5_FOUND)

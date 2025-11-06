@@ -359,17 +359,14 @@ set_property(TARGET ${PROGNAME} PROPERTY
 
 message("Boost_VERSION: ${Boost_VERSION}")
 if (Boost_VERSION VERSION_LESS "1.70.0")
-  message("setting AEYAE_CXX_STANDARD 98")
-  set(AEYAE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
+  message("setting CMAKE_CXX_STANDARD 98")
+  set(CMAKE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
 else()
-  message("setting AEYAE_CXX_STANDARD 17")
-  set(AEYAE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
+  message("setting CMAKE_CXX_STANDARD 17")
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
 endif()
-
-set(CMAKE_CXX_STANDARD ${AEYAE_CXX_STANDARD})
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD ${AEYAE_CXX_STANDARD})
-#set_property(GLOBAL PROPERTY CXX_STANDARD ${AEYAE_CXX_STANDARD})
 
 target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS

@@ -372,9 +372,6 @@ if (Qt6_FOUND)
   endif ()
 endif ()
 
-#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 98)
-#set_property(TARGET ${PROGNAME} PROPERTY CXX_STANDARD 11)
-
 target_compile_definitions(${PROGNAME} PRIVATE -DJSON_DLL)
 
 target_link_libraries(${PROGNAME}
