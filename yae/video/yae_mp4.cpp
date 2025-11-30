@@ -270,6 +270,12 @@ FullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<FullBox>::please
+//
+template FullBox *
+create<FullBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
 // create<Container>::please
 //
 template Container *
@@ -5912,6 +5918,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("cinf", create_container);
     this->add("\xa9too", create_container);
 
+    this->add("sthd", create<FullBox>::please);
     this->add("meta", create<ContainerEx>::please);
 
     this->add("stsd", create<ContainerList32>::please);
