@@ -550,6 +550,7 @@ namespace yae
       }
       else if (strcmp(argv[i], "--parse-mdat") == 0)
       {
+        load_mdat_data = true;
         parse_mdat_data = true;
       }
       else if (strcmp(argv[i], "--pkt-size") == 0)
