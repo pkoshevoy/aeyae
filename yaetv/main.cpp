@@ -200,11 +200,14 @@ namespace yae
   // parse_mp4
   //
   static void
-  parse_mp4(const char * src_path, const char * dst_path)
+  parse_mp4(const char * src_path,
+            const char * dst_path,
+            bool load_mdat_data,
+            bool parse_mdat_data)
   {
     yae::Mp4Context mp4;
-    mp4.load_mdat_data_ = false;
-    mp4.parse_mdat_data_ = false;
+    mp4.load_mdat_data_ = load_mdat_data;
+    mp4.parse_mdat_data_ = parse_mdat_data;
 
     yae::mp4::TBoxPtrVec top_level_boxes;
     Json::Value out;
@@ -520,6 +523,8 @@ namespace yae
     std::string basedir;
     std::size_t pkt_size = 188;
     bool no_ui = false;
+    bool load_mdat_data = false;
+    bool parse_mdat_data = false;
 
     for (int i = 1; i < argc; i++)
     {
@@ -538,6 +543,14 @@ namespace yae
       else if (strcmp(argv[i], "--no-ui") == 0)
       {
         no_ui = true;
+      }
+      else if (strcmp(argv[i], "--load-mdat") == 0)
+      {
+        load_mdat_data = true;
+      }
+      else if (strcmp(argv[i], "--parse-mdat") == 0)
+      {
+        parse_mdat_data = true;
       }
       else if (strcmp(argv[i], "--pkt-size") == 0)
       {
@@ -589,7 +602,7 @@ namespace yae
             (src_ext == "mov") ||
             (src_ext == "qt"))
         {
-          parse_mp4(src, dst);
+          parse_mp4(src, dst, load_mdat_data, parse_mdat_data);
         }
         else
         {

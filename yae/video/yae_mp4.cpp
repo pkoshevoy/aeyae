@@ -270,6 +270,12 @@ FullBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<Box>::please
+//
+template Box *
+create<Box>::please(const char * fourcc);
+
+//----------------------------------------------------------------
 // create<FullBox>::please
 //
 template FullBox *
@@ -5881,6 +5887,40 @@ XMLSubtitleSampleEntryBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<PlainTextSampleEntryBox>::please
+//
+template PlainTextSampleEntryBox *
+create<PlainTextSampleEntryBox>::please(const char * fourcc);
+
+
+//----------------------------------------------------------------
+// create<CueSourceIDBox>::please
+//
+template CueSourceIDBox *
+create<CueSourceIDBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// CueSourceIDBox::load
+//
+void
+CueSourceIDBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  Box::load(mp4, bin);
+  source_id_ = bin.read<int32_t>();
+}
+
+//----------------------------------------------------------------
+// CueSourceIDBox::to_json
+//
+void
+CueSourceIDBox::to_json(Json::Value & out) const
+{
+  Box::to_json(out);
+  out["source_id"] = source_id_;
+}
+
+
+//----------------------------------------------------------------
 // Mp4BoxFactory
 //
 struct Mp4BoxFactory : public BoxFactory
@@ -6050,6 +6090,18 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("hmhd", create<HintMediaHeaderBox>::please);
     this->add("stpp", create<XMLSubtitleSampleEntryBox>::please);
     this->add("msrc", create<TrackGroupTypeBox>::please);
+    // ISO/IEC 14496-30:2018(E)
+    this->add("wvtt", create<PlainTextSampleEntryBox>::please);
+    this->add("vttC", create<TextBox>::please);
+    this->add("vlab", create<TextBox>::please);
+    this->add("vttc", create<VTTCueBox>::please);
+    this->add("vsid", create<CueSourceIDBox>::please);
+    this->add("ctim", create<TextBox>::please);
+    this->add("iden", create<TextBox>::please);
+    this->add("sttg", create<TextBox>::please);
+    this->add("payl", create<TextBox>::please);
+    this->add("vtta", create<TextBox>::please);
+    this->add("vtte", create<Box>::please);
   }
 
   // helper:
@@ -6987,7 +7039,7 @@ Mp4Context::parse(IBitstream & bin,
   TBoxPtr box(new Box());
   box->load(*this, bin);
 
-  // YAE_BREAKPOINT_IF(box->type_.same_as("dref"));
+  // YAE_BREAKPOINT_IF(box->type_.same_as("wvtt"));
 
   const std::size_t box_end = box_pos + box->size_ * 8;
   YAE_ASSERT(!end_pos || box_end <= end_pos);

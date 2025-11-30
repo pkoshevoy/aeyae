@@ -736,6 +736,9 @@ namespace yae
     inline void set_end(std::size_t end)
     { end_ = end; }
 
+    inline bool at_end() const
+    { return end_ <= position_; }
+
     inline TBufferPtr read_remaining_bytes()
     {
       std::size_t remaining_bits = end_ - position_;

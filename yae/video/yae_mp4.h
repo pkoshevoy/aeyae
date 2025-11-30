@@ -2789,6 +2789,30 @@ namespace yae
       std::string auxiliary_mime_types_;
     };
 
+    //----------------------------------------------------------------
+    // PlainTextSampleEntryBox
+    //
+    struct YAE_API PlainTextSampleEntryBox : BoxWithChildren<SampleEntryBox> {};
+
+    //----------------------------------------------------------------
+    // VTTCueBox
+    //
+    struct YAE_API VTTCueBox : BoxWithChildren<Box> {};
+
+    //----------------------------------------------------------------
+    // CueSourceIDBox
+    //
+    // ISO/IEC 14496-30:2018(E)
+    //
+    struct YAE_API CueSourceIDBox : Box
+    {
+      CueSourceIDBox(): Box(), source_id_(0) {}
+
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      int32_t source_id_;
+    };
 
   }
 
