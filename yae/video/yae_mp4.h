@@ -28,6 +28,7 @@
 #include <list>
 #include <vector>
 
+// for obscure box types see https://mp4ra.org/registered-types/boxes
 
 namespace yae
 {
