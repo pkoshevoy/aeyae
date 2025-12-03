@@ -644,7 +644,18 @@ namespace yae
 
     int64_t ts = 0;
 
-    if ((seekFlags & (AVSEEK_FLAG_BYTE | AVSEEK_FLAG_FRAME)) == 0)
+    if ((seekFlags & AVSEEK_FLAG_BYTE) == AVSEEK_FLAG_BYTE)
+    {
+      // time == packet index
+      // base == packet size
+      ts = seekTime.time_ * seekTime.base_;
+    }
+    else if ((seekFlags & AVSEEK_FLAG_FRAME) == AVSEEK_FLAG_FRAME)
+    {
+      // time == frame index
+      ts = seekTime.time_;
+    }
+    else
     {
       if (streamIndex == -1)
       {
@@ -659,10 +670,6 @@ namespace yae
         const AVStream * s = ctx->streams[streamIndex];
         ts = av_rescale_q(seekTime.time_, tb, s->time_base);
       }
-    }
-    else
-    {
-      ts = seekTime.time_;
     }
 
     int err = avformat_seek_file(ctx,
@@ -2646,8 +2653,13 @@ namespace yae
             DemuxerSummary & summary,
             double tolerance)
   {
-    // get current time position:
-    TTime saved_pos;
+    // analyze from the start:
+    // demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime::min_flicks());
+    demuxer.seek(AVSEEK_FLAG_BYTE, TTime(0, 1));
+    demuxer.populate();
+
+    // get start time position:
+    TTime saved_pos(0, 0);
     {
       AVStream * src = NULL;
       TPacketPtr packet_ptr = demuxer.peek(src);
@@ -2658,16 +2670,17 @@ namespace yae
       }
     }
 
-    // analyze from the start:
-    demuxer.seek(AVSEEK_FLAG_BACKWARD, TTime(0, 1));
     analyze_timeline(demuxer,
                      summary.streams_,
                      summary.fps_,
                      summary.timeline_,
                      tolerance);
 
-    // restore previous time position:
-    demuxer.seek(AVSEEK_FLAG_BACKWARD, saved_pos);
+    if (saved_pos.valid())
+    {
+      // restore previous time position:
+      demuxer.seek(AVSEEK_FLAG_BACKWARD, saved_pos);
+    }
 
     // get the track id and time position of the "first" packet:
     get_rewind_info(demuxer, summary.rewind_.first, summary.rewind_.second);
