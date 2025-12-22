@@ -136,6 +136,8 @@ namespace yae
   {
     // keep alive:
     Track::TInfoPtr track_info_ptr = Track::info_;
+    YAE_RETURN_IF(!track_info_ptr);
+
     const Track::Info & track_info = *track_info_ptr;
 
     try
