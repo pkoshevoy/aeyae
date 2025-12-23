@@ -1016,7 +1016,6 @@ namespace yae
       return;
     }
 
-    // FIXME: pkoshevoy: this needs a mutex?
     attachments_.swap(attachments);
     program_infos_.swap(program_infos);
     video_tracks_.swap(video_tracks);
