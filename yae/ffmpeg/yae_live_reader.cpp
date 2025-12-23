@@ -1112,11 +1112,7 @@ namespace yae
   std::size_t
   LiveReader::getNumberOfPrograms() const
   {
-    // FIXME: pkoshevoy: use recording info .json
-
-    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
-    const std::size_t nprogs = progs.size();
-    return nprogs;
+    return private_->movie_.get_num_programs();
   }
 
   //----------------------------------------------------------------
@@ -1125,18 +1121,7 @@ namespace yae
   bool
   LiveReader::getProgramInfo(std::size_t i, TProgramInfo & info) const
   {
-    // FIXME: pkoshevoy: use recording info .json
-
-    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
-    const std::size_t nprogs = progs.size();
-
-    if (nprogs <= i)
-    {
-      return false;
-    }
-
-    info = progs[i];
-    return true;
+    return private_->movie_.getProgramInfo(i, info);
   }
 
   //----------------------------------------------------------------
@@ -1145,9 +1130,7 @@ namespace yae
   std::size_t
   LiveReader::getNumberOfVideoTracks() const
   {
-    // FIXME: pkoshevoy: use recording info .json
-
-    return private_->movie_.getVideoTracks().size();
+    return private_->movie_.get_num_video_tracks();
   }
 
   //----------------------------------------------------------------
@@ -1156,9 +1139,7 @@ namespace yae
   std::size_t
   LiveReader::getNumberOfAudioTracks() const
   {
-    // FIXME: pkoshevoy: use recording info .json
-
-    return private_->movie_.getAudioTracks().size();
+    return private_->movie_.get_num_audio_tracks();
   }
 
   //----------------------------------------------------------------
@@ -1233,10 +1214,10 @@ namespace yae
       return true;
     }
 
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    if (track)
     {
-      private_->movie_.getVideoTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -1257,10 +1238,10 @@ namespace yae
       return true;
     }
 
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    if (track)
     {
-      private_->movie_.getAudioTracks()[i]->getDuration(start, duration);
+      track->getDuration(start, duration);
       return true;
     }
 
@@ -1273,13 +1254,8 @@ namespace yae
   bool
   LiveReader::getVideoTraits(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      return private_->movie_.getVideoTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1288,13 +1264,8 @@ namespace yae
   bool
   LiveReader::getAudioTraits(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      return private_->movie_.getAudioTracks()[i]->getTraits(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraits(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1303,14 +1274,8 @@ namespace yae
   bool
   LiveReader::setAudioTraitsOverride(const AudioTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->setTraitsOverride(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1319,14 +1284,8 @@ namespace yae
   bool
   LiveReader::setVideoTraitsOverride(const VideoTraits & traits)
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->setTraitsOverride(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->setTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1335,14 +1294,8 @@ namespace yae
   bool
   LiveReader::getAudioTraitsOverride(AudioTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (i < private_->movie_.getAudioTracks().size())
-    {
-      AudioTrackPtr t = private_->movie_.getAudioTracks()[i];
-      return t->getTraitsOverride(traits);
-    }
-
-    return false;
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1351,14 +1304,8 @@ namespace yae
   bool
   LiveReader::getVideoTraitsOverride(VideoTraits & traits) const
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (i < private_->movie_.getVideoTracks().size())
-    {
-      VideoTrackPtr t = private_->movie_.getVideoTracks()[i];
-      return t->getTraitsOverride(traits);
-    }
-
-    return false;
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    return track ? track->getTraitsOverride(traits) : false;
   }
 
   //----------------------------------------------------------------
@@ -1385,16 +1332,8 @@ namespace yae
   bool
   LiveReader::readVideo(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
-    // FIXME: pkoshevoy: remap frame time
-
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (private_->movie_.getVideoTracks().size() <= i)
-    {
-      return false;
-    }
-
-    VideoTrackPtr track = private_->movie_.getVideoTracks()[i];
-    bool ok = track->getNextFrame(frame, terminator);
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    bool ok = track && track->getNextFrame(frame, terminator);
     if (ok && frame)
     {
       frame->readerId_ = private_->readerId_;
@@ -1409,16 +1348,8 @@ namespace yae
   bool
   LiveReader::readAudio(TAudioFramePtr & frame, QueueWaitMgr * terminator)
   {
-    // FIXME: pkoshevoy: remap frame time
-
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (private_->movie_.getAudioTracks().size() <= i)
-    {
-      return false;
-    }
-
-    AudioTrackPtr track = private_->movie_.getAudioTracks()[i];
-    bool ok = track->getNextFrame(frame, terminator);
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    bool ok = track && track->getNextFrame(frame, terminator);
     if (ok && frame)
     {
       frame->readerId_ = private_->readerId_;

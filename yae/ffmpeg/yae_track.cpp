@@ -703,7 +703,7 @@ namespace yae
     Track::Info & info = *info_ptr;
     info.track_id_ = track_id;
     this->update(info);
-    info_.swap(info_ptr);
+    this->set_info(info_ptr);
   }
 
   //----------------------------------------------------------------
@@ -886,11 +886,8 @@ namespace yae
   Track::packetQueueClear()
   {
     // this can be called on the main thread, when seeking:
-    {
-      boost::lock_guard<boost::mutex> lock(packetRateMutex_);
-      packetRateEstimator_.clear();
-    }
-
+    boost::lock_guard<boost::mutex> lock(mutex_);
+    packetRateEstimator_.clear();
     packetQueue_.clear();
     prev_packet_.reset();
   }
@@ -901,7 +898,7 @@ namespace yae
   bool
   Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
   {
-    Track::TInfoPtr track_info_ptr = Track::info_;
+    Track::TInfoPtr track_info_ptr = this->get_info();
     YAE_ASSERT(track_info_ptr);
     if (!track_info_ptr)
     {
@@ -936,7 +933,7 @@ namespace yae
 
     // this can be called on the main thread, when seeking:
     {
-      boost::lock_guard<boost::mutex> lock(packetRateMutex_);
+      boost::lock_guard<boost::mutex> lock(mutex_);
 
       if (packet.dts != AV_NOPTS_VALUE)
       {
@@ -1155,8 +1152,12 @@ namespace yae
   void
   Track::decode(const TPacketPtr & packetPtr)
   {
-    TPacketPtr prev = prev_packet_;
-    prev_packet_ = packetPtr;
+    TPacketPtr prev;
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      prev = prev_packet_;
+      prev_packet_ = packetPtr;
+    }
 
     if (!packetPtr)
     {

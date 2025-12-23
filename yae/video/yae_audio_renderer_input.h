@@ -13,6 +13,11 @@
 #include "yae/video/yae_reader.h"
 #include "yae/video/yae_synchronous.h"
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
+#endif
+
 // standard:
 #include <string>
 
@@ -86,7 +91,7 @@ namespace yae
     SharedClock & clock_;
 
     // a flag indicating whether the renderer should be paused:
-    bool pause_;
+    boost::atomic<bool> pause_;
   };
 }
 

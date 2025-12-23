@@ -10,6 +10,11 @@
 #include "yae/thread/yae_threading.h"
 #include "yae/video/yae_video_renderer.h"
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
+#endif
+
 // standard:
 #include <algorithm>
 #include <limits>
@@ -63,8 +68,8 @@ namespace yae
     SharedClock & clock_;
     IVideoCanvas * canvas_;
     IReader * reader_;
-    bool stop_;
-    bool pause_;
+    boost::atomic<bool> stop_;
+    boost::atomic<bool> pause_;
     TTime framePosition_;
     TTime packetPos_;
 

@@ -127,7 +127,7 @@ namespace yae
     const unsigned int bit_depth = 8;
 #endif
 
-    const unsigned int y_full = ~((~0) << bit_depth);
+    const unsigned int y_full = ~((~0u) << bit_depth);
     const unsigned int lshift = bit_depth - 8;
 
     const unsigned int y_min = narrow_range ? (16 << lshift) : 0;
@@ -215,7 +215,7 @@ namespace yae
     const unsigned int bit_depth = 8;
 #endif
 
-    const unsigned int y_full = ~((~0) << bit_depth);
+    const unsigned int y_full = ~((~0u) << bit_depth);
     const unsigned int lshift = bit_depth - 8;
 
     const unsigned int y_min = narrow_range ? (16 << lshift) : 0;

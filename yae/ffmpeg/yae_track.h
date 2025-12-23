@@ -24,6 +24,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
@@ -301,7 +302,7 @@ namespace yae
     inline std::string get_track_id() const
     {
       // keep-alive:
-      Track::TInfoPtr info_ptr = info_;
+      Track::TInfoPtr info_ptr = this->get_info();
       const Track::Info & info = *info_ptr;
       return info.track_id_;
     }
@@ -310,7 +311,16 @@ namespace yae
     void update(Track::Info & info) const;
 
     inline Track::TInfoPtr get_info() const
-    { return info_; }
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return info_;
+    }
+
+    inline void set_info(const Track::TInfoPtr & info_ptr)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      info_ = info_ptr;
+    }
 
     // NOTE: for MPEG-TS this corresponds to PID:
     inline int getStreamId() const
@@ -424,7 +434,7 @@ namespace yae
     void flush();
 
   protected:
-    mutable boost::mutex packetRateMutex_;
+    mutable boost::mutex mutex_;
     FramerateEstimator packetRateEstimator_;
     TPacketQueue packetQueue_;
 
@@ -471,7 +481,7 @@ namespace yae
     yae::fifo<int64_t> packet_pos_;
 
   public:
-    uint64_t discarded_;
+    boost::atomic<uint64_t> discarded_;
   };
 
   //----------------------------------------------------------------

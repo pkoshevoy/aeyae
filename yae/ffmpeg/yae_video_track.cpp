@@ -687,7 +687,7 @@ namespace yae
     // YAE_BENCHMARK(benchmark, "VideoTrack::handle");
 
     // keep alive:
-    Track::TInfoPtr track_info_ptr = Track::info_;
+    Track::TInfoPtr track_info_ptr = this->get_info();
     YAE_RETURN_IF(!track_info_ptr);
 
     const Track::Info & track_info = *track_info_ptr;

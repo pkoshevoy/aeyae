@@ -554,6 +554,39 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::get_num_programs
+  //
+  std::size_t
+  Movie::get_num_programs() const
+  {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
+    std::size_t n = program_infos_.size();
+    return n;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::get_num_video_tracks
+  //
+  std::size_t
+  Movie::get_num_video_tracks() const
+  {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
+    std::size_t n = video_tracks_.size();
+    return n;
+  }
+
+  //----------------------------------------------------------------
+  // Movie::get_num_audio_tracks
+  //
+  std::size_t
+  Movie::get_num_audio_tracks() const
+  {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
+    std::size_t n = audio_tracks_.size();
+    return n;
+  }
+
+  //----------------------------------------------------------------
   // Movie::get_video_track
   //
   VideoTrackPtr
@@ -561,6 +594,7 @@ namespace yae
   {
     VideoTrackPtr videoTrack;
 
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     std::size_t num_tracks = video_tracks_.size();
     if (i < num_tracks)
     {
@@ -578,6 +612,7 @@ namespace yae
   {
     AudioTrackPtr audioTrack;
 
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     std::size_t num_tracks = audio_tracks_.size();
     if (i < audio_tracks_.size())
     {
@@ -863,6 +898,7 @@ namespace yae
   void
   Movie::refresh()
   {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     VideoTrackPtr videoTrack = this->curr_video_track();
     AudioTrackPtr audioTrack = this->curr_audio_track();
 
@@ -1027,6 +1063,8 @@ namespace yae
 
     threadStop();
 
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
+
     const std::size_t numVideoTracks = video_tracks_.size();
     selectVideoTrack(numVideoTracks);
 
@@ -1050,6 +1088,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Movie::getProgramInfo
+  //
+  bool
+  Movie::getProgramInfo(std::size_t program_index,
+                        TProgramInfo & program_info) const
+  {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
+    if (program_infos_.size() <= program_index)
+    {
+      return false;
+    }
+
+    program_info = program_infos_[program_index];
+    return true;
+  }
+
+  //----------------------------------------------------------------
   // Movie::getVideoTrackInfo
   //
   bool
@@ -1057,6 +1112,7 @@ namespace yae
                            TTrackInfo & info,
                            VideoTraits & traits) const
   {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ = info.nprograms_;
     info.ntracks_ = video_tracks_.size();
@@ -1091,6 +1147,7 @@ namespace yae
                            TTrackInfo & info,
                            AudioTraits & traits) const
   {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     info.nprograms_ = context_ ? context_->nb_programs : 0;
     info.program_ =  info.nprograms_;
     info.ntracks_ = audio_tracks_.size();
@@ -1123,6 +1180,7 @@ namespace yae
   bool
   Movie::selectVideoTrack(std::size_t i)
   {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     const std::size_t numVideoTracks = video_tracks_.size();
     if (selectedVideoTrack_ < numVideoTracks)
     {
@@ -1153,6 +1211,7 @@ namespace yae
   bool
   Movie::selectAudioTrack(std::size_t i)
   {
+    boost::lock_guard<boost::recursive_mutex> lock(data_mutex_);
     const std::size_t numAudioTracks = audio_tracks_.size();
     if (selectedAudioTrack_ < numAudioTracks)
     {
@@ -1249,7 +1308,7 @@ namespace yae
             }
           }
 
-          if (need_info_refresh_ && !err)
+          if (!err && need_info_refresh_)
           {
             need_info_refresh_ = false;
             need_info_refresh = true;

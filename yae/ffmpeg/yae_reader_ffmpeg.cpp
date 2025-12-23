@@ -215,9 +215,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getNumberOfPrograms() const
   {
-    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
-    const std::size_t nprogs = progs.size();
-    return nprogs;
+    return private_->movie_.get_num_programs();
   }
 
   //----------------------------------------------------------------
@@ -226,16 +224,7 @@ namespace yae
   bool
   ReaderFFMPEG::getProgramInfo(std::size_t i, TProgramInfo & info) const
   {
-    const std::vector<TProgramInfo> & progs = private_->movie_.getPrograms();
-    const std::size_t nprogs = progs.size();
-
-    if (nprogs <= i)
-    {
-      return false;
-    }
-
-    info = progs[i];
-    return true;
+    return private_->movie_.getProgramInfo(i, info);
   }
 
   //----------------------------------------------------------------
@@ -244,7 +233,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getNumberOfVideoTracks() const
   {
-    return private_->movie_.getVideoTracks().size();
+    return private_->movie_.get_num_video_tracks();
   }
 
   //----------------------------------------------------------------
@@ -253,7 +242,7 @@ namespace yae
   std::size_t
   ReaderFFMPEG::getNumberOfAudioTracks() const
   {
-    return private_->movie_.getAudioTracks().size();
+    return private_->movie_.get_num_audio_tracks();
   }
 
   //----------------------------------------------------------------
@@ -470,14 +459,8 @@ namespace yae
   bool
   ReaderFFMPEG::readVideo(TVideoFramePtr & frame, QueueWaitMgr * terminator)
   {
-    std::size_t i = private_->movie_.getSelectedVideoTrack();
-    if (private_->movie_.getVideoTracks().size() <= i)
-    {
-      return false;
-    }
-
-    VideoTrackPtr track = private_->movie_.getVideoTracks()[i];
-    bool ok = track->getNextFrame(frame, terminator);
+    VideoTrackPtr track = private_->movie_.curr_video_track();
+    bool ok = track && track->getNextFrame(frame, terminator);
     if (ok && frame)
     {
       frame->readerId_ = private_->readerId_;
@@ -492,14 +475,8 @@ namespace yae
   bool
   ReaderFFMPEG::readAudio(TAudioFramePtr & frame, QueueWaitMgr * terminator)
   {
-    std::size_t i = private_->movie_.getSelectedAudioTrack();
-    if (private_->movie_.getAudioTracks().size() <= i)
-    {
-      return false;
-    }
-
-    AudioTrackPtr track = private_->movie_.getAudioTracks()[i];
-    bool ok = track->getNextFrame(frame, terminator);
+    AudioTrackPtr track = private_->movie_.curr_audio_track();
+    bool ok = track && track->getNextFrame(frame, terminator);
     if (ok && frame)
     {
       frame->readerId_ = private_->readerId_;

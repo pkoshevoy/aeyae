@@ -29,6 +29,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
@@ -97,6 +98,10 @@ namespace yae
                                 std::map<int, int> & stream_ix_to_subtt_ix);
 
   public:
+    std::size_t get_num_programs() const;
+    std::size_t get_num_video_tracks() const;
+    std::size_t get_num_audio_tracks() const;
+
     VideoTrackPtr get_video_track(std::size_t i) const;
     AudioTrackPtr get_audio_track(std::size_t i) const;
 
@@ -127,20 +132,14 @@ namespace yae
     inline const char * getFormatName() const
     { return (context_ && context_->iformat) ? context_->iformat->name : ""; }
 
-    inline const std::vector<TProgramInfo> & getPrograms() const
-    { return program_infos_; }
-
-    inline const std::vector<VideoTrackPtr> & getVideoTracks() const
-    { return video_tracks_; }
-
-    inline const std::vector<AudioTrackPtr> & getAudioTracks() const
-    { return audio_tracks_; }
-
     inline std::size_t getSelectedVideoTrack() const
     { return selectedVideoTrack_; }
 
     inline std::size_t getSelectedAudioTrack() const
     { return selectedAudioTrack_; }
+
+    bool getProgramInfo(std::size_t program_index,
+                        TProgramInfo & program_info) const;
 
     bool getVideoTrackInfo(std::size_t video_track_index,
                            TTrackInfo & info,
@@ -240,6 +239,7 @@ namespace yae
     std::string resourcePath_;
     AVFormatContext * context_;
 
+    mutable boost::recursive_mutex data_mutex_;
     std::vector<TAttachment> attachments_;
     std::vector<TProgramInfo> program_infos_;
     std::vector<VideoTrackPtr> video_tracks_;
@@ -249,18 +249,18 @@ namespace yae
     std::map<int, int> stream_ix_to_subtt_ix_;
 
     // index of the selected video/audio track:
-    std::size_t selectedVideoTrack_;
-    std::size_t selectedAudioTrack_;
+    boost::atomic<std::size_t> selectedVideoTrack_;
+    boost::atomic<std::size_t> selectedAudioTrack_;
 
     // for thread-safe refresh()
-    bool need_info_refresh_;
+    boost::atomic<bool> need_info_refresh_;
 
     // hw accelerated decoding is optional:
     bool hwdec_;
 
     // these are used to speed up video decoding:
-    bool skipLoopFilter_;
-    bool skipNonReferenceFrames_;
+    boost::atomic<bool> skipLoopFilter_;
+    boost::atomic<bool> skipNonReferenceFrames_;
 
     // 0 - disabled
     // 1 - CC1
