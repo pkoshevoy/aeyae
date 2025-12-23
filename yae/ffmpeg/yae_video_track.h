@@ -20,6 +20,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/atomic.hpp>
 #include <boost/chrono/chrono.hpp>
 #include <boost/shared_ptr.hpp>
 #endif
@@ -144,14 +145,17 @@ namespace yae
     bool skipLoopFilter_;
     bool skipNonReferenceFrames_;
 
-    bool deinterlace_;
+    boost::atomic<bool> deinterlace_;
 
     // override input (native) pixel aspect ratio (in case it's wrong):
     double overrideSourcePAR_;
 
     TVideoFrameQueue frameQueue_;
-    VideoTraits override_;
+
+    boost::atomic<bool> hasNativeTraits_;
     VideoTraits native_;
+
+    VideoTraits override_;
     VideoTraits output_;
 
     AVRational frameRate_;

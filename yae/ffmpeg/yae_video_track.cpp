@@ -116,6 +116,8 @@ namespace yae
     skipLoopFilter_(false),
     skipNonReferenceFrames_(false),
     deinterlace_(false),
+    overrideSourcePAR_(0.0),
+    hasNativeTraits_(false),
     hasPrevPTS_(false),
     framesDecoded_(0),
     framesProduced_(0),
@@ -154,11 +156,13 @@ namespace yae
   bool
   VideoTrack::initTraits()
   {
+    hasNativeTraits_ = false;
     if (!getTraits(native_))
     {
       return false;
     }
 
+    hasNativeTraits_ = true;
     output_ = native_;
     override_ = VideoTraits();
 
@@ -383,27 +387,35 @@ namespace yae
   VideoTrack::refreshTraits(const AVFrame * decoded)
   {
     // shortcut to native frame format traits:
-    getTraits(native_, decoded);
+    VideoTraits native_traits;
+    {
+      this->getTraits(native_traits, decoded);
+
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      native_ = native_traits;
+      hasNativeTraits_ = true;
+    }
 
     // frame size may have changed, so update output traits accordingly:
     output_.set_overrides(override_);
 
-    if (native_.pixelFormat_ != kInvalidPixelFormat &&
+    if (native_traits.pixelFormat_ != kInvalidPixelFormat &&
         override_.pixelFormat_ == kInvalidPixelFormat)
     {
       // Sony_Whale_Tracks.ts doesn't probe the pixel format during probing:
-      output_.pixelFormat_ = native_.pixelFormat_;
-      output_.av_fmt_ = native_.av_fmt_;
-      output_.av_rng_ = native_.av_rng_;
-      output_.av_pri_ = native_.av_pri_;
-      output_.av_trc_ = native_.av_trc_;
-      output_.av_csp_ = native_.av_csp_;
-      output_.colorspace_ = native_.colorspace_;
-      output_.dynamic_range_ = native_.dynamic_range_;
+      output_.pixelFormat_ = native_traits.pixelFormat_;
+      output_.av_fmt_ = native_traits.av_fmt_;
+      output_.av_rng_ = native_traits.av_rng_;
+      output_.av_pri_ = native_traits.av_pri_;
+      output_.av_trc_ = native_traits.av_trc_;
+      output_.av_csp_ = native_traits.av_csp_;
+      output_.colorspace_ = native_traits.colorspace_;
+      output_.dynamic_range_ = native_traits.dynamic_range_;
     }
 
     double sourcePixelAspectRatio =
-      overrideSourcePAR_ ? overrideSourcePAR_ :  native_.pixelAspectRatio_;
+      overrideSourcePAR_ ? overrideSourcePAR_ :
+      native_traits.pixelAspectRatio_;
 
     double overridePixelAspectRatio =
       override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
@@ -411,7 +423,8 @@ namespace yae
     output_.pixelAspectRatio_ = sourcePixelAspectRatio;
 
     int transposeAngle =
-      ((native_.cameraRotation_ - override_.cameraRotation_) - 180) % 180;
+      ((native_traits.cameraRotation_ -
+        override_.cameraRotation_) - 180) % 180;
 
     if (override_.visibleWidth_ ||
         override_.visibleHeight_ ||
@@ -420,8 +433,8 @@ namespace yae
       // NOTE: the override provides a scale-to-fit frame envelope,
       // not the actual frame size:
 
-      int src_w = native_.visibleWidth_ * sourcePixelAspectRatio + 0.5;
-      int src_h = native_.visibleHeight_;
+      int src_w = native_traits.visibleWidth_ * sourcePixelAspectRatio + 0.5;
+      int src_h = native_traits.visibleHeight_;
 
       int envelope_w =
         override_.visibleWidth_ ?
@@ -460,12 +473,12 @@ namespace yae
     }
     else
     {
-      output_.encodedWidth_ = native_.encodedWidth_;
-      output_.encodedHeight_ = native_.encodedHeight_;
-      output_.offsetLeft_ = native_.offsetLeft_;
-      output_.offsetTop_ = native_.offsetTop_;
-      output_.visibleWidth_ = native_.visibleWidth_;
-      output_.visibleHeight_ = native_.visibleHeight_;
+      output_.encodedWidth_ = native_traits.encodedWidth_;
+      output_.encodedHeight_ = native_traits.encodedHeight_;
+      output_.offsetLeft_ = native_traits.offsetLeft_;
+      output_.offsetTop_ = native_traits.offsetTop_;
+      output_.visibleWidth_ = native_traits.visibleWidth_;
+      output_.visibleHeight_ = native_traits.visibleHeight_;
     }
 
     if (overridePixelAspectRatio > 0.0 &&
@@ -494,7 +507,7 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_.av_fmt_,
+    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_traits.av_fmt_,
                                                 &subsample_hor_log2,
                                                 &subsample_ver_log2) == 0);
     int subsample_hor = 1 << subsample_hor_log2;
@@ -504,7 +517,7 @@ namespace yae
     output_.visibleHeight_ -= (output_.visibleHeight_ % subsample_ver);
 
     if (output_.pixelFormat_ == kPixelFormatY400A &&
-        native_.pixelFormat_ != kPixelFormatY400A)
+        native_traits.pixelFormat_ != kPixelFormatY400A)
     {
       // sws_getContext doesn't support Y400A, so drop the alpha channel:
       output_.setPixelFormat(kPixelFormatGRAY8);
@@ -703,10 +716,20 @@ namespace yae
       // update native traits first:
       VideoTraits native_traits;
       this->getTraits(native_traits, &decoded);
-      if (native_ != native_traits)
-      {
-        native_ = native_traits;
 
+      bool native_traits_changed = false;
+      {
+        boost::lock_guard<boost::mutex> lock(mutex_);
+        native_traits_changed = (native_ != native_traits);
+        if (native_traits_changed)
+        {
+          native_ = native_traits;
+          hasNativeTraits_ = true;
+        }
+      }
+
+      if (native_traits_changed)
+      {
         // keep-alive:
         TEventObserverPtr eo = eo_;
         if (eo)
@@ -720,7 +743,7 @@ namespace yae
       }
 
       // fill in any missing specs:
-      add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_));
+      add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_traits));
 
 #if 0
       // for debugging Colorspace and frame utils:
@@ -748,7 +771,8 @@ namespace yae
 #endif
 
       double sourcePixelAspectRatio =
-        overrideSourcePAR_ ? overrideSourcePAR_ :  native_.pixelAspectRatio_;
+        overrideSourcePAR_ ? overrideSourcePAR_ :
+        native_traits.pixelAspectRatio_;
 
       double overridePixelAspectRatio =
         override_.pixelAspectRatio_; // overrideSourcePAR_ ? 1.0 : 0.0;
@@ -786,11 +810,12 @@ namespace yae
         (override_.visibleWidth_ || override_.visibleHeight_ ||
          (overridePixelAspectRatio > 0.0 &&
           overridePixelAspectRatio != sourcePixelAspectRatio)) &&
-        (native_.visibleWidth_ != output_.visibleWidth_ ||
-         native_.visibleHeight_ != output_.visibleHeight_);
+        (native_traits.visibleWidth_ != output_.visibleWidth_ ||
+         native_traits.visibleHeight_ != output_.visibleHeight_);
 
       bool nativeNeedsCrop =
-        (native_.offsetTop_ != 0 || native_.offsetLeft_ != 0);
+        (native_traits.offsetTop_ != 0 ||
+         native_traits.offsetLeft_ != 0);
 
       bool outputNeedsCrop =
         (output_.offsetTop_ != 0 || output_.offsetLeft_ != 0);
@@ -802,10 +827,10 @@ namespace yae
       if (shouldCrop)
       {
         filters
-          << "crop=x=" << native_.offsetLeft_
-          << ":y=" << native_.offsetTop_
-          << ":out_w=" << native_.visibleWidth_
-          << ":out_h=" << native_.visibleHeight_;
+          << "crop=x=" << native_traits.offsetLeft_
+          << ":y=" << native_traits.offsetTop_
+          << ":out_w=" << native_traits.visibleWidth_
+          << ":out_h=" << native_traits.visibleHeight_;
       }
 
       if (deinterlace_)
@@ -835,17 +860,18 @@ namespace yae
 #endif
 
       int transposeAngle =
-        ((native_.cameraRotation_ - output_.cameraRotation_) - 180) % 180;
+        ((native_traits.cameraRotation_ -
+          output_.cameraRotation_) - 180) % 180;
 
       bool flipAngle =
         transposeAngle ? 0 :
-        (output_.cameraRotation_ - native_.cameraRotation_) % 360;
+        (output_.cameraRotation_ - native_traits.cameraRotation_) % 360;
 
       bool vflip =
-        (native_.vflip_ != output_.vflip_);
+        (native_traits.vflip_ != output_.vflip_);
 
       bool hflip =
-        (native_.hflip_ != output_.hflip_);
+        (native_traits.hflip_ != output_.hflip_);
 
       if (vflip || hflip || flipAngle)
       {
@@ -991,7 +1017,7 @@ namespace yae
           double tb = t.sec();
           // yae_debug << "video pts: " << tb << "\n";
           double dt = tb - ta;
-          double fd = 1.0 / native_.frameRate_;
+          double fd = 1.0 / native_traits.frameRate_;
           // yae_debug << ta << " ... " << tb << ", dt: " << dt << "\n";
           if (dt > 3.01 * fd)
           {
@@ -1332,8 +1358,9 @@ namespace yae
     {
       specs = AvFrmSpecs(*decoded);
     }
-    else if (native_.av_fmt_ != AV_PIX_FMT_NONE)
+    else if (hasNativeTraits_)
     {
+      boost::lock_guard<boost::mutex> lock(mutex_);
       t = native_;
       return true;
     }
