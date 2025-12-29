@@ -217,43 +217,104 @@ namespace yae
 
       for (TCodecs::const_iterator i = codecs.begin(); i != codecs.end(); ++i)
       {
-        const AVCodec * c = *i;
+        const AVCodec * codec = *i;
 
-        if (al::ends_with(c->name, "_v4l2m2m"))
+        if (al::ends_with(codec->name, "_v4l2m2m"))
         {
           // ignore it, it always fails anyway:
           continue;
         }
 
-        if (al::ends_with(c->name, "_cuvid"))
+        if (al::ends_with(codec->name, "_cuvid"))
         {
           // ignore it, use nvdec instead:
           continue;
         }
 
-        if ((c->capabilities & AV_CODEC_CAP_EXPERIMENTAL) ==
-            AV_CODEC_CAP_EXPERIMENTAL)
+        if (al::ends_with(codec->name, "_amf"))
         {
-          experimental.push_back(c);
+          // ignore it, broken sw_pix_fmt, hwtransfer doesn't work:
           continue;
         }
 
-        const AVCodecHWConfig * hw =
-          allow_hwdec ? avcodec_get_hw_config(c, 0) : NULL;
+        if ((codec->capabilities & AV_CODEC_CAP_EXPERIMENTAL) ==
+            AV_CODEC_CAP_EXPERIMENTAL)
+        {
+          experimental.push_back(codec);
+          continue;
+        }
+
+        int err = 0;
+        yae::AvBufferRef hw_device_ctx;
+        const AVCodecHWConfig * hw = NULL;
+        int hw_config_index = 0;
+
+        while (allow_hwdec && params.width > 640 && params.height > 360)
+        {
+          hw = avcodec_get_hw_config(codec, hw_config_index);
+          hw_config_index++;
+
+          if (!hw)
+          {
+            break;
+          }
+
+          if (hw->device_type == AV_HWDEVICE_TYPE_VIDEOTOOLBOX &&
+              codec->id == AV_CODEC_ID_H264)
+          {
+            // vt has problems decoding and seeking 20220407-up30635-capture.ts
+            continue;
+          }
+
+          if ((AV_CODEC_HW_CONFIG_METHOD_AD_HOC & hw->methods) ==
+              (AV_CODEC_HW_CONFIG_METHOD_AD_HOC))
+          {
+            // methods requiring this sort of configuration are deprecated
+            // and others should be used instead:
+            continue;
+          }
+
+          int hw_device_frames = (AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX |
+                                  AV_CODEC_HW_CONFIG_METHOD_HW_FRAMES_CTX);
+          if ((hw->methods & hw_device_frames) == hw_device_frames)
+          {
+            err = av_hwdevice_ctx_create(&hw_device_ctx.ref_,
+                                         hw->device_type,
+                                         NULL, // const char *, device to open
+                                         NULL, // AVDictionary *, device opts
+                                         0); // flags
+            if (err >= 0)
+            {
+              yae_ilog("av_hwdevice_ctx_create succeeded for %s",
+                       av_hwdevice_get_type_name(hw->device_type));
+              break;
+            }
+
+            yae_wlog("av_hwdevice_ctx_create failed for %s: %s",
+                     av_hwdevice_get_type_name(hw->device_type),
+                     yae::av_errstr(err).c_str());
+            YAE_ASSERT(!hw_device_ctx.ref_);
+          }
+        }
 
         if (hw)
         {
-          hardware.push_back(c);
+          hardware.push_back(codec);
         }
-        else if ((c->capabilities & AV_CODEC_CAP_HARDWARE) ==
+        else if (avcodec_get_hw_config(codec, 0) != NULL)
+        {
+          // none of the hw configs worked, skip it
+          continue;
+        }
+        else if ((codec->capabilities & AV_CODEC_CAP_HARDWARE) ==
                  AV_CODEC_CAP_HARDWARE &&
                  allow_hwdec)
         {
-          no_hwconfig.push_back(c);
+          no_hwconfig.push_back(codec);
         }
         else
         {
-          software.push_back(c);
+          software.push_back(codec);
         }
       }
 
@@ -1737,8 +1798,8 @@ namespace yae
     {
       avcodec_flush_buffers(ctx);
 #if 1
-      Track::close();
-      ctx_ptr = Track::open();
+      this->close();
+      ctx_ptr = this->open();
       ctx = ctx_ptr.get();
       YAE_ASSERT(ctx);
 #endif

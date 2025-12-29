@@ -1465,6 +1465,7 @@ namespace yae
         const char * separators,
         const char * src,
         const char * end = NULL);
+
   //----------------------------------------------------------------
   // join
   //

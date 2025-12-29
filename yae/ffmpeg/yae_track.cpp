@@ -27,6 +27,17 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 namespace al = boost::algorithm;
 
 
+//----------------------------------------------------------------
+// yae_get_format
+//
+static AVPixelFormat
+yae_get_format(struct AVCodecContext * s, const enum AVPixelFormat * fmt)
+{
+  AVPixelFormat r = avcodec_default_get_format(s, fmt);
+  return r;
+}
+
+
 namespace yae
 {
 
@@ -318,6 +329,7 @@ namespace yae
 
     av_dict_set_int(&opts, "threads", nthreads, 0);
 
+    // ctx->get_format = &::yae_get_format;
     int err = avcodec_open2(ctx.get(), c, &opts);
     if (err < 0)
     {
@@ -529,13 +541,12 @@ namespace yae
 
     int err = 0;
     yae::AvBufferRef hw_device_ctx;
+    const AVCodecHWConfig * hw = NULL;
 
     int hw_config_index = 0;
     while (hwdec_ && params.width > 640 && params.height > 360)
     {
-      const AVCodecHWConfig * hw =
-        avcodec_get_hw_config(codec, hw_config_index);
-
+      hw = avcodec_get_hw_config(codec, hw_config_index);
       hw_config_index++;
 
       if (!hw)
@@ -598,6 +609,14 @@ namespace yae
                                  NULL);
 #endif
 
+    if (!codec_pix_fmts && hw_device_ctx.ref_)
+    {
+      AVHWFramesConstraints * constraints =
+        av_hwdevice_get_hwframe_constraints(hw_device_ctx.ref_, hw);
+      codec_pix_fmts = constraints->valid_sw_formats;
+      av_hwframe_constraints_free(&constraints);
+    }
+
     if (codec_pix_fmts && !yae::has<AVPixelFormat>(codec_pix_fmts,
                                                    ctx->pix_fmt,
                                                    AV_PIX_FMT_NONE))
@@ -650,6 +669,8 @@ namespace yae
     ctx->thread_count = nthreads;
     // ctx->thread_type = FF_THREAD_SLICE;
     // ctx->thread_type = FF_THREAD_FRAME;
+
+    // ctx->get_format = &::yae_get_format;
 
     err = avcodec_open2(ctx, codec, &opts);
     if (err < 0)

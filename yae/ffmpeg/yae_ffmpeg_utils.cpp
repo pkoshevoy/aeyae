@@ -590,52 +590,103 @@ namespace yae
   // find_nearest_pix_fmt
   //
   AVPixelFormat
-  find_nearest_pix_fmt(AVPixelFormat src, const AVPixelFormat * candidates)
+  find_nearest_pix_fmt(AVPixelFormat src_fmt, const AVPixelFormat * candidates)
   {
     if (!candidates || *candidates == AV_PIX_FMT_NONE)
     {
       return AV_PIX_FMT_NONE;
     }
 
-    const AVPixFmtDescriptor * src_desc = av_pix_fmt_desc_get(src);
+    const AVPixFmtDescriptor * src_desc = av_pix_fmt_desc_get(src_fmt);
     if (!src_desc || src_desc->nb_components <= 0)
     {
       return AV_PIX_FMT_NONE;
     }
 
     const bool src_bigendian = !!(src_desc->flags & AV_PIX_FMT_FLAG_BE);
-    const int src_depth = src_desc->comp[0].depth + src_desc->comp[0].shift;
-    int best_depth_err = std::numeric_limits<int>::min();
-    AVPixelFormat best = AV_PIX_FMT_NONE;
+    const bool src_planar = !!(src_desc->flags & AV_PIX_FMT_FLAG_PLANAR);
+    const bool src_rgb = !!(src_desc->flags & AV_PIX_FMT_FLAG_RGB);
+    const bool src_alpha = !!(src_desc->flags & AV_PIX_FMT_FLAG_ALPHA);
+    const int src_depth = src_desc->comp[0].depth;
+
+    AVPixelFormat best_fmt = AV_PIX_FMT_NONE;
+    const AVPixFmtDescriptor * best = NULL;
+    bool best_bigendian = false;
+    bool best_planar = false;
+    int best_bit_loss = 255;
+    int best_bit_gain = 255;
 
     for (const AVPixelFormat * i = candidates; i && *i != AV_PIX_FMT_NONE; ++i)
     {
+      if (src_fmt == *i)
+      {
+        return src_fmt;
+      }
+
       const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get(*i);
       if (!desc || desc->nb_components <= 0)
       {
         continue;
       }
 
-      bool bigendian = !!(desc->flags & AV_PIX_FMT_FLAG_BE);
-      int depth = desc->comp[0].depth + desc->comp[0].shift;
-      int depth_err = depth - src_depth;
-      if (// try to minimize bitdepth error:
-          ((depth_err <= 0) &&
-           (best_depth_err < 0) &&
-           (best_depth_err < depth_err)) ||
-          ((depth_err > 0) &&
-           (best_depth_err > 0) &&
-           (depth_err < best_depth_err)) ||
-          // try to preserve endianness:
-          ((depth_err == best_depth_err) &&
-           (bigendian == src_bigendian)))
+      const bool dst_bigendian = !!(desc->flags & AV_PIX_FMT_FLAG_BE);
+      const bool dst_planar = !!(desc->flags & AV_PIX_FMT_FLAG_PLANAR);
+      const bool dst_rgb = !!(desc->flags & AV_PIX_FMT_FLAG_RGB);
+      const bool dst_alpha = !!(desc->flags & AV_PIX_FMT_FLAG_ALPHA);
+      const int dst_depth = desc->comp[0].depth;
+
+      if (src_rgb != dst_rgb)
       {
-        best = *i;
-        best_depth_err = depth_err;
+        continue;
       }
+
+      // int loss = av_get_pix_fmt_loss(*i, src_fmt, src_has_alpha);
+      int dst_bit_loss = std::max(src_depth - dst_depth, 0);
+      int dst_bit_gain = std::max(dst_depth - src_depth, 0);
+
+      if (dst_bit_loss > best_bit_loss)
+      {
+        // minimize bitdepth loss:
+        continue;
+      }
+
+      if (dst_bit_loss == best_bit_loss &&
+          dst_bit_gain > best_bit_gain)
+      {
+        // minimize bitdepth gain:
+        continue;
+      }
+
+      if (best &&
+          dst_bit_loss == best_bit_loss &&
+          dst_bit_gain == best_bit_gain)
+      {
+        if (src_bigendian == dst_bigendian &&
+            (src_bigendian != best_bigendian ||
+             dst_bigendian == best_bigendian))
+        {
+          // preserve endianness:
+          continue;
+        }
+
+        if (src_planar == dst_planar &&
+            (src_planar != best_planar ||
+             dst_planar == best_planar))
+        {
+          // preserve layout:
+          continue;
+        }
+      }
+
+      best_fmt = *i;
+      best = desc;
+      best_planar = dst_planar;
+      best_bigendian = dst_bigendian;
+      best_bit_loss = dst_bit_loss;
+      best_bit_gain = dst_bit_gain;
     }
 
-    return best;
+    return best_fmt;
   }
 
   //----------------------------------------------------------------
