@@ -639,7 +639,11 @@ namespace yae
     if (hw_device_ctx.ref_)
     {
       ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
-      ctx->extra_hw_frames = 7; // workaround NVDEC issues with HGTV9471765.mp4
+      if (params.video_delay > 8)
+      {
+        // workaround NVDEC issues with HGTV9471765.mp4:
+        ctx->extra_hw_frames = params.video_delay - 8;
+      }
     }
 
 #if 1
@@ -659,9 +663,12 @@ namespace yae
 #endif
       std::max(1, nthreads);
 
-    av_dict_set_int(&opts, "threads", nthreads, 0);
+    if (!hw_device_ctx.ref_)
+    {
+      av_dict_set_int(&opts, "threads", nthreads, 0);
+      ctx->thread_count = nthreads;
+    }
 
-    ctx->thread_count = nthreads;
     // ctx->thread_type = FF_THREAD_SLICE;
     // ctx->thread_type = FF_THREAD_FRAME;
 
