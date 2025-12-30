@@ -2014,7 +2014,7 @@ namespace yae
       {}
     }
 
-    YAE_ASSERT(false);
+    // YAE_ASSERT(false);
     return false;
   }
 

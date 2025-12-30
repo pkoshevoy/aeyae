@@ -1090,6 +1090,13 @@ namespace yae
       specs.colorspace = yae::guess_colorspace(src);
     }
 
+    if (!is_rgb && specs.colorspace == AVCOL_SPC_RGB)
+    {
+      specs.colorspace = AVCOL_SPC_UNSPECIFIED;
+      specs.color_primaries = AVCOL_PRI_UNSPECIFIED;
+      specs.color_trc = AVCOL_TRC_UNSPECIFIED;
+    }
+
     YAE_ASSERT(specs.colorspace != AVCOL_SPC_RGB || is_rgb);
 
     if (yae::has_color_specs(specs))

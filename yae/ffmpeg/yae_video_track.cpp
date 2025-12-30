@@ -574,7 +574,7 @@ namespace yae
     // input yuv420 chroma sub-sampling factors
     int subsample_hor_log2 = 0;
     int subsample_ver_log2 = 0;
-    YAE_ASSERT(av_pix_fmt_get_chroma_sub_sample(native_traits.av_fmt_,
+    YAE_EXPECT(av_pix_fmt_get_chroma_sub_sample(native_traits.av_fmt_,
                                                 &subsample_hor_log2,
                                                 &subsample_ver_log2) == 0);
     int subsample_hor = 1 << subsample_hor_log2;
@@ -810,7 +810,7 @@ namespace yae
       }
 
       // fill in any missing specs:
-      add_missing_specs(decodedFrameCopy.get(), AvFrmSpecs(native_traits));
+      yae::override_specs(decodedFrameCopy.get(), AvFrmSpecs(native_traits));
 
 #if 0
       // for debugging Colorspace and frame utils:
