@@ -1504,17 +1504,27 @@ namespace yae
     //! frame rate:
     const AVRational & r_frame_rate = stream_->r_frame_rate;
 
-    if (stream_->avg_frame_rate.num > 0 && stream_->avg_frame_rate.den > 0)
+    // lowest framerate with which all timestamps can be represented accurately
+    // (least common multiple of all framerates in the stream)
+    double max_fps =
+      (r_frame_rate.num > 0 &&
+       r_frame_rate.den > 0) ?
+      (double(r_frame_rate.num) /
+       double(r_frame_rate.den)) :
+      0.0;
+
+    // avg_frame_rate may be set by libavformat when creating the stream
+    // or in avformat_find_stream_info()
+    double avg_fps =
+      (stream_->avg_frame_rate.num > 0 &&
+       stream_->avg_frame_rate.den > 0) ?
+      (double(stream_->avg_frame_rate.num) /
+       double(stream_->avg_frame_rate.den)) :
+      0.0;
+
+    if (max_fps > 0.0 && max_fps < 24000)
     {
-      t.frameRate_ =
-        double(stream_->avg_frame_rate.num) /
-        double(stream_->avg_frame_rate.den);
-    }
-    else if (r_frame_rate.num > 0 && r_frame_rate.den > 0)
-    {
-      t.frameRate_ =
-        double(r_frame_rate.num) /
-        double(r_frame_rate.den);
+      t.frameRate_ = max_fps;
 
       if (context_->metadata)
       {
@@ -1547,6 +1557,10 @@ namespace yae
           }
         }
       }
+    }
+    else if (avg_fps > 0 && avg_fps < 24000)
+    {
+      t.frameRate_ = avg_fps;
     }
     else
     {
