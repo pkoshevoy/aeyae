@@ -302,14 +302,15 @@ namespace yae
           }
         }
 
+        if (!hw && al::ends_with(codec->name, "_qsv"))
+        {
+          // QuickSync Video not available, skip it:
+          continue;
+        }
+
         if (hw)
         {
           hardware.push_back(codec);
-        }
-        else if (allow_hwdec && avcodec_get_hw_config(codec, 0) != NULL)
-        {
-          // none of the hw configs worked, skip it
-          continue;
         }
         else if ((codec->capabilities & AV_CODEC_CAP_HARDWARE) ==
                  AV_CODEC_CAP_HARDWARE &&
