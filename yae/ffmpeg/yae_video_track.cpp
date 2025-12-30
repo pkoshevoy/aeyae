@@ -215,6 +215,11 @@ namespace yae
       typedef std::set<const AVCodec *> TCodecs;
       const TCodecs & codecs = found->second;
 
+      if (params.width <= 640 || params.height <= 360)
+      {
+        allow_hwdec = false;
+      }
+
       for (TCodecs::const_iterator i = codecs.begin(); i != codecs.end(); ++i)
       {
         const AVCodec * codec = *i;
@@ -249,7 +254,7 @@ namespace yae
         const AVCodecHWConfig * hw = NULL;
         int hw_config_index = 0;
 
-        while (allow_hwdec && params.width > 640 && params.height > 360)
+        while (allow_hwdec)
         {
           hw = avcodec_get_hw_config(codec, hw_config_index);
           hw_config_index++;
@@ -301,7 +306,7 @@ namespace yae
         {
           hardware.push_back(codec);
         }
-        else if (avcodec_get_hw_config(codec, 0) != NULL)
+        else if (allow_hwdec && avcodec_get_hw_config(codec, 0) != NULL)
         {
           // none of the hw configs worked, skip it
           continue;
