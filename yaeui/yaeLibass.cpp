@@ -312,7 +312,6 @@ namespace yae
   {
     if (thread_.isRunning())
     {
-      YAE_ASSERT(false);
       return;
     }
 
