@@ -639,6 +639,7 @@ namespace yae
     if (hw_device_ctx.ref_)
     {
       ctx->hw_device_ctx = av_buffer_ref(hw_device_ctx.ref_);
+      ctx->extra_hw_frames = 7; // workaround NVDEC issues with HGTV9471765.mp4
     }
 
 #if 1

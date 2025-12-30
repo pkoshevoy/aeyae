@@ -34,7 +34,7 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 //----------------------------------------------------------------
 // YAE_DEBUG_DATA_REF_SRC
 //
-#ifdef NDEBUG
+#if 1 // def NDEBUG
 #define YAE_DEBUG_DATA_REF_SRC 0
 #else
 #define YAE_DEBUG_DATA_REF_SRC 1
