@@ -340,22 +340,22 @@ namespace yae
 #endif
       }
 
-      if (clockIsRunning &&
+      if (frameDurationScaled - df > 0.5 &&
+          clockIsRunning &&
           lateFrames > 29.0 &&
           lateFramesErrorSum / lateFrames > 0.067 &&
           !playbackLoopedAround)
       {
 #ifndef NDEBUG
         yae_debug
-          << "video is late " << -df << " sec, "
-          << "\tf0: " << f0
-          << "\tf1: " << f1
-          << "\tclock: " << clockPosition
-          << "\tplayhead: " << playheadPosition
-          << "\nlate frames: " << lateFrames
-          << "\nerror total: " << lateFramesErrorSum
-          << "\naverage err: " << lateFramesErrorSum / lateFrames
-          << "\n";
+          << "video is late " << -df << " sec"
+          << ", f0: " << f0
+          << ", f1: " << f1
+          << ", clock: " << clockPosition
+          << ", playhead: " << playheadPosition
+          << ", late frames: " << lateFrames
+          << ", err sum: " << lateFramesErrorSum
+          << ", err avg: " << lateFramesErrorSum / lateFrames;
 #endif
 
         // tell others to wait for the video renderer:
