@@ -663,11 +663,18 @@ namespace yae
 #endif
       std::max(1, nthreads);
 
-    if (!hw_device_ctx.ref_)
+    if (hw_device_ctx.ref_)
     {
-      av_dict_set_int(&opts, "threads", nthreads, 0);
-      ctx->thread_count = nthreads;
+      // Limit HW decoders number of threads.
+      // This is done in order to avoid exceeding max surface pool size,
+      // because each thread requires N surfaces.
+      // This affects HGTV9471765.mp4 in particular due to extra_hw_frames.
+      nthreads = std::min(32 / (8 + ctx->extra_hw_frames), nthreads);
+      nthreads = std::max(1, nthreads);
     }
+
+    av_dict_set_int(&opts, "threads", nthreads, 0);
+    ctx->thread_count = nthreads;
 
     // ctx->thread_type = FF_THREAD_SLICE;
     // ctx->thread_type = FF_THREAD_FRAME;
