@@ -1263,6 +1263,18 @@ namespace yae
     }
 
     inline static ColorRef
+    opaque(const TDataProperties & properties,
+           Property property,
+           DataRefCaching caching = kEnableCaching)
+    {
+      return reference(properties,
+                       property,
+                       TVec4D(0.0, 1.0, 1.0, 1.0),
+                       TVec4D(1.0, 0.0, 0.0, 0.0),
+                       caching);
+    }
+
+    inline static ColorRef
     scale(const TDataProperties & properties,
           Property property,
           const TVec4D & scale,

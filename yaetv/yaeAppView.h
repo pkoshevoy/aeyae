@@ -153,6 +153,7 @@ namespace yae
     void update_wi_min_minutes(const QString &);
     void update_wi_max_minutes(const QString &);
     void update_wi_max(const QString &);
+    void update_sidebar_filter_text(const QString &);
 
   protected:
     // helpers:
@@ -250,6 +251,10 @@ namespace yae
     std::map<std::string, yae::shared_ptr<Item> > wl_sidebar_;
     yae::shared_ptr<Item> wishlist_ui_;
     yae::shared_ptr<std::pair<std::string, Wishlist::Item> > wi_edit_;
+
+    // sidebar filter text:
+    std::string sidebar_filter_text_;
+    std::vector<std::string> sidebar_filter_tokens_;
 
   protected:
     mutable boost::mutex mutex_;

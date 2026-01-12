@@ -18,6 +18,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/algorithm/string/find.hpp>
 #include <boost/lexical_cast.hpp>
 #endif
 
@@ -44,6 +45,108 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // GetSidebarFilterText
+  //
+  struct GetSidebarFilterText : public TVarExpr
+  {
+    GetSidebarFilterText(const AppView & view):
+      view_(view)
+    {}
+
+    // virtual:
+    void evaluate(TVar & result) const
+    {
+      result = TVar(view_.sidebar_filter_text_);
+    }
+
+    const AppView & view_;
+  };
+
+
+  //----------------------------------------------------------------
+  // MatchWishlistItem
+  //
+  struct MatchWishlistItem : public TBoolExpr
+  {
+    MatchWishlistItem(const AppView & view, const Wishlist::Item & wi):
+      view_(view),
+      wi_(wi)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = true;
+
+      typedef boost::iterator_range<std::string::const_iterator> StrRange;
+
+      std::string wi_txt = wi_.to_txt();
+      if (wi_.channel_)
+      {
+        const std::pair<uint16_t, uint16_t> & ch_num = *wi_.channel_;
+        wi_txt = strfmt("%i-%i ", ch_num.first, ch_num.second) + wi_txt;
+      }
+
+      StrRange haystack(wi_txt.begin(), wi_txt.end());
+      const std::vector<std::string> & tokens = view_.sidebar_filter_tokens_;
+      for (std::size_t i = 0, n = tokens.size(); i < n; ++i)
+      {
+        const std::string & token = tokens[i];
+        StrRange needle(token.begin(), token.end());
+        if (!boost::algorithm::ifind_first(haystack, needle))
+        {
+          result = false;
+          break;
+        }
+      }
+    }
+
+    const AppView & view_;
+    const Wishlist::Item & wi_;
+  };
+
+
+  //----------------------------------------------------------------
+  // MatchPlaylistItem
+  //
+  struct MatchPlaylistItem : public TBoolExpr
+  {
+    MatchPlaylistItem(const AppView & view, const Recording::Rec & rec):
+      view_(view),
+      rec_(rec)
+    {}
+
+    // virtual:
+    void evaluate(bool & result) const
+    {
+      result = true;
+
+      typedef boost::iterator_range<std::string::const_iterator> StrRange;
+
+      std::string pl_txt =
+        strfmt("%i-%i ", rec_.channel_major_, rec_.channel_minor_) +
+        rec_.get_short_title();
+
+      StrRange haystack(pl_txt.begin(), pl_txt.end());
+      const std::vector<std::string> & tokens = view_.sidebar_filter_tokens_;
+      for (std::size_t i = 0, n = tokens.size(); i < n; ++i)
+      {
+        const std::string & token = tokens[i];
+        StrRange needle(token.begin(), token.end());
+        if (!boost::algorithm::ifind_first(haystack, needle))
+        {
+          result = false;
+          break;
+        }
+      }
+    }
+
+    const AppView & view_;
+    const Recording::Rec & rec_;
+  };
+
 
   //----------------------------------------------------------------
   // IsSelected
@@ -3821,6 +3924,7 @@ namespace yae
     wl_index_.clear();
     std::size_t num_rows = 0;
 
+    ItemRef row_top = ItemRef::reference(body, kPropertyTop);
     for (std::map<std::string, Wishlist::Item>::const_iterator
            i = wishlist_.begin(); i != wishlist_.end(); ++i)
     {
@@ -3837,11 +3941,16 @@ namespace yae
         row_ptr.reset(new EditWishlistItem(row_id.c_str(), view));
 
         Item & row = body.add<Item>(row_ptr);
-        row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+        row.visible_ = row.addExpr(new MatchWishlistItem(*this, wi));
+        row.height_ = row.addExpr
+          (new Conditional<ItemRef>
+           (row.visible_,
+            ItemRef::reference(hidden, kUnitSize, 0.6),
+            ItemRef::constant(0.0)));
+
         row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
         row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-        row.anchors_.top_ = row.
-          addExpr(new ListItemTop(view, body, wl_index_, row.id_));
+        row.anchors_.top_ = row_top;
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
@@ -3905,6 +4014,7 @@ namespace yae
         }
       }
 
+      row_top = ItemRef::reference(*row_ptr, kPropertyBottom);
       rows[row_id] = row_ptr;
     }
 
@@ -3965,6 +4075,7 @@ namespace yae
     std::size_t num_playlists = 0;
     pl_index_.clear();
 
+    ItemRef row_top = ItemRef::reference(body, kPropertyTop);
     for (std::map<std::string, TRecs>::const_iterator
            i = playlists_.begin(); i != playlists_.end(); ++i)
     {
@@ -3985,11 +4096,16 @@ namespace yae
         row_ptr.reset(new Select(name.c_str(), view, view.sidebar_sel_));
 
         Item & row = body.add<Item>(row_ptr);
-        row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
+        row.visible_ = row.addExpr(new MatchPlaylistItem(*this, rec));
+        row.height_ = row.addExpr
+          (new Conditional<ItemRef>
+           (row.visible_,
+            ItemRef::reference(hidden, kUnitSize, 0.6),
+            ItemRef::constant(0.0)));
+
         row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
         row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-        row.anchors_.top_ = row.
-          addExpr(new ListItemTop(view, body, pl_index_, row.id_));
+        row.anchors_.top_ = row_top;
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
@@ -4076,6 +4192,7 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
       }
 
+      row_top = ItemRef::reference(*row_ptr, kPropertyBottom);
       rows[name] = row_ptr;
 
       // avoid calling sync_ui_playlist when the playlist has not changed:
@@ -5221,6 +5338,33 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AppView::update_sidebar_filter_text
+  //
+  void
+  AppView::update_sidebar_filter_text(const QString & qstr)
+  {
+    std::string str = yae::trim_ws(qstr.toUtf8().constData());
+    if (sidebar_filter_text_ == str)
+    {
+      // nothing changed
+      return;
+    }
+
+    sidebar_filter_tokens_.clear();
+    sidebar_filter_text_ = str;
+
+    if (!sidebar_filter_text_.empty())
+    {
+      const char * str = &sidebar_filter_text_[0];
+      const char * end = str + sidebar_filter_text_.size();
+      yae::split(sidebar_filter_tokens_, " ", str, end);
+    }
+
+    requestUncache();
+    requestRepaint();
+  }
+
+  //----------------------------------------------------------------
   // AppView::layout
   //
   void
@@ -5363,6 +5507,91 @@ namespace yae
                         ItemRef::reference(hidden, kUnitSize, 0.33));
     bg.anchors_.right_ = ItemRef::reference(sv, kPropertyRight);
 
+    // add a sidebar filter:
+    {
+      Rectangle & row = panel.addNew<Rectangle>("sidebar_filter");
+      row.anchors_.fill(bg);
+      row.anchors_.bottom_.reset();
+      row.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
+      row.color_ = bg.color_;
+
+      RoundRect & text_bg = row.
+        addNew<RoundRect>("text_bg");
+
+      Text & text = row.
+        addNew<Text>("text");
+
+      TextInput & edit = row.
+        addNew<TextInput>("edit");
+
+      TextInputProxy & focus = row.
+        add(new TextInputProxy("focus_sidebar_filter", text, edit));
+
+      focus.anchors_.fill(text_bg);
+      focus.bgNoFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.5));
+      focus.bgOnFocus_ = focus.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0, 1.0));
+      focus.copyViewToEdit_ = BoolRef::constant(true);
+      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
+
+      ItemFocus::singleton().
+        setFocusable(view, focus, "main_ui", 0);
+
+      text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
+      text.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
+      text.anchors_.vcenter_ = text.
+        addExpr(new RoundUp(row, kPropertyVCenter));
+      text.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.5));
+
+      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.color_ = text.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      text.background_ = text.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.text_ = text.addExpr(new GetSidebarFilterText(view));
+      text.font_ = style.font_;
+      text.font_.setWeight(QFont::Normal);
+      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+
+      text_bg.anchors_.offset(text, -3, 3, -3, 1);
+      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.1));
+      text_bg.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.2));
+      text_bg.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.2));
+      text_bg.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.1));
+
+      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.radius_ = ItemRef::scale(text, kPropertyHeight, 0.75);
+      text_bg.color_.disableCaching();
+
+      edit.anchors_.fill(text);
+      edit.margins_.set_right(ItemRef::scale(edit,
+                                             kPropertyCursorWidth,
+                                             -1.0));
+      edit.visible_ = edit.
+        addExpr(new ShowWhenFocused(focus, true));
+      edit.color_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.background_ =
+        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.font_ = text.font_;
+      edit.fontSize_ = text.fontSize_;
+
+      edit.selectionBg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.0, 1.0));
+      edit.selectionFg_ = edit.
+        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0, 1.0));
+
+      bool ok =
+        // connect(&edit, SIGNAL(editingFinished(const QString &)),
+        connect(&edit, SIGNAL(textEdited(const QString &)),
+                &view, SLOT(update_sidebar_filter_text(const QString &)));
+      YAE_ASSERT(ok);
+    }
+
+    // layout the list views:
     Item & sidebar = *(sv.content_);
     Item & vscrollbar = panel.get<Item>("scrollbar");
 
@@ -5370,7 +5599,7 @@ namespace yae
     spacer.anchors_.top_ = ItemRef::reference(sidebar, kPropertyTop);
     spacer.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
     spacer.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-    spacer.height_ = ItemRef::reference(hidden, kUnitSize, 0.14);
+    spacer.height_ = ItemRef::reference(hidden, kUnitSize, 1.14);
 
     // Digital Video Recorder:
     Item & top_group = add_collapsible_list(view,
