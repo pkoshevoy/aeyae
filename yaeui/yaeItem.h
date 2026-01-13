@@ -1191,7 +1191,16 @@ namespace yae
     void evaluate(TData & result) const
     {
       bool cond = predicate_.get();
-      result = cond ? a_.get() : b_.get();
+      if (cond)
+      {
+        a_.uncache();
+        result = a_.get();
+      }
+      else
+      {
+        b_.uncache();
+        result = b_.get();
+      }
     }
 
     const BoolRef & predicate_;
