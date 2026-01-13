@@ -233,7 +233,7 @@ namespace yae
 
     bbox.w_ = rect.width() / supersample;
     bbox.h_ = rect.height() / supersample;
-
+#if 0
     if (enable_high_dpi_scaling())
     {
       bbox.x_ -= 0.8;
@@ -241,6 +241,7 @@ namespace yae
       bbox.w_ += 1.6;
       bbox.h_ += 1.6;
     }
+#endif
   }
 
   //----------------------------------------------------------------
@@ -289,7 +290,7 @@ namespace yae
 
     bbox.w_ = std::max(0.0, std::min(maxWidth, rect.width() / supersample));
     bbox.h_ = std::max(0.0, std::min(maxHeight, rect.height() / supersample));
-
+#if 0
     if (enable_high_dpi_scaling())
     {
       bbox.x_ -= 0.8;
@@ -297,6 +298,7 @@ namespace yae
       bbox.w_ += 1.6;
       bbox.h_ += 1.6;
     }
+#endif
   }
 
   //----------------------------------------------------------------

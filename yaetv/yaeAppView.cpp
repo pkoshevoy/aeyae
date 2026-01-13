@@ -5561,7 +5561,7 @@ namespace yae
       text_bg.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.1));
 
       text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
-      text_bg.radius_ = ItemRef::scale(text, kPropertyHeight, 0.75);
+      text_bg.radius_ = ItemRef::scale(text, kPropertyHeight, 0.78);
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);

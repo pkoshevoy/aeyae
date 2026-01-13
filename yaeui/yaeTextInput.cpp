@@ -276,6 +276,19 @@ namespace yae
     BBox bbox;
     item.Item::get(kPropertyBBox, bbox);
 
+    // avoid rendering at fractional pixel coordinates:
+    bbox.x_ = std::floor(bbox.x_);
+    bbox.y_ = std::floor(bbox.y_);
+    bbox.w_ = std::ceil(bbox.w_);
+    bbox.h_ = std::ceil(bbox.h_);
+
+#if 0
+    bbox.x_ -= 0.8;
+    bbox.y_ -= 0.8;
+    bbox.w_ += 1.6;
+    bbox.h_ += 1.6;
+#endif
+
     double supersample = item.supersample_.get();
     iw_ = (int)std::ceil(bbox.w_ * supersample);
     ih_ = (int)std::ceil(bbox.h_ * supersample);
@@ -438,12 +451,27 @@ namespace yae
     BBox bbox;
     item.Item::get(kPropertyBBox, bbox);
 
+#if 0
     bbox.x_ = floor(bbox.x_ + 0.5);
     bbox.y_ = floor(bbox.y_ + 0.5);
 
     double supersample = item.supersample_.get();
     bbox.w_ = double(iw_) / supersample;
     bbox.h_ = double(ih_) / supersample;
+#else
+    // avoid rendering at fractional pixel coordinates:
+    bbox.x_ = std::floor(bbox.x_);
+    bbox.y_ = std::floor(bbox.y_);
+    bbox.w_ = std::ceil(bbox.w_);
+    bbox.h_ = std::ceil(bbox.h_);
+#endif
+
+#if 0
+    bbox.x_ -= 0.8;
+    bbox.y_ -= 0.8;
+    bbox.w_ += 1.6;
+    bbox.h_ += 1.6;
+#endif
 
     int iw = (iw_ + downsample_ - 1) / downsample_;
     int ih = (ih_ + downsample_ - 1) / downsample_;
