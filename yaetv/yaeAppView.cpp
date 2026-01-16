@@ -70,26 +70,36 @@ namespace yae
   //
   struct MatchWishlistItem : public TBoolExpr
   {
-    MatchWishlistItem(const AppView & view, const Wishlist::Item & wi):
+    MatchWishlistItem(const AppView & view, const std::string & wi_key):
       view_(view),
-      wi_(wi)
+      wi_key_(wi_key)
     {}
 
     // virtual:
     void evaluate(bool & result) const
     {
-      result = true;
-
-      typedef boost::iterator_range<std::string::const_iterator> StrRange;
-
-      std::string wi_txt = wi_.to_txt();
-      if (wi_.channel_)
+      std::map<std::string, Wishlist::Item>::const_iterator
+        found = view_.wishlist_.find(wi_key_);
+      if (found == view_.wishlist_.end())
       {
-        const std::pair<uint16_t, uint16_t> & ch_num = *wi_.channel_;
+        result = false;
+        return;
+      }
+
+      // shortcut:
+      const Wishlist::Item & wi = found->second;
+
+      std::string wi_txt = wi.to_txt();
+      if (wi.channel_)
+      {
+        const std::pair<uint16_t, uint16_t> & ch_num = *wi.channel_;
         wi_txt = strfmt("%i-%i ", ch_num.first, ch_num.second) + wi_txt;
       }
 
+      typedef boost::iterator_range<std::string::const_iterator> StrRange;
       StrRange haystack(wi_txt.begin(), wi_txt.end());
+      result = true;
+
       const std::vector<std::string> & tokens = view_.sidebar_filter_tokens_;
       for (std::size_t i = 0, n = tokens.size(); i < n; ++i)
       {
@@ -104,7 +114,7 @@ namespace yae
     }
 
     const AppView & view_;
-    const Wishlist::Item & wi_;
+    std::string wi_key_;
   };
 
 
@@ -113,23 +123,40 @@ namespace yae
   //
   struct MatchPlaylistItem : public TBoolExpr
   {
-    MatchPlaylistItem(const AppView & view, const Recording::Rec & rec):
+    MatchPlaylistItem(const AppView & view, const std::string & pl_key):
       view_(view),
-      rec_(rec)
+      pl_key_(pl_key)
     {}
 
     // virtual:
     void evaluate(bool & result) const
     {
-      result = true;
+      std::map<std::string, TRecs>::const_iterator
+        found = view_.playlists_.find(pl_key_);
+      if (found == view_.playlists_.end())
+      {
+        result = false;
+        return;
+      }
 
-      typedef boost::iterator_range<std::string::const_iterator> StrRange;
+      const TRecs & recs = found->second;
+      if (recs.empty())
+      {
+        result = false;
+        return;
+      }
+
+      // shortcut:
+      const Recording::Rec & rec = *(recs.begin()->second);
 
       std::string pl_txt =
-        strfmt("%i-%i ", rec_.channel_major_, rec_.channel_minor_) +
-        rec_.get_short_title();
+        strfmt("%i-%i ", rec.channel_major_, rec.channel_minor_) +
+        rec.get_short_title();
 
+      typedef boost::iterator_range<std::string::const_iterator> StrRange;
       StrRange haystack(pl_txt.begin(), pl_txt.end());
+      result = true;
+
       const std::vector<std::string> & tokens = view_.sidebar_filter_tokens_;
       for (std::size_t i = 0, n = tokens.size(); i < n; ++i)
       {
@@ -144,7 +171,7 @@ namespace yae
     }
 
     const AppView & view_;
-    const Recording::Rec & rec_;
+    std::string pl_key_;
   };
 
 
@@ -3941,7 +3968,7 @@ namespace yae
         row_ptr.reset(new EditWishlistItem(row_id.c_str(), view));
 
         Item & row = body.add<Item>(row_ptr);
-        row.visible_ = row.addExpr(new MatchWishlistItem(*this, wi));
+        row.visible_ = row.addExpr(new MatchWishlistItem(*this, wi_key));
         row.height_ = row.addExpr
           (new Conditional<ItemRef>
            (row.visible_,
@@ -4005,12 +4032,16 @@ namespace yae
       }
       else
       {
-        Text & desc = row_ptr->get<Text>("desc");
+        // avoid leaving a potentially dangling reference to a deleted row:
+        Item & row = *row_ptr;
+        row.anchors_.top_ = row_top;
+
+        Text & desc = row.get<Text>("desc");
         TVar tvar_txt(wi.to_txt());
         if (desc.text_.get() != tvar_txt)
         {
           desc.text_ = TVarRef::constant(tvar_txt);
-          row_ptr->uncache();
+          row.uncache();
         }
       }
 
@@ -4096,7 +4127,7 @@ namespace yae
         row_ptr.reset(new Select(name.c_str(), view, view.sidebar_sel_));
 
         Item & row = body.add<Item>(row_ptr);
-        row.visible_ = row.addExpr(new MatchPlaylistItem(*this, rec));
+        row.visible_ = row.addExpr(new MatchPlaylistItem(*this, name));
         row.height_ = row.addExpr
           (new Conditional<ItemRef>
            (row.visible_,
@@ -4190,6 +4221,12 @@ namespace yae
           addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0));
         count_bg.background_ = count_bg.
           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+      }
+      else
+      {
+        // avoid leaving a potentially dangling reference to a deleted row:
+        Item & row = *row_ptr;
+        row.anchors_.top_ = row_top;
       }
 
       row_top = ItemRef::reference(*row_ptr, kPropertyBottom);
