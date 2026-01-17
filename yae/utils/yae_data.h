@@ -882,11 +882,31 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // UInt
+  //
+  template <std::size_t nbits>
+  struct UInt
+  {
+    template<bool B, class T, class F>
+    struct If { typedef T type; };
+
+    template<class T, class F>
+    struct If<false, T, F> { typedef F type; };
+
+    typedef typename If
+    <nbits <= 8, uint8_t, typename If
+     <nbits <= 16, uint16_t, typename If
+      <nbits <= 32, uint32_t, uint64_t>::type>::type>::type type;
+  };
+
+  //----------------------------------------------------------------
   // Bit
   //
   template <std::size_t nbits, uint64_t default_value = 0>
   struct Bit : bitstream::IPayload
   {
+    typedef typename yae::UInt<nbits>::type TData;
+
     Bit(uint64_t value = default_value):
       data_(value)
     {}
@@ -917,7 +937,7 @@ namespace yae
       return *this;
     }
 
-    uint64_t data_;
+    TData data_;
   };
 
 
