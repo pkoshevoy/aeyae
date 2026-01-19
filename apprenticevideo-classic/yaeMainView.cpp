@@ -89,8 +89,7 @@ namespace yae
                                       TPolyline(1.0, 1.0, 0.0, 10)));
     TransitionItem & opacity = root.addHidden<TransitionItem>(opacity_);
 
-    ColorRef color_bg = hidden.addExpr
-      (style_color_ref(view, &ItemViewStyle::bg_controls_));
+    ColorRef color_bg = style_color_ref(view, &ItemViewStyle::bg_controls_);
 
     RoundRect & controls = root.addNew<RoundRect>("controls");
     controls.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);

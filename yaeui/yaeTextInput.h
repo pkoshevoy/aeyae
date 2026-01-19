@@ -161,6 +161,36 @@ namespace yae
     BoolRef editingFinishedOnFocusOut_;
   };
 
+  //----------------------------------------------------------------
+  // ClearTextInput
+  //
+  struct ClearTextInput : public InputArea
+  {
+    ClearTextInput(const char * id, TextInput & edit, Text & view):
+      InputArea(id),
+      edit_(edit),
+      view_(view)
+    {}
+
+    // virtual:
+    bool onPress(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    { return true; }
+
+    // virtual:
+    bool onClick(const TVec2D & itemCSysOrigin,
+                 const TVec2D & rootCSysPoint)
+    {
+      edit_.setText(QString());
+      edit_.uncache();
+      view_.uncache();
+      return true;
+    }
+
+    TextInput & edit_;
+    Text & view_;
+  };
+
 }
 
 

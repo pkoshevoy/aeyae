@@ -552,7 +552,7 @@ namespace yae
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
-    bg.color_ = bg.addExpr(style_color_ref(view_, &ItemViewStyle::fg_, 0.9));
+    bg.color_ = style_color_ref(view_, &ItemViewStyle::fg_, 0.9);
 
     Item & grid = root.addNew<Item>("grid");
     Item & footer = root.addNew<Item>("footer");
@@ -604,8 +604,7 @@ namespace yae
       circle.radius_ = ItemRef::reference(circle, kPropertyHeight, 0.5);
       circle.background_ = ColorRef::transparent(bg, kPropertyColor);
       circle.color_ = ColorRef::transparent(bg, kPropertyColor);
-      circle.colorBorder_ = circle.
-        addExpr(style_color_ref(view_, &ItemViewStyle::bg_, 0.3));
+      circle.colorBorder_ = style_color_ref(view_, &ItemViewStyle::bg_, 0.3);
       circle.border_ = ItemRef::reference(circle, kPropertyHeight, 0.005, 1);
 
       SelectAspectRatio & sel = circle.
@@ -622,8 +621,7 @@ namespace yae
       {
         DashedRect & stripes = item.addNew<DashedRect>("stripes");
         stripes.anchors_.fill(rect);
-        stripes.fg_ = stripes.
-          addExpr(style_color_ref(view_, &ItemViewStyle::fg_));
+        stripes.fg_ = style_color_ref(view_, &ItemViewStyle::fg_);
         stripes.bg_ = stripes.addExpr(new LetterBoxColor(*this, i));
         stripes.border_ = circle.border_;
 
@@ -689,7 +687,7 @@ namespace yae
         text.text_ = TVarRef::constant(TVar(option.label_));
       }
 
-      text.color_ = text.addExpr(style_color_ref(view_, &ItemViewStyle::fg_));
+      text.color_ = style_color_ref(view_, &ItemViewStyle::fg_);
       text.background_ = ColorRef::transparent(bg, kPropertyColor);
       text.fontSize_ = ItemRef::reference(style.title_height_);
       text.elide_ = Qt::ElideNone;
@@ -701,10 +699,8 @@ namespace yae
 
     tx_done.anchors_.center(footer);
     tx_done.text_ = TVarRef::constant(TVar("Done"));
-    tx_done.color_ = tx_done.
-      addExpr(style_color_ref(view_, &ItemViewStyle::fg_));
-    tx_done.background_ = tx_done.
-      addExpr(style_color_ref(view_, &ItemViewStyle::bg_, 0.0));
+    tx_done.color_ = style_color_ref(view_, &ItemViewStyle::fg_);
+    tx_done.background_ = style_color_ref(view_, &ItemViewStyle::bg_, 0.0);
     tx_done.fontSize_ = ItemRef::reference(style.title_height_);
     tx_done.elide_ = Qt::ElideNone;
     tx_done.setAttr("oneline", true);
@@ -712,10 +708,8 @@ namespace yae
     bg_done.anchors_.fill(tx_done, -7.0);
     bg_done.margins_.set_left(ItemRef::reference(style.title_height_, -1));
     bg_done.margins_.set_right(ItemRef::reference(style.title_height_, -1));
-    bg_done.color_ = bg_done.
-      addExpr(style_color_ref(view_, &ItemViewStyle::bg_, 0.3));
-    bg_done.background_ = bg_done.
-      addExpr(style_color_ref(view_, &ItemViewStyle::fg_, 0.0));
+    bg_done.color_ = style_color_ref(view_, &ItemViewStyle::bg_, 0.3);
+    bg_done.background_ = style_color_ref(view_, &ItemViewStyle::fg_, 0.0);
     bg_done.radius_ = ItemRef::scale(bg_done, kPropertyHeight, 0.1);
 
     OnDone & on_done = bg_done.add(new OnDone("on_done", *this));

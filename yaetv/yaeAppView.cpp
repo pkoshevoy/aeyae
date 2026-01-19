@@ -37,6 +37,7 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 #include "yaeRoundRect.h"
 #include "yaeTextInput.h"
 #include "yaeTexturedRect.h"
+#include "yaeTransform.h"
 #include "yaeUtilsQt.h"
 
 // local:
@@ -2507,10 +2508,8 @@ namespace yae
       set_left(ItemRef::reference(baseline, kPropertyHeight, 0.5));
 
     title.elide_ = Qt::ElideRight;
-    title.color_ = title.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    title.background_ = title.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    title.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    title.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     title.text_ = TVarRef::constant(TVar(title_text));
 
     Item & body = group.addNew<Item>("body");
@@ -3155,10 +3154,9 @@ namespace yae
         maj_min.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         maj_min.text_ = TVarRef::constant(TVar(ch_str.c_str()));
         maj_min.elide_ = Qt::ElideNone;
-        maj_min.color_ = maj_min.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
-        maj_min.background_ = maj_min.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        maj_min.color_ = style_color_ref(view, &AppStyle::fg_epg_chan_);
+        maj_min.background_ =
+          style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
         Text & ch_name = tile.addNew<Text>("ch_name");
         ch_name.font_ = style.font_;
@@ -3168,10 +3166,9 @@ namespace yae
         ch_name.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.13));
         ch_name.text_ = TVarRef::constant(TVar(channel.name_.c_str()));
         ch_name.elide_ = Qt::ElideNone;
-        ch_name.color_ = ch_name.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_chan_));
-        ch_name.background_ = ch_name.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        ch_name.color_ = style_color_ref(view, &AppStyle::fg_epg_chan_);
+        ch_name.background_ =
+          style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
         WatchLive & live_ia = tile.add<WatchLive>
           (new WatchLive("live_ia", view, ch_num));
@@ -3225,10 +3222,8 @@ namespace yae
           bg.anchors_.fill(prog);
           bg.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.03));
           bg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
-          bg.background_ = bg.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_));
-          bg.color_ = bg.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          bg.background_ = style_color_ref(view, &AppStyle::bg_epg_);
+          bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
 
           Item & body = bg.addNew<Item>("body");
           body.anchors_.fill(bg);
@@ -3241,10 +3236,9 @@ namespace yae
           hhmm.anchors_.top_ = ItemRef::reference(body, kPropertyTop);
           hhmm.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
           hhmm.elide_ = Qt::ElideNone;
-          hhmm.color_ = hhmm.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-          hhmm.background_ = hhmm.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+          hhmm.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+          hhmm.background_ =
+            style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
           std::string hhmm_txt =
             strfmt("%i:%02i", program.tm_.tm_hour, program.tm_.tm_min);
@@ -3261,8 +3255,7 @@ namespace yae
           rec.radius_ = ItemRef::reference(rec.width_, 0.5);
           rec.anchors_.bottom_ = ItemRef::reference(body, kPropertyBottom);
           rec.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
-          rec.background_ = rec.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+          rec.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
           rec.color_ = rec.
             addExpr(new RecButtonColor(view, ch_num, program.gps_time_));
           rec.visible_ = rec.addExpr
@@ -3280,10 +3273,9 @@ namespace yae
           title.margins_.
             set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
           title.elide_ = Qt::ElideRight;
-          title.color_ = title.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-          title.background_ = title.
-            addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+          title.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+          title.background_ =
+            style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
           // FIXME: this should be an expression:
           title.text_ = TVarRef::constant(TVar(program.title_.c_str()));
 
@@ -3328,8 +3320,7 @@ namespace yae
         tickmark.anchors_.bottom_ = ItemRef::reference(item, kPropertyBottom);
         tickmark.height_ = ItemRef::reference(item, kPropertyHeight);
         tickmark.width_ = ItemRef::constant(1.0);
-        tickmark.color_ = tickmark.
-            addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.1));
+        tickmark.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.1);
 
         Text & label = item.addNew<Text>("time");
         label.font_ = style.font_;
@@ -3339,10 +3330,8 @@ namespace yae
         label.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.03));
         label.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         label.elide_ = Qt::ElideNone;
-        label.color_ = label.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
-        label.background_ = label.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        label.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
+        label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
         std::string t_str =
           yae::unix_epoch_time_to_localdate(ts, true, true, false);
@@ -3426,8 +3415,7 @@ namespace yae
           addExpr(new ProgramTilePos(view, gps_t0));
         highlight.width_ = highlight.
           addExpr(new ProgramTileWidth(view, gps_t1 - gps_t0));
-        highlight.color_ = highlight.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_rec_, 0.1));
+        highlight.color_ = style_color_ref(view, &AppStyle::bg_epg_rec_, 0.1);
       }
       else
       {
@@ -3618,8 +3606,7 @@ namespace yae
 #if 1
               Rectangle & bg = row.addNew<Rectangle>("bg");
               bg.anchors_.fill(row);
-              bg.color_ = bg.
-                addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+              bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
               bg.visible_ = bg.
                 addInverse(new IsOddRow(layout.index_, row.id_));
 #endif
@@ -3648,10 +3635,10 @@ namespace yae
               ch_text.font_ = style.font_;
               ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
               ch_text.elide_ = Qt::ElideRight;
-              ch_text.color_ = ch_text.
-                addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-              ch_text.background_ = ch_text.
-                addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+              ch_text.color_ =
+                style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+              ch_text.background_ =
+                style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
               ch_text.text_ = TVarRef::constant(TVar(ch_num));
 
               Text & name = row.addNew<Text>("ch_name");
@@ -3660,10 +3647,10 @@ namespace yae
               name.font_ = style.font_;
               name.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
               name.elide_ = Qt::ElideRight;
-              name.color_ = name.
-                addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-              name.background_ = name.
-                addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+              name.color_ =
+                style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+              name.background_ =
+                style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
               name.text_ = TVarRef::constant(TVar(ch_name));
             }
 
@@ -3782,7 +3769,7 @@ namespace yae
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
-        bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+        bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
         bg.visible_ = bg.addExpr(new IsOddRow(sch_layout_.index_, row.id_));
 
         Item & c1 = row.addNew<Item>("c1");
@@ -3833,10 +3820,9 @@ namespace yae
         ch_text.font_ = style.font_;
         ch_text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         ch_text.elide_ = Qt::ElideRight;
-        ch_text.color_ = ch_text.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-        ch_text.background_ = ch_text.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        ch_text.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+        ch_text.background_ =
+          style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
         std::string ch_txt = strfmt("%i-%i",
                                     rec.channel_major_,
                                     rec.channel_minor_);
@@ -3849,10 +3835,8 @@ namespace yae
         title.font_ = style.font_;
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         title.elide_ = Qt::ElideRight;
-        title.color_ = title.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-        title.background_ = title.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        title.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+        title.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
         title.text_ = TVarRef::constant(TVar(rec.full_title_));
 
         // duration:
@@ -3865,10 +3849,10 @@ namespace yae
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         length.font_.setWeight(QFont::Normal);
         length.elide_ = Qt::ElideRight;
-        length.color_ = length.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        length.background_ = length.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        length.color_ =
+          style_color_ref(view, &AppStyle::fg_epg_);
+        length.background_ =
+          style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         TTime dt(rec.gps_t1_ - rec.gps_t0_, 1);
         length.text_ = TVarRef::constant(TVar(dt.to_hhmmss()));
 
@@ -3882,10 +3866,8 @@ namespace yae
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         date.font_.setWeight(QFont::Normal);
         date.elide_ = Qt::ElideRight;
-        date.color_ = date.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        date.background_ = date.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        date.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+        date.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         std::string ts = unix_epoch_time_to_localtime_str(rec.utc_t0_);
         date.text_ = TVarRef::constant(TVar(ts));
 
@@ -3901,10 +3883,8 @@ namespace yae
         desc.font_ = style.font_;
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.elide_ = Qt::ElideNone;
-        desc.color_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-        desc.background_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        desc.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+        desc.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
         desc.text_ = desc.addExpr(new GetRecordingDescription(recording_ptr));
       }
 
@@ -3983,8 +3963,7 @@ namespace yae
         bg.anchors_.fill(row);
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-        bg.color_ = bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
+        bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & icon = row.addNew<RoundRect>("icon");
@@ -3993,10 +3972,8 @@ namespace yae
         icon.width_ = ItemRef::reference(hidden, kUnitSize, 0.9);
         icon.height_ = ItemRef::reference(hidden, kUnitSize, 0.5);
         icon.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
-        icon.background_ = icon.
-           addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-        icon.color_ = icon.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
+        icon.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
+        icon.color_ = style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0);
 
         double fade = wi.is_disabled() ? 0.5 : 1.0;
         Text & chan = row.addNew<Text>("chan");
@@ -4009,10 +3986,8 @@ namespace yae
         chan.alignment_ = Qt::AlignHCenter;
         chan.elide_ = Qt::ElideRight;
         chan.text_ = TVarRef::constant(TVar(wi.ch_txt()));
-        chan.color_ = chan.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-        chan.background_ = chan.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        chan.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+        chan.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
 
         Text & desc = row.addNew<Text>("desc");
         desc.font_ = style.font_;
@@ -4025,10 +4000,8 @@ namespace yae
         desc.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         desc.elide_ = Qt::ElideRight;
         desc.text_ = TVarRef::constant(TVar(wi.to_txt()));
-        desc.color_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0 * fade));
-        desc.background_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        desc.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0 * fade);
+        desc.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
       }
       else
       {
@@ -4142,16 +4115,13 @@ namespace yae
         bg.anchors_.fill(row);
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-        bg.color_ = bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
+        bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
         bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & chbg = row.addNew<RoundRect>("chbg");
         chbg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
-        chbg.background_ = chbg.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-        chbg.color_ = chbg.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
+        chbg.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
+        chbg.color_ = style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0);
 
         Text & chan = row.addNew<Text>("chan");
         chan.font_ = style.font_;
@@ -4164,10 +4134,8 @@ namespace yae
         // chan.height_ = ItemRef::reference(chan, kPropertyFontHeight);
         chan.alignment_ = Qt::AlignHCenter;
         chan.elide_ = Qt::ElideRight;
-        chan.color_ = chan.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-        chan.background_ = chan.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        chan.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+        chan.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
 
         std::string chan_txt = strfmt("%i-%i",
                                       rec.channel_major_,
@@ -4190,10 +4158,8 @@ namespace yae
         title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.13));
         title.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.13));
         title.elide_ = Qt::ElideRight;
-        title.color_ = title.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-        title.background_ = title.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        title.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+        title.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
         title.text_ = TVarRef::constant
           (TVar(QString::fromUtf8(rec.get_short_title().c_str())));
 
@@ -4204,10 +4170,10 @@ namespace yae
         count.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
         count.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.13));
         count.elide_ = Qt::ElideRight;
-        count.color_ = count.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0));
-        count.background_ = count.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0));
+        count.color_ =
+          style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0);
+        count.background_ =
+          style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0);
         count.text_ = count.addExpr(new GetPlaylistSize(view, name));
         count.text_.disableCaching();
 
@@ -4217,10 +4183,10 @@ namespace yae
         count_bg.height_ = count_bg.
           addExpr(new OddRoundUp(count, kPropertyHeight));
         count_bg.radius_ = ItemRef::scale(count, kPropertyHeight, 0.5);
-        count_bg.color_ = count_bg.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0));
-        count_bg.background_ = count_bg.
-          addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+        count_bg.color_ =
+          style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0);
+        count_bg.background_ =
+          style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
       }
       else
       {
@@ -4328,7 +4294,7 @@ namespace yae
 
       Rectangle & bg = header.addNew<Rectangle>("bg");
       bg.anchors_.fill(header);
-      bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
 
       // add table columns:
       Item & h1 = header.addNew<Item>("h1");
@@ -4351,17 +4317,15 @@ namespace yae
       t1.font_ = style.font_;
       t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       t1.elide_ = Qt::ElideRight;
-      t1.color_ = t1.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      t1.background_ = t1.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t1.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      t1.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
       t1.text_ = TVarRef::constant(TVar("Title and Description"));
 
       l1.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
       l1.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
       l1.anchors_.right_ = ItemRef::reference(h2, kPropertyLeft);
       l1.width_ = ItemRef::constant(1);
-      l1.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+      l1.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.3);
 
       h2.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
       h2.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
@@ -4375,17 +4339,15 @@ namespace yae
       t2.font_ = style.font_;
       t2.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       t2.elide_ = Qt::ElideRight;
-      t2.color_ = t2.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      t2.background_ = t2.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t2.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      t2.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
       t2.text_ = TVarRef::constant(TVar("Duration"));
 
       l2.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
       l2.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
       l2.anchors_.right_ = ItemRef::reference(h3, kPropertyLeft);
       l2.width_ = ItemRef::constant(1);
-      l2.color_ = l2.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+      l2.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.3);
 
       h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
       h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
@@ -4399,17 +4361,15 @@ namespace yae
       t3.font_ = style.font_;
       t3.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       t3.elide_ = Qt::ElideRight;
-      t3.color_ = t3.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      t3.background_ = t3.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t3.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      t3.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
       t3.text_ = TVarRef::constant(TVar("Date"));
 
       l3.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
       l3.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
       l3.anchors_.right_ = ItemRef::reference(h4, kPropertyLeft);
       l3.width_ = ItemRef::constant(1);
-      l3.color_ = l3.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+      l3.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.3);
 
       h4.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
       h4.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
@@ -4423,10 +4383,8 @@ namespace yae
       t4.font_ = style.font_;
       t4.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
       t4.elide_ = Qt::ElideRight;
-      t4.color_ = t4.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      t4.background_ = t4.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      t4.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      t4.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
       t4.text_ = TVarRef::constant(TVar("Size"));
 
       // layout the table body:
@@ -4489,7 +4447,7 @@ namespace yae
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
-        bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+        bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
         bg.visible_ = bg.addExpr(new IsOddRow(layout.index_, row.id_));
 
         // thumbnail, title, description:
@@ -4549,10 +4507,8 @@ namespace yae
         badge.font_.setWeight(QFont::Normal);
         badge.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
         badge.elide_ = Qt::ElideRight;
-        badge.color_ = badge.
-          addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
-        badge.background_ = badge.
-          addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+        badge.color_ = style_color_ref(view, &AppStyle::cursor_fg_);
+        badge.background_ = style_color_ref(view, &AppStyle::cursor_, 0.0);
         badge.text_ = badge.addExpr(new GetBadgeText(view, basepath));
         badge.visible_ = badge.addExpr(new ShowBadge(view, basepath));
 
@@ -4564,8 +4520,7 @@ namespace yae
         badge_bg.margins_.
           set_right(ItemRef::reference(hidden, kUnitSize, -0.1));
         badge_bg.visible_ = BoolRef::reference(badge, kPropertyVisible);
-        badge_bg.color_ = badge_bg.
-          addExpr(style_color_ref(view, &AppStyle::cursor_));
+        badge_bg.color_ = style_color_ref(view, &AppStyle::cursor_);
 
         Text & title = c1.addNew<Text>("title");
         title.anchors_.vcenter(c1);
@@ -4576,10 +4531,8 @@ namespace yae
         title.font_.setWeight(QFont::Normal);
         title.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         title.elide_ = Qt::ElideRight;
-        title.color_ = title.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        title.background_ = title.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        title.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+        title.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
         // prefix the title with the channel number:
         {
@@ -4601,10 +4554,8 @@ namespace yae
         desc.font_ = style.font_;
         desc.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.29);
         desc.elide_ = Qt::ElideNone;
-        desc.color_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        desc.background_ = desc.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        desc.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+        desc.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         desc.text_ =
           TVarRef::constant(TVar(QString::fromUtf8(rec.description_.c_str())));
         desc.setAttr("linewrap", true);
@@ -4618,10 +4569,10 @@ namespace yae
         length.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         length.font_.setWeight(QFont::Normal);
         length.elide_ = Qt::ElideRight;
-        length.color_ = length.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        length.background_ = length.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        length.color_ =
+          style_color_ref(view, &AppStyle::fg_epg_);
+        length.background_ =
+          style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         TTime dt(rec.gps_t1_ - rec.gps_t0_, 1);
         length.text_ = TVarRef::constant(TVar(dt.to_hhmmss()));
 
@@ -4634,10 +4585,8 @@ namespace yae
         date.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         date.font_.setWeight(QFont::Normal);
         date.elide_ = Qt::ElideRight;
-        date.color_ = date.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        date.background_ = date.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        date.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+        date.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         std::string ts = unix_epoch_time_to_localtime_str(rec.utc_t0_);
         date.text_ = TVarRef::constant(TVar(ts));
 
@@ -4650,10 +4599,10 @@ namespace yae
         nbytes.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
         nbytes.font_.setWeight(QFont::Normal);
         nbytes.elide_ = Qt::ElideRight;
-        nbytes.color_ = nbytes.
-          addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-        nbytes.background_ = nbytes.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+        nbytes.color_ =
+          style_color_ref(view, &AppStyle::fg_epg_);
+        nbytes.background_ =
+          style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
         nbytes.text_ = nbytes.addExpr(new GetFileSize(path));
         nbytes.text_.disableCaching();
 
@@ -4676,10 +4625,10 @@ namespace yae
         trashcan_bg.width_ = ItemRef::scale(trashcan, kPropertyHeight, 2);
         trashcan_bg.height_ = ItemRef::reference(trashcan_bg, kPropertyWidth);
         trashcan_bg.radius_ = ItemRef::scale(trashcan_bg, kPropertyWidth, 0.5);
-        trashcan_bg.color_ = trashcan_bg.
-          addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
-        trashcan_bg.background_ = trashcan_bg.
-          addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+        trashcan_bg.color_ =
+          style_color_ref(view, &AppStyle::cursor_, 1.0);
+        trashcan_bg.background_ =
+          style_color_ref(view, &AppStyle::cursor_, 0.0);
 
         DeleteRecording & trashcan_ia =
           c4.add(new DeleteRecording("trashcan_ia", view, name));
@@ -5381,12 +5330,13 @@ namespace yae
   AppView::update_sidebar_filter_text(const QString & qstr)
   {
     std::string str = yae::trim_ws(qstr.toUtf8().constData());
+#if 0
     if (sidebar_filter_text_ == str)
     {
       // nothing changed
       return;
     }
-
+#endif
     sidebar_filter_tokens_.clear();
     sidebar_filter_text_ = str;
 
@@ -5410,11 +5360,10 @@ namespace yae
     YAE_BENCHMARK(probe, "AppView::layout");
 
     Item & hidden = root.addHidden(new Item("hidden"));
-    hidden.width_ = hidden.
-      addExpr(style_item_ref(view, &AppStyle::unit_size_));
+    hidden.width_ = style_item_ref(view, &AppStyle::unit_size_);
 
     Rectangle & bg = root.addNew<Rectangle>("background");
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+    bg.color_ = style_color_ref(view, &AppStyle::bg_epg_);
     bg.anchors_.fill(root);
 
     Item & overview = root.addNew<Item>("overview");
@@ -5427,7 +5376,7 @@ namespace yae
     Item & mainview = overview.add<Item>(mainview_);
 
     Rectangle & sep = overview.addNew<Rectangle>("separator");
-    sep.color_ = sep.addExpr(style_color_ref(view, &AppStyle::bg_splitter_));
+    sep.color_ = style_color_ref(view, &AppStyle::bg_splitter_);
 
     Splitter & splitter = overview.
       add(new Splitter("splitter",
@@ -5505,8 +5454,7 @@ namespace yae
     bg.anchors_.fill(row);
     bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
     bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
-    bg.color_ = bg.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33));
+    bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
     bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
 
     Text & label = row.addNew<Text>("label");
@@ -5515,13 +5463,143 @@ namespace yae
     label.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
     label.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
     label.elide_ = Qt::ElideRight;
-    label.color_ = label.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 1.0));
-    label.background_ = label.
-      addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
+    label.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
+    label.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
     label.text_ = TVarRef::constant(TVar(text));
 
     return row;
+  }
+
+  //----------------------------------------------------------------
+  // layout_search_field
+  //
+  static TextInputProxy &
+  layout_search_field(AppView & view,
+                      AppStyle & style,
+                      Item & row,
+                      const char * id,
+                      const char * placeholder = "SEARCH AND FILTER")
+  {
+    Item & root = *(view.root());
+    Item & hidden = root.get<Item>("hidden");
+
+    RoundRect & filter = row.addNew<RoundRect>("filter");
+    filter.anchors_.fill(row);
+    filter.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.1));
+    filter.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.1));
+    filter.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.1));
+    filter.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, 0.1));
+
+    filter.radius_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
+
+    Item & icon = filter.addNew<Item>("filter_icon");
+    {
+      RoundRect & circle = icon.addNew<RoundRect>("circle");
+      circle.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
+      circle.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+      circle.margins_.set_left(ItemRef::scale(hidden, kUnitSize, 0.2));
+      circle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.5);
+      circle.height_ = circle.width_;
+      circle.radius_ = ItemRef::scale(circle, kPropertyWidth, 0.5);
+      circle.border_ = ItemRef::scale(circle, kPropertyWidth, 0.1);
+      circle.background_.
+        set(new PremultipliedTransparent(filter, kPropertyColor));
+      circle.colorBorder_ =
+        style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0);
+      circle.color_ = ColorRef::reference(filter, kPropertyColorBorder);
+
+      Transform & xform = icon.addNew<Transform>("xform");
+      xform.anchors_.hcenter_ = ItemRef::reference(circle, kPropertyHCenter);
+      xform.anchors_.vcenter_ = ItemRef::reference(circle, kPropertyVCenter);
+      xform.rotation_ = ItemRef::constant(M_PI * 0.25);
+
+      Rectangle & handle = xform.addNew<Rectangle>("handle");
+      handle.anchors_.left_ = ItemRef::scale(filter, kPropertyHeight, 0.25);
+      handle.anchors_.vcenter_ = ItemRef::constant(0.0);
+      handle.width_ = ItemRef::scale(filter, kPropertyHeight, 0.175);
+      handle.height_ = ItemRef::scale(filter, kPropertyHeight, 0.0625);
+      handle.color_ = ColorRef::reference(circle, kPropertyColorBorder);
+
+      icon.anchors_.left_ = ItemRef::reference(circle, kPropertyLeft);
+      icon.anchors_.top_ = ItemRef::reference(circle, kPropertyTop);
+    }
+
+    // setup mouse trap to prevent unintended click-through to playlist:
+    MouseTrap & mouseTrap = row.addNew<MouseTrap>("mouse_trap");
+    mouseTrap.anchors_.fill(row);
+
+    Text & text = row.addNew<Text>("text");
+    TextInput & edit = row.addNew<TextInput>("edit");
+    TextInputProxy & proxy = row.add(new TextInputProxy("proxy", text, edit));
+    Item & reset = filter.addNew<Item>("reset");
+
+    // remove filter [x] button:
+    {
+      reset.width_ = ItemRef::scale(filter, kPropertyHeight, 0.3);
+      reset.height_ = reset.width_;
+      reset.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
+      reset.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+      reset.margins_.set_right(ItemRef::scale(hidden, kUnitSize, 0.25));
+      reset.visible_ = BoolRef::reference(proxy, kPropertyHasText);
+      reset.visible_.disableCaching();
+
+      TexturedRect & xbutton =
+        reset.add<TexturedRect>(new TexturedRect("xbutton"));
+      xbutton.anchors_.center(reset);
+      xbutton.width_.set(new InscribedCircleDiameterFor(reset));
+      xbutton.height_ = xbutton.width_;
+
+      ColorRef fg = style_color_ref(view, &AppStyle::fg_epg_scrollbar_);
+      ColorRef bg = yae::ref(new PremultipliedTransparent(filter,
+                                                          kPropertyColor));
+      xbutton.texture_.set(new GetTexXButton(view, xbutton, fg, bg));
+
+      ClearTextInput & cti =
+        row.add(new ClearTextInput("ma_clear_filter", edit, text));
+      cti.anchors_.fill(xbutton);
+    }
+
+    proxy.anchors_.fill(filter);
+    proxy.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_, 0.5);
+    proxy.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0, 1.0);
+    proxy.editingFinishedOnFocusOut_ = BoolRef::constant(true);
+    proxy.placeholder_ = TVarRef::constant(TVar(QObject::tr(placeholder)));
+
+    filter.color_ = filter.addExpr(new ColorWhenFocused(proxy));
+    filter.color_.disableCaching();
+
+    text.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
+    text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
+    text.anchors_.vcenter_ = text.
+      addExpr(new RoundUp(filter, kPropertyVCenter));
+    text.margins_.set_left(ItemRef::reference(filter, kPropertyHeight));
+    text.margins_.set_right(ItemRef::reference(filter, kPropertyHeight, 0.75));
+
+    text.visible_ = text.addExpr(new ShowWhenFocused(proxy, false));
+    text.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
+    text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+    text.text_ = TVarRef::reference(proxy, kPropertyText);
+    text.font_ = style.font_;
+    text.font_.setWeight(QFont::Bold);
+    text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
+    text.setAttr("oneline", true);
+    // text.supersample_ = ItemRef::constant(2.0);
+
+    edit.anchors_.fill(text);
+    edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
+    edit.visible_ = edit.
+      addExpr(new ShowWhenFocused(proxy, true));
+    edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+    edit.background_ = ColorRef::transparent(proxy, kPropertyColorOnFocusBg);
+    edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
+    edit.font_ = text.font_;
+    edit.fontSize_ = text.fontSize_;
+    edit.supersample_ = text.supersample_;
+
+    edit.selectionBg_ = style_color_ref(view, &AppStyle::fg_epg_, 0.0, 1.0);
+    edit.selectionFg_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0, 1);
+
+    return proxy;
   }
 
   //----------------------------------------------------------------
@@ -5532,11 +5610,11 @@ namespace yae
   {
     YAE_BENCHMARK(probe, "AppView::layout_sidebar");
 
-    Item & root = *(view.root_);
+    Item & root = *(view.root());
     Item & hidden = root.get<Item>("hidden");
 
     Rectangle & bg = panel.addNew<Rectangle>("bg_sidebar");
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_sidebar_));
+    bg.color_ = style_color_ref(view, &AppStyle::bg_sidebar_);
     bg.anchors_.fill(panel);
 
     Scrollview & sv =
@@ -5552,78 +5630,14 @@ namespace yae
       row.height_ = ItemRef::reference(hidden, kUnitSize, 1.0);
       row.color_ = bg.color_;
 
-      RoundRect & text_bg = row.
-        addNew<RoundRect>("text_bg");
-
-      Text & text = row.
-        addNew<Text>("text");
-
-      TextInput & edit = row.
-        addNew<TextInput>("edit");
-
-      TextInputProxy & focus = row.
-        add(new TextInputProxy("focus_sidebar_filter", text, edit));
-
-      focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0, 1.0));
-      focus.copyViewToEdit_ = BoolRef::constant(true);
-      focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
+      TextInputProxy & proxy =
+        layout_search_field(view, style, row, "sidebar_filter");
 
       ItemFocus::singleton().
-        setFocusable(view, focus, "main_ui", 0);
-
-      text.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);
-      text.anchors_.right_ = ItemRef::reference(row, kPropertyRight);
-      text.anchors_.vcenter_ = text.
-        addExpr(new RoundUp(row, kPropertyVCenter));
-      text.margins_.set(ItemRef::reference(hidden, kUnitSize, 0.5));
-
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      text.text_ = text.addExpr(new GetSidebarFilterText(view));
-      text.font_ = style.font_;
-      text.font_.setWeight(QFont::Normal);
-      text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-
-      text_bg.anchors_.offset(text, -3, 3, -3, 1);
-      text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.1));
-      text_bg.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.2));
-      text_bg.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.2));
-      text_bg.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.1));
-
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
-      text_bg.radius_ = ItemRef::scale(text, kPropertyHeight, 0.78);
-      text_bg.color_.disableCaching();
-
-      edit.anchors_.fill(text);
-      edit.margins_.set_right(ItemRef::scale(edit,
-                                             kPropertyCursorWidth,
-                                             -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
-      edit.font_ = text.font_;
-      edit.fontSize_ = text.fontSize_;
-
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.0, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0, 1.0));
+        setFocusable(view, proxy, "main_ui", 0);
 
       bool ok =
-        // connect(&edit, SIGNAL(editingFinished(const QString &)),
-        connect(&edit, SIGNAL(textEdited(const QString &)),
+        connect(&proxy.edit_, SIGNAL(textChanged(const QString &)),
                 &view, SLOT(update_sidebar_filter_text(const QString &)));
       YAE_ASSERT(ok);
     }
@@ -5731,12 +5745,9 @@ namespace yae
       btn.anchors_.left_ = ItemRef::reference(container, kPropertyLeft);
       btn.height_ = ItemRef::reference(container, kPropertyHeight);
       btn.width_ = ItemRef::reference(hidden, kUnitSize, 0.9);
-      btn.background_ = btn.
-        addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-      btn.color_ = btn.
-        addExpr(style_color_ref(view, &AppStyle::bg_sidebar_, 0.0));
-      btn.colorBorder_ = btn.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
+      btn.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
+      btn.color_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
+      btn.colorBorder_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
 
       Text & text = btn.addNew<Text>("text");
       text.anchors_.center(btn);
@@ -5745,10 +5756,8 @@ namespace yae
       text.setAttr("oneline", true);
       text.elide_ = Qt::ElideNone;
       text.text_ = TVarRef::constant(TVar("+"));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.5));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 0.0));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 0);
 
       AddWishlistItem & ia = container.add(new AddWishlistItem("ia", view));
       ia.anchors_.fill(btn);
@@ -5839,8 +5848,7 @@ namespace yae
     hscrollbar.anchors_.right_ = ItemRef::reference(vscrollbar, kPropertyLeft);
     hscrollbar.anchors_.bottom_ = ItemRef::reference(panel, kPropertyBottom);
     hscrollbar.height_ = ItemRef::reference(hidden, kUnitSize, 0.33);
-    hscrollbar.color_ = hscrollbar.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_scrollbar_));
+    hscrollbar.color_ = style_color_ref(view, &AppStyle::bg_epg_scrollbar_);
 
     vscrollbar.anchors_.top_ = ItemRef::reference(ch_header, kPropertyBottom);
     vscrollbar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
@@ -5868,8 +5876,7 @@ namespace yae
       addExpr(new CalcSliderHeight(vsv, vscrollbar, vslider));
     vslider.radius_ =
       ItemRef::scale(vslider, kPropertyWidth, 0.5);
-    vslider.color_ = vslider.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_scrollbar_));
+    vslider.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_);
     vslider.background_ = hscrollbar.color_;
 
     SliderDrag & vslider_ia =
@@ -5921,8 +5928,7 @@ namespace yae
     }
 
     // setup "now" time marker:
-    now_marker.color_ = now_marker.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.2));
+    now_marker.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.2);
     now_marker.width_ = ItemRef::constant(1.0);
     now_marker.anchors_.top_ = ItemRef::reference(panel, kPropertyTop);
     now_marker.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
@@ -5959,7 +5965,7 @@ namespace yae
 
     Rectangle & bg = panel.addNew<Rectangle>("bg");
     bg.anchors_.fill(panel);
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_));
+    bg.color_ = style_color_ref(view, &AppStyle::bg_epg_);
 
     Scrollview & scrollview =
       layout_scrollview(kScrollbarVertical, view, style, panel,
@@ -5995,10 +6001,8 @@ namespace yae
     head_bg.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
     head_bg.anchors_.bottom_ = ItemRef::reference(r3, kPropertyBottom);
     head_bg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
-    head_bg.background_ = head_bg.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_));
-    head_bg.color_ = head_bg.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+    head_bg.background_ = style_color_ref(view, &AppStyle::bg_epg_);
+    head_bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
 
     Item & ch_item = head_bg.addNew<Item>("ch_item");
     ch_item.anchors_.left_ = ItemRef::reference(head_bg, kPropertyLeft);
@@ -6011,10 +6015,8 @@ namespace yae
     maj_min.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     maj_min.alignment_ = Qt::AlignLeft;
     maj_min.elide_ = Qt::ElideRight;
-    maj_min.color_ = maj_min.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    maj_min.background_ = maj_min.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    maj_min.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    maj_min.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     maj_min.text_ = TVarRef::constant(TVar(QString::fromUtf8("X-Y")));
 
     Item & sp1 = ch_item.addNew<Item>("sp1");
@@ -6031,10 +6033,8 @@ namespace yae
     ch_name.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     ch_name.alignment_ = Qt::AlignLeft;
     ch_name.elide_ = Qt::ElideRight;
-    ch_name.color_ = ch_name.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    ch_name.background_ = ch_name.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    ch_name.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    ch_name.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     ch_name.text_ = TVarRef::constant(TVar(QString::fromUtf8("YAE TV")));
 
     Item & sp2 = ch_item.addNew<Item>("sp2");
@@ -6048,8 +6048,7 @@ namespace yae
     ch_sep.anchors_.top_ = ItemRef::reference(ch_item, kPropertyTop);
     ch_sep.anchors_.bottom_ = ItemRef::reference(ch_item, kPropertyBottom);
     ch_sep.width_ = ItemRef::reference(hidden, kUnitSize, 0.03, 1);
-    ch_sep.color_ = ch_sep.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
+    ch_sep.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
 
     Text & title = head_bg.addNew<Text>("title");
     title.font_ = style.font_;
@@ -6060,10 +6059,8 @@ namespace yae
     title.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
     title.alignment_ = Qt::AlignLeft;
     title.elide_ = Qt::ElideRight;
-    title.color_ = title.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    title.background_ = title.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    title.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    title.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     title.text_ = TVarRef::constant(TVar(QString::fromUtf8("Program Title")));
 
     Text & timing = head_bg.addNew<Text>("timing");
@@ -6074,10 +6071,8 @@ namespace yae
     timing.anchors_.bottom_ = ItemRef::reference(r2, kPropertyBottom);
     timing.alignment_ = Qt::AlignLeft;
     timing.elide_ = Qt::ElideRight;
-    timing.color_ = timing.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    timing.background_ = timing.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    timing.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    timing.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     timing.text_ = TVarRef::constant
       (TVar(QString::fromUtf8("Fri Feb 28 2020, 10:00 PM, 2hr 30min")));
 
@@ -6101,10 +6096,8 @@ namespace yae
     rating.anchors_.bottom_ = ItemRef::reference(r4, kPropertyBottom);
     rating.alignment_ = Qt::AlignLeft;
     rating.elide_ = Qt::ElideRight;
-    rating.color_ = rating.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    rating.background_ = rating.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    rating.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    rating.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     rating.text_ = TVarRef::constant(TVar(QString::fromUtf8("Rating: PG-13")));
 
     Text & desc = body.addNew<Text>("desc");
@@ -6116,10 +6109,8 @@ namespace yae
     desc.margins_.set_top(ItemRef::reference(hidden, kUnitSize, 0.3));
     desc.alignment_ = Qt::AlignLeft;
     desc.elide_ = Qt::ElideNone;
-    desc.color_ = desc.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    desc.background_ = desc.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    desc.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    desc.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     const char * description = "Once upon a time in a galaxy far away "
       "a fox jumped over a box ... or something like that, idk... "
       "I just need some filler text to fill out the description "
@@ -6140,10 +6131,8 @@ namespace yae
     status.anchors_.bottom_ = ItemRef::reference(r5, kPropertyBottom);
     status.alignment_ = Qt::AlignLeft;
     status.elide_ = Qt::ElideRight;
-    status.color_ = status.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    status.background_ = status.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    status.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    status.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     status.text_ = status.addExpr(new GetProgramDetailsStatus(view));
 
     Item & r6 = body.addNew<Item>("r6");
@@ -6164,10 +6153,8 @@ namespace yae
     tx_toggle.anchors_.bottom_ = ItemRef::reference(r6, kPropertyBottom);
     tx_toggle.anchors_.left_ = ItemRef::reference(paragraphs, kPropertyLeft);
     tx_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
-    tx_toggle.color_ = tx_toggle.
-      addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
-    tx_toggle.background_ = tx_toggle.
-      addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+    tx_toggle.color_ = style_color_ref(view, &AppStyle::cursor_fg_);
+    tx_toggle.background_ = style_color_ref(view, &AppStyle::cursor_, 0.0);
     tx_toggle.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
     tx_toggle.elide_ = Qt::ElideNone;
     tx_toggle.setAttr("oneline", true);
@@ -6178,10 +6165,8 @@ namespace yae
     bg_toggle.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
     bg_toggle.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
     bg_toggle.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-    bg_toggle.color_ = bg_toggle.
-      addExpr(style_color_ref(view, &AppStyle::cursor_));
-    bg_toggle.background_ = bg_toggle.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_toggle.color_ = style_color_ref(view, &AppStyle::cursor_);
+    bg_toggle.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
     bg_toggle.radius_ = ItemRef::scale(bg_toggle, kPropertyHeight, 0.1);
 
     ProgramDetailsToggleRecording & on_toggle = bg_toggle.
@@ -6192,10 +6177,8 @@ namespace yae
     tx_close.anchors_.left_ = ItemRef::reference(tx_toggle, kPropertyRight);
     tx_close.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 1.6));
     tx_close.text_ = TVarRef::constant(TVar("Close"));
-    tx_close.color_ = tx_close.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    tx_close.background_ = tx_close.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    tx_close.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    tx_close.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     tx_close.fontSize_ = tx_toggle.fontSize_;
     tx_close.elide_ = Qt::ElideNone;
     tx_close.setAttr("oneline", true);
@@ -6205,10 +6188,8 @@ namespace yae
     bg_close.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
     bg_close.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
     bg_close.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-    bg_close.color_ = bg_close.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-    bg_close.background_ = bg_close.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_close.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+    bg_close.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
     bg_close.radius_ = ItemRef::scale(bg_close, kPropertyHeight, 0.1);
 
     CloseProgramDetails & on_close = bg_close.
@@ -6219,10 +6200,8 @@ namespace yae
     tx_add_wi.anchors_.right_ = ItemRef::reference(paragraphs, kPropertyRight);
     tx_add_wi.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
     tx_add_wi.text_ = TVarRef::constant(TVar("New Wishlist"));
-    tx_add_wi.color_ = tx_add_wi.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    tx_add_wi.background_ = tx_add_wi.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    tx_add_wi.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    tx_add_wi.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0);
     tx_add_wi.fontSize_ = tx_toggle.fontSize_;
     tx_add_wi.elide_ = Qt::ElideNone;
     tx_add_wi.setAttr("oneline", true);
@@ -6232,10 +6211,8 @@ namespace yae
     bg_add_wi.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
     bg_add_wi.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
     bg_add_wi.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-    bg_add_wi.color_ = bg_add_wi.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-    bg_add_wi.background_ = bg_add_wi.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+    bg_add_wi.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+    bg_add_wi.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
     bg_add_wi.radius_ = ItemRef::scale(bg_add_wi, kPropertyHeight, 0.1);
 
     ProgramDetailsAddWishlist & on_add_wi = bg_add_wi.
@@ -6299,7 +6276,7 @@ namespace yae
 
     Rectangle & bg = header.addNew<Rectangle>("bg");
     bg.anchors_.fill(header);
-    bg.color_ = bg.addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+    bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
 
     // add table columns:
     Item & h1 = header.addNew<Item>("h1");
@@ -6320,17 +6297,15 @@ namespace yae
     t1.font_ = style.font_;
     t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
     t1.elide_ = Qt::ElideRight;
-    t1.color_ = t1.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    t1.background_ = t1.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t1.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    t1.background_ =  style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     t1.text_ = TVarRef::constant(TVar("Title and Description"));
 
     l1.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
     l1.anchors_.right_ = ItemRef::reference(h2, kPropertyLeft);
     l1.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
     l1.width_ = ItemRef::constant(1);
-    l1.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+    l1.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.3);
 
     h2.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
     h2.anchors_.right_ = ItemRef::reference(l2, kPropertyLeft);
@@ -6344,17 +6319,15 @@ namespace yae
     t2.font_ = style.font_;
     t2.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
     t2.elide_ = Qt::ElideRight;
-    t2.color_ = t2.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    t2.background_ = t2.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t2.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    t2.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     t2.text_ = TVarRef::constant(TVar("Duration"));
 
     l2.anchors_.top_ = ItemRef::offset(header, kPropertyTop, 1);
     l2.anchors_.right_ = ItemRef::reference(h3, kPropertyLeft);
     l2.anchors_.bottom_ = ItemRef::offset(header, kPropertyBottom, -2);
     l2.width_ = ItemRef::constant(1);
-    l2.color_ = l1.addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.3));
+    l2.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.3);
 
     h3.anchors_.top_ = ItemRef::reference(header, kPropertyTop);
     h3.anchors_.bottom_ = ItemRef::reference(header, kPropertyBottom);
@@ -6368,10 +6341,8 @@ namespace yae
     t3.font_ = style.font_;
     t3.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.23);
     t3.elide_ = Qt::ElideRight;
-    t3.color_ = t3.
-      addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-    t3.background_ = t3.
-      addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+    t3.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+    t3.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     t3.text_ = TVarRef::constant(TVar("Date"));
 
     // layout the table container:
@@ -6442,10 +6413,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Channel"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -6460,10 +6429,8 @@ namespace yae
         add(new TextInputProxy("focus_channel", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -6474,10 +6441,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemChannel(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -6494,19 +6459,16 @@ namespace yae
                                              -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_channel(const QString &)));
@@ -6520,10 +6482,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional, M-N format"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r2 = body.addNew<Item>("r2");
@@ -6546,10 +6506,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Title"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -6564,10 +6522,8 @@ namespace yae
         add(new TextInputProxy("focus_title_rx", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -6578,10 +6534,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemTitle(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -6598,19 +6552,16 @@ namespace yae
                                              -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_title(const QString &)));
@@ -6624,10 +6575,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional, exact title or a regex"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r3 = body.addNew<Item>("r3");
@@ -6650,10 +6599,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Description"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -6668,10 +6615,8 @@ namespace yae
         add(new TextInputProxy("focus_desc_rx", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -6682,10 +6627,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemDescription(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -6702,19 +6645,16 @@ namespace yae
                                              -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_desc(const QString &)));
@@ -6729,10 +6669,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, exact description or a regex"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r4 = body.addNew<Item>("r4");
@@ -6755,10 +6693,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program(s) Time Span"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_t0_bg = row.
         addNew<Rectangle>("text_t0_bg");
@@ -6773,10 +6709,8 @@ namespace yae
         add(new TextInputProxy("focus_t0", text_t0, edit_t0));
 
       focus_t0.anchors_.fill(text_t0_bg);
-      focus_t0.bgNoFocus_ = focus_t0.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus_t0.bgOnFocus_ = focus_t0.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus_t0.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus_t0.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus_t0.copyViewToEdit_ = BoolRef::constant(true);
       focus_t0.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -6800,10 +6734,8 @@ namespace yae
       text_t0.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text_t0.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
       text_t0.visible_ = text_t0.addExpr(new ShowWhenFocused(focus_t0, false));
-      text_t0.color_ = text_t0.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text_t0.background_ = text_t0.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text_t0.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text_t0.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text_t0.text_ = text_t0.addExpr(new GetWishlistItemStart(view));
       text_t0.font_ = style.font_;
       text_t0.font_.setWeight(QFont::Normal);
@@ -6814,19 +6746,17 @@ namespace yae
         set_right(ItemRef::scale(edit_t0, kPropertyCursorWidth, -1.0));
       edit_t0.visible_ = edit_t0.
         addExpr(new ShowWhenFocused(focus_t0, true));
-      edit_t0.color_ = edit_t0.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit_t0.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit_t0.background_ =
         ColorRef::transparent(focus_t0, kPropertyColorOnFocusBg);
-      edit_t0.cursorColor_ = edit_t0.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit_t0.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit_t0.font_ = text_t0.font_;
       edit_t0.fontSize_ = text_t0.fontSize_;
 
-      edit_t0.selectionBg_ = edit_t0.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit_t0.selectionFg_ = edit_t0.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit_t0.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit_t0.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit_t0, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_time_start(const QString &)));
@@ -6845,10 +6775,8 @@ namespace yae
         add(new TextInputProxy("focus_t1", text_t1, edit_t1));
 
       focus_t1.anchors_.fill(text_t1_bg);
-      focus_t1.bgNoFocus_ = focus_t1.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus_t1.bgOnFocus_ = focus_t1.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus_t1.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus_t1.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus_t1.copyViewToEdit_ = BoolRef::constant(true);
       focus_t1.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -6872,10 +6800,8 @@ namespace yae
       text_t1.anchors_.left_ = ItemRef::offset(text_t1_bg, kPropertyLeft, 3);
       text_t1.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
       text_t1.visible_ = text_t1.addExpr(new ShowWhenFocused(focus_t1, false));
-      text_t1.color_ = text_t1.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text_t1.background_ = text_t1.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text_t1.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text_t1.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text_t1.text_ = text_t1.addExpr(new GetWishlistItemEnd(view));
       text_t1.font_ = style.font_;
       text_t1.font_.setWeight(QFont::Normal);
@@ -6886,19 +6812,17 @@ namespace yae
         set_right(ItemRef::scale(edit_t1, kPropertyCursorWidth, -1.0));
       edit_t1.visible_ = edit_t1.
         addExpr(new ShowWhenFocused(focus_t1, true));
-      edit_t1.color_ = edit_t1.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit_t1.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit_t1.background_ =
         ColorRef::transparent(focus_t1, kPropertyColorOnFocusBg);
-      edit_t1.cursorColor_ = edit_t1.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit_t1.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit_t1.font_ = text_t1.font_;
       edit_t1.fontSize_ = text_t1.fontSize_;
 
-      edit_t1.selectionBg_ = edit_t1.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit_t1.selectionFg_ = edit_t1.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit_t1.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit_t1.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit_t1, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_time_end(const QString &)));
@@ -6913,10 +6837,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, 24h hh:mm - hh:mm, end time can be greater than 24"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r5 = body.addNew<Item>("r5");
@@ -6939,10 +6861,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Weekdays"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Item * prev = &c2;
       for (uint8_t i = 0; i < 7; i++)
@@ -6975,8 +6895,7 @@ namespace yae
         text.anchors_.hcenter_ = ItemRef::reference(btn, kPropertyHCenter);
         text.color_ = text.
           addExpr(new WishlistWeekdayTxtColor(view, wday));
-        text.background_ = text.
-          addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+        text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
         text.text_ = TVarRef::constant(TVar(name));
         text.font_ = style.font_;
         text.font_.setWeight(QFont::Normal);
@@ -6997,10 +6916,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r6 = body.addNew<Item>("r6");
@@ -7023,10 +6940,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Exact Date"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -7041,10 +6956,8 @@ namespace yae
         add(new TextInputProxy("focus_date", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -7055,10 +6968,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemDate(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -7074,19 +6985,17 @@ namespace yae
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ =
         ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_date(const QString &)));
@@ -7100,10 +7009,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional, YYYY/MM/DD format"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r7 = body.addNew<Item>("r7");
@@ -7126,10 +7033,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Min. Duration"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -7144,10 +7049,8 @@ namespace yae
         add(new TextInputProxy("focus_min_duration", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -7158,10 +7061,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemMinDuration(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -7177,19 +7078,16 @@ namespace yae
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_min_minutes(const QString &)));
@@ -7204,10 +7102,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, minimum program duration in minutes"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r8 = body.addNew<Item>("r8");
@@ -7230,10 +7126,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Max. Duration"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -7248,10 +7142,8 @@ namespace yae
         add(new TextInputProxy("focus_max_duration", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -7262,10 +7154,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemMaxDuration(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -7281,19 +7171,16 @@ namespace yae
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_max_minutes(const QString &)));
@@ -7308,10 +7195,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, maximum program duration in minutes"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r9 = body.addNew<Item>("r9");
@@ -7334,10 +7219,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Max. Recordings"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       Rectangle & text_bg = row.
         addNew<Rectangle>("text_bg");
@@ -7352,10 +7235,8 @@ namespace yae
         add(new TextInputProxy("focus_max_rec", text, edit));
 
       focus.anchors_.fill(text_bg);
-      focus.bgNoFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5));
-      focus.bgOnFocus_ = focus.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      focus.bgNoFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.5);
+      focus.bgOnFocus_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       focus.copyViewToEdit_ = BoolRef::constant(true);
       focus.editingFinishedOnFocusOut_ = BoolRef::constant(true);
 
@@ -7366,10 +7247,8 @@ namespace yae
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
       text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
-      text.color_ = text.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      text.background_ = text.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
+      text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
       text.text_ = text.addExpr(new GetWishlistItemMax(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
@@ -7385,19 +7264,16 @@ namespace yae
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
       edit.visible_ = edit.
         addExpr(new ShowWhenFocused(focus, true));
-      edit.color_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      edit.background_ =
-        ColorRef::transparent(focus, kPropertyColorOnFocusBg);
-      edit.cursorColor_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 1.0));
+      edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
+      edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
       edit.font_ = text.font_;
       edit.fontSize_ = text.fontSize_;
 
-      edit.selectionBg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0));
-      edit.selectionFg_ = edit.
-        addExpr(style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0));
+      edit.selectionBg_ =
+        style_color_ref(view, &AppStyle::bg_edit_selected_, 1.0);
+      edit.selectionFg_ =
+        style_color_ref(view, &AppStyle::fg_edit_selected_, 1.0);
 
       ok = connect(&edit, SIGNAL(editingFinished(const QString &)),
                    &view, SLOT(update_wi_max(const QString &)));
@@ -7411,10 +7287,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r10 = body.addNew<Item>("r10");
@@ -7437,10 +7311,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Skip Duplicates"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
@@ -7458,10 +7330,8 @@ namespace yae
       note.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant(TVar("optional"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r11 = body.addNew<Item>("r11");
@@ -7484,10 +7354,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Do Not Record"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
@@ -7506,10 +7374,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, enable to prevent recording of matching programs"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r12 = body.addNew<Item>("r12");
@@ -7532,10 +7398,8 @@ namespace yae
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Enabled"));
-      label.color_ = label.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_));
-      label.background_ = label.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      label.color_ = style_color_ref(view, &AppStyle::fg_epg_);
+      label.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
 
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
@@ -7554,10 +7418,8 @@ namespace yae
       note.elide_ = Qt::ElideNone;
       note.text_ = TVarRef::constant
         (TVar("optional, enable or disable this wishlist item"));
-      note.color_ = note.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.8));
-      note.background_ = note.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      note.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.8);
+      note.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     }
 
     Item & r13 = body.addNew<Item>("r13");
@@ -7582,10 +7444,8 @@ namespace yae
       tx_remove.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
       tx_remove.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       tx_remove.margins_.set_left(ItemRef::reference(hidden, kUnitSize, 0.5));
-      tx_remove.color_ = tx_remove.
-        addExpr(style_color_ref(view, &AppStyle::cursor_fg_));
-      tx_remove.background_ = tx_remove.
-        addExpr(style_color_ref(view, &AppStyle::cursor_, 0.0));
+      tx_remove.color_ = style_color_ref(view, &AppStyle::cursor_fg_);
+      tx_remove.background_ = style_color_ref(view, &AppStyle::cursor_, 0.0);
       tx_remove.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
       tx_remove.elide_ = Qt::ElideNone;
       tx_remove.setAttr("oneline", true);
@@ -7602,10 +7462,8 @@ namespace yae
         set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
       bg_remove.margins_.
         set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-      bg_remove.color_ = bg_remove.
-        addExpr(style_color_ref(view, &AppStyle::cursor_));
-      bg_remove.background_ = bg_remove.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_remove.color_ = style_color_ref(view, &AppStyle::cursor_);
+      bg_remove.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
       bg_remove.radius_ = ItemRef::scale(bg_remove, kPropertyHeight, 0.1);
 
       RemoveWishlistItem & on_remove = bg_remove.
@@ -7617,10 +7475,8 @@ namespace yae
       tx_save.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
       tx_save.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 0.5));
       tx_save.text_ = TVarRef::constant(TVar("Save"));
-      tx_save.color_ = tx_save.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      tx_save.background_ = tx_save.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      tx_save.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      tx_save.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
       tx_save.fontSize_ = tx_remove.fontSize_;
       tx_save.elide_ = Qt::ElideNone;
       tx_save.setAttr("oneline", true);
@@ -7630,10 +7486,8 @@ namespace yae
       bg_save.margins_.set_right(ItemRef::reference(hidden, kUnitSize, -0.5));
       bg_save.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
       bg_save.margins_.set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-      bg_save.color_ = bg_save.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      bg_save.background_ = bg_save.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_save.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+      bg_save.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
       bg_save.radius_ = ItemRef::scale(bg_save, kPropertyHeight, 0.1);
 
       SaveWishlistItem & on_save = bg_save.
@@ -7643,10 +7497,8 @@ namespace yae
       tx_close.anchors_.bottom_ = ItemRef::reference(row, kPropertyBottom);
       tx_close.anchors_.right_ = ItemRef::reference(tx_save, kPropertyLeft);
       tx_close.margins_.set_right(ItemRef::reference(hidden, kUnitSize, 1.6));
-      tx_close.color_ = tx_close.
-        addExpr(style_color_ref(view, &AppStyle::fg_epg_, 0.7));
-      tx_close.background_ = tx_close.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0));
+      tx_close.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
+      tx_close.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0);
       tx_close.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
       tx_close.elide_ = Qt::ElideNone;
       tx_close.setAttr("oneline", true);
@@ -7662,10 +7514,8 @@ namespace yae
         set_top(ItemRef::reference(hidden, kUnitSize, -0.2));
       bg_close.margins_.
         set_bottom(ItemRef::reference(hidden, kUnitSize, -0.2));
-      bg_close.color_ = bg_close.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_tile_));
-      bg_close.background_ = bg_close.
-        addExpr(style_color_ref(view, &AppStyle::bg_epg_, 0.0));
+      bg_close.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+      bg_close.background_ = style_color_ref(view, &AppStyle::bg_epg_, 0.0);
       bg_close.radius_ = ItemRef::scale(bg_close, kPropertyHeight, 0.1);
 
       CloseWishlistItem & on_close = bg_close.

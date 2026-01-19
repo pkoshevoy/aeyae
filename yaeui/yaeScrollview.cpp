@@ -805,10 +805,10 @@ namespace yae
       addExpr(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ =
       ItemRef::scale(slider, kPropertyWidth, 0.5);
-    slider.background_ = slider.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
-    slider.color_ = slider.
-      addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
+    slider.background_ =
+      style_color_ref(view, &ItemViewStyle::bg_, 0);
+    slider.color_ =
+      style_color_ref(view, &ItemViewStyle::scrollbar_);
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", view, sview, scrollbar));
@@ -830,10 +830,10 @@ namespace yae
       hslider.addExpr(new CalcSliderWidth(sview, hscrollbar, hslider));
     hslider.radius_ =
       ItemRef::scale(hslider, kPropertyHeight, 0.5);
-    hslider.background_ = hslider.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
-    hslider.color_ = hslider.
-      addExpr(style_color_ref(view, &ItemViewStyle::scrollbar_));
+    hslider.background_ =
+      style_color_ref(view, &ItemViewStyle::bg_, 0);
+    hslider.color_ =
+      style_color_ref(view, &ItemViewStyle::scrollbar_);
 
     SliderDrag & maHSlider =
       hslider.add(new SliderDrag("ma_hslider", view, sview, hscrollbar));

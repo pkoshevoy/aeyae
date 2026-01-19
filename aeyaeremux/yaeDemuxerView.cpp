@@ -129,37 +129,6 @@ namespace yae
 
 
   //----------------------------------------------------------------
-  // ClearTextInput
-  //
-  struct ClearTextInput : public InputArea
-  {
-    ClearTextInput(const char * id, TextInput & edit, Text & view):
-      InputArea(id),
-      edit_(edit),
-      view_(view)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    { return true; }
-
-    // virtual:
-    bool onClick(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      edit_.setText(QString());
-      edit_.uncache();
-      view_.uncache();
-      return true;
-    }
-
-    TextInput & edit_;
-    Text & view_;
-  };
-
-
-  //----------------------------------------------------------------
   // FrameColor
   //
   struct FrameColor : public TColorExpr
@@ -698,8 +667,7 @@ namespace yae
         frame.addExpr(new GetFramePosX(view, k + 1));
       frame.radius_ = ItemRef::constant(kFrameRadius);
 
-      frame.background_ = frame.
-        addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0));
+      frame.background_ = style_color_ref(view, &ItemViewStyle::bg_, 0);
 
       VideoFrameItem & video = frame.add(new VideoFrameItem("video", i));
       video.anchors_.fill(frame, 1);
@@ -747,7 +715,7 @@ namespace yae
         gs.text_ = TVarRef::constant(TVar(txt));
         gs.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
         gs.elide_ = Qt::ElideNone;
-        gs.color_ =  gs.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
+        gs.color_ = style_color_ref(view, &ItemViewStyle::bg_);
         gs.background_ = ColorRef::constant(style.fg_timecode_.get().opaque());
         gs_bg.anchors_.offset(gs, -3, 3, 0, 0);
         gs_bg.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
@@ -1180,10 +1148,8 @@ namespace yae
 
     GopCursorItem & cursor =
       content.add(new GopCursorItem(view, "cursor", row_lut));
-    cursor.color_ = cursor.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_, 0));
-    cursor.colorBorder_ = cursor.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_));
+    cursor.color_ = style_color_ref(view, &ItemViewStyle::fg_, 0);
+    cursor.colorBorder_ = style_color_ref(view, &ItemViewStyle::fg_);
     cursor.radius_ = ItemRef::constant(kFrameRadius);
     cursor.border_ = ItemRef::constant(kFrameRadius * 0.33);
 
@@ -1611,8 +1577,7 @@ namespace yae
       ra.addExpr(new ClipTimelineHeight(view, *root.parent_, timeline));
     // ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
     // ra.color_ = style.cursor_;
-    ra.color_ = ra.addExpr
-      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.75));
+    ra.color_ = style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.75);
     // ra.opacity_ = shadow.opacity_;
 
     Rectangle & rb = timeline.addNew<Rectangle>("rb");
@@ -1644,9 +1609,9 @@ namespace yae
     p0.width_ = ItemRef::scale(ra, kPropertyHeight, 1.6);
     p0.height_ = p0.width_;
     p0.radius_ = ItemRef::scale(p0, kPropertyHeight, 0.5);
-    p0.color_ = p0.addExpr
+    p0.color_ =
       (style_color_ref(view, &ItemViewStyle::timeline_included_, 0, 1));
-    p0.background_ = p0.addExpr
+    p0.background_ =
       (style_color_ref(view, &ItemViewStyle::timeline_included_, 0));
     p0.visible_ = p0.addExpr(new IsMouseOverItem(view, *root.parent_));
     // p0.opacity_ = shadow.opacity_;
@@ -1657,10 +1622,8 @@ namespace yae
     p1.width_ = ItemRef::scale(ra, kPropertyHeight, 1.5);
     p1.height_ = p1.width_;
     p1.radius_ = ItemRef::scale(p1, kPropertyHeight, 0.5);
-    p1.color_ = p1.addExpr
-      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 1));
-    p1.background_ = p1.addExpr
-      (style_color_ref(view, &ItemViewStyle::cursor_, 0));
+    p1.color_ = style_color_ref(view, &ItemViewStyle::cursor_, 0, 1);
+    p1.background_ = style_color_ref(view, &ItemViewStyle::cursor_, 0);
     p1.visible_ = p0.visible_;
     // p1.opacity_ = shadow.opacity_;
 
@@ -1690,8 +1653,7 @@ namespace yae
     btn.height_ = btn.width_;
     btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
     btn.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 0.6);
-    btn.color_ = btn.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
+    btn.color_ = style_color_ref(view, &ItemViewStyle::bg_controls_);
 
     Text & btn_text = btn.addNew<Text>("btn_text");
     btn_text.anchors_.center(btn);
@@ -1764,8 +1726,7 @@ namespace yae
     btn.height_ = btn.width_;
     btn.anchors_.vcenter_ = ItemRef::reference(root, kPropertyVCenter);
     btn.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
-    btn.color_ = btn.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_controls_));
+    btn.color_ = style_color_ref(view, &ItemViewStyle::bg_controls_);
 
     Text & btn_text = btn.addNew<Text>("btn_text");
     btn_text.anchors_.center(btn);
@@ -1969,8 +1930,7 @@ namespace yae
     btn.r1_ = ItemRef::constant(9.0);
     btn.r2_ = ItemRef::constant(8.0);
 #if 1
-    btn.color_ = btn.
-      addExpr(style_color_ref(view, &ItemViewStyle::bg_, 0.5, 0));
+    btn.color_ = style_color_ref(view, &ItemViewStyle::bg_, 0.5, 0);
 #else
     btn.color_ = ColorRef::constant(0x7f7f7f);
 #endif
@@ -1982,8 +1942,7 @@ namespace yae
     txt.margins_.set_right(txt.margins_.get_left());
     // txt.font_ = style.font_small_;
     txt.fontSize_ = ItemRef::reference(style.row_height_, 0.3);
-    txt.color_ = txt.addExpr
-      (style_color_ref(view, &ItemViewStyle::fg_));
+    txt.color_ = style_color_ref(view, &ItemViewStyle::fg_);
 
     btn.anchors_.top_ = ItemRef::reference(controls, kPropertyTop);
     // btn.anchors_.left_ = ItemRef::reference(txt, kPropertyLeft);
@@ -2003,9 +1962,7 @@ namespace yae
                         Text & txt,
                         Rectangle & underline)
   {
-    underline.color_ = underline.addExpr
-      (style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.5));
-
+    underline.color_ = style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.5);
     underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
     underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
     underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
@@ -2100,7 +2057,7 @@ namespace yae
 
       Rectangle & bg = root.addNew<Rectangle>("background");
       Rectangle & controls = root.addNew<Rectangle>("controls");
-      bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::bg_));
+      bg.color_ = style_color_ref(view, &ItemViewStyle::bg_);
       bg.anchors_.fill(root);
       bg.anchors_.bottom_ = ItemRef::reference(controls, kPropertyTop);
 
@@ -2134,9 +2091,7 @@ namespace yae
         btn.height_ = ItemRef::reference(style.row_height_);
         btn.border_ = ItemRef::constant(1.0);
         btn.radius_ = ItemRef::constant(3.0);
-
-        btn.color_ = btn.addExpr
-          (style_color_ref(view, &ItemViewStyle::bg_controls_));
+        btn.color_ = style_color_ref(view, &ItemViewStyle::bg_controls_);
 
         Text & txt = output.addNew<Text>("layout_txt");
         txt.anchors_.vcenter_ = ItemRef::reference(btn, kPropertyVCenter);
@@ -2170,7 +2125,7 @@ namespace yae
       sep.anchors_.bottom_ = ItemRef::offset(controls, kPropertyTop,
                                              -3.0 * (2 + get_row_height(view)));
       sep.height_ = ItemRef::reference(style.row_height_, 0.15);
-      sep.color_ = sep.addExpr(style_color_ref(view, &ItemViewStyle::fg_));
+      sep.color_ = style_color_ref(view, &ItemViewStyle::fg_);
 
       VSplitter & splitter = layout.
         add(new VSplitter("splitter",

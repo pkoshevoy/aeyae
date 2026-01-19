@@ -44,6 +44,12 @@ namespace yae
   void
   TexturedRect::paintContent() const
   {
+    YAE_EXPECT(texture_.isValid());
+    if (!texture_.isValid())
+    {
+      return;
+    }
+
     const TTexturePtr & texturePtr = texture_.get();
     if (!texturePtr)
     {

@@ -543,36 +543,6 @@ namespace yae
   };
 
   //----------------------------------------------------------------
-  // ClearTextInput
-  //
-  struct ClearTextInput : public InputArea
-  {
-    ClearTextInput(const char * id, TextInput & edit, Text & view):
-      InputArea(id),
-      edit_(edit),
-      view_(view)
-    {}
-
-    // virtual:
-    bool onPress(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    { return true; }
-
-    // virtual:
-    bool onClick(const TVec2D & itemCSysOrigin,
-                 const TVec2D & rootCSysPoint)
-    {
-      edit_.setText(QString());
-      edit_.uncache();
-      view_.uncache();
-      return true;
-    }
-
-    TextInput & edit_;
-    Text & view_;
-  };
-
-  //----------------------------------------------------------------
   // layoutPlaylistFilter
   //
   static void
@@ -695,6 +665,7 @@ namespace yae
     text.color_ = colorTextFg;
     text.text_ = TVarRef::reference(editProxy, kPropertyText);
     text.fontSize_ = ItemRef::reference(fontSize, 1.07);
+    text.setAttr("oneline", true);
 
     edit.anchors_.fill(text);
     edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
@@ -1668,8 +1639,7 @@ namespace yae
 
     Rectangle & background = root.addNew<Rectangle>("background");
     background.anchors_.fill(root);
-    background.color_ = background.
-      addExpr(style_color_ref(*this, &ItemViewStyle::bg_));
+    background.color_ = style_color_ref(*this, &ItemViewStyle::bg_);
 
     Scrollview & sview = root.addNew<Scrollview>("scrollview");
 
@@ -1727,8 +1697,7 @@ namespace yae
       addExpr(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = ColorRef::transparent(background, kPropertyColor);
-    slider.color_ = slider.
-      addExpr(style_color_ref(*this, &ItemViewStyle::separator_));
+    slider.color_ = style_color_ref(*this, &ItemViewStyle::separator_);
 
     SliderDrag & maSlider =
       slider.add(new SliderDrag("ma_slider", *this, sview, scrollbar));

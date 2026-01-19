@@ -414,16 +414,16 @@ namespace yae
   {
     Item & root = *this;
 
-    unit_size_.set(new StyleTitleHeight(view_));
+    unit_size_ = this->addExpr(new StyleTitleHeight(view_));
 
-    ColorRef colorControlsBg = root.addExpr
-      (style_color_ref(view_, &ItemViewStyle::bg_controls_));
+    ColorRef colorControlsBg =
+      style_color_ref(view_, &ItemViewStyle::bg_controls_);
 
-    ColorRef colorTextBg = root.addExpr
-      (style_color_ref(view_, &ItemViewStyle::bg_timecode_));
+    ColorRef colorTextBg =
+      style_color_ref(view_, &ItemViewStyle::bg_timecode_);
 
-    ColorRef colorTextFg = root.addExpr
-      (style_color_ref(view_, &ItemViewStyle::fg_timecode_));
+    ColorRef colorTextFg =
+      style_color_ref(view_, &ItemViewStyle::fg_timecode_);
 
     ItemViewStyle & style = *view_.style();
 

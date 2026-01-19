@@ -536,67 +536,67 @@ namespace yae
     TimelineSeek & seek = timeline.add(new TimelineSeek(model_));
     seek.anchors_.fill(timeline);
 
-    ColorRef colorCursor = timeline.addExpr
+    ColorRef colorCursor =
       (style_color_ref(view_, &ItemViewStyle::cursor_));
 
-    ColorRef colorExcluded = timeline.addExpr
+    ColorRef colorExcluded =
       (style_color_ref(view_, &ItemViewStyle::timeline_excluded_));
 
-    ColorRef colorOutPt = timeline.addExpr
+    ColorRef colorOutPt =
       (style_color_ref(view_, &ItemViewStyle::timeline_included_, 1, 1));
 
-    ColorRef colorOutPtBg = timeline.addExpr
+    ColorRef colorOutPtBg =
       (style_color_ref(view_, &ItemViewStyle::timeline_included_, 0));
 
-    ColorRef colorIncluded = timeline.addExpr
+    ColorRef colorIncluded =
       (style_color_ref(view_, &ItemViewStyle::timeline_included_));
 
-    ColorRef colorPlayed = timeline.addExpr
+    ColorRef colorPlayed =
       (style_color_ref(view_, &ItemViewStyle::timeline_played_));
 
-    ColorRef colorPlayedBg = timeline.addExpr
+    ColorRef colorPlayedBg =
       (style_color_ref(view_, &ItemViewStyle::timeline_played_, 0));
 
-    ColorRef colorTextBg = timeline.addExpr
+    ColorRef colorTextBg =
       (style_color_ref(view_, &ItemViewStyle::bg_timecode_));
 
-    ColorRef colorTextFg = timeline.addExpr
+    ColorRef colorTextFg =
       (style_color_ref(view_, &ItemViewStyle::fg_timecode_));
 
-    ColorRef colorFocusBg = timeline.addExpr
+    ColorRef colorFocusBg =
       (style_color_ref(view_, &ItemViewStyle::bg_focus_));
 
-    ColorRef colorFocusFg = timeline.addExpr
+    ColorRef colorFocusFg =
       (style_color_ref(view_, &ItemViewStyle::fg_focus_));
 
-    ColorRef colorHighlightBg = timeline.addExpr
+    ColorRef colorHighlightBg =
       (style_color_ref(view_, &ItemViewStyle::bg_edit_selected_));
 
-    ColorRef colorHighlightFg = timeline.addExpr
+    ColorRef colorHighlightFg =
       (style_color_ref(view_, &ItemViewStyle::fg_edit_selected_));
 
-    ColorRef colorFullscreenToggleBg = timeline.addExpr
+    ColorRef colorFullscreenToggleBg =
       (style_color_ref(view_, &ItemViewStyle::fg_timecode_, 0.64));
 
-    ColorRef colorFullscreenToggleFg = timeline.addExpr
+    ColorRef colorFullscreenToggleFg =
       (style_color_ref(view_, &ItemViewStyle::fg_timecode_));
 
-    ColorRef colorFg = timeline.addExpr
+    ColorRef colorFg =
       (style_color_ref(view_, &ItemViewStyle::fg_));
 
-    ColorRef colorBg = timeline.addExpr
+    ColorRef colorBg =
       (style_color_ref(view_, &ItemViewStyle::bg_));
 
-    ColorRef colorControlsFg = timeline.addExpr
+    ColorRef colorControlsFg =
       (style_color_ref(view_, &ItemViewStyle::fg_controls_));
 
-    ColorRef colorControlsBg = this->addExpr
+    ColorRef colorControlsBg =
       (style_color_ref(view_, &ItemViewStyle::bg_controls_));
 
-    ColorRef colorControlsBgTransparent = this->addExpr
+    ColorRef colorControlsBgTransparent =
       (style_color_ref(view_, &ItemViewStyle::bg_controls_, 0.0));
 
-    ColorRef colorControlsBgOpaque = this->addExpr
+    ColorRef colorControlsBgOpaque =
       (style_color_ref(view_, &ItemViewStyle::bg_controls_, 1.0, 1.0));
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");

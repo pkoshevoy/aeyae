@@ -34,8 +34,10 @@ namespace yae
     QImage img(w, w, QImage::Format_ARGB32);
 
     // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+    static const TVec2D sp[] = {
+      TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+      TVec2D(0.25, 0.75), TVec2D(0.75, 0.75)
+    };
 
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
 
@@ -101,8 +103,10 @@ namespace yae
     QImage img(w, w, QImage::Format_ARGB32);
 
     // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+    static const TVec2D sp[] = {
+      TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+      TVec2D(0.25, 0.75), TVec2D(0.75, 0.75)
+    };
 
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
     static const double sqrt_3 = 1.732050807568877;
@@ -176,8 +180,10 @@ namespace yae
     QImage img(w, w, QImage::Format_ARGB32);
 
     // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+    static const TVec2D sp[] = {
+      TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+      TVec2D(0.25, 0.75), TVec2D(0.75, 0.75)
+    };
 
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
 
@@ -250,8 +256,10 @@ namespace yae
     QImage img(w, w, QImage::Format_ARGB32);
 
     // supersample each pixel:
-    static const TVec2D sp[] = { TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
-                                 TVec2D(0.25, 0.75), TVec2D(0.75, 0.75) };
+    static const TVec2D sp[] = {
+      TVec2D(0.25, 0.25), TVec2D(0.75, 0.25),
+      TVec2D(0.25, 0.75), TVec2D(0.75, 0.75)
+    };
 
     static const unsigned int supersample = sizeof(sp) / sizeof(TVec2D);
 
@@ -413,16 +421,16 @@ namespace yae
     width_ = ItemRef::constant(0);
     height_ = ItemRef::constant(0);
 
-    dpi_ = addExpr(new ViewDpi(view));
+    dpi_.set(new ViewDpi(view));
     dpi_.disableCaching();
-    device_pixel_ratio_ = addExpr(new ViewDevicePixelRatio(view));
+    device_pixel_ratio_.set(new ViewDevicePixelRatio(view));
     device_pixel_ratio_.disableCaching();
-    row_height_ = addExpr(new GetRowHeight(view));
+    row_height_.set(new GetRowHeight(view));
 
-    cell_width_ = addExpr(new GridCellWidth(view), 1.0, -2.0);
+    cell_width_ = yae::ref(new GridCellWidth(view), 1.0, -2.0);
     cell_height_ = cell_width_;
 
-    title_height_ = addExpr(new CalcTitleHeight(view, 24.0));
+    title_height_.set(new CalcTitleHeight(view, 24.0));
 #if 0
     font_size_.set(new GetFontSize(title_height_, 0.52,
                                    cell_height_, 0.15));
@@ -564,6 +572,9 @@ namespace yae
     timeline_included_.uncache();
     timeline_played_.uncache();
 
+    trashcan_.clear();
+    xbutton_.clear();
+
     Item::uncache();
   }
 
@@ -611,6 +622,61 @@ namespace yae
       }
 
       result = trashcan;
+    }
+  }
+
+
+  //----------------------------------------------------------------
+  // GetTexXButton::GetTexXButton
+  //
+  GetTexXButton::GetTexXButton(const ItemView & view,
+                               const Item & item,
+                               const ColorRef & fg,
+                               const ColorRef & bg,
+                               double thickness):
+    view_(view),
+    item_(item),
+    fg_(fg),
+    bg_(bg),
+    thickness_(thickness)
+  {
+    fg_.disableCaching();
+    bg_.disableCaching();
+  }
+
+  //----------------------------------------------------------------
+  // GetTexXButton::evaluate
+  //
+  void
+  GetTexXButton::evaluate(TTexturePtr & result) const
+  {
+    ItemViewStyle * style = view_.style();
+    YAE_ASSERT(style);
+
+    if (style)
+    {
+      double item_size = item_.width();
+      uint32_t l = yae::floor_log2<double>(item_size) + 1;
+      l = std::min<uint32_t>(l, 8);
+      uint32_t tex_width = 1 << l;
+
+      TTexturePtr & xbutton = style->xbutton_[tex_width];
+      if (!xbutton)
+      {
+        // generate xbutton texture:
+        std::string name = strfmt("xbutton_%03u", tex_width);
+
+        xbutton = style->Item::addHidden<Texture>
+          (new Texture(name.c_str(), QImage())).sharedPtr<Texture>();
+
+        QImage img = xbuttonImage(128,
+                                  fg_.get(),
+                                  bg_.get().transparent(),
+                                  thickness_);
+        xbutton->setImage(img);
+      }
+
+      result = xbutton;
     }
   }
 

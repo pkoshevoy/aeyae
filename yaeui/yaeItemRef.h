@@ -359,7 +359,7 @@ namespace yae
     //
     struct ExprDataSrc : IDataSrc
     {
-      ExprDataSrc(TExpression * expr):
+      ExprDataSrc(const yae::shared_ptr<TExpression> & expr):
         expr_(expr)
       {}
 
@@ -495,12 +495,16 @@ namespace yae
       set<PropDataSrc>(data_src, caching);
     }
 
-    inline void set(TExpression * expression,
+    inline void set(const yae::shared_ptr<TExpression> & expression,
                     DataRefCaching caching = kEnableCaching)
     {
       ExprDataSrc data_src(expression);
-      set<ExprDataSrc>(data_src, caching);
+      this->set<ExprDataSrc>(data_src, caching);
     }
+
+    inline void set(TExpression * expression,
+                    DataRefCaching caching = kEnableCaching)
+    { this->set(yae::shared_ptr<TExpression>(expression), caching); }
 
     // for explicit caching of an externally computed value
     // on an undefined (invalid) DataRef:
@@ -591,7 +595,7 @@ namespace yae
     }
 
     inline static TDataRef
-    expression(TExpression * expr,
+    expression(const yae::shared_ptr<TExpression> & expr,
                DataRefCaching caching = kEnableCaching)
     {
       TDataRef ref;
@@ -785,7 +789,7 @@ namespace yae
       }
     }
 
-    inline void set(TExpression * expression,
+    inline void set(const yae::shared_ptr<TExpression> & expression,
                     double s,
                     double t = 0.0,
                     DataRefCaching caching = kEnableCaching)
@@ -891,7 +895,7 @@ namespace yae
     }
 
     inline static ItemRef
-    expression(TExpression * expr,
+    expression(const yae::shared_ptr<TExpression> & expr,
                double s = 1.0,
                double t = 0.0,
                DataRefCaching caching = kEnableCaching)
@@ -1004,7 +1008,7 @@ namespace yae
       }
     }
 
-    inline void set(TExpression * expr,
+    inline void set(const yae::shared_ptr<TExpression> & expr,
                     bool inverse,
                     DataRefCaching caching = kEnableCaching)
     {
@@ -1019,6 +1023,11 @@ namespace yae
         TBase::set<TDataSrc>(data_src, caching);
       }
     }
+
+    inline void set(TExpression * expr,
+                    bool inverse,
+                    DataRefCaching caching = kEnableCaching)
+    { this->set(yae::shared_ptr<TExpression>(expr), inverse, caching); }
 
     // constructor helpers:
     inline static BoolRef
@@ -1070,7 +1079,7 @@ namespace yae
     }
 
     inline static BoolRef
-    expression(TExpression * expr,
+    expression(const yae::shared_ptr<TExpression> & expr,
                bool inverse = false,
                DataRefCaching caching = kEnableCaching)
     {
@@ -1080,7 +1089,7 @@ namespace yae
     }
 
     inline static BoolRef
-    inverse(TExpression * expr,
+    inverse(const yae::shared_ptr<TExpression> & expr,
             DataRefCaching caching = kEnableCaching)
     {
       BoolRef ref;
@@ -1209,7 +1218,7 @@ namespace yae
       }
     }
 
-    inline void set(TExpression * expr,
+    inline void set(const yae::shared_ptr<TExpression> & expr,
                     const TVec4D & s,
                     const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
                     DataRefCaching caching = kEnableCaching)
@@ -1301,7 +1310,7 @@ namespace yae
     }
 
     inline static ColorRef
-    expression(TExpression * expr,
+    expression(const yae::shared_ptr<TExpression> & expr,
                const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
                const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
                DataRefCaching caching = kEnableCaching)
@@ -1316,6 +1325,109 @@ namespace yae
   // TGradientRef
   //
   typedef DataRef<TGradientPtr> TGradientRef;
+
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  template <typename TData>
+  inline DataRef<TData>
+  ref(const yae::shared_ptr<Expression<TData> > & e)
+  {
+    return DataRef<TData>::expression(e);
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  template <typename TData>
+  inline DataRef<TData>
+  ref(Expression<TData> * e)
+  {
+    typedef Expression<TData> TExpression;
+    return yae::ref(yae::shared_ptr<TExpression>(e));
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline ItemRef
+  ref(const yae::shared_ptr<TDoubleExpr> & e,
+      double scale = 1.0,
+      double translate = 0.0)
+  {
+    return ItemRef::expression(e, scale, translate);
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline ItemRef
+  ref(TDoubleExpr * e,
+      double scale = 1.0,
+      double translate = 0.0)
+  {
+    return yae::ref(yae::shared_ptr<TDoubleExpr>(e), scale, translate);
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline BoolRef
+  ref(const yae::shared_ptr<TBoolExpr> & e)
+  {
+    return BoolRef::expression(e);
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline BoolRef
+  ref(TBoolExpr * e)
+  {
+    return yae::ref(yae::shared_ptr<TBoolExpr>(e));
+  }
+
+  //----------------------------------------------------------------
+  // inv
+  //
+  inline BoolRef
+  inv(const yae::shared_ptr<TBoolExpr> & e)
+  {
+    bool inverse = true;
+    return BoolRef::expression(e, inverse);
+  }
+
+  //----------------------------------------------------------------
+  // inv
+  //
+  inline BoolRef
+  inv(TBoolExpr * e)
+  {
+    return yae::inv(yae::shared_ptr<TBoolExpr>(e));
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline ColorRef
+  ref(const yae::shared_ptr<TColorExpr> & e,
+      const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+      const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
+  {
+    return ColorRef::expression(e, scale, translate);
+  }
+
+  //----------------------------------------------------------------
+  // ref
+  //
+  inline ColorRef
+  ref(TColorExpr * e,
+      const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
+      const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
+  {
+    return yae::ref(yae::shared_ptr<TColorExpr>(e), scale, translate);
+  }
 
 }
 

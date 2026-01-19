@@ -93,7 +93,7 @@ namespace yae
 
     Rectangle & bg = root.addNew<Rectangle>("bg");
     bg.anchors_.fill(root);
-    bg.color_ = bg.addExpr(style_color_ref(view, &ItemViewStyle::fg_, 0.9));
+    bg.color_ = style_color_ref(view, &ItemViewStyle::fg_, 0.9);
 
     Scrollview & sv =
       layout_scrollview(kScrollbarVertical, view_, style, root,
@@ -228,7 +228,7 @@ namespace yae
 
       Rectangle & bg = row.addNew<Rectangle>("bg");
       bg.anchors_.fill(row);
-      bg.color_ = bg.addExpr(style_color_ref(view_, &ItemViewStyle::bg_, 0.3));
+      bg.color_ = style_color_ref(view_, &ItemViewStyle::bg_, 0.3);
       bg.visible_ = bg.addExpr(new IsOptionSelected(*this, index));
 
       Text & headline = row.addNew<Text>("headline");
@@ -238,8 +238,8 @@ namespace yae
       headline.margins_.set_left(ItemRef::reference(unit_size_, 2.0));
       headline.margins_.set_right(ItemRef::reference(unit_size_, 1.5));
       headline.text_ = TVarRef::constant(TVar(option.headline_));
-      headline.color_ = headline.
-        addExpr(style_color_ref(view_, &ItemViewStyle::fg_edit_selected_));
+      headline.color_ =
+        style_color_ref(view_, &ItemViewStyle::fg_edit_selected_);
       headline.background_ = ColorRef::transparent(headline, kPropertyColor);
       headline.fontSize_ = ItemRef::reference(unit_size_, 0.55);
       headline.elide_ = Qt::ElideRight;
@@ -250,8 +250,8 @@ namespace yae
       fineprint.anchors_.left_ = ItemRef::reference(headline, kPropertyLeft);
       fineprint.anchors_.right_ = ItemRef::reference(headline, kPropertyRight);
       fineprint.text_ = TVarRef::constant(TVar(option.fineprint_));
-      fineprint.color_ = fineprint.
-        addExpr(style_color_ref(view_, &ItemViewStyle::fg_edit_selected_, 0.7));
+      fineprint.color_ =
+        style_color_ref(view_, &ItemViewStyle::fg_edit_selected_, 0.7);
       fineprint.background_ = ColorRef::transparent(fineprint, kPropertyColor);
       fineprint.fontSize_ = ItemRef::scale(headline, kPropertyFontSize, 0.7);
       fineprint.elide_ = Qt::ElideRight;
@@ -261,8 +261,8 @@ namespace yae
       hline.anchors_.fill(row);
       hline.anchors_.top_.reset();
       hline.height_ = ItemRef::constant(1);
-      hline.color_ = hline.
-        addExpr(style_color_ref(view_, &ItemViewStyle::bg_, 0.3));
+      hline.color_ =
+        style_color_ref(view_, &ItemViewStyle::bg_, 0.3);
       // hline.visible_ = BoolRef::constant(i % 2 == 1);
 
       SelectOption & sel = row.add(new SelectOption("sel", *this, index));

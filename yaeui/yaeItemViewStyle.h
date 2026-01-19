@@ -150,6 +150,7 @@ namespace yae
 
     // indexed by nearest power-of-2 size:
     std::map<uint32_t, TTexturePtr> trashcan_;
+    std::map<uint32_t, TTexturePtr> xbutton_;
   };
 
 
@@ -263,14 +264,15 @@ namespace yae
   // style_item_ref
   //
   template <typename TStyle>
-  inline StyleAttr<TStyle, ItemRef> *
+  inline ItemRef
   style_item_ref(const ItemView & view,
                  ItemRef TStyle::* const attr,
                  double s = 1.0,
                  double t = 0.0,
                  bool odd_round_up = false)
   {
-    return new StyleAttr<TStyle, ItemRef>(view, attr, s, t, odd_round_up);
+    return yae::ref(new StyleAttr<TStyle, ItemRef>(view, attr, s, t,
+                                                   odd_round_up));
   }
 
   //----------------------------------------------------------------
@@ -313,13 +315,13 @@ namespace yae
   // style_color_ref
   //
   template <typename TStyle>
-  inline StyleAttr<TStyle, ColorRef> *
+  inline ColorRef
   style_color_ref(const ItemView & view,
                   ColorRef TStyle::* const attr,
                   double s = 1.0,
                   double t = 0.0)
   {
-    return new StyleAttr<TStyle, ColorRef>(view, attr, s, t);
+    return yae::ref(new StyleAttr<TStyle, ColorRef>(view, attr, s, t));
   }
 
   //----------------------------------------------------------------
@@ -484,6 +486,27 @@ namespace yae
 
     const ItemView & view_;
     const Item & item_;
+  };
+
+  //----------------------------------------------------------------
+  // GetTexTrashcan
+  //
+  struct GetTexXButton : public TTextureExpr
+  {
+    GetTexXButton(const ItemView & view,
+                  const Item & item,
+                  const ColorRef & fb,
+                  const ColorRef & bg,
+                  double thickness = 0.2);
+
+    // virtual:
+    void evaluate(TTexturePtr & result) const;
+
+    const ItemView & view_;
+    const Item & item_;
+    ColorRef fg_;
+    ColorRef bg_;
+    double thickness_;
   };
 
 }
