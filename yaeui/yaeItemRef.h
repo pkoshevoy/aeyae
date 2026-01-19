@@ -394,7 +394,7 @@ namespace yae
     //
     struct DataRefSrc : IDataSrc
     {
-      DataRefSrc(const DataRef & dref):
+      explicit DataRefSrc(const DataRef & dref):
         dref_(&dref)
       {
         if (!dref.isValid())
