@@ -669,50 +669,6 @@ namespace yae
       return true;
     }
 
-    template <typename TData>
-    inline static DataRef<TData>
-    addExpr(const yae::shared_ptr<Expression<TData> > & e)
-    { return yae::ref<TData>(e); }
-
-    template <typename TData>
-    inline static DataRef<TData>
-    addExpr(Expression<TData> * e)
-    { return yae::ref<TData>(e); }
-
-    inline static ItemRef addExpr(const yae::shared_ptr<TDoubleExpr> & e,
-                                  double scale = 1.0,
-                                  double translate = 0.0)
-    { return yae::ref(e, scale, translate); }
-
-    inline static ItemRef addExpr(TDoubleExpr * e,
-                                  double scale = 1.0,
-                                  double translate = 0.0)
-    { return yae::ref(e, scale, translate); }
-
-    inline static BoolRef addExpr(const yae::shared_ptr<TBoolExpr> & e)
-    { return yae::ref(e); }
-
-    inline static BoolRef addExpr(TBoolExpr * e)
-    { return yae::ref(e); }
-
-    inline static BoolRef addInverse(const yae::shared_ptr<TBoolExpr> & e)
-    { return yae::inv(e); }
-
-    inline static BoolRef addInverse(TBoolExpr * e)
-    { return yae::inv(e); }
-
-    inline static ColorRef
-    addExpr(const yae::shared_ptr<TColorExpr> & e,
-            const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
-            const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
-    { return yae::ref(e, scale, translate); }
-
-    inline static ColorRef
-    addExpr(TColorExpr * e,
-            const TVec4D & scale = TVec4D(1.0, 1.0, 1.0, 1.0),
-            const TVec4D & translate = TVec4D(0.0, 0.0, 0.0, 0.0))
-    { return yae::ref(e, scale, translate); }
-
     // for user-defined item attributes:
     template <typename TData>
     inline DataRef<TData>

@@ -106,7 +106,8 @@ namespace yae
         virtual bool match(const IDataSrc * src) const = 0;
       };
 
-      virtual const IDataSrc * find(const typename IDataSrc::IVisitor & visitor) const
+      virtual const IDataSrc *
+      find(const typename IDataSrc::IVisitor & visitor) const
       { return visitor.match(this) ? this : NULL; }
     };
 
@@ -484,8 +485,14 @@ namespace yae
     inline void set(const TData & value)
     { private_.reset(new ConstRef<ConstDataSrc>((ConstDataSrc(value)))); }
 
-    inline void set(const TDataRef & dref)
-    { private_.reset(new ConstRef<DataRefSrc>((DataRefSrc(dref)))); }
+    inline void set(const TDataRef & other)
+    { this->shallow_ref(other); }
+
+    inline void shallow_ref(const TDataRef & other)
+    { private_.reset(new ConstRef<DataRefSrc>((DataRefSrc(other)))); }
+
+    inline void copy(const TDataRef & other)
+    { private_ = other.private_; }
 
     inline void set(const TDataProperties & properties,
                     Property property,
@@ -495,16 +502,16 @@ namespace yae
       set<PropDataSrc>(data_src, caching);
     }
 
+    inline void set(TExpression * expression,
+                    DataRefCaching caching = kEnableCaching)
+    { this->set(yae::shared_ptr<TExpression>(expression), caching); }
+
     inline void set(const yae::shared_ptr<TExpression> & expression,
                     DataRefCaching caching = kEnableCaching)
     {
       ExprDataSrc data_src(expression);
-      this->set<ExprDataSrc>(data_src, caching);
+      set<ExprDataSrc>(data_src, caching);
     }
-
-    inline void set(TExpression * expression,
-                    DataRefCaching caching = kEnableCaching)
-    { this->set(yae::shared_ptr<TExpression>(expression), caching); }
 
     // for explicit caching of an externally computed value
     // on an undefined (invalid) DataRef:
@@ -555,6 +562,18 @@ namespace yae
       return *this;
     }
 
+    DataRef(TExpression * expression,
+            DataRefCaching caching = kEnableCaching)
+    {
+      this->set(expression, caching);
+    }
+
+    DataRef(const yae::shared_ptr<TExpression> & expression,
+            DataRefCaching caching = kEnableCaching)
+    {
+      this->set(expression, caching);
+    }
+
     DataRef(const DataRef & other):
       private_(other.private_)
     {}
@@ -576,11 +595,12 @@ namespace yae
       return ref;
     }
 
+    // NOTE: this make a shallow reference to an existing DataRef:
     inline static TDataRef
     reference(const TDataRef & other)
     {
       TDataRef ref;
-      ref.set(other);
+      ref.shallow_ref(other);
       return ref;
     }
 
@@ -702,6 +722,18 @@ namespace yae
     ItemRef() {}
     explicit ItemRef(double data) { TBase::set(data); }
 
+    explicit ItemRef(TDoubleExpr * expr,
+                     double scale = 1.0,
+                     double translate = 0.0,
+                     DataRefCaching caching = kEnableCaching)
+    { ItemRef::set(expr, scale, translate, caching); }
+
+    explicit ItemRef(const yae::shared_ptr<TDoubleExpr> & expr,
+                     double scale = 1.0,
+                     double translate = 0.0,
+                     DataRefCaching caching = kEnableCaching)
+    { ItemRef::set(expr, scale, translate, caching); }
+
     //----------------------------------------------------------------
     // Affine
     //
@@ -787,6 +819,15 @@ namespace yae
         TDataSrc data_src(PropDataSrc(properties, property), s, t);
         TBase::set<TDataSrc>(data_src, caching);
       }
+    }
+
+    inline void set(TExpression * expression,
+                    double s,
+                    double t = 0.0,
+                    DataRefCaching caching = kEnableCaching)
+    {
+      yae::shared_ptr<TExpression> expr(expression);
+      this->set(expr, s, t, caching);
     }
 
     inline void set(const yae::shared_ptr<TExpression> & expression,
@@ -931,6 +972,16 @@ namespace yae
     BoolRef() {}
     explicit BoolRef(bool data) { TBase::set(data); }
 
+    explicit BoolRef(TExpression * expr,
+                     bool inverse = false,
+                     DataRefCaching caching = kEnableCaching)
+    { BoolRef::set(expr, inverse, caching); }
+
+    explicit BoolRef(const yae::shared_ptr<TExpression> & expr,
+                     bool inverse = false,
+                     DataRefCaching caching = kEnableCaching)
+    { BoolRef::set(expr, inverse, caching); }
+
     //----------------------------------------------------------------
     // Inverse
     //
@@ -1008,6 +1059,14 @@ namespace yae
       }
     }
 
+    inline void set(TExpression * expr,
+                    bool inverse,
+                    DataRefCaching caching = kEnableCaching)
+    {
+      yae::shared_ptr<TExpression> expression(expr);
+      this->set(expression, inverse, caching);
+    }
+
     inline void set(const yae::shared_ptr<TExpression> & expr,
                     bool inverse,
                     DataRefCaching caching = kEnableCaching)
@@ -1023,11 +1082,6 @@ namespace yae
         TBase::set<TDataSrc>(data_src, caching);
       }
     }
-
-    inline void set(TExpression * expr,
-                    bool inverse,
-                    DataRefCaching caching = kEnableCaching)
-    { this->set(yae::shared_ptr<TExpression>(expr), inverse, caching); }
 
     // constructor helpers:
     inline static BoolRef
@@ -1123,6 +1177,18 @@ namespace yae
     explicit ColorRef(const Color & data) { TBase::set(data); }
 
 
+    explicit ColorRef(TExpression * expr,
+                      const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                      const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                      DataRefCaching caching = kEnableCaching)
+    { ColorRef::set(expr, s, t, caching); }
+
+    explicit ColorRef(const yae::shared_ptr<TExpression> & expr,
+                      const TVec4D & s = TVec4D(1.0, 1.0, 1.0, 1.0),
+                      const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                      DataRefCaching caching = kEnableCaching)
+    { ColorRef::set(expr, s, t, caching); }
+
     //----------------------------------------------------------------
     // Affine
     //
@@ -1216,6 +1282,15 @@ namespace yae
         TDataSrc data_src(PropDataSrc(properties, property), s, t);
         TBase::set<TDataSrc>(data_src, caching);
       }
+    }
+
+    inline void set(TExpression * expr,
+                    const TVec4D & s,
+                    const TVec4D & t = TVec4D(0.0, 0.0, 0.0, 0.0),
+                    DataRefCaching caching = kEnableCaching)
+    {
+      yae::shared_ptr<TExpression> expression(expr);
+      this->set(expression, s, t, caching);
     }
 
     inline void set(const yae::shared_ptr<TExpression> & expr,

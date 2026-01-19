@@ -387,7 +387,7 @@ namespace yae
     colorBorder_(ColorRef::constant(Color(0xffffff, 0.25))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
-    p_->ready_ = addExpr(new UploadTexture<RoundRect>(*this));
+    p_->ready_.set(new UploadTexture<RoundRect>(*this));
   }
 
   //----------------------------------------------------------------

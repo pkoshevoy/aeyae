@@ -603,8 +603,8 @@ namespace yae
       circle.border_ = ItemRef::scale(circle, kPropertyWidth, 0.1);
       // circle.background_ = ColorRef::transparent(filter, kPropertyColor);
       // circle.background_ = ColorRef::constant(Color(0x000000, 0.0));
-      circle.background_ = circle.
-        addExpr(new PremultipliedTransparent(filter, kPropertyColor));
+      circle.background_.set
+        (new PremultipliedTransparent(filter, kPropertyColor));
       circle.color_ = colorFocusBg;
       circle.colorBorder_ = style.border_;
 
@@ -640,8 +640,7 @@ namespace yae
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
 
-    ItemRef fontDescentNowPlaying =
-      xbutton.addExpr(new GetFontDescent(nowPlaying));
+    ItemRef fontDescentNowPlaying(new GetFontDescent(nowPlaying));
 
     TextInputProxy & editProxy =
       item.add(new TextInputProxy("filter_focus", text, edit));
@@ -652,15 +651,15 @@ namespace yae
     editProxy.placeholder_ =
       TVarRef::constant(TVar(QObject::tr("SEARCH AND FILTER")));
 
-    filter.color_ = filter.addExpr(new ColorWhenFocused(editProxy));
+    filter.color_.set(new ColorWhenFocused(editProxy));
     filter.color_.disableCaching();
 
     text.anchors_.vcenter_ = ItemRef::reference(filter, kPropertyVCenter);
     text.anchors_.left_ = ItemRef::reference(icon, kPropertyRight);
     text.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
     text.margins_.set_left(ItemRef::scale(icon, kPropertyWidth, 0.5));
-    text.margins_.set_bottom(text.addExpr(new GetFontDescent(text), -0.25));
-    text.visible_ = text.addExpr(new ShowWhenFocused(editProxy, false));
+    text.margins_.set_bottom(ItemRef(new GetFontDescent(text), -0.25));
+    text.visible_.set(new ShowWhenFocused(editProxy, false));
     text.elide_ = Qt::ElideLeft;
     text.color_ = colorTextFg;
     text.text_ = TVarRef::reference(editProxy, kPropertyText);
@@ -669,7 +668,7 @@ namespace yae
 
     edit.anchors_.fill(text);
     edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-    edit.visible_ = edit.addExpr(new ShowWhenFocused(editProxy, true));
+    edit.visible_.set(new ShowWhenFocused(editProxy, true));
     edit.background_ = colorEditBg;
     edit.color_ = colorFocusFg;
     edit.cursorColor_ = colorCursor;
@@ -692,7 +691,7 @@ namespace yae
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
-    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.width_.set(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
@@ -791,32 +790,30 @@ namespace yae
     ulName.anchors_.top_ = ItemRef::offset(byName, kPropertyBottom, 0);
     ulName.height_ = ItemRef::constant(2);
     ulName.color_ = colorUnderline;
-    ulName.visible_ = ulName.
-      addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByName));
+    ulName.visible_.set
+      (new IsModelSortedBy(model, PlaylistModelProxy::SortByName));
 
     ulTime.anchors_.left_ = ItemRef::offset(orTime, kPropertyLeft, -1);
     ulTime.anchors_.right_ = ItemRef::offset(orTime, kPropertyRight, 1);
     ulTime.anchors_.top_ = ItemRef::offset(orTime, kPropertyBottom, 0);
     ulTime.height_ = ItemRef::constant(2);
     ulTime.color_ = colorUnderline;
-    ulTime.visible_ = ulTime.
-      addExpr(new IsModelSortedBy(model, PlaylistModelProxy::SortByTime));
+    ulTime.visible_.set
+      (new IsModelSortedBy(model, PlaylistModelProxy::SortByTime));
 
     ulAsc.anchors_.left_ = ItemRef::offset(inAsc, kPropertyLeft, -1);
     ulAsc.anchors_.right_ = ItemRef::offset(inAsc, kPropertyRight, 1);
     ulAsc.anchors_.top_ = ItemRef::offset(inAsc, kPropertyBottom, 0);
     ulAsc.height_ = ItemRef::constant(2);
     ulAsc.color_ = colorUnderline;
-    ulAsc.visible_ = ulAsc.
-      addExpr(new IsModelSortOrder(model, Qt::AscendingOrder));
+    ulAsc.visible_.set(new IsModelSortOrder(model, Qt::AscendingOrder));
 
     ulDesc.anchors_.left_ = ItemRef::offset(orDesc, kPropertyLeft, -1);
     ulDesc.anchors_.right_ = ItemRef::offset(orDesc, kPropertyRight, 1);
     ulDesc.anchors_.top_ = ItemRef::offset(orDesc, kPropertyBottom, 0);
     ulDesc.height_ = ItemRef::constant(2);
     ulDesc.color_ = colorUnderline;
-    ulDesc.visible_ = ulDesc.
-      addExpr(new IsModelSortOrder(model, Qt::DescendingOrder));
+    ulDesc.visible_.set(new IsModelSortOrder(model, Qt::DescendingOrder));
 
     SetSortBy & sortByName = item.
       add(new SetSortBy("ma_sort_by_name", view, model, item,
@@ -876,7 +873,7 @@ namespace yae
     footNote.margins_.set_top(ItemRef::reference(fontSize, 0.5));
     footNote.margins_.set_right(ItemRef::reference(fontSize, 0.8));
 
-    footNote.text_ = footNote.addExpr(new PlaylistFooter(model));
+    footNote.text_.set(new PlaylistFooter(model));
     footNote.font_ = smallFont;
     footNote.fontSize_ = smallFontSize;
     footNote.color_ = style.fg_hint_;
@@ -896,7 +893,7 @@ namespace yae
   {
     group.anchors_.left_ = ItemRef::reference(groups, kPropertyLeft);
     group.anchors_.right_ = ItemRef::reference(groups, kPropertyRight);
-    group.anchors_.top_ = group.addExpr(new GroupTop(group));
+    group.anchors_.top_.set(new GroupTop(group));
     style.layout_group_->layout(group, view, model, groupIndex, style);
   }
 
@@ -1015,11 +1012,8 @@ namespace yae
     cell.width_ = cellWidth;
     cell.height_ = cellHeight;
 
-    cell.anchors_.left_ =
-      cell.addExpr(new GridCellLeft(cell, cellWidth));
-
-    cell.anchors_.top_ =
-      cell.addExpr(new GridCellTop(cell, cellWidth, cellHeight));
+    cell.anchors_.left_.set(new GridCellLeft(cell, cellWidth));
+    cell.anchors_.top_.set(new GridCellTop(cell, cellWidth, cellHeight));
 
     ItemPlay & maPlay = cell.add(new ItemPlay("ma_cell"));
     maPlay.anchors_.fill(cell);
@@ -1069,10 +1063,8 @@ namespace yae
     Item & rm = title.addNew<Item>("rm");
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
-    ItemRef fontDescent =
-      xbutton.addExpr(new GetFontDescent(text));
-    ItemRef fontDescentNowPlaying =
-      xbutton.addExpr(new GetFontDescent(nowPlaying));
+    ItemRef fontDescent(new GetFontDescent(text));
+    ItemRef fontDescentNowPlaying(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
     toggle.width_ = ItemRef::reference(text, kPropertyFontHeight);
@@ -1086,7 +1078,7 @@ namespace yae
     collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
     collapsed.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
     collapsed.height_ = ItemRef::reference(collapsed, kPropertyWidth);
-    collapsed.visible_ = collapsed.addExpr
+    collapsed.visible_.set
       (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
     expanded.texture_ = TTextureRef::constant(style.expanded_);
@@ -1095,17 +1087,17 @@ namespace yae
     expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
     expanded.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
     expanded.height_ = ItemRef::reference(expanded, kPropertyWidth);
-    expanded.visible_ = expanded.addExpr
+    expanded.visible_.set
       (new QueryBoolInverse(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
     text.anchors_.top_ = ItemRef::reference(title, kPropertyTop);
     text.anchors_.left_ = ItemRef::reference(toggle, kPropertyRight);
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
-    text.text_ = text.addExpr
+    text.text_.set
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
     text.fontSize_ = ItemRef::reference(fontSize, 1.07);
 #if defined(__APPLE__)
-    text.supersample_ = text.addExpr(new Supersample<Text>(text));
+    text.supersample_.set(new Supersample<Text>(text));
 #endif
     text.elide_ = Qt::ElideMiddle;
     text.color_ = style.fg_group_;
@@ -1116,12 +1108,12 @@ namespace yae
     rm.height_ = ItemRef::reference(text, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
-    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
+    rm.visible_.set(new IsMouseOver(view, sview, title));
     rm.visible_.disableCaching();
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
-    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.width_.set(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
@@ -1136,11 +1128,11 @@ namespace yae
     payload.anchors_.top_ = ItemRef::reference(separator, kPropertyBottom);
     payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-    payload.visible_ = payload.addExpr
+    payload.visible_.set
       (new QueryBoolInverse(model,
                             groupIndex,
                             PlaylistModel::kRoleCollapsed));
-    payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+    payload.height_.set(new InvisibleItemZeroHeight(payload));
 
     GroupCollapse & maCollapse = toggle.
       add(new GroupCollapse("ma_collapse", view));
@@ -1196,27 +1188,27 @@ namespace yae
 
     Rectangle & frame = cell.addNew<Rectangle>("frame");
     frame.anchors_.fill(cell);
-    frame.color_ = frame.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.bg_item_.get(),
-                                     style.bg_item_selected_.get(),
-                                     style.bg_item_playing_.get()));
+    frame.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.bg_item_.get(),
+                              style.bg_item_selected_.get(),
+                              style.bg_item_playing_.get()));
 
     Image & thumbnail = cell.addNew<Image>("thumbnail");
     thumbnail.setContext(view);
     thumbnail.anchors_.fill(cell);
     thumbnail.anchors_.bottom_.reset();
     thumbnail.height_ = ItemRef::scale(cell, kPropertyHeight, 0.75);
-    thumbnail.url_ = thumbnail.addExpr
+    thumbnail.url_.set
       (new ModelQuery(model, index, PlaylistModel::kRoleThumbnail));
-    thumbnail.visible_ = thumbnail.addExpr
+    thumbnail.visible_.set
       (new QueryBoolInverse(model, index, PlaylistModel::kRolePlaying));
     thumbnail.visible_.disableCaching();
 
     ImageLive & liveImage = cell.addNew<ImageLive>("live_image");
     liveImage.anchors_.fill(thumbnail);
-    liveImage.visible_ = liveImage.addExpr
+    liveImage.visible_.set
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
     liveImage.visible_.disableCaching();
 
@@ -1226,53 +1218,53 @@ namespace yae
     badge.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 5);
     badge.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 7);
     badge.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-    badge.background_ = badge.
-      addExpr(new PremultipliedTransparent(badgeBg, kPropertyColor));
-    badge.color_ = badge.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.fg_badge_.get(),
-                                     style.fg_label_selected_.get(),
-                                     style.fg_badge_.get()));
-    badge.text_ = badge.addExpr
+    badge.background_.set
+      (new PremultipliedTransparent(badgeBg, kPropertyColor));
+    badge.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.fg_badge_.get(),
+                              style.fg_label_selected_.get(),
+                              style.fg_badge_.get()));
+    badge.text_.set
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
     badge.fontSize_ = ItemRef::reference(fontSize, 0.8);
 
     badgeBg.anchors_.inset(badge, -3, 0);
-    badgeBg.color_ = badge.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.bg_badge_.get(),
-                                     style.bg_label_selected_.get(),
-                                     style.bg_badge_.get()));
+    badgeBg.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.bg_badge_.get(),
+                              style.bg_label_selected_.get(),
+                              style.bg_badge_.get()));
 
     Rectangle & labelBg = cell.addNew<Rectangle>("labelBg");
     Text & label = cell.addNew<Text>("label");
     label.font_ = style.font_;
     label.anchors_.bottomLeft(cell, 7);
     label.maxWidth_ = ItemRef::offset(cell, kPropertyWidth, -14);
-    label.text_ = label.addExpr
+    label.text_.set
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.fontSize_ = ItemRef::reference(fontSize);
 #if defined(__APPLE__)
-    label.supersample_ = label.addExpr(new Supersample<Text>(label));
+    label.supersample_.set(new Supersample<Text>(label));
 #endif
-    label.background_ = label.
-      addExpr(new PremultipliedTransparent(labelBg, kPropertyColor));
-    label.color_ = label.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.fg_label_.get(),
-                                     style.fg_label_selected_.get(),
-                                     style.fg_label_.get()));
+    label.background_.set
+      (new PremultipliedTransparent(labelBg, kPropertyColor));
+    label.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.fg_label_.get(),
+                              style.fg_label_selected_.get(),
+                              style.fg_label_.get()));
 
     labelBg.anchors_.inset(label, -3, -1);
-    labelBg.color_ = labelBg.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.bg_label_.get(),
-                                     style.bg_label_selected_.get(),
-                                     style.bg_label_.get()));
+    labelBg.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.bg_label_.get(),
+                              style.bg_label_selected_.get(),
+                              style.bg_label_.get()));
 
     Item & rm = cell.addNew<Item>("remove item");
 
@@ -1297,15 +1289,15 @@ namespace yae
     rm.height_ = ItemRef::reference(playing, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(playing, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
-    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
+    rm.visible_.set(new IsMouseOver(view, sview, cell));
     rm.visible_.disableCaching();
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
-    ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+    ItemRef fontDescent(new GetFontDescent(playing));
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescent);
-    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.width_.set(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
@@ -1324,7 +1316,7 @@ namespace yae
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
     cur.color_ = style.underline_;
-    cur.visible_ = cur.addExpr
+    cur.visible_.set
       (new TQueryBool(model, index, PlaylistModel::kRoleCurrent));
     cur.visible_.disableCaching();
 
@@ -1377,10 +1369,8 @@ namespace yae
     Item & rm = title.addNew<Item>("rm");
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
-    ItemRef fontDescent =
-      xbutton.addExpr(new GetFontDescent(text));
-    ItemRef fontDescentNowPlaying =
-      xbutton.addExpr(new GetFontDescent(nowPlaying));
+    ItemRef fontDescent(new GetFontDescent(text));
+    ItemRef fontDescentNowPlaying(new GetFontDescent(nowPlaying));
 
     // open/close disclosure [>] button:
     toggle.width_ = ItemRef::reference(text, kPropertyFontHeight);
@@ -1394,7 +1384,7 @@ namespace yae
     collapsed.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
     collapsed.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
     collapsed.height_ = ItemRef::reference(collapsed, kPropertyWidth);
-    collapsed.visible_ = collapsed.addExpr
+    collapsed.visible_.set
       (new TQueryBool(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
     expanded.texture_ = TTextureRef::constant(style.expanded_);
@@ -1403,32 +1393,32 @@ namespace yae
     expanded.anchors_.right_ = ItemRef::reference(toggle, kPropertyRight);
     expanded.anchors_.vcenter_ = ItemRef::reference(toggle, kPropertyVCenter);
     expanded.height_ = ItemRef::reference(expanded, kPropertyWidth);
-    expanded.visible_ = expanded.addExpr
+    expanded.visible_.set
       (new QueryBoolInverse(model, groupIndex, PlaylistModel::kRoleCollapsed));
 
     text.anchors_.left_ = ItemRef::reference(toggle, kPropertyRight);
     text.anchors_.right_ = ItemRef::reference(rm, kPropertyLeft);
     text.anchors_.vcenter_ = ItemRef::offset(title, kPropertyVCenter, 1);
-    text.text_ = text.addExpr
+    text.text_.set
       (new ModelQuery(model, groupIndex, PlaylistModel::kRoleLabel));
     text.fontSize_ = ItemRef::reference(fontSize, 1.07);
     text.elide_ = Qt::ElideMiddle;
     text.color_ = style.fg_group_;
     text.background_ = ColorRef::transparent(title, kPropertyColor);
-    // text.background_ = text.
-    //   addExpr(new PremultipliedTransparent(title, kPropertyColor));
+    // text.background_.set
+    //   (new PremultipliedTransparent(title, kPropertyColor));
 
     // remove group [x] button:
     rm.width_ = ItemRef::reference(nowPlaying, kPropertyHeight);
     rm.height_ = ItemRef::reference(text, kPropertyHeight);
     rm.anchors_.top_ = ItemRef::reference(text, kPropertyTop);
     rm.anchors_.right_ = ItemRef::offset(title, kPropertyRight, -5);
-    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, title));
+    rm.visible_.set(new IsMouseOver(view, sview, title));
     rm.visible_.disableCaching();
 
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescentNowPlaying);
-    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.width_.set(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
@@ -1436,11 +1426,11 @@ namespace yae
     payload.anchors_.top_ = ItemRef::reference(title, kPropertyBottom);
     payload.anchors_.left_ = ItemRef::reference(group, kPropertyLeft);
     payload.anchors_.right_ = ItemRef::reference(group, kPropertyRight);
-    payload.visible_ = payload.addExpr
+    payload.visible_.set
       (new QueryBoolInverse(model,
                             groupIndex,
                             PlaylistModel::kRoleCollapsed));
-    payload.height_ = payload.addExpr(new InvisibleItemZeroHeight(payload));
+    payload.height_.set(new InvisibleItemZeroHeight(payload));
 
     GroupCollapse & maCollapse = toggle.
       add(new GroupCollapse("ma_collapse", view));
@@ -1498,12 +1488,12 @@ namespace yae
 
     Rectangle & frame = cell.addNew<Rectangle>("frame");
     frame.anchors_.fill(cell);
-    frame.color_ = frame.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.bg_item_.get(),
-                                     style.bg_item_selected_.get(),
-                                     style.bg_item_playing_.get()));
+    frame.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.bg_item_.get(),
+                              style.bg_item_selected_.get(),
+                              style.bg_item_playing_.get()));
 
     Item & badgeItem = cell.addNew<Item>("badge_item");
     badgeItem.anchors_.left_ = ItemRef::offset(cell, kPropertyLeft, 5);
@@ -1518,24 +1508,24 @@ namespace yae
     badge.maxWidth_ = ItemRef::reference(eyetvBadge, kPropertyWidth);
     badge.maxHeight_ = ItemRef::reference(eyetvBadge, kPropertyHeight);
     badge.background_ = ColorRef::transparent(badgeBg, kPropertyColor);
-    badge.color_ = badge.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.fg_badge_.get(),
-                                     style.bg_item_selected_.get().opaque(),
-                                     style.bg_item_playing_.get().opaque()));
+    badge.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.fg_badge_.get(),
+                              style.bg_item_selected_.get().opaque(),
+                              style.bg_item_playing_.get().opaque()));
     badge.elide_ = Qt::ElideRight;
-    badge.text_ = badge.addExpr
+    badge.text_.set
       (new ModelQuery(model, index, PlaylistModel::kRoleBadge));
     badge.fontSize_ = ItemRef::reference(fontSize, 0.7);
 
     badgeBg.anchors_.inset(badge, -3, 0);
-    badgeBg.color_ = badge.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.bg_badge_.get(),
-                                     style.fg_badge_.get(),
-                                     style.fg_badge_.get()));
+    badgeBg.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.bg_badge_.get(),
+                              style.fg_badge_.get(),
+                              style.fg_badge_.get()));
 
     Text & label = cell.addNew<Text>("label");
     Item & rm = cell.addNew<Item>("remove item");
@@ -1543,25 +1533,25 @@ namespace yae
     label.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     label.anchors_.left_ = ItemRef::offset(badgeItem, kPropertyRight, 5);
     label.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
-    label.text_ = label.addExpr
+    label.text_.set
       (new ModelQuery(model, index, PlaylistModel::kRoleLabel));
     label.elide_ = Qt::ElideMiddle;
     label.fontSize_ = ItemRef::reference(fontSize, 0.9);
     label.background_ = ColorRef::transparent(frame, kPropertyColor);
-    // label.background_ = label.
-    //  addExpr(new PremultipliedTransparent(frame, kPropertyColor));
-    label.color_ = label.
-      addExpr(new ItemHighlightColor(model,
-                                     index,
-                                     style.fg_label_.get(),
-                                     style.fg_label_selected_.get(),
-                                     style.fg_label_selected_.get()));
+    // label.background_.set
+    //  (new PremultipliedTransparent(frame, kPropertyColor));
+    label.color_.set
+      (new ItemHighlightColor(model,
+                              index,
+                              style.fg_label_.get(),
+                              style.fg_label_selected_.get(),
+                              style.fg_label_selected_.get()));
 
     Text & playing = cell.addNew<Text>("now playing");
     playing.copySettings(nowPlaying);
     playing.anchors_.top_ = ItemRef::offset(cell, kPropertyTop, 0);
     playing.anchors_.right_ = ItemRef::offset(rm, kPropertyLeft, -3);
-    playing.visible_ = playing.addExpr
+    playing.visible_.set
       (new TQueryBool(model, index, PlaylistModel::kRolePlaying));
     playing.visible_.disableCaching();
     playing.color_ = ColorRef::reference(label, kPropertyColor);
@@ -1571,15 +1561,15 @@ namespace yae
     rm.height_ = ItemRef::reference(playing, kPropertyHeight);
     rm.anchors_.vcenter_ = ItemRef::reference(cell, kPropertyVCenter);
     rm.anchors_.right_ = ItemRef::offset(cell, kPropertyRight, -5);
-    rm.visible_ = rm.addExpr(new IsMouseOver(view, sview, cell));
+    rm.visible_.set(new IsMouseOver(view, sview, cell));
     rm.visible_.disableCaching();
 
     TexturedRect & xbutton =
       rm.add<TexturedRect>(new TexturedRect("xbutton"));
-    ItemRef fontDescent = xbutton.addExpr(new GetFontDescent(playing));
+    ItemRef fontDescent(new GetFontDescent(playing));
     xbutton.anchors_.center(rm);
     xbutton.margins_.set(fontDescent);
-    xbutton.width_ = xbutton.addExpr(new InscribedCircleDiameterFor(rm));
+    xbutton.width_.set(new InscribedCircleDiameterFor(rm));
     xbutton.height_ = xbutton.width_;
     xbutton.texture_ = TTextureRef::constant(style.xbutton_);
 
@@ -1589,8 +1579,7 @@ namespace yae
     cur.anchors_.bottom_ = ItemRef::offset(cell, kPropertyBottom, -3);
     cur.height_ = ItemRef::constant(2);
     cur.color_ = style.underline_;
-    cur.visible_ = cur.addExpr
-      (new IsCurrentNotSelected(model, index));
+    cur.visible_.set(new IsCurrentNotSelected(model, index));
     cur.visible_.disableCaching();
 
     RemoveModelItems & maRmItem = xbutton.
@@ -1647,14 +1636,13 @@ namespace yae
     filterItem.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     filterItem.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
     filterItem.width_ = ItemRef::reference(root, kPropertyWidth);
-    filterItem.height_ = filterItem.addExpr(new StyleTitleHeight(*this), 4.5);
+    filterItem.height_.set(new StyleTitleHeight(*this), 4.5);
 
     Item & scrollbar = root.addNew<Item>("scrollbar");
     scrollbar.anchors_.right_ = ItemRef::reference(root, kPropertyRight);
     scrollbar.anchors_.top_ = ItemRef::reference(sview, kPropertyTop);
     scrollbar.anchors_.bottom_ = ItemRef::offset(root, kPropertyBottom, -5);
-    scrollbar.width_ = scrollbar.
-      addExpr(new CalcTitleHeight(*this, 50.0), 0.2);
+    scrollbar.width_.set(new CalcTitleHeight(*this, 50.0), 0.2);
 
     sview.anchors_.left_ = ItemRef::reference(root, kPropertyLeft);
     sview.anchors_.right_ = ItemRef::reference(scrollbar, kPropertyLeft);
@@ -1689,12 +1677,10 @@ namespace yae
 
     // configure scrollbar slider:
     RoundRect & slider = scrollbar.addNew<RoundRect>("slider");
-    slider.anchors_.top_ = slider.
-      addExpr(new CalcSliderTop(sview, scrollbar, slider));
+    slider.anchors_.top_.set(new CalcSliderTop(sview, scrollbar, slider));
     slider.anchors_.left_ = ItemRef::offset(scrollbar, kPropertyLeft, 2);
     slider.anchors_.right_ = ItemRef::offset(scrollbar, kPropertyRight, -2);
-    slider.height_ = slider.
-      addExpr(new CalcSliderHeight(sview, scrollbar, slider));
+    slider.height_.set(new CalcSliderHeight(sview, scrollbar, slider));
     slider.radius_ = ItemRef::scale(slider, kPropertyWidth, 0.5);
     slider.background_ = ColorRef::transparent(background, kPropertyColor);
     slider.color_ = style_color_ref(*this, &ItemViewStyle::separator_);

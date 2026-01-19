@@ -206,14 +206,14 @@ namespace yae
     checked_(true),
     animate_(false)
   {
-    color_ = addExpr(new CheckboxColor(*this));
+    color_.set(new CheckboxColor(*this));
     RoundRect & spotlight = addNew<RoundRect>("spotlight");
     RoundRect & checkbox = addNew<RoundRect>("checkbox");
     checkbox.anchors_.fill(*this);
     // checkbox.border_ = ItemRef::scale(checkbox, kPropertyWidth, 0.0875);
     // checkbox.border_ = ItemRef::constant(2);
     checkbox.border_ = ItemRef::scale(checkbox, kPropertyWidth, 0.1);
-    checkbox.color_ = addExpr(new CheckboxColor(*this, false));
+    checkbox.color_.set(new CheckboxColor(*this, false));
     checkbox.color_.disableCaching();
     checkbox.colorBorder_ = ColorRef::reference(*this, kPropertyColor);
     checkbox.colorBorder_.disableCaching();
@@ -253,8 +253,7 @@ namespace yae
       ItemRef::scale(checkbox, kPropertyWidth, 0.29);
     checkmark.weight_ =
       ItemRef::scale(checkbox, kPropertyWidth, 0.075);
-    checkmark.color_ =
-      checkmark.addExpr(new CheckmarkColor(*this));
+    checkmark.color_.set(new CheckmarkColor(*this));
     checkmark.visible_ =
       BoolRef::reference(*this, kPropertyChecked);
     checkmark.visible_.disableCaching();
@@ -279,7 +278,7 @@ namespace yae
     ClickAnimator * click_animator = NULL;
     this->click_.reset(click_animator = new ClickAnimator(*this));
 
-    spotlight.opacity_ = addExpr
+    spotlight.opacity_.set
       (new SpotlightOpacity(*hover_animator, *click_animator));
     spotlight.opacity_.disableCaching();
   }

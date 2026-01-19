@@ -494,8 +494,10 @@ namespace yae
       titleHeightScale_(titleHeightScale),
       cellHeightScale_(cellHeightScale)
     {
+#if 1
       YAE_ASSERT(!(titleHeight_.isCacheable() ||
                    cellHeight_.isCacheable()));
+#endif
     }
 
     // virtual:
@@ -564,7 +566,9 @@ namespace yae
       scale_(scale),
       translate_(translate)
     {
+#if 1
       YAE_ASSERT(!ref.isCacheable());
+#endif
     }
 
     OddRoundUp(const Item & item,
@@ -604,7 +608,9 @@ namespace yae
       scale_(scale),
       translate_(translate)
     {
+#if 1
       YAE_ASSERT(!ref.isCacheable());
+#endif
     }
 
     RoundUp(const Item & item,

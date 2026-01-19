@@ -1086,11 +1086,9 @@ namespace yae
     timeline.query_timeline_visible_.
       reset(&yae::context_query_timeline_visible, this);
 
-    timeline.is_playback_paused_ = timeline.addExpr
-      (new IsPlaybackPaused(*this));
+    timeline.is_playback_paused_.set(new IsPlaybackPaused(*this));
 
-    timeline.is_fullscreen_ = timeline.addExpr
-      (new IsFullscreen(view_));
+    timeline.is_fullscreen_.set(new IsFullscreen(view_));
 
     timeline.toggle_playback_.reset(&yae::toggle_playback, this);
 

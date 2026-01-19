@@ -486,7 +486,7 @@ namespace yae
     color_(ColorRef::constant(Color(0x7f7f7f, 0.5))),
     background_(ColorRef::constant(Color(0x000000, 0.0)))
   {
-    p_->ready_ = addExpr(new UploadTexture<TabRect>(*this));
+    p_->ready_.set(new UploadTexture<TabRect>(*this));
 
     typedef Transition::Polyline TPolyline;
 

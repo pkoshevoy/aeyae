@@ -565,15 +565,13 @@ namespace yae
     // dirty hacks to cache grid properties:
     Item & hidden = root.addHidden(new Item("hidden_grid_props"));
 
-    hidden.anchors_.top_ = hidden.addExpr(new GridCols(*this, grid));
+    hidden.anchors_.top_.set(new GridCols(*this, grid));
     ItemRef & grid_cols = hidden.anchors_.top_;
 
-    hidden.anchors_.left_ = hidden.addExpr(new GridRows(*this, grid_cols));
+    hidden.anchors_.left_.set(new GridRows(*this, grid_cols));
     ItemRef & grid_rows = hidden.anchors_.left_;
 
-    hidden.anchors_.right_ = hidden.addExpr(new CellSize(grid,
-                                                         grid_rows,
-                                                         grid_cols));
+    hidden.anchors_.right_.set(new CellSize(grid, grid_rows, grid_cols));
     ItemRef & cell_size = hidden.anchors_.right_;
 
     std::size_t num_ar_choices = options_.size();
@@ -584,17 +582,17 @@ namespace yae
       bool custom_option = (option.category_ == AspectRatio::kOther);
 
       Item & item = grid.addNew<Item>(str("cell_", i).c_str());
-      item.anchors_.left_ = item.addExpr(new CellPosX(*this,
-                                                      grid,
-                                                      grid_rows,
-                                                      grid_cols,
-                                                      cell_size,
-                                                      i));
-      item.anchors_.top_ = item.addExpr(new CellPosY(grid,
-                                                     grid_rows,
-                                                     grid_cols,
-                                                     cell_size,
-                                                     i));
+      item.anchors_.left_.set(new CellPosX(*this,
+                                           grid,
+                                           grid_rows,
+                                           grid_cols,
+                                           cell_size,
+                                           i));
+      item.anchors_.top_.set(new CellPosY(grid,
+                                          grid_rows,
+                                          grid_cols,
+                                          cell_size,
+                                          i));
       item.width_ = cell_size;
       item.height_ = cell_size;
 
@@ -613,16 +611,16 @@ namespace yae
 
       Rectangle & rect = item.addNew<Rectangle>("frame");
       rect.anchors_.center(circle);
-      rect.color_ = rect.addExpr(new LetterBoxColor(*this, i));
-      rect.width_ = rect.addExpr(new GetFrameWidth(*this, circle, i));
-      rect.height_ = rect.addExpr(new GetFrameHeight(*this, circle, i));
+      rect.color_.set(new LetterBoxColor(*this, i));
+      rect.width_.set(new GetFrameWidth(*this, circle, i));
+      rect.height_.set(new GetFrameHeight(*this, circle, i));
 
       if (custom_option)
       {
         DashedRect & stripes = item.addNew<DashedRect>("stripes");
         stripes.anchors_.fill(rect);
         stripes.fg_ = style_color_ref(view_, &ItemViewStyle::fg_);
-        stripes.bg_ = stripes.addExpr(new LetterBoxColor(*this, i));
+        stripes.bg_.set(new LetterBoxColor(*this, i));
         stripes.border_ = circle.border_;
 
         if (option.subview_.empty())
@@ -680,7 +678,7 @@ namespace yae
 
       if (custom_option)
       {
-        text.text_ = text.addExpr(new LetterBoxText(*this, i));
+        text.text_.set(new LetterBoxText(*this, i));
       }
       else
       {

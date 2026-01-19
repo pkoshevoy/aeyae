@@ -47,12 +47,9 @@ namespace yae
     Item(id),
     view_(view)
   {
-    bg_.set(style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75));
-    fg_.set(style_color_ref(view, &ItemViewStyle::fg_));
-
-    text_color_.set
-      (style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78));
-
+    bg_ = style_color_ref(view, &ItemViewStyle::fg_edit_selected_, 0.75);
+    fg_ = style_color_ref(view, &ItemViewStyle::fg_);
+    text_color_ = style_color_ref(view, &ItemViewStyle::fg_timecode_, 0, 0.78);
     SpinnerItem::setVisible(false);
   }
 
@@ -117,8 +114,7 @@ namespace yae
       r6.anchors_.hcenter_ = r0.anchors_.hcenter_;
       r9.anchors_.vcenter_ = r3.anchors_.vcenter_;
 
-      r0.width_ = r0.
-        addExpr(new OddRoundUp(*this, kPropertyHeight, 0.005, 1));
+      r0.width_.set(new OddRoundUp(*this, kPropertyHeight, 0.005, 1));
       r3.height_ = ItemRef::reference(r0, kPropertyWidth);
       r6.width_ = ItemRef::reference(r0, kPropertyWidth);
       r9.height_ = ItemRef::reference(r0, kPropertyWidth);
@@ -145,16 +141,16 @@ namespace yae
       r6.color_.set(fg_);
       r9.color_.set(fg_);
 
-      r0.opacity_ = r0.addExpr
+      r0.opacity_.set
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(12 - i)));
 
-      r3.opacity_ = r3.addExpr
+      r3.opacity_.set
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(9 - i)));
 
-      r6.opacity_ = r6.addExpr
+      r6.opacity_.set
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(6 - i)));
 
-      r9.opacity_ = r9.addExpr
+      r9.opacity_.set
         (new Periodic(transition, 1.0 / 4.0, 1e+9 * double(3 - i)));
     }
 

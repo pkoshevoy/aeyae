@@ -279,7 +279,7 @@ namespace yae
     p_(new Image::TPrivate()),
     opacity_(ItemRef::constant(1.0))
   {
-    p_->ready_ = addExpr(new UploadTexture<Image>(*this));
+    p_->ready_.set(new UploadTexture<Image>(*this));
   }
 
   //----------------------------------------------------------------

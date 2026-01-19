@@ -414,7 +414,7 @@ namespace yae
   {
     Item & root = *this;
 
-    unit_size_ = this->addExpr(new StyleTitleHeight(view_));
+    unit_size_.set(new StyleTitleHeight(view_));
 
     ColorRef colorControlsBg =
       style_color_ref(view_, &ItemViewStyle::bg_controls_);
@@ -530,7 +530,7 @@ namespace yae
     done.font_ = style.font_small_;
     done.fontSize_ = ItemRef::scale(unit_size_, 0.5);
 
-    doneBg.color_ = doneBg.addExpr
+    doneBg.color_.set
       (new ColorOnHover(view_, doneBg,
                         ColorRef::constant(Color(0xffffff, 0.7)),
                         ColorRef::constant(Color(0xffffff, 1.0))));

@@ -229,7 +229,7 @@ namespace yae
       Rectangle & bg = row.addNew<Rectangle>("bg");
       bg.anchors_.fill(row);
       bg.color_ = style_color_ref(view_, &ItemViewStyle::bg_, 0.3);
-      bg.visible_ = bg.addExpr(new IsOptionSelected(*this, index));
+      bg.visible_.set(new IsOptionSelected(*this, index));
 
       Text & headline = row.addNew<Text>("headline");
       headline.anchors_.left_ = ItemRef::reference(row, kPropertyLeft);

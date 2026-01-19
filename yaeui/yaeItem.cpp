@@ -824,10 +824,10 @@ namespace yae
   Item::Item(const char * id):
     parent_(NULL),
     visible_(BoolRef::constant(true)),
-    xContent_(addExpr(new CalcXContent(*this))),
-    yContent_(addExpr(new CalcYContent(*this))),
-    xExtent_(addExpr(new CalcXExtent(*this))),
-    yExtent_(addExpr(new CalcYExtent(*this))),
+    xContent_(new CalcXContent(*this)),
+    yContent_(new CalcYContent(*this)),
+    xExtent_(new CalcXExtent(*this)),
+    yExtent_(new CalcYExtent(*this)),
     painted_(false)
   {
     if (id)
@@ -846,8 +846,8 @@ namespace yae
     visible_(BoolRef::constant(true)),
     xContent_(x_content),
     yContent_(y_content),
-    xExtent_(addExpr(new CalcXExtent(*this))),
-    yExtent_(addExpr(new CalcYExtent(*this))),
+    xExtent_(new CalcXExtent(*this)),
+    yExtent_(new CalcYExtent(*this)),
     painted_(false)
   {
     if (id)
@@ -1977,10 +1977,10 @@ namespace yae
                                  const Transition::Polyline & steady,
                                  const Transition::Polyline & spindown):
     Item(id),
-    expr_ref_(Item::addExpr(new Transition(spinup, steady, spindown))),
+    expr_ref_(ItemRef(new Transition(spinup, steady, spindown))),
     transition_(*(expr_ref_.get_expr<Transition>()))
   {
-    override_.set(expr_ref_);
+    override_.shallow_ref(expr_ref_);
   }
 
   //----------------------------------------------------------------

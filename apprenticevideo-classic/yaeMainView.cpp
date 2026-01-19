@@ -74,13 +74,13 @@ namespace yae
     Item & root = *root_;
     root.anchors_.left_ = ItemRef::constant(0.0);
     root.anchors_.top_ = ItemRef::constant(0.0);
-    root.width_ = root.addExpr(new GetViewWidth(view));
-    root.height_ = root.addExpr(new GetViewHeight(view));
+    root.width_.set(new GetViewWidth(view));
+    root.height_.set(new GetViewHeight(view));
 
     hidden_.reset(new Item("hidden"));
     Item & hidden = root.addHidden<Item>(hidden_);
-    hidden.width_ = hidden.addExpr(new UnitSize(view));
-    hidden.height_ = hidden.addExpr(new CalcTitleHeight(view, 24.0));
+    hidden.width_.set(new UnitSize(view));
+    hidden.height_.set(new CalcTitleHeight(view, 24.0));
 
     typedef Transition::Polyline TPolyline;
     opacity_.reset(new TransitionItem("opacity",
@@ -135,9 +135,9 @@ namespace yae
       play.margins_.set(ItemRef::scale(playback_btn,
                                        kPropertyHeight,
                                        0.15));
-      play.visible_ = play.addExpr(new IsTrue(is_playback_paused_));
+      play.visible_.set(new IsTrue(is_playback_paused_));
       play.visible_.disableCaching();
-      play.texture_ = play.addExpr(new StylePlayTexture(view));
+      play.texture_.set(new StylePlayTexture(view));
       play.opacity_ = controls.opacity_;
 
       TexturedRect & pause = playback_btn.add(new TexturedRect("pause"));
@@ -145,9 +145,9 @@ namespace yae
       pause.margins_.set(ItemRef::scale(playback_btn,
                                         kPropertyHeight,
                                         0.2));
-      pause.visible_ = pause.addExpr(new IsFalse(is_playback_paused_));
+      pause.visible_.set(new IsFalse(is_playback_paused_));
       pause.visible_.disableCaching();
-      pause.texture_ = pause.addExpr(new StylePauseTexture(view));
+      pause.texture_.set(new StylePauseTexture(view));
       pause.opacity_ = controls.opacity_;
 
 #if 1

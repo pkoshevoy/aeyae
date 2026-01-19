@@ -21,7 +21,7 @@ namespace yae
   {
     font_.setFamily(QString::fromUtf8("Lucida Grande"));
 
-    unit_size_ = addExpr(new UnitSize(view));
+    unit_size_.set(new UnitSize(view));
     bg_epg_header_.reset(new TGradient());
     bg_epg_channel_.reset(new TGradient());
 

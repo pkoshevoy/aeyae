@@ -484,7 +484,7 @@ namespace yae
   {
     delete p_;
     p_ = new TPrivate(image);
-    p_->ready_ = addExpr(new UploadTexture<Texture>(*this));
+    p_->ready_.set(new UploadTexture<Texture>(*this));
   }
 
   //----------------------------------------------------------------

@@ -271,12 +271,14 @@ namespace yae
       bottom_(bottom)
     {
       YAE_ASSERT(scrollbarId_ != kScrollbarNone);
+#if 1
       YAE_ASSERT(!(vscrollbarWidth_.isCacheable() ||
                    hscrollbarWidth_.isCacheable() ||
                    left_.isCacheable() ||
                    right_.isCacheable() ||
                    top_.isCacheable() ||
                    bottom_.isCacheable()));
+#endif
     }
 
     void evaluate(bool & result) const

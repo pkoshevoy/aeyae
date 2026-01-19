@@ -466,8 +466,8 @@ namespace yae
     view_(view),
     model_(model)
   {
-    is_timeline_visible_ = addExpr(new IsTrue(query_timeline_visible_));
-    is_playlist_visible_ = addExpr(new IsTrue(query_playlist_visible_));
+    is_timeline_visible_.set(new IsTrue(query_timeline_visible_));
+    is_playlist_visible_.set(new IsTrue(query_playlist_visible_));
   }
 
   //----------------------------------------------------------------
@@ -504,7 +504,7 @@ namespace yae
     shadow.anchors_.fill(*this);
     shadow.anchors_.top_.reset();
     shadow.height_ = ItemRef::scale(unit_size_, 4.5);
-    shadow.color_ = shadow.addExpr(new StyleTimelineShadow(view_));
+    shadow.color_.set(new StyleTimelineShadow(view_));
     shadow.opacity_ = ItemRef::uncacheable(opacity, kPropertyTransition);
 
     Item & container = this->addNew<Item>("container");
@@ -529,9 +529,9 @@ namespace yae
     timeline.anchors_.vcenter_ = ItemRef::reference(container, kPropertyTop);
     timeline.margins_.set_left(ItemRef::scale(unit_size_, 0.5));
     timeline.margins_.set_right(timeline.margins_.get_left());
-    timeline.height_ = timeline.addExpr(new OddRoundUp(container,
-                                                       kPropertyHeight,
-                                                       0.22222222, 1));
+    timeline.height_.set(new OddRoundUp(container,
+                                        kPropertyHeight,
+                                        0.22222222, 1));
 
     TimelineSeek & seek = timeline.add(new TimelineSeek(model_));
     seek.anchors_.fill(timeline);
@@ -601,12 +601,10 @@ namespace yae
 
     Rectangle & timelineIn = timeline.addNew<Rectangle>("timelineIn");
     timelineIn.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
-    timelineIn.anchors_.right_ =
-      timelineIn.addExpr(new TimelineIn(model_, timeline));
+    timelineIn.anchors_.right_.set(new TimelineIn(model_, timeline));
     timelineIn.anchors_.vcenter_ =
       ItemRef::reference(timeline, kPropertyVCenter);
-    timelineIn.height_ =
-      timelineIn.addExpr(new TimelineHeight(view_, mouseDetect, timeline));
+    timelineIn.height_.set(new TimelineHeight(view_, mouseDetect, timeline));
     timelineIn.color_ = colorExcluded;
     timelineIn.opacity_ = shadow.opacity_;
 
@@ -614,8 +612,8 @@ namespace yae
       timeline.addNew<Rectangle>("timelinePlayhead");
     timelinePlayhead.anchors_.left_ =
       ItemRef::reference(timelineIn, kPropertyRight);
-    timelinePlayhead.anchors_.right_ =
-      timelinePlayhead.addExpr(new TimelinePlayhead(model_, timeline));
+    timelinePlayhead.anchors_.right_.set
+      (new TimelinePlayhead(model_, timeline));
     timelinePlayhead.anchors_.vcenter_ = timelineIn.anchors_.vcenter_;
     timelinePlayhead.height_ = timelineIn.height_;
     timelinePlayhead.color_ = colorPlayed;
@@ -625,8 +623,7 @@ namespace yae
       timeline.addNew<Rectangle>("timelineOut");
     timelineOut.anchors_.left_ =
       ItemRef::reference(timelinePlayhead, kPropertyRight);
-    timelineOut.anchors_.right_ =
-      timelineOut.addExpr(new TimelineOut(model_, timeline));
+    timelineOut.anchors_.right_.set(new TimelineOut(model_, timeline));
     timelineOut.anchors_.vcenter_ = timelineIn.anchors_.vcenter_;
     timelineOut.height_ = timelineIn.height_;
     timelineOut.color_ = colorIncluded;
@@ -651,7 +648,7 @@ namespace yae
     inPoint.radius_ = ItemRef::scale(inPoint, kPropertyHeight, 0.5);
     inPoint.color_ = colorPlayed;
     inPoint.background_ = colorPlayedBg;
-    inPoint.visible_ = inPoint.addExpr(new MarkerVisible(view_, mouseDetect));
+    inPoint.visible_.set(new MarkerVisible(view_, mouseDetect));
     inPoint.opacity_ = shadow.opacity_;
 
     RoundRect & playhead = this->addNew<RoundRect>("playhead");
@@ -717,17 +714,15 @@ namespace yae
       set_left(ItemRef::reference(container, kPropertyHeight));
     playheadAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
-    playheadAux.visible_ =
-      playheadAux.addExpr(new ShowWhenFocused(playheadFocus, false));
+    playheadAux.visible_.set(new ShowWhenFocused(playheadFocus, false));
     playheadAux.color_ = colorTextFg;
-    playheadAux.text_ = playheadAux.addExpr(new GetPlayheadAux(model_));
+    playheadAux.text_.set(new GetPlayheadAux(model_));
     playheadAux.font_ = timecodeFont;
     playheadAux.fontSize_ =
       ItemRef::scale(container, kPropertyHeight, 0.33333333);
 
     playheadAuxBg.anchors_.offset(playheadAux, -3, 3, -3, 3);
-    playheadAuxBg.color_ = playheadAuxBg.
-      addExpr(new ColorWhenFocused(playheadFocus));
+    playheadAuxBg.color_.set(new ColorWhenFocused(playheadFocus));
 
     durationAux.anchors_.right_ =
       ItemRef::offset(timeline, kPropertyRight, -3);
@@ -736,7 +731,7 @@ namespace yae
     durationAux.anchors_.vcenter_ =
       ItemRef::reference(container, kPropertyVCenter);
     durationAux.color_ = colorTextFg;
-    durationAux.text_ = durationAux.addExpr(new GetDurationAux(model_));
+    durationAux.text_.set(new GetDurationAux(model_));
     durationAux.font_ = playheadAux.font_;
     durationAux.fontSize_ = playheadAux.fontSize_;
 
@@ -746,8 +741,7 @@ namespace yae
     playheadEdit.anchors_.fill(playheadAux);
     playheadEdit.margins_.
       set_left(ItemRef::scale(playheadEdit, kPropertyCursorWidth, -1.0));
-    playheadEdit.visible_ =
-      playheadEdit.addExpr(new ShowWhenFocused(playheadFocus, true));
+    playheadEdit.visible_.set(new ShowWhenFocused(playheadFocus, true));
     playheadEdit.color_ = colorFocusFg;
     playheadEdit.cursorColor_ = colorCursor;
     playheadEdit.font_ = playheadAux.font_;
@@ -788,14 +782,14 @@ namespace yae
       TexturedRect & play = square.add(new TexturedRect("play"));
       play.anchors_.fill(square);
       play.visible_ = BoolRef::reference(this->is_playback_paused_);
-      play.texture_ = play.addExpr(new StylePlayTexture(view_));
+      play.texture_.set(new StylePlayTexture(view_));
       play.opacity_ = shadow.opacity_;
 
       TexturedRect & pause = square.add(new TexturedRect("pause"));
       pause.anchors_.fill(square);
       pause.margins_.set(ItemRef::scale(square, kPropertyHeight, 0.05));
       pause.visible_ = BoolRef::inverse(this->is_playback_paused_);
-      pause.texture_ = pause.addExpr(new StylePauseTexture(view_));
+      pause.texture_.set(new StylePauseTexture(view_));
       pause.opacity_ = shadow.opacity_;
 
       playbackToggle.anchors_.fill(playbackBtn);
@@ -888,14 +882,14 @@ namespace yae
       gridOn.anchors_.fill(playlistButton);
       gridOn.margins_.set(ItemRef::scale(unit_size_, 0.2));
       gridOn.visible_ = BoolRef::reference(this->is_playlist_visible_);
-      gridOn.texture_ = gridOn.addExpr(new StyleGridOnTexture(view_));
+      gridOn.texture_.set(new StyleGridOnTexture(view_));
       gridOn.opacity_ = shadow.opacity_;
 
       TexturedRect & gridOff = playlistButton.add(new TexturedRect("gridOff"));
       gridOff.anchors_.fill(playlistButton);
       gridOff.margins_.set(ItemRef::scale(unit_size_, 0.2));
       gridOff.visible_ = BoolRef::inverse(this->is_playlist_visible_);
-      gridOff.texture_ = gridOff.addExpr(new StyleGridOffTexture(view_));
+      gridOff.texture_.set(new StyleGridOffTexture(view_));
       gridOff.opacity_ = shadow.opacity_;
 
       Call<TimelineItem, ContextCallback> & playlistToggle = playlistButton.
@@ -903,8 +897,8 @@ namespace yae
             ("toggle_playlist", *this, &TimelineItem::toggle_playlist_));
       playlistToggle.anchors_.fill(playlistButton);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, playlistToggle));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, playlistToggle));
       bg.opacity_.disableCaching();
     }
 
@@ -916,9 +910,8 @@ namespace yae
     Item & arrow_btn = other.addNew<Item>("arrow_btn");
     arrow_btn.anchors_.top_ = ItemRef::offset(other, kPropertyTop);
     arrow_btn.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    arrow_btn.visible_ = arrow_btn.addExpr(new IsValid(back_arrow_cb_));
-    arrow_btn.height_ = arrow_btn.
-      addExpr(new InvisibleItemZeroHeight(arrow_btn));
+    arrow_btn.visible_.set(new IsValid(back_arrow_cb_));
+    arrow_btn.height_.set(new InvisibleItemZeroHeight(arrow_btn));
     {
       RoundRect & bg = arrow_btn.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -943,8 +936,7 @@ namespace yae
             ("arrow_btn_on_click", *this, &TimelineItem::back_arrow_cb_));
       arrow_btn_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, arrow_btn_ia));
+      bg.opacity_.set(new ToolButtonOpacity(view_, opacity, bg, arrow_btn_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -953,9 +945,8 @@ namespace yae
     back_to_prev.anchors_.top_ = ItemRef::offset(playlistButton,
                                                  kPropertyBottom);
     back_to_prev.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    back_to_prev.visible_ = back_to_prev.addExpr(new IsValid(back_to_prev_cb_));
-    back_to_prev.height_ = back_to_prev.
-      addExpr(new InvisibleItemZeroHeight(back_to_prev));
+    back_to_prev.visible_.set(new IsValid(back_to_prev_cb_));
+    back_to_prev.height_.set(new InvisibleItemZeroHeight(back_to_prev));
     {
       RoundRect & bg = back_to_prev.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -984,8 +975,8 @@ namespace yae
             ("back_to_prev_on_click", *this, &TimelineItem::back_to_prev_cb_));
       back_to_prev_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, back_to_prev_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, back_to_prev_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -994,9 +985,8 @@ namespace yae
     skip_to_next.anchors_.top_ = ItemRef::offset(back_to_prev,
                                                  kPropertyBottom);
     skip_to_next.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    skip_to_next.visible_ = skip_to_next.addExpr(new IsValid(skip_to_next_cb_));
-    skip_to_next.height_ = skip_to_next.
-      addExpr(new InvisibleItemZeroHeight(skip_to_next));
+    skip_to_next.visible_.set(new IsValid(skip_to_next_cb_));
+    skip_to_next.height_.set(new InvisibleItemZeroHeight(skip_to_next));
     {
       RoundRect & bg = skip_to_next.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1025,8 +1015,8 @@ namespace yae
             ("skip_to_next_on_click", *this, &TimelineItem::skip_to_next_cb_));
       skip_to_next_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, skip_to_next_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, skip_to_next_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1035,9 +1025,8 @@ namespace yae
     select_all.anchors_.top_ = ItemRef::offset(skip_to_next,
                                                kPropertyBottom);
     select_all.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    select_all.visible_ = select_all.addExpr(new IsValid(select_all_cb_));
-    select_all.height_ = select_all.
-      addExpr(new InvisibleItemZeroHeight(select_all));
+    select_all.visible_.set(new IsValid(select_all_cb_));
+    select_all.height_.set(new InvisibleItemZeroHeight(select_all));
     {
       RoundRect & bg = select_all.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1066,8 +1055,7 @@ namespace yae
             ("select_all_on_click", *this, &TimelineItem::select_all_cb_));
       select_all_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, select_all_ia));
+      bg.opacity_.set(new ToolButtonOpacity(view_, opacity, bg, select_all_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1076,9 +1064,8 @@ namespace yae
     remove_sel.anchors_.top_ = ItemRef::offset(select_all,
                                                kPropertyBottom);
     remove_sel.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    remove_sel.visible_ = remove_sel.addExpr(new IsValid(remove_sel_cb_));
-    remove_sel.height_ = remove_sel.
-      addExpr(new InvisibleItemZeroHeight(remove_sel));
+    remove_sel.visible_.set(new IsValid(remove_sel_cb_));
+    remove_sel.height_.set(new InvisibleItemZeroHeight(remove_sel));
     {
       RoundRect & bg = remove_sel.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1107,8 +1094,7 @@ namespace yae
             ("remove_sel_on_click", *this, &TimelineItem::remove_sel_cb_));
       remove_sel_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, remove_sel_ia));
+      bg.opacity_.set(new ToolButtonOpacity(view_, opacity, bg, remove_sel_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1116,9 +1102,8 @@ namespace yae
     Item & delete_file = other.addNew<Item>("delete_file");
     delete_file.anchors_.top_ = ItemRef::offset(remove_sel, kPropertyBottom);
     delete_file.anchors_.left_ = ItemRef::reference(other, kPropertyLeft);
-    delete_file.visible_ = delete_file.addExpr(new IsValid(delete_file_cb_));
-    delete_file.height_ = delete_file.
-      addExpr(new InvisibleItemZeroHeight(delete_file));
+    delete_file.visible_.set(new IsValid(delete_file_cb_));
+    delete_file.height_.set(new InvisibleItemZeroHeight(delete_file));
     {
       RoundRect & bg = delete_file.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1133,8 +1118,7 @@ namespace yae
       TexturedRect & trashcan = bg.addNew<TexturedRect>("trashcan");
       trashcan.anchors_.fill(bg);
       trashcan.margins_.set(ItemRef::scale(bg, kPropertyHeight, 0.1));
-      trashcan.texture_ = trashcan.
-        addExpr(new GetTexTrashcan(view_, trashcan));
+      trashcan.texture_.set(new GetTexTrashcan(view_, trashcan));
       trashcan.opacity_ = shadow.opacity_;
 
       Call<TimelineItem, ContextCallback> & delete_file_ia = bg.
@@ -1142,8 +1126,8 @@ namespace yae
             ("delete_file_on_click", *this, &TimelineItem::delete_file_cb_));
       delete_file_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, delete_file_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, delete_file_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1151,9 +1135,8 @@ namespace yae
     Item & frame_crop = other.addNew<Item>("frame_crop");
     frame_crop.anchors_.top_ = arrow_btn.anchors_.top_;
     frame_crop.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
-    frame_crop.visible_ = frame_crop.addExpr(new IsValid(frame_crop_cb_));
-    frame_crop.height_ = frame_crop.
-      addExpr(new InvisibleItemZeroHeight(frame_crop));
+    frame_crop.visible_.set(new IsValid(frame_crop_cb_));
+    frame_crop.height_.set(new InvisibleItemZeroHeight(frame_crop));
     {
       RoundRect & bg = frame_crop.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1181,8 +1164,7 @@ namespace yae
             ("frame_crop_on_click", *this, &TimelineItem::frame_crop_cb_));
       frame_crop_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, frame_crop_ia));
+      bg.opacity_.set(new ToolButtonOpacity(view_, opacity, bg, frame_crop_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1190,10 +1172,8 @@ namespace yae
     Item & aspect_ratio = other.addNew<Item>("aspect_ratio");
     aspect_ratio.anchors_.top_ = ItemRef::offset(frame_crop, kPropertyBottom);
     aspect_ratio.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
-    aspect_ratio.visible_ = aspect_ratio.
-      addExpr(new IsValid(aspect_ratio_cb_));
-    aspect_ratio.height_ = aspect_ratio.
-      addExpr(new InvisibleItemZeroHeight(aspect_ratio));
+    aspect_ratio.visible_.set(new IsValid(aspect_ratio_cb_));
+    aspect_ratio.height_.set(new InvisibleItemZeroHeight(aspect_ratio));
     {
       RoundRect & bg = aspect_ratio.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1221,8 +1201,8 @@ namespace yae
             ("aspect_ratio_on_click", *this, &TimelineItem::aspect_ratio_cb_));
       aspect_ratio_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, aspect_ratio_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, aspect_ratio_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1230,9 +1210,8 @@ namespace yae
     Item & video_track = other.addNew<Item>("video_track");
     video_track.anchors_.top_ = ItemRef::offset(aspect_ratio, kPropertyBottom);
     video_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
-    video_track.visible_ = video_track.addExpr(new IsValid(video_track_cb_));
-    video_track.height_ = video_track.
-      addExpr(new InvisibleItemZeroHeight(video_track));
+    video_track.visible_.set(new IsValid(video_track_cb_));
+    video_track.height_.set(new InvisibleItemZeroHeight(video_track));
     {
       RoundRect & bg = video_track.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1260,8 +1239,8 @@ namespace yae
             ("video_track_on_click", *this, &TimelineItem::video_track_cb_));
       video_track_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, video_track_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, video_track_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1269,9 +1248,8 @@ namespace yae
     Item & audio_track = other.addNew<Item>("audio_track");
     audio_track.anchors_.top_ = ItemRef::offset(video_track, kPropertyBottom);
     audio_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
-    audio_track.visible_ = audio_track.addExpr(new IsValid(audio_track_cb_));
-    audio_track.height_ = audio_track.
-      addExpr(new InvisibleItemZeroHeight(audio_track));
+    audio_track.visible_.set(new IsValid(audio_track_cb_));
+    audio_track.height_.set(new InvisibleItemZeroHeight(audio_track));
     {
       RoundRect & bg = audio_track.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1299,8 +1277,8 @@ namespace yae
             ("audio_track_on_click", *this, &TimelineItem::audio_track_cb_));
       audio_track_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, audio_track_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, audio_track_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1308,9 +1286,8 @@ namespace yae
     Item & subtt_track = other.addNew<Item>("subtt_track");
     subtt_track.anchors_.top_ = ItemRef::offset(audio_track, kPropertyBottom);
     subtt_track.anchors_.right_ = ItemRef::reference(other, kPropertyRight);
-    subtt_track.visible_ = subtt_track.addExpr(new IsValid(subtt_track_cb_));
-    subtt_track.height_ = subtt_track.
-      addExpr(new InvisibleItemZeroHeight(subtt_track));
+    subtt_track.visible_.set(new IsValid(subtt_track_cb_));
+    subtt_track.height_.set(new InvisibleItemZeroHeight(subtt_track));
     {
       RoundRect & bg = subtt_track.addNew<RoundRect>("bg");
       bg.width_ = tool_btn_size;
@@ -1338,8 +1315,8 @@ namespace yae
             ("subtt_track_on_click", *this, &TimelineItem::subtt_track_cb_));
       subtt_track_ia.anchors_.fill(bg);
 
-      bg.opacity_ = bg.
-        addExpr(new ToolButtonOpacity(view_, opacity, bg, subtt_track_ia));
+      bg.opacity_.set
+        (new ToolButtonOpacity(view_, opacity, bg, subtt_track_ia));
       bg.opacity_.disableCaching();
     }
 
@@ -1398,7 +1375,7 @@ namespace yae
                                        kPropertyHeight,
                                        0.15));
       play.visible_ = BoolRef::reference(this->is_playback_paused_);
-      play.texture_ = play.addExpr(new StylePlayTexture(view_));
+      play.texture_.set(new StylePlayTexture(view_));
       play.opacity_ = controls.opacity_;
 
       TexturedRect & pause = bigPlaybackButton.add(new TexturedRect("pause"));
@@ -1407,7 +1384,7 @@ namespace yae
                                         kPropertyHeight,
                                         0.2));
       pause.visible_ = BoolRef::inverse(this->is_playback_paused_);
-      pause.texture_ = pause.addExpr(new StylePauseTexture(view_));
+      pause.texture_.set(new StylePauseTexture(view_));
       pause.opacity_ = controls.opacity_;
 
 #if 1

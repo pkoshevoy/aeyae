@@ -531,11 +531,11 @@ namespace yae
   {
     fontSize_ = ItemRef::constant(font_.pixelSize());
     supersample_ = ItemRef::constant(1.0);
-    bboxText_ = addExpr(new CalcTextBBox(*this));
-    p_->ready_ = addExpr(new UploadTexture<Text>(*this));
+    bboxText_.set(new CalcTextBBox(*this));
+    p_->ready_.set(new UploadTexture<Text>(*this));
 
-    Item::xContent_ = addExpr(new TextXContent(*this));
-    Item::yContent_ = addExpr(new TextYContent(*this));
+    Item::xContent_.set(new TextXContent(*this));
+    Item::yContent_.set(new TextYContent(*this));
   }
 
   //----------------------------------------------------------------

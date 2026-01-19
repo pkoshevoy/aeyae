@@ -1058,7 +1058,7 @@ namespace yae
       posAnchor_(0),
       posOffset_(0)
     {
-      pos_ = addExpr(new Pos(*this));
+      pos_.set(new Pos(*this));
 
       double v_min = lowerBound_.get();
       double v_max = upperBound_.get();
@@ -2466,8 +2466,7 @@ namespace yae
       ItemRef::reference(title, kPropertyBottom);
     baseline.margins_.
       set_bottom(ItemRef::reference(title, kPropertyFontDescent, 1, -1));
-    baseline.height_ =
-      baseline.addExpr(new CalcGlyphHeight(title, QChar('X')), 1, 2);
+    baseline.height_.set(new CalcGlyphHeight(title, QChar('X')), 1, 2);
 
     // open/close disclosure [>] button:
     toggle.height_ = ItemRef::reference(baseline, kPropertyHeight);
@@ -2476,8 +2475,8 @@ namespace yae
     toggle.anchors_.left_ = ItemRef::reference(baseline, kPropertyLeft);
     toggle.margins_.set_left(ItemRef::reference(baseline, kPropertyHeight));
 
-    expanded.visible_ = expanded.addInverse(new IsCollapsed(view, group));
-    expanded.texture_ = expanded.addExpr(new GetTexExpanded(view));
+    expanded.visible_ = yae::inv(new IsCollapsed(view, group));
+    expanded.texture_.set(new GetTexExpanded(view));
     expanded.height_ = ItemRef::reference(toggle, kPropertyHeight);
     expanded.width_ = ItemRef::reference(expanded, kPropertyHeight);
     expanded.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
@@ -2487,8 +2486,8 @@ namespace yae
     expanded.margins_.
       set_bottom(ItemRef::reference(expanded, kPropertyHeight, 0.125));
 
-    collapsed.visible_ = collapsed.addExpr(new IsCollapsed(view, group));
-    collapsed.texture_ = collapsed.addExpr(new GetTexCollapsed(view));
+    collapsed.visible_.set(new IsCollapsed(view, group));
+    collapsed.texture_.set(new GetTexCollapsed(view));
     collapsed.height_ = ItemRef::reference(toggle, kPropertyHeight);
     collapsed.width_ = ItemRef::reference(collapsed, kPropertyHeight);
     collapsed.anchors_.bottom_ = ItemRef::reference(toggle, kPropertyBottom);
@@ -2516,8 +2515,8 @@ namespace yae
     body.anchors_.top_ = ItemRef::reference(header, kPropertyBottom);
     body.anchors_.left_ = ItemRef::reference(title, kPropertyLeft);
     body.anchors_.right_ = ItemRef::reference(header, kPropertyRight);
-    body.visible_ = collapsed.addInverse(new IsCollapsed(view, group));
-    body.height_ = body.addExpr(new InvisibleItemZeroHeight(body));
+    body.visible_ = yae::inv(new IsCollapsed(view, group));
+    body.height_.set(new InvisibleItemZeroHeight(body));
 
     return group;
   }
@@ -3141,8 +3140,7 @@ namespace yae
         tile.height_ = ItemRef::reference(hidden, kUnitSize, 1.12);
         tile.anchors_.left_ = ItemRef::reference(ch_list, kPropertyLeft);
         tile.anchors_.right_ = ItemRef::reference(ch_list, kPropertyRight);
-        tile.anchors_.top_ = tile.
-          addExpr(new ChannelRowTop(view, ch_list, ch_num));
+        tile.anchors_.top_.set(new ChannelRowTop(view, ch_list, ch_num));
 
         Text & maj_min = tile.addNew<Text>("maj_min");
         maj_min.font_ = style.font_;
@@ -3188,8 +3186,8 @@ namespace yae
 
         // extend EPG to nearest whole hour, both ends:
         row.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
-        row.anchors_.left_ = row.addExpr(new ProgramRowPos(view, ch_num));
-        row.width_ = row.addExpr(new ProgramRowLen(view, ch_num));
+        row.anchors_.left_.set(new ProgramRowPos(view, ch_num));
+        row.width_.set(new ProgramRowLen(view, ch_num));
         row.height_ = ItemRef::reference(tile, kPropertyHeight);
       }
 
@@ -3213,10 +3211,8 @@ namespace yae
           Item & prog = row.add<Item>(prog_ptr);
           prog.anchors_.top_ = ItemRef::reference(tile, kPropertyTop);
           prog.height_ = ItemRef::reference(tile, kPropertyHeight);
-          prog.anchors_.left_ = prog.
-            addExpr(new ProgramTilePos(view, program.gps_time_));
-          prog.width_ = prog.
-            addExpr(new ProgramTileWidth(view, program.duration_));
+          prog.anchors_.left_.set(new ProgramTilePos(view, program.gps_time_));
+          prog.width_.set(new ProgramTileWidth(view, program.duration_));
 
           RoundRect & bg = prog.addNew<RoundRect>("bg");
           bg.anchors_.fill(prog);
@@ -3244,21 +3240,20 @@ namespace yae
             strfmt("%i:%02i", program.tm_.tm_hour, program.tm_.tm_min);
           hhmm.text_ = TVarRef::constant(TVar(hhmm_txt.c_str()));
 
-          hhmm.visible_ = hhmm.addExpr
+          hhmm.visible_.set
             (new DoesItemFit(ItemRef::reference(body, kPropertyLeft),
                              ItemRef::reference(body, kPropertyRight),
                              hhmm));
 
           RoundRect & rec = body.addNew<RoundRect>("rec");
-          rec.width_ = rec.addExpr(new OddRoundUp(bg, kPropertyHeight, 0.25));
+          rec.width_.set(new OddRoundUp(bg, kPropertyHeight, 0.25));
           rec.height_ = ItemRef::reference(rec.width_);
           rec.radius_ = ItemRef::reference(rec.width_, 0.5);
           rec.anchors_.bottom_ = ItemRef::reference(body, kPropertyBottom);
           rec.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
           rec.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-          rec.color_ = rec.
-            addExpr(new RecButtonColor(view, ch_num, program.gps_time_));
-          rec.visible_ = rec.addExpr
+          rec.color_.set(new RecButtonColor(view, ch_num, program.gps_time_));
+          rec.visible_.set
             (new DoesItemFit(ItemRef::reference(body, kPropertyLeft),
                              ItemRef::reference(body, kPropertyRight),
                              rec));
@@ -3310,10 +3305,8 @@ namespace yae
         Item & item = tc.add(item_ptr);
         item.anchors_.top_ = ItemRef::reference(tc, kPropertyTop);
         item.height_ = ItemRef::reference(tc, kPropertyHeight);
-        item.anchors_.left_ = item.
-          addExpr(new ProgramTilePos(view, gps_time));
-        item.width_ = item.
-          addExpr(new ProgramTileWidth(view, 3600));
+        item.anchors_.left_.set(new ProgramTilePos(view, gps_time));
+        item.width_.set(new ProgramTileWidth(view, 3600));
 
         Rectangle & tickmark = item.addNew<Rectangle>("tickmark");
         tickmark.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
@@ -3411,10 +3404,8 @@ namespace yae
         Rectangle & highlight = tc.add<Rectangle>(item_ptr);
         highlight.anchors_.top_ = ItemRef::reference(tc, kPropertyTop);
         highlight.height_ = ItemRef::reference(tc, kPropertyHeight);
-        highlight.anchors_.left_ = highlight.
-          addExpr(new ProgramTilePos(view, gps_t0));
-        highlight.width_ = highlight.
-          addExpr(new ProgramTileWidth(view, gps_t1 - gps_t0));
+        highlight.anchors_.left_.set(new ProgramTilePos(view, gps_t0));
+        highlight.width_.set(new ProgramTileWidth(view, gps_t1 - gps_t0));
         highlight.color_ = style_color_ref(view, &AppStyle::bg_epg_rec_, 0.1);
       }
       else
@@ -3559,8 +3550,7 @@ namespace yae
                                             table,
                                             frequency.c_str(),
                                             title.c_str());
-        group.anchors_.top_ = group.
-          addExpr(new LayoutItemTop(ch_layout_, frequency));
+        group.anchors_.top_.set(new LayoutItemTop(ch_layout_, frequency));
 
         layout.item_ = group.self_.lock();
 
@@ -3597,18 +3587,17 @@ namespace yae
 
               row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
               row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
-              row.anchors_.top_ = row.addExpr(new ListItemTop(view,
-                                                              body,
-                                                              layout.index_,
-                                                              row.id_,
-                                                              0.6));
+              row.anchors_.top_.set(new ListItemTop(view,
+                                                    body,
+                                                    layout.index_,
+                                                    row.id_,
+                                                    0.6));
               row.height_ = ItemRef::reference(hidden, kUnitSize, 0.6);
 #if 1
               Rectangle & bg = row.addNew<Rectangle>("bg");
               bg.anchors_.fill(row);
               bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-              bg.visible_ = bg.
-                addInverse(new IsOddRow(layout.index_, row.id_));
+              bg.visible_ = yae::inv(new IsOddRow(layout.index_, row.id_));
 #endif
 
               CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
@@ -3618,8 +3607,7 @@ namespace yae
               cbox.margins_.set_left(ItemRef::reference(row.height_, 0.33));
               cbox.height_ = ItemRef::reference(row.height_, 0.75);
               cbox.width_ = cbox.height_;
-              cbox.checked_ = cbox.
-                addInverse(new IsBlocked(view, ch_major, ch_minor));
+              cbox.checked_ = yae::inv(new IsBlocked(view, ch_major, ch_minor));
               cbox.on_toggle_.
                 reset(new OnToggleBlocklist(view, ch_major, ch_minor));
 
@@ -3760,17 +3748,17 @@ namespace yae
 
         row.anchors_.left_ = ItemRef::reference(table, kPropertyLeft);
         row.anchors_.right_ = ItemRef::reference(table, kPropertyRight);
-        row.anchors_.top_ = row.addExpr(new ListItemTop(view,
-                                                        table,
-                                                        sch_layout_.index_,
-                                                        row.id_,
-                                                        1.78));
+        row.anchors_.top_.set(new ListItemTop(view,
+                                              table,
+                                              sch_layout_.index_,
+                                              row.id_,
+                                              1.78));
         row.height_ = ItemRef::reference(hidden, kUnitSize, 1.78);
 
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
         bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-        bg.visible_ = bg.addExpr(new IsOddRow(sch_layout_.index_, row.id_));
+        bg.visible_.set(new IsOddRow(sch_layout_.index_, row.id_));
 
         Item & c1 = row.addNew<Item>("c1");
         Item & c2 = row.addNew<Item>("c2");
@@ -3804,8 +3792,7 @@ namespace yae
         cbox.margins_.set_left(ItemRef::reference(row1.height_, 0.33));
         cbox.height_ = ItemRef::reference(row1.height_, 0.75);
         cbox.width_ = cbox.height_;
-        cbox.checked_ = cbox.
-          addInverse(new IsCancelled(view, ch_num, rec.gps_t0_));
+        cbox.checked_ = yae::inv(new IsCancelled(view, ch_num, rec.gps_t0_));
         cbox.on_toggle_.
           reset(new OnToggleSchedule(view, ch_num, rec.gps_t0_));
         Item & maj_min = row1.addNew<Item>("maj_min");
@@ -3885,7 +3872,7 @@ namespace yae
         desc.elide_ = Qt::ElideNone;
         desc.color_ = style_color_ref(view, &AppStyle::fg_epg_, 1.0);
         desc.background_ = style_color_ref(view, &AppStyle::bg_sidebar_, 0.0);
-        desc.text_ = desc.addExpr(new GetRecordingDescription(recording_ptr));
+        desc.text_.set(new GetRecordingDescription(recording_ptr));
       }
 
       rows[rec_id] = layout_ptr;
@@ -3948,8 +3935,8 @@ namespace yae
         row_ptr.reset(new EditWishlistItem(row_id.c_str(), view));
 
         Item & row = body.add<Item>(row_ptr);
-        row.visible_ = row.addExpr(new MatchWishlistItem(*this, wi_key));
-        row.height_ = row.addExpr
+        row.visible_.set(new MatchWishlistItem(*this, wi_key));
+        row.height_.set
           (new Conditional<ItemRef>
            (row.visible_,
             ItemRef::reference(hidden, kUnitSize, 0.6),
@@ -3964,7 +3951,7 @@ namespace yae
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
         bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
-        bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
+        bg.visible_.set(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & icon = row.addNew<RoundRect>("icon");
         icon.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
@@ -4100,8 +4087,8 @@ namespace yae
         row_ptr.reset(new Select(name.c_str(), view, view.sidebar_sel_));
 
         Item & row = body.add<Item>(row_ptr);
-        row.visible_ = row.addExpr(new MatchPlaylistItem(*this, name));
-        row.height_ = row.addExpr
+        row.visible_.set(new MatchPlaylistItem(*this, name));
+        row.height_.set
           (new Conditional<ItemRef>
            (row.visible_,
             ItemRef::reference(hidden, kUnitSize, 0.6),
@@ -4116,7 +4103,7 @@ namespace yae
         bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
         bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
         bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
-        bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
+        bg.visible_.set(new IsSelected(view.sidebar_sel_, row.id_));
 
         RoundRect & chbg = row.addNew<RoundRect>("chbg");
         chbg.radius_ = ItemRef::reference(hidden, kUnitSize, 0.13);
@@ -4174,14 +4161,12 @@ namespace yae
           style_color_ref(view, &AppStyle::bg_epg_scrollbar_, 1.0);
         count.background_ =
           style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.0);
-        count.text_ = count.addExpr(new GetPlaylistSize(view, name));
+        count.text_.set(new GetPlaylistSize(view, name));
         count.text_.disableCaching();
 
         count_bg.anchors_.center(count, -1.0, -1.0);
-        count_bg.width_ = count_bg.
-          addExpr(new OddRoundUp(count, kPropertyWidth, 1.0, 7.0));
-        count_bg.height_ = count_bg.
-          addExpr(new OddRoundUp(count, kPropertyHeight));
+        count_bg.width_.set(new OddRoundUp(count, kPropertyWidth, 1.0, 7.0));
+        count_bg.height_.set(new OddRoundUp(count, kPropertyHeight));
         count_bg.radius_ = ItemRef::scale(count, kPropertyHeight, 0.5);
         count_bg.color_ =
           style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 1.0);
@@ -4284,8 +4269,7 @@ namespace yae
       layout.item_.reset(new Item(playlist_name.c_str()));
       Item & panel = mainview.add<Item>(layout.item_);
       panel.anchors_.fill(mainview);
-      panel.visible_ = panel.
-        addExpr(new IsSelected(sidebar_sel_, playlist_name));
+      panel.visible_.set(new IsSelected(sidebar_sel_, playlist_name));
 
       Item & header = panel.addNew<Item>("header");
       header.anchors_.fill(panel);
@@ -4434,11 +4418,11 @@ namespace yae
 
         row.anchors_.left_ = ItemRef::reference(table, kPropertyLeft);
         row.anchors_.right_ = ItemRef::reference(table, kPropertyRight);
-        row.anchors_.top_ = row.addExpr(new ListItemTop(view,
-                                                        table,
-                                                        layout.index_,
-                                                        row.id_,
-                                                        2.56));
+        row.anchors_.top_.set(new ListItemTop(view,
+                                              table,
+                                              layout.index_,
+                                              row.id_,
+                                              2.56));
         row.height_ = ItemRef::reference(hidden, kUnitSize, 2.56);
 
         PlaybackRecording & playback_ia =
@@ -4448,7 +4432,7 @@ namespace yae
         Rectangle & bg = row.addNew<Rectangle>("bg");
         bg.anchors_.fill(row);
         bg.color_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-        bg.visible_ = bg.addExpr(new IsOddRow(layout.index_, row.id_));
+        bg.visible_.set(new IsOddRow(layout.index_, row.id_));
 
         // thumbnail, title, description:
         Item & inner = row.addNew<Item>("inner");
@@ -4509,8 +4493,8 @@ namespace yae
         badge.elide_ = Qt::ElideRight;
         badge.color_ = style_color_ref(view, &AppStyle::cursor_fg_);
         badge.background_ = style_color_ref(view, &AppStyle::cursor_, 0.0);
-        badge.text_ = badge.addExpr(new GetBadgeText(view, basepath));
-        badge.visible_ = badge.addExpr(new ShowBadge(view, basepath));
+        badge.text_.set(new GetBadgeText(view, basepath));
+        badge.visible_.set(new ShowBadge(view, basepath));
 
         badge_bg.anchors_.fill(badge);
         badge_bg.margins_.
@@ -4603,7 +4587,7 @@ namespace yae
           style_color_ref(view, &AppStyle::fg_epg_);
         nbytes.background_ =
           style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
-        nbytes.text_ = nbytes.addExpr(new GetFileSize(path));
+        nbytes.text_.set(new GetFileSize(path));
         nbytes.text_.disableCaching();
 
         // trashcan:
@@ -4618,8 +4602,7 @@ namespace yae
         trashcan.margins_.
           set_bottom(ItemRef::reference(nbytes, kPropertyFontDescent));
         trashcan.width_ = ItemRef::reference(trashcan, kPropertyHeight);
-        trashcan.texture_ = trashcan.
-          addExpr(new GetTexTrashcan(view, trashcan));
+        trashcan.texture_.set(new GetTexTrashcan(view, trashcan));
 
         trashcan_bg.anchors_.center(trashcan);
         trashcan_bg.width_ = ItemRef::scale(trashcan, kPropertyHeight, 2);
@@ -5378,20 +5361,19 @@ namespace yae
     Rectangle & sep = overview.addNew<Rectangle>("separator");
     sep.color_ = style_color_ref(view, &AppStyle::bg_splitter_);
 
-    Splitter & splitter = overview.
-      add(new Splitter("splitter",
-                       // lower bound:
-                       hidden.addExpr
-                       (new SplitterPos(view, overview, SplitterPos::kLeft)),
-                       // upper bound:
-                       hidden.addExpr
-                       (new SplitterPos(view, overview, SplitterPos::kRight)),
-                       // unit size:
-                       ItemRef::reference(style.unit_size_),
-                       // orientation:
-                       Splitter::kHorizontal,
-                       // initial position:
-                       0.331));
+    Splitter & splitter = overview.add
+      (new Splitter
+       ("splitter",
+        // lower bound:
+        ItemRef(new SplitterPos(view, overview, SplitterPos::kLeft)),
+        // upper bound:
+        ItemRef(new SplitterPos(view, overview, SplitterPos::kRight)),
+        // unit size:
+        ItemRef::reference(style.unit_size_),
+        // orientation:
+        Splitter::kHorizontal,
+        // initial position:
+        0.331));
     splitter.anchors_.inset(sep, -5.0, 0.0);
 
     sep.anchors_.top_ = ItemRef::reference(overview, kPropertyTop);
@@ -5455,7 +5437,7 @@ namespace yae
     bg.anchors_.left_ = ItemRef::reference(sidebar, kPropertyLeft);
     bg.anchors_.right_ = ItemRef::reference(sidebar, kPropertyRight);
     bg.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_, 0.33);
-    bg.visible_ = bg.addExpr(new IsSelected(view.sidebar_sel_, row.id_));
+    bg.visible_.set(new IsSelected(view.sidebar_sel_, row.id_));
 
     Text & label = row.addNew<Text>("label");
     label.font_ = style.font_;
@@ -5565,17 +5547,16 @@ namespace yae
     proxy.editingFinishedOnFocusOut_ = BoolRef::constant(true);
     proxy.placeholder_ = TVarRef::constant(TVar(QObject::tr(placeholder)));
 
-    filter.color_ = filter.addExpr(new ColorWhenFocused(proxy));
+    filter.color_.set(new ColorWhenFocused(proxy));
     filter.color_.disableCaching();
 
     text.anchors_.left_ = ItemRef::reference(filter, kPropertyLeft);
     text.anchors_.right_ = ItemRef::reference(filter, kPropertyRight);
-    text.anchors_.vcenter_ = text.
-      addExpr(new RoundUp(filter, kPropertyVCenter));
+    text.anchors_.vcenter_.set(new RoundUp(filter, kPropertyVCenter));
     text.margins_.set_left(ItemRef::reference(filter, kPropertyHeight));
     text.margins_.set_right(ItemRef::reference(filter, kPropertyHeight, 0.75));
 
-    text.visible_ = text.addExpr(new ShowWhenFocused(proxy, false));
+    text.visible_.set(new ShowWhenFocused(proxy, false));
     text.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
     text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
     text.text_ = TVarRef::reference(proxy, kPropertyText);
@@ -5587,8 +5568,7 @@ namespace yae
 
     edit.anchors_.fill(text);
     edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-    edit.visible_ = edit.
-      addExpr(new ShowWhenFocused(proxy, true));
+    edit.visible_.set(new ShowWhenFocused(proxy, true));
     edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
     edit.background_ = ColorRef::transparent(proxy, kPropertyColorOnFocusBg);
     edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -5729,7 +5709,7 @@ namespace yae
       row.anchors_.left_ = ItemRef::reference(body, kPropertyLeft);
       row.anchors_.right_ = ItemRef::reference(body, kPropertyRight);
       row.visible_ = BoolRef::reference(body, kPropertyVisible);
-      row.height_ = row.addExpr(new InvisibleItemZeroHeight(row));
+      row.height_.set(new InvisibleItemZeroHeight(row));
 
       Item & container = row.addNew<Item>("container");
       container.anchors_.top_ = ItemRef::reference(row, kPropertyTop);
@@ -5778,8 +5758,7 @@ namespace yae
     epg_view_.reset(new Item("epg_view"));
     Item & panel = mainview.add<Item>(epg_view_);
     panel.anchors_.fill(mainview);
-    panel.visible_ = panel.
-      addExpr(new IsSelected(sidebar_sel_, "view_mode_program_guide"));
+    panel.visible_.set(new IsSelected(sidebar_sel_, "view_mode_program_guide"));
 
     Gradient & ch_header = panel.addNew<Gradient>("ch_header");
     ch_header.anchors_.fill(panel);
@@ -5859,21 +5838,19 @@ namespace yae
     chan_bar.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
     vsv.anchors_.right_ = ItemRef::reference(vscrollbar, kPropertyLeft);
     vsv.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
-    hsv.width_ = hsv.addExpr(new CalcDistanceLeftRight(chan_bar, vscrollbar));
+    hsv.width_.set(new CalcDistanceLeftRight(chan_bar, vscrollbar));
 
     // configure vscrollbar slider:
     InputArea & vscrollbar_ia = vscrollbar.addNew<InputArea>("ia");
     vscrollbar_ia.anchors_.fill(vscrollbar);
 
     RoundRect & vslider = vscrollbar.addNew<RoundRect>("vslider");
-    vslider.anchors_.top_ = vslider.
-      addExpr(new CalcSliderTop(vsv, vscrollbar, vslider));
+    vslider.anchors_.top_.set(new CalcSliderTop(vsv, vscrollbar, vslider));
     vslider.anchors_.left_ =
       ItemRef::offset(vscrollbar, kPropertyLeft, 2.5);
     vslider.anchors_.right_ =
       ItemRef::offset(vscrollbar, kPropertyRight, -2.5);
-    vslider.height_ = vslider.
-      addExpr(new CalcSliderHeight(vsv, vscrollbar, vslider));
+    vslider.height_.set(new CalcSliderHeight(vsv, vscrollbar, vslider));
     vslider.radius_ =
       ItemRef::scale(vslider, kPropertyWidth, 0.5);
     vslider.color_ = style_color_ref(view, &AppStyle::fg_epg_scrollbar_);
@@ -5892,10 +5869,8 @@ namespace yae
       ItemRef::offset(hscrollbar, kPropertyTop, 2.5);
     hslider.anchors_.bottom_ =
       ItemRef::offset(hscrollbar, kPropertyBottom, -2.5);
-    hslider.anchors_.left_ = hslider.
-      addExpr(new CalcSliderLeft(hsv, hscrollbar, hslider));
-    hslider.width_ = hslider.
-      addExpr(new CalcSliderWidth(hsv, hscrollbar, hslider));
+    hslider.anchors_.left_.set(new CalcSliderLeft(hsv, hscrollbar, hslider));
+    hslider.width_.set(new CalcSliderWidth(hsv, hscrollbar, hslider));
     hslider.radius_ =
       ItemRef::scale(hslider, kPropertyHeight, 0.5);
     hslider.background_ = hscrollbar.color_;
@@ -5916,8 +5891,7 @@ namespace yae
       timeline.clipContent_ = true;
       timeline.anchors_.fill(epg_header);
       timeline.position_y_ = ItemRef::constant(0.0);
-      timeline.position_x_ = timeline.
-        addExpr(new CalcViewPositionX(hsv, timeline));
+      timeline.position_x_.set(new CalcViewPositionX(hsv, timeline));
       timeline.position_x_.disableCaching();
 
       Item & t = *(timeline.content_);
@@ -5932,8 +5906,7 @@ namespace yae
     now_marker.width_ = ItemRef::constant(1.0);
     now_marker.anchors_.top_ = ItemRef::reference(panel, kPropertyTop);
     now_marker.anchors_.bottom_ = ItemRef::reference(hscrollbar, kPropertyTop);
-    now_marker.anchors_.left_ = now_marker.
-      addExpr(new NowMarkerPos(view, epg_header, hsv));
+    now_marker.anchors_.left_.set(new NowMarkerPos(view, epg_header, hsv));
     now_marker.anchors_.left_.disableCaching();
     now_marker.xExtentDisableCaching();
   }
@@ -5957,7 +5930,7 @@ namespace yae
     Item & panel = mainview.add<Item>(layout.item_);
 
     panel.anchors_.fill(mainview);
-    panel.visible_ = panel.addExpr(new ProgramDetailsVisible(view));
+    panel.visible_.set(new ProgramDetailsVisible(view));
 
     // setup a mouse trap to prevent unintended click-through:
     MouseTrap & mouse_trap = panel.addNew<MouseTrap>("mouse_trap");
@@ -5975,7 +5948,7 @@ namespace yae
     Item & body = content.addNew<Item>("body");
     body.anchors_.top_ = ItemRef::reference(hidden, kUnitSize, 1);
     body.anchors_.left_ = ItemRef::reference(hidden, kUnitSize, 1);
-    body.width_ = body.addExpr(new WidthMinusMargin(view, panel, 2));
+    body.width_.set(new WidthMinusMargin(view, panel, 2));
 
 
     Item & r1 = body.addNew<Item>("r1");
@@ -6133,7 +6106,7 @@ namespace yae
     status.elide_ = Qt::ElideRight;
     status.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.7);
     status.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
-    status.text_ = status.addExpr(new GetProgramDetailsStatus(view));
+    status.text_.set(new GetProgramDetailsStatus(view));
 
     Item & r6 = body.addNew<Item>("r6");
     r6.anchors_.fill(paragraphs);
@@ -6158,7 +6131,7 @@ namespace yae
     tx_toggle.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
     tx_toggle.elide_ = Qt::ElideNone;
     tx_toggle.setAttr("oneline", true);
-    tx_toggle.text_ = tx_toggle.addExpr(new GetProgramDetailsToggleText(view));
+    tx_toggle.text_.set(new GetProgramDetailsToggleText(view));
 
     bg_toggle.anchors_.fill(tx_toggle);
     bg_toggle.margins_.set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
@@ -6243,8 +6216,7 @@ namespace yae
     layout.item_.reset(new Item("channel_view"));
     Item & panel = mainview.add<Item>(layout.item_);
     panel.anchors_.fill(mainview);
-    panel.visible_ = panel.
-      addExpr(new IsSelected(sidebar_sel_, "view_mode_channel_list"));
+    panel.visible_.set(new IsSelected(sidebar_sel_, "view_mode_channel_list"));
 
     layout_scrollview(kScrollbarVertical, view, style, panel,
                       ItemRef::reference(hidden, kUnitSize, 0.33));
@@ -6266,8 +6238,7 @@ namespace yae
     layout.item_.reset(new Item("schedule_view"));
     Item & panel = mainview.add<Item>(layout.item_);
     panel.anchors_.fill(mainview);
-    panel.visible_ = panel.
-      addExpr(new IsSelected(sidebar_sel_, "view_mode_schedule"));
+    panel.visible_.set(new IsSelected(sidebar_sel_, "view_mode_schedule"));
 
     Item & header = panel.addNew<Item>("header");
     header.anchors_.fill(panel);
@@ -6370,7 +6341,7 @@ namespace yae
     wishlist_ui_.reset(new Item("wishlist_ui"));
     Item & panel = mainview.add<Item>(wishlist_ui_);
     panel.anchors_.fill(mainview);
-    panel.visible_ = panel.addExpr(new IsWishlistSelected(sidebar_sel_));
+    panel.visible_.set(new IsWishlistSelected(sidebar_sel_));
 
     Item & body = panel.addNew<Item>("body");
     body.anchors_.fill(panel);
@@ -6390,9 +6361,9 @@ namespace yae
     c2.width_ = ItemRef::reference(hidden, kUnitSize, 0.3);
 
     c3.anchors_.fill(body);
-    c3.anchors_.left_ = c3.addExpr(new RoundUp(c2, kPropertyRight));
-    c3.anchors_.right_ = c3.addExpr(new RoundUp(body, kPropertyRight));
-    c3.width_ = c3.addExpr(new RoundUp(body, kPropertyWidth, 0.75));
+    c3.anchors_.left_.set(new RoundUp(c2, kPropertyRight));
+    c3.anchors_.right_.set(new RoundUp(body, kPropertyRight));
+    c3.width_.set(new RoundUp(body, kPropertyWidth, 0.75));
 
     Item & r1 = body.addNew<Item>("r1");
     r1.anchors_.fill(body);
@@ -6408,8 +6379,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Channel"));
@@ -6440,25 +6410,24 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemChannel(view));
+      text.text_.set(new GetWishlistItemChannel(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.set_right(ItemRef::scale(edit,
                                              kPropertyCursorWidth,
                                              -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -6501,8 +6470,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Title"));
@@ -6533,25 +6501,24 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemTitle(view));
+      text.text_.set(new GetWishlistItemTitle(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.set_right(ItemRef::scale(edit,
                                              kPropertyCursorWidth,
                                              -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -6594,8 +6561,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program Description"));
@@ -6626,25 +6592,24 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.anchors_.right_ = ItemRef::reference(c3, kPropertyRight);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemDescription(view));
+      text.text_.set(new GetWishlistItemDescription(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.set_right(ItemRef::scale(edit,
                                              kPropertyCursorWidth,
                                              -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -6688,8 +6653,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Program(s) Time Span"));
@@ -6727,16 +6691,16 @@ namespace yae
         ItemRef::reference(hidden, kUnitSize, 1.475, 3);
       text_t0_bg.margins_.
         set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_t0_bg.color_ = text_t0_bg.addExpr(new ColorWhenFocused(focus_t0));
+      text_t0_bg.color_.set(new ColorWhenFocused(focus_t0));
       text_t0_bg.color_.disableCaching();
 
       text_t0.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text_t0.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text_t0.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
-      text_t0.visible_ = text_t0.addExpr(new ShowWhenFocused(focus_t0, false));
+      text_t0.visible_.set(new ShowWhenFocused(focus_t0, false));
       text_t0.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text_t0.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text_t0.text_ = text_t0.addExpr(new GetWishlistItemStart(view));
+      text_t0.text_.set(new GetWishlistItemStart(view));
       text_t0.font_ = style.font_;
       text_t0.font_.setWeight(QFont::Normal);
       text_t0.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -6744,8 +6708,7 @@ namespace yae
       edit_t0.anchors_.fill(text_t0);
       edit_t0.margins_.
         set_right(ItemRef::scale(edit_t0, kPropertyCursorWidth, -1.0));
-      edit_t0.visible_ = edit_t0.
-        addExpr(new ShowWhenFocused(focus_t0, true));
+      edit_t0.visible_.set(new ShowWhenFocused(focus_t0, true));
       edit_t0.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit_t0.background_ =
         ColorRef::transparent(focus_t0, kPropertyColorOnFocusBg);
@@ -6783,8 +6746,7 @@ namespace yae
       ItemFocus::singleton().
         setFocusable(view, focus_t1, "wishlist_ui", 4);
 
-      text_t1_bg.anchors_.left_ = text_t1_bg.
-        addExpr(new RoundUp(text_t0_bg, kPropertyRight));
+      text_t1_bg.anchors_.left_.set(new RoundUp(text_t0_bg, kPropertyRight));
       text_t1_bg.anchors_.top_ =
         ItemRef::reference(text_t0_bg, kPropertyTop);
       text_t1_bg.anchors_.bottom_ =
@@ -6792,17 +6754,17 @@ namespace yae
       text_t1_bg.width_ =
         ItemRef::reference(hidden, kUnitSize, 1.475, 3);
       text_t1_bg.margins_.
-        set_left(text_t1_bg.addExpr(new RoundUp(hidden, kUnitSize, 0.05)));
-      text_t1_bg.color_ = text_t1_bg.addExpr(new ColorWhenFocused(focus_t1));
+        set_left(ItemRef(new RoundUp(hidden, kUnitSize, 0.05)));
+      text_t1_bg.color_.set(new ColorWhenFocused(focus_t1));
       text_t1_bg.color_.disableCaching();
 
       text_t1.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text_t1.anchors_.left_ = ItemRef::offset(text_t1_bg, kPropertyLeft, 3);
       text_t1.width_ = ItemRef::reference(hidden, kUnitSize, 1.475);
-      text_t1.visible_ = text_t1.addExpr(new ShowWhenFocused(focus_t1, false));
+      text_t1.visible_.set(new ShowWhenFocused(focus_t1, false));
       text_t1.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text_t1.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text_t1.text_ = text_t1.addExpr(new GetWishlistItemEnd(view));
+      text_t1.text_.set(new GetWishlistItemEnd(view));
       text_t1.font_ = style.font_;
       text_t1.font_.setWeight(QFont::Normal);
       text_t1.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
@@ -6810,8 +6772,7 @@ namespace yae
       edit_t1.anchors_.fill(text_t1);
       edit_t1.margins_.
         set_right(ItemRef::scale(edit_t1, kPropertyCursorWidth, -1.0));
-      edit_t1.visible_ = edit_t1.
-        addExpr(new ShowWhenFocused(focus_t1, true));
+      edit_t1.visible_.set(new ShowWhenFocused(focus_t1, true));
       edit_t1.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit_t1.background_ =
         ColorRef::transparent(focus_t1, kPropertyColorOnFocusBg);
@@ -6856,8 +6817,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Weekdays"));
@@ -6881,20 +6841,17 @@ namespace yae
         btn.anchors_.left_ =
           ItemRef::offset(*prev, kPropertyRight, i ? 0 : -3);
         btn.width_ = ItemRef::reference(hidden, kUnitSize, 0.9667, 1.667);
-        btn.color_ = btn.
-          addExpr(new WishlistWeekdayBtnColor(view, wday));
+        btn.color_.set(new WishlistWeekdayBtnColor(view, wday));
 
         if (i > 0)
         {
-          btn.margins_.
-            set_left(btn.addExpr(new RoundUp(hidden, kUnitSize, 0.05)));
+          btn.margins_.set_left(ItemRef(new RoundUp(hidden, kUnitSize, 0.05)));
         }
 
         Text & text = btn.addNew<Text>("text");
         text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
         text.anchors_.hcenter_ = ItemRef::reference(btn, kPropertyHCenter);
-        text.color_ = text.
-          addExpr(new WishlistWeekdayTxtColor(view, wday));
+        text.color_.set(new WishlistWeekdayTxtColor(view, wday));
         text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
         text.text_ = TVarRef::constant(TVar(name));
         text.font_ = style.font_;
@@ -6935,8 +6892,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Exact Date"));
@@ -6967,24 +6923,23 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemDate(view));
+      text.text_.set(new GetWishlistItemDate(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ =
         ColorRef::transparent(focus, kPropertyColorOnFocusBg);
@@ -7028,8 +6983,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Min. Duration"));
@@ -7060,24 +7014,23 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemMinDuration(view));
+      text.text_.set(new GetWishlistItemMinDuration(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -7121,8 +7074,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Max. Duration"));
@@ -7153,24 +7105,23 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemMaxDuration(view));
+      text.text_.set(new GetWishlistItemMaxDuration(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -7214,8 +7165,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Max. Recordings"));
@@ -7246,24 +7196,23 @@ namespace yae
       text.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       text.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
       text.width_ = ItemRef::reference(hidden, kUnitSize, 3);
-      text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+      text.visible_.set(new ShowWhenFocused(focus, false));
       text.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
-      text.text_ = text.addExpr(new GetWishlistItemMax(view));
+      text.text_.set(new GetWishlistItemMax(view));
       text.font_ = style.font_;
       text.font_.setWeight(QFont::Normal);
       text.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
 
       text_bg.anchors_.offset(text, -3, 3, -3, 1);
       text_bg.margins_.set_top(ItemRef::reference(hidden, kUnitSize, -0.03));
-      text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+      text_bg.color_.set(new ColorWhenFocused(focus));
       text_bg.color_.disableCaching();
 
       edit.anchors_.fill(text);
       edit.margins_.
         set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-      edit.visible_ = edit.
-        addExpr(new ShowWhenFocused(focus, true));
+      edit.visible_.set(new ShowWhenFocused(focus, true));
       edit.color_ = style_color_ref(view, &AppStyle::fg_epg_);
       edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
       edit.cursorColor_ = style_color_ref(view, &AppStyle::cursor_, 1.0);
@@ -7306,8 +7255,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Skip Duplicates"));
@@ -7317,9 +7265,9 @@ namespace yae
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
-      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.height_.set(new OddRoundUp(label, kPropertyHeight));
       cbox.width_ = cbox.height_;
-      cbox.checked_ = cbox.addExpr(new GetWishlistItemSkipDuplicates(view));
+      cbox.checked_.set(new GetWishlistItemSkipDuplicates(view));
       cbox.on_toggle_.reset(new OnToggleSkipDuplicates(view));
 
       Text & note = row.addNew<Text>("note");
@@ -7349,8 +7297,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Do Not Record"));
@@ -7360,9 +7307,9 @@ namespace yae
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
-      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.height_.set(new OddRoundUp(label, kPropertyHeight));
       cbox.width_ = cbox.height_;
-      cbox.checked_ = cbox.addExpr(new GetWishlistItemDoNotRecord(view));
+      cbox.checked_.set(new GetWishlistItemDoNotRecord(view));
       cbox.on_toggle_.reset(new OnToggleWishlistItemDoNotRecord(view));
 
       Text & note = row.addNew<Text>("note");
@@ -7393,8 +7340,7 @@ namespace yae
       label.font_ = style.font_;
       label.font_.setWeight(QFont::Normal);
       label.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.312);
-      label.anchors_.bottom_ = label.
-        addExpr(new RoundUp(row, kPropertyVCenter));
+      label.anchors_.bottom_.set(new RoundUp(row, kPropertyVCenter));
       label.anchors_.right_ = ItemRef::reference(c1, kPropertyRight);
       label.elide_ = Qt::ElideNone;
       label.text_ = TVarRef::constant(TVar("Enabled"));
@@ -7404,9 +7350,9 @@ namespace yae
       CheckboxItem & cbox = row.add(new CheckboxItem("cbox", view));
       cbox.anchors_.bottom_ = ItemRef::reference(label, kPropertyBottom);
       cbox.anchors_.left_ = ItemRef::reference(c3, kPropertyLeft);
-      cbox.height_ = cbox.addExpr(new OddRoundUp(label, kPropertyHeight));
+      cbox.height_.set(new OddRoundUp(label, kPropertyHeight));
       cbox.width_ = cbox.height_;
-      cbox.checked_ = cbox.addExpr(new GetWishlistItemEnabled(view));
+      cbox.checked_.set(new GetWishlistItemEnabled(view));
       cbox.on_toggle_.reset(new OnToggleWishlistItemEnabled(view));
 
       Text & note = row.addNew<Text>("note");
@@ -7452,8 +7398,7 @@ namespace yae
       tx_remove.text_ = TVarRef::constant(TVar("Remove"));
 
       bg_remove.anchors_.fill(tx_remove);
-      bg_remove.visible_ =
-        bg_remove.addExpr(new RemoveWishlistItemVisible(view));
+      bg_remove.visible_.set(new RemoveWishlistItemVisible(view));
       bg_remove.margins_.
         set_left(ItemRef::reference(hidden, kUnitSize, -0.5));
       bg_remove.margins_.
@@ -7502,8 +7447,7 @@ namespace yae
       tx_close.fontSize_ = ItemRef::reference(hidden, kUnitSize, 0.5);
       tx_close.elide_ = Qt::ElideNone;
       tx_close.setAttr("oneline", true);
-      tx_close.text_ = tx_close.
-        addExpr(new GetWishlistItemCloseBtnText(view));
+      tx_close.text_.set(new GetWishlistItemCloseBtnText(view));
 
       bg_close.anchors_.fill(tx_close);
       bg_close.margins_.

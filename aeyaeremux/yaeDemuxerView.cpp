@@ -645,10 +645,8 @@ namespace yae
     GopItem & root = gops.add<GopItem>(new GopItem("gop", gop, outputFormat));
     root.setContext(view);
     root.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
-    root.anchors_.top_ =
-      root.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
-    root.anchors_.bottom_ =
-      root.addExpr(new GetFramePosY(view, row + 1));
+    root.anchors_.top_.set(new GetFramePosY(view, row), 1, kFrameOffset);
+    root.anchors_.bottom_.set(new GetFramePosY(view, row + 1));
 
     std::vector<std::size_t> lut;
     get_pts_order_lut(gop, lut);
@@ -661,10 +659,8 @@ namespace yae
       RoundRect & frame = root.addNew<RoundRect>("frame");
       frame.anchors_.top_ = ItemRef::reference(root, kPropertyTop);
       frame.anchors_.bottom_ = ItemRef::reference(root, kPropertyBottom);
-      frame.anchors_.left_ =
-        frame.addExpr(new GetFramePosX(view, k), 1, kFrameOffset);
-      frame.anchors_.right_ =
-        frame.addExpr(new GetFramePosX(view, k + 1));
+      frame.anchors_.left_.set(new GetFramePosX(view, k), 1, kFrameOffset);
+      frame.anchors_.right_.set(new GetFramePosX(view, k + 1));
       frame.radius_ = ItemRef::constant(kFrameRadius);
 
       frame.background_ = style_color_ref(view, &ItemViewStyle::bg_, 0);
@@ -687,18 +683,18 @@ namespace yae
       pts.font_ = style.font_large_;
       pts.anchors_.bottom_ = ItemRef::reference(frame, kPropertyBottom, 1, -5);
       pts.anchors_.left_ = ItemRef::reference(frame, kPropertyLeft, 1, 5);
-      pts.visible_ = pts.addExpr(new HasFramePts(video));
-      pts.text_ = pts.addExpr(new GetFramePts(video));
+      pts.visible_.set(new HasFramePts(video));
+      pts.text_.set(new GetFramePts(video));
       pts.fontSize_ = dts.fontSize_;
       pts.elide_ = Qt::ElideNone;
       pts.color_ = ColorRef::constant(style.fg_timecode_.get().opaque());
       pts.background_ = frame.color_;
 
       Timespan span(track.pts_[j], track.pts_[j] + track.dur_[j]);
-      frame.color_ = frame.
-        addExpr(new FrameColor(view, span, video,
-                               style.cursor_.get(),
-                               style.scrollbar_.get()));
+      frame.color_.set
+        (new FrameColor(view, span, video,
+                        style.cursor_.get(),
+                        style.scrollbar_.get()));
       frame.color_.disableCaching();
 
       // highlight the GOP start (the keyframe, usually)
@@ -803,10 +799,10 @@ namespace yae
       frame_(0),
       column_(0)
     {
-      anchors_.top_ = addExpr(new GetCursorPosY(*this), 1, kFrameOffset);
-      anchors_.bottom_ = addExpr(new GetCursorPosY(*this, 1));
-      anchors_.left_ = addExpr(new GetCursorPosX(*this), 1, kFrameOffset);
-      anchors_.right_ = addExpr(new GetCursorPosX(*this, 1));
+      anchors_.top_.set(new GetCursorPosY(*this), 1, kFrameOffset);
+      anchors_.bottom_.set(new GetCursorPosY(*this, 1));
+      anchors_.left_.set(new GetCursorPosX(*this), 1, kFrameOffset);
+      anchors_.right_.set(new GetCursorPosX(*this, 1));
     }
 
     //----------------------------------------------------------------
@@ -1017,7 +1013,7 @@ namespace yae
   {
     Item & root = container.addNew<Item>("clip_layout");
     root.anchors_.fill(container);
-    root.visible_ = root.addExpr(new IsCurrentClip(view, clip_ptr));
+    root.visible_.set(new IsCurrentClip(view, clip_ptr));
 
     const Clip & clip = *clip_ptr;
     const Timeline::Track & track = clip.get_track_timeline();
@@ -1131,12 +1127,9 @@ namespace yae
       EndFrameItem & end = gops.add<EndFrameItem>
         (new EndFrameItem("end", track.dts_.size()));
       end.anchors_.left_ = ItemRef::reference(gops, kPropertyLeft);
-      end.anchors_.right_ =
-        end.addExpr(new GetFramePosX(view, 1));
-      end.anchors_.top_ =
-        end.addExpr(new GetFramePosY(view, row), 1, kFrameOffset);
-      end.anchors_.bottom_ =
-        end.addExpr(new GetFramePosY(view, row + 1));
+      end.anchors_.right_.set(new GetFramePosX(view, 1));
+      end.anchors_.top_.set(new GetFramePosY(view, row), 1, kFrameOffset);
+      end.anchors_.bottom_.set(new GetFramePosY(view, row + 1));
 
       // save the layout so it can be reused:
       view.gops_[clip.demuxer_] = reuse;
@@ -1320,23 +1313,23 @@ namespace yae
     ItemFocus::singleton().
       setFocusable(view, focus, "remux_layout", focus_index);
 
-    text.anchors_.vcenter_ =
-      text.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
+    text.anchors_.vcenter_.set
+      (new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
 
-    text.visible_ = text.addExpr(new ShowWhenFocused(focus, false));
+    text.visible_.set(new ShowWhenFocused(focus, false));
     text.color_ = style.fg_timecode_;
     text.background_ = ColorRef::transparent(focus, kPropertyColorNoFocusBg);
-    text.text_ = text.addExpr(new GetTimecodeText(model, index, field));
+    text.text_.set(new GetTimecodeText(model, index, field));
     text.font_ = style.font_fixed_;
     text.fontSize_ = ItemRef::scale(root, kPropertyHeight, 0.285);
 
     text_bg.anchors_.offset(text, -3, 3, -3, 3);
-    text_bg.color_ = text_bg.addExpr(new ColorWhenFocused(focus));
+    text_bg.color_.set(new ColorWhenFocused(focus));
     text_bg.color_.disableCaching();
 
     edit.anchors_.fill(text);
     edit.margins_.set_right(ItemRef::scale(edit, kPropertyCursorWidth, -1.0));
-    edit.visible_ = edit.addExpr(new ShowWhenFocused(focus, true));
+    edit.visible_.set(new ShowWhenFocused(focus, true));
 
     edit.color_ = style.fg_timecode_;
     edit.background_ = ColorRef::transparent(focus, kPropertyColorOnFocusBg);
@@ -1568,24 +1561,25 @@ namespace yae
 
     Rectangle & ra = timeline.addNew<Rectangle>("ra");
     ra.anchors_.left_ = ItemRef::reference(timeline, kPropertyLeft);
-    ra.anchors_.right_ = ra.addExpr(new TimelinePos(timeline,
-                                                    model,
-                                                    index,
-                                                    &Timespan::t0_));
+    ra.anchors_.right_.set
+      (new TimelinePos(timeline,
+                       model,
+                       index,
+                       &Timespan::t0_));
     ra.anchors_.vcenter_ = ItemRef::reference(timeline, kPropertyVCenter);
-    ra.height_ =
-      ra.addExpr(new ClipTimelineHeight(view, *root.parent_, timeline));
-    // ra.addExpr(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
+    ra.height_.set(new ClipTimelineHeight(view, *root.parent_, timeline));
+    // ra.set(new OddRoundUp(root, kPropertyHeight, 0.05, -1));
     // ra.color_ = style.cursor_;
     ra.color_ = style_color_ref(view, &ItemViewStyle::cursor_, 0, 0.75);
     // ra.opacity_ = shadow.opacity_;
 
     Rectangle & rb = timeline.addNew<Rectangle>("rb");
     rb.anchors_.left_ = ItemRef::reference(ra, kPropertyRight);
-    rb.anchors_.right_ = rb.addExpr(new TimelinePos(timeline,
-                                                    model,
-                                                    index,
-                                                    &Timespan::t1_));
+    rb.anchors_.right_.set
+      (new TimelinePos(timeline,
+                       model,
+                       index,
+                       &Timespan::t1_));
     rb.anchors_.vcenter_ = ra.anchors_.vcenter_;
     rb.height_ = ra.height_;
     rb.color_ = style.timeline_included_;
@@ -1613,7 +1607,7 @@ namespace yae
       (style_color_ref(view, &ItemViewStyle::timeline_included_, 0, 1));
     p0.background_ =
       (style_color_ref(view, &ItemViewStyle::timeline_included_, 0));
-    p0.visible_ = p0.addExpr(new IsMouseOverItem(view, *root.parent_));
+    p0.visible_.set(new IsMouseOverItem(view, *root.parent_));
     // p0.opacity_ = shadow.opacity_;
 
     RoundRect & p1 = timeline.addNew<RoundRect>("p1");
@@ -1662,10 +1656,10 @@ namespace yae
 
     Text & src_name = root.addNew<Text>("src_name");
     src_name.anchors_.left_ = ItemRef::reference(root, kPropertyHeight, 1.6);
-    src_name.anchors_.vcenter_ =
-      src_name.addExpr(new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
+    src_name.anchors_.vcenter_.set
+      (new OddRoundUp(root, kPropertyVCenter), 1.0, -1);
     src_name.width_ = ItemRef::reference(style.row_height_, 10.0);
-    src_name.text_ = src_name.addExpr(new GetClipName(model, index));
+    src_name.text_.set(new GetClipName(model, index));
     src_name.elide_ = Qt::ElideMiddle;
     // src_name.font_ = style.font_small_;
     src_name.color_ = style.fg_timecode_;
@@ -1966,10 +1960,8 @@ namespace yae
     underline.anchors_.left_ = ItemRef::offset(txt, kPropertyLeft, -2);
     underline.anchors_.right_ = ItemRef::offset(txt, kPropertyRight, 2);
     underline.anchors_.top_ = ItemRef::reference(txt, kPropertyBottom);
-    underline.margins_.
-      set_top(underline.addExpr(new GetFontDescent(txt), -1.0, 1));
-    underline.height_ = underline.addExpr
-      (new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
+    underline.margins_.set_top(ItemRef(new GetFontDescent(txt), -1.0, 1));
+    underline.height_.set(new OddRoundUp(btn, kPropertyHeight, 0.05, -1));
   }
 
   //----------------------------------------------------------------
@@ -2063,19 +2055,19 @@ namespace yae
 
       Item & sources = root.addNew<Item>("sources");
       sources.anchors_.fill(bg);
-      sources.visible_ = sources.addExpr(new In<RemuxView::kSourceMode>(view));
+      sources.visible_.set(new In<RemuxView::kSourceMode>(view));
       sources.visible_.disableCaching();
       layout_scrollview(kScrollbarVertical, view, style, sources,
                         kScrollbarVertical);
 
       Item & layout = root.addNew<Item>("layout");
       layout.anchors_.fill(bg);
-      layout.visible_ = layout.addExpr(new In<RemuxView::kLayoutMode>(view));
+      layout.visible_.set(new In<RemuxView::kLayoutMode>(view));
       layout.visible_.disableCaching();
 
       Item & preview = root.addNew<Item>("preview");
       preview.anchors_.fill(bg);
-      preview.visible_ = layout.addExpr(new In<RemuxView::kPreviewMode>(view));
+      preview.visible_.set(new In<RemuxView::kPreviewMode>(view));
       preview.visible_.disableCaching();
 
       PlayerUxItem & pl_ux = root.add<PlayerUxItem>(view.pl_ux_);
@@ -2083,7 +2075,7 @@ namespace yae
 
       Item & output = root.addNew<Item>("export");
       output.anchors_.fill(bg);
-      output.visible_ = output.addExpr(new In<RemuxView::kExportMode>(view));
+      output.visible_.set(new In<RemuxView::kExportMode>(view));
       output.visible_.disableCaching();
       {
         RoundRect & btn = output.addNew<RoundRect>("export_btn");
@@ -2170,9 +2162,9 @@ namespace yae
       // layout the controls:
       controls.anchors_.fill(root);
       controls.anchors_.top_.reset();
-      controls.visible_ = controls.addInverse(new IsFullscreen(view));
+      controls.visible_ = yae::inv(new IsFullscreen(view));
 
-      controls.height_ = controls.addExpr
+      controls.height_.set
         (new Conditional<ItemRef>
          (controls.visible_,
           ItemRef::reference(hidden.row_height_with_odd_roundup_),
@@ -3054,7 +3046,7 @@ namespace yae
     tag.fontSize_ = ItemRef::reference(style.row_height_, 0.2875);
     tag.elide_ = Qt::ElideNone;
     tag.color_ = ColorRef::reference(plot, kPropertyColor);
-    tag.opacity_  = tag.addExpr(new PlotOpacity(plot));
+    tag.opacity_.set(new PlotOpacity(plot));
 
     TogglePlot & toggle = item.
       add(new TogglePlot((plot.id_ + ".toggle").c_str(), view, plot));
@@ -3371,7 +3363,7 @@ namespace yae
     cbox.anchors_.vcenter_ = ItemRef::reference(row, kPropertyVCenter);
     cbox.height_ = ItemRef::scale(style.row_height_, 0.75);
     cbox.width_ = cbox.height_;
-    cbox.checked_ = cbox.addInverse(new IsRedacted(view, src_name, track_id));
+    cbox.checked_ = yae::inv(new IsRedacted(view, src_name, track_id));
     cbox.on_toggle_.reset(new OnToggleRedacted(view, src_name, track_id));
 
     Text & text = row.addNew<Text>("text");
@@ -3591,7 +3583,7 @@ namespace yae
     Item & item = ssv_content.addNew<Item>(name.c_str());
     source_item_[name] = item.self_.lock();
     item.anchors_.left_ = ItemRef::reference(ssv_content, kPropertyLeft);
-    item.anchors_.top_ = item.addExpr(new SourceItemTop(view, name));
+    item.anchors_.top_.set(new SourceItemTop(view, name));
 
     Rectangle & bg = item.addNew<Rectangle>("bg");
 
@@ -3644,8 +3636,7 @@ namespace yae
       prog.height_ = ItemRef::reference(style.row_height_, rows_per_plot);
       prog.anchors_.left_ = ItemRef::reference(item, kPropertyLeft);
       prog.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
-      prog.anchors_.bottom_ = prog.
-        addExpr(new PlotBottomPos(tracks, tags, prog));
+      prog.anchors_.bottom_.set(new PlotBottomPos(tracks, tags, prog));
 
 
       Scrollview & psv = layout_scrollview(kScrollbarHorizontal,
@@ -3666,8 +3657,7 @@ namespace yae
       const Timespan & timespan = timeline.bbox_dts_;
       double timespan_sec = timespan.duration_sec();
 
-      ItemRef plot_item_width = psv_content.addExpr
-        (new GetPlotItemWidth(view, timespan_sec));
+      ItemRef plot_item_width(new GetPlotItemWidth(view, timespan_sec));
 
       TSegmentPtr timeline_domain(new Segment(timespan.t0_.sec(),
                                               timespan_sec));
@@ -3736,7 +3726,7 @@ namespace yae
     bg.anchors_.top_ = ItemRef::reference(item, kPropertyTop);
     bg.anchors_.right_ = ItemRef::reference(ssv, kPropertyRight);
     bg.anchors_.bottom_ = ItemRef::reference(plots, kPropertyBottom);
-    bg.visible_ = bg.addExpr(new SourceItemVisible(view, name));
+    bg.visible_.set(new SourceItemVisible(view, name));
     bg.opacity_ = ItemRef::constant(0.25);
 
     dataChanged();
@@ -3774,15 +3764,14 @@ namespace yae
     row.anchors_.left_ = ItemRef::reference(clip_list, kPropertyLeft);
     row.anchors_.right_ = ItemRef::reference(clip_list, kPropertyRight);
     row.anchors_.top_ = (index > 0) ?
-      row.addExpr(new OddRoundUp(*(clip_list.children_[index - 1]),
-                                 kPropertyBottom)) :
-      row.addExpr(new OddRoundUp(clip_list, kPropertyTop));
-    row.height_ =
-      row.addExpr(new OddRoundUp(clips_add, kPropertyHeight));
+      ItemRef(new OddRoundUp(*(clip_list.children_[index - 1]),
+                             kPropertyBottom)) :
+      ItemRef(new OddRoundUp(clip_list, kPropertyTop));
+    row.height_.set(new OddRoundUp(clips_add, kPropertyHeight));
 
     Rectangle & bg = row.addNew<Rectangle>("bg");
     bg.anchors_.fill(row);
-    bg.color_ = bg.addExpr(new ClipItemColor(model, view, index, row));
+    bg.color_.set(new ClipItemColor(model, view, index, row));
     bg.color_.disableCaching();
 
     layout_clip(model, view, *style_, row, index);

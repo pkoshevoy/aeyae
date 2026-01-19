@@ -491,7 +491,7 @@ namespace yae
   {
     fontSize_ = ItemRef::constant(font_.pointSizeF());
     supersample_ = ItemRef::constant(1.0);
-    p_->ready_ = addExpr(new UploadTexture<TextInput>(*this));
+    p_->ready_.set(new UploadTexture<TextInput>(*this));
 
     cursorWidth_ = ItemRef::constant(1);
 

@@ -90,12 +90,12 @@ namespace yae
     // in order to handle coordinate system transformations:
     xContentLocal_ = Item::xContent_;
     yContentLocal_ = Item::yContent_;
-    Item::xContent_ = addExpr(new TransformedXContent(*this));
-    Item::yContent_ = addExpr(new TransformedYContent(*this));
+    Item::xContent_.set(new TransformedXContent(*this));
+    Item::yContent_.set(new TransformedYContent(*this));
     Item::xExtent_.set(Item::xContent_);
     Item::yExtent_.set(Item::yContent_);
 
-    uAxis_ = addExpr(new GetUAxis(rotation_));
+    uAxis_.set(new GetUAxis(rotation_));
   }
 
   //----------------------------------------------------------------
