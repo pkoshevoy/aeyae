@@ -5558,7 +5558,7 @@ namespace yae
 
     text.visible_.set(new ShowWhenFocused(proxy, false));
     text.color_ = style_color_ref(view, &AppStyle::fg_epg_, 0.5);
-    text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_);
+    text.background_ = style_color_ref(view, &AppStyle::bg_epg_tile_, 0.0);
     text.text_ = TVarRef::reference(proxy, kPropertyText);
     text.font_ = style.font_;
     text.font_.setWeight(QFont::Bold);
