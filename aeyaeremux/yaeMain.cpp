@@ -400,6 +400,7 @@ mainMayThrowException(int argc, char ** argv)
                        QSurfaceFormat::DeprecatedFunctions);
     // fmt.setVersion(4, 2);
     fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
+    fmt.setRenderableType(QSurfaceFormat::OpenGL);
     QSurfaceFormat::setDefaultFormat(fmt);
   }
   // yae::Application::setAttribute(Qt::AA_UseDesktopOpenGL, true);

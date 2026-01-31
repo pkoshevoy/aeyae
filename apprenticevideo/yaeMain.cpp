@@ -220,10 +220,7 @@ mainMayThrowException(int argc, char ** argv)
 #if (QT_VERSION >= QT_VERSION_CHECK(5, 0, 0))
   // setup opengl:
   {
-    QSurfaceFormat fmt(
-#ifndef NDEBUG
-                       QSurfaceFormat::DebugContext |
-#endif
+    QSurfaceFormat fmt(// QSurfaceFormat::DebugContext |
                        QSurfaceFormat::DeprecatedFunctions);
     // fmt.setVersion(4, 2);
     fmt.setProfile(QSurfaceFormat::CompatibilityProfile);
