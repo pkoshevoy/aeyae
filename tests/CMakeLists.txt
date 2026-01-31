@@ -1,5 +1,6 @@
 find_package(Threads REQUIRED)
 
+set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS

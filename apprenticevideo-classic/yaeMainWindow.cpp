@@ -20,7 +20,9 @@
 #include <math.h>
 
 // GLEW:
+#ifdef YAE_USE_QGL_WIDGET
 #include <GL/glew.h>
+#endif
 
 YAE_DISABLE_DEPRECATION_WARNINGS
 
