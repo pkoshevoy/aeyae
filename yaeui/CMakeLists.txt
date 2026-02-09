@@ -254,11 +254,12 @@ if (APPLE)
     martinkahr-apple_remote_control/RemoteControl.h
     martinkahr-apple_remote_control/RemoteControl.m)
 else ()
-#  include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
-  find_package(portaudio REQUIRED)
-  set(TARGET_LIBS ${TARGET_LIBS}
-      ${PORTAUDIO_LIBRARIES}
-      )
+  find_package(portaudio)
+  if (PORTAUDIO_FOUND)
+    set(TARGET_LIBS ${TARGET_LIBS} ${PORTAUDIO_LIBRARIES})
+  else()
+    include("${aeyae_SOURCE_DIR}/add_portaudio.cmake")
+  endif()
   set(project_sources
     ${project_sources}
     yaePortaudioRenderer.h
