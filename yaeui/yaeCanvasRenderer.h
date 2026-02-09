@@ -47,6 +47,8 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 #endif
 #endif
 
+#include <GL/glext.h>
+
 #ifdef YAE_USE_QGL_WIDGET
 // GLEW:
 #include <GL/glew.h>

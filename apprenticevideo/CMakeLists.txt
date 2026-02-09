@@ -68,15 +68,6 @@ if (WIN32 AND NOT (MINGW OR MSYS))
   include_directories(AFTER msIntTypes)
 endif ()
 
-
-
-set(GLEW_DIR "$ENV{GLEW_DIR}"
-  CACHE
-  PATH "root path for GLEW lib/ and include/ folders")
-find_library(GLEW_LIBRARY GLEW
-  PATHS ${GLEW_DIR}/lib ${FFMPEG_LIBS_PATH}
-  DOC "GLEW library")
-
 set(project_moc_hxx
   yaeMainWidget.h
   yaeMainWindow.h
@@ -224,7 +215,6 @@ set(TARGET_LIBS
   aeyae
   ${TARGET_LIBS}
   ${LIBASS_LIBRARY}
-  ${GLEW_LIBRARY}
   ${QT_QTOPENGL_LIBRARY}
   ${QT_LIBRARIES}
   ${OPENGL_LIBRARIES}
