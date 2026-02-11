@@ -55,10 +55,14 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 #define GL_GLEXT_PROTOTYPES
 #include <QtOpenGL>
 #include <QOpenGLFunctions>
-#endif
 
 // for APIENTRYP etc...
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#else
 #include <GL/glext.h>
+#endif
+#endif
 
 
 //----------------------------------------------------------------
