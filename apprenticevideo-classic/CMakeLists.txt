@@ -446,7 +446,7 @@ if (APPLE)
     MACOSX_BUNDLE_ICON_FILE "${PROGNAME}.icns"
     MACOSX_BUNDLE_GUI_IDENTIFIER "com.pavelkoshevoy.${PROGNAME}"
     MACOSX_BUNDLE_BUNDLE_NAME "${PROGNAME}"
-    ALLOW_LSUIELEMENT "${ALLOW_LSUIELEMENT}"
+    MACOSX_BUNDLE_LSUIELEMENT "${ALLOW_LSUIELEMENT}"
     MACOSX_BUNDLE_INFO_PLIST "${PROJECT_SOURCE_DIR}/${PROGNAME}.plist.in")
 
   set_source_files_properties("${PROJECT_SOURCE_DIR}/${PROGNAME}.icns"
@@ -489,7 +489,6 @@ if (WIN32)
   if (MINGW OR MSYS)
     string(REPLACE "/" "\\\\" NATIVE_PROGRAM_ICON
       "${PROJECT_SOURCE_DIR}/apprenticevideo_classic.ico")
-    string(REPLACE "/" "\\\\" NATIVE_DEPENDS_EXE "${DEPENDENCY_WALKER}")
     string(REPLACE "/" "\\\\" NATIVE_ALLOWED_PATHS "${ALLOWED_PATHS}")
     string(REPLACE "/" "\\\\" NATIVE_CANDLE_EXE "${WIX_CANDLE}")
     string(REPLACE "/" "\\\\" NATIVE_LIGHT_EXE "${WIX_LIGHT}")
@@ -497,24 +496,27 @@ if (WIN32)
   else (MINGW OR MSYS)
     file(TO_NATIVE_PATH "${PROJECT_SOURCE_DIR}/apprenticevideo_classic.ico"
       NATIVE_PROGRAM_ICON)
-    file(TO_NATIVE_PATH "${DEPENDENCY_WALKER}" NATIVE_DEPENDS_EXE)
     file(TO_NATIVE_PATH "${ALLOWED_PATHS}" NATIVE_ALLOWED_PATHS)
     file(TO_NATIVE_PATH "${WIX_CANDLE}" NATIVE_CANDLE_EXE)
     file(TO_NATIVE_PATH "${WIX_LIGHT}" NATIVE_LIGHT_EXE)
     file(TO_NATIVE_PATH "${VC_CRT_MSM}" NATIVE_VC_CRT_MSM)
   endif ()
 
+  set(WIX_WRAPPER_OUTPUT
+    "${PROJECT_BINARY_DIR}/${PROGNAME}-${PROJ_WC_REVISION}.msi"
+    )
+  set_source_files_properties(${WIX_WRAPPER_OUTPUT} PROPERTIES SYMBOLIC TRUE)
+
   add_custom_target("create_apprenticevideo_classic_installer"
     ALL DEPENDS
     wixWrapper
-    "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
+    ${WIX_WRAPPER_OUTPUT}
     )
 
-  add_custom_command(OUTPUT "${PROJECT_BINARY_DIR}/depends-exe-log.txt"
+  add_custom_command(OUTPUT ${WIX_WRAPPER_OUTPUT}
     COMMAND wixWrapper
     ARGS
     "-what" "apprenticevideo-classic"
-    "-dep-walker" "${NATIVE_DEPENDS_EXE}"
     "-allow" "$<TARGET_FILE_DIR:${PROGNAME}>;${NATIVE_ALLOWED_PATHS}"
     "-wix-candle" "${NATIVE_CANDLE_EXE}"
     "-wix-light" "${NATIVE_LIGHT_EXE}"

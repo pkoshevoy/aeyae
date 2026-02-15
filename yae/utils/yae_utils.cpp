@@ -654,7 +654,7 @@ namespace yae
   void
   strip_ws(std::string & str)
   {
-    strip_tail_ws(str);
+    strip_head_ws(str);
     strip_tail_ws(str);
   }
 

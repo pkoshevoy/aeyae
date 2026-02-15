@@ -12,6 +12,7 @@
 
 // system:
 #ifdef _WIN32
+#include <winsock2.h>
 #include <windows.h>
 #define _OLEAUT32_
 #include <unknwn.h>
@@ -38,6 +39,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/algorithm/string/replace.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/process.hpp>
 #include <boost/regex.hpp>
 
 YAE_ENABLE_DEPRECATION_WARNINGS
@@ -45,6 +47,8 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 // namespace shortcut:
 namespace fs = boost::filesystem;
 namespace al = boost::algorithm;
+namespace bp = boost::process;
+using yae::has;
 
 
 //----------------------------------------------------------------
@@ -94,18 +98,6 @@ getFileName(const std::string & fullPath)
 }
 
 //----------------------------------------------------------------
-// TState
-//
-enum TState
-{
-  kParsing,
-  kFoundModuleDependencyTree,
-  kFoundOpeningBracket,
-  kFoundClosingBracket,
-  kFoundModuleList
-};
-
-//----------------------------------------------------------------
 // detect
 //
 static bool
@@ -136,140 +128,6 @@ tolower(const std::string & src)
 }
 
 //----------------------------------------------------------------
-// has
-//
-template <typename TDataContainer, typename TData>
-bool
-has(const TDataContainer & container, const TData & value)
-{
-  typename TDataContainer::const_iterator found =
-    std::find(container.begin(), container.end(), value);
-
-  return found != container.end();
-}
-
-//----------------------------------------------------------------
-// parse_depends_log
-//
-static void
-get_dependencies(std::vector<std::string> & deps,
-                 const std::string & dependsExe,
-                 const std::list<std::string> & allowed,
-                 const std::string & module)
-{
-  std::string dependsLog("depends-exe-log.txt");
-  {
-    std::ostringstream os;
-    os << dependsExe << " /c /a:0 /f:1 /ot:" << dependsLog << " " << module;
-
-    std::string cmd(os.str().c_str());
-    std::cerr << cmd << std::endl;
-
-    int r = system(cmd.c_str());
-    std::cerr << dependsExe << " returned: " << r << std::endl;
-  }
-
-  // parse depends.exe log:
-  FILE * in = fopen(dependsLog.c_str(), "rb");
-  if (!has(deps, module))
-  {
-    deps.push_back(module);
-  }
-
-  std::string head;
-  std::string tail;
-  std::list<char> tmpAcc;
-  TState state = kParsing;
-
-  while (in)
-  {
-    char ch = 0;
-    std::size_t nb = fread(&ch, 1, 1, in);
-    if (!nb)
-    {
-      break;
-    }
-
-    if (ch != '\r' && ch != '\n')
-    {
-      tmpAcc.push_back(tolower(ch));
-      continue;
-    }
-
-    if (tmpAcc.empty())
-    {
-      continue;
-    }
-
-    std::string line(tmpAcc.begin(), tmpAcc.end());
-    tmpAcc.clear();
-
-    if (state == kParsing)
-    {
-      if (detect("*| module dependency tree |*", line, head, tail))
-      {
-        state = kFoundModuleDependencyTree;
-      }
-    }
-    else if (state == kFoundModuleDependencyTree)
-    {
-      if (detect("*| module list |*", line, head, tail))
-      {
-        state = kFoundModuleList;
-      }
-      else if (detect("[", line, head, tail))
-      {
-        line = tail;
-
-        std::string path;
-        if (detect("] ", line, head, path))
-        {
-          line = head;
-          if (// detect("e", line, head, tail) || // load failure
-              detect("?", line, head, tail) || // missing
-              detect("^", line, head, tail) || // duplicate
-              detect("!", line, head, tail))   // invalid
-          {
-            continue;
-          }
-
-          // check if the path is allowed:
-          bool allow = false;
-
-          for (std::list<std::string>::const_iterator i = allowed.begin();
-               i != allowed.end(); ++i)
-          {
-            const std::string & pfx = *i;
-            if (detect(pfx.c_str(), path, head, tail))
-            {
-              if (!has(deps, path))
-              {
-                std::cerr << "depends: " << path << std::endl;
-                deps.push_back(path);
-              }
-
-              allow = true;
-              break;
-            }
-          }
-
-          if (!allow)
-          {
-            std::cerr << "NOT ALLOWED: " << path << std::endl;
-          }
-        }
-      }
-    }
-  }
-
-  if (in)
-  {
-    fclose(in);
-    in = NULL;
-  }
-}
-
-//----------------------------------------------------------------
 // append_path
 //
 static void
@@ -282,6 +140,217 @@ append_path(std::string & paths, const std::string & path)
 
   paths += path;
 }
+
+//----------------------------------------------------------------
+// DllSearchPath
+//
+struct DllSearchPath
+{
+  DllSearchPath(std::string paths = std::string())
+  {
+    if (paths.empty())
+    {
+      paths = boost::this_process::environment().get("PATH");
+    }
+
+    std::vector<std::string> strs;
+    yae::split(strs, ";", paths.c_str());
+
+    for (std::size_t i = 0, n = strs.size(); i < n; ++i)
+    {
+      const std::string & s = strs[i];
+      fs::path p(s);
+      paths_.push_back(p);
+    }
+  }
+
+  void prepend(std::list<std::string> & paths)
+  {
+    std::list<fs::path> result;
+
+    for (std::list<std::string>::const_iterator
+           i = paths.begin(); i != paths.end(); ++i)
+    {
+      const std::string & s = *i;
+      fs::path p(s);
+      if (fs::exists(p))
+      {
+        result.push_back(p);
+      }
+      else
+      {
+        std::cerr << "path doesn't exist: " << s << std::endl;
+      }
+    }
+
+    result.splice(result.end(), paths_);
+    paths_.swap(result);
+  }
+
+  std::string find(const std::string & name) const
+  {
+    for (std::list<fs::path>::const_iterator
+           i = paths_.begin(); i != paths_.end(); ++i)
+    {
+      fs::path p = (*i) / name;
+      if (fs::exists(p))
+      {
+        std::string found = p.make_preferred().string();
+        return found;
+      }
+    }
+
+    return std::string();
+  }
+
+  std::list<fs::path> paths_;
+};
+
+//----------------------------------------------------------------
+// DepsResolver
+//
+struct DepsResolver
+{
+
+  //----------------------------------------------------------------
+  // add
+  //
+  // NOTE: this is recursive:
+  //
+  void
+  add(const std::string & name, const std::string & path)
+  {
+    if (yae::has(resolved_, name))
+    {
+      return;
+    }
+
+    resolved_[name] = path;
+
+    std::list<std::string> dlls = this->get_dll_names(path);
+    for (std::list<std::string>::const_iterator
+           i = dlls.begin(); i != dlls.end(); ++i)
+    {
+      const std::string & dll_name = *i;
+      if (yae::has(resolved_, dll_name))
+      {
+        continue;
+      }
+
+      std::string dll_path = search_path_.find(dll_name);
+      if (dll_path.empty())
+      {
+        std::cerr << "file not found: " << dll_name << std::endl;
+        resolved_[dll_name] = std::string();
+      }
+      else
+      {
+        this->add(dll_name, dll_path);
+      }
+    }
+  }
+
+  //----------------------------------------------------------------
+  // get_dll_names
+  //
+  std::list<std::string>
+  get_dll_names(const std::string & object)
+  {
+    static std::string dumpbin_path = search_path_.find("dumpbin.exe");
+    YAE_THROW_IF(dumpbin_path.empty());
+
+    std::string dumpbin;
+    {
+      std::ostringstream oss;
+      oss << dumpbin_path << " /dependents " << object;
+      dumpbin = oss.str();
+    }
+
+    bp::ipstream pipe_stream;
+    bp::child c(dumpbin, bp::std_out > pipe_stream);
+    std::list<std::string> dlls;
+    {
+      bool found_start = false;
+      bool reached_end = false;
+
+      std::string line;
+      while (pipe_stream && std::getline(pipe_stream, line) && !line.empty())
+      {
+        std::string token = yae::trim_ws(line);
+        if (token.empty())
+        {
+          continue;
+        }
+
+        if (!found_start)
+        {
+          found_start = (token == "Image has the following dependencies:");
+        }
+        else if (!reached_end)
+        {
+          reached_end = (token == "Summary");
+
+          if (!reached_end && al::ends_with(token, ".dll"))
+          {
+            dlls.push_back(token);
+          }
+        }
+      }
+    }
+
+    return dlls;
+  }
+
+  //----------------------------------------------------------------
+  // get_dll_paths
+  //
+  void
+  get_paths(std::vector<std::string> & results,
+            const std::list<std::string> & allowed,
+            const std::string & ext) const
+  {
+    for (std::map<std::string, std::string>::const_iterator
+           i = resolved_.begin(); i != resolved_.end(); ++i)
+    {
+      const std::string & name = i->first;
+      const std::string & path = i->second;
+
+      if (path.empty())
+      {
+        // file not found:
+        continue;
+      }
+
+      if (!al::ends_with(name, ext))
+      {
+        continue;
+      }
+
+      bool not_allowed = true;
+      for (std::list<std::string>::const_iterator
+             j = allowed.begin(); j != allowed.end(); ++j)
+      {
+        const std::string & prefix = *j;
+        if (al::starts_with(path, prefix))
+        {
+          not_allowed = false;
+          break;
+        }
+      }
+
+      if (not_allowed)
+      {
+        continue;
+      }
+
+      std::cout << "adding: " << path << std::endl;
+      results.push_back(path);
+    }
+  }
+
+  DllSearchPath search_path_;
+  std::map<std::string, std::string> resolved_; // name: path
+};
 
 //----------------------------------------------------------------
 // InstallerData
@@ -312,11 +381,18 @@ make_installer(const InstallerData & data,
                const std::map<std::string, std::set<std::string> > & deployTo,
                const std::map<std::string, std::string> & deployFrom)
 {
-  // parse allowed paths:
-  std::string allowed_paths = allowedPaths;
+  // add paths of the deployed objects to the allowed paths:
   std::list<std::string> allowed;
+  for (std::list<std::string>::const_iterator
+         i = deploy.begin(); i != deploy.end(); ++i)
   {
-    std::string nativePaths;
+    fs::path path = tolower(*i);
+    std::string dir = path.parent_path().make_preferred().string();
+    allowed.push_back(dir);
+  }
+
+  // parse allowed paths:
+  {
     std::string paths = allowedPaths;
     std::string head;
     std::string tail;
@@ -330,7 +406,6 @@ make_installer(const InstallerData & data,
           std::string path = tolower(head.substr(0, head.size() - 1));
           path = fs::path(path).make_preferred().string();
           allowed.push_back(path);
-          append_path(nativePaths, path);
         }
 
         paths = tail;
@@ -340,15 +415,12 @@ make_installer(const InstallerData & data,
         std::string path = tolower(paths);
         path = fs::path(path).make_preferred().string();
         allowed.push_back(path);
-        append_path(nativePaths, path);
         break;
       }
     }
-
-    allowed_paths = nativePaths;
   }
 
-  // add allowed paths to env PATH, so Dependency Walker would search there:
+  // add allowed paths to env PATH, so dumpbin would search there:
   {
     std::string path;
     const char * pathEnv = getenv("PATH");
@@ -357,23 +429,36 @@ make_installer(const InstallerData & data,
       path = pathEnv;
     }
 
-    std::size_t pathSize = path.size();
-    if (pathSize && path[pathSize - 1] != ';')
+    path = yae::trim_ws(path);
+
+    for (std::list<std::string>::const_iterator
+           i = allowed.begin(); i != allowed.end(); ++i)
     {
-      path += ';';
+      const std::string & p = *i;
+      append_path(path, p);
     }
 
-    path += allowed_paths;
     _putenv((std::string("PATH=") + path).c_str());
   }
 
   // call depends.exe:
+  std::vector<std::string> exes;
   std::vector<std::string> deps;
-  for (std::list<std::string>::const_iterator
-         i = deploy.begin(); i != deploy.end(); ++i)
   {
-    const std::string & module = *i;
-    get_dependencies(deps, dependsExe, allowed, module);
+    DepsResolver deps_resolver;
+    deps_resolver.search_path_.prepend(allowed);
+
+    for (std::list<std::string>::const_iterator
+           i = deploy.begin(); i != deploy.end(); ++i)
+    {
+      const std::string & object = *i;
+      // get_dependencies(deps, dependsExe, allowed, object);
+      std::string name = getFileName(object);
+      deps_resolver.add(name, object);
+    }
+
+    deps_resolver.get_paths(exes, allowed, ".exe");
+    deps_resolver.get_paths(deps, allowed, ".dll");
   }
 
   std::string installerName;
@@ -454,6 +539,70 @@ make_installer(const InstallerData & data,
   std::string icon = getFileName(iconFile);
   std::size_t fileIndex = 0;
 
+  for (std::size_t i = 0; i < exes.size(); i++, fileIndex++)
+  {
+    const std::string & path = exes[i];
+    std::string name = getFileName(path);
+    std::string guid = makeGuidStr();
+
+    out << "     <Component Id='Component" << fileIndex
+        << "' Guid='" << guid << "'"
+#ifdef _WIN64
+        << " Win64='yes'"
+#else
+        << " Win64='no'"
+#endif
+        << ">" << std::endl;
+
+    // executable:
+    out << "      <File Id='File" << fileIndex << "' "
+        << "Name='" << name << "' DiskId='1' "
+        << "Source='" << path << "' "
+        << "KeyPath='yes'>"
+        << std::endl;
+
+    out << "       <Shortcut Id='startmenu" << data.product_id_ << "' "
+        << "Directory='ProgramMenuDir' "
+        << "Name='" << data.product_name_ << "' "
+        << "WorkingDirectory='INSTALLDIR' "
+        << "Icon='" << icon << "' "
+        << "IconIndex='0' "
+        << "Advertise='yes' />"
+        << std::endl;
+
+    out << "       <Shortcut Id='desktop" << data.product_id_ << "' "
+        << "Directory='DesktopFolder' "
+        << "Name='" << data.product_name_ << "' "
+        << "WorkingDirectory='INSTALLDIR' "
+        << "Icon='" << icon <<"' "
+        << "IconIndex='0' "
+        << "Advertise='yes' />"
+        << std::endl;
+
+    out << "      </File>"
+        << std::endl;
+
+    std::size_t numSupported = data.ext_.size();
+    for (std::size_t j = 0; j < numSupported; j++)
+    {
+      const char * ext = data.ext_[j].c_str();
+      out << "      <ProgId Id='" << data.product_id_ << "." << ext << "' "
+          << "Icon='" << icon << "' IconIndex='0' Advertise='yes' "
+          << "Description='media file format supported by "
+          << data.product_name_ << "'>\n"
+          << "       <Extension Id='" << ext << "'>\n"
+          << "        <Verb Id='open' Command='Open' "
+          << "Argument='&quot;%1&quot;' />\n"
+          << "       </Extension>\n"
+          << "      </ProgId>\n"
+          << std::endl;
+    }
+
+    out << "     </Component>\n"
+        << std::endl;
+  }
+
+  // dlls:
   for (std::size_t i = 0; i < deps.size(); i++, fileIndex++)
   {
     const std::string & path = deps[i];
@@ -469,60 +618,10 @@ make_installer(const InstallerData & data,
 #endif
         << ">" << std::endl;
 
-    if (fileIndex == 0)
-    {
-      // executable:
-      out << "      <File Id='File" << fileIndex << "' "
-          << "Name='" << name << "' DiskId='1' "
-          << "Source='" << path << "' "
-          << "KeyPath='yes'>"
-          << std::endl;
-
-      out << "       <Shortcut Id='startmenu" << data.product_id_ << "' "
-          << "Directory='ProgramMenuDir' "
-          << "Name='" << data.product_name_ << "' "
-          << "WorkingDirectory='INSTALLDIR' "
-          << "Icon='" << icon << "' "
-          << "IconIndex='0' "
-          << "Advertise='yes' />"
-          << std::endl;
-
-      out << "       <Shortcut Id='desktop" << data.product_id_ << "' "
-          << "Directory='DesktopFolder' "
-          << "Name='" << data.product_name_ << "' "
-          << "WorkingDirectory='INSTALLDIR' "
-          << "Icon='" << icon <<"' "
-          << "IconIndex='0' "
-          << "Advertise='yes' />"
-          << std::endl;
-
-      out << "      </File>"
-          << std::endl;
-
-      std::size_t numSupported = data.ext_.size();
-      for (std::size_t j = 0; j < numSupported; j++)
-      {
-        const char * ext = data.ext_[j].c_str();
-        out << "      <ProgId Id='" << data.product_id_ << "." << ext << "' "
-            << "Icon='" << icon << "' IconIndex='0' Advertise='yes' "
-            << "Description='media file format supported by "
-            << data.product_name_ << "'>\n"
-            << "       <Extension Id='" << ext << "'>\n"
-            << "        <Verb Id='open' Command='Open' "
-            << "Argument='&quot;%1&quot;' />\n"
-            << "       </Extension>\n"
-            << "      </ProgId>\n"
-            << std::endl;
-      }
-    }
-    else
-    {
-      // dlls:
-      out << "      <File Id='File" << fileIndex << "' "
-          << "Name='" << name << "' DiskId='1' "
-          << "Source='" << path << "' "
-          << "KeyPath='yes' />\n";
-    }
+    out << "      <File Id='File" << fileIndex << "' "
+        << "Name='" << name << "' DiskId='1' "
+        << "Source='" << path << "' "
+        << "KeyPath='yes' />\n";
 
     out << "     </Component>\n"
         << std::endl;
@@ -655,7 +754,6 @@ usage(char ** argv, const char * message = NULL)
   std::cerr
     << "USAGE: " << argv[0]
     << " -what [apprenticevideo|apprenticevideo-classic|aeyaeremux|yaetv]"
-    << " -dep-walker pathToDependsExe"
     << " -allow dlls;allowed;search;path;list"
     << " -wix-candle pathWixCandleExe"
     << " -wix-light pathWixLightExe"
@@ -706,13 +804,7 @@ main(int argc, char ** argv)
 
   for (int i = 1; i < argc; i++)
   {
-    if (strcmp(argv[i], "-dep-walker") == 0)
-    {
-      if ((argc - i) <= 1) usage(argv, "malformed -dep-walker parameter");
-      i++;
-      dependsExe.assign(argv[i]);
-    }
-    else if (strcmp(argv[i], "-allow") == 0)
+    if (strcmp(argv[i], "-allow") == 0)
     {
       if ((argc - i) <= 1) usage(argv, "malformed -allow parameter");
       i++;
@@ -880,11 +972,6 @@ main(int argc, char ** argv)
   if (deploy.empty())
   {
     usage(argv, "missing -deploy parameter");
-  }
-
-  if (dependsExe.empty())
-  {
-    usage(argv, "missing -dep-walker parameter");
   }
 
   if (vcRedistMsm.empty())
