@@ -59,8 +59,15 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 // for APIENTRYP etc...
 #ifdef __APPLE__
 #include <OpenGL/gl.h>
-#else
+#elif !defined(WIN32)
 #include <GL/glext.h>
+#else
+# ifndef APIENTRY
+#  define APIENTRY    __stdcall
+# endif
+# ifndef APIENTRYP
+#  define APIENTRYP   APIENTRY *
+# endif
 #endif
 #endif
 
