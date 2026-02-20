@@ -387,7 +387,7 @@ make_installer(const InstallerData & data,
          i = deploy.begin(); i != deploy.end(); ++i)
   {
     fs::path path = tolower(*i);
-    std::string dir = path.parent_path().make_preferred().string();
+    std::string dir = yae::trim_ws(path.parent_path().make_preferred().string());
     allowed.push_back(dir);
   }
 
@@ -403,7 +403,7 @@ make_installer(const InstallerData & data,
       {
         if (head.size() > 1)
         {
-          std::string path = tolower(head.substr(0, head.size() - 1));
+          std::string path = yae::trim_ws(tolower(head.substr(0, head.size() - 1)));
           path = fs::path(path).make_preferred().string();
           allowed.push_back(path);
         }
@@ -412,7 +412,7 @@ make_installer(const InstallerData & data,
       }
       else
       {
-        std::string path = tolower(paths);
+        std::string path = yae::trim_ws(tolower(paths));
         path = fs::path(path).make_preferred().string();
         allowed.push_back(path);
         break;
