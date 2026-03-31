@@ -280,9 +280,9 @@ namespace yae
 #if 1
         yae_ilog("PID %i, %.3f vs %.3f, sleep: %i ms",
                  packet.pid_,
-                 msec_sleep,
                  t_actual,
-                 t_expected);
+                 t_expected,
+                 msec_sleep);
 #endif
         boost::this_thread::sleep_for(boost::chrono::milliseconds(msec_sleep));
       }
