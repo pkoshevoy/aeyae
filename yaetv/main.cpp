@@ -23,6 +23,13 @@
 #endif
 #endif
 
+#ifndef _WIN32
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#endif
+
 // Qt:
 #include <QCoreApplication>
 #include <QDir>
@@ -39,9 +46,10 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
-#include <boost/locale.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
+#include <boost/chrono.hpp>
+#include <boost/locale.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/thread/thread.hpp>
 #endif
@@ -92,15 +100,192 @@ namespace yae
     // record each (PMT) program separately:
     std::map<uint16_t, yae::TOpenFilePtr> files_;
 
+    struct Track
+    {
+      boost::chrono::steady_clock::time_point start_;
+      yae::Timespan dts_;
+      yae::Timespan pts_;
+    };
+
+    std::map<uint16_t, Track> track_;
+    struct sockaddr_in dest_addr_;
+    int output_socket_;
+    double rate_;
+
     StreamDumper(const std::string & basedir):
       ctx_("StreamDumper"),
       packets_(40000000), // 7520MB
-      basedir_(basedir)
-    {}
+      basedir_(basedir),
+      output_socket_(-1),
+      rate_(1.0)
+    {
+      memset(&dest_addr_, 0, sizeof(dest_addr_));
+
+      std::vector<std::string> tokens;
+      yae::split(tokens, ":", basedir.c_str());
+
+      if (tokens.size() == 2)
+      {
+        const std::string & host = tokens[0];
+        uint16_t port = boost::lexical_cast<uint16_t>(tokens[1]);
+        dest_addr_.sin_addr.s_addr = inet_addr(host.c_str());
+        if (dest_addr_.sin_addr.s_addr >= 0)
+        {
+          dest_addr_.sin_family = AF_INET;
+          dest_addr_.sin_port = htons(port);
+
+          output_socket_ = ::socket(AF_INET, SOCK_DGRAM, 0);
+          YAE_THROW_IF(output_socket_ < 0);
+
+          int flags = ::fcntl(output_socket_, F_GETFL);
+          YAE_ASSERT(flags != -1);
+          ::fcntl(output_socket_, F_SETFL, flags | O_NONBLOCK);
+        }
+      }
+    }
 
     ~StreamDumper()
     {
       handle_backlog();
+
+      if (output_socket_ >= 0)
+      {
+        ::close(output_socket_);
+      }
+    }
+
+    void
+    send(const yae::mpeg_ts::IPacketHandler::Packet & packet)
+    {
+      const std::list<yae::mpeg_ts::PESPacket> *
+        es_packets = ctx_.get_es_packets(packet.pid_);
+
+      Track * track = NULL;
+      double t_expected = 0.0;
+
+      if (es_packets && !es_packets->empty())
+      {
+        const yae::mpeg_ts::PESPacket & pkt = es_packets->back();
+        if (pkt.pes_)
+        {
+          const yae::mpeg_ts::PESPacket::PES & pes = *(pkt.pes_);
+          track = &track_[packet.pid_];
+
+          yae::TTime dts(0, 0);
+          bool has_dts = pes.get_dts(dts);
+          if (has_dts)
+          {
+            yae::Timespan & timespan = track->dts_;
+
+            if (timespan.empty() || dts < timespan.t1_)
+            {
+              if (!timespan.empty())
+              {
+                // looped around?
+                yae_ilog("PID %i, prev DTS=%" PRIi64 ", curr DTS=%" PRIi64 "",
+                         packet.pid_,
+                         timespan.t1_.time_,
+                         dts.time_);
+              }
+
+              track->start_ = boost::chrono::steady_clock::now();
+              track->dts_.reset();
+              track->pts_.reset();
+            }
+
+            if (timespan.empty() || timespan.t1_ < dts)
+            {
+              // yae_ilog("PID %i DTS %" PRIi64 "", packet.pid_, dts.time_);
+              timespan.add(dts);
+              // yae_ilog("%i t_expected: %f", packet.pid_, t_expected);
+            }
+
+            t_expected = timespan.dt().sec();
+          }
+
+          yae::TTime pts(0, 0);
+          if (pes.get_pts(pts))
+          {
+            yae::Timespan & timespan = track->pts_;
+
+            if (!has_dts &&
+                (timespan.empty() ||
+                 (pts + yae::TTime(1, 1)) < timespan.t1_))
+            {
+              if (!timespan.empty())
+              {
+                // looped around?
+                yae_ilog("PID %i, prev PTS=%" PRIi64 ", curr PTS=%" PRIi64 "",
+                         packet.pid_,
+                         timespan.t1_.time_,
+                         pts.time_);
+              }
+
+              track->start_ = boost::chrono::steady_clock::now();
+              track->dts_.reset();
+              track->pts_.reset();
+            }
+
+            if (timespan.empty() || timespan.t1_ < pts)
+            {
+              // yae_ilog("PID %i PTS %" PRIi64 "", packet.pid_, pts.time_);
+              timespan.add(pts);
+              // yae_ilog("%i t_expected: %f", packet.pid_, t_expected);
+            }
+
+            if (!has_dts)
+            {
+              t_expected = timespan.dt().sec();
+            }
+          }
+        }
+      }
+
+      const yae::Data & pkt = packet.data_;
+      while (true)
+      {
+        ssize_t sent = ::sendto(output_socket_,
+                                pkt.get(),
+                                pkt.size(),
+                                0, // flags
+                                (const sockaddr *)(&dest_addr_),
+                                sizeof(dest_addr_));
+        YAE_EXPECT(sent == pkt.size());
+        if (sent < 0)
+        {
+          continue;
+        }
+
+        break;
+      }
+
+      if (t_expected <= 0.0 || !track)
+      {
+        return;
+      }
+
+      boost::chrono::steady_clock::time_point now =
+        boost::chrono::steady_clock::now();
+
+      boost::chrono::duration elapsed = (now - track->start_);
+      double t_actual =
+        boost::chrono::duration_cast<boost::chrono::microseconds>(elapsed).
+        count() * 1e-6;
+
+      t_actual *= rate_;
+
+      int msec_sleep = int(floor((t_expected - t_actual) * 1e+3));
+      if (msec_sleep > 50)
+      {
+#if 1
+        yae_ilog("PID %i, %.3f vs %.3f, sleep: %i ms",
+                 packet.pid_,
+                 msec_sleep,
+                 t_actual,
+                 t_expected);
+#endif
+        boost::this_thread::sleep_for(boost::chrono::milliseconds(msec_sleep));
+      }
     }
 
     yae::TOpenFile &
@@ -124,6 +309,13 @@ namespace yae
                 const yae::mpeg_ts::Bucket & bucket,
                 uint32_t gps_time)
     {
+      if (output_socket_)
+      {
+        //yae_ilog("gps_time: %" PRIu32 "", gps_time);
+        this->send(packet);
+        return;
+      }
+
       packets_.push(packet);
 
       uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
@@ -254,21 +446,43 @@ namespace yae
   static void
   parse_mpeg_ts(const char * fn,
                 const char * dst_path,
-                std::size_t pkt_size = 188)
+                std::size_t pkt_size = 188,
+                bool loop = false,
+                double rate = 1.0)
   {
     yae::TOpenFile src(fn, "rb");
     YAE_THROW_IF(!src.is_open());
 
     StreamDumper handler(dst_path);
-    while (!src.is_eof())
+    handler.rate_ = rate;
+
+    while (true)
     {
+      if (src.is_eof())
+      {
+        if (!loop)
+        {
+          break;
+        }
+
+        src.fseek64(0, SEEK_SET);
+        continue;
+      }
+
       yae::Data data(12 + 7 * pkt_size);
       uint64_t pos = yae::ftell64(src.file_);
 
       std::size_t n = src.read(data.get(), data.size());
       if (n < pkt_size)
       {
-        break;
+        if (!loop)
+        {
+          break;
+        }
+        else
+        {
+          continue;
+        }
       }
 
       data.truncate(n);
@@ -609,6 +823,37 @@ namespace yae
         {
           parse_mpeg_ts(src, dst, pkt_size);
         }
+        return 0;
+      }
+      else if (strcmp(argv[i], "--send") == 0)
+      {
+        if (argc <= i + 2)
+        {
+          usage(argv, "--send needs more params: "
+                "/path/input.mpg host:port [-loop] [-rate s]");
+          return i;
+        }
+
+        const char * src = argv[i + 1];
+        const char * dst = argv[i + 2];
+
+        bool loop = false;
+        double rate = 1.0;
+
+        for (int j = i + 3; j < argc; ++j)
+        {
+          if (strcmp(argv[j], "-loop") == 0)
+          {
+            loop = true;
+          }
+          else if (strcmp(argv[j], "-rate") == 0 &&
+                   j + 1 < argc)
+          {
+            rate = boost::lexical_cast<double>(argv[j + 1]);
+          }
+        }
+
+        parse_mpeg_ts(src, dst, pkt_size, loop, rate);
         return 0;
       }
 #ifdef __APPLE__

@@ -334,6 +334,9 @@ namespace yae
 
         void load(IBitstream & bin);
 
+        bool get_dts(TTime & dts) const;
+        bool get_pts(TTime & pts) const;
+
         // 8:
         uint64_t pes_const_10_ : 2;
         uint64_t pes_scrambling_control_ : 2;
@@ -2802,6 +2805,8 @@ namespace yae
       {
         prev_.clear();
         pes_.clear();
+        es_.clear();
+        es_packets_.clear();
       }
 
       inline uint16_t lookup_pid_in_pmt(uint16_t pid) const
@@ -2814,6 +2819,17 @@ namespace yae
       {
         uint16_t program_id = lookup_pid_in_es(pid);
         return program_id ? program_id : lookup_pid_in_pmt(pid);
+      }
+
+      inline const std::list<PESPacket> * get_es_packets(uint16_t pid) const
+      {
+        std::map<uint16_t, std::list<PESPacket> >::const_iterator
+          found = es_packets_.find(pid);
+        if (found != es_packets_.end())
+        {
+          return &(found->second);
+        }
+        return NULL;
       }
 
       // for more human-friendly logging:
@@ -2868,6 +2884,13 @@ namespace yae
 
       // packets, indexed by pid:
       std::map<uint16_t, std::list<TSPacket> > pes_;
+
+      // latest ES sections, indexed by PID:
+      std::map<uint16_t, TSectionPtr> es_;
+
+      // NOTE: at most 2 PESPackets are stored per PID (previous, and latest),
+      // older packets are discarded when a new packet is added:
+      std::map<uint16_t, std::list<PESPacket> > es_packets_;
 
       // program numbers, indexed by program map pid:
       std::map<uint16_t, uint16_t> pid_pmt_;

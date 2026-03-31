@@ -850,6 +850,32 @@ namespace yae
       stuffing_ = bin.read_bytes(pes_header_data_length_ - consumed_bytes);
     }
 
+    //----------------------------------------------------------------
+    // PESPacket::PES::get_dts
+    //
+    bool
+    PESPacket::PES::get_dts(TTime & dts) const
+    {
+      dts.time_ = int64_t((uint64_t(dts_32_30_) << 30) |
+                          (uint64_t(dts_29_15_) << 15) |
+                          uint64_t(dts_14_00_));
+      dts.base_ = (pts_dts_flags_ == 0x3) ? 90000 : 0;
+      return dts.base_ == 90000;
+    }
+
+    //----------------------------------------------------------------
+    // PESPacket::PES::get_pts
+    //
+    bool
+    PESPacket::PES::get_pts(TTime & pts) const
+    {
+      pts.time_ = int64_t((uint64_t(pts_32_30_) << 30) |
+                          (uint64_t(pts_29_15_) << 15) |
+                          uint64_t(pts_14_00_));
+      pts.base_ = ((pts_dts_flags_ & 0x2) == 0x2) ? 90000 : 0;
+      return pts.base_ == 90000;
+    }
+
 
     //----------------------------------------------------------------
     // PESPacket::PES::Extension::Extension
@@ -5441,7 +5467,7 @@ namespace yae
 
           consume_rrt(rrt_section, pid);
         }
-#if 0
+#if 1
         else if (yae::has(pid_dccsct_, pid))
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "DCCSCT");
@@ -5459,14 +5485,23 @@ namespace yae
         else if (bin.peek_bits(24) == 0x000001)
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "PES");
-          PESPacket pes_pkt;
+
+          std::list<PESPacket> & es_packets = es_packets_[pid];
+          es_packets.push_back(PESPacket());
+
+          if (es_packets.size() > 2)
+          {
+            es_packets.pop_front();
+          }
+
+          PESPacket & pes_pkt = es_packets.back();
           pes_pkt.load(bin);
         }
         else if (yae::has(pid_es_, pid))
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "ES");
-          TSectionPtr section = load_section(bin);
-          (void)section;
+          TSectionPtr & section = es_[pid];
+          section = load_section(bin);
         }
         else
         {

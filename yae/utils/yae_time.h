@@ -449,6 +449,12 @@ namespace yae
       t1_ = t1;
     }
 
+    inline void add(const TTime & t)
+    {
+      t0_ = std::min(t0_, t);
+      t1_ = std::max(t1_, t);
+    }
+
     // returns non-zero value if interval s
     // and this interval are disjoint beyond given tolerance;
     //
