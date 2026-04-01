@@ -729,9 +729,6 @@ namespace yae
       logger.assign(std::string("yaetv"), new LogToFile(log_path.string()));
     }
 
-    // install signal handler:
-    yae::signal_handler();
-
     // parse input parameters:
     std::string appearance;
     std::string basedir;
@@ -869,6 +866,9 @@ namespace yae
         return i;
       }
     }
+
+    // install signal handler:
+    yae::signal_handler();
 
     if (basedir.empty())
     {
