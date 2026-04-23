@@ -510,7 +510,7 @@ namespace yae
   //
   struct YAE_API IBitstream
   {
-    IBitstream(std::size_t end):
+    IBitstream(std::size_t end = 0):
       position_(0),
       end_(end)
     {}
@@ -526,6 +526,9 @@ namespace yae
       YAE_SILENT_THROW_IF(end_ < bit_position);
       position_ = bit_position;
     }
+
+    inline void seek_to_byte_pos(std::size_t byte_pos)
+    { this->seek(byte_pos << 3); }
 
     inline void skip(std::size_t num_bits)
     { seek(position_ + num_bits); }
@@ -575,6 +578,14 @@ namespace yae
       return false;
     }
 
+    inline bool expect_fourcc(const char * expected_fourcc)
+    {
+      uint8_t fourcc[5];
+      fourcc[4] = 0;
+      this->read_bytes(fourcc, 4);
+      return memcmp(fourcc, expected_fourcc, 4) == 0;
+    }
+
     //----------------------------------------------------------------
     // Bits
     //
@@ -616,7 +627,7 @@ namespace yae
     inline TData read()
     { return TData(this->read_bits(sizeof(TData) << 3)); }
 
-    virtual TBufferPtr read_bytes(std::size_t num_bytes) = 0;
+    virtual void read_bytes(void * dst, std::size_t dst_size) = 0;
 
     inline TBufferPtr read_bytes_until(std::size_t end_pos)
     {
@@ -630,10 +641,17 @@ namespace yae
     inline TBufferPtr read_bytes_until_end()
     { return this->read_bytes_until(end_); }
 
-    inline void read_bytes(void * dst, std::size_t dst_size)
+    virtual TBufferPtr read_bytes(std::size_t num_bytes)
     {
-      TBufferPtr src = this->read_bytes(dst_size);
-      memcpy(dst, src->get(), src->size());
+      Data data;
+      if (!num_bytes)
+      {
+        return data;
+      }
+
+      data.resize(num_bytes);
+      this->read_bytes(data.get(), num_bytes);
+      return data;
     }
 
     // returns number of bytes consumed:
@@ -724,6 +742,9 @@ namespace yae
       }
     }
 
+    inline std::size_t byte_pos() const
+    { return position_ >> 3; }
+
     inline std::size_t position() const
     { return position_; }
 
@@ -808,13 +829,15 @@ namespace yae
   //
   struct YAE_API NullBitstream : IBitstream
   {
+    using IBitstream::read_bytes;
+
     NullBitstream(std::size_t end = std::numeric_limits<std::size_t>::max());
 
     // virtual:
     uint64_t read_bits(std::size_t num_bits);
 
     // virtual:
-    TBufferPtr read_bytes(std::size_t num_bytes);
+    void read_bytes(void * dst, std::size_t dst_size);
 
     // virtual:
     void write_bits(std::size_t num_bits, uint64_t bits);
@@ -832,13 +855,20 @@ namespace yae
   //
   struct YAE_API Bitstream : IBitstream
   {
-    Bitstream(const TBufferPtr & data);
+    using IBitstream::read_bytes;
+
+    Bitstream(const TBufferPtr & data = TBufferPtr());
+
+    void reset(const TBufferPtr & data);
 
     // virtual:
     uint64_t read_bits(std::size_t num_bits);
 
     // virtual:
-    TBufferPtr read_bytes(std::size_t bytes);
+    void read_bytes(void * dst, std::size_t num_bytes);
+
+    // virtual:
+    TBufferPtr read_bytes(std::size_t num_bytes);
 
     // virtual:
     void write_bits(std::size_t num_bits, uint64_t bits);

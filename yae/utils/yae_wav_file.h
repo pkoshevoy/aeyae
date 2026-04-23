@@ -12,6 +12,7 @@
 // aeyae:
 #include "yae/api/yae_api.h"
 #include "yae/utils/yae_utils.h"
+#include "yae/video/yae_video.h"
 
 // standard:
 #include <string>
@@ -77,7 +78,7 @@ namespace yae
       nout_ = 0;
     }
 
-    bool open(const char * fn, const AudioTraits & atts)
+    bool open(const std::string & fn, const AudioTraits & atts)
     {
       int nchan = atts.ch_layout_.nb_channels;
       int sampleRate = (unsigned int)(atts.sample_rate_);
@@ -86,7 +87,7 @@ namespace yae
       return open(fn, nchan, sampleRate, bitsPerSample, floatSamples);
     }
 
-    bool open(const char * fn,
+    bool open(const std::string & fn,
               unsigned int nchan,
               unsigned int sampleRate,
               unsigned int bitsPerSample,
@@ -94,7 +95,7 @@ namespace yae
     {
       close();
 
-      file_ = fopenUtf8(fn, "wb");
+      file_ = fopen_utf8(fn, "wb");
       if (!file_)
       {
         return false;
@@ -187,11 +188,11 @@ namespace yae
     WavFile & operator = (const WavFile &);
 
     // helper:
-    bool open(const char * fn)
+    bool open(const std::string & fn)
     {
       close();
 
-      file_ = fopenUtf8(fn, "wb");
+      file_ = fopen_utf8(fn, "wb");
       if (!file_)
       {
         return false;
@@ -254,6 +255,205 @@ namespace yae
     unsigned int bitsPerSample_;
     bool floatSamples_;
   };
+
+
+
+  //----------------------------------------------------------------
+  // WavFileReader
+  //
+  struct WavFileReader
+  {
+    enum { kPCM_integer = 1, kIEEE754_float = 3 };
+
+    yae::Data wav_;
+    yae::Bitstream bs_;
+
+    // 1: PCM integer, 3: IEEE 754 float
+    uint16_t audio_format_ = 0;
+
+    uint16_t num_channels_ = 0;
+
+    // in Hertz
+    uint32_t sample_rate_ = 0;
+
+    // Frequency * BytePerBloc)
+    uint32_t bytes_per_sec_ = 0;
+
+    // NbrChannels * BitsPerSample / 8
+    uint16_t bytes_per_block_ = 0;
+
+    // Number of bits per sample
+    uint16_t bits_per_sample_ = 0;
+
+    uint32_t sample_data_size_ = 0;
+    std::size_t data_start_byte_pos_ = 0;
+
+    WavFileReader(const std::string & fn = std::string())
+    {
+      if (!fn.empty())
+      {
+        YAE_THROW_IF(!this->open(fn));
+      }
+    }
+
+    // helper:
+    bool open(const std::string & fn)
+    {
+      if (!yae::load_file(wav_, fn, "rb"))
+      {
+        return false;
+      }
+
+      bs_.reset(wav_);
+
+      // read the file header:
+      if (!bs_.expect_fourcc("RIFF"))
+      {
+        return false;
+      }
+
+      // file size minus 8, little-endian:
+      uint32_t file_size_minus_8 = 0;
+      bs_.read_bytes((uint8_t *)&file_size_minus_8, 4);
+      if (wav_.size() != file_size_minus_8 + 8)
+      {
+        return false;
+      }
+
+      if (!bs_.expect_fourcc("WAVE"))
+      {
+        return false;
+      }
+
+      // 'fmt ' sub-chunk:
+      if (!bs_.expect_fourcc("fmt "))
+      {
+        return false;
+      }
+
+      // format structure size minus 8, little endian:
+      uint32_t fmt_chunk_data_size = 0;
+      bs_.read_bytes((uint8_t *)&fmt_chunk_data_size, 4);
+      if (fmt_chunk_data_size != 16)
+      {
+        return false;
+      }
+
+      bs_.read_bytes((uint8_t *)&audio_format_, 2);
+      if (audio_format_ != kPCM_integer &&
+          audio_format_ != kIEEE754_float)
+      {
+        return false;
+      }
+
+      bs_.read_bytes((uint8_t *)&num_channels_, 2);
+      if (num_channels_ < 1 || num_channels_ > 8)
+      {
+        return false;
+      }
+
+      // sample rate:
+      bs_.read_bytes((uint8_t *)&sample_rate_, 4);
+
+      // byte rate:
+      bs_.read_bytes((uint8_t *)&bytes_per_sec_, 4);
+
+      // block align (stride):
+      bs_.read_bytes((uint8_t *)&bytes_per_block_, 2);
+
+      // bits per sample:
+      bs_.read_bytes((uint8_t *)&bits_per_sample_, 2);
+
+      if (bytes_per_sec_ !=
+          (bits_per_sample_ * num_channels_ * sample_rate_) / 8)
+      {
+        return false;
+      }
+
+      // skip to "data" chunk:
+      uint8_t fourcc[5];
+      fourcc[4] = 0;
+      while (true)
+      {
+        if (!bs_.has_enough_bytes(4))
+        {
+          return false;
+        }
+
+        bs_.read_bytes(fourcc, 4);
+        if (memcmp(fourcc, "data", 4) == 0)
+        {
+          break;
+        }
+
+        // skip this chunk:
+        uint32_t payload_size = 0;
+        bs_.read_bytes((uint8_t *)&payload_size, 4);
+        if (!bs_.has_enough_bytes(payload_size))
+        {
+          return false;
+        }
+
+        bs_.skip_bytes(payload_size);
+      }
+
+      bs_.read_bytes((uint8_t *)&sample_data_size_, 4);
+      if (!bs_.has_enough_bytes(sample_data_size_))
+      {
+        return false;
+      }
+
+      data_start_byte_pos_ = bs_.byte_pos();
+      return true;
+    }
+
+    // returns number of samples loaded:
+    int load_frame(yae::Data & data, int num_samples = 1536)
+    {
+      uint8_t bytes_per_sample = (bits_per_sample_ >> 3);
+      YAE_THROW_IF(bits_per_sample_ != (bytes_per_sample << 3));
+
+      uint32_t frame_size = num_samples * (num_channels_ * bytes_per_sample);
+      frame_size = std::min<uint32_t>(frame_size, bs_.bytes_left());
+
+      int out_samples = frame_size / (num_channels_ * bytes_per_sample);
+      frame_size = out_samples * (num_channels_ * bytes_per_sample);
+      data.resize(frame_size);
+
+      if (frame_size > 0)
+      {
+        bs_.read_bytes(data.get(), frame_size);
+      }
+
+      return out_samples;
+    }
+
+    inline void rewind()
+    {
+      bs_.seek_to_byte_pos(data_start_byte_pos_);
+    }
+
+    inline int64_t get_pts() const
+    {
+      std::size_t pos = std::max(bs_.byte_pos(), data_start_byte_pos_);
+      int64_t pts = (pos - data_start_byte_pos_) / bytes_per_block_;
+      return pts;
+    }
+
+    inline int64_t get_dur() const
+    {
+      std::size_t data_size = wav_.size() - data_start_byte_pos_;
+      int64_t dur = data_size / bytes_per_block_;
+      return dur;
+    }
+
+    inline void seek_to(int64_t pts)
+    {
+      std::size_t pos = data_start_byte_pos_ + pts * bytes_per_block_;
+      bs_.seek_to_byte_pos(pos);
+    }
+  };
+
 }
 
 

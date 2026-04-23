@@ -35,6 +35,7 @@ add_executable(aeyae-tests
   yae_tests.cpp
   yae_timeline_tests.cpp
   yae_utils_tests.cpp
+  yae_wav_file_tests.cpp
   # yae_frame_observer_tests.cpp
   # yae_log_tests.cpp
   )

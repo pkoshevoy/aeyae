@@ -356,17 +356,12 @@ namespace yae
   //----------------------------------------------------------------
   // NullBitstream::read_bytes
   //
-  TBufferPtr
-  NullBitstream::read_bytes(std::size_t num_bytes)
+  void
+  NullBitstream::read_bytes(void * dst, std::size_t num_bytes)
   {
     YAE_THROW_IF(!has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
-
-    Data data;
-    data.allocz(num_bytes);
-
-    TBufferPtr buffer = data;
-    return buffer;
+    memset(dst, 0, num_bytes);
   }
 
   //----------------------------------------------------------------
@@ -409,10 +404,20 @@ namespace yae
   //----------------------------------------------------------------
   // Bitstream::Bitstream
   //
-  Bitstream::Bitstream(const TBufferPtr & data):
-    IBitstream(data ? (data->size() << 3) : 0),
-    data_(data)
-  {}
+  Bitstream::Bitstream(const TBufferPtr & data)
+  {
+    this->reset(data);
+  }
+
+  //----------------------------------------------------------------
+  // Bitstream::reset
+  //
+  void
+  Bitstream::reset(const TBufferPtr & data)
+  {
+    data_ = data;
+    this->set_end(data ? (data->size() << 3) : 0);
+  }
 
   //----------------------------------------------------------------
   // Bitstream::read_bits
@@ -471,6 +476,33 @@ namespace yae
     }
 
     return v;
+  }
+
+  //----------------------------------------------------------------
+  // Bitstream::read_bytes
+  //
+  void
+  Bitstream::read_bytes(void * dst, std::size_t num_bytes)
+  {
+    YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
+    YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
+    YAE_EXPECT(IBitstream::is_byte_aligned());
+
+    if (IBitstream::is_byte_aligned())
+    {
+      std::size_t addr = IBitstream::position_ >> 3;
+      memcpy(dst, data_->get() + addr, num_bytes);
+      IBitstream::position_ += (num_bytes << 3);
+    }
+    else
+    {
+      // slow:
+      const uint8_t * end = (uint8_t *)dst + num_bytes;
+      for (uint8_t * b = (uint8_t *)dst; b < end; ++b)
+      {
+        *b = this->read(8);
+      }
+    }
   }
 
   //----------------------------------------------------------------

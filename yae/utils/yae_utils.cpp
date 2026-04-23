@@ -1596,6 +1596,26 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // load_file
+  //
+  bool
+  load_file(yae::Data & data,
+            const std::string & filename,
+            const char * mode)
+  {
+    yae::TOpenFile file(filename, mode);
+    if (!file.is_open())
+    {
+      return false;
+    }
+
+    uint64_t size = file.get_filesize();
+    data.resize(size);
+    return file.load(data) == size;
+  }
+
+
+  //----------------------------------------------------------------
   // uuid_generator_t
   //
   struct uuid_generator_t

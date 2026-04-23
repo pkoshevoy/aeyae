@@ -171,6 +171,13 @@ namespace yae
   fopen_utf8(const char * filename_utf8, const char * mode);
 
   //----------------------------------------------------------------
+  // fopen_utf8
+  //
+  inline std::FILE *
+  fopen_utf8(const std::string & filename_utf8, const char * mode)
+  { return yae::fopen_utf8(filename_utf8.c_str(), mode); }
+
+  //----------------------------------------------------------------
   // ftell64
   //
   YAE_API uint64_t
@@ -485,6 +492,7 @@ namespace yae
     inline std::string read()
     { return yae::read(this->file_); }
 
+    // NOTE: to load the whole file at once use yae::load_file:
     inline std::size_t load(yae::Data & buffer)
     { return yae::read(this->file_, buffer.get(), buffer.size()); }
 
@@ -542,6 +550,15 @@ namespace yae
   // TOpenFilePtr
   //
   typedef boost::shared_ptr<TOpenFile> TOpenFilePtr;
+
+  //----------------------------------------------------------------
+  // load_file
+  //
+  // return the contents of the file
+  //
+  bool load_file(yae::Data & data,
+                 const std::string & filename,
+                 const char * mode = "rb");
 
 
   //----------------------------------------------------------------
