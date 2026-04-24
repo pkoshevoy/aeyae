@@ -639,6 +639,9 @@ namespace yae
     return err < tolerance;
   }
 
+  //----------------------------------------------------------------
+  // get
+  //
   template <typename TValue>
   inline static TValue
   get(const std::vector<TValue> & v,
@@ -930,6 +933,18 @@ namespace yae
   bitmask_width(uint64_t m)
   {
     return bitmask_width<64>(m);
+  }
+
+  //----------------------------------------------------------------
+  // get_po2_size
+  //
+  inline std::size_t
+  get_po2_size(std::size_t size)
+  {
+    unsigned int width = bitmask_width<sizeof(size) * 8>(size);
+    std::size_t po2_size = (width < 2) ? 1 : (1 << (width - 1));
+    YAE_ASSERT((size == po2_size) || (width < sizeof(size) * 8));
+    return (po2_size < size) ? (po2_size << 1) : po2_size;
   }
 
   //----------------------------------------------------------------
@@ -1502,6 +1517,19 @@ namespace yae
   replace_inplace(std::string & text,
                   const std::string & search_text,
                   const std::string & replacement);
+
+  //----------------------------------------------------------------
+  // replace
+  //
+  inline std::string
+  replace(const std::string & text,
+          const std::string & search_text,
+          const std::string & replacement)
+  {
+    std::string result = text;
+    yae::replace_inplace(result, search_text, replacement);
+    return result;
+  }
 
   //----------------------------------------------------------------
   // vstrfmt

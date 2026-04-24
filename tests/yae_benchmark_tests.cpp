@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae/utils/yae_benchmark.h"
+#include "yae/utils/yae_utils.h"
 
 // standard:
 #include <iostream>
@@ -44,6 +45,15 @@ static void func_b()
 }
 
 //----------------------------------------------------------------
+// func_c
+//
+static void func_c()
+{
+  func_b();
+  func_b();
+}
+
+//----------------------------------------------------------------
 // to_string
 //
 template <typename TData>
@@ -63,7 +73,7 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
     std::ostringstream oss;
     YAE_BENCHMARK_SHOW(oss);
 
-#ifndef NDEBUG
+#ifdef YAE_ENABLE_BENCHMARK
     BOOST_CHECK_EQUAL(oss.str().c_str(),
                       "\nBenchmark timesheets per thread:\n\n");
 #else
@@ -74,7 +84,7 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
   boost::thread t1(&func_b);
   std::string t1_id = ::to_string(t1.get_id());
 
-  boost::thread t2(&func_b);
+  boost::thread t2(&func_c);
   std::string t2_id = ::to_string(t2.get_id());
 
   t1.join();
@@ -82,25 +92,19 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
 
   std::ostringstream oss;
   YAE_BENCHMARK_SHOW(oss);
-  std::string result(oss.str().c_str());
 
-  std::string::size_type found_t1 = result.find(t1_id, 0);
-  std::string::size_type found_b1 =
-    result.find(" func_b                                   :        1  call,",
-                found_t1);
-  std::string::size_type found_a1 =
-    result.find("  func_a                                  :     1000 calls,",
-                found_b1);
+  std::string txt(oss.str().c_str());
+  txt = yae::replace(txt, "  ", " ");
 
-  std::string::size_type found_t2 = result.find(t1_id, 0);
-  std::string::size_type found_b2 =
-    result.find(" func_b                                   :        1  call,",
-                found_t2);
-  std::string::size_type found_a2 =
-    result.find("  func_a                                  :     1000 calls,",
-                found_b2);
+  std::string::size_type found_t1 = txt.find(t1_id, 0);
+  std::string::size_type found_b1 = txt.find("func_b : 1 call", found_t1);
+  std::string::size_type found_a1 = txt.find("func_a : 1000 calls,", found_b1);
 
-#ifndef NDEBUG
+  std::string::size_type found_t2 = txt.find(t2_id, 0);
+  std::string::size_type found_b2 = txt.find("func_b : 2 calls,", found_t2);
+  std::string::size_type found_a2 = txt.find("func_a : 2000 calls,", found_b2);
+
+#ifdef YAE_ENABLE_BENCHMARK
   BOOST_CHECK(std::string::npos != found_t1);
   BOOST_CHECK(std::string::npos != found_b1);
   BOOST_CHECK(std::string::npos != found_a1);
@@ -111,7 +115,7 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
 #else
   (void)found_a1;
   (void)found_a2;
-  BOOST_CHECK_EQUAL(result, std::string());
+  BOOST_CHECK_EQUAL(txt, std::string());
 #endif
 
   YAE_BENCHMARK_CLEAR();
@@ -119,7 +123,7 @@ BOOST_AUTO_TEST_CASE(yae_benchmark)
     std::ostringstream oss;
     YAE_BENCHMARK_SHOW(oss);
 
-#ifndef NDEBUG
+#ifdef YAE_ENABLE_BENCHMARK
     BOOST_CHECK_EQUAL(oss.str().c_str(),
                       "\nBenchmark timesheets per thread:\n\n");
 #else

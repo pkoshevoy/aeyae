@@ -905,7 +905,6 @@ namespace yae
       }
 
       text.replace(pos, search_text.size(), replacement);
-      pos += replacement.size();
     }
   }
 

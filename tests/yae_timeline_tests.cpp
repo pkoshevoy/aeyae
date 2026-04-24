@@ -253,7 +253,7 @@ BOOST_AUTO_TEST_CASE(yae_timeline_track)
   {
     const char f =
       (i % 13) == 0 ? 'I' :
-      (i % 3) == 1 ? 'P' :
+      ((i % 13) % 3) == 1 ? 'P' :
       'B';
 
     const int pts =
@@ -304,7 +304,7 @@ BOOST_AUTO_TEST_CASE(yae_timeline_track)
   BOOST_CHECK_EQUAL(kb, 13);
   BOOST_CHECK_EQUAL(kc, 0);
   BOOST_CHECK_EQUAL(kd, 13);
-  BOOST_CHECK_EQUAL(ia, 6);
+  BOOST_CHECK_EQUAL(ia, 4);
   BOOST_CHECK_EQUAL(ib, 9);
 
   pts_span.reset(TTime(10.1), TTime(18.5));
@@ -313,6 +313,6 @@ BOOST_AUTO_TEST_CASE(yae_timeline_track)
   BOOST_CHECK_EQUAL(kb, 13);
   BOOST_CHECK_EQUAL(kc, 13);
   BOOST_CHECK_EQUAL(kd, 26);
-  BOOST_CHECK_EQUAL(ia, 11);
+  BOOST_CHECK_EQUAL(ia, 10);
   BOOST_CHECK_EQUAL(ib, 18);
 }

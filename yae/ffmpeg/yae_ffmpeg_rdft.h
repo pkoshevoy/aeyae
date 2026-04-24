@@ -49,7 +49,6 @@ namespace yae
       c2r_(NULL),
       r2c_tx_(NULL),
       c2r_tx_(NULL),
-      n_levels_(0),
       po2_size_(0)
     {}
 
@@ -67,14 +66,7 @@ namespace yae
     //
     bool init(uint32_t size)
     {
-      n_levels_ = 0;
-      po2_size_ = 1;
-
-      while (po2_size_ < size)
-      {
-        ++n_levels_;
-        po2_size_ <<= 1;
-      }
+      po2_size_ = yae::get_po2_size(size);
 
       static const re_t r2c_scale = 1.0f;
       static const re_t c2r_scale = 0.5f;
@@ -111,14 +103,10 @@ namespace yae
       av_tx_uninit(&c2r_);
       r2c_tx_ = NULL;
       c2r_tx_ = NULL;
-      n_levels_ = 0;
       po2_size_ = 0;
     }
 
     // accessors:
-    inline uint32_t n_levels() const
-    { return n_levels_; }
-
     inline uint32_t po2_size() const
     { return po2_size_; }
 
@@ -161,7 +149,6 @@ namespace yae
     av_tx_fn r2c_tx_;
     av_tx_fn c2r_tx_;
 
-    uint32_t n_levels_; // log2(N)
     uint32_t po2_size_; // N
 
     TDataBuffer re_buffer_; // N

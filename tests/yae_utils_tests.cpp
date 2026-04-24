@@ -37,3 +37,28 @@ BOOST_AUTO_TEST_CASE(yae_bitmask_width)
   BOOST_CHECK_EQUAL(32, bitmask_width(0xFFFFFFFF));
   BOOST_CHECK_EQUAL(64, bitmask_width(std::numeric_limits<uint64_t>::max()));
 }
+
+
+BOOST_AUTO_TEST_CASE(yae_get_po2_size)
+{
+  BOOST_CHECK(yae::get_po2_size(0) == 1);
+  BOOST_CHECK(yae::get_po2_size(1) == 1);
+  BOOST_CHECK(yae::get_po2_size(2) == 2);
+  BOOST_CHECK(yae::get_po2_size(3) == 4);
+  BOOST_CHECK(yae::get_po2_size(4) == 4);
+  BOOST_CHECK(yae::get_po2_size(5) == 8);
+  BOOST_CHECK(yae::get_po2_size(6) == 8);
+  BOOST_CHECK(yae::get_po2_size(7) == 8);
+  BOOST_CHECK(yae::get_po2_size(8) == 8);
+  BOOST_CHECK(yae::get_po2_size(9) == 16);
+  BOOST_CHECK(yae::get_po2_size(4095) == 4096);
+  BOOST_CHECK(yae::get_po2_size(4096) == 4096);
+}
+
+
+BOOST_AUTO_TEST_CASE(yae_replace)
+{
+  std::string src = "  func_b                                :        1  call";
+  std::string out = yae::replace(src, "  ", " ");
+  BOOST_CHECK(out == " func_b : 1 call");
+}
