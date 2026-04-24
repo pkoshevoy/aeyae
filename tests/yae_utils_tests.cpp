@@ -8,6 +8,7 @@
 
 // aeyae:
 #include "yae/utils/yae_utils.h"
+#include "yae/utils/yae_ransac.h"
 
 // standard:
 #include <inttypes.h>
@@ -61,4 +62,30 @@ BOOST_AUTO_TEST_CASE(yae_replace)
   std::string src = "  func_b                                :        1  call";
   std::string out = yae::replace(src, "  ", " ");
   BOOST_CHECK(out == " func_b : 1 call");
+}
+
+
+BOOST_AUTO_TEST_CASE(yae_ransac)
+{
+  std::vector<int> dataset(1000);
+
+  // generate a dataset with 50% outliers:
+  for (int i = 0, n = dataset.size(); i < n; ++i)
+  {
+    dataset[i] = (i % 2) ? 768 : i;
+  }
+
+  yae::RANSAC<int>::Median model;
+  yae::RANSAC<int>::TSubSet bestfit;
+
+  double fit_error_threshold = 1.0;
+  double bestfit_err_avg =
+    yae::RANSAC<int>(&dataset[0], dataset.size()).
+    find_inliers(model, fit_error_threshold, bestfit);
+
+  BOOST_CHECK(bestfit_err_avg < fit_error_threshold);
+  model.reset(bestfit);
+
+  int mean = int(model.median_ + 0.5);
+  BOOST_CHECK(mean == 768);
 }
