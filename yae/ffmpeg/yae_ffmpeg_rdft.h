@@ -13,6 +13,7 @@
 // ffmpeg:
 extern "C"
 {
+#include <libavutil/error.h>
 #include <libavutil/tx.h>
 }
 
@@ -89,8 +90,8 @@ namespace yae
                        0); // flags
       YAE_ASSERT_NO_AVERROR_OR_RETURN(ret, false);
 
-      re_buffer_.resize<rdft_t::re_t>(po2_size_);
-      cx_buffer_.resize<rdft_t::cx_t>(po2_size_ / 2 + 1);
+      buffer_.re_.resize<rdft_t::re_t>(po2_size_);
+      buffer_.cx_.resize<rdft_t::cx_t>(po2_size_ / 2 + 1);
       return true;
     }
 
@@ -111,10 +112,10 @@ namespace yae
     { return po2_size_; }
 
     inline TDataBuffer & re_buffer()
-    { return re_buffer_; }
+    { return buffer_.re_; }
 
     inline TDataBuffer & cx_buffer()
-    { return cx_buffer_; }
+    { return buffer_.cx_; }
 
     //----------------------------------------------------------------
     // r2c
@@ -142,7 +143,43 @@ namespace yae
                     re_t * dst)
     { c2r_tx_(c2r_, dst, src, sizeof(cx_t)); }
 
+    //----------------------------------------------------------------
+    // Frame
+    //
+    struct Frame
+    {
+      typedef rdft_t::re_t re_t;
+      typedef rdft_t::cx_t cx_t;
+
+      // initialize re and cx buffers:
+      void init(rdft_t & rdft, const re_t * samples, std::size_t num_samples)
+      {
+        re_.resize<re_t>(rdft.po2_size());
+        re_.memset(0);
+
+        num_samples = std::min<std::size_t>(num_samples, rdft.po2_size());
+        memcpy(re_.get<re_t>(), samples, sizeof(re_t) * num_samples);
+
+        cx_.resize<cx_t>(rdft.po2_size() / 2 + 1);
+        cx_.memset(0);
+
+        // apply rDFT:
+        re_t * re = re_.get<re_t>();
+        cx_t * cx = cx_.get<cx_t>();
+        rdft.r2c(re, cx);
+      }
+
+      inline void init(rdft_t & rdft, const yae::Data & samples)
+      { this->init(rdft, samples.get<re_t>(), samples.num<re_t>()); }
+
+      // should this be yae::Data instead?
+      TDataBuffer re_; // N
+      TDataBuffer cx_; // N / 2 + 1
+    };
+
   protected:
+    rdft_t::Frame buffer_;
+
     AVTXContext * r2c_;
     AVTXContext * c2r_;
 
@@ -150,9 +187,6 @@ namespace yae
     av_tx_fn c2r_tx_;
 
     uint32_t po2_size_; // N
-
-    TDataBuffer re_buffer_; // N
-    TDataBuffer cx_buffer_; // N / 2 + 1
   };
 
 }

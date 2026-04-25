@@ -10,6 +10,9 @@
 #include "yae/utils/yae_time.h"
 #include "yae/utils/yae_utils.h"
 
+// boost:
+#include <boost/integer/common_factor.hpp>
+
 // standard:
 #include <ctype.h>
 #include <iomanip>
@@ -608,6 +611,38 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::get_gcd
+  //
+  int64_t
+  TTime::get_gcd() const
+  {
+    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    return gcd;
+  }
+
+  //----------------------------------------------------------------
+  // TTime::reduce
+  //
+  bool
+  TTime::reduce()
+  {
+    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    time_ /= gcd;
+    base_ /= gcd;
+    return (gcd > 1);
+  }
+
+  //----------------------------------------------------------------
+  // TTime::reduced
+  //
+  TTime
+  TTime::reduced() const
+  {
+    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    return TTime(time_ / gcd, base_ / gcd);
+  }
+
+  //----------------------------------------------------------------
   // TTime::ceil
   //
   TTime TTime::ceil() const
@@ -701,15 +736,6 @@ namespace yae
   {
     time_ = int64_t(yae::round(time_ * s));
     return *this;
-  }
-
-  //----------------------------------------------------------------
-  // TTime::operator *
-  //
-  TTime
-  TTime::operator * (double s) const
-  {
-    return TTime(int64_t(yae::round(time_ * s)), base_);
   }
 
   //----------------------------------------------------------------
@@ -2748,4 +2774,28 @@ namespace yae
     return oss;
   }
 
+}
+
+//----------------------------------------------------------------
+// operator *
+//
+yae::TTime operator * (const yae::TTime & a, const yae::TTime & b)
+{
+  yae::TTime ra = a.reduced();
+  yae::TTime rb = b.reduced();
+  yae::TTime r(ra.time_ * rb.time_, ra.base_ * rb.base_);
+  r.reduce();
+  return r;
+}
+
+//----------------------------------------------------------------
+// operator /
+//
+yae::TTime operator / (const yae::TTime & a, const yae::TTime & b)
+{
+  yae::TTime ra = a.reduced();
+  yae::TTime rb = b.reduced();
+  yae::TTime r(ra.time_ * rb.base_, ra.base_ * rb.time_);
+  r.reduce();
+  return r;
 }

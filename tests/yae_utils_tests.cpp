@@ -9,6 +9,7 @@
 // aeyae:
 #include "yae/utils/yae_utils.h"
 #include "yae/utils/yae_ransac.h"
+#include "yae/utils/yae_time.h"
 
 // standard:
 #include <inttypes.h>
@@ -88,4 +89,36 @@ BOOST_AUTO_TEST_CASE(yae_ransac)
 
   int mean = int(model.median_ + 0.5);
   BOOST_CHECK(mean == 768);
+}
+
+
+BOOST_AUTO_TEST_CASE(yae_time_arithmetic)
+{
+  yae::TTime x0(2048, 48000);
+  yae::TTime x1(6144, 48000);
+
+  yae::TTime x0_mul_x1 = (x0 * x1);
+  BOOST_CHECK(x0_mul_x1.base_ <= 48000);
+  BOOST_CHECK(x0_mul_x1.get(48000) == 262);
+
+  yae::TTime x1_div_x0 = x1 / x0;
+  BOOST_CHECK(x1_div_x0.time_ == 3 && x1_div_x0.base_ == 1);
+
+  yae::TTime x0_div_x1 = x0 / x1;
+  BOOST_CHECK(x0_div_x1.time_ == 1 && x0_div_x1.base_ == 3);
+
+
+  yae::TTime a(22276, 48000);
+  yae::TTime b(164784, 48000);
+  yae::TTime c(163200, 48000);
+  std::size_t n = 10;
+  std::size_t m = 10;
+
+  yae::TTime t = (n * c + n * b - m * a) / (n * b + m * b);
+  BOOST_CHECK(t.time_ == 76427 && t.base_ == 82392);
+
+  yae::TTime t0(2246540, 48000);
+  yae::TTime t1 = t0 + (a + b) + b * (t - yae::TTime(1, 1));
+  BOOST_CHECK(t1.time_ == 2421670 && t1.base_ == 48000);
+  BOOST_CHECK(t1.get(1000) == 50451);
 }

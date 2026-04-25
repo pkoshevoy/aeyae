@@ -15,6 +15,7 @@
 
 // standard:
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <limits>
 #include <list>
@@ -168,6 +169,17 @@ namespace yae
   YAE_API void
   gps_time_to_localtime(uint32_t gps_time, struct tm & t);
 
+  //----------------------------------------------------------------
+  // round
+  //
+  inline double round(double number)
+  {
+#if defined(_MSC_VER) && _MSC_VER < 1800
+    return number < 0.0 ? std::ceil(number - 0.5) : std::floor(number + 0.5);
+#else
+    return std::round(number);
+#endif
+  }
 
   //----------------------------------------------------------------
   // TTime
@@ -191,7 +203,7 @@ namespace yae
 
     TTime();
     TTime(int64_t time, uint64_t base);
-    TTime(double seconds);
+    explicit TTime(double seconds);
 
     inline bool valid() const
     { return base_ > 0; }
@@ -214,19 +226,37 @@ namespace yae
     // return time expressed in a given time base:
     TTime rebased(uint64_t base) const;
 
+    // return Greatest Common Divisor of time_ and base_:
+    int64_t get_gcd() const;
+
+    // reduced time_ and base_ by gcd, returns true of gcd is greater than 1:
+    bool reduce();
+
+    // return a reduced fraction, where time_ and base_ are
+    // divided by Greatest Common Divisor (aka Greates Common Factor)
+    TTime reduced() const;
+
     // NOTE: these round to seconds and drop sub-seconds:
     TTime ceil() const;
     TTime floor() const;
     TTime round() const;
 
+    inline TTime & operator = (double s)
+    { *this = TTime(s); return *this; }
+
+    inline TTime & operator += (double s)
+    { return this->operator+=(TTime(s)); }
+
     TTime & operator += (const TTime & dt);
     TTime operator + (const TTime & dt) const;
+
+    inline TTime & operator -= (double s)
+    { return this->operator-=(TTime(s)); }
 
     TTime & operator -= (const TTime & dt);
     TTime operator - (const TTime & dt) const;
 
     TTime & operator *= (double s);
-    TTime operator * (double s) const;
 
     bool operator < (const TTime & t) const;
     bool operator == (const TTime & t) const;
@@ -812,6 +842,66 @@ namespace yae
   operator << (std::ostream & oss, const FramerateEstimator & estimator);
 
 }
+
+//----------------------------------------------------------------
+// operator +
+//
+inline yae::TTime operator + (const yae::TTime & a, double b)
+{ return a + yae::TTime(b); }
+
+//----------------------------------------------------------------
+// operator +
+//
+inline yae::TTime operator + (double a, const yae::TTime & b)
+{ return yae::TTime(a) + b; }
+
+//----------------------------------------------------------------
+// operator -
+//
+inline yae::TTime operator - (const yae::TTime & a, double b)
+{ return a - yae::TTime(b); }
+
+//----------------------------------------------------------------
+// operator -
+//
+inline yae::TTime operator - (double a, const yae::TTime & b)
+{ return yae::TTime(a) - b; }
+
+//----------------------------------------------------------------
+// operator *
+//
+template <typename TData>
+inline yae::TTime operator * (const yae::TTime & a, TData b)
+{ return yae::TTime(a.time_ * b, a.base_); }
+
+//----------------------------------------------------------------
+// operator *
+//
+template <typename TData>
+inline yae::TTime operator * (TData a, const yae::TTime & b)
+{ return yae::TTime(b.time_ * a, b.base_); }
+
+//----------------------------------------------------------------
+// operator *
+//
+inline yae::TTime operator * (const yae::TTime & a, double b)
+{ return yae::TTime(yae::round(a.time_ * b), a.base_); }
+
+//----------------------------------------------------------------
+// operator *
+//
+inline yae::TTime operator * (double a, const yae::TTime & b)
+{ return yae::TTime(yae::round(b.time_ * a), b.base_); }
+
+//----------------------------------------------------------------
+// operator *
+//
+YAE_API yae::TTime operator * (const yae::TTime & a, const yae::TTime & b);
+
+//----------------------------------------------------------------
+// operator /
+//
+YAE_API yae::TTime operator / (const yae::TTime & a, const yae::TTime & b);
 
 
 #endif // YAE_TIME_H_
