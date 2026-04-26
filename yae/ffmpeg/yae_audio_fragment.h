@@ -94,7 +94,7 @@ namespace yae
     //
     template <typename TSample>
     void
-    tx_r2c(yae::rdft_t & rdft,
+    tx_r2c(yae::rDFT & rdft,
            float min0 = float(std::numeric_limits<TSample>::min()),
            float max0 = float(std::numeric_limits<TSample>::max()))
     {
@@ -103,15 +103,11 @@ namespace yae
       const unsigned char * srcEnd = src + numSamples_ * stride_;
 
       // init data buffers used for rDFT and Cross-Correlation:
-      re_.resize<rdft_t::re_t>(rdft.po2_size());
-      re_.memset(0);
-
-      cx_.resize<rdft_t::cx_t>(rdft.po2_size() / 2 + 1);
-      cx_.memset(0);
+      buffer_.init(rdft);
 
       if (numChannels_ == 1)
       {
-        rdft_t::re_t * xdat = re_.template data<rdft_t::re_t>();
+        rDFT::re_t * xdat = buffer_.re_.template get<rDFT::re_t>();
         TSample tmp;
 
         while (src < srcEnd)
@@ -119,36 +115,36 @@ namespace yae
           tmp = *(const TSample *)src;
           src += sizeof(TSample);
 
-          *xdat = rdft_t::re_t(tmp);
+          *xdat = rDFT::re_t(tmp);
           xdat++;
         }
       }
       else
       {
-        rdft_t::re_t * xdat = re_.template data<rdft_t::re_t>();
+        rDFT::re_t * xdat = buffer_.re_.template get<rDFT::re_t>();
 
         // temporary buffer for a row of samples:
         TSample tmp;
-        rdft_t::re_t s;
-        rdft_t::re_t max;
-        rdft_t::re_t ti;
-        rdft_t::re_t si;
+        rDFT::re_t s;
+        rDFT::re_t max;
+        rDFT::re_t ti;
+        rDFT::re_t si;
 
         while (src < srcEnd)
         {
           tmp = *(const TSample *)src;
           src += sizeof(TSample);
 
-          max = rdft_t::re_t(tmp);
-          s = std::min<rdft_t::re_t>(max0, fabsf(max));
+          max = rDFT::re_t(tmp);
+          s = std::min<rDFT::re_t>(max0, fabsf(max));
 
           for (std::size_t i = 1; i < numChannels_; i++)
           {
             tmp = *(const TSample *)src;
             src += sizeof(TSample);
 
-            ti = rdft_t::re_t(tmp);
-            si = std::min<rdft_t::re_t>(max0, fabsf(ti));
+            ti = rDFT::re_t(tmp);
+            si = std::min<rDFT::re_t>(max0, fabsf(ti));
 
             // store max amplitude only:
             if (s < si)
@@ -164,8 +160,8 @@ namespace yae
       }
 
       // apply rDFT:
-      rdft_t::re_t * re = re_.template data<rdft_t::re_t>();
-      rdft_t::cx_t * cx = cx_.template data<rdft_t::cx_t>();
+      rDFT::re_t * re = buffer_.re_.template get<rDFT::re_t>();
+      rDFT::cx_t * cx = buffer_.cx_.template get<rDFT::cx_t>();
       rdft.r2c(re, cx);
     }
 
@@ -179,24 +175,24 @@ namespace yae
     alignTo(const AudioFragment & other,
             const int deltaMax,
             const int drift,
-            yae::rdft_t & rdft)
+            yae::rDFT & rdft)
     {
       // shortcuts:
       const uint32_t window = rdft.po2_size() / 2;
       const uint32_t half_window = window / 2;
 
       // rdft.re_buffer().memset(0);
-      YAE_ASSERT(rdft.re_buffer().num<rdft_t::re_t>() == window * 2);
-      rdft_t::re_t * correlation = rdft.re_buffer().data<rdft_t::re_t>();
+      YAE_ASSERT(rdft.re_buffer().num<rDFT::re_t>() == window * 2);
+      rDFT::re_t * correlation = rdft.re_buffer().get<rDFT::re_t>();
 
       // calculate cross correlation in frequency domain:
       {
-        const rdft_t::cx_t * xa = other.cx_.data<rdft_t::cx_t>();
-        const rdft_t::cx_t * xb = this->cx_.data<rdft_t::cx_t>();
+        const rDFT::cx_t * xa = other.buffer_.cx_.get<rDFT::cx_t>();
+        const rDFT::cx_t * xb = this->buffer_.cx_.get<rDFT::cx_t>();
 
         rdft.cx_buffer().memset(0);
-        YAE_ASSERT(rdft.cx_buffer().num<rdft_t::cx_t>() == window + 1);
-        rdft_t::cx_t * xc = rdft.cx_buffer().data<rdft_t::cx_t>();
+        YAE_ASSERT(rdft.cx_buffer().num<rDFT::cx_t>() == window + 1);
+        rDFT::cx_t * xc = rdft.cx_buffer().get<rDFT::cx_t>();
 
         for (uint32_t i = 0; i <= half_window; i++, xa++, xb++, xc++)
         {
@@ -205,13 +201,13 @@ namespace yae
         }
 
         // apply inverse rDFT transform:
-        xc = rdft.cx_buffer().data<rdft_t::cx_t>();
+        xc = rdft.cx_buffer().get<rDFT::cx_t>();
         rdft.c2r(xc, correlation);
       }
 
       // identify peaks:
       int bestOffset = -drift;
-      rdft_t::re_t bestMetric = -std::numeric_limits<rdft_t::re_t>::max();
+      rDFT::re_t bestMetric = -std::numeric_limits<rDFT::re_t>::max();
 
       int i0 = std::max<int>(half_window - deltaMax - drift, 0);
       i0 = std::min<int>(i0, window);
@@ -220,14 +216,14 @@ namespace yae
                              window - window / 16);
       i1 = std::max<int>(i1, 0);
 
-      rdft_t::re_t * xc = correlation + i0;
+      rDFT::re_t * xc = correlation + i0;
       for (int i = i0; i < i1; i++, xc++)
       {
-        rdft_t::re_t metric = *xc;
+        rDFT::re_t metric = *xc;
 
         // normalize:
-        rdft_t::re_t drifti = rdft_t::re_t(drift + i);
-        metric *= drifti * rdft_t::re_t(i - i0) * rdft_t::re_t(i1 - i);
+        rDFT::re_t drifti = rDFT::re_t(drift + i);
+        metric *= drifti * rDFT::re_t(i - i0) * rDFT::re_t(i1 - i);
 
         if (metric > bestMetric)
         {
@@ -255,12 +251,10 @@ namespace yae
     // stride = (number-of-channels * bits-per-sample-per-channel) / 8
     std::size_t stride_;
 
-    // downmixed mono fragment:
-    TDataBuffer re_;
-
-    // rDFT transform of the downmixed mono fragment,
+    // downmixed mono fragment,
+    // and rDFT transform of the downmixed mono fragment,
     // used for waveform alignment via correlation:
-    TDataBuffer cx_;
+    yae::rDFT::Frame buffer_;
   };
 
   //----------------------------------------------------------------

@@ -25,19 +25,20 @@ include_directories(AFTER
   )
 
 add_executable(aeyae-tests
-  yae_benchmark_tests.cpp
-  yae_color_transform_tests.cpp
-  yae_data_tests.cpp
-  yae_iso14496_tests.cpp
-  yae_lru_cache_tests.cpp
-  yae_settings_tests.cpp
-  yae_shared_ptr_tests.cpp
-  yae_tests.cpp
-  yae_timeline_tests.cpp
-  yae_utils_tests.cpp
-  yae_wav_file_tests.cpp
-  # yae_frame_observer_tests.cpp
-  # yae_log_tests.cpp
+  test_yae_audio_utils.cpp
+  test_yae_benchmark.cpp
+  test_yae_color_transform.cpp
+  test_yae_data.cpp
+  test_yae_iso14496.cpp
+  test_yae_lru_cache.cpp
+  test_yae_settings.cpp
+  test_yae_shared_ptr.cpp
+  test_yae_timeline.cpp
+  test_yae_utils.cpp
+  test_yae_wav_file.cpp
+  # test_yae_frame_observer.cpp
+  # test_yae_log.cpp
+  test_yae.cpp
   )
 
 target_compile_definitions(aeyae-tests PRIVATE

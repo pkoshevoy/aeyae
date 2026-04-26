@@ -34,6 +34,7 @@ namespace yae
   {
     enum TPriority
     {
+      kInvalid = -1,
       kDebug   = 0,
       kInfo    = 1,
       kWarning = 2,
@@ -57,6 +58,40 @@ namespace yae
     TLog & operator = (TLog &&) = delete;
     TLog & operator = (const TLog &) = delete;
 #endif
+
+    // helper, useful for temporary replacement of message carriers:
+    inline void swap(TLog & other)
+    { std::swap(this->private_, other.private_); }
+
+    //----------------------------------------------------------------
+    // Replace
+    //
+    // RAII helper for temporary replacement of message carriers:
+    //
+    struct Replace
+    {
+      TLog & original_;
+      TLog & replacement_;
+
+      Replace(TLog & original, TLog & replacement):
+        original_(original),
+        replacement_(replacement)
+      {
+        // replace:
+        original_.swap(replacement_);
+      }
+
+      ~Replace()
+      {
+        // restore:
+        replacement_.swap(original_);
+      }
+
+    private:
+      // intentionally disabled:
+      Replace(const Replace &);
+      Replace & operator = (const Replace &);
+    };
 
     // dispose of all carriers associated with this log instance:
     void clear();

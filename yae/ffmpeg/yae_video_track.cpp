@@ -80,6 +80,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TAVFrameBuffer::size
+  //
+  std::size_t
+  TAVFrameBuffer::size(std::size_t plane) const
+  {
+    const AVFrame & frame = frame_.get();
+    return frame.linesize[plane] * frame.height;
+  }
+
+  //----------------------------------------------------------------
   // TAVFrameBuffer::rowBytes
   //
   std::size_t

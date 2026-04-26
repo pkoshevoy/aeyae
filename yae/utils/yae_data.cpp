@@ -10,6 +10,11 @@
 #include "yae/utils/yae_data.h"
 #include "yae/utils/yae_utils.h"
 
+// ffmpeg:
+extern "C" {
+#include <libavutil/mem.h>
+}
+
 
 namespace yae
 {
@@ -20,30 +25,58 @@ namespace yae
   IBuffer::~IBuffer()
   {}
 
-
   //----------------------------------------------------------------
   // Buffer::Buffer
   //
   Buffer::Buffer(std::size_t size):
-    data_(size)
-  {}
-
-  //----------------------------------------------------------------
-  // Buffer::get
-  //
-  unsigned char *
-  Buffer::get() const
+    data_(size ? (unsigned char *)::av_malloc(size) : NULL),
+    size_(size)
   {
-    return data_.empty() ? NULL : &(data_[0]);
+    YAE_THROW_IF(size_ && !data_);
   }
 
   //----------------------------------------------------------------
-  // Buffer::size
+  // Buffer::Buffer
   //
-  std::size_t
-  Buffer::size() const
+  Buffer::Buffer(const Buffer & other):
+    data_(other.size_ ? (unsigned char *)::av_malloc(other.size_) : NULL),
+    size_(other.size_)
   {
-    return data_.size();
+    YAE_THROW_IF(size_ && !data_);
+    if (data_)
+    {
+      ::memcpy(data_, other.data_, other.size_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // Buffer::~Buffer
+  //
+  Buffer::~Buffer()
+  {
+    ::av_freep(&data_);
+  }
+
+  //----------------------------------------------------------------
+  // Buffer::operator
+  //
+  Buffer &
+  Buffer::operator = (const Buffer & other)
+  {
+    if (this != &other)
+    {
+      ::av_freep(&data_);
+      size_ = 0;
+
+      if (other.size_ && other.data_)
+      {
+        data_ = (unsigned char *)::av_malloc(other.size_);
+        ::memcpy(data_, other.data_, other.size_);
+        size_ = other.size_;
+      }
+    }
+
+    return *this;
   }
 
   //----------------------------------------------------------------
@@ -52,8 +85,8 @@ namespace yae
   void
   Buffer::truncate(std::size_t size)
   {
-    YAE_THROW_IF(data_.size() < size);
-    data_.resize(size);
+    YAE_THROW_IF(size_ < size);
+    size_ = size;
   }
 
 

@@ -296,6 +296,27 @@ namespace yae
       }
     }
 
+    WavFileReader(const WavFileReader & other)
+    {
+      this->operator=(other);
+    }
+
+    WavFileReader & operator = (const WavFileReader & other)
+    {
+      wav_ = other.wav_;
+      audio_format_ = other.audio_format_;
+      num_channels_ = other.num_channels_;
+      sample_rate_ = other.sample_rate_;
+      bytes_per_sec_ = other.bytes_per_sec_;
+      bytes_per_block_ = other.bytes_per_block_;
+      bits_per_sample_ = other.bits_per_sample_;
+      sample_data_size_ = other.sample_data_size_;
+      data_start_byte_pos_ = other.data_start_byte_pos_;
+      bs_.reset(wav_);
+      bs_.seek(other.bs_.position());
+      return *this;
+    }
+
     // helper:
     bool open(const std::string & fn)
     {
@@ -404,6 +425,52 @@ namespace yae
       }
 
       data_start_byte_pos_ = bs_.byte_pos();
+      return true;
+    }
+
+    bool save(const std::string & fn) const
+    {
+      yae::TOpenFile file(fn, "wb");
+      if (!file.is_open())
+      {
+        return false;
+      }
+
+      // data can be clipped via data_start_byte_pos_ and sample_data_size_:
+      uint32_t sample_data_size = wav_.size() - data_start_byte_pos_;
+      YAE_ASSERT(sample_data_size_ <= sample_data_size);
+      if (sample_data_size < sample_data_size_)
+      {
+        return false;
+      }
+
+      file.write("RIFF", 4);
+
+      // file size minus 8, little-endian:
+      uint32_t file_size_minus_8 =
+        yae::WavFile::kHeadSz +
+        yae::WavFile::kFrmtSz +
+        sample_data_size_;
+      file.write(&file_size_minus_8, 4);
+
+      file.write("WAVE", 4);
+      file.write("fmt ", 4);
+
+      // format structure size minus 8, little endian:
+      uint32_t fmt_chunk_data_size = 16;
+      file.write(&fmt_chunk_data_size, 4);
+      file.write(&audio_format_, 2);
+      file.write(&num_channels_, 2);
+      file.write(&sample_rate_, 4);
+      file.write(&bytes_per_sec_, 4);
+      file.write(&bytes_per_block_, 2);
+      file.write(&bits_per_sample_, 2);
+
+      // write "data" chunk:
+      file.write("data", 4);
+      file.write(&sample_data_size_, 4);
+      file.write(wav_.get() + data_start_byte_pos_, sample_data_size_);
+
       return true;
     }
 

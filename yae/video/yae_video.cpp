@@ -617,6 +617,15 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TPlanarBuffer::size
+  //
+  std::size_t
+  TPlanarBuffer::size(std::size_t samplePlane) const
+  {
+    return samplePlane < plane_.size() ? plane_[samplePlane].size() : 0;
+  }
+
+  //----------------------------------------------------------------
   // TPlanarBuffer::rowBytes
   //
   std::size_t
@@ -649,6 +658,26 @@ namespace yae
       plane_[samplePlane].resize(rowBytes, rows, alignment);
     }
   }
+
+
+  //----------------------------------------------------------------
+  // TPackedBuffer::TPackedBuffer
+  //
+  TPackedBuffer::TPackedBuffer(const yae::Data & data,
+                               std::size_t row_bytes):
+    data_(data),
+    row_bytes_(0)
+  {}
+
+  //----------------------------------------------------------------
+  // TPackedBuffer:destroy
+  //
+  void
+  TPackedBuffer::destroy()
+  {
+    delete this;
+  }
+
 
   //----------------------------------------------------------------
   // getSubsFormatLabel

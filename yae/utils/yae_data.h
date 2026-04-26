@@ -173,15 +173,23 @@ namespace yae
   //----------------------------------------------------------------
   // Buffer
   //
+  // this uses av_malloc internally, so it should be suitably aligned
+  //
   struct YAE_API Buffer : IBuffer
   {
-    Buffer(std::size_t size);
+    Buffer(std::size_t size = 0);
+    Buffer(const Buffer & other);
+    ~Buffer();
+
+    Buffer & operator = (const Buffer & other);
 
     // virtual:
-    unsigned char * get() const;
+    unsigned char * get() const
+    { return data_; }
 
     // virtual:
-    std::size_t size() const;
+    std::size_t size() const
+    { return size_; }
 
     // virtual:
     void truncate(std::size_t size);
@@ -191,7 +199,8 @@ namespace yae
     { return true; }
 
   protected:
-    mutable std::vector<unsigned char> data_;
+    unsigned char * data_;
+    std::size_t size_;
   };
 
 
@@ -312,7 +321,7 @@ namespace yae
       {
         std::size_t size = n * sizeof(TData);
         data_.reset(new Buffer(size));
-        return static_cast<TData *>(data_->get());
+        return reinterpret_cast<TData *>(data_->get());
       }
 
       data_.reset();

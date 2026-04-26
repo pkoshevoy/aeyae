@@ -7,16 +7,19 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
+#include "yae/api/yae_log_observer.h"
 #include "yae/utils/yae_data.h"
 
 YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
+#include <boost/algorithm/string.hpp>
 #include <boost/test/unit_test.hpp>
 
 YAE_ENABLE_DEPRECATION_WARNINGS
 
-// shortcut:
+// namespace shortcuts:
+namespace al = boost::algorithm;
 using namespace yae;
 
 
@@ -162,10 +165,18 @@ BOOST_AUTO_TEST_CASE(yae_bitstream_write)
   BOOST_CHECK_EQUAL(64, bits.position());
 }
 
+//----------------------------------------------------------------
+// yae_bitstream_read_write_bytes
+//
 BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_bytes)
 {
-  unsigned char b[8] = { 0 };
+  // temporarily intercept log messages:
+  TLog test_logger;
+  std::list<LogObserver::Message> log;
+  test_logger.assign("log_observer", new LogObserver(log));
+  TLog::Replace replace_logger(yae::logger(), test_logger);
 
+  unsigned char b[8] = { 0 };
   TBufferPtr data(new ExtBuffer(b, sizeof(b)));
   Bitstream bits(data);
 
@@ -179,17 +190,26 @@ BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_bytes)
   std::string hello = Data(bits.read_bytes(5)).to_str();
   BOOST_CHECK_EQUAL("Hello", hello);
 
+  // NOTE: intentionally non-byte-aligned write_bytes call:
   bits.seek(0);
   bits.write(4, 0);
   bits.seek(4);
   bits.write_bytes("World", 5);
   BOOST_CHECK_EQUAL(44, bits.position());
   BOOST_CHECK_EQUAL('W' >> 4, b[0]);
+  BOOST_CHECK(!log.empty() && al::starts_with
+              (log.front().message_,
+               "unexpected condition: IBitstream::is_byte_aligned()"));
+  log.clear();
 
   bits.seek(4);
   BOOST_CHECK_EQUAL(4, bits.position());
   std::string world = Data(bits.read_bytes(5)).to_str();
   BOOST_CHECK_EQUAL("World", world);
+  BOOST_CHECK(!log.empty() && al::starts_with
+              (log.front().message_,
+               "unexpected condition: IBitstream::is_byte_aligned()"));
+  log.clear();
 }
 
 BOOST_AUTO_TEST_CASE(yae_bitstream_read_write_exp_golomb)

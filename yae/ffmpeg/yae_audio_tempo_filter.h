@@ -637,7 +637,7 @@ namespace yae
     TState state_;
 
     // for fast correlation calculation in frequency domain:
-    yae::rdft_t rdft_;
+    yae::rDFT rdft_;
   };
 
   //----------------------------------------------------------------

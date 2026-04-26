@@ -319,8 +319,36 @@ namespace yae
     //! data plane accessor:
     virtual unsigned char * data(std::size_t plane) const = 0;
 
+    //! data plane accessor:
+    virtual std::size_t size(std::size_t plane) const = 0;
+
     //! bytes per plane row:
     virtual std::size_t rowBytes(std::size_t planeIndex) const = 0;
+
+    template <typename TData>
+    inline std::size_t num(std::size_t plane = 0) const
+    {
+      std::size_t pz = this->size(plane);
+      return pz / sizeof(TData);
+    }
+
+    template <typename TData>
+    inline TData * get(std::size_t plane = 0) const
+    {
+      unsigned char * p = this->data(plane);
+      return p ? reinterpret_cast<TData *>(p) : NULL;
+    }
+
+    template <typename TData>
+    inline TData * end(std::size_t plane = 0) const
+    { return this->get<TData>() + this->num<TData>(); }
+
+    inline yae::Data get_data(std::size_t plane = 0) const
+    {
+      yae::Data result;
+      result.shallow_ref(this->data(plane), this->size(plane));
+      return result;
+    }
   };
 
   //----------------------------------------------------------------
@@ -416,6 +444,9 @@ namespace yae
     unsigned char * data(std::size_t plane) const;
 
     // virtual:
+    std::size_t size(std::size_t plane) const;
+
+    // virtual:
     std::size_t rowBytes(std::size_t plane) const;
 
     // helper:
@@ -429,7 +460,7 @@ namespace yae
 
     // helper, useful for audio sample buffer:
     inline void resize(std::size_t numBytes, std::size_t alignment = 32)
-    { resize(0, numBytes, 1, alignment); }
+    { this->resize(0, numBytes, 1, alignment); }
 
   protected:
     // data planes:
@@ -440,6 +471,57 @@ namespace yae
   // TPlanarBufferPtr
   //
   typedef boost::shared_ptr<TPlanarBuffer> TPlanarBufferPtr;
+
+  //----------------------------------------------------------------
+  // TPackedBuffer
+  //
+  struct YAE_API TPackedBuffer : public IPlanarBuffer
+  {
+    TPackedBuffer(const yae::Data & data = yae::Data(),
+                  std::size_t row_bytes = 0);
+
+    // virtual:
+    void destroy();
+
+    // virtual:
+    std::size_t planes() const
+    { return 1; }
+
+    // virtual:
+    unsigned char * data(std::size_t plane) const
+    { return plane ? NULL : data_.get(); }
+
+    // virtual:
+    std::size_t size(std::size_t plane) const
+    { return plane ? 0 : data_.size(); }
+
+    // virtual:
+    std::size_t rowBytes(std::size_t plane) const
+    { return plane ? 0 : (row_bytes_ ? row_bytes_ : data_.size()); }
+
+    // helper:
+    inline std::size_t rows() const
+    { return row_bytes_ ? (data_.size() / row_bytes_) : 1; }
+
+    // helper:
+    inline void resize(std::size_t rowBytes, std::size_t rows)
+    {
+      row_bytes_ = rowBytes;
+      data_.resize(rowBytes * rows);
+    }
+
+    // helper, useful for audio sample buffer:
+    inline void resize(std::size_t numBytes)
+    { this->resize(numBytes, 1); }
+
+    yae::Data data_;
+    std::size_t row_bytes_;
+  };
+
+  //----------------------------------------------------------------
+  // TPackedBufferPtr
+  //
+  typedef boost::shared_ptr<TPackedBuffer> TPackedBufferPtr;
 
   //----------------------------------------------------------------
   // TRendererHints
@@ -461,6 +543,12 @@ namespace yae
       readerId_((unsigned int)~0),
       tempo_(1.0)
     {}
+
+    inline yae::Data get_data(std::size_t plane = 0) const
+    { return data_ ? data_->get_data(plane) : yae::Data(); }
+
+    inline void set_data(const yae::Data & data, std::size_t row_bytes = 0)
+    { data_.reset(new TPackedBuffer(data, row_bytes)); }
 
     //! renderer hints bitmask:
     unsigned int rendererHints_;
@@ -609,6 +697,21 @@ namespace yae
     // helper:
     std::size_t numSamples() const;
     double durationInSeconds() const;
+
+    inline AVSampleFormat get_format() const
+    { return traits_.sample_format_; }
+
+    inline int sample_rate() const
+    { return traits_.sample_rate_; }
+
+    inline int num_channels() const
+    { return traits_.ch_layout_.nb_channels; }
+
+    inline std::size_t num_samples() const
+    { return this->numSamples(); }
+
+    inline yae::TTime duration() const
+    { return yae::TTime(this->num_samples(), traits_.sample_rate_); }
   };
 
   //----------------------------------------------------------------

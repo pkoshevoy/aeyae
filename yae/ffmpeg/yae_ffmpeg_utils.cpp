@@ -1204,7 +1204,8 @@ namespace yae
   void
   sanitize_color_specs(yae::AvFrmSpecs & specs)
   {
-    const AVPixFmtDescriptor * desc = av_pix_fmt_desc_get((AVPixelFormat)(specs.format));
+    const AVPixFmtDescriptor * desc =
+      av_pix_fmt_desc_get((AVPixelFormat)(specs.format));
     if (desc)
     {
       if ((desc->flags & AV_PIX_FMT_FLAG_RGB) != AV_PIX_FMT_FLAG_RGB)
@@ -1708,14 +1709,15 @@ namespace yae
         codec_pix_fmts[0];
 
       yae::sanitize_color_specs(specs);
+      yae::copy_color_specs(frame, specs);
 
       yae::VideoFilterGraph vf;
-      if (vf.setup(src, framerate, timebase, specs))
+      if (vf.setup(avfrm, framerate, timebase, specs))
       {
-        yae_dlog("save_as: filters: %s", vf.get_filters().c_str());
+        // yae_dlog("save_as: filters: %s", vf.get_filters().c_str());
       }
 
-      yae::AvFrm tmp = src;
+      yae::AvFrm tmp = avfrm;
       vf.push(&tmp.get());
       vf.push(NULL);
 

@@ -54,6 +54,9 @@ namespace yae
     unsigned char * data(std::size_t plane) const;
 
     // virtual:
+    std::size_t size(std::size_t plane) const;
+
+    // virtual:
     std::size_t rowBytes(std::size_t plane) const;
 
     AvFrm frame_;

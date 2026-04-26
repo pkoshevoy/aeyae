@@ -217,6 +217,7 @@ set(LIBAEYAE_SOURCES
   yae/api/yae_frame_observer_interface.h
   yae/api/yae_log.cpp
   yae/api/yae_log.h
+  yae/api/yae_log_observer.h
   yae/api/yae_message_carrier_interface.h
   yae/api/yae_plugin_interface.h
   yae/api/yae_settings.h
@@ -295,6 +296,8 @@ set(LIBAEYAE_SOURCES
   yae/video/yae_audio_renderer.h
   yae/video/yae_audio_renderer_input.cpp
   yae/video/yae_audio_renderer_input.h
+  yae/video/yae_audio_utils.cpp
+  yae/video/yae_audio_utils.h
   yae/video/yae_auto_crop.cpp
   yae/video/yae_auto_crop.h
   yae/video/yae_colorspace.cpp

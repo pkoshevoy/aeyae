@@ -31,7 +31,7 @@ BOOST_AUTO_TEST_CASE(wav_write_read)
   BOOST_CHECK(yae::get_current_executable_folder(exe_folder_path_utf8));
 
   // create a sample file:
-  fs::path wav_path = fs::path(exe_folder_path_utf8) / "yae_test.wav";
+  fs::path wav_path = fs::path(exe_folder_path_utf8) / "stereo_s16.wav";
   {
     yae::WavFile wav;
     BOOST_REQUIRE(wav.open(wav_path.string(), 2, 48000, 16));

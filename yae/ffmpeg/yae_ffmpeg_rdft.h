@@ -26,11 +26,11 @@ namespace yae
 {
 
   //----------------------------------------------------------------
-  // rdft_t
+  // rDFT
   //
   // a warpper for libavutil 1D RDFT
   //
-  struct rdft_t
+  struct rDFT
   {
     //----------------------------------------------------------------
     // re_t
@@ -43,9 +43,50 @@ namespace yae
     typedef AVComplexFloat cx_t;
 
     //----------------------------------------------------------------
-    // rdft_t
+    // Frame
     //
-    rdft_t():
+    struct Frame
+    {
+      typedef rDFT::re_t re_t;
+      typedef rDFT::cx_t cx_t;
+
+      // initialize re and cx buffers:
+      inline void init(const rDFT & rdft)
+      {
+        re_.resize<re_t>(rdft.po2_size());
+        re_.memset(0);
+
+        cx_.resize<cx_t>(rdft.po2_size() / 2 + 1);
+        cx_.memset(0);
+      }
+
+      inline void init(rDFT & rdft,
+                       const re_t * samples,
+                       std::size_t num_samples)
+      {
+        this->init(rdft);
+
+        num_samples = std::min<std::size_t>(num_samples, rdft.po2_size());
+        memcpy(re_.get<re_t>(), samples, sizeof(re_t) * num_samples);
+
+        // apply rDFT:
+        re_t * re = re_.get<re_t>();
+        cx_t * cx = cx_.get<cx_t>();
+        rdft.r2c(re, cx);
+      }
+
+      inline void init(rDFT & rdft, const yae::Data & samples)
+      { this->init(rdft, samples.get<re_t>(), samples.num<re_t>()); }
+
+      // should this be yae::Data instead?
+      yae::Data re_; // N
+      yae::Data cx_; // N / 2 + 1
+    };
+
+    //----------------------------------------------------------------
+    // rDFT
+    //
+    rDFT():
       r2c_(NULL),
       c2r_(NULL),
       r2c_tx_(NULL),
@@ -54,9 +95,9 @@ namespace yae
     {}
 
     //----------------------------------------------------------------
-    // ~rdft_t
+    // ~rDFT
     //
-    ~rdft_t()
+    ~rDFT()
     { this->uninit(); }
 
     //----------------------------------------------------------------
@@ -90,8 +131,8 @@ namespace yae
                        0); // flags
       YAE_ASSERT_NO_AVERROR_OR_RETURN(ret, false);
 
-      buffer_.re_.resize<rdft_t::re_t>(po2_size_);
-      buffer_.cx_.resize<rdft_t::cx_t>(po2_size_ / 2 + 1);
+      buffer_.re_.resize<rDFT::re_t>(po2_size_);
+      buffer_.cx_.resize<rDFT::cx_t>(po2_size_ / 2 + 1);
       return true;
     }
 
@@ -111,10 +152,10 @@ namespace yae
     inline uint32_t po2_size() const
     { return po2_size_; }
 
-    inline TDataBuffer & re_buffer()
+    inline yae::Data & re_buffer()
     { return buffer_.re_; }
 
-    inline TDataBuffer & cx_buffer()
+    inline yae::Data & cx_buffer()
     { return buffer_.cx_; }
 
     //----------------------------------------------------------------
@@ -143,42 +184,8 @@ namespace yae
                     re_t * dst)
     { c2r_tx_(c2r_, dst, src, sizeof(cx_t)); }
 
-    //----------------------------------------------------------------
-    // Frame
-    //
-    struct Frame
-    {
-      typedef rdft_t::re_t re_t;
-      typedef rdft_t::cx_t cx_t;
-
-      // initialize re and cx buffers:
-      void init(rdft_t & rdft, const re_t * samples, std::size_t num_samples)
-      {
-        re_.resize<re_t>(rdft.po2_size());
-        re_.memset(0);
-
-        num_samples = std::min<std::size_t>(num_samples, rdft.po2_size());
-        memcpy(re_.get<re_t>(), samples, sizeof(re_t) * num_samples);
-
-        cx_.resize<cx_t>(rdft.po2_size() / 2 + 1);
-        cx_.memset(0);
-
-        // apply rDFT:
-        re_t * re = re_.get<re_t>();
-        cx_t * cx = cx_.get<cx_t>();
-        rdft.r2c(re, cx);
-      }
-
-      inline void init(rdft_t & rdft, const yae::Data & samples)
-      { this->init(rdft, samples.get<re_t>(), samples.num<re_t>()); }
-
-      // should this be yae::Data instead?
-      TDataBuffer re_; // N
-      TDataBuffer cx_; // N / 2 + 1
-    };
-
   protected:
-    rdft_t::Frame buffer_;
+    rDFT::Frame buffer_;
 
     AVTXContext * r2c_;
     AVTXContext * c2r_;

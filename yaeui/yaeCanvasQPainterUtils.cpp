@@ -342,6 +342,18 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TQImageBuffer::size
+  //
+  std::size_t
+  TQImageBuffer::size(std::size_t plane) const
+  {
+    (void)plane;
+    int h = qimg_.height();
+    int n = qimg_.bytesPerLine();
+    return (std::size_t)(h * n);
+ }
+
+  //----------------------------------------------------------------
   // TQImageBuffer::rowBytes
   //
   std::size_t

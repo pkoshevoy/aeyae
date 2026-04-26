@@ -20,11 +20,15 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost library:
 #ifndef Q_MOC_RUN
+#include <boost/algorithm/string.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 
 YAE_ENABLE_DEPRECATION_WARNINGS
+
+// namespace shortcut:
+namespace al = boost::algorithm;
 
 
 namespace yae
