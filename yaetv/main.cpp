@@ -107,19 +107,22 @@ namespace yae
       yae::Timespan pts_;
     };
 
+#ifndef _WIN32
     std::map<uint16_t, Track> track_;
     struct sockaddr_in dest_addr_;
     int output_socket_;
     double rate_;
+#endif
 
     StreamDumper(const std::string & basedir):
       ctx_("StreamDumper"),
       packets_(40000000), // 7520MB
-      basedir_(basedir),
-      output_socket_(-1),
-      rate_(1.0)
+      basedir_(basedir)
     {
+#ifndef _WIN32
       memset(&dest_addr_, 0, sizeof(dest_addr_));
+      output_socket_ = -1;
+      rate_ = 1.0;
 
       std::vector<std::string> tokens;
       yae::split(tokens, ":", basedir.c_str());
@@ -142,21 +145,24 @@ namespace yae
           ::fcntl(output_socket_, F_SETFL, flags | O_NONBLOCK);
         }
       }
+#endif
     }
 
     ~StreamDumper()
     {
       handle_backlog();
-
+#ifndef _WIN32
       if (output_socket_ >= 0)
       {
         ::close(output_socket_);
       }
+#endif
     }
 
     void
     send(const yae::mpeg_ts::IPacketHandler::Packet & packet)
     {
+#ifndef _WIN32
       const std::list<yae::mpeg_ts::PESPacket> *
         es_packets = ctx_.get_es_packets(packet.pid_);
 
@@ -286,6 +292,7 @@ namespace yae
 #endif
         boost::this_thread::sleep_for(boost::chrono::milliseconds(msec_sleep));
       }
+#endif
     }
 
     yae::TOpenFile &
@@ -309,12 +316,14 @@ namespace yae
                 const yae::mpeg_ts::Bucket & bucket,
                 uint32_t gps_time)
     {
+#ifndef _WIN32
       if (output_socket_)
       {
         //yae_ilog("gps_time: %" PRIu32 "", gps_time);
         this->send(packet);
         return;
       }
+#endif
 
       packets_.push(packet);
 
@@ -454,7 +463,9 @@ namespace yae
     YAE_THROW_IF(!src.is_open());
 
     StreamDumper handler(dst_path);
+#ifndef _WIN32
     handler.rate_ = rate;
+#endif
 
     while (true)
     {

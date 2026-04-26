@@ -556,9 +556,9 @@ namespace yae
   //
   // return the contents of the file
   //
-  bool load_file(yae::Data & data,
-                 const std::string & filename,
-                 const char * mode = "rb");
+  YAE_API bool load_file(yae::Data & data,
+                         const std::string & filename,
+                         const char * mode = "rb");
 
 
   //----------------------------------------------------------------
