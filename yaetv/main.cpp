@@ -273,10 +273,9 @@ namespace yae
       boost::chrono::steady_clock::time_point now =
         boost::chrono::steady_clock::now();
 
-      boost::chrono::duration elapsed = (now - track->start_);
+      // elapsed seconds:
       double t_actual =
-        boost::chrono::duration_cast<boost::chrono::microseconds>(elapsed).
-        count() * 1e-6;
+        boost::chrono::duration<double>(now - track->start_).count();
 
       t_actual *= rate_;
 
