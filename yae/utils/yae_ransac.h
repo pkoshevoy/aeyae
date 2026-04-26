@@ -31,6 +31,10 @@ namespace yae
   template <typename TData>
   struct RANSAC
   {
+    typedef TData data_t;
+    typedef RANSAC<TData> ransac_t;
+    typedef std::vector<const TData *> TSubSet;
+
     boost::random::uniform_int_distribution<std::size_t> random_;
     mutable boost::random::mt19937 rng_;
 
@@ -43,14 +47,12 @@ namespace yae
       dataset_size_(dataset_size)
     {}
 
-    typedef std::vector<const TData *> TSubSet;
-
     //----------------------------------------------------------------
     // Model
     //
     struct Model
     {
-      typedef RANSAC<TData>::TSubSet TSubSet;
+      typedef typename ransac_t::TSubSet TSubSet;
       virtual ~Model() {}
       virtual void reset(const TSubSet & data) = 0;
       virtual double fit(const TData & sample) const = 0;
@@ -59,10 +61,9 @@ namespace yae
     //----------------------------------------------------------------
     // Mean
     //
-    struct Mean : RANSAC<TData>::Model
+    struct Mean : Model
     {
-      typedef RANSAC<TData>::Model TBase;
-      typedef typename TBase::TSubSet TSubSet;
+      typedef typename ransac_t::TSubSet TSubSet;
 
       Mean(): mean_(0) {}
 
@@ -90,10 +91,9 @@ namespace yae
     //----------------------------------------------------------------
     // Median
     //
-    struct Median : RANSAC<TData>::Model
+    struct Median : Model
     {
-      typedef RANSAC<TData>::Model TBase;
-      typedef typename TBase::TSubSet TSubSet;
+      typedef typename ransac_t::TSubSet TSubSet;
 
       Median(): median_(0) {}
 

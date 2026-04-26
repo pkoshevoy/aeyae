@@ -7,9 +7,9 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
-#include "yae/utils/yae_utils.h"
 #include "yae/utils/yae_ransac.h"
 #include "yae/utils/yae_time.h"
+#include "yae/utils/yae_utils.h"
 
 // standard:
 #include <inttypes.h>
@@ -76,12 +76,13 @@ BOOST_AUTO_TEST_CASE(yae_ransac)
     dataset[i] = (i % 2) ? 768 : i;
   }
 
-  yae::RANSAC<int>::Median model;
-  yae::RANSAC<int>::TSubSet bestfit;
+  typedef yae::RANSAC<int> ransac_t;
+  ransac_t::Median model;
+  ransac_t::TSubSet bestfit;
 
   double fit_error_threshold = 1.0;
   double bestfit_err_avg =
-    yae::RANSAC<int>(&dataset[0], dataset.size()).
+    ransac_t(&dataset[0], dataset.size()).
     find_inliers(model, fit_error_threshold, bestfit);
 
   BOOST_CHECK(bestfit_err_avg < fit_error_threshold);

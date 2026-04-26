@@ -17,11 +17,13 @@
 YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
+#include <boost/filesystem.hpp>
 #include <boost/test/unit_test.hpp>
 
 YAE_ENABLE_DEPRECATION_WARNINGS
 
 // namespace access:
+namespace fs = boost::filesystem;
 using namespace yae;
 
 
@@ -338,6 +340,20 @@ BOOST_AUTO_TEST_CASE(ycbcr_to_ypbpr_to_ycbcr_full_8bit)
 }
 
 //----------------------------------------------------------------
+// get_output_path
+//
+static std::string
+get_output_path(const std::string & prefix)
+{
+  std::string exe_folder_path_utf8;
+  BOOST_CHECK(yae::get_current_executable_folder(exe_folder_path_utf8));
+
+  // create a sample file:
+  fs::path out_path = fs::path(exe_folder_path_utf8) / prefix;
+  return out_path.string();
+}
+
+//----------------------------------------------------------------
 // yae_color_transform_hlg_to_sdr_yuv444
 //
 BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
@@ -373,7 +389,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hlg_to_sdr_yuv444)
   // convert 3D LUT to a 2D CLUT:
   AvFrm frm = lut_3d_to_2d_yuv(lut3d, *csp_sdr);
 
-  std::string fn_prefix = "/tmp/clut-hlg-to-sdr-";
+  std::string fn_prefix = get_output_path("clut-hlg-to-sdr-");
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
@@ -412,7 +428,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_yuv444)
   // convert 3D LUT to a 2D CLUT:
   AvFrm frm = lut_3d_to_2d_yuv(lut3d, *csp_sdr);
 
-  std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
+  std::string fn_prefix = get_output_path("clut-hdr10-to-sdr-");
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
@@ -452,7 +468,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_hdr10_to_sdr_rgb24)
   // convert 3D LUT to a 2D CLUT:
   AvFrm frm = lut_3d_to_2d_rgb(lut3d, *csp_sdr);
 
-  std::string fn_prefix = "/tmp/clut-hdr10-to-sdr-";
+  std::string fn_prefix = get_output_path("clut-hdr10-to-sdr-");
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
@@ -488,7 +504,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_sdr_to_sdr_rgb24)
   // convert 3D LUT to a 2D CLUT:
   AvFrm frm = lut_3d_to_2d_rgb(lut3d, *dst_csp);
 
-  std::string fn_prefix = "/tmp/clut-sdr-to-sdr-";
+  std::string fn_prefix = get_output_path("clut-sdr-to-sdr-");
   BOOST_CHECK(save_as_png(frm, fn_prefix, TTime(1, 30)));
 }
 
@@ -772,7 +788,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
   AvFrm yuv_frm = make_textured_frame(tex_gen, AV_PIX_FMT_YUV444P, w, h);
   const AVFrame & yuv_frame = yuv_frm.get();
 
-  std::string fn_prefix_yuv = "/tmp/colorbars-source-";
+  std::string fn_prefix_yuv = get_output_path("colorbars-source-");
   BOOST_CHECK(save_as_png(yuv_frm, fn_prefix_yuv));
 
   AvFrm rgb_frm = make_avfrm(AV_PIX_FMT_RGB24,
@@ -806,7 +822,7 @@ BOOST_AUTO_TEST_CASE(yae_color_transform_yuv_to_rgb_colorbars)
     }
   }
 
-  std::string fn_prefix_rgb = "/tmp/colorbars-output-";
+  std::string fn_prefix_rgb = get_output_path("colorbars-output-");
   BOOST_CHECK(save_as_png(rgb_frm, fn_prefix_rgb));
 }
 #endif

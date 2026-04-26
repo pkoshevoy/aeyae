@@ -82,7 +82,7 @@ WavFile::close()
 // WavFile::open
 //
 bool
-WavFile::open(const std::string & fn, const AudioTraits & atts)
+WavFile::open(const std::string & fn, const yae::AudioTraits & atts)
 {
   int nchan = atts.ch_layout_.nb_channels;
   int sampleRate = (unsigned int)(atts.sample_rate_);
@@ -179,7 +179,7 @@ WavFile::save(const void * data,
 //
 bool
 WavFile::save(const char * fn,
-              const AudioTraits & atts,
+              const yae::AudioTraits & atts,
               const void * data,
               std::size_t size)
 {
