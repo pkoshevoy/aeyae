@@ -67,7 +67,8 @@ namespace yae
 
       Mean(): mean_(0) {}
 
-      void reset(const TSubSet & data) override
+      // virtual:
+      void reset(const TSubSet & data)
       {
         double sum = 0.0;
         std::size_t num = data.size();
@@ -79,7 +80,8 @@ namespace yae
         mean_ = num ? (sum / double(num)) : 0.0;
       }
 
-      double fit(const TData & sample) const override
+      // virtual:
+      double fit(const TData & sample) const
       {
         double abs_diff = ::fabs(mean_ - sample);
         return abs_diff;
@@ -97,7 +99,8 @@ namespace yae
 
       Median(): median_(0) {}
 
-      void reset(const TSubSet & data) override
+      // virtual:
+      void reset(const TSubSet & data)
       {
         std::size_t num = data.size();
         std::vector<TData> sorted(num);
@@ -110,7 +113,8 @@ namespace yae
         median_ = sorted[sorted.size() >> 1];
       }
 
-      double fit(const TData & sample) const override
+      // virtual:
+      double fit(const TData & sample) const
       {
         double abs_diff = ::fabs(median_ - sample);
         return abs_diff;
