@@ -177,7 +177,7 @@ namespace yae
 #if defined(_MSC_VER) && _MSC_VER < 1800
     return number < 0.0 ? std::ceil(number - 0.5) : std::floor(number + 0.5);
 #else
-    return std::round(number);
+    return ::round(number);
 #endif
   }
 

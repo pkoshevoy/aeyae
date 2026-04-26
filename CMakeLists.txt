@@ -290,6 +290,7 @@ set(LIBAEYAE_SOURCES
   yae/utils/yae_type_name.h
   yae/utils/yae_utils.cpp
   yae/utils/yae_utils.h
+  yae/utils/yae_wav_file.cpp
   yae/utils/yae_wav_file.h
 
   yae/video/yae_audio_renderer.cpp
