@@ -160,17 +160,6 @@ namespace yae
                    int max_samples = 1536);
 
   //----------------------------------------------------------------
-  // find_alignment_offset
-  //
-  // return best alignment offset between two wav files.
-  //
-  // the returned offset specifies to the number of samples that
-  // must be removed from the start of wav_b to align it with wav_a.
-  //
-  YAE_API int find_alignment_offset(yae::WavFileReader wav_a,
-                                    yae::WavFileReader wav_b);
-
-  //----------------------------------------------------------------
   // calc_avg_abs_diff
   //
   // return average absolute difference in waveform amplitudes
@@ -181,7 +170,22 @@ namespace yae
   //
   YAE_API double calc_avg_abs_diff(yae::WavFileReader wav_a,
                                    yae::WavFileReader wav_b,
-                                   int offset);
+                                   std::size_t frame_size,
+                                   int64_t offset);
+
+  //----------------------------------------------------------------
+  // find_alignment_offset
+  //
+  // return best alignment offset between two wav files.
+  //
+  // the returned offset specifies to the number of samples that
+  // must be removed from the start of wav_b to align it with wav_a.
+  //
+  YAE_API int64_t find_alignment_offset(yae::WavFileReader wav_a,
+                                        yae::WavFileReader wav_b,
+                                        std::size_t frame_size_po2,
+                                        double & best_avg_abs_diff,
+                                        double avg_diff_threshold = 2e+2);
 }
 
 

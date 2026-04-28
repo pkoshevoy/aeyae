@@ -108,6 +108,7 @@ BOOST_AUTO_TEST_CASE(yae_audio_utils)
   wav_a.data_start_byte_pos_ += wav_a.bytes_per_block_ * misalignment;
   wav_b.sample_data_size_ -= wav_a.bytes_per_block_ * misalignment;
 
-  int offset = yae::find_alignment_offset(wav_a, wav_b);
+  double avg_diff = std::numeric_limits<double>::max();
+  int64_t offset = yae::find_alignment_offset(wav_a, wav_b, 1024, avg_diff);
   BOOST_CHECK_EQUAL(misalignment, offset);
 }

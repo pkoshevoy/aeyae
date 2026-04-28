@@ -548,6 +548,16 @@ yae::find_alignment_offset(const yae::TAudioFrame & a,
 #if 0
   // debugging only:
   {
+    yae::AvFrm frm_a = yae::draw_wav_amp(to_s16(a));
+    save_as_png(frm_a,
+                yae::strfmt("/tmp/amp-a-%08" PRIi64 "-", a.time_.time_),
+                a.duration());
+
+    yae::AvFrm frm_b = yae::draw_wav_amp(to_s16(b));
+    save_as_png(frm_b,
+                yae::strfmt("/tmp/amp-b-%08" PRIi64 "-", b.time_.time_),
+                b.duration());
+
     yae::Data s16_mono = f32_to_s16(rdft.re_buffer(), 32767.f / peak , window);
     yae::AvFrm frm = draw_wav_s16_mono(s16_mono);
     save_as_png(frm,
@@ -607,55 +617,13 @@ yae::load(yae::WavFileReader & wav, yae::TAudioFrame & frame, int max_samples)
 }
 
 //----------------------------------------------------------------
-// yae::find_alignment_offset
-//
-int
-yae::find_alignment_offset(yae::WavFileReader wav_a,
-                           yae::WavFileReader wav_b)
-{
-  wav_a.rewind();
-  wav_b.rewind();
-
-  yae::TAudioFrame frame_a;
-  yae::TAudioFrame frame_b;
-
-  yae::load(wav_a, frame_a, 4096);
-  yae::load(wav_b, frame_b, 4096);
-
-  // find alignment for each frame pair:
-  std::vector<int> offsets;
-  while (frame_a.num_samples() == frame_b.num_samples())
-  {
-    int offset = find_alignment_offset(frame_b, frame_a);
-    offsets.push_back(offset);
-#if 0
-    yae_dlog("alignment offset: %i", offset);
-    yae::AvFrm wav_overlap = draw_wav_overlap(frame_a, frame_b, offset);
-    save_as_png(wav_overlap,
-                yae::strfmt("/tmp/overlap-%08" PRIi64 "-offset-%i-",
-                            frame_a.time_.time_,
-                            offset),
-                frame_a.duration());
-#endif
-
-    // load next frame:
-    yae::load(wav_a, frame_a, 4096);
-    yae::load(wav_b, frame_b, 4096);
-  }
-
-  // select the median offset:
-  std::sort(offsets.begin(), offsets.end());
-  int offset = offsets[offsets.size() / 2];
-  return offset;
-}
-
-//----------------------------------------------------------------
 // yae::calc_avg_abs_diff
 //
 double
 yae::calc_avg_abs_diff(yae::WavFileReader wav_a,
                        yae::WavFileReader wav_b,
-                       int offset)
+                       std::size_t frame_size,
+                       int64_t offset)
 {
   wav_a.rewind();
   wav_b.rewind();
@@ -672,8 +640,8 @@ yae::calc_avg_abs_diff(yae::WavFileReader wav_a,
   yae::TAudioFrame frame_a;
   yae::TAudioFrame frame_b;
 
-  yae::load(wav_a, frame_a, 4096);
-  yae::load(wav_b, frame_b, 4096);
+  yae::load(wav_a, frame_a, frame_size);
+  yae::load(wav_b, frame_b, frame_size);
 
   // sum the absolute differences
   uint64_t sum_absdiffs = 0;
@@ -682,6 +650,9 @@ yae::calc_avg_abs_diff(yae::WavFileReader wav_a,
   while (frame_a.num_samples() == frame_b.num_samples() &&
          frame_a.num_samples() > 0)
   {
+    frame_a = to_s16(frame_a);
+    frame_b = to_s16(frame_b);
+
 #if 0
     yae::AvFrm wav_overlap = draw_wav_overlap(frame_a, frame_b, 0);
     save_as_png(wav_overlap,
@@ -712,10 +683,153 @@ yae::calc_avg_abs_diff(yae::WavFileReader wav_a,
     }
 
     // load next frame:
-    yae::load(wav_a, frame_a, 4096);
-    yae::load(wav_b, frame_b, 4096);
+    yae::load(wav_a, frame_a, frame_size);
+    yae::load(wav_b, frame_b, frame_size);
   }
 
   double avg_absdiff = double(sum_absdiffs) / double(num_absdiffs);
   return avg_absdiff;
+}
+
+//----------------------------------------------------------------
+// find_alignment_offset
+//
+// return best alignment offset between two wav files.
+//
+// the returned offset specifies to the number of samples that
+// must be removed from the start of wav_b to align it with wav_a.
+//
+// NOTE: this can fail if the misalignment between waveforms is larger
+// than the frame size (or even half the frame size).
+// initial_offset is used to nudge the alignment closer.
+//
+static int64_t
+find_alignment_offset(yae::WavFileReader wav_a,
+                      yae::WavFileReader wav_b,
+                      std::size_t frame_size_po2,
+                      int64_t initial_offset)
+{
+  using yae::draw_wav_overlap;
+  using yae::find_alignment_offset;
+
+  frame_size_po2 = yae::get_po2_size(frame_size_po2);
+
+  wav_a.rewind();
+  wav_b.rewind();
+
+  if (initial_offset > 0)
+  {
+    wav_b.seek_to(initial_offset);
+  }
+  else
+  {
+    wav_a.seek_to(-initial_offset);
+  }
+
+  yae::TAudioFrame frame_a;
+  yae::TAudioFrame frame_b;
+
+  yae::load(wav_a, frame_a, frame_size_po2);
+  yae::load(wav_b, frame_b, frame_size_po2);
+
+  // find alignment for each frame pair:
+  std::vector<int> offsets;
+  while (frame_a.num_samples() == frame_b.num_samples() &&
+         frame_a.num_samples() > 0)
+  {
+    int offset = find_alignment_offset(frame_b, frame_a);
+    offsets.push_back(offset);
+#if 0
+    yae_dlog("alignment offset: %i", offset);
+    yae::AvFrm wav_overlap = draw_wav_overlap(frame_a, frame_b, offset);
+    save_as_png(wav_overlap,
+                yae::strfmt("/tmp/overlap-%08" PRIi64 "-offset-%i-",
+                            frame_a.time_.time_,
+                            offset),
+                frame_a.duration());
+#endif
+
+    // load next frame:
+    yae::load(wav_a, frame_a, frame_size_po2);
+    yae::load(wav_b, frame_b, frame_size_po2);
+  }
+
+  // select the median offset:
+  std::sort(offsets.begin(), offsets.end());
+  int offset = offsets[offsets.size() / 2];
+  return initial_offset + offset;
+}
+
+//----------------------------------------------------------------
+// yae::find_alignment_offset
+//
+int64_t
+yae::find_alignment_offset(yae::WavFileReader wav_a,
+                           yae::WavFileReader wav_b,
+                           std::size_t frame_size_po2,
+                           double & best_avg_abs_diff,
+                           double avg_diff_threshold)
+{
+  using yae::calc_avg_abs_diff;
+  using yae::draw_wav_overlap;
+  using yae::save_as_png;
+
+  frame_size_po2 = yae::get_po2_size(frame_size_po2);
+  best_avg_abs_diff = std::numeric_limits<double>::max();
+
+  int64_t best_offset = 0;
+  int64_t max_dur = std::min(wav_a.get_dur(), wav_b.get_dur());
+
+  for (int64_t i = 0; i < max_dur; i += frame_size_po2)
+  {
+    int64_t offset = ::find_alignment_offset(wav_a, wav_b, frame_size_po2, i);
+    double avg_diff = calc_avg_abs_diff(wav_a, wav_b, frame_size_po2, offset);
+    if (avg_diff < best_avg_abs_diff)
+    {
+      best_offset = offset;
+      best_avg_abs_diff = avg_diff;
+    }
+
+    if (avg_diff <= avg_diff_threshold)
+    {
+      break;
+    }
+  }
+
+#if 0
+  yae::TAudioFrame frame_a;
+  yae::TAudioFrame frame_b;
+
+  wav_a.rewind();
+  wav_b.rewind();
+
+  if (best_offset > 0)
+  {
+    wav_b.seek_to(best_offset);
+  }
+  else
+  {
+    wav_a.seek_to(-best_offset);
+  }
+
+  yae::load(wav_a, frame_a, frame_size_po2);
+  yae::load(wav_b, frame_b, frame_size_po2);
+
+  while (frame_a.num_samples() == frame_b.num_samples() &&
+         frame_a.num_samples() > 0)
+  {
+    yae::AvFrm wav_overlap = draw_wav_overlap(frame_a, frame_b, 0);
+    save_as_png(wav_overlap,
+                yae::strfmt("/tmp/overlap-%08" PRIi64 "-aligned-%i-",
+                            frame_a.time_.time_,
+                            best_offset),
+                frame_a.duration());
+
+    // load next frame:
+    yae::load(wav_a, frame_a, frame_size_po2);
+    yae::load(wav_b, frame_b, frame_size_po2);
+  }
+#endif
+
+  return best_offset;
 }
