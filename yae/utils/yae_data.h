@@ -604,9 +604,6 @@ namespace yae
         data_(data)
       {}
 
-      inline operator unsigned char() const
-      { return static_cast<unsigned char>(data_ & 0xFF); }
-
       template <typename TData>
       inline operator TData() const
       { return static_cast<TData>(data_); }
