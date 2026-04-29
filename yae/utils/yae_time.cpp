@@ -11,7 +11,7 @@
 #include "yae/utils/yae_utils.h"
 
 // boost:
-#include <boost/integer/common_factor.hpp>
+#include <boost/math/common_factor.hpp>
 
 // standard:
 #include <ctype.h>
@@ -616,7 +616,7 @@ namespace yae
   int64_t
   TTime::get_gcd() const
   {
-    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
     return gcd;
   }
 
@@ -626,7 +626,7 @@ namespace yae
   bool
   TTime::reduce()
   {
-    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
     time_ /= gcd;
     base_ /= gcd;
     return (gcd > 1);
@@ -638,7 +638,7 @@ namespace yae
   TTime
   TTime::reduced() const
   {
-    int64_t gcd = boost::integer::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
     return TTime(time_ / gcd, base_ / gcd);
   }
 
