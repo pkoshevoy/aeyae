@@ -909,11 +909,6 @@ find_alignment_offset(yae::WavFileReader wav_a,
   {
     double abs_diff = std::numeric_limits<double>::max();
     int offset = find_alignment_offset(frame_b, frame_a, abs_diff);
-    if (!abs_diff)
-    {
-      return initial_offset + offset;
-    }
-
     offsets.push_back(offset);
 #if 0
     yae_dlog("alignment offset: %i", offset);
