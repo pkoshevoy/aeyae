@@ -99,16 +99,31 @@ BOOST_AUTO_TEST_CASE(yae_audio_utils)
   std::string ab_pfx = (results_dir/"overlap-").string();
   BOOST_CHECK(yae::save_as_png(ab_frm, ab_pfx, a_f32.duration()));
 
-  // create two copies of the waveform,
-  // clip wav_a from the front, and wav_b from the back
-  // by the same number of samples:
-  int misalignment = 1234;
+  // create 2 copies of the waveform:
   yae::WavFileReader wav_a = wav;
   yae::WavFileReader wav_b = wav;
+
+  // clip wav_a from the back, and wav_b from the front
+  // by the same number of samples:
+  // int misalignment = 1234;
+  int misalignment = 5678;
   wav_a.data_start_byte_pos_ += wav_a.bytes_per_block_ * misalignment;
-  wav_b.sample_data_size_ -= wav_a.bytes_per_block_ * misalignment;
+  wav_b.sample_data_size_ -= wav_b.bytes_per_block_ * misalignment;
 
   double avg_diff = std::numeric_limits<double>::max();
   int64_t offset = yae::find_alignment_offset(wav_a, wav_b, 1024, avg_diff);
   BOOST_CHECK_EQUAL(misalignment, offset);
+#if 1
+  // clip wav_a from the back, and wav_b from the front
+  // by the same number of samples:
+  wav_a = wav;
+  wav_b = wav;
+
+  wav_a.sample_data_size_ -= wav_a.bytes_per_block_ * misalignment;
+  wav_b.data_start_byte_pos_ += wav_b.bytes_per_block_ * misalignment;
+
+  avg_diff = std::numeric_limits<double>::max();
+  offset = yae::find_alignment_offset(wav_a, wav_b, 1024, avg_diff);
+  BOOST_CHECK_EQUAL(misalignment, -offset);
+#endif
 }

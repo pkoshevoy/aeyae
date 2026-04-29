@@ -457,11 +457,52 @@ yae::draw_wav_overlap(yae::Data s16_mono_a,
 }
 
 //----------------------------------------------------------------
+// SlidingAverage
+//
+template <typename TData, std::size_t Size>
+struct SlidingAverage
+{
+  enum { kSize = Size };
+  std::size_t size_;
+  std::size_t tail_;
+  TData data_[Size];
+  TData sum_;
+
+  SlidingAverage():
+    size_(0),
+    tail_(0),
+    sum_(0)
+  {}
+
+  void push(TData v)
+  {
+    sum_ += v;
+
+    if (size_ < Size)
+    {
+      data_[tail_] = v;
+      size_ += 1;
+    }
+    else
+    {
+      sum_ -= data_[tail_];
+      data_[tail_] = v;
+    }
+
+    tail_ = (tail_ + 1) % Size;
+  }
+
+  inline double avg() const
+  { return double(sum_) / double(size_); }
+};
+
+//----------------------------------------------------------------
 // yae::find_alignment_offset
 //
 int
 yae::find_alignment_offset(const yae::TAudioFrame & a,
-                           const yae::TAudioFrame & b)
+                           const yae::TAudioFrame & b,
+                           double & best_err)
 {
   typedef yae::rDFT::re_t re_t;
   typedef yae::rDFT::cx_t cx_t;
@@ -476,9 +517,10 @@ yae::find_alignment_offset(const yae::TAudioFrame & a,
   int num_samples = a.num_samples();
   int window = yae::get_po2_size(num_samples);
   int half_window = window / 2;
+  int window_x2 = window * 2;
 
   yae::rDFT rdft;
-  rdft.init(window * 2);
+  rdft.init(window_x2);
   // rdft.init(window);
 
   // convert frame data to AV_SAMPLE_FMT_FLT, mono:
@@ -503,8 +545,8 @@ yae::find_alignment_offset(const yae::TAudioFrame & a,
     // YAE_ASSERT(rdft.cx_buffer().num<cx_t>() == half_window + 1);
     cx_t * xc = rdft.cx_buffer().get<cx_t>();
 
-    // for (uint32_t i = 0; i < window; i++, xa++, xb++, xc++)
-    for (uint32_t i = 0; i < half_window; i++, xa++, xb++, xc++)
+    // for (uint32_t i = 0; i <= window; i++, xa++, xb++, xc++)
+    for (uint32_t i = 0; i <= half_window; i++, xa++, xb++, xc++)
     {
       xc->re = (xa->re * xb->re + xa->im * xb->im);
       xc->im = (xa->im * xb->re - xa->re * xb->im);
@@ -515,33 +557,148 @@ yae::find_alignment_offset(const yae::TAudioFrame & a,
     rdft.c2r(xc, correlation);
   }
 
-  // identify peaks:
-  int best_offset = 0;
-  re_t best_metric = -std::numeric_limits<re_t>::max();
-
-  re_t * xc = correlation;
+  // rescale the data:
   re_t peak = 0.f;
-  for (int i = 0; i < window; i++, xc++)
   {
-    re_t & metric = *xc;
-
-    // "normalize"
-    int overlap = window - i;
-#if 0
-    re_t s = 1.f;
-#elif 0
-    re_t s = re_t(window) / re_t(overlap);
-#else
-    re_t s = re_t(2 * window - overlap) / re_t(window + overlap);
-#endif
-    metric *= s;
-
-    peak = std::max(peak, ::fabsf(metric));
-
-    if (metric > best_metric)
+    re_t * xc = correlation;
+    for (int i = 0; i < window; ++i, ++xc)
     {
-      best_metric = metric;
-      best_offset = i;
+      int overlap = window - i;
+#if 0
+      re_t s = 1.f;
+#elif 1
+      re_t s = re_t(window) / re_t(overlap);
+#elif 0
+      re_t s = re_t(2 * window - overlap) / re_t(window + overlap);
+#else
+      re_t s = (i + 1) * (window_x2 - i);
+#endif
+      re_t & metric = *xc;
+      metric *= s;
+      peak = std::max(peak, ::fabsf(metric));
+    }
+  }
+
+  // run a box filter over thresholded data:
+  yae::Data average;
+  {
+    re_t * avg = average.resize<re_t>(window);
+    re_t * xc = correlation;
+
+    typedef SlidingAverage<re_t, 3> TSlidingWindow;
+    std::size_t n = TSlidingWindow::kSize;
+    std::size_t n2 = n / 2;
+    TSlidingWindow box;
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      std::size_t j = (i <  n2) ? (n2 - i) : (i - n2);
+      box.push(xc[j]);
+    }
+
+    std::size_t n2_1 = n2 + 1;
+    for (std::size_t i = 0; i < window; ++i, ++avg)
+    {
+      *avg = box.avg();
+      std::size_t j = (i + n2_1 < window) ? (i + n2_1) : (window + n2 - i);
+      box.push(xc[j]);
+    }
+  }
+
+  // subtract the box filtered data to isolate the peaks:
+  yae::Data diff;
+  {
+    re_t * xc = correlation;
+    re_t * avg = average.get<re_t>();
+    re_t * out = diff.resize<re_t>(window);
+    re_t * end = diff.end<re_t>();
+    re_t threshold = peak * 0.95;
+    re_t max = 0.f;
+
+    for (; out < end; ++xc, ++avg, ++out)
+    {
+      re_t amp = ::fabsf(*xc);
+      *out = (amp < threshold) ? 0.f : (*xc - *avg);
+      max = std::max(max, ::fabsf(*out));
+    }
+#if 0
+    yae::Data s16_mono = f32_to_s16(diff, 32767.f / max);
+    yae::AvFrm frm = draw_wav_s16_mono(s16_mono);
+    save_as_png(frm, "/tmp/peaks-", a.duration());
+#endif
+  }
+
+  // find offset evaluation candidates:
+  std::list<int> candidates;
+  {
+    re_t * src = diff.get<re_t>();
+    double num = 0.0;
+    double den = 0.0;
+    for (std::size_t i = 0; i < window; ++i, ++src)
+    {
+      re_t v = *src;
+      if (den && !v)
+      {
+        double ix = num / den;
+        candidates.push_back(int(ix + 0.5));
+        num = 0;
+        den = 0;
+      }
+
+      num += i * v;
+      den += v;
+    }
+
+    if (den)
+    {
+      double ix = num / den;
+      candidates.push_back(int(ix + 0.5));
+    }
+  }
+
+  // find the best offset:
+  best_err = std::numeric_limits<double>::max();
+  int best_offset = 0;
+  {
+    re_t * xc = correlation;
+    for (std::list<int>::const_iterator iter = candidates.begin();
+         iter != candidates.end() && best_err > 0; ++iter)
+    {
+      int i = *iter;
+      re_t metric = xc[i];
+      int offset = (metric < 0) ? -i : i;
+
+      re_t * src_a = frag_a.re_.get<re_t>();
+      re_t * src_b = frag_b.re_.get<re_t>();
+
+      re_t * end_a = src_a + window;
+      re_t * end_b = src_b + window;
+#if 0
+      yae::AvFrm frm_ab = yae::draw_wav_overlap(b, a, offset);
+      save_as_png(frm_ab, "/tmp/overlap-", a.duration());
+#endif
+      if (offset < 0)
+      {
+        src_b -= offset;
+      }
+      else
+      {
+        src_a += offset;
+      }
+
+      re_t err_sum = 0.0;
+      std::size_t err_num = 0;
+      for (; src_a < end_a && src_b < end_b; ++src_a, ++src_b)
+      {
+        err_sum += ::fabsf(*src_a - *src_b);
+        err_num += 1;
+      }
+
+      re_t err = err_sum / re_t(err_num);
+      if (err < best_err)
+      {
+        best_err = err;
+        best_offset = offset;
+      }
     }
   }
 
@@ -566,6 +723,19 @@ yae::find_alignment_offset(const yae::TAudioFrame & a,
                             best_offset),
                 a.duration());
   }
+#elif 0
+    yae::AvFrm frm_a = yae::draw_wav_amp(to_s16(a));
+    save_as_png(frm_a, "/tmp/amp-a-", a.duration());
+
+    yae::AvFrm frm_b = yae::draw_wav_amp(to_s16(b));
+    save_as_png(frm_b, "/tmp/amp-b-", b.duration());
+
+    yae::Data s16_mono = f32_to_s16(rdft.re_buffer(), 32767.f / peak , window);
+    yae::AvFrm frm = draw_wav_s16_mono(s16_mono);
+    save_as_png(frm, "/tmp/xcor-", a.duration());
+
+    yae::AvFrm frm_ab = yae::draw_wav_overlap(b, a, best_offset);
+    save_as_png(frm_ab, "/tmp/overlap-", a.duration());
 #endif
 
   return best_offset;
@@ -737,7 +907,13 @@ find_alignment_offset(yae::WavFileReader wav_a,
   while (frame_a.num_samples() == frame_b.num_samples() &&
          frame_a.num_samples() > 0)
   {
-    int offset = find_alignment_offset(frame_b, frame_a);
+    double abs_diff = std::numeric_limits<double>::max();
+    int offset = find_alignment_offset(frame_b, frame_a, abs_diff);
+    if (!abs_diff)
+    {
+      return initial_offset + offset;
+    }
+
     offsets.push_back(offset);
 #if 0
     yae_dlog("alignment offset: %i", offset);
@@ -780,14 +956,30 @@ yae::find_alignment_offset(yae::WavFileReader wav_a,
   int64_t best_offset = 0;
   int64_t max_dur = std::min(wav_a.get_dur(), wav_b.get_dur());
 
+  // for (int64_t i = frame_size_po2 * 5; i < max_dur; i += frame_size_po2)
   for (int64_t i = 0; i < max_dur; i += frame_size_po2)
   {
     int64_t offset = ::find_alignment_offset(wav_a, wav_b, frame_size_po2, i);
     double avg_diff = calc_avg_abs_diff(wav_a, wav_b, frame_size_po2, offset);
+
     if (avg_diff < best_avg_abs_diff)
     {
       best_offset = offset;
       best_avg_abs_diff = avg_diff;
+    }
+
+    if (avg_diff <= avg_diff_threshold)
+    {
+      break;
+    }
+
+    offset = -::find_alignment_offset(wav_b, wav_a, frame_size_po2, i);
+    avg_diff = calc_avg_abs_diff(wav_a, wav_b, frame_size_po2, offset);
+
+    if (avg_diff < best_avg_abs_diff)
+    {
+      best_avg_abs_diff = avg_diff;
+      best_offset = offset;
     }
 
     if (avg_diff <= avg_diff_threshold)

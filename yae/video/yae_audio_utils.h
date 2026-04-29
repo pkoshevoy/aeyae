@@ -139,7 +139,8 @@ namespace yae
   // return best alignment offset between a and b waveforms
   //
   YAE_API int find_alignment_offset(const yae::TAudioFrame & a,
-                                    const yae::TAudioFrame & b);
+                                    const yae::TAudioFrame & b,
+                                    double & best_err);
 
   //----------------------------------------------------------------
   // get_format
