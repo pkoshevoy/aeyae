@@ -15,7 +15,7 @@
 #include "yae/video/yae_video.h"
 
 // standard:
-#include <cstdint>
+#include <stdint.h>
 #include <string>
 #include <stdio.h>
 

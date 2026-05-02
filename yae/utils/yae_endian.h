@@ -14,7 +14,7 @@
 #include "yae/api/yae_assert.h"
 
 // standard:
-#include <cstdint>
+#include <stdint.h>
 #include <string.h>
 
 
