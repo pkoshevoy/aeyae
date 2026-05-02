@@ -11,7 +11,12 @@
 #include "yae/utils/yae_utils.h"
 
 // boost:
+#include <boost/version.hpp>
+#if BOOST_VERSION < 105400
 #include <boost/math/common_factor.hpp>
+#else
+#include <boost/integer/common_factor.hpp>
+#endif
 
 // standard:
 #include <ctype.h>
@@ -28,6 +33,13 @@
 #include <windows.h>
 #else
 #include <sys/time.h>
+#endif
+
+// namespase access:
+#if BOOST_VERSION < 105400
+namespace boost_int_math = boost::math;
+#else
+namespace boost_int_math = boost::integer;
 #endif
 
 
@@ -616,7 +628,7 @@ namespace yae
   int64_t
   TTime::get_gcd() const
   {
-    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost_int_math::gcd<int64_t>(time_, base_);
     return gcd;
   }
 
@@ -626,7 +638,7 @@ namespace yae
   bool
   TTime::reduce()
   {
-    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost_int_math::gcd<int64_t>(time_, base_);
     time_ /= gcd;
     base_ /= gcd;
     return (gcd > 1);
@@ -638,7 +650,7 @@ namespace yae
   TTime
   TTime::reduced() const
   {
-    int64_t gcd = boost::math::gcd<int64_t>(time_, base_);
+    int64_t gcd = boost_int_math::gcd<int64_t>(time_, base_);
     return TTime(time_ / gcd, base_ / gcd);
   }
 

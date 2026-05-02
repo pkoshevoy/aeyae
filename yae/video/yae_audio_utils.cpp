@@ -46,9 +46,9 @@ yae::generate_stereo_f32(std::size_t num_samples,
   wav.bytes_per_sec_ = wav.bytes_per_block_ * wav.sample_rate_;
   wav.sample_data_size_ = wav.bytes_per_block_ * num_samples;
   wav.data_start_byte_pos_ = 0;
-  wav.wav_.alloc(wav.sample_data_size_);
+  wav.data_ne_.alloc(wav.sample_data_size_);
 
-  float * ch0 = wav.wav_.get<float>();
+  float * ch0 = wav.data_ne_.get<float>();
   float * ch1 = ch0 + 1;
 
   for (uint64_t i = 0; i < num_samples; ++i, ch0 += 2, ch1 += 2)

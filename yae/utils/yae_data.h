@@ -13,6 +13,7 @@
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_assert.h"
 #include "yae/api/yae_shared_ptr.h"
+#include "yae/utils/yae_endian.h"
 
 // standard:
 #include <algorithm>
@@ -509,9 +510,116 @@ namespace yae
     Data & load_hex(const std::string & hex_str);
     std::string to_hex() const;
 
+    // endian helpers:
+    template <typename TData>
+    inline void ntob_inplace()
+    {
+      if (sizeof(TData) == 2)
+      {
+        yae::ntob_16_inplace(this->get<TData>(), this->end<TData>());
+      }
+      else if (sizeof(TData) == 4)
+      {
+        yae::ntob_32_inplace(this->get<TData>(), this->end<TData>());
+      }
+      else if (sizeof(TData) == 8)
+      {
+        yae::ntob_64_inplace(this->get<TData>(), this->end<TData>());
+      }
+    }
+
+    template <typename TData>
+    inline void ntol_inplace()
+    {
+      if (sizeof(TData) == 2)
+      {
+        yae::ntol_16_inplace(this->get<TData>(), this->end<TData>());
+      }
+      else if (sizeof(TData) == 4)
+      {
+        yae::ntol_32_inplace(this->get<TData>(), this->end<TData>());
+      }
+      else if (sizeof(TData) == 8)
+      {
+        yae::ntol_64_inplace(this->get<TData>(), this->end<TData>());
+      }
+    }
+
+    template <typename TData>
+    inline yae::Data ntob() const
+    {
+      yae::Data dst(this->size());
+
+      if (sizeof(TData) == 2)
+      {
+        yae::ntob_16(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+      else if (sizeof(TData) == 4)
+      {
+        yae::ntob_32(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+      else if (sizeof(TData) == 8)
+      {
+        yae::ntob_64(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+
+      return dst;
+    }
+
+    template <typename TData>
+    inline yae::Data ntol() const
+    {
+      yae::Data dst(this->size());
+
+      if (sizeof(TData) == 2)
+      {
+        yae::ntol_16(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+      else if (sizeof(TData) == 4)
+      {
+        yae::ntol_32(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+      else if (sizeof(TData) == 8)
+      {
+        yae::ntol_64(dst.get<TData>(),
+                     dst.end<TData>(),
+                     this->get<TData>(),
+                     this->end<TData>());
+      }
+
+      return dst;
+    }
+
+
   protected:
     TBufferPtr data_;
   };
+
+  //----------------------------------------------------------------
+  // shallow_ref
+  //
+  inline yae::Data
+  shallow_ref(void * data, std::size_t size)
+  {
+    Data wrapper;
+    wrapper.shallow_ref(data, size);
+    return wrapper;
+  }
 
 
   //----------------------------------------------------------------

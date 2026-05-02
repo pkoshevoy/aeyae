@@ -11,9 +11,11 @@
 
 // aeyae:
 #include "yae/api/yae_api.h"
+#include "yae/utils/yae_utils.h"
 #include "yae/video/yae_video.h"
 
 // standard:
+#include <cstdint>
 #include <string>
 #include <stdio.h>
 
@@ -67,12 +69,12 @@ namespace yae
     // helper:
     bool open(const std::string & fn);
 
-    FILE * file_;
+    yae::TOpenFile file_;
     std::size_t nout_;
     std::size_t nstart_;
     unsigned int sampleRate_;
-    unsigned int numChannels_;
-    unsigned int bitsPerSample_;
+    uint16_t numChannels_;
+    uint16_t bitsPerSample_;
     bool floatSamples_;
   };
 
@@ -84,7 +86,7 @@ namespace yae
   {
     enum { kPCM_integer = 1, kIEEE754_float = 3 };
 
-    yae::Data wav_;
+    yae::Data data_ne_;
     yae::Bitstream bs_;
 
     // 1: PCM integer, 3: IEEE 754 float

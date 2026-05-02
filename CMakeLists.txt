@@ -273,6 +273,8 @@ set(LIBAEYAE_SOURCES
   yae/utils/yae_benchmark.h
   yae/utils/yae_data.cpp
   yae/utils/yae_data.h
+  yae/utils/yae_endian.cpp
+  yae/utils/yae_endian.h
   yae/utils/yae_json.cpp
   yae/utils/yae_json.h
   yae/utils/yae_linear_algebra.h

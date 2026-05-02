@@ -13,6 +13,7 @@
 #include "yae/api/yae_api.h"
 #include "yae/api/yae_assert.h"
 #include "yae/utils/yae_data.h"
+#include "yae/utils/yae_endian.h"
 
 // standard:
 #include <cstdio>
@@ -496,6 +497,9 @@ namespace yae
     inline std::size_t load(yae::Data & buffer)
     { return yae::read(this->file_, buffer.get(), buffer.size()); }
 
+    inline bool save(const yae::Data & buffer)
+    { return this->write(buffer.get(), buffer.size()); }
+
     inline std::size_t load(std::vector<unsigned char> & out)
     { return yae::load(this->file_, out); }
 
@@ -536,6 +540,161 @@ namespace yae
 
     inline uint64_t ftell64() const
     { return yae::ftell64(file_); }
+
+    template <typename TData>
+    inline TData load_u8()
+    {
+      TData data;
+      YAE_ASSERT(sizeof(TData) == 1);
+      YAE_ASSERT(this->read(&data, 1) == 1);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_16()
+    {
+      TData data;
+      YAE_ASSERT(sizeof(TData) == 2);
+      YAE_ASSERT(this->read(&data, 2) == 2);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_32()
+    {
+      TData data;
+      YAE_ASSERT(sizeof(TData) == 4);
+      YAE_ASSERT(this->read(&data, 4) == 4);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_64()
+    {
+      TData data;
+      YAE_ASSERT(sizeof(TData) == 8);
+      YAE_ASSERT(this->read(&data, 8) == 8);
+      return data;
+    }
+
+    template <typename TData>
+    inline bool save_u8(TData data)
+    {
+      YAE_ASSERT(sizeof(TData) == 1);
+      return this->write(&data, 1) == 1;
+    }
+
+    template <typename TData>
+    inline bool save_16(TData data)
+    {
+      YAE_ASSERT(sizeof(TData) == 2);
+      return this->write(&data, 2) == 2;
+    }
+
+    template <typename TData>
+    inline bool save_32(TData data)
+    {
+      YAE_ASSERT(sizeof(TData) == 4);
+      return this->write(&data, 4) == 4;
+    }
+
+    template <typename TData>
+    inline bool save_64(TData data)
+    {
+      YAE_ASSERT(sizeof(TData) == 8);
+      return this->write(&data, 8) == 8;
+    }
+
+    // endian helpers:
+    template <typename TData>
+    inline TData load_16_be()
+    {
+      TData data = this->load_16<TData>();
+      data = yae::ntob_16<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_32_be()
+    {
+      TData data = this->load_32<TData>();
+      data = yae::ntob_32<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_64_be()
+    {
+      TData data = this->load_64<TData>();
+      data = yae::ntob_64<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_16_le()
+    {
+      TData data = this->load_16<TData>();
+      data = yae::ntol_16<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_32_le()
+    {
+      TData data = this->load_32<TData>();
+      data = yae::ntol_32<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline TData load_64_le()
+    {
+      TData data = this->load_64<TData>();
+      data = yae::ntol_64<TData>(data);
+      return data;
+    }
+
+    template <typename TData>
+    inline bool save_16_be(TData data)
+    {
+      data = yae::ntob_16<TData>(data);
+      return this->save_16(data);
+    }
+
+    template <typename TData>
+    inline bool save_32_be(TData data)
+    {
+      data = yae::ntob_32<TData>(data);
+      return this->save_32(data);
+    }
+
+    template <typename TData>
+    inline bool save_64_be(TData data)
+    {
+      data = yae::ntob_64<TData>(data);
+      return this->save_64(data);
+    }
+
+    template <typename TData>
+    inline bool save_16_le(TData data)
+    {
+      data = yae::ntol_16<TData>(data);
+      return this->save_16(data);
+    }
+
+    template <typename TData>
+    inline bool save_32_le(TData data)
+    {
+      data = yae::ntol_32<TData>(data);
+      return this->save_32(data);
+    }
+
+    template <typename TData>
+    inline bool save_64_le(TData data)
+    {
+      data = yae::ntol_64<TData>(data);
+      return this->save_64(data);
+    }
 
     // the file handle:
     FILE * file_;

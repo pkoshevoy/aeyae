@@ -25,7 +25,7 @@ YAE_ENABLE_DEPRECATION_WARNINGS
 namespace fs = boost::filesystem;
 
 
-BOOST_AUTO_TEST_CASE(wav_write_read)
+BOOST_AUTO_TEST_CASE(yae_wav_file)
 {
   std::string exe_folder_path_utf8;
   BOOST_CHECK(yae::get_current_executable_folder(exe_folder_path_utf8));
@@ -46,8 +46,10 @@ BOOST_AUTO_TEST_CASE(wav_write_read)
       double t = double(i) / 120; // 400Hz
       double p = double(i) / 96000; // 0.5Hz
       double q = double(i) / 160000; // 0.3Hz
-      sample[0] = int16_t(32767 * sin(two_pi * s) * sin(two_pi * p));
-      sample[1] = int16_t(32767 * sin(two_pi * t) * sin(two_pi * q));
+      sample[0] =
+        yae::ntol_16<int16_t>(32767 * sin(two_pi * s) * sin(two_pi * p));
+      sample[1] =
+        yae::ntol_16<int16_t>(32767 * sin(two_pi * t) * sin(two_pi * q));
       wav.save(1, sample);
     }
   }
