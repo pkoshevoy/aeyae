@@ -28,6 +28,16 @@
 
 
 //----------------------------------------------------------------
+// YAE_BIG_ENDIAN
+//
+#if (defined(_BIG_ENDIAN) && (_BIG_ENDIAN == 1) || \
+     defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__))
+#define YAE_BIG_ENDIAN 1
+#else
+#define YAE_BIG_ENDIAN 0
+#endif
+
+//----------------------------------------------------------------
 // YAE_API
 //
 // http://gcc.gnu.org/wiki/Visibility

@@ -121,7 +121,7 @@ namespace yae
 //
 // helper macros for converting from Native Endian to Big/Little Endian
 //
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
+#if YAE_BIG_ENDIAN
 #define YAE_N16_TO_BE(x) x
 #define YAE_N32_TO_BE(x) x
 #define YAE_N64_TO_BE(x) x
