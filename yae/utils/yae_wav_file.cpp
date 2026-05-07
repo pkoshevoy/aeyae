@@ -274,7 +274,7 @@ WavFileReader::WavFileReader(const WavFileReader & other)
 // WavFileReader::operator =
 //
 WavFileReader &
- WavFileReader::operator = (const WavFileReader & other)
+WavFileReader::operator = (const WavFileReader & other)
 {
   data_ne_ = other.data_ne_;
   audio_format_ = other.audio_format_;
