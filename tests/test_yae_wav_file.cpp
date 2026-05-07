@@ -46,10 +46,8 @@ BOOST_AUTO_TEST_CASE(yae_wav_file)
       double t = double(i) / 120; // 400Hz
       double p = double(i) / 96000; // 0.5Hz
       double q = double(i) / 160000; // 0.3Hz
-      sample[0] =
-        yae::ntol_16<int16_t>(32767 * sin(two_pi * s) * sin(two_pi * p));
-      sample[1] =
-        yae::ntol_16<int16_t>(32767 * sin(two_pi * t) * sin(two_pi * q));
+      sample[0] = int16_t(32767 * sin(two_pi * s) * sin(two_pi * p));
+      sample[1] = int16_t(32767 * sin(two_pi * t) * sin(two_pi * q));
       wav.save(1, sample);
     }
   }

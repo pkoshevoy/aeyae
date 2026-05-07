@@ -311,7 +311,7 @@ WavFileReader::open(const std::string & fn)
   }
 
   // file size minus 8, little-endian:
-  uint32_t file_size_minus_8 = yae::bton_32(bs_.read<uint32_t>());
+  uint32_t file_size_minus_8 = yae::lton_32(bs_.read<uint32_t>());
   if (wav.size() != file_size_minus_8 + 8)
   {
     return false;
@@ -329,36 +329,36 @@ WavFileReader::open(const std::string & fn)
   }
 
   // format structure size minus 8, little endian:
-  uint32_t fmt_chunk_data_size = yae::bton_32(bs_.read<uint32_t>());
+  uint32_t fmt_chunk_data_size = yae::lton_32(bs_.read<uint32_t>());
   if (fmt_chunk_data_size != 16)
   {
     return false;
   }
 
-  audio_format_ = yae::bton_16(bs_.read<uint16_t>());
+  audio_format_ = yae::lton_16(bs_.read<uint16_t>());
   if (audio_format_ != kPCM_integer &&
       audio_format_ != kIEEE754_float)
   {
     return false;
   }
 
-  num_channels_ = yae::bton_16(bs_.read<uint16_t>());
+  num_channels_ = yae::lton_16(bs_.read<uint16_t>());
   if (num_channels_ < 1 || num_channels_ > 8)
   {
     return false;
   }
 
   // sample rate:
-  sample_rate_ = yae::bton_32(bs_.read<uint32_t>());
+  sample_rate_ = yae::lton_32(bs_.read<uint32_t>());
 
   // byte rate:
-  bytes_per_sec_ = yae::bton_32(bs_.read<uint32_t>());
+  bytes_per_sec_ = yae::lton_32(bs_.read<uint32_t>());
 
   // block align (stride):
-  bytes_per_block_ = yae::bton_16(bs_.read<uint16_t>());
+  bytes_per_block_ = yae::lton_16(bs_.read<uint16_t>());
 
   // bits per sample:
-  bits_per_sample_ = yae::bton_16(bs_.read<uint16_t>());
+  bits_per_sample_ = yae::lton_16(bs_.read<uint16_t>());
 
   if (bytes_per_sec_ !=
       (bits_per_sample_ * num_channels_ * sample_rate_) / 8)
@@ -383,7 +383,7 @@ WavFileReader::open(const std::string & fn)
     }
 
     // skip this chunk:
-    uint32_t payload_size = yae::bton_32(bs_.read<uint32_t>());
+    uint32_t payload_size = yae::lton_32(bs_.read<uint32_t>());
     if (!bs_.has_enough_bytes(payload_size))
     {
       return false;
@@ -392,7 +392,7 @@ WavFileReader::open(const std::string & fn)
     bs_.skip_bytes(payload_size);
   }
 
-  sample_data_size_ = yae::bton_32(bs_.read<uint32_t>());
+  sample_data_size_ = yae::lton_32(bs_.read<uint32_t>());
   if (!bs_.has_enough_bytes(sample_data_size_))
   {
     return false;
