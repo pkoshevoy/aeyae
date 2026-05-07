@@ -258,6 +258,67 @@ namespace yae
 {
 
   //----------------------------------------------------------------
+  // bswap_16
+  //
+  template <typename TData>
+  inline static TData
+  bswap_16(TData data)
+  {
+    YAE_ASSERT(sizeof(TData) == 2);
+
+    union U
+    {
+      TData data;
+      uint16_t i;
+    } dst;
+
+    dst.data = data;
+    dst.i = yae::bswap_16(dst.i);
+    return dst.data;
+  }
+
+  //----------------------------------------------------------------
+  // bswap_32
+  //
+  template <typename TData>
+  inline static TData
+  bswap_32(TData data)
+  {
+    YAE_ASSERT(sizeof(TData) == 4);
+
+    union U
+    {
+      TData data;
+      uint32_t i;
+    } dst;
+
+    dst.data = data;
+    dst.i = yae::bswap_32(dst.i);
+    return dst.data;
+  }
+
+  //----------------------------------------------------------------
+  // bswap_64
+  //
+  template <typename TData>
+  inline static TData
+  bswap_64(TData data)
+  {
+    YAE_ASSERT(sizeof(TData) == 8);
+
+    union U
+    {
+      TData data;
+      uint64_t i;
+    } dst;
+
+    dst.data = data;
+    dst.i = yae::bswap_64(dst.i);
+    return dst.data;
+  }
+
+
+  //----------------------------------------------------------------
   // ntob_16
   //
   template <typename TData>
