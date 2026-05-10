@@ -151,10 +151,6 @@ namespace yae
     {
       boost::this_thread::interruption_point();
 
-      // assemble audio frame, piecewise:
-      std::list<std::vector<unsigned char> > chunks;
-      std::size_t outputBytes = 0;
-
       // shortcuts:
       const AVFrame & decoded = decoded_frame.get();
 
@@ -240,6 +236,8 @@ namespace yae
           }
         }
 
+        // yae_debug << "decoded audio pts: " << copied.pts;
+
         if (!filterGraph_.push(&copied))
         {
           YAE_ASSERT(false);
@@ -271,7 +269,7 @@ namespace yae
       // assemble audio frame, piecewise:
       std::list<std::vector<unsigned char> > chunks;
       std::size_t outputBytes = 0;
-      int64_t output_pts = AV_NOPTS_VALUE;
+      TTime output_pts(0, 0);
 
       while (true)
       {
@@ -282,9 +280,16 @@ namespace yae
           break;
         }
 
-        if (output_pts == AV_NOPTS_VALUE)
+        // yae_debug << "output audio pts: " << output.pts;
+
+        if (output_pts.invalid() && output.pts != AV_NOPTS_VALUE)
         {
-          output_pts = output.pts;
+          yae::Rational out_timebase(0, 0);
+          if (filterGraph_.get_output_timebase(out_timebase))
+          {
+            output_pts.reset(out_timebase.num * output.pts,
+                             out_timebase.den);
+          }
         }
 
         const int bufferSize = output.nb_samples * outputBytesPerSample_;
@@ -320,9 +325,9 @@ namespace yae
 
       bool gotPTS = false;
 
-      if (!gotPTS && output_pts != AV_NOPTS_VALUE)
+      if (!gotPTS && output_pts.valid())
       {
-        af.time_.time_ = stream_->time_base.num * output_pts;
+        af.time_ = output_pts;
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
                             "audio output_pts");
       }

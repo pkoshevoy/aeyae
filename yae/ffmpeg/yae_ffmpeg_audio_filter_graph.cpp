@@ -212,4 +212,19 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // AudioFilterGraph::get_output_timebase
+  //
+  bool
+  AudioFilterGraph::get_output_timebase(AVRational & sink_timebase) const
+  {
+    if (!sink_)
+    {
+      return false;
+    }
+
+    sink_timebase = av_buffersink_get_time_base(sink_);
+    return true;
+  }
+
 }

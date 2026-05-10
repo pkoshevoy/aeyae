@@ -62,6 +62,9 @@ namespace yae
     bool push(AVFrame * in);
     bool pull(AVFrame * out);
 
+    // NOTE: some filters may change the output timebase:
+    bool get_output_timebase(AVRational & timebase) const;
+
     inline bool is_valid() const
     { return graph_ && src_ && sink_; }
 
