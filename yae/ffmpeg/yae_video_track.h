@@ -102,7 +102,14 @@ namespace yae
     bool decoderShutdown();
 
     // virtual:
-    void handle(const AvFrm & decodedFrame);
+    void flush_filters(const Track::TInfoPtr & track_info_ptr);
+
+    // virtual:
+    void handle(const Track::TInfoPtr & track_info_ptr,
+                const AvFrm & decoded_frame);
+
+    // helper:
+    void output_ready_frames(const Track::TInfoPtr & track_info_ptr);
 
     // virtual:
     bool threadStop();

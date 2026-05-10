@@ -347,10 +347,17 @@ namespace yae
     virtual bool decoderShutdown()
     { return false; }
 
+    virtual void flush_filters(const Track::TInfoPtr & track_info_ptr)
+    { (void)track_info_ptr; }
+
     // audio/video tracks will handle decoded frames differently,
     // but the interface is the same:
-    virtual void handle(const AvFrm & decodedFrame)
-    {}
+    virtual void handle(const Track::TInfoPtr & track_info_ptr,
+                        const AvFrm & decoded_frame)
+    {
+      (void)track_info_ptr;
+      (void)decoded_frame;
+    }
 
     // packet decoding thread:
     virtual void thread_loop();
@@ -426,12 +433,16 @@ namespace yae
     Track & operator = (const Track &);
 
   protected:
-    int decoderPull(AVCodecContext * ctx);
-    int decode(AVCodecContext * ctx, const AvPkt & pkt);
+    int decoderPull(const Track::TInfoPtr & track_info_ptr,
+                    AVCodecContext * ctx);
+
+    int decode(const Track::TInfoPtr & track_info_ptr,
+               AVCodecContext * ctx,
+               const AvPkt & pkt);
 
   public:
     void decode(const TPacketPtr & packetPtr);
-    void flush();
+    void flush(const Track::TInfoPtr & track_info_ptr);
 
   protected:
     mutable boost::mutex mutex_;

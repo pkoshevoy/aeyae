@@ -4609,7 +4609,8 @@ namespace yae
     }
 
     // flush:
-    decoder.flush();
+    Track::TInfoPtr track_info_ptr = decoder.get_info();
+    decoder.flush(track_info_ptr);
     pull(decoder, pts_span, callback, context);
 
     // done:

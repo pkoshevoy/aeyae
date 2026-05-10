@@ -769,22 +769,30 @@ namespace yae
   };
 
   //----------------------------------------------------------------
+  // VideoTrack::flush_filters
+  //
+  void
+  VideoTrack::flush_filters(const Track::TInfoPtr & track_info_ptr)
+  {
+    filterGraph_.push(NULL); // flush
+    this->output_ready_frames(track_info_ptr);
+  }
+
+  //----------------------------------------------------------------
   // VideoTrack::handle
   //
   void
-  VideoTrack::handle(const AvFrm & decodedFrame)
+  VideoTrack::handle(const Track::TInfoPtr & track_info_ptr,
+                     const AvFrm & decoded_frame)
   {
     // YAE_BENCHMARK(benchmark, "VideoTrack::handle");
 
-    // keep alive:
-    Track::TInfoPtr track_info_ptr = this->get_info();
     YAE_RETURN_IF(!track_info_ptr);
-
     const Track::Info & track_info = *track_info_ptr;
 
     try
     {
-      AvFrm decodedFrameCopy(decodedFrame);
+      AvFrm decodedFrameCopy(decoded_frame);
       decodedFrameCopy.hwdownload();
 
       AVFrame & decoded = decodedFrameCopy.get();
@@ -1129,6 +1137,23 @@ namespace yae
 #endif
       filterGraph_.push(&decoded);
 
+      this->output_ready_frames(track_info_ptr);
+    }
+    catch (...)
+    {}
+  }
+
+  //----------------------------------------------------------------
+  // VideoTrack::output_ready_frames
+  //
+  void
+  VideoTrack::output_ready_frames(const Track::TInfoPtr & track_info_ptr)
+  {
+    YAE_RETURN_IF(!track_info_ptr);
+    const Track::Info & track_info = *track_info_ptr;
+
+    try
+    {
       while (true)
       {
         AVRational filterGraphOutputTimeBase;
@@ -1186,6 +1211,7 @@ namespace yae
         vf.traits_.set_pixel_format(yae::pix_fmt(output));
 
         // preserve output color specs:
+        const AvFrmSpecs & outSpecs = filterGraph_.dst_specs();
         vf.traits_.av_rng_ = outSpecs.color_range;
         vf.traits_.av_pri_ = outSpecs.color_primaries;
         vf.traits_.av_trc_ = outSpecs.color_trc;

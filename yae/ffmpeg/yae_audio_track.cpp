@@ -129,16 +129,23 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // AudioTrack::flush_filters
+  //
+  void
+  AudioTrack::flush_filters(const Track::TInfoPtr & track_info_ptr)
+  {
+    filterGraph_.push(NULL); // flush
+    this->output_ready_frames(track_info_ptr);
+  }
+
+  //----------------------------------------------------------------
   // AudioTrack::decode
   //
   void
-  AudioTrack::handle(const AvFrm & decodedFrame)
+  AudioTrack::handle(const Track::TInfoPtr & track_info_ptr,
+                     const AvFrm & decoded_frame)
   {
-    // keep alive:
-    Track::TInfoPtr track_info_ptr = this->get_info();
     YAE_RETURN_IF(!track_info_ptr);
-
-    const Track::Info & track_info = *track_info_ptr;
 
     try
     {
@@ -149,12 +156,12 @@ namespace yae
       std::size_t outputBytes = 0;
 
       // shortcuts:
-      const AVFrame & decoded = decodedFrame.get();
+      const AVFrame & decoded = decoded_frame.get();
 
       // assemble output audio frame
       if (decoded.nb_samples)
       {
-        AvFrm copiedFrame(decodedFrame);
+        AvFrm copiedFrame(decoded_frame);
         AVFrame & copied = copiedFrame.get();
 
         if (hasPrevPTS_ && copied.pts != AV_NOPTS_VALUE)
@@ -238,22 +245,53 @@ namespace yae
           YAE_ASSERT(false);
           return;
         }
+      }
 
-        while (true)
+      this->output_ready_frames(track_info_ptr);
+    }
+    catch (...)
+    {}
+
+    return;
+  }
+
+  //----------------------------------------------------------------
+  // AudioTrack::output_ready_frames
+  //
+  void
+  AudioTrack::output_ready_frames(const Track::TInfoPtr & track_info_ptr)
+  {
+    YAE_RETURN_IF(!track_info_ptr);
+    const Track::Info & track_info = *track_info_ptr;
+
+    try
+    {
+      boost::this_thread::interruption_point();
+
+      // assemble audio frame, piecewise:
+      std::list<std::vector<unsigned char> > chunks;
+      std::size_t outputBytes = 0;
+      int64_t output_pts = AV_NOPTS_VALUE;
+
+      while (true)
+      {
+        AvFrm frm;
+        AVFrame & output = frm.get();
+        if (!filterGraph_.pull(&output))
         {
-          AvFrm frm;
-          AVFrame & output = frm.get();
-          if (!filterGraph_.pull(&output))
-          {
-            break;
-          }
-
-          const int bufferSize = output.nb_samples * outputBytesPerSample_;
-          chunks.push_back(std::vector<unsigned char>
-                           (output.data[0],
-                            output.data[0] + bufferSize));
-          outputBytes += bufferSize;
+          break;
         }
+
+        if (output_pts == AV_NOPTS_VALUE)
+        {
+          output_pts = output.pts;
+        }
+
+        const int bufferSize = output.nb_samples * outputBytesPerSample_;
+        chunks.push_back(std::vector<unsigned char>
+                         (output.data[0],
+                          output.data[0] + bufferSize));
+        outputBytes += bufferSize;
       }
 
       if (!outputBytes)
@@ -282,11 +320,11 @@ namespace yae
 
       bool gotPTS = false;
 
-      if (!gotPTS && decoded.pts != AV_NOPTS_VALUE)
+      if (!gotPTS && output_pts != AV_NOPTS_VALUE)
       {
-        af.time_.time_ = stream_->time_base.num * decoded.pts;
+        af.time_.time_ = stream_->time_base.num * output_pts;
         gotPTS = verify_pts(hasPrevPTS_, prevPTS_, af.time_, stream_,
-                            "audio decoded.pts");
+                            "audio output_pts");
       }
 
       if (!gotPTS)

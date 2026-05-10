@@ -1044,7 +1044,8 @@ namespace yae
   // Track::decoderPull
   //
   int
-  Track::decoderPull(AVCodecContext * ctx)
+  Track::decoderPull(const Track::TInfoPtr & track_info_ptr,
+                     AVCodecContext * ctx)
   {
     int err = 0;
     while (true)
@@ -1095,7 +1096,7 @@ namespace yae
       }
 #endif
 
-      this->handle(frm);
+      this->handle(track_info_ptr, frm);
     }
 
     return err;
@@ -1105,7 +1106,9 @@ namespace yae
   // Track::decode
   //
   int
-  Track::decode(AVCodecContext * ctx, const AvPkt & pkt)
+  Track::decode(const Track::TInfoPtr & track_info_ptr,
+                AVCodecContext * ctx,
+                const AvPkt & pkt)
   {
     // YAE_BENCHMARK(benchmark, "Track::decode");
 
@@ -1152,7 +1155,7 @@ namespace yae
         sent_++;
       }
 
-      errRecv = decoderPull(ctx);
+      errRecv = this->decoderPull(track_info_ptr, ctx);
       if (errRecv < 0)
       {
 #ifndef NDEBUG
@@ -1180,6 +1183,9 @@ namespace yae
   void
   Track::decode(const TPacketPtr & packetPtr)
   {
+    // keep alive:
+    Track::TInfoPtr track_info_ptr = this->get_info();
+
     TPacketPtr prev;
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
@@ -1189,7 +1195,7 @@ namespace yae
 
     if (!packetPtr)
     {
-      this->flush();
+      this->flush(track_info_ptr);
       return;
     }
 
@@ -1219,7 +1225,7 @@ namespace yae
       (codecpar_curr_ && !codecpar_curr_->same_codec(*(packetPtr->codecpar_)));
     if (codec_changed)
     {
-      this->flush();
+      this->flush(track_info_ptr);
       codecContext_.reset();
     }
 
@@ -1240,7 +1246,7 @@ namespace yae
     }
 
     const AvPkt & pkt = *packetPtr;
-    decode(ctx.get(), pkt);
+    this->decode(track_info_ptr, ctx.get(), pkt);
 
     if (codec_changed)
     {
@@ -1261,7 +1267,7 @@ namespace yae
   // Track::flush
   //
   void
-  Track::flush()
+  Track::flush(const Track::TInfoPtr & track_info_ptr)
   {
     // keep-alive:
     AvCodecContextPtr ctx_ptr = codecContext_;
@@ -1270,10 +1276,12 @@ namespace yae
     if (ctx)
     {
       // flush out buffered frames with an empty packet:
-      this->decode(ctx, AvPkt());
+      this->decode(track_info_ptr, ctx, AvPkt());
     }
 
     packet_pos_.clear();
+
+    this->flush_filters(track_info_ptr);
   }
 
   //----------------------------------------------------------------
