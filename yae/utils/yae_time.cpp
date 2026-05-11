@@ -12,7 +12,7 @@
 
 // boost:
 #include <boost/version.hpp>
-#if BOOST_VERSION < 105400
+#if BOOST_VERSION < 105800
 #include <boost/math/common_factor.hpp>
 #else
 #include <boost/integer/common_factor.hpp>
@@ -36,7 +36,7 @@
 #endif
 
 // namespase access:
-#if BOOST_VERSION < 105400
+#if BOOST_VERSION < 105800
 namespace boost_int_math = boost::math;
 #else
 namespace boost_int_math = boost::integer;
