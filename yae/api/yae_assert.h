@@ -23,7 +23,7 @@
 //
 #if defined(__APPLE__)
 #  if defined(__ppc__)
-#    if __GNUC__ <= 4
+#    if (__GNUC__ == 4) && (__GNUC_MINOR__ < 3)
 #      define YAE_BREAKPOINT() __asm { trap }
 #    else
 #      define YAE_BREAKPOINT() asm("trap")

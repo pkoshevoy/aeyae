@@ -23,7 +23,8 @@
 #include <vector>
 
 // system:
-#ifdef YAE_HAS_LIBBFD
+#if defined(YAE_HAS_LIBBFD) && defined(__GNUC__) && (__GNUC__ > 4)
+#define YAE_USE_LIBBFD 1
 #include <bfd.h>
 #ifndef HAVE_DECL_BASENAME
 #define HAVE_DECL_BASENAME 1
@@ -182,7 +183,7 @@ namespace yae
   struct StackTrace::Private : StackTraceWin32
   {};
 
-#elif !defined(YAE_HAS_LIBBFD)
+#elif !defined(YAE_USE_LIBBFD)
   //----------------------------------------------------------------
   // StackTraceApple
   //
