@@ -18,14 +18,14 @@
 #include <iostream>
 
 // atomics:
-#if (!defined(__clang__) && \
-     defined(__GNUC__) && \
+#if (defined(__GNUC__) && \
      (__GNUC__ == 4) && \
-     (__GNUC_MINOR__ < 3))
+     (__GNUC_MINOR__ < 1) && \
+     !defined(__clang__))
 # include <bits/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
-#elif defined(__GNUC__) && __GNUC_MINOR__ >= 5
+#elif defined(__GNUC__)
 # include <ext/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add_dispatch
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add_dispatch
