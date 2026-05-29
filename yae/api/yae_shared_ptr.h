@@ -25,7 +25,7 @@
 # include <bits/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add
-#elif defined(__GNUC__)
+#elif defined(__GNUC__) && !defined(__clang__)
 # include <ext/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add_dispatch
 # define YAE_ATOMIC_ADD       __gnu_cxx::__atomic_add_dispatch
