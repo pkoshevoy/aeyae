@@ -4,14 +4,6 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS
-  atomic
-  chrono
-  date_time
-  filesystem
-  locale
-  regex
-  system
-  thread
   unit_test_framework
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)

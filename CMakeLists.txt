@@ -26,14 +26,13 @@ set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
   COMPONENTS
-  thread
+  atomic
+  chrono
   date_time
-  system
   filesystem
   locale
-  chrono
-  atomic
   regex
+  thread
   REQUIRED)
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
