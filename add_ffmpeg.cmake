@@ -33,14 +33,16 @@ if (PKG_CONFIG_FOUND)
   set(TARGET_LIBS ${TARGET_LIBS} ${SWRESAMPLE_LIBRARIES})
   include_directories(${SWRESAMPLE_INCLUDE_DIRS})
   link_directories(${SWRESAMPLE_LIBRARY_DIRS})
-else (PKG_CONFIG_FOUND)
-  set(FFMPEG_INSTALL_PREFIX "$ENV{FFMPEG_INSTALL_PREFIX}"
+endif (PKG_CONFIG_FOUND)
+
+if (NOT AVFILTER_FOUND)
+  set(FFMPEG_DIR "$ENV{FFMPEG_DIR}"
     CACHE PATH "search path for ffmpeg install path")
 
   find_path(FFMPEG_INSTALL_DIR
     include/libavutil/avutil.h
     PATHS
-    ${FFMPEG_INSTALL_PREFIX}
+    ${FFMPEG_DIR}
     ${AEYAE_INSTALL_DIR_INCLUDE}
     /usr/include
     /usr/local/include
@@ -50,7 +52,7 @@ else (PKG_CONFIG_FOUND)
     file(TO_NATIVE_PATH "${FFMPEG_INSTALL_DIR}/lib" FFMPEG_LIBS_DIR)
     include_directories(AFTER ${FFMPEG_INCLUDE_DIR})
   endif (FFMPEG_INSTALL_DIR)
-endif (PKG_CONFIG_FOUND)
+endif()
 
 if (NOT AVFILTER_FOUND)
   find_library(AVFILTER_LIBRARY avfilter
