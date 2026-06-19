@@ -1932,9 +1932,11 @@ namespace yae
   std::string
   to_hex(const void * data,
          std::size_t src_size,
-         std::size_t word_size)
+         std::size_t word_size,
+         bool lower_case)
   {
-    static const char * alphabet = "0123456789ABCDEF";
+    const char * alphabet =
+      lower_case ? "0123456789abcdef" : "0123456789ABCDEF";
 
     std::ostringstream oss;
     const unsigned char * src = static_cast<const unsigned char *>(data);

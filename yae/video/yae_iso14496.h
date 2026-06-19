@@ -478,6 +478,32 @@ namespace yae
       { return load_descriptor<TPayload>(*this, bin, 0x05); }
     };
 
+
+    //----------------------------------------------------------------
+    // ProfileLevelIndicationIndexDescriptor
+    //
+    struct YAE_API ProfileLevelIndicationIndexDescriptor : public BaseDescriptor
+    {
+      struct YAE_API Payload : public IPayload
+      {
+        virtual void save(IBitstream & bin) const
+        { profileLevelIndicationIndex.save(bin); }
+
+        virtual bool load(IBitstream & bin)
+        { return profileLevelIndicationIndex.load(bin); }
+
+        Bit<8> profileLevelIndicationIndex;
+      };
+
+      ProfileLevelIndicationIndexDescriptor():
+        BaseDescriptor(ProfileLevelIndicationIndexDescrTag)
+      {}
+
+      virtual bool load(IBitstream & bin)
+      { return load_descriptor<Payload>(*this, bin, 0x14); }
+    };
+
+
     //----------------------------------------------------------------
     // DecoderConfigDescriptor
     //
@@ -506,7 +532,8 @@ namespace yae
         // In this case the existence of AudioSpecificConfig() is mandatory.
         boost::shared_ptr<BaseDescriptor> decSpecificInfo;
 
-        // profileLevelIndicationIndexDescriptor [0...255]
+        // 0 ... 255
+        std::list<ProfileLevelIndicationIndexDescriptor> pliid_;
       };
 
       DecoderConfigDescriptor();

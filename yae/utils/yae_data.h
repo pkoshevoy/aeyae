@@ -508,7 +508,13 @@ namespace yae
     // hex helpers:
     Data & load_hex(const char * hex_str, std::size_t hex_len = 0);
     Data & load_hex(const std::string & hex_str);
-    std::string to_hex() const;
+    std::string to_hex(bool lower_case = true) const;
+
+    inline std::string to_hex_lc() const
+    { return this->to_hex(true); }
+
+    inline std::string to_hex_uc() const
+    { return this->to_hex(false); }
 
     // endian helpers:
     template <typename TData>

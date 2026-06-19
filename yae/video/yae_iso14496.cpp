@@ -779,14 +779,11 @@ SyncExtensionType0x2b7::save(IBitstream & bin) const
     {
       extensionSamplingFrequency_.save(bin);
 
-      if (extensionAudioObjectType == 5)
+      if (extensionAudioObjectType == 5 &&
+          syncExtensionType.data_ == 0x548)
       {
         syncExtensionType.save(bin);
-
-        if (syncExtensionType.data_ == 0x548)
-        {
-          psPresentFlag.save(bin);
-        }
+        psPresentFlag.save(bin);
       }
     }
 
@@ -825,15 +822,15 @@ SyncExtensionType0x2b7::load(IBitstream & bin)
       }
 
       if (extensionAudioObjectType == 5 &&
-          bin.has_enough_bits(12))
+          bin.has_enough_bits(12) &&
+          bin.peek_bits(11) == 0x548)
       {
         if (!syncExtensionType.load(bin))
         {
           return false;
         }
 
-        if (syncExtensionType.data_ == 0x548 &&
-            !psPresentFlag.load(bin))
+        if (!psPresentFlag.load(bin))
         {
           return false;
         }
@@ -898,14 +895,11 @@ AudioSpecificConfig::save(IBitstream & bin) const
       break;
   }
 
-  if (extensionAudioObjectType != 5)
+  if (extensionAudioObjectType != 5 &&
+      syncExtensionType.data_ == 0x2b7)
   {
     syncExtensionType.save(bin);
-
-    if (syncExtensionType.data_ == 0x2b7)
-    {
-      syncExtensionType0x2b7.save(bin);
-    }
+    syncExtensionType0x2b7.save(bin);
   }
 }
 
@@ -1099,7 +1093,9 @@ AudioSpecificConfig::load(IBitstream & bin)
       break;
   }
 
-  if (extensionAudioObjectType != 5 && bin.has_enough_bits(16))
+  if (extensionAudioObjectType != 5 &&
+      bin.has_enough_bits(16) &&
+      bin.peek_bits(11) == 0x2b7)
   {
     if (!syncExtensionType.load(bin))
     {
@@ -1158,6 +1154,13 @@ DecoderConfigDescriptor::Payload::save(IBitstream & bin) const
   {
     decSpecificInfo->save(bin);
   }
+
+  for (std::list<ProfileLevelIndicationIndexDescriptor>::const_iterator
+         i = pliid_.begin(); i != pliid_.end(); ++i)
+  {
+    const ProfileLevelIndicationIndexDescriptor & descr = *i;
+    descr.save(bin);
+  }
 }
 
 //----------------------------------------------------------------
@@ -1199,6 +1202,26 @@ DecoderConfigDescriptor::Payload::load(IBitstream & bin)
   if (decSpecificInfo && !decSpecificInfo->load(bin))
   {
     return false;
+  }
+
+  for (int i = 0; i < 255; i++)
+  {
+    if (!bin.has_enough_bits(16))
+    {
+      break;
+    }
+
+    if (bin.peek_bits(8) != ProfileLevelIndicationIndexDescrTag)
+    {
+      break;
+    }
+
+    pliid_.push_back(ProfileLevelIndicationIndexDescriptor());
+    ProfileLevelIndicationIndexDescriptor & d = pliid_.back();
+    if (!d.load(bin))
+    {
+      return false;
+    }
   }
 
   return true;

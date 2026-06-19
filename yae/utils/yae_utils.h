@@ -1238,17 +1238,38 @@ namespace yae
   YAE_API std::string
   to_hex(const void * src,
          std::size_t src_size,
-         std::size_t word_size = 0);
+         std::size_t word_size = 0,
+         bool lower_case = true);
+
+  //----------------------------------------------------------------
+  // to_hex_lc
+  //
+  inline std::string
+  to_hex_lc(const void * src,
+            std::size_t src_size,
+            std::size_t word_size = 0)
+  { return to_hex(src, src_size, word_size, true); }
+
+  //----------------------------------------------------------------
+  // to_hex_uc
+  //
+  inline std::string
+  to_hex_uc(const void * src,
+            std::size_t src_size,
+            std::size_t word_size = 0)
+  { return to_hex(src, src_size, word_size, false); }
 
   //----------------------------------------------------------------
   // to_hex
   //
-  template <typename TData>
+  template <typename TData, bool lower_case = true>
   std::string
   to_hex(TData data)
   {
-    static const char * alphabet = "0123456789ABCDEF";
     static const std::size_t max = sizeof(TData) * 2;
+    static const char * alphabet =
+      lower_case ? "0123456789abcdef" : "0123456789ABCDEF";
+
     char tmp[sizeof(TData) * 2] = { '0' };
     std::size_t i = 0;
     while (data)
@@ -1261,6 +1282,20 @@ namespace yae
 
     return std::string(tmp + (max - i), tmp + max);
   }
+
+  //----------------------------------------------------------------
+  // to_hex_lc
+  //
+  template <typename TData>
+  inline std::string to_hex_lc(TData data)
+  { return to_hex<TData, true>(data); }
+
+  //----------------------------------------------------------------
+  // to_hex_uc
+  //
+  template <typename TData>
+  inline std::string to_hex_uc(TData data)
+  { return to_hex<TData, false>(data); }
 
   //----------------------------------------------------------------
   // load_hex

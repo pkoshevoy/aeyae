@@ -199,9 +199,9 @@ namespace yae
   // Data::to_hex
   //
   std::string
-  Data::to_hex() const
+  Data::to_hex(bool lower_case) const
   {
-    return yae::to_hex(this->get(), this->size());
+    return yae::to_hex(this->get(), this->size(), 0, lower_case);
   }
 
   //----------------------------------------------------------------
