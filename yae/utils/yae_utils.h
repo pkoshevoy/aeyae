@@ -1262,12 +1262,12 @@ namespace yae
   //----------------------------------------------------------------
   // to_hex
   //
-  template <typename TData>
+  template <typename TData, bool lower_case>
   std::string
-  to_hex(TData data, bool lower_case = true)
+  to_hex(TData data)
   {
     static const std::size_t max = sizeof(TData) * 2;
-    const char * alphabet =
+    static const char * alphabet =
       lower_case ? "0123456789abcdef" : "0123456789ABCDEF";
 
     char tmp[sizeof(TData) * 2] = { '0' };
@@ -1284,18 +1284,25 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // to_hex
+  //
+  template <typename TData>
+  inline std::string to_hex(TData data)
+  { return to_hex<TData, true>(data); }
+
+  //----------------------------------------------------------------
   // to_hex_lc
   //
   template <typename TData>
   inline std::string to_hex_lc(TData data)
-  { return to_hex<TData>(data, true); }
+  { return to_hex<TData, true>(data); }
 
   //----------------------------------------------------------------
   // to_hex_uc
   //
   template <typename TData>
   inline std::string to_hex_uc(TData data)
-  { return to_hex<TData>(data, false); }
+  { return to_hex<TData, false>(data); }
 
   //----------------------------------------------------------------
   // load_hex
