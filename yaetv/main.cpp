@@ -316,7 +316,7 @@ namespace yae
                 uint32_t gps_time)
     {
 #ifndef _WIN32
-      if (output_socket_)
+      if (output_socket_ >= 0)
       {
         //yae_ilog("gps_time: %" PRIu32 "", gps_time);
         this->send(packet);
