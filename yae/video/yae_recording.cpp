@@ -463,7 +463,8 @@ namespace yae
   // Recording::Writer::Writer
   //
   Recording::Writer::Writer():
-    dat_time_(0),
+    dat_t0_(0, 0),
+    pcr_t0_(0, 0),
     mpg_size_(0)
   {}
 
@@ -471,32 +472,59 @@ namespace yae
   // Recording::write
   //
   void
-  Recording::Writer::write(const yae::Data & data)
+  Recording::Writer::write(const yae::mpeg_ts::IPacketHandler::Packet & packet)
   {
-    YAE_EXPECT(mpg_.write(data.get(), data.size()));
+    YAE_EXPECT(mpg_.write(packet.data_.get(), packet.data_.size()));
 
-    int64_t time_now = yae::TTime::now().get(Writer::kTimebase);
-    int64_t elapsed_time = time_now - dat_time_;
-
-    if (elapsed_time > Writer::kTimebase)
+    yae::TTime pcr(0, 0);
+    if (packet.parsed_.get_pcr(pcr))
     {
-      dat_time_ = time_now;
+      yae::TTime now = yae::TTime::now();
+      static const int64_t tolerance_msec = 300;
 
-      if (dat_.is_open())
+      int64_t err_msec =
+        (dat_t0_.invalid() ||
+         pcr_t0_.invalid() ||
+         pcr < pcr_t0_) ? tolerance_msec :
+        ((now - dat_t0_).get(Writer::kTimebase) -
+         (pcr - pcr_t0_).get(Writer::kTimebase));
+
+      bool reset_origin = std::abs(err_msec) >= tolerance_msec;
+      if (reset_origin)
       {
-        yae::Data payload(16);
-        yae::Bitstream bs(payload);
-        bs.write_bits(64, dat_time_);
-        bs.write_bits(64, mpg_size_);
-
-        YAE_ASSERT(dat_.write(payload.get(), payload.size()));
-        dat_.flush();
+        // resync:
+        dat_t0_ = now;
+        pcr_t0_ = pcr;
       }
 
-      mpg_.flush();
+      int64_t elapsed_pcr = (pcr - pcr_t0_).get(Writer::kTimebase);
+      if (reset_origin || elapsed_pcr >= Writer::kTimebase)
+      {
+#if 0 // ndef NDEBUG
+        yae::TTime dt = (now - dat_t0_);
+        yae_dlog("dt: %s, PCR: %s, err: %" PRIi64 " msec%s",
+                 dt.to_hhmmss_ms().c_str(),
+                 pcr.to_hhmmss_ms().c_str(),
+                 err_msec,
+                 reset_origin ? ", resync" : "");
+#endif
+        if (dat_.is_open())
+        {
+          yae::Data payload(16);
+          yae::Bitstream bs(payload);
+          uint64_t dat_time = dat_t0_.get(Writer::kTimebase) + elapsed_pcr;
+          bs.write_bits(64, dat_time);
+          bs.write_bits(64, mpg_size_);
+
+          YAE_ASSERT(dat_.write(payload.get(), payload.size()));
+          dat_.flush();
+        }
+
+        mpg_.flush();
+      }
     }
 
-    mpg_size_ += data.size();
+    mpg_size_ += packet.data_.size();
   }
 
   //----------------------------------------------------------------
@@ -564,7 +592,6 @@ namespace yae
       return writer_ptr;
     }
 
-    writer.dat_time_ = 0;
     writer.mpg_size_ = yae::stat_filesize(path_mpg.c_str());
 
     uint64_t misalignment = writer.mpg_size_ % 188;
@@ -610,7 +637,8 @@ namespace yae
   // Recording::write
   //
   void
-  Recording::write(const fs::path & basedir, const yae::Data & data)
+  Recording::write(const fs::path & basedir,
+                   const yae::mpeg_ts::IPacketHandler::Packet & packet)
   {
     yae::shared_ptr<Writer> writer_ptr = get_writer(basedir);
     if (!writer_ptr)
@@ -619,7 +647,7 @@ namespace yae
     }
 
     Writer & writer = *writer_ptr;
-    writer.write(data);
+    writer.write(packet);
   }
 
   //----------------------------------------------------------------

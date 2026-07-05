@@ -164,7 +164,7 @@ namespace yae
     {
 #ifndef _WIN32
       const std::list<yae::mpeg_ts::PESPacket> *
-        es_packets = ctx_.get_es_packets(packet.pid_);
+        es_packets = ctx_.get_es_packets(packet.parsed_.pid_);
 
       Track * track = NULL;
       double t_expected = 0.0;
@@ -175,7 +175,7 @@ namespace yae
         if (pkt.pes_)
         {
           const yae::mpeg_ts::PESPacket::PES & pes = *(pkt.pes_);
-          track = &track_[packet.pid_];
+          track = &track_[packet.parsed_.pid_];
 
           yae::TTime dts(0, 0);
           bool has_dts = pes.get_dts(dts);
@@ -189,7 +189,7 @@ namespace yae
               {
                 // looped around?
                 yae_ilog("PID %i, prev DTS=%" PRIi64 ", curr DTS=%" PRIi64 "",
-                         packet.pid_,
+                         packet.parsed_.pid_,
                          timespan.t1_.time_,
                          dts.time_);
               }
@@ -222,7 +222,7 @@ namespace yae
               {
                 // looped around?
                 yae_ilog("PID %i, prev PTS=%" PRIi64 ", curr PTS=%" PRIi64 "",
-                         packet.pid_,
+                         packet.parsed_.pid_,
                          timespan.t1_.time_,
                          pts.time_);
               }
@@ -284,7 +284,7 @@ namespace yae
       {
 #if 1
         yae_ilog("PID %i, %.3f vs %.3f, sleep: %i ms",
-                 packet.pid_,
+                 packet.parsed_.pid_,
                  t_actual,
                  t_expected,
                  msec_sleep);
@@ -326,7 +326,7 @@ namespace yae
 
       packets_.push(packet);
 
-      uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
+      uint16_t program_id = ctx_.lookup_program_id(packet.parsed_.pid_);
       if (!program_id)
       {
         return;
@@ -348,7 +348,7 @@ namespace yae
       {
         const yae::Data & data = packet.data_;
 
-        uint16_t program_id = ctx_.lookup_program_id(packet.pid_);
+        uint16_t program_id = ctx_.lookup_program_id(packet.parsed_.pid_);
         if (!program_id)
         {
           for (std::map<uint16_t, yae::TOpenFilePtr>::const_iterator
@@ -510,13 +510,8 @@ namespace yae
             yae::TBufferPtr pkt_data = data.get(offset, pkt_size);
             pkt_data->truncate(188);
 
-            yae::Bitstream bin(pkt_data);
-
-            yae::mpeg_ts::TSPacket pkt;
-            pkt.load(bin);
-
-            std::size_t end_pos = bin.position();
-            std::size_t bytes_consumed = end_pos >> 3;
+            yae::mpeg_ts::IPacketHandler::Packet packet;
+            std::size_t bytes_consumed = packet.load(pkt_data);
 
             if (bytes_consumed < 188)
             {
@@ -527,9 +522,13 @@ namespace yae
               continue;
             }
 
-            handler.ctx_.push(pkt);
+            if (packet.parsed_.is_null_packet())
+            {
+              offset += pkt_size;
+              continue;
+            }
 
-            yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);
+            handler.ctx_.push(packet.parsed_);
             handler.ctx_.handle(packet, handler);
           }
           catch (const std::exception & e)

@@ -1486,13 +1486,10 @@ namespace yae
           TBufferPtr pkt_data = bitstream.read_bytes(188);
           yae::Bitstream bin(pkt_data);
 
-          yae::mpeg_ts::TSPacket pkt;
-          pkt.load(bin);
+          yae::mpeg_ts::IPacketHandler::Packet packet;
+          std::size_t bytes_consumed = packet.load(pkt_data);
 
-          std::size_t end_pos = bin.position();
-          std::size_t bytes_consumed = end_pos >> 3;
-
-          if (bytes_consumed != 188)
+          if (bytes_consumed < 188)
           {
 #ifndef NDEBUG
             yae_wlog("%sTSPacket too short (%i bytes), %s ...",
@@ -1503,14 +1500,12 @@ namespace yae
             continue;
           }
 
-          if (pkt.is_null_packet())
+          if (packet.parsed_.is_null_packet())
           {
             continue;
           }
 
-          ctx.push(pkt);
-
-          yae::mpeg_ts::IPacketHandler::Packet packet(pkt.pid_, pkt_data);
+          ctx.push(packet.parsed_);
           ctx.handle(packet, packet_handler_);
         }
         catch (const std::exception & e)
@@ -1609,7 +1604,7 @@ namespace yae
   static void
   write(DVR & dvr,
         const std::set<TRecordingPtr> & recs,
-        const yae::Data & data)
+        const yae::mpeg_ts::IPacketHandler::Packet & packet)
   {
     for (std::set<TRecordingPtr>::const_iterator
            i = recs.begin(); i != recs.end(); ++i)
@@ -1624,7 +1619,7 @@ namespace yae
         dvr.make_room_for(rec, num_sec);
       }
 
-      recording.write(dvr.basedir_, data);
+      recording.write(dvr.basedir_, packet);
     }
   }
 
@@ -1683,7 +1678,7 @@ namespace yae
       const yae::Data & data = pkt.data_;
 
       std::map<uint16_t, uint32_t>::const_iterator found =
-        bucket.pid_to_ch_num_.find(pkt.pid_);
+        bucket.pid_to_ch_num_.find(pkt.parsed_.pid_);
 
       if (found == bucket.pid_to_ch_num_.end())
       {
@@ -1691,7 +1686,7 @@ namespace yae
                it = recordings_.begin(); it != recordings_.end(); ++it)
         {
           const std::set<TRecordingPtr> & recs = it->second;
-          write(dvr_, recs, data);
+          write(dvr_, recs, pkt);
         }
       }
       else
@@ -1702,7 +1697,7 @@ namespace yae
         if (it != recordings_.end())
         {
           const std::set<TRecordingPtr> & recs = it->second;
-          write(dvr_, recs, data);
+          write(dvr_, recs, pkt);
         }
       }
     }

@@ -319,6 +319,40 @@ namespace yae
       return true;
     }
 
+    //----------------------------------------------------------------
+    // AdaptationField::get_pcr
+    //
+    bool
+    AdaptationField::get_pcr(yae::TTime & t) const
+    {
+      if (!pcr_flag_)
+      {
+        return false;
+      }
+
+      t.reset(program_clock_reference_base_ * 300 +
+              program_clock_reference_extension_,
+              27000000);
+      return true;
+    }
+
+    //----------------------------------------------------------------
+    // AdaptationField::get_opcr
+    //
+    bool
+    AdaptationField::get_opcr(yae::TTime & t) const
+    {
+      if (!opcr_flag_)
+      {
+        return false;
+      }
+
+      t.reset(original_program_clock_reference_base_ * 300 +
+              original_program_clock_reference_extension_,
+              27000000);
+      return true;
+    }
+
 
     //----------------------------------------------------------------
     // TSPacket::TSPacket
@@ -5138,6 +5172,23 @@ namespace yae
 
 
     //----------------------------------------------------------------
+    // IPacketHandler::Packet::load
+    //
+    std::size_t
+    IPacketHandler::Packet::load(const Data & data)
+    {
+      data_ = data;
+
+      yae::Bitstream bin(data_);
+      parsed_.load(bin);
+
+      std::size_t end_pos = bin.position();
+      std::size_t bytes_consumed = end_pos >> 3;
+      return bytes_consumed;
+    }
+
+
+    //----------------------------------------------------------------
     // EPG::Program::operator
     //
     bool
@@ -6424,11 +6475,13 @@ namespace yae
                 {
                   Json::Value json;
                   yae::mpeg_ts::save(json, item);
+#if 0
                   yae_debug
                     << id_ << " bucket " << bx << " has EPG for "
                     << channel_major(ch_num) << "-" << channel_minor(ch_num)
                     << " at " << gps_time_to_localtime_str(gps_time) << ": "
                     << yae::to_str(json);
+#endif
                   found = true;
                   break;
                 }

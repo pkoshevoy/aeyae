@@ -55,6 +55,8 @@ namespace yae
 
       void load(IBitstream & bin);
       bool is_duplicate_of(const AdaptationField & af) const;
+      bool get_pcr(yae::TTime & t) const;
+      bool get_opcr(yae::TTime & t) const;
 
       // 8:
       uint64_t adaptation_field_length_ : 8;
@@ -143,6 +145,10 @@ namespace yae
 
       inline bool is_null_packet() const
       { return pid_ == 0x1FFF; }
+
+      // helper:
+      inline bool get_pcr(yae::TTime & pcr) const
+      { return adaptation_field_ && adaptation_field_->get_pcr(pcr); }
 
       uint32_t sync_byte_ : 8; // 0x47
 
@@ -2649,12 +2655,10 @@ namespace yae
       //
       struct YAE_API Packet
       {
-        Packet(uint16_t pid = 0x1FFF, const Data & data = Data()):
-          pid_(pid),
-          data_(data)
-        {}
+        // returns number of bytes consumed:
+        std::size_t load(const Data & ts_pkt_data);
 
-        uint16_t pid_;
+        TSPacket parsed_;
         Data data_;
       };
 
