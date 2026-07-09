@@ -900,7 +900,10 @@ namespace yae
       if (byterate > 0.0)
       {
         currRange_ = range - r0;
-        double posErr = double(pkt->pos - range->p0_);
+        double posErr =
+          (range->p0_ <= pkt->pos) ?
+          double(pkt->pos - range->p0_) :
+          -double(range->p0_ - pkt->pos);
         double secErr = posErr / byterate;
 #if 0
         std::size_t i0 = segment.i_;
