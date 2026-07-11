@@ -20,7 +20,7 @@
 // atomics:
 #if (defined(__GNUC__) && \
      (__GNUC__ == 4) && \
-     (__GNUC_MINOR__ < 1) && \
+     (__GNUC_MINOR__ <= 2) && \
      !defined(__clang__))
 # include <bits/atomicity.h>
 # define YAE_EXCHANGE_AND_ADD __gnu_cxx::__exchange_and_add
