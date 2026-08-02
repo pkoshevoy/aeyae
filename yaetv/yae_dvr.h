@@ -500,6 +500,9 @@ namespace yae
       virtual bool is_open() const;
       virtual bool push(const void * data, std::size_t size);
 
+      virtual const std::string & id() const
+      { return frequency_; }
+
       DVR & dvr_;
       yae::TWorkerPtr worker_;
       yae::HDHomeRun::TSessionPtr session_;

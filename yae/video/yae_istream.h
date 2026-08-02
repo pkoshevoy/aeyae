@@ -31,6 +31,8 @@ namespace yae
     //  false -- stop
     //
     virtual bool push(const void * data, std::size_t size) = 0;
+
+    virtual const std::string & id() const = 0;
   };
 
 }

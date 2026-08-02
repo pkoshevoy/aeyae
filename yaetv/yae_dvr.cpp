@@ -2083,7 +2083,7 @@ namespace yae
     basedir_(basedir.empty() ? yae::get_temp_dir_utf8() : basedir),
     heartbeat_period_(5, 1),
     channel_scan_period_(24 * 60 * 60, 1),
-    epg_refresh_period_(30 * 60, 1),
+    epg_refresh_period_(3 * 60, 1),
     schedule_refresh_period_(30, 1),
     storage_cleanup_period_(300, 1),
     find_recordings_period_(30, 1),
@@ -2691,7 +2691,7 @@ namespace yae
 
           const TunerChannel & tuner_channel = *k;
           std::string frequency = tuner_channel.frequency_str();
-
+#if 0
           if (dvr_.maybe_skip(frequency))
           {
             yae_dlog("%s skipping channel scan for %s",
@@ -2699,7 +2699,7 @@ namespace yae
                      frequency.c_str());
             continue;
           }
-
+#endif
           Json::Value & cache = tuner_cache["frequencies"][frequency];
           int64_t timestamp = cache.get("timestamp", 0).asInt64();
           int64_t elapsed = now - timestamp;
@@ -2837,13 +2837,13 @@ namespace yae
       // shortucts:
       const uint32_t ch_num = i->first;
       const std::string & frequency = i->second;
-
+#if 0
       if (dvr_.maybe_skip(frequency))
       {
         yae_dlog("skipping EPG update for %s", frequency.c_str());
         continue;
       }
-
+#endif
       const uint16_t major = yae::mpeg_ts::channel_major(ch_num);
       const uint16_t minor = yae::mpeg_ts::channel_minor(ch_num);
       const std::string channels_str = dvr_.get_channels_str(frequency);
@@ -4687,16 +4687,17 @@ namespace yae
         uint32_t signal_to_noise_quality =
           status.get("signal_to_noise_quality", 0).asUInt();
 
-        // uint32_t symbol_error_quality =
-        //   status.get("symbol_error_quality", 100).asUInt();
+        uint32_t symbol_error_quality =
+          status.get("symbol_error_quality", 100).asUInt();
 
         bool poor_signal_present =
-          (signal_strength < 70 &&
-           signal_to_noise_quality < 70);
+          (signal_strength < 50 &&
+           signal_to_noise_quality < 50 &&
+           symbol_error_quality < 80);
 
-        if (no_signal_present ||
+        if (programs.empty() ||
             poor_signal_present ||
-            programs.empty())
+            no_signal_present)
         {
           signal_absent.insert(frequency);
           continue;
@@ -5122,6 +5123,13 @@ namespace yae
           get("frequencies", Json::Value()).
           get(frequency, Json::Value());
       }
+    }
+
+    if (tuners.empty())
+    {
+      // if we don't have cached tuner info for a given frequency
+      // then we shouldn't skip it:
+      return false;
     }
 
     std::set<uint32_t> blocked_channels;
