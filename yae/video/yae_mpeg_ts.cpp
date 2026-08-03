@@ -6247,7 +6247,7 @@ namespace yae
         if (event_t1 < t_min || event_t0 > t_max)
         {
           // event does not belong in this EIT 3 hour window, ignore it:
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
           yae_wlog("%sevent %i (%s, %s, %s) falls outside "
                    "time window [%s, %s]",
                    log_prefix_.c_str(),
