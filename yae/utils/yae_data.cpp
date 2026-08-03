@@ -458,7 +458,7 @@ namespace yae
   uint64_t
   Bitstream::read_bits(std::size_t num_bits)
   {
-    YAE_ASSERT(num_bits <= 64 && IBitstream::has_enough_bits(num_bits));
+    // YAE_ASSERT(num_bits <= 64 && IBitstream::has_enough_bits(num_bits));
     YAE_THROW_IF(64 < num_bits);
     YAE_THROW_IF(!IBitstream::has_enough_bits(num_bits));
 
@@ -517,7 +517,7 @@ namespace yae
   void
   Bitstream::read_bytes(void * dst, std::size_t num_bytes)
   {
-    YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
+    // YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 
@@ -550,7 +550,7 @@ namespace yae
       return data;
     }
 
-    YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
+    // YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
     YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 

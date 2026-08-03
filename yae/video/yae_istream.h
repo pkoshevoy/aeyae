@@ -22,6 +22,7 @@ namespace yae
   struct YAE_API IStream
   {
     virtual ~IStream() {}
+
     virtual void close() = 0;
     virtual bool is_open() const = 0;
 
