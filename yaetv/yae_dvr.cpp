@@ -4563,6 +4563,10 @@ namespace yae
           yae_ilog("%salready recording: %s",
                    stream->packet_handler_->ctx_.log_prefix_.c_str(),
                    rec.get_basename().c_str());
+#if 1
+          this->save_epg(stream->id(), // frequency
+                         stream->packet_handler_->ctx_);
+#endif
         }
 
         recording.set_stream(stream);
