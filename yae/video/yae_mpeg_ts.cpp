@@ -6456,7 +6456,7 @@ namespace yae
           if (bucket.has_epg_for(gps_time, Bucket::kEventDescRequired))
           {
             bx_fallback.reset();
-#ifndef NDEBUG
+#if 0 // ndef NDEBUG
             yae_debug << id_ << " bucket " << bx << " has EPG for "
                       << gps_time;
 
