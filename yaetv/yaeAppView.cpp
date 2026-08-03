@@ -3015,10 +3015,12 @@ namespace yae
       if (!same_recordings)
       {
         found_recordings_ = found_recordings;
+        prior_recs_ = recordings_;
         recordings_ = recordings;
         playlists_ = playlists;
         rec_by_channel_ = rec_by_channel;
         sync_ui_playlists();
+        prior_recs_.clear();
       }
 
       if (!(same_channels && same_blocklist))
@@ -4408,6 +4410,16 @@ namespace yae
       layout.names_.push_back(name);
 
       yae::shared_ptr<Layout> & rowlayout_ptr = layout.items_[name];
+      if (rowlayout_ptr)
+      {
+        TRecPtr prior_rec = yae::get(prior_recs_, name);
+        if (prior_rec && rec != *prior_rec)
+        {
+          YAE_ASSERT(table.remove(rowlayout_ptr->item_));
+          rowlayout_ptr.reset();
+        }
+      }
+
       if (!rowlayout_ptr)
       {
         rowlayout_ptr.reset(new Layout());

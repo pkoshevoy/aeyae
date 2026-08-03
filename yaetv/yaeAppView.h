@@ -215,6 +215,9 @@ namespace yae
     // all recordings, indexed by filename:
     TRecs recordings_;
 
+    // temporary previous list of all recordings, indexed by filename:
+    TRecs prior_recs_;
+
     // all recordings, indexed by playlist:
     std::map<std::string, TRecs> playlists_;
     std::map<std::string, TRecs> prev_recs_;
