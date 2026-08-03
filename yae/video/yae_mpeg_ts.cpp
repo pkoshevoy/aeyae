@@ -5233,7 +5233,9 @@ namespace yae
              i = programs_.begin(); i != programs_.end(); ++i)
       {
         const EPG::Program & program = *i;
-        if (program.gps_time_ == gps_time)
+        uint32_t t0 = program.gps_t0();
+        uint32_t t1 = program.gps_t1();
+        if (t0 <= gps_time && gps_time < t1)
         {
           return &program;
         }

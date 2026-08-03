@@ -2684,6 +2684,12 @@ namespace yae
       {
         bool operator == (const Program & other) const;
 
+        inline uint32_t gps_t0() const
+        { return gps_time_; }
+
+        inline uint32_t gps_t1() const
+        { return gps_time_ + duration_; }
+
         std::string title_;
         std::string description_;
         std::string rating_;
