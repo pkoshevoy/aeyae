@@ -576,6 +576,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         {
 #ifdef _WIN32
           v = "Lucida Console";
+#elif defined(__APPLE__)
+          v = "Courier";
 #endif
         }
         else if (k == "Fontsize")
@@ -586,19 +588,26 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         }
         else if (k == "PrimaryColour")
         {
-          // &hAABBGGRR:
-          v = "&Hff00ffff";
-          // v = "&Hffffffff";
+          // from https://github.com/libass/libass/wiki/ASS-File-Format-Guide
+          //
+          // Colour values MUST use hexadecimal values with a &H prefix.
+          // If the value includes an alpha channel
+          // (all colour values in the Style: line do),
+          // the order is ABGR.
+          // An alpha value of &H00 means fully opaque
+          // and a value of &HFF fully transparent, i.e. invisible.
+          //
+          // &HAABBGGRR:
+          //
+          v = "&H0000ffff";
         }
         else if (k == "SecondaryColour")
         {
-          v = "&Hffffffff";
-          // v = "&Hff00ffff";
+          v = "&H00ffffff";
         }
         else if (k == "OutlineColour")
         {
           // outline color, AABBGGRR:
-          // v = "&H3f808080";
           v = "&H7f000000";
         }
         else if (k == "BackColour")

@@ -170,7 +170,7 @@ namespace yae
 
 #ifdef YAE_DUMP_TMP_TRACK_ASS
       TOpenFilePtr fout = yae::get_open_file("/tmp/track.ass", "w");
-      fout->seek(0, SEEK_SET);
+      fout->fseek64(0, SEEK_SET);
       fout->write(tmp);
 #endif
       ass_process_codec_private(track_,
