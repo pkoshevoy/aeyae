@@ -18,7 +18,7 @@
 #include <iostream>
 
 // atomics:
-#if (defined(__GNUC__) && \
+#if (defined(__APPLE__) && defined(_ARCH_PPC) && defined(__GNUC__) && \
      (__GNUC__ == 4) && \
      (__GNUC_MINOR__ <= 2) && \
      !defined(__clang__))
