@@ -24,9 +24,12 @@ find_package(Threads REQUIRED)
 
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
-find_package(Boost
-  REQUIRED
-  COMPONENTS
+find_package(Boost REQUIRED)
+
+set(FOUND_BOOST_SEMVER_STR "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+message("FOUND_BOOST_SEMVER_STR: ${FOUND_BOOST_SEMVER_STR}")
+
+set(REQUIRED_BOOST_LIBS
   atomic
   chrono
   date_time
@@ -35,23 +38,18 @@ find_package(Boost
   regex
   thread)
 
-set(FOUND_BOOST_SEMVER_STR "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
-message("FOUND_BOOST_SEMVER_STR: ${FOUND_BOOST_SEMVER_STR}")
-
 if (FOUND_BOOST_SEMVER_STR VERSION_LESS "1.70.0")
   message("setting CMAKE_CXX_STANDARD 98")
   set(CMAKE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
   set(CMAKE_CXX_STANDARD_REQUIRED NO)
-  find_package(Boost
-    REQUIRED
-    COMPONENTS
-    system
-    thread)
+  set(REQUIRED_BOOST_LIBS ${REQUIRED_BOOST_LIBS} system)
 else()
   message("setting CMAKE_CXX_STANDARD 17")
   set(CMAKE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
   set(CMAKE_CXX_STANDARD_REQUIRED YES)
 endif()
+
+find_package(Boost REQUIRED COMPONENTS ${REQUIRED_BOOST_LIBS})
 
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
