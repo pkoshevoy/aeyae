@@ -25,6 +25,7 @@ find_package(Threads REQUIRED)
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREAD ON)
 find_package(Boost
+  REQUIRED
   COMPONENTS
   atomic
   chrono
@@ -32,8 +33,26 @@ find_package(Boost
   filesystem
   locale
   regex
-  thread
-  REQUIRED)
+  thread)
+
+set(FOUND_BOOST_SEMVER_STR "${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}.${Boost_SUBMINOR_VERSION}")
+message("FOUND_BOOST_SEMVER_STR: ${FOUND_BOOST_SEMVER_STR}")
+
+if (FOUND_BOOST_SEMVER_STR VERSION_LESS "1.70.0")
+  message("setting CMAKE_CXX_STANDARD 98")
+  set(CMAKE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
+  set(CMAKE_CXX_STANDARD_REQUIRED NO)
+  find_package(Boost
+    REQUIRED
+    COMPONENTS
+    system
+    thread)
+else()
+  message("setting CMAKE_CXX_STANDARD 17")
+  set(CMAKE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
+  set(CMAKE_CXX_STANDARD_REQUIRED YES)
+endif()
+
 add_definitions(-DBOOST_ALL_DYN_LINK)
 add_definitions(-DBOOST_FILESYSTEM_NO_DEPRECATED)
 
@@ -361,17 +380,6 @@ add_dependencies(${PROGNAME} "aeyae_update_revision")
 set_property(TARGET ${PROGNAME} PROPERTY
   VERSION 1.0-${CMAKE_SYSTEM_VERSION}
   )
-
-message("Boost_VERSION: ${Boost_VERSION}")
-if (Boost_VERSION VERSION_LESS "1.70.0")
-  message("setting CMAKE_CXX_STANDARD 98")
-  set(CMAKE_CXX_STANDARD 98 CACHE STRING "Specify C++ standard version to use")
-  set(CMAKE_CXX_STANDARD_REQUIRED NO)
-else()
-  message("setting CMAKE_CXX_STANDARD 17")
-  set(CMAKE_CXX_STANDARD 17 CACHE STRING "Specify C++ standard version to use")
-  set(CMAKE_CXX_STANDARD_REQUIRED YES)
-endif()
 
 target_compile_definitions(${PROGNAME} PRIVATE
   -DYAE_DLL_EXPORTS
