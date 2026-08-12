@@ -4088,6 +4088,51 @@ namespace yae
       return false;
     }
 
+    // shortcuts:
+    const uint32_t gps_time = TTime::gps_now().get(1);
+    const std::map<std::string, std::string> & recordings =
+      found_recordings->mpg_path_;
+
+    std::set<std::string> removed;
+    std::size_t removed_bytes = 0;
+
+    for (std::map<std::string, std::string>::const_iterator
+           i = recordings.begin(); i != recordings.end(); ++i)
+    {
+      const std::string & mpg = i->second;
+      TRecPtr rec_ptr = load_recording(mpg);
+      const Recording::Rec & rec = *rec_ptr;
+      if (rec.is_recordable())
+      {
+        continue;
+      }
+
+      yae::TTime t0;
+      yae::TTime t1;
+      uint64_t z0 = 0;
+      uint64_t z1 = 0;
+      if (!rec.load_dat(basedir_, t0, z0, t1, z1))
+      {
+        continue;
+      }
+
+      double recorded = (t1 - t0).sec();
+      double expected = double(rec.get_duration());
+      double completion = (expected <= 0.0) ? 1.0 : (recorded / expected);
+      if (completion > 0.1)
+      {
+        continue;
+      }
+
+      yae_ilog("removing incomplete recording (%.1f%%): %s, %s",
+               completion * 100.0,
+               mpg.c_str(),
+               rec.description_.c_str());
+
+      removed_bytes += this->delete_recording(rec);
+      removed.insert(mpg);
+    }
+
     uint64_t filesystem_bytes = 0;
     uint64_t filesystem_bytes_free = 0;
     uint64_t available_bytes = 0;
@@ -4115,11 +4160,6 @@ namespace yae
       return true;
     }
 
-    // shortcut:
-    const std::map<std::string, std::string> & recordings =
-      found_recordings->mpg_path_;
-
-    std::size_t removed_bytes = 0;
     for (std::map<std::string, std::string>::const_iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
@@ -4129,6 +4169,11 @@ namespace yae
       }
 
       const std::string & mpg = i->second;
+      if (yae::has(removed, mpg))
+      {
+        continue;
+      }
+
       TRecPtr rec_ptr = load_recording(mpg);
       removed_bytes += this->delete_recording(*rec_ptr);
     }

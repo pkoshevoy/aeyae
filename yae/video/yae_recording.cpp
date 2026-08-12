@@ -404,6 +404,86 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // Recording::Rec::load_dat
+  //
+  bool
+  Recording::Rec::load_dat(const fs::path & basedir,
+                           yae::TTime & t0, uint64_t & z0,
+                           yae::TTime & t1, uint64_t & z1) const
+  {
+    std::string dat_path = this->get_filepath(basedir, ".dat");
+    yae::TOpenFile dat(dat_path, "rb");
+    if (!dat.is_open())
+    {
+      return false;
+    }
+
+    yae::Data line(16);
+    yae::Bitstream bs(line);
+
+    uint64_t dat_size = dat.get_filesize();
+    uint64_t num_lines = dat_size / line.size();
+    if (num_lines < 3)
+    {
+      return false;
+    }
+
+    uint64_t timebase = Writer::kTimebase;
+    dat.load(line);
+
+    uint64_t head_offset = 1;
+    while (line.starts_with("timebase", 8))
+    {
+      ++head_offset;
+      bs.seek_to_byte_pos(8);
+      timebase = bs.read<uint64_t>();
+      if (dat.load(line) != line.size())
+      {
+        return false;
+      }
+    }
+
+    bs.seek_to_byte_pos(0);
+    t0.base_ = timebase;
+    t0.time_ = bs.read<uint64_t>();
+    z0 = bs.read<uint64_t>();
+
+    uint64_t tail_offset = 1;
+    while (head_offset + tail_offset < num_lines)
+    {
+      if (dat.fseek64((num_lines - tail_offset) * line.size(), SEEK_SET) != 0)
+      {
+        return false;
+      }
+
+      if (dat.load(line) != line.size())
+      {
+        return false;
+      }
+
+      if (line.starts_with("timebase", 8))
+      {
+        ++tail_offset;
+        bs.seek_to_byte_pos(8);
+        timebase = bs.read<uint64_t>();
+        if (timebase != t0.base_)
+        {
+          return false;
+        }
+        continue;
+      }
+
+      bs.seek_to_byte_pos(0);
+      t1.base_ = timebase;
+      t1.time_ = bs.read<uint64_t>();
+      z1 = bs.read<uint64_t>();
+      return true;
+    }
+
+    return false;
+  }
+
+  //----------------------------------------------------------------
   // Recording::Recording
   //
   Recording::Recording():

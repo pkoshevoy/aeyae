@@ -141,6 +141,14 @@ namespace yae
       bool save(const fs::path & basedir) const;
       bool load(const fs::path & basedir);
 
+      // open the recording .dat and get the .dat start time t0,
+      // end time t1, and number of bytes recorded between t0 and t1;
+      // this can be used to estimate the recording bitrate,
+      // and approximate relative completion of the recording:
+      bool load_dat(const fs::path & basedir,
+                    yae::TTime & t0, uint64_t & z0,
+                    yae::TTime & t1, uint64_t & z1) const;
+
       Recording::MadeBy made_by_;
       bool cancelled_;
       uint64_t utc_t0_;
