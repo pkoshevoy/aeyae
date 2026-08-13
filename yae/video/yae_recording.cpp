@@ -411,6 +411,11 @@ namespace yae
                            yae::TTime & t0, uint64_t & z0,
                            yae::TTime & t1, uint64_t & z1) const
   {
+    t0.reset(0, 1);
+    t1.reset(0, 1);
+    z0 = 0;
+    z1 = 0;
+
     std::string dat_path = this->get_filepath(basedir, ".dat");
     yae::TOpenFile dat(dat_path, "rb");
     if (!dat.is_open())
@@ -423,11 +428,6 @@ namespace yae
 
     uint64_t dat_size = dat.get_filesize();
     uint64_t num_lines = dat_size / line.size();
-    if (num_lines < 3)
-    {
-      return false;
-    }
-
     uint64_t timebase = Writer::kTimebase;
     dat.load(line);
 
@@ -448,17 +448,20 @@ namespace yae
     t0.time_ = bs.read<uint64_t>();
     z0 = bs.read<uint64_t>();
 
+    t1 = t0;
+    z1 = z0;
+
     uint64_t tail_offset = 1;
-    while (head_offset + tail_offset < num_lines)
+    while (head_offset + tail_offset <= num_lines)
     {
       if (dat.fseek64((num_lines - tail_offset) * line.size(), SEEK_SET) != 0)
       {
-        return false;
+        break;
       }
 
       if (dat.load(line) != line.size())
       {
-        return false;
+        break;
       }
 
       if (line.starts_with("timebase", 8))
@@ -470,6 +473,7 @@ namespace yae
         {
           return false;
         }
+
         continue;
       }
 
@@ -477,10 +481,10 @@ namespace yae
       t1.base_ = timebase;
       t1.time_ = bs.read<uint64_t>();
       z1 = bs.read<uint64_t>();
-      return true;
+      break;
     }
 
-    return false;
+    return true;
   }
 
   //----------------------------------------------------------------

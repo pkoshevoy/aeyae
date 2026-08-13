@@ -4119,7 +4119,7 @@ namespace yae
       double recorded = (t1 - t0).sec();
       double expected = double(rec.get_duration());
       double completion = (expected <= 0.0) ? 1.0 : (recorded / expected);
-      if (completion > 0.1)
+      if (completion > 0.16)
       {
         continue;
       }
