@@ -839,11 +839,11 @@ namespace yae
     VideoTraits vtts;
     bool gotVideoTraits = reader.getVideoTraits(vtts);
 
-    if ((videoTrackIndex >= numVideoTracks && numAudioTracks > 0) ||
-        // audio files with embeded album art poster frame
+    if (// audio files with embeded album art poster frame
         // typically show up with ridiculous frame rate,
         // so I'll consider that as an audio file trait:
-        (gotVideoTraits && vtts.frameRate_ > 240.0))
+        // (gotVideoTraits && vtts.frameRate_ > 240.0) ||
+        (videoTrackIndex >= numVideoTracks && numAudioTracks > 0))
     {
       playlistView_->setStyleId(PlaylistView::kListView);
     }

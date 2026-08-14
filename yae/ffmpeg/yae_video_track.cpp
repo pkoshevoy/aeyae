@@ -1543,8 +1543,10 @@ namespace yae
     // lowest framerate with which all timestamps can be represented accurately
     // (least common multiple of all framerates in the stream)
     double max_fps =
-      (r_frame_rate.num > 0 &&
-       r_frame_rate.den > 0) ?
+      (codecParams.framerate.num > 0 && codecParams.framerate.den > 0) ?
+      (double(codecParams.framerate.num) /
+       double(codecParams.framerate.den)) :
+      (r_frame_rate.num > 0 && r_frame_rate.den > 0) ?
       (double(r_frame_rate.num) /
        double(r_frame_rate.den)) :
       0.0;
@@ -1558,7 +1560,7 @@ namespace yae
        double(stream_->avg_frame_rate.den)) :
       0.0;
 
-    if (max_fps > 0.0 && max_fps < 24000)
+    if (max_fps > 0.0 && (avg_fps <= 0.0 || (max_fps / avg_fps) < 3.0))
     {
       t.frameRate_ = max_fps;
 
@@ -1594,13 +1596,20 @@ namespace yae
         }
       }
     }
-    else if (avg_fps > 0 && avg_fps < 24000)
-    {
-      t.frameRate_ = avg_fps;
-    }
     else
     {
-      t.frameRate_ = 0.0;
+      t.frameRate_ =
+        (avg_fps > 0) ? avg_fps :
+        (max_fps > 0) ? max_fps :
+        0.0;
+    }
+
+    double std_fps = 0.0;
+    double tolerance = 0.1;
+    if (t.frameRate_ > 0.0 &&
+        closeEnoughToStandardFrameRate(t.frameRate_, std_fps, tolerance))
+    {
+      t.frameRate_ = std_fps;
     }
 
     //! encoded frame size (including any padding):
