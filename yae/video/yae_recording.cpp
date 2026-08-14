@@ -411,9 +411,9 @@ namespace yae
                            yae::TTime & t0, uint64_t & z0,
                            yae::TTime & t1, uint64_t & z1) const
   {
-    t0.reset(0, 1);
-    t1.reset(0, 1);
-    z0 = 0;
+    t0.reset(0, 0);
+    t1.reset(0, 0);
+    z0 = std::numeric_limits<uint64_t>::max();
     z1 = 0;
 
     std::string dat_path = this->get_filepath(basedir, ".dat");
@@ -426,64 +426,63 @@ namespace yae
     yae::Data line(16);
     yae::Bitstream bs(line);
 
-    uint64_t dat_size = dat.get_filesize();
-    uint64_t num_lines = dat_size / line.size();
-    uint64_t timebase = Writer::kTimebase;
-    dat.load(line);
+    yae::TTime recorded(0, 1);
+    yae::TTime s0(0, 0);
+    yae::TTime s1(0, 0);
+    yae::TTime t(0, Writer::kTimebase);
+    uint64_t z = 0;
 
-    uint64_t head_offset = 1;
-    while (line.starts_with("timebase", 8))
+    while (dat.load(line) == line.size())
     {
-      ++head_offset;
-      bs.seek_to_byte_pos(8);
-      timebase = bs.read<uint64_t>();
-      if (dat.load(line) != line.size())
-      {
-        return false;
-      }
-    }
-
-    bs.seek_to_byte_pos(0);
-    t0.base_ = timebase;
-    t0.time_ = bs.read<uint64_t>();
-    z0 = bs.read<uint64_t>();
-
-    t1 = t0;
-    z1 = z0;
-
-    uint64_t tail_offset = 1;
-    while (head_offset + tail_offset <= num_lines)
-    {
-      if (dat.fseek64((num_lines - tail_offset) * line.size(), SEEK_SET) != 0)
-      {
-        break;
-      }
-
-      if (dat.load(line) != line.size())
-      {
-        break;
-      }
-
       if (line.starts_with("timebase", 8))
       {
-        ++tail_offset;
         bs.seek_to_byte_pos(8);
-        timebase = bs.read<uint64_t>();
-        if (timebase != t0.base_)
-        {
-          return false;
-        }
-
+        t.base_ = bs.read<uint64_t>();
         continue;
       }
 
       bs.seek_to_byte_pos(0);
-      t1.base_ = timebase;
-      t1.time_ = bs.read<uint64_t>();
-      z1 = bs.read<uint64_t>();
-      break;
+      t.time_ = bs.read<uint64_t>();
+      z = bs.read<uint64_t>();
+
+      if (t0.invalid())
+      {
+        t0 = t;
+      }
+
+      if (s0.invalid())
+      {
+        s0 = t;
+        s1 = t;
+        z0 = std::min(z0, z);
+        z1 = z0;
+      }
+      else
+      {
+        z1 = std::max(z1, z);
+      }
+
+      yae::TTime dt = t - s1;
+      if (dt.get(1) > 1)
+      {
+        recorded += (s1 - s0);
+        s0 = t;
+      }
+
+      s1 = t;
     }
 
+    if (t0.invalid())
+    {
+      return false;
+    }
+
+    if (s0.valid())
+    {
+      recorded += (s1 - s0);
+    }
+
+    t1 = t0 + recorded;
     return true;
   }
 
