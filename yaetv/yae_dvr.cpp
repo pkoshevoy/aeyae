@@ -4089,7 +4089,6 @@ namespace yae
     }
 
     // shortcuts:
-    const uint32_t gps_time = TTime::gps_now().get(1);
     const std::map<std::string, std::string> & recordings =
       found_recordings->mpg_path_;
 
