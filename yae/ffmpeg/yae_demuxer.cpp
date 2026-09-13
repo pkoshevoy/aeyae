@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
+#include "yae/ffmpeg/yae_analyzer.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "yae/utils/yae_utils.h"
@@ -852,6 +853,15 @@ namespace yae
       return TDemuxerPtr();
     }
 
+    std::list<FileRegion> clips;
+    if (yae::analyze(demuxer->get_context().get(), clips) &&
+        clips.size() > 1)
+    {
+      // FIXME: pkoshevoy: create a serial demuxer concatenating the clips:
+      YAE_ASSERT(false);
+      demuxer.reset();
+    }
+
     return demuxer;
   }
 
@@ -880,6 +890,7 @@ namespace yae
     if (!src.back())
     {
       // failed to open the primary resource:
+      src.pop_back();
       return false;
     }
 
@@ -1060,12 +1071,14 @@ namespace yae
       return true;
     }
 
+#if 0
     av_log(NULL, AV_LOG_WARNING,
            "%s: non-monotonically increasing DTS, "
            "prev %" PRIi64 ", next %" PRIi64 "\n",
            packet_ptr->trackId_.c_str(),
            packets.back()->get().dts,
            packet.dts);
+#endif
 
     // reassign DTS and PTS to maintain monotonically increasing DTS order:
     std::list<TPacketPtr> retimed;

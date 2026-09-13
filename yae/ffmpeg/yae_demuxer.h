@@ -136,6 +136,9 @@ namespace yae
     inline const AVFormatContext & getFormatContext() const
     { return *(context_.get()); }
 
+    inline AvInputContextPtr get_context() const
+    { return context_; }
+
     inline std::size_t demuxer_index() const
     { return ix_; }
 

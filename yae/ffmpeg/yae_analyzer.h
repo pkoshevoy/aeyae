@@ -110,6 +110,62 @@ namespace yae
     std::list<SourceInfo> detected_;
   };
 
+  //----------------------------------------------------------------
+  // FileRegion
+  //
+  // file regions [p0, p1)
+  //
+  struct YAE_API FileRegion
+  {
+
+    //----------------------------------------------------------------
+    // Track
+    //
+    struct YAE_API Track
+    {
+      Track();
+
+      inline bool empty() const
+      { return num_packets_ == 0; }
+
+      uint64_t num_packets_;
+      Timespan dts_span_;
+    };
+
+    //----------------------------------------------------------------
+    // Program
+    //
+    struct YAE_API Program
+    {
+      // check if all tracks are empty:
+      bool empty() const;
+
+      std::map<int, Track> tracks_;
+    };
+
+    FileRegion(uint64_t p0 = 0,
+               uint64_t p1 = 0);
+
+    // check if all programs are empty:
+    bool empty() const;
+
+    // file region:
+    uint64_t p0_;
+    uint64_t p1_;
+
+    // programs present in this file region:
+    std::map<int, Program> programs_;
+  };
+
+  //----------------------------------------------------------------
+  // analyze
+  //
+  // find contiguous DTS timeline regions,
+  // indexed by starting file position
+  //
+  YAE_API bool analyze(AVFormatContext * ctx,
+                       std::list<FileRegion> & clips);
+
 }
 
 

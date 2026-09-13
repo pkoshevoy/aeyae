@@ -751,6 +751,16 @@ namespace yae
   }
 
   //----------------------------------------------------------------
+  // TTime::operator /=
+  //
+  TTime &
+  TTime::operator /= (double s)
+  {
+    time_ = int64_t(yae::round(time_ / s));
+    return *this;
+  }
+
+  //----------------------------------------------------------------
   // TTime::operator <
   //
   bool

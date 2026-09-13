@@ -460,4 +460,200 @@ namespace yae
     return !detected_.empty();
   }
 
+
+  //----------------------------------------------------------------
+  // FileRegion::Track::Track
+  //
+  FileRegion::Track::Track():
+    num_packets_(0)
+  {}
+
+
+  //----------------------------------------------------------------
+  // FileRegion::Program::empty
+  //
+  bool
+  FileRegion::Program::empty() const
+  {
+    for (std::map<int, FileRegion::Track>::const_iterator
+           i = tracks_.begin(); i != tracks_.end(); ++i)
+    {
+      const FileRegion::Track & track = i->second;
+      if (!track.empty())
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
+  // FileRegion::FileRegion
+  //
+  FileRegion::FileRegion(uint64_t p0, uint64_t p1):
+    p0_(p0),
+    p1_(p1)
+  {}
+
+  //----------------------------------------------------------------
+  // FileRegion::empty
+  //
+  bool
+  FileRegion::empty() const
+  {
+    for (std::map<int, FileRegion::Program>::const_iterator
+           i = programs_.begin(); i != programs_.end(); ++i)
+    {
+      const FileRegion::Program & program = i->second;
+      if (!program.empty())
+      {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+
+  //----------------------------------------------------------------
+  // analyze
+  //
+  bool
+  analyze(AVFormatContext * ctx, std::list<FileRegion> & clips)
+  {
+    clips.clear();
+
+    if (!(ctx && ctx->pb && ctx->pb->seekable))
+    {
+      return false;
+    }
+
+    // save current file position:
+    int64_t restore_pos = ctx->pb->pos;
+    int64_t file_size = avio_size(ctx->pb);
+    int err = avformat_seek_file(ctx,
+                                 -1, // stream index
+                                 0, // min_ts
+                                 0, // ts
+                                 file_size, // max_ts
+                                 AVSEEK_FLAG_BYTE);
+    if (err < 0)
+    {
+      return false;
+    }
+
+    FileRegion clip(0, file_size);
+    while (true)
+    {
+      TPacketPtr pkt_ptr(new AvPkt());
+      AVPacket & pkt = pkt_ptr->get();
+
+      int err = av_read_frame(ctx, &pkt);
+      if (err == AVERROR_EOF)
+      {
+        break;
+      }
+      else if (err < 0)
+      {
+        continue;
+      }
+
+      if (pkt.pos < 0)
+      {
+        continue;
+      }
+
+      if (ctx->nb_streams <= pkt.stream_index)
+      {
+        continue;
+      }
+
+      const AVStream * s = ctx->streams[pkt.stream_index];
+      if (!s)
+      {
+        continue;
+      }
+
+      if (pkt.dts == AV_NOPTS_VALUE)
+      {
+        continue;
+      }
+
+      TTime dts(s->time_base.num * pkt.dts,
+                s->time_base.den);
+
+      TTime dur(s->time_base.num * pkt.duration,
+                s->time_base.den);
+
+#if 1
+      AVMediaType media_type =
+        s->codecpar ?
+        s->codecpar->codec_type :
+        AVMEDIA_TYPE_UNKNOWN;
+
+      // ignore potentially sparse media:
+      if (media_type != AVMEDIA_TYPE_VIDEO &&
+          media_type != AVMEDIA_TYPE_AUDIO)
+      {
+        continue;
+      }
+#endif
+
+      int prog_id = -1;
+      if (ctx->nb_programs > 0)
+      {
+        const AVProgram * found =
+          av_find_program_from_stream(ctx, NULL, pkt.stream_index);
+        if (!found)
+        {
+          continue;
+        }
+
+        prog_id = found->id;
+      }
+
+      // check for timeline anomalies:
+      {
+        FileRegion::Program & program = clip.programs_[prog_id];
+        FileRegion::Track & track = program.tracks_[pkt.stream_index];
+
+        if (!track.dts_span_.empty())
+        {
+          if (// check if DTS jumped back in time:
+              dts < track.dts_span_.t1_ ||
+
+              // check if DTS jumped forward in time:
+              track.dts_span_.t1_ + TTime(2, 24) < dts)
+          {
+            // timeline anomaly:
+            clip.p1_ = pkt.pos;
+            clips.push_back(clip);
+            clip = FileRegion(pkt.pos, file_size);
+          }
+        }
+      }
+
+      FileRegion::Program & program = clip.programs_[prog_id];
+      FileRegion::Track & track = program.tracks_[pkt.stream_index];
+      track.dts_span_.add(dts);
+      track.num_packets_ += 1;
+    }
+
+    if (!clip.empty())
+    {
+      clips.push_back(clip);
+    }
+
+    avformat_seek_file(ctx,
+                       -1, // stream index
+                       0, // min_ts
+                       restore_pos, // ts
+                       file_size, // max_ts
+                       AVSEEK_FLAG_BYTE);
+
+    return true;
+  }
+
 }

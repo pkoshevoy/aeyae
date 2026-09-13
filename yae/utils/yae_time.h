@@ -257,6 +257,21 @@ namespace yae
     TTime operator - (const TTime & dt) const;
 
     TTime & operator *= (double s);
+    TTime & operator /= (double s);
+
+    inline TTime operator * (double s) const
+    {
+      TTime t(*this);
+      t *= s;
+      return t;
+    }
+
+    inline TTime operator / (double s) const
+    {
+      TTime t(*this);
+      t /= s;
+      return t;
+    }
 
     bool operator < (const TTime & t) const;
     bool operator == (const TTime & t) const;
