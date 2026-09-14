@@ -625,7 +625,7 @@ namespace yae
               dts < track.dts_span_.t1_ ||
 
               // check if DTS jumped forward in time:
-              track.dts_span_.t1_ + TTime(2, 24) < dts)
+              track.dts_span_.t1_ + TTime(1, 1) < dts)
           {
             // timeline anomaly:
             clip.p1_ = pkt.pos;
@@ -654,6 +654,61 @@ namespace yae
                        AVSEEK_FLAG_BYTE);
 
     return true;
+  }
+
+  //----------------------------------------------------------------
+  // analyze
+  //
+  bool
+  analyze(const std::string & resource_path,
+          std::list<FileRegion> & clips)
+  {
+    AvInputContextPtr context(avformat_alloc_context());
+    AVFormatContext * ctx = context.get();
+    if (!ctx)
+    {
+      return false;
+    }
+
+    AVDictionary * options = NULL;
+
+    // set probesize to 64 MiB:
+    av_dict_set(&options, "probesize", "67108864", 0);
+
+    // set analyze duration to 10 seconds:
+    av_dict_set(&options, "analyzeduration", "10000000", 0);
+
+    // set AVFMT_FLAG_GENPTS:
+    av_dict_set(&options, "fflags", "+genpts", AV_DICT_APPEND);
+
+    // set AVFMT_FLAG_DISCARD_CORRUPT:
+    av_dict_set(&options, "fflags", "+discardcorrupt", AV_DICT_APPEND);
+
+#ifdef AVFMT_FLAG_ALLOW_CODEC_CHANGES
+    // Allow AVStream.codecpar codec_type and codec_id to change
+    // when MPEG-TS PMT ES stream_type changes at runtime:
+    // av_dict_set(&options, "allow_codec_changes", "1", 0);
+    ctx->flags |= AVFMT_FLAG_ALLOW_CODEC_CHANGES;
+#endif
+
+    int err = avformat_open_input(&ctx,
+                                  resource_path.c_str(),
+                                  NULL, // AVInputFormat to force
+                                  &options);
+    av_dict_free(&options);
+
+    if (err != 0)
+    {
+      return false;
+    }
+
+    err = avformat_find_stream_info(ctx, NULL);
+    if (err < 0)
+    {
+      return false;
+    }
+
+    return yae::analyze(ctx, clips);
   }
 
 }

@@ -51,11 +51,18 @@ namespace yae
   //
   struct YAE_API Demuxer
   {
+
     Demuxer(std::size_t demuxer_index = 0,
             std::size_t track_offset = 0);
     ~Demuxer();
 
-    bool open(const char * resourcePath, bool hwdec);
+    inline bool open(const std::string & resource_path, bool hwdec)
+    { return this->open(AvIoContextPtr(), resource_path, hwdec); }
+
+    bool open(const AvIoContextPtr & avio_ctx,
+              const std::string & resource_path,
+              bool hwdec);
+
     void close();
 
     bool isSeekable() const;
@@ -130,13 +137,13 @@ namespace yae
     static int demuxerInterruptCallback(void * context);
 
     // accessors:
-    inline const std::string & resourcePath() const
-    { return resourcePath_; }
+    inline const std::string & resource_path() const
+    { return resource_path_; }
 
-    inline const AVFormatContext & getFormatContext() const
-    { return *(context_.get()); }
+    inline const AvIoContextPtr & get_avio_ctx() const
+    { return avio_ctx_; }
 
-    inline AvInputContextPtr get_context() const
+    inline const AvInputContextPtr & get_context() const
     { return context_; }
 
     inline std::size_t demuxer_index() const
@@ -152,8 +159,9 @@ namespace yae
 
   protected:
     // a copy of the resource path passed to open(..):
-    std::string resourcePath_;
+    std::string resource_path_;
 
+    AvIoContextPtr avio_ctx_;
     AvInputContextPtr context_;
 
     // demuxer index:
@@ -206,7 +214,8 @@ namespace yae
   // open_demuxer
   //
   YAE_API TDemuxerPtr
-  open_demuxer(const char * resourcePath,
+  open_demuxer(const AvIoContextPtr & avio_ctx, // optional
+               const std::string & resource_path,
                std::size_t track_offset,
                bool hwdec);
 
@@ -371,7 +380,7 @@ namespace yae
 
     // helpers:
     inline const AVFormatContext & context() const
-    { return demuxer_->getFormatContext(); }
+    { return *(demuxer_->get_context()); }
 
     AVStream * stream(const TPacketPtr & pkt) const;
     AVStream * stream(int stream_index) const;

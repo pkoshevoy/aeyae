@@ -438,6 +438,180 @@ namespace yae
     }
   }
 
+
+  //----------------------------------------------------------------
+  // AvIoContext::AvIoContext
+  //
+  AvIoContext::AvIoContext(int write_flag, int buffer_size):
+    avio_(NULL)
+  {
+    uint8_t * buffer = (uint8_t *)::av_malloc(buffer_size);
+    avio_ = ::avio_alloc_context(buffer,
+                                 buffer_size,
+                                 write_flag,
+                                 this, // opaque
+                                 &AvIoContext::cb_read,
+                                 write_flag ? &AvIoContext::cb_write : NULL,
+                                 &AvIoContext::cb_seek);
+    if (!avio_)
+    {
+      ::av_free(buffer);
+    }
+
+    YAE_THROW_IF(!avio_);
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::~AvIoContext
+  //
+  AvIoContext::~AvIoContext()
+  {
+    if (avio_)
+    {
+      ::av_freep(&avio_->buffer);
+      ::avio_context_free(&avio_);
+    }
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::read
+  //
+  int
+  AvIoContext::read(uint8_t * buf, int buf_size)
+  {
+    YAE_ASSERT(false);
+    return AVERROR_EOF;
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::write
+  //
+  int
+  AvIoContext::write(const uint8_t * buf, int buf_size)
+  {
+    YAE_ASSERT(false);
+    return AVERROR_EOF;
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::seek
+  //
+  int64_t
+  AvIoContext::seek(int64_t offset, int whence)
+  {
+    YAE_ASSERT(false);
+    return -1;
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::cb_read
+  //
+  int
+  AvIoContext::cb_read(void * opaque, uint8_t * buf, int buf_size)
+  {
+    YAE_ASSERT(opaque);
+    AvIoContext * io = (AvIoContext *)opaque;
+    return io->read(buf, buf_size);
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::cb_write
+  //
+  int
+  AvIoContext::cb_write(void * opaque, const uint8_t * buf, int buf_size)
+  {
+    YAE_ASSERT(opaque);
+    AvIoContext * io = (AvIoContext *)opaque;
+    return io->write(buf, buf_size);
+  }
+
+  //----------------------------------------------------------------
+  // AvIoContext::cb_seek
+  //
+  int64_t
+  AvIoContext::cb_seek(void * opaque, int64_t offset, int whence)
+  {
+    YAE_ASSERT(opaque);
+    AvIoContext * io = (AvIoContext *)opaque;
+    return io->seek(offset, whence);
+  }
+
+
+  //----------------------------------------------------------------
+  // AvIoFileRegion::AvIoFileRegion
+  //
+  AvIoFileRegion::AvIoFileRegion(const std::string & filepath,
+                                 uint64_t p0,
+                                 uint64_t p1):
+    p0_(p0),
+    p1_(p1)
+  {
+    YAE_THROW_IF(p1 <= p0);
+    YAE_THROW_IF(!file_.open(filepath, "rb"));
+
+    uint64_t file_size = file_.get_filesize();
+    YAE_THROW_IF(file_size < p1);
+
+    pos_ = 0;
+    end_ = p1 - p0;
+    YAE_THROW_IF(file_.fseek64(p0, SEEK_SET) != 0);
+  }
+
+  //----------------------------------------------------------------
+  // AvIoFileRegion::read
+  //
+  int
+  AvIoFileRegion::read(uint8_t * buf, int buf_size)
+  {
+    int64_t nbytes = std::min<int64_t>(buf_size, end_ - pos_);
+    nbytes = file_.read(buf, std::size_t(nbytes));
+    pos_ += nbytes;
+    return nbytes ? nbytes : AVERROR_EOF;
+  }
+
+  //----------------------------------------------------------------
+  // AvIoFileRegion::seek
+  //
+  int64_t
+  AvIoFileRegion::seek(int64_t offset, int whence)
+  {
+    if ((whence & AVSEEK_SIZE) == AVSEEK_SIZE)
+    {
+      // return the filesize without seeking anywhere:
+      return end_;
+    }
+
+    // turn off the AVSEEK_FORCE bit:
+    whence &= ~AVSEEK_FORCE;
+
+    int64_t seek_pos =
+      (whence == SEEK_SET) ? (p0_ + offset) :
+      (whence == SEEK_END) ? (p1_ + offset) :
+      (pos_ + offset); // whence == SEEK_CUR
+
+    YAE_ASSERT(p0_ <= seek_pos);
+    if (seek_pos < p0_)
+    {
+      return -1;
+    }
+
+    YAE_ASSERT(seek_pos <= p1_);
+    if (p1_ < seek_pos)
+    {
+      return -1;
+    }
+
+    int64_t r = file_.fseek64(seek_pos, SEEK_SET);
+    if (r == 0)
+    {
+      pos_ = seek_pos - p0_;
+    }
+
+    YAE_ASSERT(r == 0);
+    return r;
+  }
+
+
   YAE_ENABLE_DEPRECATION_WARNINGS;
 
   //----------------------------------------------------------------

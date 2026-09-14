@@ -7,7 +7,6 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
-#include "yae/ffmpeg/yae_analyzer.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "yae/utils/yae_utils.h"
@@ -125,7 +124,9 @@ namespace yae
   // Demuxer::open
   //
   bool
-  Demuxer::open(const char * resourcePath, bool hwdec)
+  Demuxer::open(const AvIoContextPtr & avio_ctx,
+                const std::string & resource_path,
+                bool hwdec)
   {
     // FIXME: avoid closing/reopening the same resource:
     close();
@@ -135,6 +136,13 @@ namespace yae
 
     AVFormatContext * ctx = avformat_alloc_context();
     YAE_THROW_IF(!ctx);
+
+    avio_ctx_ = avio_ctx;
+    if (avio_ctx_)
+    {
+      ctx->pb = avio_ctx_->get_avio();
+      avio_seek(ctx->pb, 0, SEEK_SET);
+    }
 
     hwdec_ = hwdec;
 
@@ -160,7 +168,7 @@ namespace yae
 #endif
 
     int err = avformat_open_input(&ctx,
-                                  resourcePath,
+                                  resource_path.c_str(),
                                   NULL, // AVInputFormat to force
                                   &options);
     av_dict_free(&options);
@@ -177,7 +185,7 @@ namespace yae
     YAE_ASSERT((ctx->flags & AVFMT_FLAG_DISCARD_CORRUPT) ==
                AVFMT_FLAG_DISCARD_CORRUPT);
 
-    resourcePath_ = resourcePath;
+    resource_path_ = resource_path;
     context_.reset(ctx);
 
     ctx->interrupt_callback.callback = &Demuxer::demuxerInterruptCallback;
@@ -572,7 +580,7 @@ namespace yae
       {
         av_log(NULL, AV_LOG_ERROR,
                "av_read_frame(%s) error %i: \"%s\"\n",
-               resourcePath_.c_str(), err, yae::av_errstr(err).c_str());
+               resource_path_.c_str(), err, yae::av_errstr(err).c_str());
       }
     }
     else
@@ -754,7 +762,7 @@ namespace yae
   Demuxer::getMetadata(std::map<std::string, TDictionary> & track_meta,
                        TDictionary & metadata) const
   {
-    const AVFormatContext & ctx = getFormatContext();
+    const AVFormatContext & ctx = *(this->get_context());
     getDictionary(metadata, ctx.metadata);
 
     for (unsigned int i = 0; i < ctx.nb_streams; i++)
@@ -792,7 +800,7 @@ namespace yae
   void
   Demuxer::getTrackPrograms(std::map<std::string, int> & prog_lut) const
   {
-    const AVFormatContext & ctx = getFormatContext();
+    const AVFormatContext & ctx = *(this->get_context());
     for (unsigned int i = 0; i < ctx.nb_streams; i++)
     {
       const AVStream * stream = ctx.streams[i];
@@ -830,13 +838,16 @@ namespace yae
   // open_demuxer
   //
   TDemuxerPtr
-  open_demuxer(const char * resourcePath, std::size_t track_offset, bool hwdec)
+  open_demuxer(const AvIoContextPtr & avio_ctx,
+               const std::string & resource_path,
+               std::size_t track_offset,
+               bool hwdec)
   {
     YAE_ASSERT(!(track_offset % 100));
     TDemuxerPtr demuxer(new Demuxer(track_offset / 100, track_offset));
 
-    std::string path(resourcePath);
-    if (al::ends_with(path, ".eyetv"))
+    std::string path(resource_path);
+    if (!avio_ctx && al::ends_with(path, ".eyetv"))
     {
       std::set<std::string> mpg_path;
       CollectMatchingFiles visitor(mpg_path, "^.+\\.mpg$");
@@ -848,18 +859,9 @@ namespace yae
       }
     }
 
-    if (!demuxer->open(path.c_str(), hwdec))
+    if (!demuxer->open(avio_ctx, path, hwdec))
     {
       return TDemuxerPtr();
-    }
-
-    std::list<FileRegion> clips;
-    if (yae::analyze(demuxer->get_context().get(), clips) &&
-        clips.size() > 1)
-    {
-      // FIXME: pkoshevoy: create a serial demuxer concatenating the clips:
-      YAE_ASSERT(false);
-      demuxer.reset();
     }
 
     return demuxer;
@@ -886,7 +888,10 @@ namespace yae
       baseName += '.';
     }
 
-    src.push_back(open_demuxer(filePath.c_str(), 0, hwdec));
+    src.push_back(open_demuxer(AvIoContextPtr(),
+                               filePath,
+                               0, // track_offset
+                               hwdec));
     if (!src.back())
     {
       // failed to open the primary resource:
@@ -918,7 +923,8 @@ namespace yae
           continue;
         }
 
-        src.push_back(open_demuxer(folder.item_path().c_str(),
+        src.push_back(open_demuxer(AvIoContextPtr(),
+                                   folder.item_path(),
                                    trackOffset,
                                    hwdec));
         if (!src.back())
@@ -934,7 +940,7 @@ namespace yae
 #ifndef NDEBUG
           av_log(NULL, AV_LOG_WARNING,
                  "skipping auxiliary video \"%s\"\n",
-                 aux.resourcePath().c_str());
+                 aux.resource_path().c_str());
 #endif
 
           src.pop_back();
@@ -1538,7 +1544,7 @@ namespace yae
   void
   PacketBuffer::init_program_buffers()
   {
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    const AVFormatContext & ctx = *(demuxer_->get_context());
     for (unsigned int i = 0; i < ctx.nb_programs; i++)
     {
       TProgramBufferPtr buffer(new ProgramBuffer());
@@ -1590,14 +1596,15 @@ namespace yae
     if (pb.demuxer())
     {
       const Demuxer & d = *(pb.demuxer());
-      demuxer_ = open_demuxer(d.resourcePath().c_str(),
+      demuxer_ = open_demuxer(d.get_avio_ctx(),
+                              d.resource_path(),
                               d.track_offset(),
                               d.hwdec());
       if (!demuxer_)
       {
         std::ostringstream oss;
         oss << "failed to clone demuxer for track " << d.track_offset()
-            << ", resource path: " << d.resourcePath();
+            << ", resource path: " << d.resource_path();
         throw std::runtime_error(oss.str().c_str());
       }
     }
@@ -1701,7 +1708,7 @@ namespace yae
   {
     // shortcuts:
     Demuxer & demuxer = *demuxer_;
-    const AVFormatContext & ctx = demuxer.getFormatContext();
+    const AVFormatContext & ctx = *(demuxer.get_context());
 
     while (true)
     {
@@ -1811,7 +1818,7 @@ namespace yae
   PacketBuffer::choose(TTime & dts_min, int & stream_index) const
   {
     // shortcut:
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    const AVFormatContext & ctx = *(demuxer_->get_context());
 
     TProgramBufferPtr max_buffer;
     double max_duration = 0;
@@ -1858,7 +1865,7 @@ namespace yae
       }
     }
 
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    const AVFormatContext & ctx = *(demuxer_->get_context());
     TPacketPtr packet_ptr = buffer->peek(ctx, dts_min, stream_index);
     return packet_ptr;
   }
@@ -1887,7 +1894,7 @@ namespace yae
       }
     }
 
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    const AVFormatContext & ctx = *(demuxer_->get_context());
     TPacketPtr packet_ptr = buffer->get(ctx, src, stream_index);
 
     if (packet_ptr)
@@ -1944,7 +1951,7 @@ namespace yae
   AVStream *
   PacketBuffer::stream(int stream_index) const
   {
-    const AVFormatContext & ctx = demuxer_->getFormatContext();
+    const AVFormatContext & ctx = *(demuxer_->get_context());
 
     AVStream * s =
       (((unsigned int)stream_index) < ctx.nb_streams) ?

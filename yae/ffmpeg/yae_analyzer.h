@@ -166,6 +166,12 @@ namespace yae
   YAE_API bool analyze(AVFormatContext * ctx,
                        std::list<FileRegion> & clips);
 
+  //----------------------------------------------------------------
+  // analyze
+  //
+  YAE_API bool analyze(const std::string & resource_path,
+                       std::list<FileRegion> & clips);
+
 }
 
 

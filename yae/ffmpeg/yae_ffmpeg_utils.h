@@ -182,6 +182,61 @@ namespace yae
 
 
   //----------------------------------------------------------------
+  // AvIoContext
+  //
+  struct YAE_API AvIoContext
+  {
+    AvIoContext(int write_flag = 0,
+                int buffer_size = 4096);
+    virtual ~AvIoContext();
+
+    // these fail by default, they should be specialized in the subclass:
+    virtual int read(uint8_t * buf, int buf_size);
+    virtual int write(const uint8_t * buf, int buf_size);
+    virtual int64_t seek(int64_t offset, int whence);
+
+    // callbacks, passed to avio_alloc_context , opaque == this:
+    static int cb_read(void * opaque, uint8_t * buf, int buf_size);
+    static int cb_write(void * opaque, const uint8_t * buf, int buf_size);
+    static int64_t cb_seek(void * opaque, int64_t offset, int whence);
+
+    inline ::AVIOContext * get_avio() const
+    { return avio_; }
+
+  protected:
+    ::AVIOContext * avio_;
+  };
+
+  //----------------------------------------------------------------
+  // AvIoContextPtr
+  //
+  typedef boost::shared_ptr<AvIoContext> AvIoContextPtr;
+
+  //----------------------------------------------------------------
+  // AvIoFileRegion
+  //
+  struct YAE_API AvIoFileRegion : AvIoContext
+  {
+    AvIoFileRegion(const std::string & filepath,
+                   uint64_t p0,
+                   uint64_t p1);
+
+    // virtual:
+    int read(uint8_t * buf, int buf_size);
+    int64_t seek(int64_t offset, int whence);
+
+  protected:
+    TOpenFile file_;
+    uint64_t p0_;
+    uint64_t p1_;
+
+    // these are relative to p0:
+    uint64_t pos_;
+    uint64_t end_;
+  };
+
+
+  //----------------------------------------------------------------
   // AvInputContextPtr
   //
   struct YAE_API AvInputContextPtr : public boost::shared_ptr<AVFormatContext>
