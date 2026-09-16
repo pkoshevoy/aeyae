@@ -566,8 +566,9 @@ namespace yae
   int
   Demuxer::demux(AvPkt & pkt)
   {
+    AVFormatContext * ctx = context_.get();
     AVPacket & packet = pkt.get();
-    int err = av_read_frame(context_.get(), &packet);
+    int err = av_read_frame(ctx, &packet);
 
     if (interruptDemuxer_)
     {
@@ -585,6 +586,14 @@ namespace yae
     }
     else
     {
+      TAvCodecParametersPtr & codecpar = codecpar_[packet.stream_index];
+      const AVStream * s = ctx->streams[packet.stream_index];
+
+      if (!codecpar || !codecpar->same_codec(s->codecpar))
+      {
+        codecpar.reset(new yae::AvCodecParameters(s->codecpar));
+      }
+
       TrackPtr track = yae::get(tracks_, packet.stream_index);
       if (track)
       {
@@ -597,7 +606,21 @@ namespace yae
 
       const TProgramInfo * info = getProgram(packet.stream_index);
       pkt.program_ = info ? info->id_ : 0;
+      pkt.codecpar_ = codecpar;
       pkt.demuxer_ = this;
+
+      if (packet.pts != AV_NOPTS_VALUE &&
+          packet.dts != AV_NOPTS_VALUE)
+      {
+        TTime cts(s->time_base.num * (packet.pts - packet.dts),
+                  s->time_base.den);
+        if (cts.get(1) > 0)
+        {
+          // packet.dts = AV_NOPTS_VALUE;
+          packet.pts = AV_NOPTS_VALUE;
+          err = AVERROR_INVALIDDATA;
+        }
+      }
     }
 
     return err;
@@ -2035,7 +2058,7 @@ namespace yae
       TrackPtr found = yae::get(decoders_, track_id);
       if (found)
       {
-        YAE_ASSERT(same_codec(found, decoder));
+        // YAE_ASSERT(same_codec(found, decoder));
         continue;
       }
 
@@ -3468,7 +3491,7 @@ namespace yae
   void
   SerialDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    for (std::size_t i = 0; i < src_.size(); i++)
+    for (std::size_t i = 0, n = src_.size(); i < n; i++)
     {
       std::map<int, TTime> prog_offset;
       for (std::map<int, std::vector<TTime> >::const_iterator
@@ -3485,7 +3508,7 @@ namespace yae
       if (src_summary.chapters_.empty())
       {
         std::ostringstream oss;
-        oss << "Part " << std::setw(2) << std::setfill('0') << src_.size();
+        oss << "Part " << std::setw(2) << std::setfill('0') << (i + 1);
 
         const Timeline & timeline = src_summary.timeline_.begin()->second;
         TChapter c(oss.str(), timeline.bbox_pts_);

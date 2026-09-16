@@ -152,6 +152,13 @@ namespace yae
     inline std::size_t track_offset() const
     { return to_; }
 
+    inline AVStream * get_stream(const TPacketPtr & pkt) const
+    {
+      AVFormatContext * ctx = context_.get();
+      int idx = pkt ? pkt->stream_index() : std::numeric_limits<int>::max();
+      return (ctx && idx < ctx->nb_streams) ? ctx->streams[idx] : NULL;
+    }
+
   private:
     // intentionally disabled:
     Demuxer(const Demuxer &);
@@ -184,6 +191,9 @@ namespace yae
 
     // map native ffmpeg stream_index to track id:
     std::map<int, std::string> trackId_;
+
+    // latest stream codec parameters, indexed by ffmpeg stream index:
+    std::map<int, TAvCodecParametersPtr> codecpar_;
 
     // map global track IDs to native ffmpeg stream index:
     std::map<std::string, int> streamIndex_;

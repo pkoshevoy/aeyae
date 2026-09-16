@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
+#include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_ffmpeg_utils.h"
 #include "yae/ffmpeg/yae_track.h"
 #include "yae/utils/yae_benchmark.h"
@@ -241,7 +242,9 @@ namespace yae
     pbuffer_(pkt.pbuffer_),
     demuxer_(pkt.demuxer_),
     program_(pkt.program_),
-    trackId_(pkt.trackId_)
+    trackId_(pkt.trackId_),
+    codecpar_(pkt.codecpar_),
+    timebase_(pkt.timebase_)
   {
     av_packet_ref(packet_, pkt.packet_);
   }
@@ -269,6 +272,8 @@ namespace yae
       trackId_ = pkt.trackId_;
       program_ = pkt.program_;
       pbuffer_ = pkt.pbuffer_;
+      codecpar_ = pkt.codecpar_;
+      timebase_ = pkt.timebase_;
     }
 
     return *this;
@@ -924,7 +929,7 @@ namespace yae
   // Track::packetQueuePush
   //
   bool
-  Track::packetQueuePush(const TPacketPtr & packetPtr, QueueWaitMgr * waitMgr)
+  Track::packetQueuePush(const TPacketPtr & pkt_ptr, QueueWaitMgr * waitMgr)
   {
     Track::TInfoPtr track_info_ptr = this->get_info();
     YAE_ASSERT(track_info_ptr);
@@ -933,22 +938,34 @@ namespace yae
       return false;
     }
 
-    if (!(codecpar_next_ && codecpar_next_->same_codec(stream_->codecpar)))
+    if (pkt_ptr)
     {
-      codecpar_next_.reset(new yae::AvCodecParameters(stream_->codecpar));
-    }
+      if (pkt_ptr->codecpar_)
+      {
+        // respect codecpar_ supplied upstream (by yae::Demuxer):
+        if (codecpar_next_ != pkt_ptr->codecpar_)
+        {
+          codecpar_next_ = pkt_ptr->codecpar_;
+        }
+      }
+      else
+      {
+        if (!(codecpar_next_ &&
+              codecpar_next_->same_codec(stream_->codecpar)))
+        {
+          codecpar_next_.reset(new yae::AvCodecParameters(stream_->codecpar));
+        }
 
-    if (packetPtr)
-    {
-      packetPtr->codecpar_ = codecpar_next_;
-      packetPtr->timebase_ = stream_->time_base;
+        pkt_ptr->codecpar_ = codecpar_next_;
+        pkt_ptr->timebase_ = stream_->time_base;
+      }
 
-      const AvPkt & pkt = *packetPtr;
+      const AvPkt & pkt = *pkt_ptr;
       const AVPacket & packet = pkt.get();
       this->update_packet_queue_size(packet);
     }
 
-    return this->packet_queue_push(packetPtr, waitMgr);
+    return this->packet_queue_push(pkt_ptr, waitMgr);
   }
 
   //----------------------------------------------------------------
@@ -1181,7 +1198,7 @@ namespace yae
   // Track::decode
   //
   void
-  Track::decode(const TPacketPtr & packetPtr)
+  Track::decode(const TPacketPtr & pkt_ptr)
   {
     // keep alive:
     Track::TInfoPtr track_info_ptr = this->get_info();
@@ -1190,10 +1207,10 @@ namespace yae
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       prev = prev_packet_;
-      prev_packet_ = packetPtr;
+      prev_packet_ = pkt_ptr;
     }
 
-    if (!packetPtr)
+    if (!pkt_ptr)
     {
       this->flush(track_info_ptr);
       return;
@@ -1204,10 +1221,10 @@ namespace yae
     if (prev)
     {
       const AVPacket & a = prev->get();
-      const AVPacket & b = packetPtr->get();
+      const AVPacket & b = pkt_ptr->get();
 
       const AVRational & a_tb = prev->timebase_;
-      const AVRational & b_tb = packetPtr->timebase_;
+      const AVRational & b_tb = pkt_ptr->timebase_;
 
       if (a.dts != AV_NOPTS_VALUE &&
           b.dts != AV_NOPTS_VALUE)
@@ -1222,15 +1239,20 @@ namespace yae
 
     // handle codec changes:
     bool codec_changed =
-      (codecpar_curr_ && !codecpar_curr_->same_codec(*(packetPtr->codecpar_)));
+      (codecpar_curr_ && !codecpar_curr_->same_codec(*(pkt_ptr->codecpar_)));
     if (codec_changed)
     {
       this->flush(track_info_ptr);
       codecContext_.reset();
+
+      if (pkt_ptr->demuxer_)
+      {
+        stream_ = pkt_ptr->demuxer_->get_stream(pkt_ptr);
+      }
     }
 
     // save for future reference:
-    codecpar_curr_ = packetPtr->codecpar_;
+    codecpar_curr_ = pkt_ptr->codecpar_;
 
     AvCodecContextPtr ctx = this->open();
     if (!ctx)
@@ -1245,7 +1267,7 @@ namespace yae
       this->resetTimeCounters(TSeekPosPtr(), dropPendingFrames);
     }
 
-    const AvPkt & pkt = *packetPtr;
+    const AvPkt & pkt = *pkt_ptr;
     this->decode(track_info_ptr, ctx.get(), pkt);
 
     if (codec_changed)
@@ -1298,13 +1320,13 @@ namespace yae
       {
         boost::this_thread::interruption_point();
 
-        TPacketPtr packetPtr;
-        if (!this->packet_queue_pop(packetPtr, &terminator_))
+        TPacketPtr pkt_ptr;
+        if (!this->packet_queue_pop(pkt_ptr, &terminator_))
         {
           break;
         }
 
-        decode(packetPtr);
+        decode(pkt_ptr);
       }
       catch (...)
       {

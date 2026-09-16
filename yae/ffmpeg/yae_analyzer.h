@@ -128,6 +128,7 @@ namespace yae
       inline bool empty() const
       { return num_packets_ == 0; }
 
+      AVCodecID codec_id_;
       uint64_t num_packets_;
       Timespan dts_span_;
     };

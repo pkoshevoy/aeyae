@@ -182,6 +182,12 @@ namespace yae
     inline AVPacket & get()
     { return *packet_; }
 
+    inline int stream_index() const
+    {
+      return (packet_ ? packet_->stream_index :
+              std::numeric_limits<int>::max());
+    }
+
   protected:
     // the packet:
     AVPacket * packet_;

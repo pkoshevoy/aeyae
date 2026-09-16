@@ -465,6 +465,7 @@ namespace yae
   // FileRegion::Track::Track
   //
   FileRegion::Track::Track():
+    codec_id_(AV_CODEC_ID_NONE),
     num_packets_(0)
   {}
 
@@ -571,7 +572,12 @@ namespace yae
       }
 
       const AVStream * s = ctx->streams[pkt.stream_index];
-      if (!s)
+      if (!s || !s->codecpar)
+      {
+        continue;
+      }
+
+      if (s->codecpar->codec_id == AV_CODEC_ID_NONE)
       {
         continue;
       }
@@ -637,6 +643,7 @@ namespace yae
 
       FileRegion::Program & program = clip.programs_[prog_id];
       FileRegion::Track & track = program.tracks_[pkt.stream_index];
+      track.codec_id_ = s->codecpar->codec_id;
       track.dts_span_.add(dts);
       track.num_packets_ += 1;
     }
