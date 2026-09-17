@@ -41,16 +41,18 @@ namespace yae
     {
       reader_ptr.reset(LiveReader::create());
     }
-    else if (al::ends_with(resource_path_utf8, ".yaerx") ||
-             al::ends_with(resource_path_utf8, ".m2ts") ||
-             al::ends_with(resource_path_utf8, ".mpeg") ||
-             al::ends_with(resource_path_utf8, ".mpg") ||
-             al::ends_with(resource_path_utf8, ".m2t") ||
-             al::ends_with(resource_path_utf8, ".ts"))
+#if 1
+    else if (al::iends_with(resource_path_utf8, ".yaerx") ||
+             al::iends_with(resource_path_utf8, ".m2ts") ||
+             al::iends_with(resource_path_utf8, ".mpeg") ||
+             al::iends_with(resource_path_utf8, ".mpg") ||
+             al::iends_with(resource_path_utf8, ".m2t") ||
+             al::iends_with(resource_path_utf8, ".ts"))
 
     {
       reader_ptr.reset(DemuxerReader::create());
     }
+#endif
     else
     {
       reader_ptr.reset(ReaderFFMPEG::create());
