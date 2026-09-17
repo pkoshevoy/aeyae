@@ -220,20 +220,26 @@ namespace yae
   bool
   DemuxerReader::open(const char * resourcePathUTF8, bool hwdec)
   {
-    if (!al::ends_with(resourcePathUTF8, ".yaerx"))
+    std::string resource_path(resourcePathUTF8 ? resourcePathUTF8 : "");
+
+    TDemuxerInterfacePtr demuxer;
+
+    if (al::ends_with(resource_path, ".yaerx"))
+    {
+      demuxer = yae::load_yaerx(resource_path);
+    }
+    else
+    {
+      demuxer = yae::get_demuxer(resource_path, hwdec);
+    }
+
+    if (!demuxer)
     {
       return false;
     }
 
-    TSerialDemuxerPtr serial_demuxer =
-      yae::load_yaerx(std::string(resourcePathUTF8));
-    if (!serial_demuxer)
-    {
-      return false;
-    }
-
-    resourcePath_ = resourcePathUTF8;
-    init(serial_demuxer, hwdec);
+    resourcePath_ = resource_path;
+    init(demuxer, hwdec);
     return !!demuxer_;
   }
 

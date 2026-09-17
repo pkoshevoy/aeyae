@@ -837,7 +837,7 @@ namespace yae
       return false;
     }
 
-#if 0
+#if 1
     Analyzer analyzer;
     bool asap = true;
     bool detected_anomalies = analyzer.find_anomalies(&ctx, 188, asap);

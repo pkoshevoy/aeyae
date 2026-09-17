@@ -7,6 +7,7 @@
 // License   : MIT -- http://www.opensource.org/licenses/mit-license.php
 
 // aeyae:
+#include "yae/ffmpeg/yae_analyzer.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_pixel_format_ffmpeg.h"
 #include "yae/utils/yae_utils.h"
@@ -275,7 +276,7 @@ namespace yae
 
       if (!program)
       {
-        YAE_ASSERT(false);
+        // YAE_ASSERT(false);
         continue;
       }
 
@@ -399,7 +400,7 @@ namespace yae
       }
     }
 
-    return true;
+    return tracks_.size() > 0;
   }
 
   //----------------------------------------------------------------
@@ -795,7 +796,7 @@ namespace yae
 
       if (track_id.empty())
       {
-        YAE_ASSERT(false);
+        // YAE_ASSERT(false);
         track_id = make_track_id('_', to_ + stream->index);
       }
 
@@ -831,7 +832,7 @@ namespace yae
 
       if (track_id.empty())
       {
-        YAE_ASSERT(false);
+        // YAE_ASSERT(false);
         track_id = make_track_id('_', to_ + stream->index);
       }
 
@@ -1809,7 +1810,7 @@ namespace yae
       TProgramBufferPtr program = yae::get(stream_, packet.stream_index);
       if (!program)
       {
-        YAE_ASSERT(false);
+        // YAE_ASSERT(false);
         continue;
       }
 
@@ -2648,7 +2649,7 @@ namespace yae
     int err = demuxer.seek(AVSEEK_FLAG_BACKWARD, min_dts);
     if (err < 0)
     {
-      YAE_ASSERT(false);
+      // YAE_ASSERT(false);
       return false;
     }
 
@@ -2691,7 +2692,7 @@ namespace yae
   //----------------------------------------------------------------
   // summarize
   //
-  void
+  bool
   summarize(DemuxerInterface & demuxer,
             DemuxerSummary & summary,
             double tolerance)
@@ -2726,16 +2727,27 @@ namespace yae
     }
 
     // get the track id and time position of the "first" packet:
-    get_rewind_info(demuxer, summary.rewind_.first, summary.rewind_.second);
+    if (!get_rewind_info(demuxer,
+                         summary.rewind_.first,
+                         summary.rewind_.second))
+    {
+      return false;
+    }
+
+    return true;
   }
 
   //----------------------------------------------------------------
   // DemuxerBuffer::summarize
   //
-  void
+  bool
   DemuxerBuffer::summarize(DemuxerSummary & summary, double tolerance)
   {
-    yae::summarize(*this, summary, tolerance);
+    if (!yae::summarize(*this, summary, tolerance))
+    {
+      return false;
+    }
+
     yae::extend(summary.attachments_, src_.demuxer()->attachments());
 
     src_.get_decoders(summary.decoders_);
@@ -2744,6 +2756,7 @@ namespace yae
     src_.get_trk_prog(summary.trk_prog_);
     src_.get_metadata(summary.trk_meta_,
                       summary.metadata_);
+    return true;
   }
 
 
@@ -2856,7 +2869,7 @@ namespace yae
   //----------------------------------------------------------------
   // ParallelDemuxer::summarize
   //
-  void
+  bool
   ParallelDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
     for (std::list<TDemuxerInterfacePtr>::const_iterator
@@ -2869,7 +2882,12 @@ namespace yae
     }
 
     // get the track id and time position of the "first" packet:
-    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+    if (!get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second))
+    {
+      return false;
+    }
+
+    return true;
   }
 
 
@@ -3488,7 +3506,7 @@ namespace yae
   //----------------------------------------------------------------
   // SerialDemuxer::summarize
   //
-  void
+  bool
   SerialDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
     for (std::size_t i = 0, n = src_.size(); i < n; i++)
@@ -3520,7 +3538,12 @@ namespace yae
     }
 
     // get the track id and time position of the "first" packet:
-    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+    if (!get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second))
+    {
+      return false;
+    }
+
+    return true;
   }
 
 
@@ -3834,13 +3857,13 @@ namespace yae
   //----------------------------------------------------------------
   // TrimmedDemuxer::summarize
   //
-  void
+  bool
   TrimmedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
     YAE_ASSERT(src_);
     if (!src_)
     {
-      return;
+      return false;
     }
 
     // shortcut:
@@ -3964,7 +3987,12 @@ namespace yae
     summary.trk_prog_ = src_summary_.trk_prog_;
 
     // get the track id and time position of the "first" packet:
-    get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second);
+    if (!get_rewind_info(*this, summary.rewind_.first, summary.rewind_.second))
+    {
+      return false;
+    }
+
+    return true;
   }
 
 
@@ -4051,13 +4079,14 @@ namespace yae
   //----------------------------------------------------------------
   // RedactedDemuxer::summarize
   //
-  void
+  bool
   RedactedDemuxer::summarize(DemuxerSummary & summary, double tolerance)
   {
     DemuxerInterface & demuxer = *src_;
     const DemuxerSummary & src_summary = demuxer.summary();
     std::map<int, TTime> prog_offset;
     summary.extend(src_summary, prog_offset, redacted_, tolerance);
+    return true;
   }
 
   //----------------------------------------------------------------
@@ -4659,6 +4688,105 @@ namespace yae
     // done:
     decoder.decoderShutdown();
     return true;
+  }
+
+
+  //----------------------------------------------------------------
+  // get_demuxer
+  //
+  TDemuxerInterfacePtr
+  get_demuxer(const std::string & source,
+              bool hwdec,
+              double buffer_duration,
+              double discont_tolerance)
+  {
+    std::list<FileRegion> clips;
+    if (yae::analyze(source, clips) && clips.size() > 1)
+    {
+      std::list<TDemuxerInterfacePtr> demuxers;
+      const DemuxerSummary * max_summary = NULL;
+
+      for (std::list<FileRegion>::const_iterator
+             i = clips.begin(); i != clips.end(); ++i)
+      {
+        const FileRegion & f = *i;
+        AvIoContextPtr avio_ctx(new AvIoFileRegion(source, f.p0_, f.p1_));
+        TDemuxerPtr demuxer(new Demuxer());
+        if (!demuxer->open(avio_ctx, source, hwdec))
+        {
+          // YAE_ASSERT(false);
+          continue;
+        }
+
+        TDemuxerInterfacePtr buffer(new DemuxerBuffer(demuxer));
+        if (!buffer->update_summary(discont_tolerance))
+        {
+          yae_error
+            << "get_demuxer: update_summary failed for " << source
+            << ", file region [" << f.p0_ << ", " << f.p1_ << ")"
+            << ", skipping...";
+          continue;
+        }
+
+        const DemuxerSummary & summary = buffer->summary();
+        if (!max_summary ||
+            max_summary->decoders_.size() < summary.decoders_.size())
+        {
+          max_summary = &summary;
+        }
+
+        demuxers.push_back(buffer);
+      }
+
+      if (max_summary)
+      {
+        TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
+        for (std::list<TDemuxerInterfacePtr>::const_iterator
+               i = demuxers.begin(); i != demuxers.end(); ++i)
+        {
+          const TDemuxerInterfacePtr & demuxer = *i;
+          const DemuxerSummary & summary = demuxer->summary();
+          if (summary.decoders_.size() < max_summary->decoders_.size())
+          {
+            continue;
+          }
+
+          serial_demuxer->append(demuxer);
+        }
+
+        // summarize the demuxer:
+        serial_demuxer->update_summary(discont_tolerance);
+        return serial_demuxer;
+      }
+    }
+
+    std::list<TDemuxerPtr> demuxers;
+    if (!open_primary_and_aux_demuxers(source, demuxers, hwdec))
+    {
+      // failed to open the primary resource:
+      yae_wlog("failed to open %s, skipping...",
+               source.c_str());
+      return TDemuxerInterfacePtr();
+    }
+
+    TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
+
+    // wrap each demuxer in a DemuxerBuffer, build a summary:
+    for (std::list<TDemuxerPtr>::const_iterator
+           i = demuxers.begin(); i != demuxers.end(); ++i)
+    {
+      const TDemuxerPtr & demuxer = *i;
+
+      TDemuxerInterfacePtr
+        buffer(new DemuxerBuffer(demuxer, buffer_duration));
+
+      buffer->update_summary(discont_tolerance);
+      parallel_demuxer->append(buffer);
+    }
+
+    // summarize the demuxer:
+    parallel_demuxer->update_summary(discont_tolerance);
+    return parallel_demuxer;
   }
 
 }

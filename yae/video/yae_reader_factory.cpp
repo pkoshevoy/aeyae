@@ -14,6 +14,17 @@
 #include "yae/video/yae_reader_factory.h"
 #include "yae/video/yae_recording.h"
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost:
+#include <boost/algorithm/string.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
+// namespace shortcut:
+namespace al = boost::algorithm;
+
 
 namespace yae
 {
@@ -26,13 +37,19 @@ namespace yae
   {
     IReaderPtr reader_ptr;
 
-    if (al::ends_with(resource_path_utf8, ".yaerx"))
-    {
-      reader_ptr.reset(DemuxerReader::create());
-    }
-    else if (maybe_yaetv_recording(resource_path_utf8))
+    if (maybe_yaetv_recording(resource_path_utf8))
     {
       reader_ptr.reset(LiveReader::create());
+    }
+    else if (al::ends_with(resource_path_utf8, ".yaerx") ||
+             al::ends_with(resource_path_utf8, ".m2ts") ||
+             al::ends_with(resource_path_utf8, ".mpeg") ||
+             al::ends_with(resource_path_utf8, ".mpg") ||
+             al::ends_with(resource_path_utf8, ".m2t") ||
+             al::ends_with(resource_path_utf8, ".ts"))
+
+    {
+      reader_ptr.reset(DemuxerReader::create());
     }
     else
     {

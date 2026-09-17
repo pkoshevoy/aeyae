@@ -8,7 +8,6 @@
 
 // aeyae:
 #include "yae/api/yae_version.h"
-#include "yae/ffmpeg/yae_analyzer.h"
 #include "yae/ffmpeg/yae_demuxer.h"
 #include "yae/ffmpeg/yae_remux.h"
 #include "yae/utils/yae_json.h"
@@ -550,72 +549,28 @@ namespace yae
     static const double buffer_duration = 8.0;
     static const double discont_tolerance = 0.1;
 
-    if (!yae::has(demuxers_, source))
+    TDemuxerInterfacePtr demuxer =
+      yae::get(demuxers_, source, TDemuxerInterfacePtr());
+
+    if (!demuxer)
     {
       if (observer_)
       {
         observer_->began(source);
       }
 
-      std::list<TDemuxerPtr> demuxers;
-      std::list<FileRegion> clips;
+      demuxer = yae::get_demuxer(source,
+                                 hwdec,
+                                 buffer_duration,
+                                 discont_tolerance);
 
-      if (yae::analyze(source, clips) && clips.size() > 1)
+      if (demuxer)
       {
-        TSerialDemuxerPtr serial_demuxer(new SerialDemuxer());
-        for (std::list<FileRegion>::const_iterator
-               i = clips.begin(); i != clips.end(); ++i)
-        {
-          const FileRegion & f = *i;
-          AvIoContextPtr avio_ctx(new AvIoFileRegion(source, f.p0_, f.p1_));
-          TDemuxerPtr demuxer(new Demuxer());
-          if (!demuxer->open(avio_ctx, source, hwdec))
-          {
-            YAE_ASSERT(false);
-            continue;
-          }
-
-          TDemuxerInterfacePtr buffer(new DemuxerBuffer(demuxer));
-          buffer->update_summary(discont_tolerance);
-          serial_demuxer->append(buffer);
-        }
-
-        // summarize the demuxer:
-        serial_demuxer->update_summary(discont_tolerance);
-        demuxers_[source] = serial_demuxer;
-      }
-      else
-      {
-        if (!open_primary_and_aux_demuxers(source, demuxers, hwdec))
-        {
-          // failed to open the primary resource:
-          yae_wlog("failed to open %s, skipping...",
-                   source.c_str());
-          return TDemuxerInterfacePtr();
-        }
-
-        TParallelDemuxerPtr parallel_demuxer(new ParallelDemuxer());
-
-        // wrap each demuxer in a DemuxerBuffer, build a summary:
-        for (std::list<TDemuxerPtr>::const_iterator
-               i = demuxers.begin(); i != demuxers.end(); ++i)
-        {
-          const TDemuxerPtr & demuxer = *i;
-
-          TDemuxerInterfacePtr
-            buffer(new DemuxerBuffer(demuxer, buffer_duration));
-
-          buffer->update_summary(discont_tolerance);
-          parallel_demuxer->append(buffer);
-        }
-
-        // summarize the demuxer:
-        parallel_demuxer->update_summary(discont_tolerance);
-        demuxers_[source] = parallel_demuxer;
+        demuxers_[source] = demuxer;
       }
     }
 
-    return demuxers_[source];
+    return demuxer;
   }
 
   //----------------------------------------------------------------

@@ -509,16 +509,16 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const = 0;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1) = 0;
 
     // helpers:
-    inline const DemuxerSummary & update_summary(double tolerance = 0.1)
+    inline bool update_summary(double tolerance = 0.1)
     {
       TDemuxerSummaryPtr summary(new DemuxerSummary);
-      this->summarize(*summary, tolerance);
+      bool success = this->summarize(*summary, tolerance);
       summary_ = summary;
-      return *summary;
+      return success;
     }
 
     inline const DemuxerSummary & summary() const
@@ -558,7 +558,7 @@ namespace yae
   // DemuxerInterface::summarize is not necessarily as slow,
   // so use it instead.
   //
-  YAE_API void
+  YAE_API bool
   summarize(DemuxerInterface & demuxer,
             DemuxerSummary & summary,
             double tolerance = 0.1);
@@ -592,7 +592,7 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1);
 
   protected:
@@ -630,7 +630,7 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1);
 
   protected:
@@ -693,7 +693,7 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1);
 
     // find the source corresponding to the given program/time:
@@ -786,7 +786,7 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1);
 
     //----------------------------------------------------------------
@@ -871,7 +871,7 @@ namespace yae
     // lookup front packet, pass back its AVStream:
     virtual TPacketPtr peek(AVStream *& src) const;
 
-    virtual void summarize(DemuxerSummary & summary,
+    virtual bool summarize(DemuxerSummary & summary,
                            double tolerance = 0.1);
 
     // helpers:
@@ -939,6 +939,15 @@ namespace yae
              // delivery:
              TVideoFrameCallback callback,
              void * context);
+
+  //----------------------------------------------------------------
+  // get_demuxer
+  //
+  YAE_API TDemuxerInterfacePtr
+  get_demuxer(const std::string & source,
+              bool hwdec = true,
+              double buffer_duration = 8.0,
+              double discont_tolerance = 0.1);
 }
 
 

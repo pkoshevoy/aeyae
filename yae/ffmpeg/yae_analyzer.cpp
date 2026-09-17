@@ -631,7 +631,7 @@ namespace yae
               dts < track.dts_span_.t1_ ||
 
               // check if DTS jumped forward in time:
-              track.dts_span_.t1_ + TTime(1, 1) < dts)
+              track.dts_span_.t1_ + TTime(10, 1) < dts)
           {
             // timeline anomaly:
             clip.p1_ = pkt.pos;

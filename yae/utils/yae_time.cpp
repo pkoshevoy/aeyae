@@ -2073,11 +2073,11 @@ namespace yae
     if (!yae::extend(track.dts_span_, s, tolerance))
     {
       // non-monotonically increasing DTS:
-      YAE_ASSERT(false);
+      // YAE_ASSERT(false);
 
       if (!yae::extend(track.dts_span_, s, tolerance, false))
       {
-        YAE_ASSERT(false);
+        // YAE_ASSERT(false);
       }
     }
 
