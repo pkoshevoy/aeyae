@@ -517,6 +517,55 @@ namespace yae
     return true;
   }
 
+  //----------------------------------------------------------------
+  // PktPosBuffer
+  //
+  // sorted list of packets, ordered by pkt.pos in ascending order
+  //
+  struct PktPosBuffer
+  {
+    //----------------------------------------------------------------
+    // PktInfo
+    //
+    struct PktInfo
+    {
+      PktInfo & operator = (const AVPacket & pkt)
+      {
+        stream_index = pkt.stream_index;
+        pos = pkt.pos;
+        dts = pkt.dts;
+        duration = pkt.duration;
+        return *this;
+      }
+
+      int stream_index;
+      int64_t dts;
+      int64_t duration;
+      int64_t pos;
+    };
+
+    // packets, indexed by pkt.pos:
+    std::map<uint64_t, PktInfo> packets_;
+
+    inline std::size_t size() const
+    { return packets_.size(); }
+
+    inline void push(const AVPacket & pkt)
+    { packets_[pkt.pos] = pkt; }
+
+    inline bool pull(PktInfo & pkt)
+    {
+      if (packets_.empty())
+      {
+        return false;
+      }
+
+      std::map<uint64_t, PktInfo>::iterator i = packets_.begin();
+      pkt = i->second;
+      packets_.erase(i);
+      return true;
+    }
+  };
 
   //----------------------------------------------------------------
   // analyze
@@ -545,47 +594,69 @@ namespace yae
       return false;
     }
 
+    PktPosBuffer buffer;
     FileRegion clip(0, file_size);
+    bool reached_eof = false;
+
     while (true)
     {
-      TPacketPtr pkt_ptr(new AvPkt());
-      AVPacket & pkt = pkt_ptr->get();
-
-      int err = av_read_frame(ctx, &pkt);
-      if (err == AVERROR_EOF)
+      if (!reached_eof)
       {
+        TPacketPtr pkt_ptr(new AvPkt());
+        AVPacket & pkt = pkt_ptr->get();
+
+        int err = av_read_frame(ctx, &pkt);
+        if (err == AVERROR_EOF)
+        {
+          reached_eof = true;
+          continue;
+        }
+        else if (err < 0)
+        {
+          continue;
+        }
+
+        if (pkt.pos < 0)
+        {
+          continue;
+        }
+
+        if (ctx->nb_streams <= pkt.stream_index)
+        {
+          continue;
+        }
+
+        const AVStream * s = ctx->streams[pkt.stream_index];
+        if (!s || !s->codecpar)
+        {
+          continue;
+        }
+
+        if (s->codecpar->codec_id == AV_CODEC_ID_NONE)
+        {
+          continue;
+        }
+
+        if (pkt.dts == AV_NOPTS_VALUE)
+        {
+          continue;
+        }
+
+        buffer.push(pkt);
+        if (buffer.size() < 256)
+        {
+          continue;
+        }
+      }
+
+      PktPosBuffer::PktInfo pkt;
+      if (!buffer.pull(pkt))
+      {
+        YAE_ASSERT(reached_eof);
         break;
-      }
-      else if (err < 0)
-      {
-        continue;
-      }
-
-      if (pkt.pos < 0)
-      {
-        continue;
-      }
-
-      if (ctx->nb_streams <= pkt.stream_index)
-      {
-        continue;
       }
 
       const AVStream * s = ctx->streams[pkt.stream_index];
-      if (!s || !s->codecpar)
-      {
-        continue;
-      }
-
-      if (s->codecpar->codec_id == AV_CODEC_ID_NONE)
-      {
-        continue;
-      }
-
-      if (pkt.dts == AV_NOPTS_VALUE)
-      {
-        continue;
-      }
 
       TTime dts(s->time_base.num * pkt.dts,
                 s->time_base.den);
@@ -634,9 +705,13 @@ namespace yae
               track.dts_span_.t1_ + TTime(10, 1) < dts)
           {
             // timeline anomaly:
-            clip.p1_ = pkt.pos;
-            clips.push_back(clip);
-            clip = FileRegion(pkt.pos, file_size);
+            YAE_ASSERT(clip.p0_ < pkt.pos);
+            if (clip.p0_ < pkt.pos)
+            {
+              clip.p1_ = pkt.pos;
+              clips.push_back(clip);
+              clip = FileRegion(pkt.pos, file_size);
+            }
           }
         }
       }

@@ -4710,32 +4710,39 @@ namespace yae
              i = clips.begin(); i != clips.end(); ++i)
       {
         const FileRegion & f = *i;
-        AvIoContextPtr avio_ctx(new AvIoFileRegion(source, f.p0_, f.p1_));
-        TDemuxerPtr demuxer(new Demuxer());
-        if (!demuxer->open(avio_ctx, source, hwdec))
+        try
         {
-          // YAE_ASSERT(false);
+          AvIoContextPtr avio_ctx(new AvIoFileRegion(source, f.p0_, f.p1_));
+          TDemuxerPtr demuxer(new Demuxer());
+          if (!demuxer->open(avio_ctx, source, hwdec))
+          {
+            // YAE_ASSERT(false);
+            continue;
+          }
+
+          TDemuxerInterfacePtr buffer(new DemuxerBuffer(demuxer));
+          if (!buffer->update_summary(discont_tolerance))
+          {
+            yae_error
+              << "get_demuxer: update_summary failed for " << source
+              << ", file region [" << f.p0_ << ", " << f.p1_ << ")"
+              << ", skipping...";
+            continue;
+          }
+
+          const DemuxerSummary & summary = buffer->summary();
+          if (!max_summary ||
+              max_summary->decoders_.size() < summary.decoders_.size())
+          {
+            max_summary = &summary;
+          }
+
+          demuxers.push_back(buffer);
+        }
+        catch (...)
+        {
           continue;
         }
-
-        TDemuxerInterfacePtr buffer(new DemuxerBuffer(demuxer));
-        if (!buffer->update_summary(discont_tolerance))
-        {
-          yae_error
-            << "get_demuxer: update_summary failed for " << source
-            << ", file region [" << f.p0_ << ", " << f.p1_ << ")"
-            << ", skipping...";
-          continue;
-        }
-
-        const DemuxerSummary & summary = buffer->summary();
-        if (!max_summary ||
-            max_summary->decoders_.size() < summary.decoders_.size())
-        {
-          max_summary = &summary;
-        }
-
-        demuxers.push_back(buffer);
       }
 
       if (max_summary)
