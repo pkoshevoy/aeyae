@@ -445,13 +445,20 @@ namespace yae
   AvIoContext::AvIoContext(int write_flag, int buffer_size):
     avio_(NULL)
   {
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(61, 0, 100)
+    typedef int (*TWriteCallback)(void*, uint8_t*, int);
+#endif
+
     uint8_t * buffer = (uint8_t *)::av_malloc(buffer_size);
     avio_ = ::avio_alloc_context(buffer,
                                  buffer_size,
                                  write_flag,
                                  this, // opaque
                                  &AvIoContext::cb_read,
-                                 write_flag ? &AvIoContext::cb_write : NULL,
+#if LIBAVFORMAT_VERSION_INT < AV_VERSION_INT(61, 0, 100)
+                                 (TWriteCallback)
+#endif
+                                 (write_flag ? &AvIoContext::cb_write : NULL),
                                  &AvIoContext::cb_seek);
     if (!avio_)
     {
