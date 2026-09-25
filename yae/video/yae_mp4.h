@@ -2778,6 +2778,17 @@ namespace yae
     };
 
     //----------------------------------------------------------------
+    // MIMEBox
+    //
+    struct YAE_API MIMEBox : public FullBox
+    {
+      void load(Mp4Context & mp4, IBitstream & bin) YAE_OVERRIDE;
+      void to_json(Json::Value & out) const YAE_OVERRIDE;
+
+      std::string content_type_;
+    };
+
+    //----------------------------------------------------------------
     // XMLSubtitleSampleEntryBox
     //
     struct YAE_API XMLSubtitleSampleEntryBox : BoxWithChildren<SampleEntryBox>

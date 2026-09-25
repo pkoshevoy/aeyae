@@ -5838,6 +5838,39 @@ HintMediaHeaderBox::to_json(Json::Value & out) const
 
 
 //----------------------------------------------------------------
+// create<MIMEBox>::please
+//
+template MIMEBox *
+create<MIMEBox>::please(const char * fourcc);
+
+//----------------------------------------------------------------
+// MIMEBox::load
+//
+void
+MIMEBox::load(Mp4Context & mp4, IBitstream & bin)
+{
+  const std::size_t box_pos = bin.position();
+  FullBox::load(mp4, bin);
+
+  const std::size_t box_end = box_pos + Box::size_ * 8;
+
+  content_type_.clear();
+  bin.read_string_until_null(content_type_, box_end);
+}
+
+//----------------------------------------------------------------
+// MIMEBox::to_json
+//
+void
+MIMEBox::to_json(Json::Value & out) const
+{
+  FullBox::to_json(out);
+
+  out["content_type"] = content_type_;
+}
+
+
+//----------------------------------------------------------------
 // create<XMLSubtitleSampleEntryBox>::please
 //
 template XMLSubtitleSampleEntryBox *
@@ -6088,6 +6121,7 @@ struct Mp4BoxFactory : public BoxFactory
     this->add("uriI", create<DataFullBox>::please);
     this->add("urim", create<URIMetaSampleEntryBox>::please);
     this->add("hmhd", create<HintMediaHeaderBox>::please);
+    this->add("mime", create<MIMEBox>::please);
     this->add("stpp", create<XMLSubtitleSampleEntryBox>::please);
     this->add("msrc", create<TrackGroupTypeBox>::please);
     // ISO/IEC 14496-30:2018(E)
