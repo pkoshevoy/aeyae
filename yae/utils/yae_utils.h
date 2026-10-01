@@ -39,6 +39,8 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 #include <boost/filesystem.hpp>
 #include <boost/regex.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/thread/lock_guard.hpp>
+#include <boost/thread/mutex.hpp>
 #endif
 
 YAE_ENABLE_DEPRECATION_WARNINGS
@@ -53,6 +55,71 @@ namespace al = boost::algorithm;
 
 namespace yae
 {
+
+  //----------------------------------------------------------------
+  // AtomicPtr
+  //
+  template <typename TData>
+  struct AtomicPtr
+  {
+    //----------------------------------------------------------------
+    // TDataPtr
+    //
+    typedef boost::shared_ptr<TData> TDataPtr;
+
+    AtomicPtr(const TDataPtr & data = TDataPtr()):
+      data_(data)
+    {}
+
+    explicit AtomicPtr(TData * data):
+      data_(TDataPtr(data))
+    {}
+
+    inline AtomicPtr<TData> & operator = (const TDataPtr & data)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      data_ = data;
+      return *this;
+    }
+
+    inline void reset(const TDataPtr & data)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      data_ = data;
+    }
+
+    inline void reset(TData * data = nullptr)
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      data_.reset(data);
+    }
+
+    inline TDataPtr lock() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      return TDataPtr(data_);
+    }
+
+    template <typename TDerived>
+    inline boost::shared_ptr<TDerived> lock() const
+    {
+      boost::lock_guard<boost::mutex> lock(mutex_);
+      boost::shared_ptr<TDerived> derived =
+        boost::dynamic_pointer_cast<TDerived>(data_);
+      return derived;
+    }
+
+    inline operator TDataPtr() const
+    { return this->lock(); }
+
+    inline operator bool() const
+    { return !!this->lock(); }
+
+  protected:
+    mutable boost::mutex mutex_;
+    TDataPtr data_;
+  };
+
 
   //----------------------------------------------------------------
   // parity_lut

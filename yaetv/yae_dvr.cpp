@@ -802,14 +802,14 @@ namespace yae
   //----------------------------------------------------------------
   // Wishlist::matches
   //
-  yae::shared_ptr<Wishlist::Item>
+  boost::shared_ptr<Wishlist::Item>
   Wishlist::matches(const yae::mpeg_ts::EPG::Channel & channel,
                     const yae::mpeg_ts::EPG::Program & program) const
   {
     boost::unique_lock<boost::mutex> lock(mutex_);
 
-    std::list<yae::shared_ptr<Wishlist::Item> > wanted;
-    std::list<yae::shared_ptr<Wishlist::Item> > unwanted;
+    std::list<boost::shared_ptr<Wishlist::Item> > wanted;
+    std::list<boost::shared_ptr<Wishlist::Item> > unwanted;
 
     for (std::list<Item>::const_iterator
            i = items_.begin(); i != items_.end(); ++i)
@@ -817,7 +817,7 @@ namespace yae
       const Item & item = *i;
       if (item.matches(channel, program))
       {
-        yae::shared_ptr<Item> item_ptr(new Item(item));
+        boost::shared_ptr<Item> item_ptr(new Item(item));
 
         if (item.do_not_record())
         {
@@ -840,7 +840,7 @@ namespace yae
       return wanted.front();
     }
 
-    return yae::shared_ptr<Item>();
+    return boost::shared_ptr<Item>();
   }
 
   //----------------------------------------------------------------
@@ -1058,7 +1058,7 @@ namespace yae
           continue;
         }
 
-        yae::shared_ptr<Wishlist::Item> want =
+        boost::shared_ptr<Wishlist::Item> want =
           dvr.explicitly_scheduled(channel, program);
 
         Recording::MadeBy rec_cause =
@@ -1177,7 +1177,7 @@ namespace yae
         if (rec.made_by_ != Recording::kLiveChannel &&
             !dvr.explicitly_scheduled(channel, program))
         {
-          yae::shared_ptr<Wishlist::Item> wanted =
+          boost::shared_ptr<Wishlist::Item> wanted =
             dvr.wishlist_.matches(channel, program);
           if (!wanted)
           {
@@ -1613,7 +1613,7 @@ namespace yae
 
       if (!recording.has_writer())
       {
-        yae::shared_ptr<Recording::Rec> rec_ptr = recording.get_rec();
+        boost::shared_ptr<Recording::Rec> rec_ptr = recording.get_rec();
         Recording::Rec & rec = *rec_ptr;
         uint32_t num_sec = rec.get_duration();
         dvr.make_room_for(rec, num_sec);
@@ -1725,7 +1725,7 @@ namespace yae
     void execute(const yae::Worker & worker);
     void cleanup();
 
-    yae::weak_ptr<IStream> stream_;
+    boost::weak_ptr<DVR::Stream> stream_;
   };
 
   //----------------------------------------------------------------
@@ -1831,7 +1831,7 @@ namespace yae
   DVR::Stream::open(const DVR::TStreamPtr & stream_ptr,
                     const yae::TWorkerPtr & worker_ptr)
   {
-    yae::shared_ptr<CaptureStream, yae::Worker::Task> task;
+    boost::shared_ptr<CaptureStream> task;
     task.reset(new CaptureStream(stream_ptr));
 
     worker_ = worker_ptr;
@@ -1927,7 +1927,7 @@ namespace yae
 
     if (packet_handler.worker_.is_idle())
     {
-      yae::shared_ptr<ParseStream, yae::Worker::Task> task;
+      boost::shared_ptr<ParseStream> task;
       task.reset(new ParseStream(packet_handler));
       packet_handler.worker_.add(task);
     }
@@ -2195,7 +2195,7 @@ namespace yae
 
     TWorkerPtr service_loop_worker_ptr = service_loop_worker_;
     Worker & service_loop_worker = *service_loop_worker_ptr;
-    yae::shared_ptr<DVR::ServiceLoop, yae::Worker::Task> task;
+    boost::shared_ptr<DVR::ServiceLoop> task;
     task.reset(new DVR::ServiceLoop(*this));
     service_loop_worker.add(task);
   }
@@ -2768,7 +2768,7 @@ namespace yae
       return;
     }
 
-    yae::shared_ptr<FindExistingRecordings, yae::Worker::Task> task;
+    boost::shared_ptr<FindExistingRecordings> task;
     task.reset(new FindExistingRecordings(*this, call_add_existing_recording));
     storage_worker_.add(task);
   }
@@ -2779,7 +2779,7 @@ namespace yae
   void
   DVR::scan_channels()
   {
-    yae::shared_ptr<ScanChannels, yae::Worker::Task> task;
+    boost::shared_ptr<ScanChannels> task;
     task.reset(new ScanChannels(*this));
     service_worker_.add(task);
   }
@@ -2948,7 +2948,7 @@ namespace yae
   void
   DVR::update_epg()
   {
-    yae::shared_ptr<UpdateProgramGuide, yae::Worker::Task> task;
+    boost::shared_ptr<UpdateProgramGuide> task;
     task.reset(new UpdateProgramGuide(*this));
     service_worker_.add(task);
   }
@@ -2986,7 +2986,7 @@ namespace yae
   void
   DVR::cleanup_storage()
   {
-    yae::shared_ptr<StorageCleanup, yae::Worker::Task> task;
+    boost::shared_ptr<StorageCleanup> task;
     task.reset(new StorageCleanup(*this));
     service_worker_.add(task);
   }
@@ -3807,7 +3807,7 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::explicitly_scheduled
   //
-  yae::shared_ptr<Wishlist::Item>
+  boost::shared_ptr<Wishlist::Item>
   DVR::explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
                             const yae::mpeg_ts::EPG::Program & program) const
   {
@@ -3817,7 +3817,7 @@ namespace yae
     boost::unique_lock<boost::mutex> lock(mutex_);
 
     Json::Value json;
-    yae::shared_ptr<Wishlist::Item> item_ptr;
+    boost::shared_ptr<Wishlist::Item> item_ptr;
 
     std::string name = wishlist_item_filename(channel, program);
     std::string path = (basedir_ / ".yaetv" / name).string();
@@ -3900,7 +3900,7 @@ namespace yae
   void
   DVR::toggle_recording(uint32_t ch_num, uint32_t gps_time)
   {
-    yae::shared_ptr<Wishlist::Item> explicitly_scheduled;
+    boost::shared_ptr<Wishlist::Item> explicitly_scheduled;
     yae::mpeg_ts::EPG::Channel channel;
 
     // avoid race condition with EPG updates:
@@ -4391,12 +4391,12 @@ namespace yae
   //----------------------------------------------------------------
   // DVR::is_ready_to_play
   //
-  yae::shared_ptr<DVR::Playback>
+  boost::shared_ptr<DVR::Playback>
   DVR::is_ready_to_play(const Recording::Rec & rec) const
   {
     YAE_BENCHMARK(probe, "DVR::is_ready_to_play");
 
-    yae::shared_ptr<Playback> result;
+    boost::shared_ptr<Playback> result;
     fs::path title_path = rec.get_title_path(basedir_);
     std::string mpg_path = rec.get_title_filepath(title_path, ".mpg");
 

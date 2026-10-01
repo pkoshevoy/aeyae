@@ -111,7 +111,7 @@ namespace yae
       boost::unique_lock<boost::mutex> lock(tasks.mutex_);
       stop_ = true;
 
-      for (std::list<yae::shared_ptr<Task> >::iterator
+      for (std::list<boost::shared_ptr<Task> >::iterator
              i = tasks.fifo_.begin(); i != tasks.fifo_.end(); ++i)
       {
         TTaskPtr & task_ptr = *i;
@@ -309,7 +309,7 @@ namespace yae
   // Worker::add
   //
   bool
-  Worker::add(const yae::shared_ptr<Task> & task)
+  Worker::add(const boost::shared_ptr<Task> & task)
   {
     // keep alive the task queue in case it is
     // replaced while we are accessing it here:

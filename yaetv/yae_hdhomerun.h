@@ -12,6 +12,11 @@
 // standard:
 #include <stdexcept>
 
+// boost:
+#ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
+#endif
+
 // aeyae:
 #include "yae/utils/yae_time.h"
 #include "yae/video/yae_istream.h"
@@ -131,7 +136,7 @@ namespace yae
                  TunerStatus & status);
 
     void capture(TSessionPtr session_ptr,
-                 yae::weak_ptr<IStream> stream_ptr,
+                 boost::weak_ptr<IStream> stream_ptr,
                  const std::string & frequency);
 
   protected:

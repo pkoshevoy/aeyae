@@ -1587,7 +1587,7 @@ namespace yae
       TRecordingPtr recording = recording_.lock();
       if (recording)
       {
-        yae::shared_ptr<Recording::Rec> rec = recording->get_rec();
+        boost::shared_ptr<Recording::Rec> rec = recording->get_rec();
         result = TVar(rec->description_);
         return;
       }
@@ -1595,7 +1595,7 @@ namespace yae
       result = TVar("");
     }
 
-    yae::weak_ptr<Recording> recording_;
+    boost::weak_ptr<Recording> recording_;
   };
 
   //----------------------------------------------------------------
@@ -1760,7 +1760,7 @@ namespace yae
   static TRecordingPtr
   find_recording(const yae::mpeg_ts::EPG & epg,
                  const std::map<uint32_t, TScheduledRecordings> & schedule,
-                 const yae::shared_ptr<DVR::ChanTime> & program_sel)
+                 const boost::shared_ptr<DVR::ChanTime> & program_sel)
   {
     TRecordingPtr recording_ptr;
 
@@ -1820,7 +1820,7 @@ namespace yae
         const TRecPtr rec_ptr = recording_ptr->get_rec();
         const Recording::Rec & rec = *rec_ptr;
 
-        yae::shared_ptr<DVR::Playback> ready =
+        boost::shared_ptr<DVR::Playback> ready =
           view_.model()->is_ready_to_play(rec);
 
         if (ready)
@@ -1914,7 +1914,7 @@ namespace yae
         const TRecPtr rec_ptr = recording_ptr->get_rec();
         const Recording::Rec & rec = *rec_ptr;
 
-        yae::shared_ptr<DVR::Playback> playback_ptr =
+        boost::shared_ptr<DVR::Playback> playback_ptr =
           view_.model()->is_ready_to_play(rec);
 
         if (playback_ptr)
@@ -1988,7 +1988,7 @@ namespace yae
     bool onClick(const TVec2D & itemCSysOrigin,
                  const TVec2D & rootCSysPoint)
     {
-      yae::shared_ptr<DVR::ChanTime> program_sel = view_.program_sel_;
+      boost::shared_ptr<DVR::ChanTime> program_sel = view_.program_sel_;
       view_.program_sel_.reset();
       view_.requestUncache();
       view_.add_wishlist_item(program_sel);
@@ -4887,7 +4887,7 @@ namespace yae
   // AppView::watch_now
   //
   void
-  AppView::watch_now(yae::shared_ptr<DVR::Playback> playback_ptr,
+  AppView::watch_now(boost::shared_ptr<DVR::Playback> playback_ptr,
                      TRecPtr rec_ptr)
   {
     if (!(playback_ptr && rec_ptr))
@@ -4958,7 +4958,7 @@ namespace yae
   // AppView::add_wishlist_item
   //
   void
-  AppView::add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & prog_sel)
+  AppView::add_wishlist_item(const boost::shared_ptr<DVR::ChanTime> & prog_sel)
   {
     Wishlist::Item wi;
     if (prog_sel)

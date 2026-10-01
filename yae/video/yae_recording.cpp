@@ -496,7 +496,7 @@ namespace yae
   //----------------------------------------------------------------
   // Recording::Recording
   //
-  Recording::Recording(const yae::shared_ptr<Recording::Rec> & rec):
+  Recording::Recording(const boost::shared_ptr<Recording::Rec> & rec):
     rec_(rec)
   {
     YAE_ASSERT(rec);
@@ -529,7 +529,7 @@ namespace yae
   // Recording::set
   //
   void
-  Recording::set_rec(const yae::shared_ptr<Recording::Rec> & rec_ptr)
+  Recording::set_rec(const boost::shared_ptr<Recording::Rec> & rec_ptr)
   {
     // avoid data race:
     TWriteLock lock(mutex_);
@@ -624,7 +624,7 @@ namespace yae
   //----------------------------------------------------------------
   // Recording::get_writer
   //
-  yae::shared_ptr<Recording::Writer>
+  boost::shared_ptr<Recording::Writer>
   Recording::get_writer(const fs::path & basedir)
   {
     // avoid data race:
@@ -638,10 +638,10 @@ namespace yae
       writer_.reset();
     }
 
-    yae::shared_ptr<Recording::Rec> rec_ptr = get_rec();
+    boost::shared_ptr<Recording::Rec> rec_ptr = get_rec();
     const Recording::Rec & rec = *rec_ptr;
 
-    yae::shared_ptr<Recording::Writer> writer_ptr;
+    boost::shared_ptr<Recording::Writer> writer_ptr;
     if (rec.cancelled_)
     {
       return writer_ptr;
@@ -723,7 +723,7 @@ namespace yae
   Recording::write(const fs::path & basedir,
                    const yae::mpeg_ts::IPacketHandler::Packet & packet)
   {
-    yae::shared_ptr<Writer> writer_ptr = get_writer(basedir);
+    boost::shared_ptr<Writer> writer_ptr = get_writer(basedir);
     if (!writer_ptr)
     {
       return;
@@ -747,7 +747,7 @@ namespace yae
   // Recording::set_stream
   //
   void
-  Recording::set_stream(const yae::shared_ptr<IStream> & s)
+  Recording::set_stream(const boost::shared_ptr<IStream> & s)
   {
     TWriteLock lock(mutex_);
     stream_ = s;
@@ -825,7 +825,7 @@ namespace yae
   void
   save(Json::Value & json, const Recording & recording)
   {
-    yae::shared_ptr<Recording::Rec> rec = recording.get_rec();
+    boost::shared_ptr<Recording::Rec> rec = recording.get_rec();
     save(json, *rec);
   }
 
@@ -835,7 +835,7 @@ namespace yae
   void
   load(const Json::Value & json, Recording & recording)
   {
-    yae::shared_ptr<Recording::Rec> rec(new Recording::Rec);
+    boost::shared_ptr<Recording::Rec> rec(new Recording::Rec);
     load(json, *rec);
     recording.set_rec(rec);
   }

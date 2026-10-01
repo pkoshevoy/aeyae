@@ -10,7 +10,6 @@
 #define YAE_WORKER_H_
 
 // aeyae:
-#include "yae/api/yae_shared_ptr.h"
 #include "yae/thread/yae_threading.h"
 
 // standard:
@@ -21,6 +20,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 
 // boost:
 #ifndef Q_MOC_RUN
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 
@@ -69,7 +69,7 @@ namespace yae
     //----------------------------------------------------------------
     // TTaskPtr
     //
-    typedef yae::shared_ptr<Task> TTaskPtr;
+    typedef boost::shared_ptr<Task> TTaskPtr;
 
 
     //----------------------------------------------------------------
@@ -102,7 +102,7 @@ namespace yae
     //----------------------------------------------------------------
     // TTaskQueuePtr
     //
-    typedef yae::shared_ptr<TaskQueue> TTaskQueuePtr;
+    typedef boost::shared_ptr<TaskQueue> TTaskQueuePtr;
 
 
     //----------------------------------------------------------------
@@ -132,7 +132,7 @@ namespace yae
     void set_queue_size_limit(std::size_t n);
     std::size_t get_queue_size_limit() const;
 
-    bool add(const yae::shared_ptr<Task> & task);
+    bool add(const boost::shared_ptr<Task> & task);
     void wait_until_finished();
 
     bool is_busy() const;
@@ -163,7 +163,7 @@ namespace yae
   //----------------------------------------------------------------
   // TWorkerPtr
   //
-  typedef yae::shared_ptr<yae::Worker> TWorkerPtr;
+  typedef boost::shared_ptr<yae::Worker> TWorkerPtr;
 
 }
 

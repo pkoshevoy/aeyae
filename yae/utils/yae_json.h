@@ -316,6 +316,36 @@ namespace yae
     bits = std::bitset<nbits>(str);
   }
 
+  // boost::shared_ptr
+  template <typename TData>
+  void
+  save(Json::Value & json, const boost::shared_ptr<TData> & ptr)
+  {
+    if (ptr)
+    {
+      save(json, *ptr);
+    }
+    else
+    {
+      json = Json::Value::nullRef;
+    }
+  }
+
+  template <typename TData>
+  void
+  load(const Json::Value & json, boost::shared_ptr<TData> & ptr)
+  {
+    if (json.isNull())
+    {
+      ptr.reset();
+    }
+    else
+    {
+      ptr.reset(new TData());
+      load(json, *ptr);
+    }
+  }
+
   // yae::shared_ptr
   template <typename TData>
   void

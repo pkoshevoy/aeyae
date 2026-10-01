@@ -151,7 +151,7 @@ namespace yae
     bool remove(const std::string & wi_key);
     void update(std::string & wi_key, const Wishlist::Item & new_item);
 
-    yae::shared_ptr<Item>
+    boost::shared_ptr<Item>
     matches(const yae::mpeg_ts::EPG::Channel & channel,
             const yae::mpeg_ts::EPG::Program & program) const;
 
@@ -170,12 +170,10 @@ namespace yae
   void load(const Json::Value & json, Wishlist::Item & item);
 
 
-
-
   //----------------------------------------------------------------
   // TRecPtr
   //
-  typedef yae::shared_ptr<Recording::Rec> TRecPtr;
+  typedef boost::shared_ptr<Recording::Rec> TRecPtr;
 
   //----------------------------------------------------------------
   // TRecs
@@ -215,7 +213,7 @@ namespace yae
   //----------------------------------------------------------------
   // TFoundRecordingsPtr
   //
-  typedef yae::shared_ptr<FoundRecordings> TFoundRecordingsPtr;
+  typedef boost::shared_ptr<FoundRecordings> TFoundRecordingsPtr;
 
 
   //----------------------------------------------------------------
@@ -237,14 +235,14 @@ namespace yae
   // next
   //
   template <typename TRec>
-  yae::shared_ptr<TRec>
-  next(const std::map<uint32_t, std::map<uint32_t, yae::shared_ptr<TRec> > > &
+  boost::shared_ptr<TRec>
+  next(const std::map<uint32_t, std::map<uint32_t, boost::shared_ptr<TRec> > > &
        recordings,
        uint32_t ch_num,
        uint32_t gps_time,
-       const yae::shared_ptr<TRec> & after_this = yae::shared_ptr<TRec>())
+       const boost::shared_ptr<TRec> & after_this = boost::shared_ptr<TRec>())
   {
-    typedef yae::shared_ptr<TRec> TRecPtr;
+    typedef boost::shared_ptr<TRec> TRecPtr;
     typedef std::map<uint32_t, TRecPtr> TRecsByTime;
     typedef std::map<uint32_t, TRecsByTime> TRecByChannel;
 
@@ -456,7 +454,7 @@ namespace yae
       //----------------------------------------------------------------
       // TSessionPtr
       //
-      typedef yae::shared_ptr<PacketHandler::Session> TSessionPtr;
+      typedef boost::shared_ptr<PacketHandler::Session> TSessionPtr;
 
       DVR & dvr_;
       yae::Worker worker_;
@@ -479,8 +477,7 @@ namespace yae
     //----------------------------------------------------------------
     // TPacketHandlerPtr
     //
-    typedef yae::shared_ptr<PacketHandler, yae::mpeg_ts::IPacketHandler>
-    TPacketHandlerPtr;
+    typedef boost::shared_ptr<PacketHandler> TPacketHandlerPtr;
 
 
     //----------------------------------------------------------------
@@ -488,12 +485,14 @@ namespace yae
     //
     struct Stream : IStream
     {
+      typedef boost::shared_ptr<Stream> TStreamPtr;
+
       Stream(DVR & dvr,
              const yae::HDHomeRun::TSessionPtr & session_ptr,
              const std::string & frequency);
       ~Stream();
 
-      void open(const yae::shared_ptr<Stream, IStream> & self_ptr,
+      void open(const TStreamPtr & self_ptr,
                 const yae::TWorkerPtr & worker_ptr);
 
       virtual void close();
@@ -513,7 +512,7 @@ namespace yae
     //----------------------------------------------------------------
     // TStreamPtr
     //
-    typedef yae::shared_ptr<Stream, IStream> TStreamPtr;
+    typedef Stream::TStreamPtr TStreamPtr;
 
 
     //----------------------------------------------------------------
@@ -618,7 +617,7 @@ namespace yae
     void cancel_recording(const yae::mpeg_ts::EPG::Channel & channel,
                           const yae::mpeg_ts::EPG::Program & program);
 
-    yae::shared_ptr<Wishlist::Item>
+    boost::shared_ptr<Wishlist::Item>
     explicitly_scheduled(const yae::mpeg_ts::EPG::Channel & channel,
                          const yae::mpeg_ts::EPG::Program & program) const;
 
@@ -683,7 +682,7 @@ namespace yae
       std::string basepath_;
     };
 
-    yae::shared_ptr<Playback>
+    boost::shared_ptr<Playback>
     is_ready_to_play(const Recording::Rec & rec) const;
 
     void watch_live(uint32_t ch_num);
@@ -849,7 +848,7 @@ namespace yae
 
     // keep track of existing streams, but don't extend their lifetime:
     std::map<std::string, TWorkerPtr> stream_worker_;
-    std::map<std::string, yae::weak_ptr<Stream, IStream> > stream_;
+    std::map<std::string, yae::AtomicPtr<Stream> > stream_;
     std::map<std::string, TPacketHandlerPtr> packet_handler_;
     TWorkerPtr service_loop_worker_;
 

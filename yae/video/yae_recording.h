@@ -22,6 +22,7 @@ YAE_DISABLE_DEPRECATION_WARNINGS
 // boost:
 #ifndef Q_MOC_RUN
 #include <boost/filesystem.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread.hpp>
 #endif
 
@@ -170,7 +171,7 @@ namespace yae
     };
 
     Recording();
-    Recording(const yae::shared_ptr<Recording::Rec> & rec);
+    Recording(const boost::shared_ptr<Recording::Rec> & rec);
     Recording(const yae::mpeg_ts::EPG::Channel & channel,
               const yae::mpeg_ts::EPG::Program & program,
               Recording::MadeBy rec_cause = Recording::kUnspecified,
@@ -179,9 +180,9 @@ namespace yae
 
     // NOTE: this will close any open .mpg .dat files
     // if the recording has been cancelled
-    void set_rec(const yae::shared_ptr<Recording::Rec> & rec);
+    void set_rec(const boost::shared_ptr<Recording::Rec> & rec);
 
-    inline yae::shared_ptr<Recording::Rec> get_rec() const
+    inline boost::shared_ptr<Recording::Rec> get_rec() const
     {
       TReadLock lock(mutex_);
       return rec_;
@@ -189,62 +190,62 @@ namespace yae
 
     inline uint32_t ch_num() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->ch_num();
     }
 
     inline uint32_t gps_t0() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->gps_t0_;
     }
 
     inline uint32_t gps_t1() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->gps_t1_;
     }
 
     inline uint32_t is_cancelled() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->cancelled_;
     }
 
     inline uint32_t made_by_wishlist() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->made_by_ == Recording::kWishlistItem;
     }
 
     inline uint16_t max_recordings() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->max_recordings_;
     }
 
     inline std::string get_short_title() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->get_short_title();
     }
 
     inline fs::path get_title_path(const fs::path & basedir) const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->get_title_path(basedir);
     }
 
     inline std::string get_basename() const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->get_basename();
     }
 
     inline std::string get_filepath(const fs::path & basedir,
                                     const char * suffix = ".mpg") const
     {
-      yae::shared_ptr<Recording::Rec> rec = get_rec();
+      boost::shared_ptr<Recording::Rec> rec = get_rec();
       return rec->get_filepath(basedir, suffix);
     }
 
@@ -275,14 +276,14 @@ namespace yae
 
   protected:
     // NOTE: this will return NULL writer if the recording is cancelled:
-    yae::shared_ptr<Writer> get_writer(const fs::path & basedir);
+    boost::shared_ptr<Writer> get_writer(const fs::path & basedir);
 
   public:
     void write(const fs::path & basedir,
                const yae::mpeg_ts::IPacketHandler::Packet & packet);
 
     bool is_recording() const;
-    void set_stream(const yae::shared_ptr<IStream> & s);
+    void set_stream(const boost::shared_ptr<IStream> & s);
 
   private:
     // intentionally disabled:
@@ -294,13 +295,13 @@ namespace yae
     mutable boost::shared_mutex mutex_;
 
     // recording attributes:
-    yae::shared_ptr<Recording::Rec> rec_;
+    boost::shared_ptr<Recording::Rec> rec_;
 
     // keep-alive the stream as long as the Recording exists:
-    yae::shared_ptr<IStream> stream_;
+    boost::shared_ptr<IStream> stream_;
 
     // create writer on-demand, destroy when cancelled:
-    yae::shared_ptr<Writer> writer_;
+    boost::shared_ptr<Writer> writer_;
   };
 
   YAE_API void save(Json::Value & json, const Recording::Rec & rec);
@@ -312,7 +313,7 @@ namespace yae
   //----------------------------------------------------------------
   // TRecordingPtr
   //
-  typedef yae::shared_ptr<Recording> TRecordingPtr;
+  typedef boost::shared_ptr<Recording> TRecordingPtr;
 
   //----------------------------------------------------------------
   // maybe_yaetv_recording

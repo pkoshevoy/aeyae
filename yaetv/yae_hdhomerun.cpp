@@ -452,7 +452,7 @@ namespace yae
     bool wait_for_lock(const HDHomeRun::TSessionPtr & session_ptr,
                        TunerStatus & status);
 
-    void capture(yae::weak_ptr<IStream> stream_ptr,
+    void capture(boost::weak_ptr<IStream> stream_ptr,
                  const HDHomeRun::TSessionPtr & session_ptr,
                  const std::string & frequency);
 
@@ -823,7 +823,7 @@ namespace yae
   // HDHomeRun::Private::capture
   //
   void
-  HDHomeRun::Private::capture(yae::weak_ptr<IStream> stream_weak_ptr,
+  HDHomeRun::Private::capture(boost::weak_ptr<IStream> stream_weak_ptr,
                               const HDHomeRun::TSessionPtr & session_ptr,
                               const std::string & frequency)
   {
@@ -900,7 +900,7 @@ namespace yae
                                      "inner loop",
                                      TTime(30, 1000));
 
-        yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
+        boost::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
         if (!stream_ptr)
         {
           yae_ilog("%p break capture: !stream_ptr", this);
@@ -1000,7 +1000,7 @@ namespace yae
                frequency.c_str());
     }
 
-    yae::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
+    boost::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
     if (stream_ptr)
     {
       stream_ptr->close();
@@ -1087,7 +1087,7 @@ namespace yae
   //
   void
   HDHomeRun::capture(const HDHomeRun::TSessionPtr session_ptr,
-                     yae::weak_ptr<IStream> stream_ptr,
+                     boost::weak_ptr<IStream> stream_ptr,
                      const std::string & frequency)
   {
     private_->capture(stream_ptr, session_ptr, frequency);

@@ -134,9 +134,9 @@ namespace yae
     void toggle_recording(uint32_t ch_num, uint32_t gps_time);
     void delete_recording(const std::string & name);
     void playback_recording(const std::string & name);
-    void watch_now(yae::shared_ptr<DVR::Playback> playback_ptr, TRecPtr rec);
+    void watch_now(boost::shared_ptr<DVR::Playback> playback_ptr, TRecPtr rec);
     void add_wishlist_item();
-    void add_wishlist_item(const yae::shared_ptr<DVR::ChanTime> & program_sel);
+    void add_wishlist_item(const boost::shared_ptr<DVR::ChanTime> & progr_sel);
     void add_wishlist_item(const yae::mpeg_ts::EPG::Channel & channel,
                            const yae::mpeg_ts::EPG::Program & program);
     void edit_wishlist_item(const std::string & row_id);
@@ -225,8 +225,8 @@ namespace yae
     // all recordings, indexed by channel and gps start time:
     std::map<uint32_t, TRecsByTime> rec_by_channel_;
 
-    yae::shared_ptr<DVR::Playback> now_playing_;
-    yae::shared_ptr<DVR::ChanTime> program_sel_;
+    boost::shared_ptr<DVR::Playback> now_playing_;
+    boost::shared_ptr<DVR::ChanTime> program_sel_;
 
     std::map<uint32_t, std::size_t> ch_index_;
     std::map<uint32_t, yae::shared_ptr<Gradient, Item> > ch_tile_;
