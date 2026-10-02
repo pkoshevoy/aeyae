@@ -66,7 +66,8 @@ namespace yae
       data_.resize(capacity);
     }
 
-    open_ = true;
+    open_ = data_.size() > 0;
+    YAE_ASSERT(open_);
     cond_.notify_all();
   }
 

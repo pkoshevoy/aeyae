@@ -1847,9 +1847,10 @@ namespace yae
   {
     PacketHandler & packet_handler = *packet_handler_;
 
-    yae_ilog("%p stream stop: %s",
+    yae_ilog("%p stream stop: %s, %s",
              this,
-             packet_handler.ctx_.log_prefix_.c_str());
+             packet_handler.ctx_.log_prefix_.c_str(),
+             yae::get_stacktrace_str().c_str());
     PacketHandler::TSessionPtr ph_session = packet_handler.session_;
     if (ph_session)
     {

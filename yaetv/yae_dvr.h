@@ -462,7 +462,7 @@ namespace yae
 
       // session buffers lifetime may be extended by the threads
       // that reference it:
-      PacketHandler::TSessionPtr session_;
+      yae::AtomicPtr<PacketHandler::Session> session_;
 
       // cache scheduled recordings to avoid lock contention:
       mutable boost::mutex mutex_;
@@ -848,7 +848,7 @@ namespace yae
 
     // keep track of existing streams, but don't extend their lifetime:
     std::map<std::string, TWorkerPtr> stream_worker_;
-    std::map<std::string, yae::AtomicPtr<Stream> > stream_;
+    std::map<std::string, boost::weak_ptr<Stream> > stream_;
     std::map<std::string, TPacketHandlerPtr> packet_handler_;
     TWorkerPtr service_loop_worker_;
 

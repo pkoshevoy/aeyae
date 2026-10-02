@@ -881,11 +881,15 @@ namespace yae
                                             &status_str,
                                             &status) == 1)
       {
-        yae_ilog("%p %s, status: %s", this, tuner_name.c_str(), status_str);
+        yae_ilog("%p %s %s Hz, status: %s",
+                 this,
+                 tuner_name.c_str(),
+                 frequency.c_str(),
+                 status_str);
         session.set_tuner_status(status);
       }
 
-      yae_ilog("%p %s %s Hz: capturing",
+      yae_ilog("%p %s %s Hz, capturing",
                this,
                session.tuner_name_.c_str(),
                frequency.c_str());
@@ -903,14 +907,20 @@ namespace yae
         boost::shared_ptr<IStream> stream_ptr = stream_weak_ptr.lock();
         if (!stream_ptr)
         {
-          yae_ilog("%p break capture: !stream_ptr", this);
+          yae_ilog("%p %s %s Hz, break capture: !stream_ptr",
+                   this,
+                   session.tuner_name_.c_str(),
+                   frequency.c_str());
           break;
         }
 
         IStream & stream = *stream_ptr;
         if (!stream.is_open())
         {
-          yae_ilog("%p break capture: !stream.is_open()", this);
+          yae_ilog("%p %s %s Hz, break capture: !stream.is_open()",
+                   this,
+                   session.tuner_name_.c_str(),
+                   frequency.c_str());
           break;
         }
 
@@ -936,9 +946,10 @@ namespace yae
                                                       &status);
           if (ret <= 0)
           {
-            yae_elog("%p %s, hdhomerun_device_get_tuner_status: %i",
+            yae_elog("%p %s %s Hz, hdhomerun_device_get_tuner_status: %i",
                      this,
                      tuner_name.c_str(),
+                     frequency.c_str(),
                      ret);
             break;
           }
