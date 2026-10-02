@@ -9,6 +9,15 @@
 // yae:
 #include "yae/thread/yae_ring_buffer.h"
 
+YAE_DISABLE_DEPRECATION_WARNINGS
+
+// boost library:
+#ifndef Q_MOC_RUN
+#include <boost/chrono.hpp>
+#endif
+
+YAE_ENABLE_DEPRECATION_WARNINGS
+
 
 namespace yae
 {
@@ -130,6 +139,7 @@ namespace yae
       }
     }
 
+    cond_.notify_all();
     return done;
   }
 
@@ -171,7 +181,7 @@ namespace yae
       }
       else if (open_)
       {
-        cond_.wait(lock);
+        cond_.wait_for(lock, boost::chrono::seconds(1));
 
         if (data_.size() != capacity)
         {
@@ -186,6 +196,7 @@ namespace yae
       }
     }
 
+    cond_.notify_all();
     return done;
   }
 
