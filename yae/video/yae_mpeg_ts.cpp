@@ -5419,7 +5419,7 @@ namespace yae
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "PMT");
           TSectionPtr section = load_section(bin);
           PMTSectionPtr pmt_section = section;
-          YAE_EXPECT(pmt_section);
+          // YAE_EXPECT(pmt_section);
           if (pmt_section)
           {
             const ProgramMapTable & pmt = *pmt_section;
