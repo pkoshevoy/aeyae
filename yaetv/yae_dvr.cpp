@@ -2128,6 +2128,8 @@ namespace yae
 
     cleanup_yaetv_dir();
 
+    last_incomplete_recs_scan_.reset(0, 1);
+
     // load preferences:
     {
       std::string path = (fs::path(yaetv_) / "settings.json").string();
@@ -4092,7 +4094,10 @@ namespace yae
     const std::map<std::string, std::string> & recordings =
       found_recordings->mpg_path_;
 
-    int64_t gps_now_sec = yae::TTime::gps_now().get(1);
+    int64_t last_incomplete_recs_scan = last_incomplete_recs_scan_.get(1);
+    last_incomplete_recs_scan_ = yae::TTime::now();
+    int64_t next_incomplete_recs_scan = last_incomplete_recs_scan_.get(1);
+
     std::set<std::string> removed;
     std::size_t removed_bytes = 0;
 
@@ -4101,19 +4106,31 @@ namespace yae
            i = recordings.begin(); i != recordings.end(); ++i)
     {
       const std::string & mpg = i->second;
+
+      int64_t utc_t1 = yae::stat_lastmod(mpg.c_str());
+      if (utc_t1 + 300 > next_incomplete_recs_scan)
+      {
+        // recently updated, might be still recording:
+        yae_dlog("still fresh, skipping recording scan: %s", mpg.c_str());
+        continue;
+      }
+
+      if (utc_t1 + 3600 < last_incomplete_recs_scan)
+      {
+        // skip it, already scanned
+        yae_dlog("already scanned, skipping recording scan: %s", mpg.c_str());
+        continue;
+      }
+
       TRecPtr rec_ptr = load_recording(mpg);
       const Recording::Rec & rec = *rec_ptr;
       if (rec.is_recordable())
       {
+        yae_dlog("still recordable, skipping recording scan: %s", mpg.c_str());
         continue;
       }
 
-      if (rec.gps_t0_ + 86400 < gps_now_sec)
-      {
-        // avoid reading every recording;
-        // just the last 24h should be enough
-        continue;
-      }
+      yae_dlog("scanning recording: %s", mpg.c_str());
 
       yae::TTime t0;
       yae::TTime t1;

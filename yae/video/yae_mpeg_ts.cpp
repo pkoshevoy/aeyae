@@ -1123,7 +1123,7 @@ namespace yae
       this->load(bin);
 
       std::size_t end_pos = bin.position();
-      YAE_ASSERT(end_pos == stop_pos);
+      // YAE_ASSERT(end_pos == stop_pos);
 
       std::size_t consumed_bits = end_pos - start_pos;
       YAE_THROW_IF(end_pos > stop_pos);

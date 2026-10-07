@@ -889,6 +889,7 @@ namespace yae
     TTime next_storage_cleanup_;
     TTime next_find_recordings_;
     TTime next_log_cleanup_;
+    TTime last_incomplete_recs_scan_;
 
     mutable boost::mutex epg_mutex_;
     yae::mpeg_ts::EPG epg_;
