@@ -4115,10 +4115,10 @@ namespace yae
         continue;
       }
 
-      if (utc_t1 + 3600 < last_incomplete_recs_scan)
+      if (utc_t1 + 86400 < last_incomplete_recs_scan)
       {
-        // skip it, already scanned
-        yae_dlog("already scanned, skipping recording scan: %s", mpg.c_str());
+        // skip it, recording is more than 24h old since the last scan:
+        yae_dlog("skipping recording scan: %s", mpg.c_str());
         continue;
       }
 
