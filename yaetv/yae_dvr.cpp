@@ -4092,9 +4092,11 @@ namespace yae
     const std::map<std::string, std::string> & recordings =
       found_recordings->mpg_path_;
 
+    int64_t gps_now_sec = yae::TTime::gps_now().get(1);
     std::set<std::string> removed;
     std::size_t removed_bytes = 0;
 
+    // first, remove incomplete recordings:
     for (std::map<std::string, std::string>::const_iterator
            i = recordings.begin(); i != recordings.end(); ++i)
     {
@@ -4103,6 +4105,13 @@ namespace yae
       const Recording::Rec & rec = *rec_ptr;
       if (rec.is_recordable())
       {
+        continue;
+      }
+
+      if (rec.gps_t0_ + 86400 < gps_now_sec)
+      {
+        // avoid reading every recording;
+        // just the last 24h should be enough
         continue;
       }
 
