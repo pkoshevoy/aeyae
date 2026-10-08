@@ -4111,14 +4111,18 @@ namespace yae
       if (utc_t1 + 300 > next_incomplete_recs_scan)
       {
         // recently updated, might be still recording:
+#ifndef NDEBUG
         yae_dlog("still fresh, skipping recording scan: %s", mpg.c_str());
+#endif
         continue;
       }
 
       if (utc_t1 + 86400 < last_incomplete_recs_scan)
       {
         // skip it, recording is more than 24h old since the last scan:
+#ifndef NDEBUG
         yae_dlog("skipping recording scan: %s", mpg.c_str());
+#endif
         continue;
       }
 
@@ -4126,11 +4130,13 @@ namespace yae
       const Recording::Rec & rec = *rec_ptr;
       if (rec.is_recordable())
       {
+#ifndef NDEBUG
         yae_dlog("still recordable, skipping recording scan: %s", mpg.c_str());
+#endif
         continue;
       }
 
-      yae_dlog("scanning recording: %s", mpg.c_str());
+      yae_ilog("scanning recording: %s", mpg.c_str());
 
       yae::TTime t0;
       yae::TTime t1;
