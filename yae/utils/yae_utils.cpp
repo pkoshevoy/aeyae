@@ -1218,6 +1218,113 @@ namespace yae
     return NULL;
   }
 
+#ifdef _WIN32
+  //----------------------------------------------------------------
+  // TOpenFolder::Private
+  //
+  struct TOpenFolder::Private
+  {
+    Private():
+      handle_(INVALID_HANDLE_VALUE)
+    {}
+
+    Private(const std::string & folder_path_utf8):
+      path_(fs::absolute(fs::path(folder_path_utf8))),
+      handle_(INVALID_HANDLE_VALUE)
+    {
+      if (!this->open(folder_path_utf8))
+      {
+        std::ostringstream oss;
+        oss << "\"" << folder_path_utf8 << "\" folder is empty";
+        throw std::runtime_error(oss.str().c_str());
+      }
+    }
+
+    ~Private()
+    {
+      this->close();
+    }
+
+    void close()
+    {
+      if (handle_ == INVALID_HANDLE_VALUE)
+      {
+        return;
+      }
+
+      FindClose(handle_);
+      handle_ = INVALID_HANDLE_VALUE;
+    }
+
+    bool open(const std::string & folder_path_utf8)
+    {
+      this->close();
+
+      path_ = fs::absolute(fs::path(folder_path_utf8));
+      std::string path = "\\\\?\\" + (path_ / "*").string();
+      std::wstring wpath = utf8_to_utf16(path.c_str());
+
+      handle_ = FindFirstFileExW(wpath.c_str(),
+                                 FindExInfoBasic,
+                                 &found_,
+                                 FindExSearchNameMatch,
+                                 NULL, // lpSearchFilter
+                                 FIND_FIRST_EX_LARGE_FETCH);
+      if (handle_ == INVALID_HANDLE_VALUE)
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    bool parse_next_item()
+    {
+      if (handle_ == INVALID_HANDLE_VALUE)
+      {
+        return false;
+      }
+
+      if (!FindNextFileW(handle_, &found_))
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    inline std::string folder_path() const
+    {
+      return path_.string();
+    }
+
+    inline bool item_is_folder() const
+    {
+      return
+        (handle_ != INVALID_HANDLE_VALUE) &&
+        ((found_.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0);
+    }
+
+    std::string item_name() const
+    {
+      std::string name = utf16_to_utf8(found_.cFileName);
+      return name;
+    }
+
+    std::string item_path() const
+    {
+      std::string name = this->item_name();
+      std::string path = (path_ / name).string();
+      return path;
+    }
+
+  protected:
+    fs::path path_;
+    HANDLE handle_;
+    WIN32_FIND_DATAW found_;
+  };
+#else
+
   //----------------------------------------------------------------
   // TOpenFolder::Private
   //
@@ -1281,6 +1388,7 @@ namespace yae
     fs::path path_;
     fs::directory_iterator iter_;
   };
+#endif
 
   //----------------------------------------------------------------
   // TOpenFolder::TOpenFolder
