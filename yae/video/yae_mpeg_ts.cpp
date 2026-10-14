@@ -1126,7 +1126,7 @@ namespace yae
       // YAE_ASSERT(end_pos == stop_pos);
 
       std::size_t consumed_bits = end_pos - start_pos;
-      YAE_THROW_IF(end_pos > stop_pos);
+      YAE_SILENT_THROW_IF(end_pos > stop_pos);
       YAE_SILENT_THROW_IF((consumed_bits & 0x7) != 0);
 
       bin.seek(stop_pos);
@@ -1611,7 +1611,7 @@ namespace yae
     ISO639LanguageDescriptor::load_body(IBitstream & bin)
     {
       std::size_t n = descriptor_length_ / 4;
-      YAE_THROW_IF((descriptor_length_ & 0x3) != 0x0);
+      YAE_SILENT_THROW_IF((descriptor_length_ & 0x3) != 0x0);
 
       lang_.resize(n);
       for (std::size_t i = 0; i < n; i++)
@@ -3376,7 +3376,7 @@ namespace yae
       // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       section_length_ = bin.read(12);
-      YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
+      YAE_SILENT_THROW_IF(!bin.has_enough_bytes(section_length_));
 
       if (section_syntax_indicator_)
       {
@@ -3424,7 +3424,7 @@ namespace yae
     void
     ProgramAssociationTable::load_body(IBitstream & bin, std::size_t n_bytes)
     {
-      YAE_THROW_IF((n_bytes & 0x3) != 0);
+      YAE_SILENT_THROW_IF((n_bytes & 0x3) != 0);
 
       std::size_t n = n_bytes >> 2;
       program_.resize(n);
@@ -3472,7 +3472,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != body_end);
+      YAE_SILENT_THROW_IF(bin.position() != body_end);
     }
 
 
@@ -3510,7 +3510,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
 
       while (bin.position() < body_end)
       {
@@ -3532,7 +3532,7 @@ namespace yae
                  to_str(es.descriptor_).c_str());
 #endif
       }
-      YAE_THROW_IF(bin.position() != body_end);
+      YAE_SILENT_THROW_IF(bin.position() != body_end);
     }
 
     //----------------------------------------------------------------
@@ -3569,7 +3569,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -3611,7 +3611,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -3650,7 +3650,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
     //----------------------------------------------------------------
@@ -3698,7 +3698,7 @@ namespace yae
         descriptor_.push_back(descriptor);
       }
 
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -3751,7 +3751,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         additional_descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
     //----------------------------------------------------------------
@@ -3791,10 +3791,10 @@ namespace yae
       // YAE_SILENT_THROW_IF(reserved1_ != 0xF);
 
       major_channel_number_ = bin.read(10);
-      YAE_THROW_IF(major_channel_number_ < 1 || major_channel_number_ > 99);
+      YAE_SILENT_THROW_IF(major_channel_number_ < 1 || major_channel_number_ > 99);
 
       minor_channel_number_ = bin.read(10);
-      YAE_THROW_IF(minor_channel_number_ > 999);
+      YAE_SILENT_THROW_IF(minor_channel_number_ > 999);
 
       modulation_mode_ = bin.read(8);
       carrier_frequency_ = bin.read(32);
@@ -3827,7 +3827,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -3872,7 +3872,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
     //----------------------------------------------------------------
@@ -4001,7 +4001,7 @@ namespace yae
         TDescriptorPtr descriptor = load_descriptor(bin);
         descriptor_.push_back(descriptor);
       }
-      YAE_THROW_IF(bin.position() != stop_pos);
+      YAE_SILENT_THROW_IF(bin.position() != stop_pos);
     }
 
 
@@ -4026,7 +4026,7 @@ namespace yae
       etm_id_event_id_ = bin.read(14);
       etm_id_event_flag_ = bin.read(1);
       uint16_t etm_id_lsb = bin.read(1);
-      YAE_EXPECT(etm_id_lsb == 0);
+      // YAE_EXPECT(etm_id_lsb == 0);
       extended_text_message_.load(bin);
     }
 
@@ -4078,7 +4078,7 @@ namespace yae
       // YAE_SILENT_THROW_IF(reserved1_ != 0x3);
 
       section_length_ = bin.read(12);
-      YAE_THROW_IF(!bin.has_enough_bytes(section_length_));
+      YAE_SILENT_THROW_IF(!bin.has_enough_bytes(section_length_));
       std::size_t start_pos = bin.position();
 
       protocol_version_ = bin.read(8);
@@ -4530,7 +4530,7 @@ namespace yae
         section.reset(new PrivateSection());
       }
 
-      YAE_THROW_IF(!section);
+      YAE_SILENT_THROW_IF(!section);
       section->load(bin);
       return section;
     }
@@ -5375,7 +5375,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "PAT");
           PATSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const ProgramAssociationTable & pat = *section;
           YAE_SILENT_THROW_IF(pat.table_id_ != 0x00);
@@ -5398,7 +5398,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "CAT");
           CATSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const ConditionalAccessTable & cat = *section;
           YAE_SILENT_THROW_IF(cat.table_id_ != 0x01);
@@ -5408,7 +5408,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "TSD");
           TSDescSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const TSDescriptionSection & tsd = *section;
           YAE_SILENT_THROW_IF(tsd.table_id_ != 0x02);
@@ -5480,7 +5480,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "VCT0");
           VCTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const VirtualChannelTable & vct = *section;
           consume_vct(vct, pid);
@@ -5489,7 +5489,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const ExtendedTextTable & ett = *section;
           consume_ett(ett, pid);
@@ -5498,7 +5498,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "EIT");
           EITSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const EventInformationTable & eit = *section;
           consume_eit(eit, pid);
@@ -5507,7 +5507,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "ETT");
           ETTSectionPtr section = load_section(bin);
-          YAE_THROW_IF(!section);
+          YAE_SILENT_THROW_IF(!section);
 
           const ExtendedTextTable & ett = *section;
           consume_ett(ett, pid);
@@ -5516,7 +5516,7 @@ namespace yae
         {
           YAE_TIMESHEET_PROBE(probe, timesheet_, "Context::consume", "RRT0");
           RRTSectionPtr rrt_section = load_section(bin);
-          YAE_THROW_IF(!rrt_section);
+          YAE_SILENT_THROW_IF(!rrt_section);
 
           consume_rrt(rrt_section, pid);
         }
@@ -5892,9 +5892,9 @@ namespace yae
     {
       YAE_TIMESHEET_PROBE(probe, timesheet_, "Context", "consume_mgt");
       const MasterGuideTable & mgt = *mgt_section;
-      YAE_THROW_IF(mgt.table_id_ < 0xC7 ||
-                   mgt.table_id_ > 0xCD);
-      YAE_THROW_IF(mgt.private_indicator_ != 1);
+      YAE_SILENT_THROW_IF(mgt.table_id_ < 0xC7 ||
+                          mgt.table_id_ > 0xCD);
+      YAE_SILENT_THROW_IF(mgt.private_indicator_ != 1);
 
       boost::unique_lock<boost::mutex> lock(mutex_);
       uint32_t ix_curr = get_current_bucket_index();

@@ -518,7 +518,7 @@ namespace yae
   Bitstream::read_bytes(void * dst, std::size_t num_bytes)
   {
     // YAE_ASSERT(IBitstream::has_enough_bytes(num_bytes));
-    YAE_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
+    YAE_SILENT_THROW_IF(!IBitstream::has_enough_bytes(num_bytes));
     YAE_EXPECT(IBitstream::is_byte_aligned());
 
     if (IBitstream::is_byte_aligned())
