@@ -88,7 +88,7 @@ namespace yae
       data_ = data;
     }
 
-    inline void reset(TData * data = nullptr)
+    inline void reset(TData * data = NULL)
     {
       boost::lock_guard<boost::mutex> lock(mutex_);
       data_.reset(data);
